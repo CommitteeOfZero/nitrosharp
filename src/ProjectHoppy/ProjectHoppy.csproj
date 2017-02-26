@@ -1,0 +1,17 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard1.4</TargetFramework>
+    <PackageTargetFallback>portable-net45+win8+wpa81</PackageTargetFallback>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SciAdvNet.MediaLayer\SciAdvNet.MediaLayer.csproj" />
+    <ProjectReference Include="..\SciAdvNet.NSScript\SciAdvNet.NSScript.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="nss/**" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

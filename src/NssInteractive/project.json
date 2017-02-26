@@ -1,0 +1,11 @@
+﻿{
+  "dependencies": {
+    "System.IO.Compression": "4.3.0"
+  },
+  "frameworks": {
+    "net461": { }
+  },
+  "runtimes": {
+    "win": {}
+  }
+}
