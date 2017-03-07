@@ -14,7 +14,7 @@ namespace SciAdvNet.NSScript.Execution
 
     public class NSScriptInterpreter
     {
-        private readonly Dictionary<string, Action<ArgumentStack>> _builtinsDispatch;
+        private readonly Dictionary<string, Action<ArgumentStack>> _builtinsDispatchTable;
 
         private readonly ExecutingVisitor _execVisitor;
         private readonly INssBuiltInMethods _builtIns;
@@ -29,7 +29,7 @@ namespace SciAdvNet.NSScript.Execution
             Status = NSScriptInterpreterStatus.Idle;
             Globals = new VariableTable();
 
-            _builtinsDispatch = new Dictionary<string, Action<ArgumentStack>>(StringComparer.OrdinalIgnoreCase)
+            _builtinsDispatchTable = new Dictionary<string, Action<ArgumentStack>>(StringComparer.OrdinalIgnoreCase)
             {
                 ["WaitKey"] = WaitKey,
                 ["Request"] = Request,
@@ -80,7 +80,7 @@ namespace SciAdvNet.NSScript.Execution
             {
                 var methodCall = _execVisitor.PendingBuiltInCalls.Dequeue();
                 Action<ArgumentStack> handler;
-                _builtinsDispatch.TryGetValue(methodCall.MethodName, out handler);
+                _builtinsDispatchTable.TryGetValue(methodCall.MethodName, out handler);
                 handler?.Invoke(methodCall.MutableArguments);
             }
         }

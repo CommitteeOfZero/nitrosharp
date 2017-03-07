@@ -22,8 +22,8 @@ namespace ProjectHoppy
 
         public override void Run()
         {
-            _nssInterpreter.CreateMicrothread("nss/boot-logo");
-            //_nssInterpreter.CreateMicrothread("nss/ch01_007_円山町殺人現場");
+            //_nssInterpreter.CreateMicrothread("nss/boot-logo");
+            _nssInterpreter.CreateMicrothread("nss/ch01_007_円山町殺人現場");
             while (_nssInterpreter.Status != NSScriptInterpreterStatus.Idle)
             {
                 _nssInterpreter.Run(HaltCondition.PendingBuiltInCall);

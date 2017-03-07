@@ -33,7 +33,22 @@ namespace SciAdvNet.NSScript.Execution
         public NssColor PopColor()
         {
             var value = Pop();
-            return value.Type == NssType.Integer ? NssColor.FromRgb(value.As<int>()) : PredefinedConstants.Colors[value.As<string>()];
+            if (value.Type == NssType.String)
+            {
+                string s = value.As<string>();
+
+                string strNum = s.Substring(1);
+                if (int.TryParse(strNum, out int num))
+                {
+                    return NssColor.FromRgb(num);
+                }
+                else
+                {
+                    return PredefinedConstants.Colors[value.As<string>()];
+                }
+
+            }
+            return NssColor.FromRgb(value.As<int>()) ;
         }
 
         public TimeSpan PopTimeSpan()
