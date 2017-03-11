@@ -1,11 +1,15 @@
 ﻿using SciAdvNet.MediaLayer.Graphics.Text;
 using System.Drawing;
+using System;
+using SharpDX.Direct2D1;
 
 namespace SciAdvNet.MediaLayer.Graphics.DirectX
 {
     public class DXTextLayout : TextLayout
     {
         private DXRenderContext _rc;
+
+        private SolidColorBrush _colorBrush;
         internal SharpDX.DirectWrite.TextLayout DWriteLayout;
 
         internal DXTextLayout(DXRenderContext renderContext, string text, TextFormat format, float requestedWidth, float requestedHeight)
@@ -17,7 +21,10 @@ namespace SciAdvNet.MediaLayer.Graphics.DirectX
 
             var dwriteFormat = MlToDxTextFormat(format);
             DWriteLayout = new SharpDX.DirectWrite.TextLayout(_rc.DWriteFactory, text, dwriteFormat, requestedWidth, requestedHeight);
+            _colorBrush = new SolidColorBrush(_rc.DeviceContext, SharpDX.Color.Red);
         }
+
+        private static SharpDX.Color MlColorToDxColor(Color color) => new SharpDX.Color(color.R, color.G, color.B, color.A);
 
         public override string Text { get; }
         public override SizeF RequestedSize { get; }
@@ -34,6 +41,21 @@ namespace SciAdvNet.MediaLayer.Graphics.DirectX
             {
                 DWriteLayout.GetLineSpacing(out var spacingMethod, out float spacing, out float baseline);
                 DWriteLayout.SetLineSpacing(spacingMethod, value, baseline);
+            }
+        }
+
+        private bool set = false;
+        public override void SetGlyphColor(int glyphIndex, Color color)
+        {
+            _colorBrush.Color = MlColorToDxColor(color);
+            if (!set)
+            {
+                DWriteLayout.SetDrawingEffect(_colorBrush, new SharpDX.DirectWrite.TextRange(0, 1));
+                set = true;
+            }
+            else
+            {
+                _colorBrush.Color = MlColorToDxColor(color);
             }
         }
 

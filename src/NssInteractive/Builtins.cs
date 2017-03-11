@@ -8,7 +8,7 @@ using System.Threading;
 
 namespace NssInteractive
 {
-    public sealed class HoppyBuiltIns : NssBuildInMethods
+    public sealed class HoppyBuiltIns : NssBuiltInMethods
     {
         //public override void Unknown(string methodName, ImmutableArray<ConstantValue> args)
         //{

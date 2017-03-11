@@ -9,11 +9,11 @@ namespace ProjectHoppy.Content
     {
         private readonly Dictionary<Type, ContentLoader> _contentLoaders;
 
-        public ContentManager(Game game)
+        public ContentManager(SciAdvNet.MediaLayer.Graphics.ResourceFactory resourceFactory)
         {
             _contentLoaders = new Dictionary<Type, ContentLoader>();
 
-            RegisterContentLoader(typeof(Texture2D), new TextureLoader(game.Graphics));
+            RegisterContentLoader(typeof(Texture2D), new TextureLoader(resourceFactory));
         }
 
         public T Load<T>(string path)

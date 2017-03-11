@@ -28,46 +28,46 @@ namespace SciAdvNet.MediaLayer.Audio.XAudio
 
         public override void Play(AudioFile file)
         {
-            Task.Run(async () =>
-            {
-                var samples = new float[file.Channels * file.SampleRate];
+            //Task.Run(async () =>
+            //{
+            //    var samples = new float[file.Channels * file.SampleRate];
 
-                var bufferQueue = new Queue<AudioBuffer>();
-                _sourceVoice.BufferEnd += (IntPtr _) =>
-                {
-                    bufferQueue.Dequeue().Stream.Dispose();
-                };
+            //    var bufferQueue = new Queue<AudioBuffer>();
+            //    _sourceVoice.BufferEnd += (IntPtr _) =>
+            //    {
+            //        bufferQueue.Dequeue().Stream.Dispose();
+            //    };
 
-                _sourceVoice.Start();
+            //    _sourceVoice.Start();
 
-                bool doneReading = false;
-                do
-                {
-                    if (_sourceVoice.State.BuffersQueued < 3 && !doneReading)
-                    {
-                        int bytesRead = file.ReadSamples(samples, 0, samples.Length);
-                        if (bytesRead == 0)
-                        {
-                            doneReading = true;
-                            continue;
-                        }
+            //    bool doneReading = false;
+            //    do
+            //    {
+            //        if (_sourceVoice.State.BuffersQueued < 3 && !doneReading)
+            //        {
+            //            int bytesRead = file.ReadSamples(samples, 0, samples.Length);
+            //            if (bytesRead == 0)
+            //            {
+            //                doneReading = true;
+            //                continue;
+            //            }
 
-                        var dataStream = new DataStream(bytesRead * sizeof(float), true, true);
-                        dataStream.WriteRange(samples, 0, bytesRead);
-                        dataStream.Position = 0;
+            //            var dataStream = new DataStream(bytesRead * sizeof(float), true, true);
+            //            dataStream.WriteRange(samples, 0, bytesRead);
+            //            dataStream.Position = 0;
 
-                        var buffer = new AudioBuffer(dataStream);
-                        buffer.Flags = BufferFlags.EndOfStream;
-                        bufferQueue.Enqueue(buffer);
-                        _sourceVoice.SubmitSourceBuffer(buffer, null);
-                    }
+            //            var buffer = new AudioBuffer(dataStream);
+            //            buffer.Flags = BufferFlags.EndOfStream;
+            //            bufferQueue.Enqueue(buffer);
+            //            _sourceVoice.SubmitSourceBuffer(buffer, null);
+            //        }
 
-                    await Task.Delay(100).ConfigureAwait(false);
-                } while (_sourceVoice.State.BuffersQueued > 0);
+            //        await Task.Delay(100).ConfigureAwait(false);
+            //    } while (_sourceVoice.State.BuffersQueued > 0);
 
-                _sourceVoice.DestroyVoice();
-                _sourceVoice.Dispose();
-            });
+            //    _sourceVoice.DestroyVoice();
+            //    _sourceVoice.Dispose();
+            //});
         }
     }
 }

@@ -1,56 +1,70 @@
-﻿using ProjectHoppy.Audio;
-using ProjectHoppy.Content;
-using ProjectHoppy.Graphics;
+﻿using ProjectHoppy.Content;
+using SciAdvNet.MediaLayer.Graphics;
 using SciAdvNet.MediaLayer.Platform;
 using System;
 using System.Diagnostics;
-using System.Threading;
+using System.Runtime.InteropServices;
 
 namespace ProjectHoppy
 {
     public abstract class Game
     {
-        private volatile bool _interacting;
+        private volatile bool _running;
+        private readonly Stopwatch _gameTimer = new Stopwatch();
 
+        protected RenderContext RenderContext { get; private set; }
+        protected ContentManager Content { get; private set; }
         public Window Window { get; }
-        public abstract ContentManager Content { get; }
-        public GraphicsSystem Graphics { get; }
-        public InputSystem Input { get; }
-        public AudioSystem Audio { get; }
+        public EntityManager Entities { get; }
+        public SystemManager Systems { get; }
 
         public Game()
         {
             Window = new GameWindow();
             Window.WindowState = WindowState.Normal;
-            Graphics = new GraphicsSystem(Window);
-            Input = new InputSystem(this);
+            RenderContext = RenderContext.Create(GraphicsBackend.DirectX, Window);
+
+            Entities = new EntityManager();
+            Systems = new SystemManager(Entities);
+        }
+
+        public virtual ContentManager CreateContentManager()
+        {
+            return new ContentManager(RenderContext.ResourceFactory);
+        }
+
+        public virtual void Update(float deltaMilliseconds)
+        {
+            Systems.Update(deltaMilliseconds);
+        }
+
+        public void EnterLoop()
+        {
+            _running = true;
+            _gameTimer.Start();
+
+            float prevFrameTicks = 0.0f;
+            while (_running && Window.Exists)
+            {
+                long currentFrameTicks = _gameTimer.ElapsedTicks;
+                float deltaMilliseconds = (currentFrameTicks - prevFrameTicks) / Stopwatch.Frequency * 1000.0f;
+                prevFrameTicks = currentFrameTicks;
+
+                Window.ProcessEvents();
+                Update(deltaMilliseconds);
+            }
+
+            Systems.Dispose();
         }
 
         public abstract void Run();
 
-        public void Interact(TimeSpan timeout)
+        public void Interact()
         {
-            var sw = Stopwatch.StartNew();
-            _interacting = true;
-            while (Window.Exists && _interacting)
+            while (Window.Exists)
             {
-                if (sw.Elapsed >= timeout)
-                {
-                    sw.Stop();
-                    return;
-                }
-
                 Window.ProcessEvents();
-                Input.Update();
-                Graphics.Update();
-
-                Graphics.Render();
             }
-        }
-
-        public void StopInteracting()
-        {
-            _interacting = false;
         }
     }
 }

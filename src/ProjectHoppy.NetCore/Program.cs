@@ -6,7 +6,7 @@ namespace ProjectHoppy.NetCore
     {
         public static void Main(string[] args)
         {
-            var noah = new Noah();
+            var noah = new TypewriterTest();
             noah.Run();
         }
     }

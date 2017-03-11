@@ -4,7 +4,7 @@ using SciAdvNet.MediaLayer.Graphics.Text;
 
 namespace SciAdvNet.MediaLayer.Graphics.DirectX
 {
-    public class DXResourceFactory : ResourceFactory
+    internal class DXResourceFactory : ResourceFactory
     {
         private readonly DXRenderContext _renderContext;
 

@@ -3,6 +3,7 @@ using OpenTK;
 using OpenTK.Input;
 using MlKeyboard = SciAdvNet.MediaLayer.Input.Keyboard;
 using MlKey = SciAdvNet.MediaLayer.Input.Key;
+using MlButton = SciAdvNet.MediaLayer.Input.MouseButton;
 using MlMouse = SciAdvNet.MediaLayer.Input.Mouse;
 
 namespace SciAdvNet.MediaLayer.Platform
@@ -26,36 +27,41 @@ namespace SciAdvNet.MediaLayer.Platform
         private void OnKeyDown(object sender, KeyboardKeyEventArgs e)
         {
             var mlKey = (MlKey)e.Key;
-            if (!MlKeyboard.PressedKeys.Contains(mlKey))
+            if (MlKeyboard.PressedKeys.Add(mlKey))
             {
-                MlKeyboard.PressedKeys.Add(mlKey);
+                MlKeyboard.NewlyPressedKeys.Add(mlKey);
             }
         }
 
         private void OnKeyUp(object sender, KeyboardKeyEventArgs e)
         {
             var mlKey = (MlKey)e.Key;
-            if (MlKeyboard.PressedKeys.Contains(mlKey))
-            {
-                MlKeyboard.PressedKeys.Remove(mlKey);
-            }
+            MlKeyboard.PressedKeys.Remove(mlKey);
+            MlKeyboard.NewlyPressedKeys.Remove(mlKey);
         }
 
         private void OnMouseDown(object sender, MouseButtonEventArgs e)
         {
-            int button = (int)e.Button;
-            MlMouse.PressedButtons[button] = true;
+            var mlButton = (MlButton)e.Button;
+            if (MlMouse.PressedButtons.Add(mlButton))
+            {
+                MlMouse.NewlyPressedButtons.Add(mlButton);
+            }
         }
 
         private void OnMouseUp(object sender, MouseButtonEventArgs e)
         {
-            int button = (int)e.Button;
-            MlMouse.PressedButtons[button] = false;
+            var mlButton = (MlButton)e.Button;
+            MlMouse.PressedButtons.Remove(mlButton);
+            MlMouse.NewlyPressedButtons.Remove(mlButton);
         }
 
         private void ClearState()
         {
+            MlKeyboard.NewlyPressedKeys.Clear();
             MlKeyboard.PressedKeys.Clear();
+            MlMouse.NewlyPressedButtons.Clear();
+            MlMouse.PressedButtons.Clear();
         }
     }
 }

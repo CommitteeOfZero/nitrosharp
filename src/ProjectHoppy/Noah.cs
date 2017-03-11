@@ -1,4 +1,5 @@
 ﻿using ProjectHoppy.Content;
+using ProjectHoppy.Graphics;
 using SciAdvNet.NSScript.Execution;
 using System;
 using System.IO;
@@ -7,7 +8,6 @@ namespace ProjectHoppy
 {
     public class Noah : Game
     {
-        public override ContentManager Content { get; }
         private readonly NSScriptInterpreter _nssInterpreter;
         private readonly HoppyNssImplementation _nssBuiltIns;
 
@@ -15,25 +15,40 @@ namespace ProjectHoppy
         {
             Window.Title = "Chaos;Hoppy";
 
-            Content = new ZipContentManager(this, "S:/ProjectHoppy/Content.zip");
-            _nssBuiltIns = new HoppyNssImplementation(this);
+            _nssBuiltIns = new HoppyNssImplementation(Entities);
             _nssInterpreter = new NSScriptInterpreter(new ScriptLocator(), _nssBuiltIns);
+
+            var renderSystem = new RenderSystem(RenderContext);
+            Systems.RegisterSystem(renderSystem);
+        }
+
+        public override ContentManager CreateContentManager()
+        {
+            return new ZipContentManager(RenderContext.ResourceFactory, "S:/ProjectHoppy/Content.zip");
         }
 
         public override void Run()
         {
-            //_nssInterpreter.CreateMicrothread("nss/boot-logo");
-            _nssInterpreter.CreateMicrothread("nss/ch01_007_円山町殺人現場");
-            while (_nssInterpreter.Status != NSScriptInterpreterStatus.Idle)
-            {
-                _nssInterpreter.Run(HaltCondition.PendingBuiltInCall);
+            _nssInterpreter.CreateMicrothread("nss/boot-logo");
 
-                LogBuiltInCalls();
-                _nssInterpreter.DispatchPendingBuiltInCalls();
-            }
+            EnterLoop();
 
-            Interact(TimeSpan.MaxValue);
-            Graphics.Dispose();
+            //_nssInterpreter.CreateMicrothread("nss/ch01_007_円山町殺人現場");
+            //while (_nssInterpreter.Status != NSScriptInterpreterStatus.Idle)
+            //{
+            //    _nssInterpreter.Run(HaltCondition.PendingBuiltInCall);
+
+            //    LogBuiltInCalls();
+            //    _nssInterpreter.DispatchPendingBuiltInCalls();
+            //}
+        }
+
+        public override void Update(float deltaMilliseconds)
+        {
+            _nssInterpreter.Run(HaltCondition.PendingBuiltInCall);
+            LogBuiltInCalls();
+            _nssInterpreter.DispatchPendingBuiltInCalls();
+            base.Update(deltaMilliseconds);
         }
 
         private void LogBuiltInCalls()

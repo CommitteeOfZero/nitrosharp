@@ -1,20 +1,19 @@
-﻿using ProjectHoppy.Graphics;
-using System.IO;
+﻿using System.IO;
 
 namespace ProjectHoppy.Content
 {
     public class TextureLoader : ContentLoader
     {
-        private readonly GraphicsSystem _graphics;
+        private readonly SciAdvNet.MediaLayer.Graphics.ResourceFactory _resourceFactory;
 
-        public TextureLoader(GraphicsSystem graphics)
+        public TextureLoader(SciAdvNet.MediaLayer.Graphics.ResourceFactory resourceFactory)
         {
-            _graphics = graphics;
+            _resourceFactory = resourceFactory;
         }
 
         public override object Load(Stream stream)
         {
-            return _graphics.RenderContext.ResourceFactory.CreateTexture(stream);
+            return _resourceFactory.CreateTexture(stream);
         }
     }
 }

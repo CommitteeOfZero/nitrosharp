@@ -18,10 +18,10 @@ namespace SciAdvNet.MediaLayer.Platform
         public abstract void ProcessEvents();
         public abstract void Close();
 
-        public abstract event Action Resized;
-        public abstract event Action Closing;
-        public abstract event Action Closed;
-        public abstract event Action GotFocus;
-        public abstract event Action LostFocus;
+        public abstract event EventHandler Resized;
+        public abstract event EventHandler Closing;
+        public abstract event EventHandler Closed;
+        public abstract event EventHandler GotFocus;
+        public abstract event EventHandler LostFocus;
     }
 }

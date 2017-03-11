@@ -9,11 +9,13 @@ namespace SciAdvNet.MediaLayer.Graphics.DirectX
     public class DXDrawingSession : DrawingSession, IDisposable
     {
         private readonly DXRenderContext _rc;
+        private CustomBrushTextRenderer _txt;
 
         internal DXDrawingSession(DXRenderContext renderContext)
             : base(renderContext)
         {
             _rc = renderContext;
+            _txt = new CustomBrushTextRenderer(_rc.DeviceContext, new SolidColorBrush(_rc.DeviceContext, SharpDX.Color.Transparent), false);
         }
 
         internal void Reset(Color clearColor)
@@ -64,7 +66,10 @@ namespace SciAdvNet.MediaLayer.Graphics.DirectX
         {
             _rc.ColorBrush.Color = MlColorToDxColor(color);
             var dxLayout = textLayout as DXTextLayout;
-            _rc.DeviceContext.DrawTextLayout(NumericsToDxVector2(origin), dxLayout.DWriteLayout, _rc.ColorBrush);
+
+            dxLayout.DWriteLayout.Draw(_txt, origin.X, origin.Y);
+
+            //_rc.DeviceContext.DrawTextLayout(NumericsToDxVector2(origin), dxLayout.DWriteLayout, _rc.ColorBrush);
         }
 
         private static SharpDX.Color MlColorToDxColor(Color color) => new SharpDX.Color(color.R, color.G, color.B, color.A);
@@ -78,7 +83,7 @@ namespace SciAdvNet.MediaLayer.Graphics.DirectX
         public override void Dispose()
         {
             _rc.DeviceContext.EndDraw();
-            _rc.SwapChain.Present(1, SharpDX.DXGI.PresentFlags.None);
+            _rc.SwapChain.Present(0, SharpDX.DXGI.PresentFlags.None);
         }
     }
 }

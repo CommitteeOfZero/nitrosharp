@@ -1,15 +1,14 @@
 ﻿using System;
-using System.Collections.Immutable;
 
 namespace SciAdvNet.NSScript.Execution
 {
-    public class NssBuildInMethods : INssBuiltInMethods
+    public class NssBuiltInMethods : INssBuiltInMethods
     {
-        public virtual void CreateChoice(string objectName)
+        public virtual void CreateChoice(string entityName)
         {
         }
 
-        public virtual void RemoveObject(string objectName)
+        public virtual void RemoveObject(string entityName)
         {
         }
 
@@ -18,39 +17,39 @@ namespace SciAdvNet.NSScript.Execution
         {
         }
 
-        public virtual void FadeIn(string objectName, TimeSpan duration, int opacity, bool wait)
+        public virtual void FadeIn(string entityName, TimeSpan duration, int opacity, bool wait)
         {
         }
 
-        public virtual void LoadAudio(string objectName, AudioKind kind, string fileName)
+        public virtual void LoadAudio(string entityName, AudioKind kind, string fileName)
         {
         }
 
-        public virtual void PlayCutscene(string objectName, int zLevel, bool loop, bool alpha, string fileName, bool enableAudio)
+        public virtual void PlayCutscene(string entityName, int zLevel, bool loop, bool alpha, string fileName, bool enableAudio)
         {
         }
 
-        public virtual void LoadImage(string objectName, string fileName)
+        public virtual void LoadImage(string entityName, string fileName)
         {
         }
 
-        public virtual void Request(string objectName, NssAction action)
+        public virtual void Request(string entityName, NssAction action)
         {
         }
 
-        public virtual void SetAlias(string objectName, string alias)
+        public virtual void SetAlias(string entityName, string alias)
         {
         }
 
-        public virtual void SetLoop(string objectName, bool loop)
+        public virtual void SetLoop(string entityName, bool loop)
         {
         }
 
-        public virtual void SetLoopPoint(string objectName, TimeSpan loopStart, TimeSpan loopEnd)
+        public virtual void SetLoopPoint(string entityName, TimeSpan loopStart, TimeSpan loopEnd)
         {
         }
 
-        public virtual void SetVolume(string objectName, TimeSpan duration, int volume)
+        public virtual void SetVolume(string entityName, TimeSpan duration, int volume)
         {
         }
 
@@ -74,27 +73,27 @@ namespace SciAdvNet.NSScript.Execution
         {
         }
 
-        public virtual void CreateDialogueBox(string objectName, int zLevel, NssCoordinate x, NssCoordinate y, int width, int height)
+        public virtual void CreateDialogueBox(string entityName, int zLevel, NssCoordinate x, NssCoordinate y, int width, int height)
         {
         }
 
-        public virtual void AddText(string objectName, int zLevel, NssCoordinate x, NssCoordinate y, int width, int height, string text)
+        public virtual void AddText(string entityName, int zLevel, NssCoordinate x, NssCoordinate y, int width, int height, string text)
         {
         }
 
-        public virtual void AddTexture(string objectName, int zLevel, NssCoordinate x, NssCoordinate y, string fileOrObjectName)
+        public virtual void AddTexture(string entityName, int zLevel, NssCoordinate x, NssCoordinate y, string fileOrentityName)
         {
         }
 
-        public virtual void AddRectangle(string objectName, int zLevel, NssCoordinate x, NssCoordinate y, int width, int height, NssColor color)
+        public virtual void AddRectangle(string entityName, int zLevel, NssCoordinate x, NssCoordinate y, int width, int height, NssColor color)
         {
         }
 
-        public virtual void Move(string objectName, TimeSpan duration, NssCoordinate x, NssCoordinate y, bool wait)
+        public virtual void Move(string entityName, TimeSpan duration, NssCoordinate x, NssCoordinate y, bool wait)
         {
         }
 
-        public virtual void Zoom(string objectName, TimeSpan duration, NssCoordinate x, NssCoordinate y, bool wait)
+        public virtual void Zoom(string entityName, TimeSpan duration, NssCoordinate x, NssCoordinate y, bool wait)
         {
         }
     }

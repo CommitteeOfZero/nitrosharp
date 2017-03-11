@@ -8,8 +8,8 @@ namespace ProjectHoppy.Content
     {
         private readonly ZipArchive _archive;
 
-        public ZipContentManager(Game game, string archivePath)
-            : base(game)
+        public ZipContentManager(SciAdvNet.MediaLayer.Graphics.ResourceFactory resourceFactory, string archivePath)
+            : base(resourceFactory)
         {
             _archive = ZipFile.OpenRead(archivePath);
         }

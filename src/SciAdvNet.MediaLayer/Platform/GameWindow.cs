@@ -29,11 +29,11 @@ namespace SciAdvNet.MediaLayer.Platform
             IsVisible = true;
         }
 
-        public override event Action Resized;
-        public override event Action Closing;
-        public override event Action Closed;
-        public override event Action GotFocus;
-        public override event Action LostFocus;
+        public override event EventHandler Resized;
+        public override event EventHandler Closing;
+        public override event EventHandler Closed;
+        public override event EventHandler GotFocus;
+        public override event EventHandler LostFocus;
 
         public override string Title
         {
@@ -87,17 +87,17 @@ namespace SciAdvNet.MediaLayer.Platform
 
         private void OnWindowResized(object sender, EventArgs e)
         {
-            Resized?.Invoke();
+            Resized?.Invoke(this, e);
         }
 
         private void OnWindowClosing(object sender, System.ComponentModel.CancelEventArgs e)
         {
-            Closing?.Invoke();
+            Closing?.Invoke(this, e);
         }
 
         private void OnWindowClosed(object sender, EventArgs e)
         {
-            Closed?.Invoke();
+            Closed?.Invoke(this, e);
         }
 
         private static System.Drawing.Rectangle OtkToMlRectangle(OpenTK.Rectangle rect)
