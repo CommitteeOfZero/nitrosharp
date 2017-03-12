@@ -13,6 +13,7 @@ namespace SciAdvNet.MediaLayer.Graphics.Text
         public abstract SizeF RequestedSize { get; }
         public abstract float LineSpacing { get; set; }
 
-        public abstract void SetGlyphColor(int glyphIndex, Color color);
+
+        public abstract void SetGlyphBrush(int glyphIndex, ColorBrush brush);
     }
 }

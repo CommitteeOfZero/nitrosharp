@@ -1,0 +1,51 @@
+﻿using SciAdvNet.MediaLayer;
+using SciAdvNet.MediaLayer.Graphics;
+using SciAdvNet.MediaLayer.Graphics.Text;
+using System;
+using System.Collections.Generic;
+using System.Numerics;
+using System.Text;
+
+namespace ProjectHoppy.Graphics
+{
+    public partial class RenderSystem
+    {
+        private Dictionary<Entity, TextLayout> _textLayouts;
+        private TextFormat _textFormat;
+
+        private ColorBrush _defaultTextBrush;
+        private ColorBrush _blackBrush;
+        private ColorBrush _currentGlyphBrush;
+
+        public override void OnEnityAdded(Entity e)
+        {
+			if (e.HasComponent<TextComponent>())
+            {
+                var visual = e.GetComponent<VisualComponent>();
+                var txt = e.GetComponent<TextComponent>();
+                var layout = _rc.ResourceFactory.CreateTextLayout(txt.Text, _textFormat, visual.Width, visual.Height);
+                _textLayouts[e] = layout;
+            }
+        }
+
+        public override void OnEntityRemoved(Entity e)
+        {
+            base.OnEntityRemoved(e);
+        }
+
+        private void DrawText(Entity e, VisualComponent visualComponent, TextComponent textComponent)
+        {
+            var layout = _textLayouts[e];
+            //_currentGlyphBrush.Opacity = textComponent.CurrentGlyphOpacity;
+            ////layout.SetGlyphBrush(textComponent.CurrentGlyphIndex, _currentGlyphBrush);
+
+            //if (textComponent.ResetBrushFlag && textComponent.CurrentGlyphIndex > 0)
+            //{
+            //    textComponent.ResetBrushFlag = false;
+            //    //layout.SetGlyphBrush(textComponent.CurrentGlyphIndex - 1, _blackBrush);
+            //}
+
+            _drawingSession.DrawTextLayout(layout, new Vector2(visualComponent.X, visualComponent.Y), RgbaValueF.White);
+        }
+    }
+}

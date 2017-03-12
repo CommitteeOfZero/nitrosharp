@@ -47,7 +47,7 @@ namespace ProjectHoppy
         {
             _entities.CreateEntity(entityName)
                 .WithComponent(new VisualComponent(x.Value, y.Value, width, height, zLevel))
-                .WithComponent(new ShapeComponent(ShapeKind.Rectangle, Color.Black));
+                .WithComponent(new ShapeComponent(ShapeKind.Rectangle, RgbaValueF.Black));
         }
 
         //public override void AddTexture(string objectName, int zLevel, NssCoordinate x, NssCoordinate y, string fileOrObjectName)

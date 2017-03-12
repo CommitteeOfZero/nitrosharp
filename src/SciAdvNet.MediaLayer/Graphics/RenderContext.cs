@@ -16,7 +16,7 @@ namespace SciAdvNet.MediaLayer.Graphics
 
         internal GraphicsBackend Backend { get; }
         public ResourceFactory ResourceFactory { get; protected set; }
-        public abstract DrawingSession NewSession(Color clearColor);
+        public abstract DrawingSession NewSession(RgbaValueF clearColor);
 
         public static RenderContext Create(GraphicsBackend backend, Window window)
         {

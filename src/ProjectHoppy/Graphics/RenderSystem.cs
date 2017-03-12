@@ -3,11 +3,10 @@ using SciAdvNet.MediaLayer;
 using SciAdvNet.MediaLayer.Graphics;
 using System.Linq;
 using SciAdvNet.MediaLayer.Graphics.Text;
-using System.Numerics;
 
 namespace ProjectHoppy.Graphics
 {
-    public class RenderSystem : EntityProcessingSystem
+    public partial class RenderSystem : EntityProcessingSystem
     {
         private RenderContext _rc;
         private DrawingSession _drawingSession;
@@ -16,11 +15,24 @@ namespace ProjectHoppy.Graphics
             : base(typeof(VisualComponent))
         {
             _rc = renderContext;
+
+            _textLayouts = new Dictionary<Entity, TextLayout>();
+            _textFormat = new TextFormat
+            {
+                FontFamily = "Noto Sans CJK JP",
+                FontSize = 20,
+                FontWeight = FontWeight.Normal,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+
+            _defaultTextBrush = renderContext.ResourceFactory.CreateColorBrush(RgbaValueF.White, 0.0f);
+            _blackBrush = renderContext.ResourceFactory.CreateColorBrush(RgbaValueF.White, 1.0f);
+            _currentGlyphBrush = renderContext.ResourceFactory.CreateColorBrush(RgbaValueF.White, 0.0f);
         }
 
         public override void Update(float deltaMilliseconds)
         {
-            using (_drawingSession = _rc.NewSession(Color.White))
+            using (_drawingSession = _rc.NewSession(RgbaValueF.Black))
             {
                 base.Update(deltaMilliseconds);
             }
@@ -41,7 +53,7 @@ namespace ProjectHoppy.Graphics
                     break;
 
                 case Entity e when entity.HasComponent<TextComponent>():
-                    DrawText(e);
+                    DrawText(e, visualComponent, e.GetComponent<TextComponent>());
                     break;
             }
         }
@@ -49,31 +61,6 @@ namespace ProjectHoppy.Graphics
         private void DrawShape(VisualComponent visualComponent, ShapeComponent shapeComponent)
         {
             _drawingSession.FillRectangle(visualComponent.X, visualComponent.Y, visualComponent.Width, visualComponent.Height, shapeComponent.FillColor);
-        }
-
-        private Dictionary<Entity, TextLayout> _layouts = new Dictionary<Entity, TextLayout>();
-
-        private void DrawText(Entity e)
-        {
-            var format = new TextFormat
-            {
-                FontFamily = "Arial",
-                FontSize = 28,
-
-            };
-
-            var text = e.GetComponent<TextComponent>();
-            if (!_layouts.TryGetValue(e, out var layout))
-            {
-                
-
-                layout = _rc.ResourceFactory.CreateTextLayout(text.Text, format, 200, 200);
-                _layouts[e] = layout;
-            }
-
-            
-            _drawingSession.DrawTextLayout(layout, Vector2.Zero, new Color(0, 0, 0, 100));
-            layout.SetGlyphColor(1, text.CurrentGlyphColor);
         }
     }
 }

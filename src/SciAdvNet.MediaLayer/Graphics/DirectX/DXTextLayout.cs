@@ -8,8 +8,6 @@ namespace SciAdvNet.MediaLayer.Graphics.DirectX
     public class DXTextLayout : TextLayout
     {
         private DXRenderContext _rc;
-
-        private SolidColorBrush _colorBrush;
         internal SharpDX.DirectWrite.TextLayout DWriteLayout;
 
         internal DXTextLayout(DXRenderContext renderContext, string text, TextFormat format, float requestedWidth, float requestedHeight)
@@ -21,10 +19,7 @@ namespace SciAdvNet.MediaLayer.Graphics.DirectX
 
             var dwriteFormat = MlToDxTextFormat(format);
             DWriteLayout = new SharpDX.DirectWrite.TextLayout(_rc.DWriteFactory, text, dwriteFormat, requestedWidth, requestedHeight);
-            _colorBrush = new SolidColorBrush(_rc.DeviceContext, SharpDX.Color.Red);
         }
-
-        private static SharpDX.Color MlColorToDxColor(Color color) => new SharpDX.Color(color.R, color.G, color.B, color.A);
 
         public override string Text { get; }
         public override SizeF RequestedSize { get; }
@@ -44,19 +39,10 @@ namespace SciAdvNet.MediaLayer.Graphics.DirectX
             }
         }
 
-        private bool set = false;
-        public override void SetGlyphColor(int glyphIndex, Color color)
+        public override void SetGlyphBrush(int glyphIndex, ColorBrush brush)
         {
-            _colorBrush.Color = MlColorToDxColor(color);
-            if (!set)
-            {
-                DWriteLayout.SetDrawingEffect(_colorBrush, new SharpDX.DirectWrite.TextRange(0, 1));
-                set = true;
-            }
-            else
-            {
-                _colorBrush.Color = MlColorToDxColor(color);
-            }
+            var dxBrush = brush as DXColorBrush;
+            DWriteLayout.SetDrawingEffect(dxBrush.DeviceBrush, new SharpDX.DirectWrite.TextRange(glyphIndex, 1));
         }
 
         public override void Dispose()
@@ -70,7 +56,8 @@ namespace SciAdvNet.MediaLayer.Graphics.DirectX
             return new SharpDX.DirectWrite.TextFormat(_rc.DWriteFactory, format.FontFamily, MlToDxFontWeight(format.FontWeight),
                 SharpDX.DirectWrite.FontStyle.Normal, SharpDX.DirectWrite.FontStretch.Normal, format.FontSize)
             {
-                WordWrapping = MlToDxWordWrapping(format.WordWrapping)
+                WordWrapping = MlToDxWordWrapping(format.WordWrapping),
+                 ParagraphAlignment = SharpDX.DirectWrite.ParagraphAlignment.Center
             };
         }
 

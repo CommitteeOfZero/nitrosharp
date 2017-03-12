@@ -96,7 +96,7 @@ namespace SciAdvNet.MediaLayer.Graphics.DirectX
             DeviceContext.TextAntialiasMode = SharpDX.Direct2D1.TextAntialiasMode.Grayscale;
         }
 
-        public override DrawingSession NewSession(Color clearColor)
+        public override DrawingSession NewSession(RgbaValueF clearColor)
         {
             _session.Reset(clearColor);
             return _session;

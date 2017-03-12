@@ -54,17 +54,15 @@ namespace ProjectHoppy
                 Update(deltaMilliseconds);
             }
 
-            Systems.Dispose();
+            Shutdown();
         }
 
         public abstract void Run();
 
-        public void Interact()
+        public virtual void Shutdown()
         {
-            while (Window.Exists)
-            {
-                Window.ProcessEvents();
-            }
+            Systems.Dispose();
+            RenderContext.Dispose();
         }
     }
 }

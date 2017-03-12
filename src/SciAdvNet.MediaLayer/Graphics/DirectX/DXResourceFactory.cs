@@ -22,5 +22,10 @@ namespace SciAdvNet.MediaLayer.Graphics.DirectX
         {
             return new DXTextLayout(_renderContext, text, format, requestedWidth, requestedHeight);
         }
+
+        public override ColorBrush CreateColorBrush(RgbaValueF color, float opacity)
+        {
+            return new DXColorBrush(_renderContext, color, opacity);
+        }
     }
 }

@@ -1,52 +1,49 @@
 ﻿using SharpDX;
 using SharpDX.Direct2D1;
 using SharpDX.DirectWrite;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace SciAdvNet.MediaLayer.Graphics.DirectX
 {
     public class CustomBrushTextRenderer : TextRendererBase
     {
-        private readonly RenderTarget renderTarget;
-        private readonly Brush defaultBrush;
-        private readonly bool isPixelSnappingDisabled;
+        private readonly RenderTarget _renderTarget;
+        private readonly Brush _defaultBrush;
+        private readonly bool _isPixelSnappingDisabled;
 
         public CustomBrushTextRenderer(RenderTarget renderTarget, Brush defaultBrush, bool isPixelSnappingDisabled)
         {
-            this.renderTarget = renderTarget;
-            this.defaultBrush = defaultBrush;
-            this.isPixelSnappingDisabled = isPixelSnappingDisabled;
+            _renderTarget = renderTarget;
+            _defaultBrush = defaultBrush;
+            _isPixelSnappingDisabled = isPixelSnappingDisabled;
         }
 
-        public override Result DrawGlyphRun(object clientDrawingContext, float baselineOriginX, float baselineOriginY, MeasuringMode measuringMode, GlyphRun glyphRun, GlyphRunDescription glyphRunDescription, ComObject clientDrawingEffect)
+        public override Result DrawGlyphRun(object clientDrawingContext, float baselineOriginX, float baselineOriginY, MeasuringMode measuringMode,
+            GlyphRun glyphRun, GlyphRunDescription glyphRunDescription, ComObject clientDrawingEffect)
         {
-            var brush = clientDrawingEffect as Brush ?? defaultBrush;
-            if (brush == null) throw new NullReferenceException("No brush is set as a drawing effect for this glyph run and no default brush was given.");
-            renderTarget.DrawGlyphRun(new Vector2(baselineOriginX, baselineOriginY), glyphRun, brush, measuringMode);
+            var brush = clientDrawingEffect as Brush ?? _defaultBrush;
+            _renderTarget.DrawGlyphRun(new Vector2(baselineOriginX, baselineOriginY), glyphRun, brush, measuringMode);
             return Result.Ok;
         }
 
         public override bool IsPixelSnappingDisabled(object clientDrawingContext)
         {
-            return isPixelSnappingDisabled;
+            return _isPixelSnappingDisabled;
         }
 
-        public static void DrawTextLayout(RenderTarget renderTarget, Vector2 origin, TextLayout textLayout, Brush defaultForegroundBrush, DrawTextOptions options = DrawTextOptions.None)
-        {
-            if (options.HasFlag(DrawTextOptions.Clip))
-            {
-                renderTarget.PushAxisAlignedClip(new RectangleF(origin.X, origin.Y, textLayout.MaxWidth, textLayout.MaxHeight), renderTarget.AntialiasMode);
-                using (var renderer = new CustomBrushTextRenderer(renderTarget, defaultForegroundBrush, options.HasFlag(DrawTextOptions.NoSnap)))
-                    textLayout.Draw(renderer, origin.X, origin.Y);
-                renderTarget.PopAxisAlignedClip();
-            }
-            else
-            {
-                using (var renderer = new CustomBrushTextRenderer(renderTarget, defaultForegroundBrush, options.HasFlag(DrawTextOptions.NoSnap)))
-                    textLayout.Draw(renderer, origin.X, origin.Y);
-            }
-        }
+        //public static void DrawTextLayout(RenderTarget renderTarget, Vector2 origin, TextLayout textLayout, Brush defaultForegroundBrush, DrawTextOptions options = DrawTextOptions.None)
+        //{
+        //    if (options.HasFlag(DrawTextOptions.Clip))
+        //    {
+        //        renderTarget.PushAxisAlignedClip(new RectangleF(origin.X, origin.Y, textLayout.MaxWidth, textLayout.MaxHeight), renderTarget.AntialiasMode);
+        //        using (var renderer = new CustomBrushTextRenderer(renderTarget, defaultForegroundBrush, options.HasFlag(DrawTextOptions.NoSnap)))
+        //            textLayout.Draw(renderer, origin.X, origin.Y);
+        //        renderTarget.PopAxisAlignedClip();
+        //    }
+        //    else
+        //    {
+        //        using (var renderer = new CustomBrushTextRenderer(renderTarget, defaultForegroundBrush, options.HasFlag(DrawTextOptions.NoSnap)))
+        //            textLayout.Draw(renderer, origin.X, origin.Y);
+        //    }
+        //}
     }
 }

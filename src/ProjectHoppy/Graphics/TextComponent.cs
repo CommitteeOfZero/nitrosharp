@@ -1,18 +1,11 @@
-﻿using SciAdvNet.MediaLayer;
-using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace ProjectHoppy.Graphics
+﻿namespace ProjectHoppy.Graphics
 {
     public class TextComponent : Component
     {
-        public TextComponent()
-        {
-            CurrentGlyphColor = new Color(0, 0, 0, 0);
-        }
-
         public string Text { get; set; }
-        public Color CurrentGlyphColor;
+        public float CurrentGlyphOpacity { get; set; }
+        public int CurrentGlyphIndex { get; set; }
+
+        public bool ResetBrushFlag { get; set; }
     }
 }

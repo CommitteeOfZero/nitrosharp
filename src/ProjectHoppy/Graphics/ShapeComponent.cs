@@ -8,14 +8,14 @@ namespace ProjectHoppy.Graphics
         {
         }
 
-        public ShapeComponent(ShapeKind kind, Color fillColor)
+        public ShapeComponent(ShapeKind kind, RgbaValueF fillColor)
         {
             Kind = kind;
             FillColor = fillColor;
         }
 
         public ShapeKind Kind { get; set; }
-        public Color FillColor { get; set; }
+        public RgbaValueF FillColor { get; set; }
     }
 
     public enum ShapeKind

@@ -134,7 +134,7 @@ namespace ProjectHoppy
             return entities;
         }
         
-        public virtual void ProcessAll(IEnumerable<Entity> entities, float deltaMilliseconds)
+        public void ProcessAll(IEnumerable<Entity> entities, float deltaMilliseconds)
         {
             foreach (var item in SortEntities(entities))
             {
@@ -143,6 +143,14 @@ namespace ProjectHoppy
         }
 
         public abstract void Process(Entity entity, float deltaMilliseconds);
+
+        public virtual void OnEnityAdded(Entity e)
+        {
+        }
+
+        public virtual void OnEntityRemoved(Entity e)
+        {
+        }
 
         internal void RefreshLocalEntityList(IEnumerable<Entity> updatedEntities, IEnumerable<Entity> removedEntities)
         {
@@ -154,6 +162,7 @@ namespace ProjectHoppy
             foreach (var removed in removedEntities)
             {
                 _entities.Remove(removed);
+                OnEntityRemoved(removed);
             }
         }
 
@@ -164,6 +173,7 @@ namespace ProjectHoppy
                 if (entity.HasComponent(interest))
                 {
                     _entities.Add(entity);
+                    OnEnityAdded(entity);
                     break;
                 }
             }

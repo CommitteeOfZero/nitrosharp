@@ -19,4 +19,8 @@
   <ItemGroup>
     <Content Include="nss/**" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
+
+  <ItemGroup>
+    <None Include="Graphics\RenderSystem.Text.cs" />
+  </ItemGroup>
 </Project>
