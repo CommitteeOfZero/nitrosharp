@@ -53,7 +53,7 @@ namespace ProjectHoppy
         public bool HasComponent<T>() where T : Component => _components.ContainsKey(typeof(T));
         public bool HasComponent(Type type) => _components.ContainsKey(type);
 
-        public T GetComponent<T>() where T : Component => GetComponents<T>().First();
+        public T GetComponent<T>() where T : Component => GetComponents<T>().FirstOrDefault();
         public IEnumerable<T> GetComponents<T>() where T : Component
         {
             if (_components.TryGetValue(typeof(T), out var collection))

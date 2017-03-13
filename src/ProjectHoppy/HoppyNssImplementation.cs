@@ -46,8 +46,7 @@ namespace ProjectHoppy
         public override void AddRectangle(string entityName, int zLevel, NssCoordinate x, NssCoordinate y, int width, int height, NssColor color)
         {
             _entities.CreateEntity(entityName)
-                .WithComponent(new VisualComponent(x.Value, y.Value, width, height, zLevel))
-                .WithComponent(new ShapeComponent(ShapeKind.Rectangle, RgbaValueF.Black));
+                .WithComponent(new VisualComponent(VisualKind.Rectangle, x.Value, y.Value, width, height, zLevel));
         }
 
         //public override void AddTexture(string objectName, int zLevel, NssCoordinate x, NssCoordinate y, string fileOrObjectName)

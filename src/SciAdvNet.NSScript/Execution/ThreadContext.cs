@@ -5,7 +5,7 @@ namespace SciAdvNet.NSScript.Execution
 {
     internal sealed class ThreadContext
     {
-        private VariableTable _globals;
+        private readonly VariableTable _globals;
         private readonly Stack<Frame> _frameStack;
 
         public ThreadContext(Module module, Statement target, VariableTable globals)

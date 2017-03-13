@@ -4,14 +4,19 @@ using System.IO.Compression;
 
 namespace ProjectHoppy.Content
 {
-    public class ZipContentManager : ContentManager, IDisposable
+    public class ZipContentManager : ConcurrentContentManager, IDisposable
     {
         private readonly ZipArchive _archive;
 
-        public ZipContentManager(SciAdvNet.MediaLayer.Graphics.ResourceFactory resourceFactory, string archivePath)
-            : base(resourceFactory)
+        public ZipContentManager(string archivePath)
         {
             _archive = ZipFile.OpenRead(archivePath);
+        }
+
+        public void PreloadToc()
+        {
+            var randomEntry = _archive.Entries[0].Open();
+            randomEntry.Dispose();
         }
 
         public override Stream OpenStream(string path)

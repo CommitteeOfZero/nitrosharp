@@ -2,32 +2,23 @@
 using SciAdvNet.MediaLayer;
 using SciAdvNet.MediaLayer.Graphics;
 using System.Linq;
-using SciAdvNet.MediaLayer.Graphics.Text;
+using ProjectHoppy.Content;
 
 namespace ProjectHoppy.Graphics
 {
     public partial class RenderSystem : EntityProcessingSystem
     {
         private RenderContext _rc;
+        private readonly ConcurrentContentManager _content;
         private DrawingSession _drawingSession;
 
-        public RenderSystem(RenderContext renderContext)
+        public RenderSystem(RenderContext renderContext, ConcurrentContentManager contentManager)
             : base(typeof(VisualComponent))
         {
             _rc = renderContext;
+            _content = contentManager;
 
-            _textLayouts = new Dictionary<Entity, TextLayout>();
-            _textFormat = new TextFormat
-            {
-                FontFamily = "Noto Sans CJK JP",
-                FontSize = 20,
-                FontWeight = FontWeight.Normal,
-                VerticalAlignment = VerticalAlignment.Center
-            };
-
-            _defaultTextBrush = renderContext.ResourceFactory.CreateColorBrush(RgbaValueF.White, 0.0f);
-            _blackBrush = renderContext.ResourceFactory.CreateColorBrush(RgbaValueF.White, 1.0f);
-            _currentGlyphBrush = renderContext.ResourceFactory.CreateColorBrush(RgbaValueF.White, 0.0f);
+            CreateTextResources();
         }
 
         public override void Update(float deltaMilliseconds)
@@ -46,21 +37,34 @@ namespace ProjectHoppy.Graphics
         public override void Process(Entity entity, float deltaMilliseconds)
         {
             var visualComponent = entity.GetComponent<VisualComponent>();
-            switch (entity)
+            switch (visualComponent.Kind)
             {
-                case Entity e when entity.HasComponent<ShapeComponent>():
-                    DrawShape(visualComponent, e.GetComponent<ShapeComponent>());
+                case VisualKind.Rectangle:
+                    DrawRectangle(visualComponent);
                     break;
 
-                case Entity e when entity.HasComponent<TextComponent>():
-                    DrawText(e, visualComponent, e.GetComponent<TextComponent>());
+                case VisualKind.Texture:
+                    DrawTexture(visualComponent, entity.GetComponent<AssetComponent>());
+                    break;
+
+                case VisualKind.Text:
+                    DrawText(visualComponent, entity.GetComponent<TextComponent>());
                     break;
             }
         }
 
-        private void DrawShape(VisualComponent visualComponent, ShapeComponent shapeComponent)
+        private void DrawRectangle(VisualComponent visual)
         {
-            _drawingSession.FillRectangle(visualComponent.X, visualComponent.Y, visualComponent.Width, visualComponent.Height, shapeComponent.FillColor);
+            _drawingSession.FillRectangle(visual.X, visual.Y, visual.Width, visual.Height, visual.Color);
+        }
+
+        private void DrawTexture(VisualComponent visual, AssetComponent asset)
+        {
+            if (asset != null && _content.IsLoaded(asset.AssetPath))
+            {
+                var texture = _content.Get<Texture2D>(asset.AssetPath);
+                _drawingSession.DrawTexture(texture, visual.X, visual.Y, visual.Opacity);
+            }
         }
     }
 }

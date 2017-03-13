@@ -10,12 +10,28 @@ namespace ProjectHoppy.Graphics
 {
     public partial class RenderSystem
     {
-        private Dictionary<Entity, TextLayout> _textLayouts;
+        private Dictionary<TextComponent, TextLayout> _textLayouts;
         private TextFormat _textFormat;
 
         private ColorBrush _defaultTextBrush;
         private ColorBrush _blackBrush;
         private ColorBrush _currentGlyphBrush;
+
+        private void CreateTextResources()
+        {
+            _textLayouts = new Dictionary<TextComponent, TextLayout>();
+            _textFormat = new TextFormat
+            {
+                FontFamily = "Noto Sans CJK JP",
+                FontSize = 20,
+                FontWeight = FontWeight.Normal,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+
+            _defaultTextBrush = _rc.ResourceFactory.CreateColorBrush(RgbaValueF.White, 0.0f);
+            _blackBrush = _rc.ResourceFactory.CreateColorBrush(RgbaValueF.White, 1.0f);
+            _currentGlyphBrush = _rc.ResourceFactory.CreateColorBrush(RgbaValueF.White, 0.0f);
+        }
 
         public override void OnEnityAdded(Entity e)
         {
@@ -24,7 +40,7 @@ namespace ProjectHoppy.Graphics
                 var visual = e.GetComponent<VisualComponent>();
                 var txt = e.GetComponent<TextComponent>();
                 var layout = _rc.ResourceFactory.CreateTextLayout(txt.Text, _textFormat, visual.Width, visual.Height);
-                _textLayouts[e] = layout;
+                _textLayouts[txt] = layout;
             }
         }
 
@@ -33,19 +49,19 @@ namespace ProjectHoppy.Graphics
             base.OnEntityRemoved(e);
         }
 
-        private void DrawText(Entity e, VisualComponent visualComponent, TextComponent textComponent)
+        private void DrawText(VisualComponent visualComponent, TextComponent textComponent)
         {
-            var layout = _textLayouts[e];
+            var layout = _textLayouts[textComponent];
             //_currentGlyphBrush.Opacity = textComponent.CurrentGlyphOpacity;
-            ////layout.SetGlyphBrush(textComponent.CurrentGlyphIndex, _currentGlyphBrush);
+            //layout.SetGlyphBrush(textComponent.CurrentGlyphIndex, _currentGlyphBrush);
 
             //if (textComponent.ResetBrushFlag && textComponent.CurrentGlyphIndex > 0)
             //{
             //    textComponent.ResetBrushFlag = false;
-            //    //layout.SetGlyphBrush(textComponent.CurrentGlyphIndex - 1, _blackBrush);
+            //    layout.SetGlyphBrush(textComponent.CurrentGlyphIndex - 1, _blackBrush);
             //}
 
-            _drawingSession.DrawTextLayout(layout, new Vector2(visualComponent.X, visualComponent.Y), RgbaValueF.White);
+            _drawingSession.DrawTextLayout(layout, new Vector2(visualComponent.X, visualComponent.Y), _blackBrush.Color);
         }
     }
 }

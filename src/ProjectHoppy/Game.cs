@@ -4,6 +4,7 @@ using SciAdvNet.MediaLayer.Platform;
 using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 
 namespace ProjectHoppy
 {
@@ -13,24 +14,22 @@ namespace ProjectHoppy
         private readonly Stopwatch _gameTimer = new Stopwatch();
 
         protected RenderContext RenderContext { get; private set; }
-        protected ContentManager Content { get; private set; }
-        public Window Window { get; }
+        public Window Window { get; private set; }
         public EntityManager Entities { get; }
         public SystemManager Systems { get; }
 
         public Game()
         {
-            Window = new GameWindow();
-            Window.WindowState = WindowState.Normal;
-            RenderContext = RenderContext.Create(GraphicsBackend.DirectX, Window);
-
             Entities = new EntityManager();
             Systems = new SystemManager(Entities);
         }
 
-        public virtual ContentManager CreateContentManager()
+        public virtual Task Initialize()
         {
-            return new ContentManager(RenderContext.ResourceFactory);
+            Window = new GameWindow();
+            Window.WindowState = WindowState.Normal;
+            RenderContext = RenderContext.Create(GraphicsBackend.DirectX, Window);
+            return Task.FromResult(0);
         }
 
         public virtual void Update(float deltaMilliseconds)
@@ -57,7 +56,10 @@ namespace ProjectHoppy
             Shutdown();
         }
 
-        public abstract void Run();
+        public virtual Task Run()
+        {
+            return Initialize().ContinueWith(t => EnterLoop(), TaskContinuationOptions.ExecuteSynchronously);
+        }
 
         public virtual void Shutdown()
         {
