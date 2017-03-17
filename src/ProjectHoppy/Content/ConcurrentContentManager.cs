@@ -1,5 +1,4 @@
 ﻿using System;
-using SciAdvNet.MediaLayer.Graphics;
 using System.Threading.Tasks.Dataflow;
 using System.Collections.Concurrent;
 
@@ -10,7 +9,12 @@ namespace ProjectHoppy.Content
         private readonly ConcurrentDictionary<string, object> _loadedItems;
         private readonly BufferBlock<string> _workItems;
 
-        public ConcurrentContentManager()
+        public ConcurrentContentManager() : this(string.Empty)
+        {
+        }
+
+        public ConcurrentContentManager(string rootDirectory)
+            : base(rootDirectory)
         {
             _loadedItems = new ConcurrentDictionary<string, object>(StringComparer.OrdinalIgnoreCase);
             _workItems = new BufferBlock<string>();

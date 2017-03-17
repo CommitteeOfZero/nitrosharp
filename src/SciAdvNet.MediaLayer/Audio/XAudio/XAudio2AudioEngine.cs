@@ -4,17 +4,17 @@ namespace SciAdvNet.MediaLayer.Audio.XAudio
 {
     public class XAudio2AudioEngine : AudioEngine
     {
-        internal XAudio2 Device { get; }
-        private MasteringVoice _masteringVoice;
+        private readonly MasteringVoice _masteringVoice;
 
-        public XAudio2AudioEngine()
+        public XAudio2AudioEngine(int bitDepth, int sampleRate, int channelCount)
+            : base(bitDepth, sampleRate, channelCount)
         {
-            var flags = XAudio2Flags.None;
-            Device = new XAudio2(flags, ProcessorSpecifier.DefaultProcessor);
+            Device = new XAudio2(XAudio2Flags.None, ProcessorSpecifier.DefaultProcessor);
             _masteringVoice = new MasteringVoice(Device);
-
             ResourceFactory = new XAudio2ResourceFactory(this);
         }
+
+        internal XAudio2 Device { get; }
 
         public override void Dispose()
         {

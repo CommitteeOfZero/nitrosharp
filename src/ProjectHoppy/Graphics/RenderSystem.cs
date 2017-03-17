@@ -12,12 +12,15 @@ namespace ProjectHoppy.Graphics
         private readonly ConcurrentContentManager _content;
         private DrawingSession _drawingSession;
 
+        private ColorBrush _colorBrush;
+
         public RenderSystem(RenderContext renderContext, ConcurrentContentManager contentManager)
             : base(typeof(VisualComponent))
         {
             _rc = renderContext;
             _content = contentManager;
 
+            _colorBrush = renderContext.ResourceFactory.CreateColorBrush(RgbaValueF.White, 1.0f);
             CreateTextResources();
         }
 
@@ -55,7 +58,10 @@ namespace ProjectHoppy.Graphics
 
         private void DrawRectangle(VisualComponent visual)
         {
-            _drawingSession.FillRectangle(visual.X, visual.Y, visual.Width, visual.Height, visual.Color);
+            _colorBrush.Color = visual.Color;
+            _colorBrush.Opacity = visual.Opacity;
+
+            _drawingSession.FillRectangle(visual.X, visual.Y, visual.Width, visual.Height, _colorBrush);
         }
 
         private void DrawTexture(VisualComponent visual, AssetComponent asset)

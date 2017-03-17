@@ -6,7 +6,7 @@ using System;
 
 namespace SciAdvNet.MediaLayer.Graphics.DirectX
 {
-    internal class DXRenderContext : RenderContext
+    public class DXRenderContext : RenderContext
     {
         private readonly Window _window;
         private DXDrawingSession _session;
@@ -52,7 +52,9 @@ namespace SciAdvNet.MediaLayer.Graphics.DirectX
             SharpDX.Direct3D.FeatureLevel[] featureLevels =
             {
                 SharpDX.Direct3D.FeatureLevel.Level_11_1,
-                SharpDX.Direct3D.FeatureLevel.Level_11_0
+                SharpDX.Direct3D.FeatureLevel.Level_11_0,
+                SharpDX.Direct3D.FeatureLevel.Level_10_1,
+                SharpDX.Direct3D.FeatureLevel.Level_10_0
             };
 
             using (var defaultDevice = new SharpDX.Direct3D11.Device(DriverType.Hardware, DeviceCreationFlags.BgraSupport, featureLevels))

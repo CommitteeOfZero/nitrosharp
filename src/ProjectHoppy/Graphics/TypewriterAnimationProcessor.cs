@@ -1,10 +1,4 @@
-﻿using SciAdvNet.MediaLayer;
-using SciAdvNet.MediaLayer.Graphics;
-using System;
-using System.Collections.Generic;
-using System.Numerics;
-using System.Text;
-using System.Threading;
+﻿using SciAdvNet.MediaLayer.Graphics;
 
 namespace ProjectHoppy.Graphics
 {
@@ -24,14 +18,12 @@ namespace ProjectHoppy.Graphics
                 return;
             }
 
-
             text.CurrentGlyphOpacity += 1.0f * (deltaMilliseconds / (float)100);
 
             if (text.CurrentGlyphOpacity >= 1.0f || text.Text[text.CurrentGlyphIndex] == ' ')
             {
                 text.CurrentGlyphOpacity = 0.0f;
                 text.CurrentGlyphIndex++;
-                text.ResetBrushFlag = true;
             }
         }
     }

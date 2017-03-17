@@ -11,10 +11,17 @@ namespace ProjectHoppy.Content
     {
         private readonly Dictionary<Type, ContentLoader> _contentLoaders;
 
-        public ContentManager()
+        public ContentManager(string rootDirectory)
         {
+            RootDirectory = rootDirectory;
             _contentLoaders = new Dictionary<Type, ContentLoader>();
         }
+
+        public ContentManager() : this(string.Empty)
+        {
+        }
+
+        public string RootDirectory { get; }
 
         public void InitContentLoaders(SciAdvNet.MediaLayer.Graphics.ResourceFactory resourceFactory)
         {
@@ -85,7 +92,8 @@ namespace ProjectHoppy.Content
 
         public virtual Stream OpenStream(string path)
         {
-            return File.OpenRead(path);
+            string fullPath = Path.Combine(RootDirectory, path);
+            return File.OpenRead(fullPath);
         }
 
         private Exception UnsupportedFormat(string path)

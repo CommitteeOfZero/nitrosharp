@@ -6,7 +6,7 @@ using SciAdvNet.MediaLayer.Graphics.Text;
 
 namespace SciAdvNet.MediaLayer.Graphics.DirectX
 {
-    public class DXDrawingSession : DrawingSession, IDisposable
+    internal class DXDrawingSession : DrawingSession, IDisposable
     {
         private readonly DXRenderContext _rc;
 
@@ -44,6 +44,13 @@ namespace SciAdvNet.MediaLayer.Graphics.DirectX
             FillRectangle(new RectangleF(x, y, width, height), color);
         }
 
+        public override void FillRectangle(float x, float y, float width, float height, ColorBrush brush)
+        {
+            var rect = new RectangleF(x, y, width, height);
+            var dxBrush = brush as DXColorBrush;
+            _rc.DeviceContext.FillRectangle(Utils.DrawingRectToDxRectF(rect), dxBrush.DeviceBrush);
+        }
+
         public override void DrawTexture(Texture2D texture, RectangleF destRect, float opacity)
         {
             var d2dTexture = texture as DXTexture2D;
@@ -74,7 +81,7 @@ namespace SciAdvNet.MediaLayer.Graphics.DirectX
         public override void Dispose()
         {
             _rc.DeviceContext.EndDraw();
-            _rc.SwapChain.Present(0, SharpDX.DXGI.PresentFlags.None);
+            _rc.SwapChain.Present(1, SharpDX.DXGI.PresentFlags.None);
         }
     }
 }

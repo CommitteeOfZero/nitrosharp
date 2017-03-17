@@ -2,9 +2,6 @@
 using SharpDX.Multimedia;
 using SharpDX.XAudio2;
 using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace SciAdvNet.MediaLayer.Audio.XAudio
 {
@@ -13,11 +10,20 @@ namespace SciAdvNet.MediaLayer.Audio.XAudio
         private readonly XAudio2AudioEngine _engine;
         private SourceVoice _sourceVoice;
 
-        internal XAudio2AudioSource(XAudio2AudioEngine engine)
+        internal XAudio2AudioSource(XAudio2AudioEngine engine) : base(engine)
         {
             _engine = engine;
-            var waveFormat = new WaveFormat(44100, 32, 2);
-            _sourceVoice = new SourceVoice(_engine.Device, waveFormat);
+            var waveFormat = new WaveFormat(engine.SampleRate, engine.BitDepth, engine.ChannelCount);
+            _sourceVoice = new SourceVoice(engine.Device, waveFormat);
+            _sourceVoice.BufferEnd += RaiseBufferEnd;
+        }
+
+        public override event EventHandler<AudioBuffer> BufferEnd;
+
+        private void RaiseBufferEnd(IntPtr context)
+        {
+            int id = (int)context;
+            BufferEnd?.Invoke(this, _buffers[id]);
         }
 
         public override float Volume
@@ -26,48 +32,20 @@ namespace SciAdvNet.MediaLayer.Audio.XAudio
             set => _sourceVoice.SetVolume(value);
         }
 
-        public override void Play(AudioFile file)
+        internal override void StartAcceptingBuffers()
         {
-            //Task.Run(async () =>
-            //{
-            //    var samples = new float[file.Channels * file.SampleRate];
+            _sourceVoice.Start();
+        }
 
-            //    var bufferQueue = new Queue<AudioBuffer>();
-            //    _sourceVoice.BufferEnd += (IntPtr _) =>
-            //    {
-            //        bufferQueue.Dequeue().Stream.Dispose();
-            //    };
+        internal override void AcceptBuffer(AudioBuffer buffer)
+        {
+            base.AcceptBuffer(buffer);
 
-            //    _sourceVoice.Start();
+            var dataPointer = new DataPointer(buffer.StartPointer, buffer.Position);
+            var xaudio2Buffer = new SharpDX.XAudio2.AudioBuffer(dataPointer);
+            xaudio2Buffer.Context = (IntPtr)buffer.Id;
 
-            //    bool doneReading = false;
-            //    do
-            //    {
-            //        if (_sourceVoice.State.BuffersQueued < 3 && !doneReading)
-            //        {
-            //            int bytesRead = file.ReadSamples(samples, 0, samples.Length);
-            //            if (bytesRead == 0)
-            //            {
-            //                doneReading = true;
-            //                continue;
-            //            }
-
-            //            var dataStream = new DataStream(bytesRead * sizeof(float), true, true);
-            //            dataStream.WriteRange(samples, 0, bytesRead);
-            //            dataStream.Position = 0;
-
-            //            var buffer = new AudioBuffer(dataStream);
-            //            buffer.Flags = BufferFlags.EndOfStream;
-            //            bufferQueue.Enqueue(buffer);
-            //            _sourceVoice.SubmitSourceBuffer(buffer, null);
-            //        }
-
-            //        await Task.Delay(100).ConfigureAwait(false);
-            //    } while (_sourceVoice.State.BuffersQueued > 0);
-
-            //    _sourceVoice.DestroyVoice();
-            //    _sourceVoice.Dispose();
-            //});
+            _sourceVoice.SubmitSourceBuffer(xaudio2Buffer, null);
         }
     }
 }

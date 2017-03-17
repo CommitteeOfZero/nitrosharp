@@ -6,6 +6,10 @@
     <DefaultLanguage>en-US</DefaultLanguage>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+  </PropertyGroup>
+
   <ItemGroup>
     <Content Include="FFmpeg/**" CopyToOutputDirectory="PreserveNewest" />
     

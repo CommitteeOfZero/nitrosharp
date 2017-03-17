@@ -13,8 +13,8 @@ namespace ProjectHoppy.Graphics
         private Dictionary<TextComponent, TextLayout> _textLayouts;
         private TextFormat _textFormat;
 
-        private ColorBrush _defaultTextBrush;
-        private ColorBrush _blackBrush;
+        private int _prevGlyphIndex;
+        private ColorBrush _transparentTextBrush;
         private ColorBrush _currentGlyphBrush;
 
         private void CreateTextResources()
@@ -28,8 +28,7 @@ namespace ProjectHoppy.Graphics
                 VerticalAlignment = VerticalAlignment.Center
             };
 
-            _defaultTextBrush = _rc.ResourceFactory.CreateColorBrush(RgbaValueF.White, 0.0f);
-            _blackBrush = _rc.ResourceFactory.CreateColorBrush(RgbaValueF.White, 1.0f);
+            _transparentTextBrush = _rc.ResourceFactory.CreateColorBrush(RgbaValueF.White, 0.0f);
             _currentGlyphBrush = _rc.ResourceFactory.CreateColorBrush(RgbaValueF.White, 0.0f);
         }
 
@@ -52,16 +51,25 @@ namespace ProjectHoppy.Graphics
         private void DrawText(VisualComponent visualComponent, TextComponent textComponent)
         {
             var layout = _textLayouts[textComponent];
-            //_currentGlyphBrush.Opacity = textComponent.CurrentGlyphOpacity;
-            //layout.SetGlyphBrush(textComponent.CurrentGlyphIndex, _currentGlyphBrush);
 
-            //if (textComponent.ResetBrushFlag && textComponent.CurrentGlyphIndex > 0)
-            //{
-            //    textComponent.ResetBrushFlag = false;
-            //    layout.SetGlyphBrush(textComponent.CurrentGlyphIndex - 1, _blackBrush);
-            //}
+            _transparentTextBrush.Color = visualComponent.Color;
+            _transparentTextBrush.Opacity = 0;
+            _colorBrush.Color = visualComponent.Color;
+            _colorBrush.Opacity = visualComponent.Opacity;
+            _currentGlyphBrush.Color = visualComponent.Color;
+            _currentGlyphBrush.Opacity = textComponent.CurrentGlyphOpacity;
 
-            _drawingSession.DrawTextLayout(layout, new Vector2(visualComponent.X, visualComponent.Y), _blackBrush.Color);
+            if (textComponent.Animated)
+            {
+                if (textComponent.CurrentGlyphIndex != _prevGlyphIndex)
+                {
+                    layout.SetGlyphBrush(textComponent.CurrentGlyphIndex, _currentGlyphBrush);
+                    layout.SetGlyphBrush(_prevGlyphIndex, _colorBrush);
+                    _prevGlyphIndex = textComponent.CurrentGlyphIndex;
+                }
+            }
+
+            _drawingSession.DrawTextLayout(layout, new Vector2(visualComponent.X, visualComponent.Y), new RgbaValueF(1, 1, 1, 0));
         }
     }
 }

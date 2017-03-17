@@ -43,21 +43,8 @@ namespace SciAdvNet.MediaLayer
 
         public static implicit operator RgbaValueF(SharpDX.Mathematics.Interop.RawColor4 color)
         {
-            return new RgbaValueF(color.R / 255.0f, color.G / 255.0f, color.B / 255.0f, color.A / 255.0f);
+            return new RgbaValueF(color.R, color.G, color.B, color.A);
         }
-
-        //public Color(byte r, byte g, byte b, byte a)
-        //{
-        //    R = r;
-        //    G = g;
-        //    B = b;
-        //    A = a;
-        //}
-
-        //public Color(byte r, byte g, byte b)
-        //    : this(r, g, b, 255)
-        //{
-        //}
 
         public float R
         {

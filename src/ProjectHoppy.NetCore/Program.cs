@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 
 namespace ProjectHoppy.NetCore
 {
@@ -6,8 +7,13 @@ namespace ProjectHoppy.NetCore
     {
         public static void Main(string[] args)
         {
+            //Task.Run(() =>
+            //{
+            //    var noah = new TypewriterTest();
+            //    noah.Run();
+            //}).Wait();
             var noah = new TypewriterTest();
-            noah.Run();
+            noah.Run().Wait();
         }
     }
 }

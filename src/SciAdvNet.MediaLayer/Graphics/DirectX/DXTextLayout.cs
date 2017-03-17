@@ -1,11 +1,9 @@
 ﻿using SciAdvNet.MediaLayer.Graphics.Text;
 using System.Drawing;
-using System;
-using SharpDX.Direct2D1;
 
 namespace SciAdvNet.MediaLayer.Graphics.DirectX
 {
-    public class DXTextLayout : TextLayout
+    internal class DXTextLayout : TextLayout
     {
         private DXRenderContext _rc;
         internal SharpDX.DirectWrite.TextLayout DWriteLayout;

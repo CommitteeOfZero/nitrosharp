@@ -6,17 +6,16 @@ namespace ProjectHoppy.Content
 {
     public class ZipContentManager : ConcurrentContentManager, IDisposable
     {
-        private readonly ZipArchive _archive;
+        internal readonly ZipArchive _archive;
 
         public ZipContentManager(string archivePath)
         {
-            _archive = ZipFile.OpenRead(archivePath);
+            _archive = ZipFile.Open(archivePath, ZipArchiveMode.Update);
         }
 
         public void PreloadToc()
         {
-            var randomEntry = _archive.Entries[0].Open();
-            randomEntry.Dispose();
+            var randomEntry = _archive.Entries[0];
         }
 
         public override Stream OpenStream(string path)

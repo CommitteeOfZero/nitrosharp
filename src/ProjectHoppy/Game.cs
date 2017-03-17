@@ -1,9 +1,10 @@
-﻿using ProjectHoppy.Content;
-using SciAdvNet.MediaLayer.Graphics;
+﻿using SciAdvNet.MediaLayer.Graphics;
+using SciAdvNet.MediaLayer.Graphics.DirectX;
 using SciAdvNet.MediaLayer.Platform;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
-using System.Runtime.InteropServices;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace ProjectHoppy
@@ -13,23 +14,46 @@ namespace ProjectHoppy
         private volatile bool _running;
         private readonly Stopwatch _gameTimer = new Stopwatch();
 
-        protected RenderContext RenderContext { get; private set; }
+        private readonly List<Action> _startupTasks;
+        private bool _allowNewStartupTasks;
+
+        public RenderContext RenderContext { get; private set; }
         public Window Window { get; private set; }
         public EntityManager Entities { get; }
         public SystemManager Systems { get; }
 
         public Game()
         {
-            Entities = new EntityManager();
+            Entities = CreateEntityManager();
             Systems = new SystemManager(Entities);
+
+            _startupTasks = new List<Action>();
+            _allowNewStartupTasks = true;
         }
 
-        public virtual Task Initialize()
+        public virtual EntityManager CreateEntityManager() => new EntityManager();
+
+        public void AddStartupTask(Action action)
+        {
+            if (!_allowNewStartupTasks)
+            {
+                throw new InvalidOperationException();
+            }
+
+            _startupTasks.Add(action);
+        }
+
+        private void InitializeGraphics()
         {
             Window = new GameWindow();
             Window.WindowState = WindowState.Normal;
-            RenderContext = RenderContext.Create(GraphicsBackend.DirectX, Window);
-            return Task.FromResult(0);
+            RenderContext = new DXRenderContext(Window);
+
+            OnGraphicsInitialized();
+        }
+
+        public virtual void OnGraphicsInitialized()
+        {
         }
 
         public virtual void Update(float deltaMilliseconds)
@@ -56,9 +80,11 @@ namespace ProjectHoppy
             Shutdown();
         }
 
-        public virtual Task Run()
+        public async Task Run()
         {
-            return Initialize().ContinueWith(t => EnterLoop(), TaskContinuationOptions.ExecuteSynchronously);
+            await Task.WhenAll(_startupTasks.Select(x => Task.Run(x)));
+            InitializeGraphics();
+            EnterLoop();
         }
 
         public virtual void Shutdown()

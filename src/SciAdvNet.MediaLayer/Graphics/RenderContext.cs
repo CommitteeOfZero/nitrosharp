@@ -1,6 +1,4 @@
-﻿using SciAdvNet.MediaLayer.Graphics.DirectX;
-using SciAdvNet.MediaLayer.Platform;
-using System;
+﻿using System;
 using System.Collections.Generic;
 
 namespace SciAdvNet.MediaLayer.Graphics
@@ -14,19 +12,8 @@ namespace SciAdvNet.MediaLayer.Graphics
             _gpuResources = new List<DeviceResource>();
         }
 
-        internal GraphicsBackend Backend { get; }
         public ResourceFactory ResourceFactory { get; protected set; }
         public abstract DrawingSession NewSession(RgbaValueF clearColor);
-
-        public static RenderContext Create(GraphicsBackend backend, Window window)
-        {
-            switch (backend)
-            {
-                case GraphicsBackend.DirectX:
-                default:
-                    return new DXRenderContext(window);
-            }
-        }
 
         internal void AddDeviceResource(DeviceResource resource)
         {

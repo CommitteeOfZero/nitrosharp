@@ -3,8 +3,6 @@
   <PropertyGroup>
     <TargetFramework>netstandard1.4</TargetFramework>
     <PackageTargetFallback>portable-net45+win8+wpa81</PackageTargetFallback>
-    <ApplicationIcon />
-    <Win32Resource />
   </PropertyGroup>
 
   <ItemGroup>
@@ -13,14 +11,10 @@
   </ItemGroup>
   
   <ItemGroup>
-    <PackageReference Include="System.Composition" Version="1.0.31" />
-  </ItemGroup>
-
-  <ItemGroup>
     <Content Include="nss/**" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
-
+  
   <ItemGroup>
-    <None Include="Graphics\RenderSystem.Text.cs" />
+    <PackageReference Include="Newtonsoft.Json" Version="9.0.1" />
   </ItemGroup>
 </Project>

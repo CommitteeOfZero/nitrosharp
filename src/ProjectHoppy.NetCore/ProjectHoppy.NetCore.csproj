@@ -8,7 +8,19 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Content Include="hoppy.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\ProjectHoppy\ProjectHoppy.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Stay Alive.m4a">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>

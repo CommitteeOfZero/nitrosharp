@@ -1,11 +1,10 @@
 ﻿using SharpDX.Direct2D1;
 using SharpDX.WIC;
 using System.IO;
-using System;
 
 namespace SciAdvNet.MediaLayer.Graphics.DirectX
 {
-    public class DXTexture2D : Texture2D
+    internal class DXTexture2D : Texture2D
     {
         private readonly DXRenderContext _rc;
 
@@ -27,9 +26,10 @@ namespace SciAdvNet.MediaLayer.Graphics.DirectX
             using (stream)
             using (var memoryStream = new MemoryStream((int)stream.Length))
             {
-                stream.CopyTo(memoryStream);
-                memoryStream.Seek(0, SeekOrigin.Begin);
-                using (var bitmapDecoder = new BitmapDecoder(_rc.WicFactory, memoryStream, DecodeOptions.CacheOnDemand))
+                //stream.CopyTo(memoryStream);
+                //memoryStream.Seek(0, SeekOrigin.Begin);
+                var wicStream = new WICStream(_rc.WicFactory, stream);
+                using (var bitmapDecoder = new BitmapDecoder(_rc.WicFactory, wicStream, DecodeOptions.CacheOnDemand))
                 {
                     var frame = bitmapDecoder.GetFrame(0);
                     var converter = new FormatConverter(_rc.WicFactory);

@@ -2,7 +2,7 @@
 
 namespace SciAdvNet.MediaLayer.Graphics.DirectX
 {
-    public class DXColorBrush : ColorBrush
+    internal class DXColorBrush : ColorBrush
     {
         public DXColorBrush(RenderContext renderContext, RgbaValueF color, float opacity)
             : base(renderContext, color, opacity)
