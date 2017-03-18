@@ -85,14 +85,6 @@ namespace SciAdvNet.MediaLayer.Audio
             OriginalChannelCount = pCodecContext->channels;
 
             Duration = TimeSpan.FromSeconds(pFormatContext->duration / ffmpeg.AV_TIME_BASE);
-
-            //Seek(TimeSpan.FromSeconds(54));
-            //DecodeFrame();
-
-            //var dts = _context.Stream->cur_dts;
-            //var pts = _context.Stream->pts;
-            //var streamTs = _context.CurrentFrame->best_effort_timestamp;
-            //long ms = StreamToBclTimestamp(streamTs);
         }
 
         internal override void OnAttachedToSource()
@@ -140,11 +132,11 @@ namespace SciAdvNet.MediaLayer.Audio
 
                     // The seek target is in the current frame now.
                     // We still might need to discard some samples to get as close as possible to the specified timestamp.
-                    long delta = _seekTargetInStreamUnits - PositionInStreamUnits;
-                    nbSamplesToDiscard = StreamTimeToSamples(delta);
-                    discardFromStart = true;
+                    //long delta = _seekTargetInStreamUnits - PositionInStreamUnits;
+                    //nbSamplesToDiscard = StreamTimeToSamples(delta);
+                    //discardFromStart = true;
                     _seeking = false;
-                    needMoreFrames = false;
+                    //needMoreFrames = false;
                 }
                 else if (Looping)
                 {
@@ -153,13 +145,14 @@ namespace SciAdvNet.MediaLayer.Audio
                     if (Timestamp_IsInCurrentFrame(_loopEndInStreamUnits))
                     {
                         long delta = _loopEndInStreamUnits - PositionInStreamUnits;
-                        nbSamplesToDiscard = StreamTimeToSamples(delta);
+                        //nbSamplesToDiscard = StreamTimeToSamples(delta);
                         discardFromStart = false;
                         needMoreFrames = false;
                         Seek(LoopStart);
+                        continue;
                     }
                 }
-                
+
                 if (needMoreFrames)
                 {
                     if (ReadFrame() == AVError_Eof)
@@ -170,25 +163,68 @@ namespace SciAdvNet.MediaLayer.Audio
 
                 if (nbSamplesToDiscard > 0 && discardFromStart)
                 {
-                    IncrementDataPointers(nbSamplesToDiscard  * 4);
+                    continue;
+                    //byte* b = (byte*)outBuffer.CurrentPointer;
+                    ////discard = 0;
+                    //pFrame->extended_data[0] -= discard * _targetBytesPerSample;
+                    //pFrame->extended_data[1] -= discard * _targetBytesPerSample;
+                    ////byte* b =  (byte*)ffmpeg.av_malloc(44100 * 2);
+                    //ffmpeg.swr_convert(_context.ResamplerContext, &b, pFrame->nb_samples, pFrame->extended_data, pFrame->nb_samples);
+
+                    //byte* dst = (byte*)outBuffer.CurrentPointer;
+                    //memcpy(dst, b + discard * 2, result);
+                    unsafe
+                    {
+                        byte* b = (byte*)ffmpeg.av_malloc(44100 * 2);
+                        int ns = _context.CurrentFrame->nb_samples - nbSamplesToDiscard;
+                        ffmpeg.swr_convert(_context.ResamplerContext, &b, _context.CurrentFrame->nb_samples, _context.CurrentFrame->extended_data, _context.CurrentFrame->nb_samples);
+
+                        int writ = _targetBytesPerSample * ns * TargetChannelCount;
+                        memcpy((byte*)buffer.CurrentPointer, b + nbSamplesToDiscard * 2, writ);
+
+                        buffer.AdvancePosition(writ);
+                        _maxFrameSize = Math.Max(_maxFrameSize, writ - nbSamplesToDiscard * 2);
+                    }
+
+                    //IncrementDataPointers(nbSamplesToDiscard * _targetBytesPerSample);
                 }
-                unsafe
+                //else
                 {
-                    int written = WriteToBuffer(_context.CurrentFrame, buffer, _context.CurrentFrame->nb_samples - nbSamplesToDiscard);
-                    buffer.AdvancePosition(written);
-                    _maxFrameSize = Math.Max(_maxFrameSize, written);
+                    unsafe
+                    {
+                        int written = WriteToBuffer(_context.CurrentFrame, buffer, _context.CurrentFrame->nb_samples - nbSamplesToDiscard);
+                        buffer.AdvancePosition(written);
+                        _maxFrameSize = Math.Max(_maxFrameSize, written);
+                    }
                 }
 
-                if (discardFromStart)
-                {
-                    IncrementDataPointers(-nbSamplesToDiscard * 4);
-                }
-                
+                //if (discardFromStart)
+                //{
+                //    IncrementDataPointers(-nbSamplesToDiscard * _targetBytesPerSample);
+                //}
+
                 // Potential buffer overflow, nya.
                 // Shall not pass any code review.
             } while (buffer.FreeSpace >= _maxFrameSize);
 
             return true;
+        }
+
+        public unsafe static void memcpy(void* dst, void* src, int count)
+        {
+            const int blockSize = 4096;
+            byte[] block = new byte[blockSize];
+            byte* d = (byte*)dst, s = (byte*)src;
+            for (int i = 0, step; i < count; i += step, d += step, s += step)
+            {
+                step = count - i;
+                if (step > blockSize)
+                {
+                    step = blockSize;
+                }
+                Marshal.Copy(new IntPtr(s), block, 0, step);
+                Marshal.Copy(block, 0, new IntPtr(d), step);
+            }
         }
 
         private unsafe void IncrementDataPointers(int incrementBy)
@@ -203,14 +239,16 @@ namespace SciAdvNet.MediaLayer.Audio
                 for (int i = 0; i < OriginalChannelCount; i++)
                 {
                     _context.CurrentFrame->extended_data[i] += incrementBy;
+                    //_context.CurrentFrame->data[(uint)i] += incrementBy;
                 }
             }
             else
             {
-                _context.CurrentFrame->extended_data[0] += incrementBy * OriginalChannelCount;
+                _context.CurrentFrame->extended_data[0] += incrementBy;
+                //_context.CurrentFrame->data[0] += incrementBy;
             }
         }
-        
+
         private unsafe uint ReadFrame()
         {
             uint readResult;
