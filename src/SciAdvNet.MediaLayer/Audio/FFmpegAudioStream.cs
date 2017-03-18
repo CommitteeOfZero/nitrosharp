@@ -7,6 +7,7 @@ namespace SciAdvNet.MediaLayer.Audio
 {
     public class FFmpegAudioStream : AudioStream
     {
+        private const uint AVError_Eof = 0xdfb9b0bb;
         private const int AVError_EAgain = -11;
 
         private static AVRational s_msTimeBase;
@@ -19,10 +20,15 @@ namespace SciAdvNet.MediaLayer.Audio
 
         private Context _context;
         private AVSampleFormat _targetSampleFormat;
+        private bool _planarAudio = true;
         private int _targetBytesPerSample;
-        private int _frameSize;
+        private int _maxFrameSize;
 
-        private long _positionInSamples;
+        private bool _seeking;
+        private long _seekTargetInStreamUnits;
+
+        private long _loopStartInStreamUntis;
+        private long _loopEndInStreamUnits;
 
         static FFmpegAudioStream()
         {
@@ -35,20 +41,8 @@ namespace SciAdvNet.MediaLayer.Audio
             OpenStream();
         }
 
-        public override TimeSpan Position => TimeSpan.FromSeconds((double)_positionInSamples / OriginalSampleRate);
-
-        private unsafe long StreamToBclTimestamp(long streamTimestamp)
-        {
-            var streamTimeBase = _context.Stream->time_base;
-            return ffmpeg.av_rescale_q(streamTimestamp, streamTimeBase, s_msTimeBase);
-        }
-
-        private unsafe long BclToStreamTimestamp(TimeSpan timeSpan)
-        {
-            var streamTimeBase = _context.Stream->time_base;
-            long msRounded = (long)Math.Round(timeSpan.TotalMilliseconds);
-            return ffmpeg.av_rescale_q(msRounded, s_msTimeBase, streamTimeBase);
-        }
+        private unsafe long FrameDurationInStreamUnits => NbSamplesToStreamTime(_context.CurrentFrame->nb_samples);
+        private unsafe long PositionInStreamUnits => _context.CurrentFrame->best_effort_timestamp;
 
         private unsafe void OpenStream()
         {
@@ -92,13 +86,13 @@ namespace SciAdvNet.MediaLayer.Audio
 
             Duration = TimeSpan.FromSeconds(pFormatContext->duration / ffmpeg.AV_TIME_BASE);
 
-            Seek(TimeSpan.FromSeconds(54));
-            ReceiveFrame();
+            //Seek(TimeSpan.FromSeconds(54));
+            //DecodeFrame();
 
-            var dts = _context.Stream->cur_dts;
-            var pts = _context.Stream->pts;
-            var streamTs = _context.CurrentFrame->best_effort_timestamp;
-            long ms = StreamToBclTimestamp(streamTs);
+            //var dts = _context.Stream->cur_dts;
+            //var pts = _context.Stream->pts;
+            //var streamTs = _context.CurrentFrame->best_effort_timestamp;
+            //long ms = StreamToBclTimestamp(streamTs);
         }
 
         internal override void OnAttachedToSource()
@@ -128,140 +122,192 @@ namespace SciAdvNet.MediaLayer.Audio
         {
             do
             {
-                int decodedBytes;
-                if ((decodedBytes = DecodeFrame(buffer)) == 0)
+                int nbSamplesToDiscard = 0;
+                bool discardFromStart = false;
+                bool needMoreFrames = true;
+                if (_seeking)
                 {
-                    return false;
+                    // av_seek_frame isn't always precise enough.
+                    // Sometimes it's required to call av_read_frame several times after seeking
+                    // in order to reach the frame that contains the specified timestamp.
+                    while (!Timestamp_IsInCurrentFrame(_seekTargetInStreamUnits))
+                    {
+                        if (ReadFrame() == AVError_Eof)
+                        {
+                            return false;
+                        }
+                    }
+
+                    // The seek target is in the current frame now.
+                    // We still might need to discard some samples to get as close as possible to the specified timestamp.
+                    long delta = _seekTargetInStreamUnits - PositionInStreamUnits;
+                    nbSamplesToDiscard = StreamTimeToSamples(delta);
+                    discardFromStart = true;
+                    _seeking = false;
+                    needMoreFrames = false;
+                }
+                else if (Looping)
+                {
+                    // If LoopEnd is in this frame, we need to read only a certain part of it,
+                    // and then set the position to LoopStart.
+                    if (Timestamp_IsInCurrentFrame(_loopEndInStreamUnits))
+                    {
+                        long delta = _loopEndInStreamUnits - PositionInStreamUnits;
+                        nbSamplesToDiscard = StreamTimeToSamples(delta);
+                        discardFromStart = false;
+                        needMoreFrames = false;
+                        Seek(LoopStart);
+                    }
+                }
+                
+                if (needMoreFrames)
+                {
+                    if (ReadFrame() == AVError_Eof)
+                    {
+                        return false;
+                    }
                 }
 
-                buffer.AdvancePosition(decodedBytes);
-            } while (buffer.FreeSpace >= _frameSize);
+                if (nbSamplesToDiscard > 0 && discardFromStart)
+                {
+                    IncrementDataPointers(nbSamplesToDiscard  * 4);
+                }
+                unsafe
+                {
+                    int written = WriteToBuffer(_context.CurrentFrame, buffer, _context.CurrentFrame->nb_samples - nbSamplesToDiscard);
+                    buffer.AdvancePosition(written);
+                    _maxFrameSize = Math.Max(_maxFrameSize, written);
+                }
+
+                if (discardFromStart)
+                {
+                    IncrementDataPointers(-nbSamplesToDiscard * 4);
+                }
+                
+                // Potential buffer overflow, nya.
+                // Shall not pass any code review.
+            } while (buffer.FreeSpace >= _maxFrameSize);
 
             return true;
         }
 
-        private bool shit = false;
-        private int _frameNumber = 0;
-        private unsafe int DecodeFrame(AudioBuffer outBuffer)
+        private unsafe void IncrementDataPointers(int incrementBy)
         {
-            start:
-            int discard = 0;
-
-            var pFrame = _context.CurrentFrame;
-            var pPacket = _context.Packet;
-            int receiveResult;
-            do
+            if (incrementBy == 0)
             {
-                if (ffmpeg.av_read_frame(_context.FormatContext, pPacket) != 0)
+                return;
+            }
+
+            if (_planarAudio)
+            {
+                for (int i = 0; i < OriginalChannelCount; i++)
                 {
-                    ffmpeg.av_packet_unref(pPacket);
-                    return 0;
+                    _context.CurrentFrame->extended_data[i] += incrementBy;
                 }
-
-                ThrowIfNotZero(ffmpeg.avcodec_send_packet(_context.CodecContext, pPacket));
-                ffmpeg.av_packet_unref(pPacket);
-                receiveResult = ffmpeg.avcodec_receive_frame(_context.CodecContext, pFrame);
-            } while (receiveResult == AVError_EAgain);
-
-            _frameSize = Math.Max(_frameSize, _targetBytesPerSample * pFrame->nb_samples * pFrame->channels);
-            _positionInSamples = pFrame->best_effort_timestamp + pFrame->nb_samples;
-
-            if (shit && LoopStart.TotalSeconds * OriginalSampleRate - _positionInSamples > pFrame->nb_samples)
-            {
-                goto start;
             }
-
-            if (shit && LoopStart.TotalSeconds * OriginalSampleRate > _positionInSamples)
+            else
             {
-                discard = (int)Math.Round(LoopStart.TotalSeconds * OriginalSampleRate - _positionInSamples);
-                shit = false;
-
-                int result = _targetBytesPerSample * (pFrame->nb_samples - discard) * pFrame->channels;
-
-                byte* b = (byte*)outBuffer.CurrentPointer;
-                //discard = 0;
-                pFrame->extended_data[0] -= discard * _targetBytesPerSample;
-                pFrame->extended_data[1] -= discard * _targetBytesPerSample;
-                //byte* b =  (byte*)ffmpeg.av_malloc(44100 * 2);
-                ffmpeg.swr_convert(_context.ResamplerContext, &b, pFrame->nb_samples, pFrame->extended_data, pFrame->nb_samples);
-
-                byte* dst = (byte*)outBuffer.CurrentPointer;
-                memcpy(dst, b + discard * 2, result);
-
-                return result;
+                _context.CurrentFrame->extended_data[0] += incrementBy * OriginalChannelCount;
             }
-
-            if (Looping && _positionInSamples >= LoopEnd.TotalSeconds * OriginalSampleRate)
-            {
-                discard = (int)Math.Round(_positionInSamples - LoopEnd.TotalSeconds * OriginalSampleRate);
-                Seek(LoopStart);
-                shit = true;
-            }
-
-            
-
-            int decodedBytes = _targetBytesPerSample * (pFrame->nb_samples - discard) * pFrame->channels;
-
-            byte* pBuf = (byte*)outBuffer.CurrentPointer;
-            ffmpeg.swr_convert(_context.ResamplerContext, &pBuf, pFrame->nb_samples - discard, pFrame->extended_data, pFrame->nb_samples - discard);
-
-            return decodedBytes;
         }
-
-        private unsafe void ReceiveFrame()
+        
+        private unsafe uint ReadFrame()
         {
+            uint readResult;
             int receiveResult;
             do
             {
-                if (ffmpeg.av_read_frame(_context.FormatContext, _context.Packet) != 0)
+                if ((readResult = (uint)ffmpeg.av_read_frame(_context.FormatContext, _context.Packet)) != 0)
                 {
                     ffmpeg.av_packet_unref(_context.Packet);
-                    return;
+                    return readResult == AVError_Eof ? AVError_Eof : throw EncodingFailed("av_read_frame() returned a non-zero value.");
                 }
-
-                ThrowIfNotZero(ffmpeg.avcodec_send_packet(_context.CodecContext, _context.Packet));
-                ffmpeg.av_packet_unref(_context.Packet);
-                receiveResult = ffmpeg.avcodec_receive_frame(_context.CodecContext, _context.CurrentFrame);
+                try
+                {
+                    ThrowIfNotZero(ffmpeg.avcodec_send_packet(_context.CodecContext, _context.Packet));
+                    receiveResult = ffmpeg.avcodec_receive_frame(_context.CodecContext, _context.CurrentFrame);
+                }
+                catch
+                {
+                    throw;
+                }
+                finally
+                {
+                    ffmpeg.av_packet_unref(_context.Packet);
+                }
             } while (receiveResult == AVError_EAgain);
+
+            ThrowIfNotZero(receiveResult);
+            return 0;
         }
 
-        public unsafe static void memcpy(void* dst, void* src, int count)
+        private unsafe int WriteToBuffer(AVFrame* frame, AudioBuffer buffer, int nbSamples)
         {
-            const int blockSize = 4096;
-            byte[] block = new byte[blockSize];
-            byte* d = (byte*)dst, s = (byte*)src;
-            for (int i = 0, step; i < count; i += step, d += step, s += step)
-            {
-                step = count - i;
-                if (step > blockSize)
-                {
-                    step = blockSize;
-                }
-                Marshal.Copy(new IntPtr(s), block, 0, step);
-                Marshal.Copy(block, 0, new IntPtr(d), step);
-            }
+            byte* pBuf = (byte*)buffer.CurrentPointer;
+            ffmpeg.swr_convert(_context.ResamplerContext, &pBuf, nbSamples, frame->extended_data, nbSamples);
+
+            return _targetBytesPerSample * nbSamples * frame->channels;
         }
 
         public override void Seek(TimeSpan timeCode)
         {
-            UnsafeSeek(timeCode);
+            long timestamp = BclToStreamTimestamp(timeCode);
+            Seek(timestamp);
         }
 
-        private unsafe void UnsafeSeek(TimeSpan timeCode)
+        private unsafe void Seek(long streamTimestamp)
         {
-            long timestamp = BclToStreamTimestamp(timeCode);
-            //var flags = timestamp < _positionInSamples ? ffmpeg.AVSEEK_FLAG_BACKWARD : 0;
-
-            ffmpeg.av_seek_frame(_context.FormatContext, 0, timestamp, ffmpeg.AVSEEK_FLAG_BACKWARD);
+            ffmpeg.av_seek_frame(_context.FormatContext, 0, streamTimestamp, ffmpeg.AVSEEK_FLAG_BACKWARD);
             ffmpeg.avcodec_flush_buffers(_context.CodecContext);
 
-            //while (_context.CurrentFrame->best_effort_timestamp)
+            _seeking = true;
+            _seekTargetInStreamUnits = streamTimestamp;
         }
 
-        public override void Dispose()
+        public override void SetLoop(TimeSpan loopStart, TimeSpan loopEnd)
         {
-            _context.Dispose();
-            base.Dispose();
+            base.SetLoop(loopStart, loopEnd);
+            _loopStartInStreamUntis = BclToStreamTimestamp(loopStart);
+            _loopEndInStreamUnits = BclToStreamTimestamp(loopEnd);
+        }
+
+        private bool Timestamp_IsInCurrentFrame(long streamTimestamp)
+        {
+            if (PositionInStreamUnits < 0)
+            {
+                return false;
+            }
+
+            long nextFramePos = PositionInStreamUnits + FrameDurationInStreamUnits;
+            return streamTimestamp >= PositionInStreamUnits && nextFramePos >= streamTimestamp;
+        }
+
+        private unsafe TimeSpan StreamToBclTimestamp(long streamTimestamp)
+        {
+            var streamTimeBase = _context.Stream->time_base;
+            long ms = ffmpeg.av_rescale_q(streamTimestamp, streamTimeBase, s_msTimeBase);
+            return TimeSpan.FromMilliseconds(ms);
+        }
+
+        private unsafe long BclToStreamTimestamp(TimeSpan timeSpan)
+        {
+            var streamTimeBase = _context.Stream->time_base;
+            long msRounded = (long)Math.Round(timeSpan.TotalMilliseconds);
+            return ffmpeg.av_rescale_q(msRounded, s_msTimeBase, streamTimeBase);
+        }
+
+        private unsafe long NbSamplesToStreamTime(int nbSamples)
+        {
+            var streamTimeBase = _context.Stream->time_base;
+            var originalTimeBase = new AVRational { num = 1, den = OriginalSampleRate };
+            return ffmpeg.av_rescale_q(nbSamples, originalTimeBase, streamTimeBase);
+        }
+
+        private unsafe int StreamTimeToSamples(long streamTime)
+        {
+            var streamTimeBase = _context.Stream->time_base;
+            var newTimeBase = new AVRational { num = 1, den = OriginalSampleRate };
+            return (int)ffmpeg.av_rescale_q(streamTime, streamTimeBase, newTimeBase);
         }
 
         private unsafe int IOReadPacket(void* opaque, byte* buf, int buf_size)
@@ -288,12 +334,23 @@ namespace SciAdvNet.MediaLayer.Audio
             return FileStream.Seek(offset, origin);
         }
 
+        public override void Dispose()
+        {
+            _context.Dispose();
+            base.Dispose();
+        }
+
         private static void ThrowIfNotZero(int result)
         {
             if (result != 0)
             {
                 throw new AudioDecodingException();
             }
+        }
+
+        private Exception EncodingFailed(string details)
+        {
+            return new AudioDecodingException($"ERRA: {details}");
         }
 
         private static AVSampleFormat BitDepthToSampleFormat(int bitDepth)
@@ -308,16 +365,14 @@ namespace SciAdvNet.MediaLayer.Audio
             }
         }
 
-        private TimeSpan SamplesToTimeCode(long nbSamples) => TimeSpan.FromSeconds((double)nbSamples / OriginalSampleRate);
-
         private unsafe class Context : IDisposable
         {
             public byte* UnmanagedIOBuffer;
             public AVFormatContext* FormatContext;
             public AVCodecContext* CodecContext;
             public SwrContext* ResamplerContext;
-            internal AVPacket* Packet;
-            internal AVFrame* CurrentFrame;
+            public AVPacket* Packet;
+            public AVFrame* CurrentFrame;
             public AVStream* Stream;
 
             public void Dispose()

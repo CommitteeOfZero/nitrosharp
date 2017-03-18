@@ -20,7 +20,7 @@ namespace SciAdvNet.MediaLayer.Audio
         public int TargetChannelCount { get; internal set; }
 
         public TimeSpan Duration { get; protected set; }
-        public abstract TimeSpan Position { get; }
+        //public abstract TimeSpan Position { get; }
 
         public bool Looping { get; private set; }
         public TimeSpan LoopStart { get; private set; }
@@ -34,7 +34,7 @@ namespace SciAdvNet.MediaLayer.Audio
             SetLoop(TimeSpan.Zero, Duration);
         }
 
-        public void SetLoop(TimeSpan loopStart, TimeSpan loopEnd)
+        public virtual void SetLoop(TimeSpan loopStart, TimeSpan loopEnd)
         {
             Looping = true;
             LoopStart = loopStart;
