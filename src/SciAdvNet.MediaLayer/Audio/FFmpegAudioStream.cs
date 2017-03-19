@@ -1,5 +1,6 @@
 ﻿using FFmpeg.AutoGen;
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 
@@ -114,9 +115,6 @@ namespace SciAdvNet.MediaLayer.Audio
         {
             do
             {
-                int nbSamplesToDiscard = 0;
-                bool discardFromStart = false;
-                bool needMoreFrames = true;
                 if (_seeking)
                 {
                     // av_seek_frame isn't always precise enough.
@@ -130,13 +128,8 @@ namespace SciAdvNet.MediaLayer.Audio
                         }
                     }
 
-                    // The seek target is in the current frame now.
-                    // We still might need to discard some samples to get as close as possible to the specified timestamp.
-                    //long delta = _seekTargetInStreamUnits - PositionInStreamUnits;
-                    //nbSamplesToDiscard = StreamTimeToSamples(delta);
-                    //discardFromStart = true;
+                    ReadFrame();
                     _seeking = false;
-                    //needMoreFrames = false;
                 }
                 else if (Looping)
                 {
@@ -144,64 +137,23 @@ namespace SciAdvNet.MediaLayer.Audio
                     // and then set the position to LoopStart.
                     if (Timestamp_IsInCurrentFrame(_loopEndInStreamUnits))
                     {
-                        long delta = _loopEndInStreamUnits - PositionInStreamUnits;
-                        //nbSamplesToDiscard = StreamTimeToSamples(delta);
-                        discardFromStart = false;
-                        needMoreFrames = false;
+                        Debug.WriteLine("looping");
                         Seek(LoopStart);
                         continue;
                     }
                 }
 
-                if (needMoreFrames)
+                if (ReadFrame() == AVError_Eof)
                 {
-                    if (ReadFrame() == AVError_Eof)
-                    {
-                        return false;
-                    }
+                    return false;
                 }
 
-                if (nbSamplesToDiscard > 0 && discardFromStart)
+                unsafe
                 {
-                    continue;
-                    //byte* b = (byte*)outBuffer.CurrentPointer;
-                    ////discard = 0;
-                    //pFrame->extended_data[0] -= discard * _targetBytesPerSample;
-                    //pFrame->extended_data[1] -= discard * _targetBytesPerSample;
-                    ////byte* b =  (byte*)ffmpeg.av_malloc(44100 * 2);
-                    //ffmpeg.swr_convert(_context.ResamplerContext, &b, pFrame->nb_samples, pFrame->extended_data, pFrame->nb_samples);
-
-                    //byte* dst = (byte*)outBuffer.CurrentPointer;
-                    //memcpy(dst, b + discard * 2, result);
-                    unsafe
-                    {
-                        byte* b = (byte*)ffmpeg.av_malloc(44100 * 2);
-                        int ns = _context.CurrentFrame->nb_samples - nbSamplesToDiscard;
-                        ffmpeg.swr_convert(_context.ResamplerContext, &b, _context.CurrentFrame->nb_samples, _context.CurrentFrame->extended_data, _context.CurrentFrame->nb_samples);
-
-                        int writ = _targetBytesPerSample * ns * TargetChannelCount;
-                        memcpy((byte*)buffer.CurrentPointer, b + nbSamplesToDiscard * 2, writ);
-
-                        buffer.AdvancePosition(writ);
-                        _maxFrameSize = Math.Max(_maxFrameSize, writ - nbSamplesToDiscard * 2);
-                    }
-
-                    //IncrementDataPointers(nbSamplesToDiscard * _targetBytesPerSample);
+                    int written = WriteToBuffer(_context.CurrentFrame, buffer, _context.CurrentFrame->nb_samples);
+                    buffer.AdvancePosition(written);
+                    _maxFrameSize = Math.Max(_maxFrameSize, written);
                 }
-                //else
-                {
-                    unsafe
-                    {
-                        int written = WriteToBuffer(_context.CurrentFrame, buffer, _context.CurrentFrame->nb_samples - nbSamplesToDiscard);
-                        buffer.AdvancePosition(written);
-                        _maxFrameSize = Math.Max(_maxFrameSize, written);
-                    }
-                }
-
-                //if (discardFromStart)
-                //{
-                //    IncrementDataPointers(-nbSamplesToDiscard * _targetBytesPerSample);
-                //}
 
                 // Potential buffer overflow, nya.
                 // Shall not pass any code review.

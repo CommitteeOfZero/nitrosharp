@@ -49,6 +49,13 @@ namespace ProjectHoppy
                 .WithComponent(new VisualComponent(VisualKind.Rectangle, x.Value, y.Value, width, height, zLevel));
         }
 
+        public override void AddTexture(string entityName, int zLevel, NssCoordinate x, NssCoordinate y, string fileOrentityName)
+        {
+            _entities.CreateEntity(entityName)
+                .WithComponent(new VisualComponent(VisualKind.Texture, x.Value, y.Value, 0, 0, zLevel))
+                .WithComponent(new AssetComponent { AssetPath = fileOrentityName });
+        }
+
         //public override void AddTexture(string objectName, int zLevel, NssCoordinate x, NssCoordinate y, string fileOrObjectName)
         //{
         //    Texture2D texture;
@@ -94,6 +101,7 @@ namespace ProjectHoppy
 
         public override void WaitText(string id, TimeSpan time)
         {
+
             //_game.Interact(TimeSpan.FromSeconds(10));
         }
     }

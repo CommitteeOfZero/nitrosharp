@@ -81,15 +81,15 @@ namespace ProjectHoppy
             ////fileStream.CopyTo(memStream);
             ////memStream.Position = 0;
 
-            var fileStream = File.OpenRead(Path.Combine(_content.RootDirectory, "sound/bgm/ch03.ogg"));
+            var fileStream = File.OpenRead(Path.Combine(_content.RootDirectory, "sound/bgm/ch25.ogg"));
             var audioStream = new FFmpegAudioStream(fileStream);
 
             src.SetStream(audioStream);
-            //audioStream.Seek(TimeSpan.FromMilliseconds(6645));
-            //184915
-            audioStream.SetLoop(TimeSpan.FromMilliseconds(6645), TimeSpan.FromMilliseconds(184915));
-            audioStream.Seek(TimeSpan.FromMilliseconds(179915));
+            //audioStream.SetLoop(TimeSpan.FromMilliseconds(6645), TimeSpan.FromMilliseconds(184915));
             //audioStream.Seek(TimeSpan.FromMilliseconds(179915));
+
+            audioStream.SetLoop(TimeSpan.FromMilliseconds(5109), TimeSpan.FromMilliseconds(68939));
+            audioStream.Seek(TimeSpan.FromMilliseconds(60000));
             src.Play();
         }
     }

@@ -12,7 +12,7 @@ namespace ProjectHoppy.NetCore
             //    var noah = new TypewriterTest();
             //    noah.Run();
             //}).Wait();
-            var noah = new TypewriterTest();
+            var noah = new Noah();
             noah.Run().Wait();
         }
     }
