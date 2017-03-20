@@ -24,12 +24,9 @@ namespace SciAdvNet.MediaLayer.Graphics.DirectX
         public Bitmap1 DecodeTexture(Stream stream)
         {
             using (stream)
-            using (var memoryStream = new MemoryStream((int)stream.Length))
             {
-                //stream.CopyTo(memoryStream);
-                //memoryStream.Seek(0, SeekOrigin.Begin);
-                var wicStream = new WICStream(_rc.WicFactory, stream);
-                using (var bitmapDecoder = new BitmapDecoder(_rc.WicFactory, wicStream, DecodeOptions.CacheOnDemand))
+                //var wicStream = new WICStream(_rc.WicFactory, stream);
+                using (var bitmapDecoder = new BitmapDecoder(_rc.WicFactory, stream, DecodeOptions.CacheOnDemand))
                 {
                     var frame = bitmapDecoder.GetFrame(0);
                     var converter = new FormatConverter(_rc.WicFactory);

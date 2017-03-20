@@ -1,10 +1,10 @@
-﻿using ProjectHoppy.Graphics;
+﻿using ProjectHoppy.Core.Graphics;
 using SciAdvNet.MediaLayer.Input;
 using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace ProjectHoppy
+namespace ProjectHoppy.Core
 {
     public class TextInputHandler : EntityProcessingSystem
     {

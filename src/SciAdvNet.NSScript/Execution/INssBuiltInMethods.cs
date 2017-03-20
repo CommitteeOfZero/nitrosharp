@@ -4,6 +4,8 @@ namespace SciAdvNet.NSScript.Execution
 {
     public interface INssBuiltInMethods
     {
+        uint CallingThreadId { get; }
+
         void DisplayDialogue(DialogueLine dialogue);
 
         void SetAlias(string entityName, string alias);
@@ -47,14 +49,14 @@ namespace SciAdvNet.NSScript.Execution
 
         
         void Request(string entityName, NssAction action);
-        void RemoveObject(string entityName);
+        void RemoveEntity(string entityName);
 
-        void FadeIn(string entityName, TimeSpan duration, int finalOpacity, bool wait);
+        void Fade(string entityName, TimeSpan duration, int finalOpacity, bool wait);
         void Move(string entityName, TimeSpan duration, NssCoordinate x, NssCoordinate y, bool wait);
         void Zoom(string entityName, TimeSpan duration, NssCoordinate x, NssCoordinate y, bool wait);
 
         void SetLoopPoint(string entityName, TimeSpan loopStart, TimeSpan loopEnd);
-        void SetLoop(string entityName, bool loop);
+        void SetLoop(string entityName, bool looping);
         void SetVolume(string entityName, TimeSpan duration, int volume);
 
         void CreateChoice(string entityName);

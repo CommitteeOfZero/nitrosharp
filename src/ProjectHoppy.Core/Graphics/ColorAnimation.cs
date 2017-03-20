@@ -3,7 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace ProjectHoppy.Graphics
+namespace ProjectHoppy.Core.Graphics
 {
     public class ColorAnimation : Component
     {

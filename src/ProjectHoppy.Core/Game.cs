@@ -1,4 +1,6 @@
-﻿using SciAdvNet.MediaLayer.Graphics;
+﻿using SciAdvNet.MediaLayer.Audio;
+using SciAdvNet.MediaLayer.Audio.XAudio;
+using SciAdvNet.MediaLayer.Graphics;
 using SciAdvNet.MediaLayer.Graphics.DirectX;
 using SciAdvNet.MediaLayer.Platform;
 using System;
@@ -7,7 +9,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace ProjectHoppy
+namespace ProjectHoppy.Core
 {
     public abstract class Game
     {
@@ -18,6 +20,7 @@ namespace ProjectHoppy
         private bool _allowNewStartupTasks;
 
         public RenderContext RenderContext { get; private set; }
+        public AudioEngine AudioEngine { get; private set; }
         public Window Window { get; private set; }
         public EntityManager Entities { get; }
         public SystemManager Systems { get; }
@@ -31,7 +34,7 @@ namespace ProjectHoppy
             _allowNewStartupTasks = true;
         }
 
-        public virtual EntityManager CreateEntityManager() => new EntityManager();
+        public virtual EntityManager CreateEntityManager() => new EntityManager(_gameTimer);
 
         public void AddStartupTask(Action action)
         {
@@ -48,6 +51,7 @@ namespace ProjectHoppy
             Window = new GameWindow();
             Window.WindowState = WindowState.Normal;
             RenderContext = new DXRenderContext(Window);
+            AudioEngine = new XAudio2AudioEngine(16, 44100, 2);
 
             OnGraphicsInitialized();
         }
@@ -80,9 +84,9 @@ namespace ProjectHoppy
             Shutdown();
         }
 
-        public async Task Run()
+        public void Run()
         {
-            await Task.WhenAll(_startupTasks.Select(x => Task.Run(x)));
+            Task.WhenAll(_startupTasks.Select(x => Task.Run(x))).Wait();
             InitializeGraphics();
             EnterLoop();
         }

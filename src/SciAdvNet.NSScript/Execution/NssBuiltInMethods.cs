@@ -4,11 +4,13 @@ namespace SciAdvNet.NSScript.Execution
 {
     public class NssBuiltInMethods : INssBuiltInMethods
     {
+        public uint CallingThreadId { get; }
+
         public virtual void CreateChoice(string entityName)
         {
         }
 
-        public virtual void RemoveObject(string entityName)
+        public virtual void RemoveEntity(string entityName)
         {
         }
 
@@ -17,7 +19,7 @@ namespace SciAdvNet.NSScript.Execution
         {
         }
 
-        public virtual void FadeIn(string entityName, TimeSpan duration, int opacity, bool wait)
+        public virtual void Fade(string entityName, TimeSpan duration, int opacity, bool wait)
         {
         }
 
@@ -81,7 +83,7 @@ namespace SciAdvNet.NSScript.Execution
         {
         }
 
-        public virtual void AddTexture(string entityName, int zLevel, NssCoordinate x, NssCoordinate y, string fileOrentityName)
+        public virtual void AddTexture(string entityName, int zLevel, NssCoordinate x, NssCoordinate y, string fileOrEntityName)
         {
         }
 

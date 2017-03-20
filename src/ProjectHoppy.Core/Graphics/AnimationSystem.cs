@@ -1,6 +1,6 @@
 ﻿using System.Numerics;
 
-namespace ProjectHoppy.Graphics
+namespace ProjectHoppy.Core.Graphics
 {
     public class AnimationSystem : EntityProcessingSystem
     {

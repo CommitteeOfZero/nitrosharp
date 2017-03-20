@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace SciAdvNet.NSScript.Execution
 {
@@ -18,15 +19,17 @@ namespace SciAdvNet.NSScript.Execution
 
         private readonly ExecutingVisitor _execVisitor;
         private readonly INssBuiltInMethods _builtIns;
+        private readonly List<ThreadContext> _threads;
 
-        private ThreadContext _currentThread;
+        private uint _nextThreadId;
 
         public NSScriptInterpreter(IScriptLocator scriptLocator, INssBuiltInMethods builtIns)
         {
             _builtIns = builtIns;
             _execVisitor = new ExecutingVisitor(builtIns);
+            _threads = new List<ThreadContext>();
+
             Session = new NSScriptSession(scriptLocator);
-            Status = NSScriptInterpreterStatus.Idle;
             Globals = new VariableTable();
 
             _builtinsDispatchTable = new Dictionary<string, Action<ArgumentStack>>(StringComparer.OrdinalIgnoreCase)
@@ -42,8 +45,12 @@ namespace SciAdvNet.NSScript.Execution
                 ["SetVolume"] = SetVolume,
                 ["CreateWindow"] = CreateWindow,
                 ["LoadText"] = LoadText,
-                ["WaitText"] = WaitText
+                ["WaitText"] = WaitText,
+                ["SetLoop"] = SetLoop,
+                ["SetLoopPoint"] = SetLoopPoint
             };
+
+            Status = NSScriptInterpreterStatus.Idle;
         }
 
         public VariableTable Globals { get; }
@@ -51,34 +58,78 @@ namespace SciAdvNet.NSScript.Execution
         public NSScriptInterpreterStatus Status { get; private set; }
         public ImmutableArray<BuiltInMethodCall> PendingBuiltInCalls => _execVisitor.PendingBuiltInCalls.ToImmutableArray();
 
+        //public event EventHandler<BuiltInMethodCall>
+
         public void CreateMicrothread(Module module, Statement entryPoint)
         {
-            _currentThread = new ThreadContext(module, entryPoint, Globals);
-            Status = NSScriptInterpreterStatus.Suspended;
+            uint id = _nextThreadId++;
+            var thread = new ThreadContext(id, module, entryPoint, Globals);
+            _threads.Add(thread);
         }
 
         public void CreateMicrothread(Module module) => CreateMicrothread(module, module.MainChapter.Body);
         public void CreateMicrothread(string moduleName) => CreateMicrothread(Session.GetModule(moduleName));
 
-        public void Run(HaltCondition haltCondition)
+        public void Run()
         {
             Status = NSScriptInterpreterStatus.Running;
-            while (!_currentThread.DoneExecuting && _execVisitor.PendingBuiltInCalls.Count == 0)
-            {
-                _execVisitor.ExecuteNode(_currentThread);
-            }
 
-            if (_currentThread.DoneExecuting)
+            var idleThreads = new Queue<ThreadContext>();
+            while (Status == NSScriptInterpreterStatus.Running && _threads.Count > 0)
             {
-                Status = NSScriptInterpreterStatus.Idle;
+                while (idleThreads.Count > 0)
+                {
+                    _threads.Remove(idleThreads.Dequeue());
+                }
+
+                var activeThreads = _threads.Where(x => x.Suspended == false).ToArray();
+                if (activeThreads.Length == 0)
+                {
+                    return;
+                }
+
+                foreach (var thread in activeThreads)
+                {
+                    _execVisitor.ExecuteNode(thread);
+                    if (thread.DoneExecuting)
+                    {
+                        idleThreads.Enqueue(thread);
+                    }
+                }
+
+                DispatchPendingBuiltInCalls();
             }
+        }
+
+        public void Suspend()
+        {
+            Status = NSScriptInterpreterStatus.Suspended;
+        }
+
+        public void SuspendThread(uint threadId)
+        {
+            _threads.FirstOrDefault(x => x.Id == threadId)?.Suspend();
+        }
+
+        public void SuspendThread(uint threadId, TimeSpan timeout)
+        {
+            SuspendThread(threadId);
+            Task.Delay(timeout).ContinueWith(x => ResumeThread(threadId), TaskContinuationOptions.ExecuteSynchronously);
+        }
+
+        public void ResumeThread(uint threadId)
+        {
+            _threads.FirstOrDefault(x => x.Id == threadId)?.Resume();
         }
 
         public void DispatchPendingBuiltInCalls()
         {
-            while (_execVisitor.PendingBuiltInCalls.Count > 0)
+            while (_execVisitor.PendingBuiltInCalls.Count > 0 && Status != NSScriptInterpreterStatus.Suspended)
             {
                 var methodCall = _execVisitor.PendingBuiltInCalls.Dequeue();
+
+                Console.WriteLine(methodCall);
+
                 Action<ArgumentStack> handler;
                 _builtinsDispatchTable.TryGetValue(methodCall.MethodName, out handler);
                 handler?.Invoke(methodCall.MutableArguments);
@@ -142,7 +193,7 @@ namespace SciAdvNet.NSScript.Execution
         private void Delete(ArgumentStack args)
         {
             string symbol = args.PopString();
-            _builtIns.RemoveObject(symbol);
+            _builtIns.RemoveEntity(symbol);
         }
 
         private void CreateTexture(ArgumentStack args)
@@ -209,7 +260,7 @@ namespace SciAdvNet.NSScript.Execution
             args.Pop();
 
             bool wait = args.PopBool();
-            _builtIns.FadeIn(symbol, duration, opacity, wait);
+            _builtIns.Fade(symbol, duration, opacity, wait);
         }
 
         private void CreateWindow(ArgumentStack args)
@@ -271,6 +322,23 @@ namespace SciAdvNet.NSScript.Execution
             NssCoordinate targetY = args.PopCoordinate();
             int unk = args.PopInt();
             bool wait = args.PopBool();
+        }
+
+        private void SetLoop(ArgumentStack args)
+        {
+            string entityName = args.PopString();
+            bool looping = args.PopBool();
+
+            _builtIns.SetLoop(entityName, looping);
+        }
+
+        private void SetLoopPoint(ArgumentStack args)
+        {
+            string entityName = args.PopString();
+            TimeSpan loopStart = args.PopTimeSpan();
+            TimeSpan loopEnd = args.PopTimeSpan();
+
+            _builtIns.SetLoopPoint(entityName, loopStart, loopEnd);
         }
     }
 
@@ -372,7 +440,7 @@ namespace SciAdvNet.NSScript.Execution
         {
             string name = methodCall.TargetMethodName.SimplifiedName;
             var args = new ArgumentStack(methodCall.Arguments.Select(Evaluate).Reverse());
-            PendingBuiltInCalls.Enqueue(new BuiltInMethodCall(name, args));
+            PendingBuiltInCalls.Enqueue(new BuiltInMethodCall(name, args, _threadContext.Id));
         }
     }
 }

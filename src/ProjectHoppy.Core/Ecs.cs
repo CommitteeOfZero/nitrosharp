@@ -1,25 +1,30 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 
-namespace ProjectHoppy
+namespace ProjectHoppy.Core
 {
     public class Entity
     {
         private readonly EntityManager _manager;
         private readonly Dictionary<Type, ICollection<Component>> _components;
 
-        internal Entity(EntityManager manager, ulong id, string name)
+        internal Entity(EntityManager manager, ulong id, string name, TimeSpan creationTime)
         {
             _manager = manager;
             Id = id;
             Name = name;
+            CreationTime = creationTime;
 
             _components = new Dictionary<Type, ICollection<Component>>();
         }
 
         public ulong Id { get; }
         public string Name { get; }
+        public TimeSpan CreationTime { get; }
+
+        public bool Locked { get; set; }
 
         public Entity WithComponent<T>(T component) where T : Component
         {
@@ -75,31 +80,68 @@ namespace ProjectHoppy
     {
         private readonly Dictionary<string, Entity> _allEntities;
         private ulong _nextId;
+        private readonly Stopwatch _gameTimer;
 
-        public EntityManager()
+        public EntityManager(Stopwatch gameTimer)
         {
             _allEntities = new Dictionary<string, Entity>(StringComparer.OrdinalIgnoreCase);
+            _gameTimer = gameTimer;
         }
+
+        public IReadOnlyDictionary<string, Entity> AllEntities => _allEntities;
 
         public event EventHandler<Entity> EntityUpdated;
         public event EventHandler<Entity> EntityRemoved;
 
-        public Entity CreateEntity(string name)
+        public Entity Create(string name, bool replace = false)
         {
             if (_allEntities.ContainsKey(name))
             {
-                throw new InvalidOperationException($"Entity '{name}' already exists.");
+                if (replace)
+                {
+                    Remove(name);
+                }
+                else
+                {
+                    throw new InvalidOperationException($"Entity '{name}' already exists.");
+                }
             }
 
-            var entity = new Entity(this, _nextId++, name);
+            var entity = new Entity(this, _nextId++, name, _gameTimer.Elapsed);
             _allEntities[name] = entity;
             return entity;
         }
 
-        public void RemoveEntity(Entity entity)
+        public bool Exists(string name) => _allEntities.ContainsKey(name);
+
+        public Entity Get(string name)
         {
-            _allEntities.Remove(entity.Name);
-            EntityRemoved?.Invoke(this, entity);
+            if (!_allEntities.TryGetValue(name, out var entity))
+            {
+                throw new ArgumentException($"Entity '{name}' does not exist.");
+            }
+
+            return entity;
+        }
+
+        public Entity SafeGet(string name)
+        {
+            if (!_allEntities.TryGetValue(name, out var entity))
+            {
+                return null;
+            }
+
+            return entity;
+        }
+
+        public void Remove(Entity entity) => Remove(entity.Name);
+        public void Remove(string entityName)
+        {
+            if (_allEntities.TryGetValue(entityName, out var entity))
+            {
+                _allEntities.Remove(entityName);
+                EntityRemoved?.Invoke(this, entity);
+            }
         }
 
         internal void RaiseEntityUpdated(Entity entity)
@@ -115,12 +157,15 @@ namespace ProjectHoppy
 
     public abstract class EntityProcessingSystem : System
     {
-        private readonly List<Entity> _entities;
+        private readonly HashSet<Entity> _entities;
         private readonly HashSet<Type> _interests;
+
+        public event EventHandler<Entity> EntityAdded;
+        public event EventHandler<Entity> EntityRemoved;
 
         protected EntityProcessingSystem(params Type[] interests)
         {
-            _entities = new List<Entity>();
+            _entities = new HashSet<Entity>();
             _interests = new HashSet<Type>(interests);
         }
 
@@ -144,14 +189,6 @@ namespace ProjectHoppy
 
         public abstract void Process(Entity entity, float deltaMilliseconds);
 
-        public virtual void OnEnityAdded(Entity e)
-        {
-        }
-
-        public virtual void OnEntityRemoved(Entity e)
-        {
-        }
-
         internal void RefreshLocalEntityList(IEnumerable<Entity> updatedEntities, IEnumerable<Entity> removedEntities)
         {
             foreach (var updated in updatedEntities)
@@ -162,7 +199,7 @@ namespace ProjectHoppy
             foreach (var removed in removedEntities)
             {
                 _entities.Remove(removed);
-                OnEntityRemoved(removed);
+                EntityRemoved?.Invoke(this, removed);
             }
         }
 
@@ -172,8 +209,10 @@ namespace ProjectHoppy
             {
                 if (entity.HasComponent(interest))
                 {
-                    _entities.Add(entity);
-                    OnEnityAdded(entity);
+                    if (_entities.Add(entity))
+                    {
+                        EntityAdded?.Invoke(this, entity);
+                    }
                     break;
                 }
             }

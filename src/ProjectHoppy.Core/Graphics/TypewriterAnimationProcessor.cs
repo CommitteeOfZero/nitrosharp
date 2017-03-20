@@ -1,6 +1,6 @@
 ﻿using SciAdvNet.MediaLayer.Graphics;
 
-namespace ProjectHoppy.Graphics
+namespace ProjectHoppy.Core.Graphics
 {
     public class TypewriterAnimationProcessor : EntityProcessingSystem
     {

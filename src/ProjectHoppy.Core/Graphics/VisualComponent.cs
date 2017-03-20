@@ -1,6 +1,6 @@
 ﻿using SciAdvNet.MediaLayer;
 
-namespace ProjectHoppy.Graphics
+namespace ProjectHoppy.Core.Graphics
 {
     public enum VisualKind
     {

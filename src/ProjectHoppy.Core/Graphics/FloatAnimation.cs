@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace ProjectHoppy.Graphics
+namespace ProjectHoppy.Core.Graphics
 {
     public class FloatAnimation : Component
     {

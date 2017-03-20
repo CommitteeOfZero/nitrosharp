@@ -11,16 +11,12 @@
     <Content Include="hoppy.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+
+    <Content Include="FFmpeg/**" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\ProjectHoppy\ProjectHoppy.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Update="Stay Alive.m4a">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
+    <ProjectReference Include="..\ProjectHoppy.Core\ProjectHoppy.Core.csproj" />
   </ItemGroup>
 
 </Project>

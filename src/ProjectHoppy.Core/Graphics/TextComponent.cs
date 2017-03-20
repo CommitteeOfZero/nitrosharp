@@ -1,4 +1,4 @@
-﻿namespace ProjectHoppy.Graphics
+﻿namespace ProjectHoppy.Core.Graphics
 {
     public class TextComponent : Component
     {

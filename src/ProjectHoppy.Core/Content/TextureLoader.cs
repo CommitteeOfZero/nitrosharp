@@ -2,14 +2,13 @@
 using System.Collections.Generic;
 using System.IO;
 
-namespace ProjectHoppy.Content
+namespace ProjectHoppy.Core.Content
 {
     public class TextureLoader : ContentLoader
     {
         private const string JpgSignature = "ÿØÿà";
         private const string PngSignature = ".PNG";
 
-        private readonly string[] _extensions;
         private readonly string[] _signatures;
         private readonly SciAdvNet.MediaLayer.Graphics.ResourceFactory _resourceFactory;
 
@@ -17,11 +16,9 @@ namespace ProjectHoppy.Content
         {
             _resourceFactory = resourceFactory;
             _signatures = new[] { JpgSignature, PngSignature };
-            _extensions = new[] { ".jpg" };
         }
 
-        public override IEnumerable<string> FileSignatures => _signatures;
-        public override IEnumerable<string> FileExtensions => _extensions;
+        //public override IEnumerable<string> FileSignatures => _signatures;
 
         public override object Load(Stream stream)
         {

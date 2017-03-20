@@ -8,17 +8,21 @@ namespace SciAdvNet.NSScript.Execution
         private readonly VariableTable _globals;
         private readonly Stack<Frame> _frameStack;
 
-        public ThreadContext(Module module, Statement target, VariableTable globals)
+        public ThreadContext(uint id, Module module, Statement target, VariableTable globals)
         {
+            Id = id;
             CurrentModule = module;
             _globals = globals;
             _frameStack = new Stack<Frame>();
+
             PushContinuation(target);
         }
 
+        public uint Id { get; }
         public Module CurrentModule { get; }
         public Frame CurrentFrame => _frameStack.Peek();
         public SyntaxNode CurrentNode => CurrentFrame.Statements[CurrentFrame.Position];
+        public bool Suspended { get; private set; }
         public bool DoneExecuting => _frameStack.Count == 0;
 
         public void Advance()
@@ -36,6 +40,9 @@ namespace SciAdvNet.NSScript.Execution
                 }
             }
         }
+
+        public void Suspend() => Suspended = true;
+        public void Resume() => Suspended = false;
 
         public void PushContinuation(ImmutableArray<Statement> statements)
         {

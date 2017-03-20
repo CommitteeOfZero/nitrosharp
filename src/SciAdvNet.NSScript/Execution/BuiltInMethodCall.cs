@@ -8,11 +8,12 @@ namespace SciAdvNet.NSScript.Execution
         private ImmutableArray<ConstantValue> _immutableArgs;
         internal static BuiltInMethodCall Empty = new BuiltInMethodCall();
 
-        internal BuiltInMethodCall(string methodName, ArgumentStack arguments)
+        internal BuiltInMethodCall(string methodName, ArgumentStack arguments, uint callingThreadId)
         {
             MethodName = methodName;
             MutableArguments = arguments;
             _immutableArgs = ImmutableArray<ConstantValue>.Empty;
+            CallingThreadId = callingThreadId;
         }
 
         public string MethodName { get; }
@@ -31,6 +32,7 @@ namespace SciAdvNet.NSScript.Execution
 
         internal ArgumentStack MutableArguments { get; }
 
+        public uint CallingThreadId { get; }
         internal bool IsEmpty => string.IsNullOrEmpty(MethodName);
 
         public override string ToString()

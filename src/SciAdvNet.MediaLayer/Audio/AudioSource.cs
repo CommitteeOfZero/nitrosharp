@@ -28,6 +28,7 @@ namespace SciAdvNet.MediaLayer.Audio
         }
 
         public abstract float Volume { get; set; }
+        public AudioStream CurrentStream => _audioStream;
         public abstract event EventHandler<AudioBuffer> BufferEnd;
 
         public void SetStream(AudioStream stream)

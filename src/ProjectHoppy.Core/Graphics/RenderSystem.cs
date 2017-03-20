@@ -2,23 +2,25 @@
 using SciAdvNet.MediaLayer;
 using SciAdvNet.MediaLayer.Graphics;
 using System.Linq;
-using ProjectHoppy.Content;
+using ProjectHoppy.Core.Content;
 
-namespace ProjectHoppy.Graphics
+namespace ProjectHoppy.Core.Graphics
 {
     public partial class RenderSystem : EntityProcessingSystem
     {
         private RenderContext _rc;
-        private readonly ConcurrentContentManager _content;
+        private readonly ContentManager _content;
         private DrawingSession _drawingSession;
 
         private ColorBrush _colorBrush;
 
-        public RenderSystem(RenderContext renderContext, ConcurrentContentManager contentManager)
+        public RenderSystem(RenderContext renderContext, ContentManager contentManager)
             : base(typeof(VisualComponent))
         {
             _rc = renderContext;
             _content = contentManager;
+
+            EntityAdded += OnTextAdded;
 
             _colorBrush = renderContext.ResourceFactory.CreateColorBrush(RgbaValueF.White, 1.0f);
             CreateTextResources();
@@ -34,7 +36,11 @@ namespace ProjectHoppy.Graphics
 
         public override IEnumerable<Entity> SortEntities(IEnumerable<Entity> entities)
         {
-            return entities.OrderBy(x => x.GetComponent<VisualComponent>().LayerDepth);
+            var result = entities.OrderBy(x => x.GetComponent<VisualComponent>().LayerDepth);
+                //.ThenBy(x => x.CreationTime);
+
+            var list = result.ToList();
+            return result;
         }
 
         public override void Process(Entity entity, float deltaMilliseconds)
@@ -66,9 +72,9 @@ namespace ProjectHoppy.Graphics
 
         private void DrawTexture(VisualComponent visual, AssetComponent asset)
         {
-            if (asset != null && _content.IsLoaded(asset.AssetPath))
+            if (asset != null && _content.IsLoaded(asset.FilePath))
             {
-                var texture = _content.Get<Texture2D>(asset.AssetPath);
+                var texture = _content.Get<Texture2D>(asset.FilePath);
                 _drawingSession.DrawTexture(texture, visual.X, visual.Y, visual.Opacity);
             }
         }

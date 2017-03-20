@@ -1,18 +1,17 @@
-﻿using ProjectHoppy.Graphics;
+﻿using ProjectHoppy.Core.Graphics;
 using SciAdvNet.MediaLayer;
 using System;
-using ProjectHoppy.Content;
+using ProjectHoppy.Core.Content;
 using SciAdvNet.MediaLayer.Graphics;
-using System.Threading.Tasks;
 using SciAdvNet.MediaLayer.Audio;
 using SciAdvNet.MediaLayer.Audio.XAudio;
 using System.IO;
 
-namespace ProjectHoppy
+namespace ProjectHoppy.Core
 {
     public class TypewriterTest : Game
     {
-        private ConcurrentContentManager _content;
+        private ContentManager _content;
         private HoppyConfig _config;
 
         public TypewriterTest()
@@ -23,12 +22,12 @@ namespace ProjectHoppy
         private void LoadConfig()
         {
             _config = HoppyConfig.Read();
-            _content = new ConcurrentContentManager(_config.ContentPath);
+            _content = new ContentManager(_config.ContentPath);
         }
 
         public override void OnGraphicsInitialized()
         {
-            _content.InitContentLoaders(RenderContext.ResourceFactory);
+            _content.InitContentLoaders(RenderContext.ResourceFactory, AudioEngine.ResourceFactory);
 
             var typewriterProcessor = new TypewriterAnimationProcessor(RenderContext);
             Systems.RegisterSystem(typewriterProcessor);
@@ -45,15 +44,15 @@ namespace ProjectHoppy
             var visual = new VisualComponent { Kind = VisualKind.Text, X = 100, Width = 600, Height = 600, LayerDepth = 1, Color = RgbaValueF.White };
             var text = new TextComponent { Animated = true, Text = "According to all known laws of aviation, there is no way that a bee should be able to fly. Its wings are too small to get its fat little body off the ground. The bee, of course, flies anyway. Because bees don't care what humans think is impossible." };
 
-            Entities.CreateEntity("text")
+            Entities.Create("text")
                 .WithComponent(visual)
                 .WithComponent(text);
 
-            Entities.CreateEntity("bg")
+            Entities.Create("bg")
                 .WithComponent(new VisualComponent { Kind = VisualKind.Texture, Width = 800, Height = 640, LayerDepth = 0 })
-                .WithComponent(new AssetComponent { AssetPath = "cg/bg/bg000_01_1_チャットサンプル.jpg" });
+                .WithComponent(new AssetComponent("cg/bg/bg000_01_1_チャットサンプル.jpg"));
 
-            _content.EnqueueWorkItem("cg/bg/bg000_01_1_チャットサンプル.jpg");
+            _content.StartLoading<Texture2D>("cg/bg/bg000_01_1_チャットサンプル.jpg");
 
             var fade = new FloatAnimation
             {

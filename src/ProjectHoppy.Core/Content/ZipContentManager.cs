@@ -2,9 +2,9 @@
 using System.IO;
 using System.IO.Compression;
 
-namespace ProjectHoppy.Content
+namespace ProjectHoppy.Core.Content
 {
-    public class ZipContentManager : ConcurrentContentManager, IDisposable
+    public class ZipContentManager : ContentManager, IDisposable
     {
         internal readonly ZipArchive _archive;
 

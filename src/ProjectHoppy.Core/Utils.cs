@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace ProjectHoppy
+namespace ProjectHoppy.Core
 {
     public class DuplicateKeyComparer<TKey> : IComparer<TKey> where TKey : IComparable
     {

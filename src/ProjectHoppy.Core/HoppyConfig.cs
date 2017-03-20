@@ -2,7 +2,7 @@
 using System.IO;
 using System.Text;
 
-namespace ProjectHoppy
+namespace ProjectHoppy.Core
 {
     public class HoppyConfig
     {

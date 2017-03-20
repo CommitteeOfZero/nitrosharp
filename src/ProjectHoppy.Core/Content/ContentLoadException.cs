@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace ProjectHoppy.Content
+namespace ProjectHoppy.Core.Content
 {
     public class ContentLoadException : Exception
     {

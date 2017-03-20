@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.26228.4
+VisualStudioVersion = 15.0.26228.9
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SciAdvNet.NSScript", "src\SciAdvNet.NSScript\SciAdvNet.NSScript.csproj", "{D141E5DC-81DB-4352-8BAE-E3772BDC23DE}"
 EndProject
@@ -11,9 +11,9 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NssInteractive", "src\NssIn
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SciAdvNet.MediaLayer", "src\SciAdvNet.MediaLayer\SciAdvNet.MediaLayer.csproj", "{BEAFA26E-1010-4512-9610-025618DBD677}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProjectHoppy.NetCore", "src\ProjectHoppy.NetCore\ProjectHoppy.NetCore.csproj", "{D3FD53D0-2DBF-4AD4-8B5B-2A95639B1E20}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProjectHoppy.EntryPoint.NetCore", "src\ProjectHoppy.EntryPoint.NetCore\ProjectHoppy.EntryPoint.NetCore.csproj", "{D3FD53D0-2DBF-4AD4-8B5B-2A95639B1E20}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProjectHoppy", "src\ProjectHoppy\ProjectHoppy.csproj", "{D5D100EF-CB4E-4DE2-B20F-D5D85091DD52}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProjectHoppy.Core", "src\ProjectHoppy.Core\ProjectHoppy.Core.csproj", "{D5D100EF-CB4E-4DE2-B20F-D5D85091DD52}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

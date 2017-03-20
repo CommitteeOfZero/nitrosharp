@@ -55,7 +55,7 @@ namespace SciAdvNet.MediaLayer.Graphics.DirectX
                 SharpDX.DirectWrite.FontStyle.Normal, SharpDX.DirectWrite.FontStretch.Normal, format.FontSize)
             {
                 WordWrapping = MlToDxWordWrapping(format.WordWrapping),
-                 ParagraphAlignment = SharpDX.DirectWrite.ParagraphAlignment.Center
+                 //ParagraphAlignment = SharpDX.DirectWrite.ParagraphAlignment.Center
             };
         }
 

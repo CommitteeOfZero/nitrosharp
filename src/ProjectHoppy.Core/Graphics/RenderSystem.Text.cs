@@ -1,12 +1,10 @@
 ﻿using SciAdvNet.MediaLayer;
 using SciAdvNet.MediaLayer.Graphics;
 using SciAdvNet.MediaLayer.Graphics.Text;
-using System;
 using System.Collections.Generic;
 using System.Numerics;
-using System.Text;
 
-namespace ProjectHoppy.Graphics
+namespace ProjectHoppy.Core.Graphics
 {
     public partial class RenderSystem
     {
@@ -23,7 +21,7 @@ namespace ProjectHoppy.Graphics
             _textFormat = new TextFormat
             {
                 FontFamily = "Noto Sans CJK JP",
-                FontSize = 20,
+                FontSize = 19,
                 FontWeight = FontWeight.Normal,
                 VerticalAlignment = VerticalAlignment.Center
             };
@@ -31,8 +29,8 @@ namespace ProjectHoppy.Graphics
             _transparentTextBrush = _rc.ResourceFactory.CreateColorBrush(RgbaValueF.White, 0.0f);
             _currentGlyphBrush = _rc.ResourceFactory.CreateColorBrush(RgbaValueF.White, 0.0f);
         }
-
-        public override void OnEnityAdded(Entity e)
+        
+        private void OnTextAdded(object sender, Entity e)
         {
 			if (e.HasComponent<TextComponent>())
             {
@@ -41,11 +39,6 @@ namespace ProjectHoppy.Graphics
                 var layout = _rc.ResourceFactory.CreateTextLayout(txt.Text, _textFormat, visual.Width, visual.Height);
                 _textLayouts[txt] = layout;
             }
-        }
-
-        public override void OnEntityRemoved(Entity e)
-        {
-            base.OnEntityRemoved(e);
         }
 
         private void DrawText(VisualComponent visualComponent, TextComponent textComponent)
