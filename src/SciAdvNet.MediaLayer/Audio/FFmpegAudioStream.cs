@@ -95,8 +95,11 @@ namespace SciAdvNet.MediaLayer.Audio
             SetupResampler();
         }
 
-        private unsafe void SetupResampler()
+        public unsafe void SetupResampler()
         {
+            _targetSampleFormat = BitDepthToSampleFormat(TargetBitDepth);
+            _targetBytesPerSample = ffmpeg.av_get_bytes_per_sample(_targetSampleFormat);
+
             SwrContext* pSwrContext = ffmpeg.swr_alloc();
             ffmpeg.av_opt_set_int(pSwrContext, "in_channel_count", OriginalChannelCount, 0);
             ffmpeg.av_opt_set_int(pSwrContext, "out_channel_count", TargetChannelCount, 0);
@@ -216,6 +219,11 @@ namespace SciAdvNet.MediaLayer.Audio
                 {
                     ThrowIfNotZero(ffmpeg.avcodec_send_packet(_context.CodecContext, _context.Packet));
                     receiveResult = ffmpeg.avcodec_receive_frame(_context.CodecContext, _context.CurrentFrame);
+
+                    if (_context.CurrentFrame->key_frame == 0)
+                    {
+                        Debugger.Break();
+                    }
                 }
                 catch
                 {

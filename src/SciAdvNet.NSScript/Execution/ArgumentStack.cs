@@ -48,7 +48,13 @@ namespace SciAdvNet.NSScript.Execution
                 }
 
             }
-            return NssColor.FromRgb(value.As<int>()) ;
+            return NssColor.FromRgb(value.As<int>());
+        }
+
+        public NssAction PopNssAction()
+        {
+            string strAction = PopString();
+            return PredefinedConstants.Actions.TryGetValue(strAction, out NssAction action) ? action : NssAction.Other;
         }
 
         public TimeSpan PopTimeSpan()

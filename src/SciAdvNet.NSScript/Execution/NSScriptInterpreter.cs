@@ -157,59 +157,40 @@ namespace SciAdvNet.NSScript.Execution
 
         private void SetAlias(ArgumentStack args)
         {
-            string symbol = args.PopString();
+            string entityName = args.PopString();
             string alias = args.PopString();
 
-            _builtIns.SetAlias(symbol, alias);
+            _builtIns.SetAlias(entityName, alias);
         }
 
         private void Request(ArgumentStack args)
         {
-            string symbol = args.PopString();
-            NssAction action;
-            string strAction = args.PopString();
-            switch (strAction.ToUpperInvariant())
-            {
-                case "LOCK":
-                    action = NssAction.Lock;
-                    break;
+            string entityName = args.PopString();
+            NssAction action = args.PopNssAction();
 
-                case "PLAY":
-                    action = NssAction.Play;
-                    break;
-
-                case "UNLOCK":
-                    action = NssAction.Unlock;
-                    break;
-
-                default:
-                    action = NssAction.Other;
-                    break;
-            }
-
-            _builtIns.Request(symbol, action);
+            _builtIns.Request(entityName, action);
         }
 
         private void Delete(ArgumentStack args)
         {
-            string symbol = args.PopString();
-            _builtIns.RemoveEntity(symbol);
+            string entityName = args.PopString();
+            _builtIns.RemoveEntity(entityName);
         }
 
         private void CreateTexture(ArgumentStack args)
         {
-            string symbol = args.PopString();
-            int zLevel = args.PopInt();
+            string entityName = args.PopString();
+            int priority = args.PopInt();
             NssCoordinate x = args.PopCoordinate();
             NssCoordinate y = args.PopCoordinate();
-            string fileName = args.PopString();
+            string fileOrEntityName = args.PopString();
 
-            _builtIns.AddTexture(symbol, zLevel, x, y, fileName);
+            _builtIns.AddTexture(entityName, priority, x, y, fileOrEntityName);
         }
 
         private void CreateSound(ArgumentStack args)
         {
-            string symbol = args.PopString();
+            string entityName = args.PopString();
             string strAudioKind = args.PopString();
             AudioKind kind;
             switch (strAudioKind)
@@ -225,34 +206,34 @@ namespace SciAdvNet.NSScript.Execution
             }
 
             string fileName = args.PopString();
-            _builtIns.LoadAudio(symbol, kind, fileName);
+            _builtIns.LoadAudio(entityName, kind, fileName);
         }
 
         private void CreateColor(ArgumentStack args)
         {
-            string symbol = args.PopString();
-            int zLevel = args.PopInt();
+            string entityName = args.PopString();
+            int priority = args.PopInt();
             NssCoordinate x = args.PopCoordinate();
             NssCoordinate y = args.PopCoordinate();
             int width = args.PopInt();
             int height = args.PopInt();
             NssColor color = args.PopColor();
 
-            _builtIns.AddRectangle(symbol, zLevel, x, y, width, height, color);
+            _builtIns.AddRectangle(entityName, priority, x, y, width, height, color);
         }
 
         private void SetVolume(ArgumentStack args)
         {
-            string symbol = args.PopString();
+            string entityName = args.PopString();
             TimeSpan duration = args.PopTimeSpan();
             int volume = args.PopInt();
 
-            _builtIns.SetVolume(symbol, duration, volume);
+            _builtIns.SetVolume(entityName, duration, volume);
         }
 
         private void Fade(ArgumentStack args)
         {
-            string symbol = args.PopString();
+            string entityName = args.PopString();
             TimeSpan duration = args.PopTimeSpan();
             int opacity = args.PopInt();
 
@@ -260,27 +241,27 @@ namespace SciAdvNet.NSScript.Execution
             args.Pop();
 
             bool wait = args.PopBool();
-            _builtIns.Fade(symbol, duration, opacity, wait);
+            _builtIns.Fade(entityName, duration, opacity, wait);
         }
 
         private void CreateWindow(ArgumentStack args)
         {
-            string symbol = args.PopString();
-            int zLevel = args.PopInt();
+            string entityName = args.PopString();
+            int priority = args.PopInt();
             NssCoordinate x = args.PopCoordinate();
             NssCoordinate y = args.PopCoordinate();
             int width = args.PopInt();
             int height = args.PopInt();
 
-            _builtIns.CreateDialogueBox(symbol, zLevel, x, y, width, height);
+            _builtIns.CreateDialogueBox(entityName, priority, x, y, width, height);
         }
 
         private void WaitText(ArgumentStack args)
         {
-            string symbol = args.PopString();
+            string entityName = args.PopString();
             TimeSpan time = args.PopTimeSpan();
 
-            _builtIns.WaitText(symbol, time);
+            _builtIns.WaitText(entityName, time);
         }
 
         private void LoadText(ArgumentStack args)
@@ -316,7 +297,7 @@ namespace SciAdvNet.NSScript.Execution
 
         private void Move(ArgumentStack args)
         {
-            string symbol = args.PopString();
+            string entityName = args.PopString();
             TimeSpan duration = args.PopTimeSpan();
             NssCoordinate targetX = args.PopCoordinate();
             NssCoordinate targetY = args.PopCoordinate();

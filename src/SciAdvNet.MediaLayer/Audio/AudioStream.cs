@@ -15,9 +15,9 @@ namespace SciAdvNet.MediaLayer.Audio
         public int OriginalSampleRate { get; protected set; }
         public int OriginalChannelCount { get; protected set; }
 
-        public int TargetBitDepth { get; internal set; }
-        public int TargetSampleRate { get; internal set; }
-        public int TargetChannelCount { get; internal set; }
+        public int TargetBitDepth { get; set; }
+        public int TargetSampleRate { get; set; }
+        public int TargetChannelCount { get; set; }
 
         public TimeSpan Duration { get; protected set; }
         //public abstract TimeSpan Position { get; }

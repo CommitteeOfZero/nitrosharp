@@ -1,6 +1,4 @@
-﻿using ProjectHoppy.Core;
-
-namespace ProjectHoppy.EntryPoint.NetCore
+﻿namespace ProjectHoppy.EntryPoint.NetCore
 {
     public class Program
     {

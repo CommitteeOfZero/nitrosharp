@@ -5,7 +5,7 @@ namespace SciAdvNet.MediaLayer.Audio
 {
     public sealed class AudioBuffer : IDisposable
     {
-        internal AudioBuffer(int id, int capacity)
+        public AudioBuffer(int id, int capacity)
         {
             Id = id;
             Capacity = capacity;

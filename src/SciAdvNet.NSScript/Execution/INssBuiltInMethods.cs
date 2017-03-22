@@ -27,12 +27,12 @@ namespace SciAdvNet.NSScript.Execution
         /// </summary>
         void LoadAudio(string entityName, AudioKind kind, string fileName);
 
-        void CreateDialogueBox(string entityName, int zLevel, NssCoordinate x, NssCoordinate y, int width, int height);
+        void CreateDialogueBox(string entityName, int priority, NssCoordinate x, NssCoordinate y, int width, int height);
 
         /// <summary>
         /// Original name: CreateText.
         /// </summary>
-        void AddText(string entityName, int zLevel, NssCoordinate x, NssCoordinate y, int width, int height, string text);
+        void AddText(string entityName, int priority, NssCoordinate x, NssCoordinate y, int width, int height, string text);
 
         void WaitText(string id, TimeSpan time);
 
@@ -40,12 +40,12 @@ namespace SciAdvNet.NSScript.Execution
         /// Loads and displays an image at the specified coordinates.
         /// Original name: CreateTexture.
         /// </summary>
-        void AddTexture(string entityName, int zLevel, NssCoordinate x, NssCoordinate y, string fileOrEntityName);
+        void AddTexture(string entityName, int priority, NssCoordinate x, NssCoordinate y, string fileOrEntityName);
 
         /// <summary>
         /// Original name: CreateColor.
         /// </summary>
-        void AddRectangle(string entityName, int zLevel, NssCoordinate x, NssCoordinate y, int width, int height, NssColor color);
+        void AddRectangle(string entityName, int priority, NssCoordinate x, NssCoordinate y, int width, int height, NssColor color);
 
         
         void Request(string entityName, NssAction action);
@@ -60,7 +60,7 @@ namespace SciAdvNet.NSScript.Execution
         void SetVolume(string entityName, TimeSpan duration, int volume);
 
         void CreateChoice(string entityName);
-        void PlayCutscene(string entityName, int zLevel, bool loop, bool alpha, string fileName, bool enableAudio);
+        void PlayCutscene(string entityName, int priority, bool loop, bool alpha, string fileName, bool enableAudio);
         void DrawTransition(int time, int start, int end, int unk, string filename, bool wait);
     }
 }

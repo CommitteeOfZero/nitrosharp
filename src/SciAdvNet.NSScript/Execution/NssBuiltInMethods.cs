@@ -27,7 +27,7 @@ namespace SciAdvNet.NSScript.Execution
         {
         }
 
-        public virtual void PlayCutscene(string entityName, int zLevel, bool loop, bool alpha, string fileName, bool enableAudio)
+        public virtual void PlayCutscene(string entityName, int priority, bool loop, bool alpha, string fileName, bool enableAudio)
         {
         }
 
@@ -75,19 +75,19 @@ namespace SciAdvNet.NSScript.Execution
         {
         }
 
-        public virtual void CreateDialogueBox(string entityName, int zLevel, NssCoordinate x, NssCoordinate y, int width, int height)
+        public virtual void CreateDialogueBox(string entityName, int priority, NssCoordinate x, NssCoordinate y, int width, int height)
         {
         }
 
-        public virtual void AddText(string entityName, int zLevel, NssCoordinate x, NssCoordinate y, int width, int height, string text)
+        public virtual void AddText(string entityName, int priority, NssCoordinate x, NssCoordinate y, int width, int height, string text)
         {
         }
 
-        public virtual void AddTexture(string entityName, int zLevel, NssCoordinate x, NssCoordinate y, string fileOrEntityName)
+        public virtual void AddTexture(string entityName, int priority, NssCoordinate x, NssCoordinate y, string fileOrEntityName)
         {
         }
 
-        public virtual void AddRectangle(string entityName, int zLevel, NssCoordinate x, NssCoordinate y, int width, int height, NssColor color)
+        public virtual void AddRectangle(string entityName, int priority, NssCoordinate x, NssCoordinate y, int width, int height, NssColor color)
         {
         }
 
