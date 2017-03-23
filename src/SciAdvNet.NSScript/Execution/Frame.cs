@@ -1,11 +1,11 @@
-﻿using System.Collections.Immutable;
+﻿using System.Collections.Generic;
+using System.Collections.Immutable;
 
 namespace SciAdvNet.NSScript.Execution
 {
     public interface IFrame
     {
         VariableTable Globals { get; }
-        VariableTable NamedConstants { get; }
         VariableTable Arguments { get; }
     }
 
@@ -21,7 +21,9 @@ namespace SciAdvNet.NSScript.Execution
         public ImmutableArray<Statement> Statements { get; }
         public int Position { get; set; }
         public VariableTable Globals { get; }
-        public VariableTable NamedConstants { get; }
         public VariableTable Arguments { get; set; }
+
+        public Queue<Expression> OperandStack { get; }
+        //public Queue<>
     }
 }

@@ -23,7 +23,7 @@ namespace ProjectHoppy
             _content = new ContentManager(_config.ContentPath);
 
             _nssBuiltIns = new N2SystemImplementation(Entities, _content);
-            _nssInterpreter = new NSScriptInterpreter(new ScriptLocator(), _nssBuiltIns);
+            _nssInterpreter = new NSScriptInterpreter(new ScriptLocator(_config.NssFolderPath), _nssBuiltIns);
             _nssBuiltIns.Interpreter = _nssInterpreter;
 
             //_nssInterpreter.CreateMicrothread("nss/boot-logo.nss");
@@ -69,9 +69,16 @@ namespace ProjectHoppy
 
         private class ScriptLocator : IScriptLocator
         {
+            private readonly string _root;
+
+            public ScriptLocator(string root)
+            {
+                _root = root;
+            }
+
             public Stream Locate(string fileName)
             {
-                return File.OpenRead("S:/ProjectHoppy/" + fileName);
+                return File.OpenRead(Path.Combine(_root, fileName.Replace("nss/", string.Empty)));
             }
         }
     }

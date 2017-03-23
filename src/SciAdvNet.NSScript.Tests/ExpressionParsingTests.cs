@@ -121,23 +121,23 @@ namespace SciAdvNet.NSScript.Tests
             TestAssignment(AssignmentOperationKind.SubtractAssignment);
         }
 
-        private void TestUnary(UnaryOperationKind kind)
+        private void TestUnary(Operation operation)
         {
             string text;
-            if (Operation.IsPrefixOperation(kind))
+            if (operation.Category == OperationCategory.PrefixUnary)
             {
-                text = Operation.GetText(kind) + "$a";
+                text = operation.ToString() + "$a";
             }
             else
             {
-                text = "$a" + Operation.GetText(kind);
+                text = "$a" + operation.ToString();
             }
 
             var expr = NSScript.ParseExpression(text) as UnaryExpression;
 
             Assert.NotNull(expr);
             Assert.Equal(SyntaxNodeKind.UnaryExpression, expr.Kind);
-            Assert.Equal(kind, expr.OperationKind);
+            Assert.Equal(operation.Kind, expr.Operation.Kind);
 
             var operand = expr.Operand as Variable;
             Assert.NotNull(operand);
@@ -148,7 +148,7 @@ namespace SciAdvNet.NSScript.Tests
 
         private void TestBinary(BinaryOperationKind kind)
         {
-            string text = "$a " + Operation.GetText(kind) + " $b";
+            string text = "$a " + OperationStatic.GetText(kind) + " $b";
             var expr = NSScript.ParseExpression(text) as BinaryExpression;
 
             Assert.NotNull(expr);
@@ -168,12 +168,12 @@ namespace SciAdvNet.NSScript.Tests
 
         private void TestAssignment(AssignmentOperationKind kind)
         {
-            string text = "$a " + Operation.GetText(kind) + " 42";
+            string text = "$a " + OperationStatic.GetText(kind) + " 42";
             var expr = NSScript.ParseExpression(text) as AssignmentExpression;
 
             Assert.NotNull(expr);
             Assert.Equal(SyntaxNodeKind.AssignmentExpression, expr.Kind);
-            Assert.Equal(kind, expr.OperationKind);
+            Assert.Equal(kind, expr.Operation);
 
             var target = expr.Target as Variable;
             Assert.NotNull(target);

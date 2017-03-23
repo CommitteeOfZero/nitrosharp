@@ -267,73 +267,27 @@ namespace SciAdvNet.NSScript
 
         internal Expression ParseExpression()
         {
-            return ParseSubExpression(Precedence.Expression);
+            return ParseSubExpression(OperationPrecedence.Expression);
         }
-
-        private enum Precedence : uint
-        {
-            Expression = 0,
-            Assignment,
-            Logical,
-            Equality,
-            Relational,
-            Additive,
-            Multiplicative,
-            Unary
-        }
-
-        private static Precedence GetOperationPrecedence(BinaryOperationKind operationKind)
-        {
-            switch (operationKind)
-            {
-                case BinaryOperationKind.Multiplication:
-                case BinaryOperationKind.Division:
-                    return Precedence.Multiplicative;
-
-                case BinaryOperationKind.Addition:
-                case BinaryOperationKind.Subtraction:
-                    return Precedence.Additive;
-
-                case BinaryOperationKind.GreaterThan:
-                case BinaryOperationKind.GreaterThanOrEqual:
-                case BinaryOperationKind.LessThan:
-                case BinaryOperationKind.LessThanOrEqual:
-                    return Precedence.Relational;
-
-                case BinaryOperationKind.Equal:
-                case BinaryOperationKind.NotEqual:
-                    return Precedence.Equality;
-
-                case BinaryOperationKind.LogicalAnd:
-                case BinaryOperationKind.LogicalOr:
-                    return Precedence.Logical;
-
-                default:
-                    return Precedence.Expression;
-            }
-        }
-
-        private static Precedence GetOperationPrecedence(AssignmentOperationKind operationKind) => Precedence.Assignment;
-        private static Precedence GetOperationPrecedence(UnaryOperationKind operationKind) => Precedence.Unary;
 
         private bool IsExpectedPrefixUnaryOperator() => SyntaxFacts.IsPrefixUnaryOperator(CurrentToken.Kind);
         private bool IsExpectedPostfixUnaryOperator() => SyntaxFacts.IsPostfixUnaryOperator(CurrentToken.Kind);
         private bool IsExpectedBinaryOperator() => SyntaxFacts.IsBinaryOperator(CurrentToken.Kind);
         private bool IsExpectedAssignmentOperator() => SyntaxFacts.IsAssignmentOperator(CurrentToken.Kind);
 
-        private Expression ParseSubExpression(Precedence minPrecedence)
+        private Expression ParseSubExpression(OperationPrecedence minPrecedence)
         {
             Expression leftOperand;
-            Precedence newPrecedence;
+            OperationPrecedence newPrecedence;
 
             var tk = CurrentToken.Kind;
             if (IsExpectedPrefixUnaryOperator())
             {
-                var opKind = SyntaxFacts.GetPrefixUnaryOperationKind(tk);
+                var operation = Operation.PrefixUnary(tk);
                 EatToken();
-                newPrecedence = GetOperationPrecedence(opKind);
+                newPrecedence = operation.Precedence;
                 var operand = ParseSubExpression(newPrecedence);
-                leftOperand = ExpressionFactory.Unary(operand, opKind);
+                leftOperand = ExpressionFactory.Unary(operand, operation);
             }
             else
             {
@@ -343,35 +297,35 @@ namespace SciAdvNet.NSScript
             while (true)
             {
                 tk = CurrentToken.Kind;
+                Operation operation = default(Operation);
                 if (IsExpectedBinaryOperator())
                 {
-                    var opKind = SyntaxFacts.GetBinaryOperationKind(tk);
-                    newPrecedence = GetOperationPrecedence(opKind);
-                    if (newPrecedence < minPrecedence)
-                    {
-                        break;
-                    }
-
-                    EatToken();
-                    var rightOperand = ParseSubExpression(newPrecedence);
-                    leftOperand = ExpressionFactory.Binary(leftOperand, opKind, rightOperand);
+                    operation = Operation.Binary(tk);
                 }
                 else if (IsExpectedAssignmentOperator())
                 {
-                    var opKind = SyntaxFacts.GetAssignmentOperationKind(tk);
-                    newPrecedence = GetOperationPrecedence(opKind);
-                    if (newPrecedence < minPrecedence)
-                    {
-                        break;
-                    }
-
-                    EatToken();
-                    var rightOperand = ParseSubExpression(newPrecedence);
-                    leftOperand = ExpressionFactory.Assignment(leftOperand as Variable, opKind, rightOperand);
+                    operation = Operation.Assignment(tk);
                 }
                 else
                 {
                     break;
+                }
+
+                newPrecedence = operation.Precedence;
+                if (newPrecedence < minPrecedence)
+                {
+                    break;
+                }
+
+                EatToken();
+                var rightOperand = ParseSubExpression(newPrecedence);
+                if (operation.Category == OperationCategory.Binary)
+                {
+                    leftOperand = ExpressionFactory.Binary(leftOperand, operation, rightOperand);
+                }
+                else
+                {
+                    leftOperand = ExpressionFactory.Assignment(leftOperand as Variable, operation, rightOperand);
                 }
             }
 
@@ -404,7 +358,7 @@ namespace SciAdvNet.NSScript
 
                 case SyntaxTokenKind.OpenParenToken:
                     EatToken(SyntaxTokenKind.OpenParenToken);
-                    var expr = ParseSubExpression(Precedence.Expression);
+                    var expr = ParseSubExpression(OperationPrecedence.Expression);
                     EatToken(SyntaxTokenKind.CloseParenToken);
                     return expr;
 
@@ -417,9 +371,9 @@ namespace SciAdvNet.NSScript
         {
             if (IsExpectedPostfixUnaryOperator())
             {
-                var opKind = SyntaxFacts.GetPostfixUnaryOperationKind(CurrentToken.Kind);
+                var operation = Operation.PostfixUnary(CurrentToken.Kind);
                 EatToken();
-                return ExpressionFactory.Unary(expr, opKind);
+                return ExpressionFactory.Unary(expr, operation);
             }
 
             return expr;

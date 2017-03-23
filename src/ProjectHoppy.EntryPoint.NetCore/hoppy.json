@@ -1,3 +1,4 @@
 ﻿{
-  "contentRoot": "S:/HoppyContent"
+  "debug.contentRoot": "S:/HoppyContent",
+  "debug.nssFolder": "S:/ProjectHoppy/nss"
 }
