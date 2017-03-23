@@ -92,14 +92,14 @@ namespace SciAdvNet.NSScript
             var operationKind = unaryExpression.OperationKind;
             if (Operation.IsPrefixOperation(operationKind))
             {
-                Write(operationKind.ToString());
+                Write(Operation.GetText(operationKind));
             }
 
             Visit(unaryExpression.Operand);
 
             if (Operation.IsPostfixOperation(operationKind))
             {
-                Write(operationKind.ToString());
+                Write(Operation.GetText(operationKind));
             }
         }
 
@@ -107,7 +107,7 @@ namespace SciAdvNet.NSScript
         {
             Visit(binaryExpression.Left);
             WriteSpace();
-            Write(binaryExpression.OperationKind.ToString());
+            Write(Operation.GetText(binaryExpression.OperationKind));
             WriteSpace();
             Visit(binaryExpression.Right);
         }
@@ -116,7 +116,7 @@ namespace SciAdvNet.NSScript
         {
             Visit(assignmentExpression.Target);
             WriteSpace();
-            Write(assignmentExpression.ToString());
+            Write(Operation.GetText(assignmentExpression.OperationKind));
             WriteSpace();
             Visit(assignmentExpression.Value);
         }

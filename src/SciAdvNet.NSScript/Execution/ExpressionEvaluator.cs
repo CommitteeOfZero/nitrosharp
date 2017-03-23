@@ -110,7 +110,8 @@ namespace SciAdvNet.NSScript.Execution
             if (operand.Kind != SyntaxNodeKind.Variable &&
                 (operationKind == OperationKind.PostfixIncrement || operationKind == OperationKind.PostfixIncrement))
             {
-                throw new InvalidOperationException($"Unary operator '{operationKind}' can only be applied to variables.");
+                string op = Operation.GetText(operationKind);
+                throw new InvalidOperationException($"Unary operator '{op}' can only be applied to variables.");
             }
 
             ConstantValue oldValue;
