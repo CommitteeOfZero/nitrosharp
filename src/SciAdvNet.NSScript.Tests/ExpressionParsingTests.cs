@@ -87,57 +87,57 @@ namespace SciAdvNet.NSScript.Tests
         [Fact]
         public void TestUnaryOperators()
         {
-            TestUnary(UnaryOperationKind.LogicalNegation);
-            TestUnary(UnaryOperationKind.PostfixDecrement);
-            TestUnary(UnaryOperationKind.PostfixIncrement);
-            TestUnary(UnaryOperationKind.UnaryMinus);
-            TestUnary(UnaryOperationKind.UnaryPlus);
+            TestUnary(OperationKind.LogicalNegation);
+            TestUnary(OperationKind.PostfixDecrement);
+            TestUnary(OperationKind.PostfixIncrement);
+            TestUnary(OperationKind.UnaryMinus);
+            TestUnary(OperationKind.UnaryPlus);
         }
 
         [Fact]
         public void TestBinaryOperators()
         {
-            TestBinary(BinaryOperationKind.Addition);
-            TestBinary(BinaryOperationKind.Division);
-            TestBinary(BinaryOperationKind.Equal);
-            TestBinary(BinaryOperationKind.GreaterThan);
-            TestBinary(BinaryOperationKind.GreaterThanOrEqual);
-            TestBinary(BinaryOperationKind.LessThan);
-            TestBinary(BinaryOperationKind.LessThanOrEqual);
-            TestBinary(BinaryOperationKind.LogicalAnd);
-            TestBinary(BinaryOperationKind.LogicalOr);
-            TestBinary(BinaryOperationKind.Multiplication);
-            TestBinary(BinaryOperationKind.NotEqual);
-            TestBinary(BinaryOperationKind.Subtraction);
+            TestBinary(OperationKind.Addition);
+            TestBinary(OperationKind.Division);
+            TestBinary(OperationKind.Equal);
+            TestBinary(OperationKind.GreaterThan);
+            TestBinary(OperationKind.GreaterThanOrEqual);
+            TestBinary(OperationKind.LessThan);
+            TestBinary(OperationKind.LessThanOrEqual);
+            TestBinary(OperationKind.LogicalAnd);
+            TestBinary(OperationKind.LogicalOr);
+            TestBinary(OperationKind.Multiplication);
+            TestBinary(OperationKind.NotEqual);
+            TestBinary(OperationKind.Subtraction);
         }
 
         [Fact]
         public void TestAssignmentOperators()
         {
-            TestAssignment(AssignmentOperationKind.AddAssignment);
-            TestAssignment(AssignmentOperationKind.DivideAssignment);
-            TestAssignment(AssignmentOperationKind.MultiplyAssignment);
-            TestAssignment(AssignmentOperationKind.SimpleAssignment);
-            TestAssignment(AssignmentOperationKind.SubtractAssignment);
+            TestAssignment(OperationKind.AddAssignment);
+            TestAssignment(OperationKind.DivideAssignment);
+            TestAssignment(OperationKind.MultiplyAssignment);
+            TestAssignment(OperationKind.SimpleAssignment);
+            TestAssignment(OperationKind.SubtractAssignment);
         }
 
-        private void TestUnary(Operation operation)
+        private void TestUnary(OperationKind kind)
         {
             string text;
-            if (operation.Category == OperationCategory.PrefixUnary)
+            if (Operation.IsPrefixOperation(kind))
             {
-                text = operation.ToString() + "$a";
+                text = Operation.GetText(kind) + "$a";
             }
             else
             {
-                text = "$a" + operation.ToString();
+                text = "$a" + Operation.GetText(kind);
             }
 
             var expr = NSScript.ParseExpression(text) as UnaryExpression;
 
             Assert.NotNull(expr);
             Assert.Equal(SyntaxNodeKind.UnaryExpression, expr.Kind);
-            Assert.Equal(operation.Kind, expr.Operation.Kind);
+            Assert.Equal(kind, expr.OperationKind);
 
             var operand = expr.Operand as Variable;
             Assert.NotNull(operand);
@@ -146,9 +146,9 @@ namespace SciAdvNet.NSScript.Tests
             Assert.Equal(text, expr.ToString());
         }
 
-        private void TestBinary(BinaryOperationKind kind)
+        private void TestBinary(OperationKind kind)
         {
-            string text = "$a " + OperationStatic.GetText(kind) + " $b";
+            string text = "$a " + Operation.GetText(kind) + " $b";
             var expr = NSScript.ParseExpression(text) as BinaryExpression;
 
             Assert.NotNull(expr);
@@ -166,14 +166,14 @@ namespace SciAdvNet.NSScript.Tests
             Assert.Equal(text, expr.ToString());
         }
 
-        private void TestAssignment(AssignmentOperationKind kind)
+        private void TestAssignment(OperationKind kind)
         {
-            string text = "$a " + OperationStatic.GetText(kind) + " 42";
+            string text = "$a " + Operation.GetText(kind) + " 42";
             var expr = NSScript.ParseExpression(text) as AssignmentExpression;
 
             Assert.NotNull(expr);
             Assert.Equal(SyntaxNodeKind.AssignmentExpression, expr.Kind);
-            Assert.Equal(kind, expr.Operation);
+            Assert.Equal(kind, expr.OperationKind);
 
             var target = expr.Target as Variable;
             Assert.NotNull(target);
@@ -204,7 +204,7 @@ namespace SciAdvNet.NSScript.Tests
 
             var invocation = method.Body.Statements[0] as MethodCall;
             Assert.NotNull(invocation);
-           
+
             var arg = invocation.Arguments[0] as ParameterReference;
             Assert.NotNull(arg);
             Assert.Equal(SyntaxNodeKind.Parameter, arg.Kind);

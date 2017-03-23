@@ -39,7 +39,7 @@ namespace SciAdvNet.NSScript.Execution
 
         public override ConstantValue VisitUnaryExpression(UnaryExpression unaryExpression)
         {
-            return ApplyUnaryOperation(unaryExpression.Operand, unaryExpression.Operation);
+            return ApplyUnaryOperation(unaryExpression.Operand, unaryExpression.OperationKind);
         }
 
         public override ConstantValue VisitAssignmentExpression(AssignmentExpression assignmentExpression)
@@ -55,7 +55,7 @@ namespace SciAdvNet.NSScript.Execution
             var leftValue = Visit(binaryExpression.Left);
             var rightValue = Visit(binaryExpression.Right);
 
-            return ApplyBinaryOperation(leftValue, binaryExpression.Operation, rightValue);
+            return ApplyBinaryOperation(leftValue, binaryExpression.OperationKind, rightValue);
         }
 
         public override ConstantValue VisitConstantValue(ConstantValue constantValue)
@@ -68,9 +68,9 @@ namespace SciAdvNet.NSScript.Execution
             return Frame.Arguments[parameterReference.ParameterName.SimplifiedName];
         }
 
-        private static ConstantValue ApplyBinaryOperation(ConstantValue leftOperand, Operation operation, ConstantValue rightOperand)
+        private static ConstantValue ApplyBinaryOperation(ConstantValue leftOperand, OperationKind operationKind, ConstantValue rightOperand)
         {
-            switch (operation.Kind)
+            switch (operationKind)
             {
                 case OperationKind.Addition:
                     return leftOperand + rightOperand;
@@ -100,17 +100,17 @@ namespace SciAdvNet.NSScript.Execution
             }
         }
 
-        private ConstantValue ApplyUnaryOperation(Expression operand, Operation operation)
+        private ConstantValue ApplyUnaryOperation(Expression operand, OperationKind operationKind)
         {
-            if (operation.Kind == OperationKind.LogicalNegation)
+            if (operationKind == OperationKind.LogicalNegation)
             {
                 return !Visit(operand);
             }
 
             if (operand.Kind != SyntaxNodeKind.Variable &&
-                (operation.Kind == OperationKind.PostfixIncrement || operation.Kind == OperationKind.PostfixIncrement))
+                (operationKind == OperationKind.PostfixIncrement || operationKind == OperationKind.PostfixIncrement))
             {
-                throw new InvalidOperationException($"Unary operator '{operation}' can only be applied to variables.");
+                throw new InvalidOperationException($"Unary operator '{operationKind}' can only be applied to variables.");
             }
 
             ConstantValue oldValue;
@@ -126,7 +126,7 @@ namespace SciAdvNet.NSScript.Execution
                 oldValue = Visit(operand);
             }
 
-            switch (operation.Kind)
+            switch (operationKind)
             {
                 case OperationKind.UnaryPlus:
                     return oldValue;

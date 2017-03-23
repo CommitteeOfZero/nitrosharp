@@ -125,6 +125,32 @@ namespace SciAdvNet.NSScript
         public static bool IsBinaryOperator(SyntaxTokenKind tokenKind) => TryGetBinaryOperationKind(tokenKind, out var kind);
         public static bool IsAssignmentOperator(SyntaxTokenKind tokenKind) => TryGetAssignmentOperationKind(tokenKind, out var kind);
 
+        public static OperationKind GetPrefixUnaryOperationKind(SyntaxTokenKind operatorTokenKind)
+        {
+            bool success = TryGetPrefixUnaryOperationKind(operatorTokenKind, out var kind);
+            return success ? kind : throw Dummy();
+        }
+
+        public static OperationKind GetPostfixUnaryOperationKind(SyntaxTokenKind operatorTokenKind)
+        {
+            bool success = TryGetPostfixUnaryOperationKind(operatorTokenKind, out var kind);
+            return success ? kind : throw Dummy();
+        }
+
+        public static OperationKind GetBinaryOperationKind(SyntaxTokenKind operatorTokenKind)
+        {
+            bool success = TryGetBinaryOperationKind(operatorTokenKind, out var kind);
+            return success ? kind : throw Dummy();
+        }
+
+        public static OperationKind GetAssignmentOperationKind(SyntaxTokenKind operatorTokenKind)
+        {
+            bool success = TryGetAssignmentOperationKind(operatorTokenKind, out var kind);
+            return success ? kind : throw Dummy();
+        }
+
+        private static Exception Dummy() => new ArgumentException();
+
         public static bool TryGetPrefixUnaryOperationKind(SyntaxTokenKind operatorTokenKind, out OperationKind kind)
         {
             switch (operatorTokenKind)
@@ -242,91 +268,6 @@ namespace SciAdvNet.NSScript
 
             return true;
         }
-
-
-        //public static bool TryGetPrefixUnaryOperationKind(SyntaxTokenKind operatorTokenKind, out UnaryOperationKind kind)
-        //{
-        //    switch (operatorTokenKind)
-        //    {
-        //        case SyntaxTokenKind.ExclamationToken:
-        //            return UnaryOperationKind.LogicalNegation;
-        //        case SyntaxTokenKind.PlusToken:
-        //            return UnaryOperationKind.UnaryPlus;
-        //        case SyntaxTokenKind.MinusToken:
-        //            return UnaryOperationKind.UnaryMinus;
-
-        //        default:
-        //            throw new ArgumentException(nameof(operatorTokenKind));
-        //    }
-        //}
-
-        //public static UnaryOperationKind GetPostfixUnaryOperationKind(SyntaxTokenKind operatorTokenKind)
-        //{
-        //    switch (operatorTokenKind)
-        //    {
-        //        case SyntaxTokenKind.PlusPlusToken:
-        //            return UnaryOperationKind.PostfixIncrement;
-        //        case SyntaxTokenKind.MinusMinusToken:
-        //            return UnaryOperationKind.PostfixDecrement;
-
-        //        default:
-        //            throw new ArgumentException(nameof(operatorTokenKind));
-        //    }
-        //}
-
-        //public static BinaryOperationKind GetBinaryOperationKind(SyntaxTokenKind operatorTokenKind)
-        //{
-        //    switch (operatorTokenKind)
-        //    {
-        //        case SyntaxTokenKind.PlusToken:
-        //            return BinaryOperationKind.Addition;
-        //        case SyntaxTokenKind.MinusToken:
-        //            return BinaryOperationKind.Subtraction;
-        //        case SyntaxTokenKind.AsteriskToken:
-        //            return BinaryOperationKind.Multiplication;
-        //        case SyntaxTokenKind.SlashToken:
-        //            return BinaryOperationKind.Division;
-        //        case SyntaxTokenKind.LessThanToken:
-        //            return BinaryOperationKind.LessThan;
-        //        case SyntaxTokenKind.LessThanEqualsToken:
-        //            return BinaryOperationKind.LessThanOrEqual;
-        //        case SyntaxTokenKind.GreaterThanToken:
-        //            return BinaryOperationKind.GreaterThan;
-        //        case SyntaxTokenKind.GreaterThanEqualsToken:
-        //            return BinaryOperationKind.GreaterThanOrEqual;
-        //        case SyntaxTokenKind.BarBarToken:
-        //            return BinaryOperationKind.LogicalOr;
-        //        case SyntaxTokenKind.AmpersandAmpersandToken:
-        //            return BinaryOperationKind.LogicalAnd;
-        //        case SyntaxTokenKind.EqualsEqualsToken:
-        //            return BinaryOperationKind.Equal;
-        //        case SyntaxTokenKind.ExclamationEqualsToken:
-        //            return BinaryOperationKind.NotEqual;
-
-        //        default:
-        //            throw new ArgumentException(nameof(operatorTokenKind));
-        //    }
-        //}
-
-        //public static AssignmentOperationKind GetAssignmentOperationKind(SyntaxTokenKind operatorTokenKind)
-        //{
-        //    switch (operatorTokenKind)
-        //    {
-        //        case SyntaxTokenKind.EqualsToken:
-        //            return AssignmentOperationKind.SimpleAssignment;
-        //        case SyntaxTokenKind.PlusEqualsToken:
-        //            return AssignmentOperationKind.AddAssignment;
-        //        case SyntaxTokenKind.MinusEqualsToken:
-        //            return AssignmentOperationKind.SubtractAssignment;
-        //        case SyntaxTokenKind.AsteriskEqualsToken:
-        //            return AssignmentOperationKind.MultiplyAssignment;
-        //        case SyntaxTokenKind.SlashEqualsToken:
-        //            return AssignmentOperationKind.DivideAssignment;
-
-        //        default:
-        //            throw new ArgumentException(nameof(operatorTokenKind));
-        //    }
-        //}
 
         public static string GetText(SyntaxTokenKind kind)
         {

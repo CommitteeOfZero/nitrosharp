@@ -2,61 +2,51 @@
 
 namespace SciAdvNet.NSScript
 {
-    public struct Operation
+    public static class Operation
     {
-        private Operation(OperationCategory category, OperationKind kind)
+        //public static Operation PrefixUnary(SyntaxTokenKind operatorTokenKind)
+        //{
+        //    if (!SyntaxFacts.TryGetPrefixUnaryOperationKind(operatorTokenKind, out var operationKind))
+        //    {
+        //        throw new ArgumentException(nameof(operatorTokenKind));
+        //    }
+
+        //    return new Operation(operationKind);
+        //}
+
+        //public static Operation PostfixUnary(SyntaxTokenKind operatorTokenKind)
+        //{
+        //    if (!SyntaxFacts.TryGetPostfixUnaryOperationKind(operatorTokenKind, out var operationKind))
+        //    {
+        //        throw new ArgumentException(nameof(operatorTokenKind));
+        //    }
+
+        //    return new Operation(operationKind);
+        //}
+
+        //public static Operation Binary(SyntaxTokenKind operatorTokenKind)
+        //{
+        //    if (!SyntaxFacts.TryGetBinaryOperationKind(operatorTokenKind, out var operationKind))
+        //    {
+        //        throw new ArgumentException(nameof(operatorTokenKind));
+        //    }
+
+        //    return new Operation(operationKind);
+        //}
+
+        //public static Operation Assignment(SyntaxTokenKind operatorTokenKind)
+        //{
+        //    if (!SyntaxFacts.TryGetAssignmentOperationKind(operatorTokenKind, out var operationKind))
+        //    {
+        //        throw new ArgumentException(nameof(operatorTokenKind));
+        //    }
+
+        //    return new Operation(operationKind);
+        //}
+
+        public static OperationPrecedence GetPrecedence(OperationKind operationKind)
         {
-            Category = category;
-            Kind = kind;
-        }
-
-        public OperationCategory Category { get; }
-        public OperationKind Kind { get; }
-        public OperationPrecedence Precedence => GetPrecedence();
-
-        public static Operation PrefixUnary(SyntaxTokenKind operatorTokenKind)
-        {
-            if (!SyntaxFacts.TryGetPrefixUnaryOperationKind(operatorTokenKind, out var operationKind))
-            {
-                throw new ArgumentException(nameof(operatorTokenKind));
-            }
-
-            return new Operation(OperationCategory.PrefixUnary, operationKind);
-        }
-
-        public static Operation PostfixUnary(SyntaxTokenKind operatorTokenKind)
-        {
-            if (!SyntaxFacts.TryGetPostfixUnaryOperationKind(operatorTokenKind, out var operationKind))
-            {
-                throw new ArgumentException(nameof(operatorTokenKind));
-            }
-
-            return new Operation(OperationCategory.PostfixUnary, operationKind);
-        }
-
-        public static Operation Binary(SyntaxTokenKind operatorTokenKind)
-        {
-            if (!SyntaxFacts.TryGetBinaryOperationKind(operatorTokenKind, out var operationKind))
-            {
-                throw new ArgumentException(nameof(operatorTokenKind));
-            }
-
-            return new Operation(OperationCategory.Binary, operationKind);
-        }
-
-        public static Operation Assignment(SyntaxTokenKind operatorTokenKind)
-        {
-            if (!SyntaxFacts.TryGetAssignmentOperationKind(operatorTokenKind, out var operationKind))
-            {
-                throw new ArgumentException(nameof(operatorTokenKind));
-            }
-
-            return new Operation(OperationCategory.Assignment, operationKind);
-        }
-
-        private OperationPrecedence GetPrecedence()
-        {
-            switch (Kind)
+            switch (operationKind)
             {
                 case OperationKind.Multiplication:
                 case OperationKind.Division:
@@ -81,13 +71,13 @@ namespace SciAdvNet.NSScript
                     return OperationPrecedence.Logical;
 
                 default:
-                    return Category == OperationCategory.Assignment ? OperationPrecedence.Assignment : OperationPrecedence.Unary;
+                    return IsAssignment(operationKind) ? OperationPrecedence.Assignment : OperationPrecedence.Unary;
             }
         }
 
-        public override string ToString()
+        public static string GetText(OperationKind operationKind)
         {
-            switch (Kind)
+            switch (operationKind)
             {
                 case OperationKind.LogicalNegation:
                     return "!";
@@ -140,6 +130,38 @@ namespace SciAdvNet.NSScript
                     return string.Empty;
             }
         }
+
+        public static bool IsAssignment(OperationKind operationKind)
+        {
+            switch (operationKind)
+            {
+                case OperationKind.SimpleAssignment:
+                case OperationKind.AddAssignment:
+                case OperationKind.SubtractAssignment:
+                case OperationKind.MultiplyAssignment:
+                case OperationKind.DivideAssignment:
+                    return true;
+
+                default:
+                    return false;
+            }
+        }
+
+        public static bool IsPrefixOperation(OperationKind operationKind)
+        {
+            switch (operationKind)
+            {
+                case OperationKind.LogicalNegation:
+                case OperationKind.UnaryPlus:
+                case OperationKind.UnaryMinus:
+                    return true;
+
+                default:
+                    return false;
+            }
+        }
+
+        public static bool IsPostfixOperation(OperationKind operationKind) => !IsPrefixOperation(operationKind);
     }
 
     public enum OperationPrecedence : uint
@@ -194,45 +216,4 @@ namespace SciAdvNet.NSScript
         MultiplyAssignment,
         DivideAssignment
     }
-
-    //public static class OperationStatic
-    //{
-    //    public static string GetText(UnaryOperationKind unaryOperationKind)
-    //    {
-    //        switch (unaryOperationKind)
-    //        {
-    //            case UnaryOperationKind.LogicalNegation:
-    //                return "!";
-    //            case UnaryOperationKind.UnaryPlus:
-    //                return "+";
-    //            case UnaryOperationKind.UnaryMinus:
-    //                return "-";
-    //            case UnaryOperationKind.PostfixIncrement:
-    //                return "++";
-    //            case UnaryOperationKind.PostfixDecrement:
-    //                return "--";
-
-    //            default:
-    //                return string.Empty;
-    //        }
-    //    }
-
-
-
-    //    public static bool IsPrefixOperation(UnaryOperationKind unaryOperationKind)
-    //    {
-    //        switch (unaryOperationKind)
-    //        {
-    //            case UnaryOperationKind.LogicalNegation:
-    //            case UnaryOperationKind.UnaryPlus:
-    //            case UnaryOperationKind.UnaryMinus:
-    //                return true;
-
-    //            default:
-    //                return false;
-    //        }
-    //    }
-
-    //    public static bool IsPostfixOperation(UnaryOperationKind unaryOperationKind) => !IsPrefixOperation(unaryOperationKind);
-    //}
 }

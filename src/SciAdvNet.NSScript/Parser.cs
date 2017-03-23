@@ -283,11 +283,11 @@ namespace SciAdvNet.NSScript
             var tk = CurrentToken.Kind;
             if (IsExpectedPrefixUnaryOperator())
             {
-                var operation = Operation.PrefixUnary(tk);
+                var operationKind = SyntaxFacts.GetPrefixUnaryOperationKind(tk);
                 EatToken();
-                newPrecedence = operation.Precedence;
+                newPrecedence = Operation.GetPrecedence(operationKind);
                 var operand = ParseSubExpression(newPrecedence);
-                leftOperand = ExpressionFactory.Unary(operand, operation);
+                leftOperand = ExpressionFactory.Unary(operand, operationKind);
             }
             else
             {
@@ -297,21 +297,24 @@ namespace SciAdvNet.NSScript
             while (true)
             {
                 tk = CurrentToken.Kind;
-                Operation operation = default(Operation);
+                OperationKind operationKind = default(OperationKind);
+                bool binary;
                 if (IsExpectedBinaryOperator())
                 {
-                    operation = Operation.Binary(tk);
+                    binary = true;
+                    operationKind = SyntaxFacts.GetBinaryOperationKind(tk);
                 }
                 else if (IsExpectedAssignmentOperator())
                 {
-                    operation = Operation.Assignment(tk);
+                    binary = false;
+                    operationKind = SyntaxFacts.GetAssignmentOperationKind(tk);
                 }
                 else
                 {
                     break;
                 }
 
-                newPrecedence = operation.Precedence;
+                newPrecedence = Operation.GetPrecedence(operationKind);
                 if (newPrecedence < minPrecedence)
                 {
                     break;
@@ -319,13 +322,13 @@ namespace SciAdvNet.NSScript
 
                 EatToken();
                 var rightOperand = ParseSubExpression(newPrecedence);
-                if (operation.Category == OperationCategory.Binary)
+                if (binary)
                 {
-                    leftOperand = ExpressionFactory.Binary(leftOperand, operation, rightOperand);
+                    leftOperand = ExpressionFactory.Binary(leftOperand, operationKind, rightOperand);
                 }
                 else
                 {
-                    leftOperand = ExpressionFactory.Assignment(leftOperand as Variable, operation, rightOperand);
+                    leftOperand = ExpressionFactory.Assignment(leftOperand as Variable, operationKind, rightOperand);
                 }
             }
 
@@ -371,9 +374,9 @@ namespace SciAdvNet.NSScript
         {
             if (IsExpectedPostfixUnaryOperator())
             {
-                var operation = Operation.PostfixUnary(CurrentToken.Kind);
+                var operationKind = SyntaxFacts.GetPostfixUnaryOperationKind(CurrentToken.Kind);
                 EatToken();
-                return ExpressionFactory.Unary(expr, operation);
+                return ExpressionFactory.Unary(expr, operationKind);
             }
 
             return expr;

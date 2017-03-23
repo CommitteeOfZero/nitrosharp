@@ -24,13 +24,13 @@
         public static ParameterReference ParameterReference(Identifier parameterName) =>
             new ParameterReference(parameterName);
 
-        public static UnaryExpression Unary(Expression operand, Operation operation) => new UnaryExpression(operand, operation);
+        public static UnaryExpression Unary(Expression operand, OperationKind operationKind) => new UnaryExpression(operand, operationKind);
 
-        public static BinaryExpression Binary(Expression left, Operation operation, Expression right)
-            => new BinaryExpression(left, operation, right);
+        public static BinaryExpression Binary(Expression left, OperationKind operationKind, Expression right)
+            => new BinaryExpression(left, operationKind, right);
 
-        public static AssignmentExpression Assignment(Variable target, Operation operation, Expression value)
-            => new AssignmentExpression(target, operation, value);
+        public static AssignmentExpression Assignment(Variable target, OperationKind operationKind, Expression value)
+            => new AssignmentExpression(target, operationKind, value);
     }
 
     public enum SigilKind
@@ -156,14 +156,14 @@
 
     public sealed class UnaryExpression : Expression
     {
-        internal UnaryExpression(Expression operand, Operation operation)
+        internal UnaryExpression(Expression operand, OperationKind operationKind)
         {
             Operand = operand;
-            Operation = operation;
+            OperationKind = operationKind;
         }
 
         public Expression Operand { get; }
-        public Operation Operation { get; }
+        public OperationKind OperationKind { get; }
 
         public override SyntaxNodeKind Kind => SyntaxNodeKind.UnaryExpression;
 
@@ -180,15 +180,15 @@
 
     public sealed class BinaryExpression : Expression
     {
-        internal BinaryExpression(Expression left, Operation operation, Expression right)
+        internal BinaryExpression(Expression left, OperationKind operationKind, Expression right)
         {
             Left = left;
-            Operation = operation;
+            OperationKind = operationKind;
             Right = right;
         }
 
         public Expression Left { get; }
-        public Operation Operation { get; }
+        public OperationKind OperationKind { get; }
         public Expression Right { get; }
 
         public override SyntaxNodeKind Kind => SyntaxNodeKind.BinaryExpression;
@@ -206,15 +206,15 @@
 
     public sealed class AssignmentExpression : Expression
     {
-        internal AssignmentExpression(Variable target, Operation operation, Expression value)
+        internal AssignmentExpression(Variable target, OperationKind operationKind, Expression value)
         {
             Target = target;
-            Operation = operation;
+            OperationKind = operationKind;
             Value = value;
         }
 
         public Variable Target { get; }
-        public Operation Operation { get; }
+        public OperationKind OperationKind { get; }
         public Expression Value { get; }
 
         public override SyntaxNodeKind Kind => SyntaxNodeKind.AssignmentExpression;

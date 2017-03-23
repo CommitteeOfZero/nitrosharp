@@ -89,17 +89,17 @@ namespace SciAdvNet.NSScript
 
         public override void VisitUnaryExpression(UnaryExpression unaryExpression)
         {
-            var operation = unaryExpression.Operation;
-            if (operation.Category == OperationCategory.PrefixUnary)
+            var operationKind = unaryExpression.OperationKind;
+            if (Operation.IsPrefixOperation(operationKind))
             {
-                Write(operation.ToString());
+                Write(operationKind.ToString());
             }
 
             Visit(unaryExpression.Operand);
 
-            if (operation.Category == OperationCategory.PostfixUnary)
+            if (Operation.IsPostfixOperation(operationKind))
             {
-                Write(operation.ToString());
+                Write(operationKind.ToString());
             }
         }
 
@@ -107,7 +107,7 @@ namespace SciAdvNet.NSScript
         {
             Visit(binaryExpression.Left);
             WriteSpace();
-            Write(binaryExpression.Operation.ToString());
+            Write(binaryExpression.OperationKind.ToString());
             WriteSpace();
             Visit(binaryExpression.Right);
         }
