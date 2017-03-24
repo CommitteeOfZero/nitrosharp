@@ -19,7 +19,10 @@ namespace SciAdvNet.NSScript.Execution
 
         private readonly ExecutingVisitor _execVisitor;
         private readonly INssBuiltInMethods _builtIns;
+
         private readonly List<ThreadContext> _threads;
+        private readonly List<ThreadContext> _activeThreads;
+        private readonly Queue<ThreadContext> _idleThreads;
 
         private uint _nextThreadId;
 
@@ -27,7 +30,10 @@ namespace SciAdvNet.NSScript.Execution
         {
             _builtIns = builtIns;
             _execVisitor = new ExecutingVisitor(builtIns);
+
             _threads = new List<ThreadContext>();
+            _activeThreads = new List<ThreadContext>();
+            _idleThreads = new Queue<ThreadContext>();
 
             Session = new NSScriptSession(scriptLocator);
             Globals = new VariableTable();
@@ -60,40 +66,41 @@ namespace SciAdvNet.NSScript.Execution
 
         //public event EventHandler<BuiltInMethodCall>
 
-        public void CreateMicrothread(Module module, Statement entryPoint)
+        public void CreateThread(Module module, Statement entryPoint)
         {
             uint id = _nextThreadId++;
             var thread = new ThreadContext(id, module, entryPoint, Globals);
             _threads.Add(thread);
+            _activeThreads.Add(thread);
         }
 
-        public void CreateMicrothread(Module module) => CreateMicrothread(module, module.MainChapter.Body);
-        public void CreateMicrothread(string moduleName) => CreateMicrothread(Session.GetModule(moduleName));
+        public void CreateThread(Module module) => CreateThread(module, module.MainChapter.Body);
+        public void CreateThread(string moduleName) => CreateThread(Session.GetModule(moduleName));
 
         public void Run()
         {
             Status = NSScriptInterpreterStatus.Running;
 
-            var idleThreads = new Queue<ThreadContext>();
             while (Status == NSScriptInterpreterStatus.Running && _threads.Count > 0)
             {
-                while (idleThreads.Count > 0)
+                while (_idleThreads.Count > 0)
                 {
-                    _threads.Remove(idleThreads.Dequeue());
+                    var thread = _idleThreads.Dequeue();
+                    _activeThreads.Remove(thread);
+                    _threads.Remove(thread);
                 }
 
-                var activeThreads = _threads.Where(x => x.Suspended == false).ToArray();
-                if (activeThreads.Length == 0)
+                if (_activeThreads.Count == 0)
                 {
                     return;
                 }
 
-                foreach (var thread in activeThreads)
+                foreach (var thread in _activeThreads)
                 {
                     _execVisitor.ExecuteNode(thread);
                     if (thread.DoneExecuting)
                     {
-                        idleThreads.Enqueue(thread);
+                        _idleThreads.Enqueue(thread);
                     }
                 }
 
@@ -108,7 +115,12 @@ namespace SciAdvNet.NSScript.Execution
 
         public void SuspendThread(uint threadId)
         {
-            _threads.FirstOrDefault(x => x.Id == threadId)?.Suspend();
+            var thread = _threads.FirstOrDefault(x => x.Id == threadId);
+            if (thread != null)
+            {
+                thread.Suspend();
+                _activeThreads.Remove(thread);
+            }
         }
 
         public void SuspendThread(uint threadId, TimeSpan timeout)
@@ -119,7 +131,12 @@ namespace SciAdvNet.NSScript.Execution
 
         public void ResumeThread(uint threadId)
         {
-            _threads.FirstOrDefault(x => x.Id == threadId)?.Resume();
+            var thread = _threads.FirstOrDefault(x => x.Id == threadId);
+            if (thread != null)
+            {
+                thread.Resume();
+                _activeThreads.Add(thread);
+            }
         }
 
         public void DispatchPendingBuiltInCalls()

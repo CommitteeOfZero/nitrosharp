@@ -186,7 +186,7 @@ namespace SciAdvNet.NSScript
 
     public enum OperationKind
     {
-        Invalid = 0,
+        NoOp = 0,
 
         // Unary
         LogicalNegation,

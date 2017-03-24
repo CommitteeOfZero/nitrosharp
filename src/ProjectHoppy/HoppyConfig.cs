@@ -17,13 +17,13 @@ namespace ProjectHoppy
 
             string json = File.ReadAllText(ConfigFileName, Encoding.UTF8);
             var root = JObject.Parse(json);
-#if DEBUG
+//#if DEBUG
             config.ContentPath = root["debug.contentRoot"].ToString();
             config.NssFolderPath = root["debug.nssFolder"].ToString();
-#else
-            config.ContentPath = "./Content";
-            config.NssFolderPath = "./nss";
-#endif
+//#else
+//            config.ContentPath = "./Content";
+//            config.NssFolderPath = "./nss";
+//#endif
 
             return config;
         }

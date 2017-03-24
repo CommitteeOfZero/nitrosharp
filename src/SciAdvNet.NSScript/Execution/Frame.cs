@@ -16,6 +16,9 @@ namespace SciAdvNet.NSScript.Execution
             Statements = statements;
             Globals = globals;
             Arguments = new VariableTable();
+
+            OperandStack = new Queue<Expression>();
+            OperationStack = new Queue<OperationKind>();
         }
 
         public ImmutableArray<Statement> Statements { get; }
@@ -24,6 +27,6 @@ namespace SciAdvNet.NSScript.Execution
         public VariableTable Arguments { get; set; }
 
         public Queue<Expression> OperandStack { get; }
-        //public Queue<>
+        public Queue<OperationKind> OperationStack { get; }
     }
 }

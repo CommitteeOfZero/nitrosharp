@@ -27,7 +27,7 @@ namespace ProjectHoppy
             _nssBuiltIns.Interpreter = _nssInterpreter;
 
             //_nssInterpreter.CreateMicrothread("nss/boot-logo.nss");
-            _nssInterpreter.CreateMicrothread("nss/ch01_007_円山町殺人現場");
+            _nssInterpreter.CreateThread("nss/ch01_007_円山町殺人現場");
         }
 
         public override void OnGraphicsInitialized()
