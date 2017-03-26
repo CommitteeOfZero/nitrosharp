@@ -1,4 +1,6 @@
-﻿namespace SciAdvNet.NSScript
+﻿using System.Collections.Immutable;
+
+namespace SciAdvNet.NSScript
 {
     public abstract class Expression : SyntaxNode
     {
@@ -31,6 +33,33 @@
 
         public static AssignmentExpression Assignment(Variable target, OperationKind operationKind, Expression value)
             => new AssignmentExpression(target, operationKind, value);
+
+        public static FunctionCall FunctionCall(Identifier targetFunctionName, ImmutableArray<Expression> arguments) =>
+            new FunctionCall(targetFunctionName, arguments);
+    }
+
+    public sealed class FunctionCall : Expression
+    {
+        internal FunctionCall(Identifier targetFunctionName, ImmutableArray<Expression> arguments)
+        {
+            TargetFunctionName = targetFunctionName;
+            Arguments = arguments;
+        }
+
+        public Identifier TargetFunctionName { get; }
+        public ImmutableArray<Expression> Arguments { get; }
+
+        public override SyntaxNodeKind Kind => SyntaxNodeKind.FunctionCall;
+
+        public override void Accept(SyntaxVisitor visitor)
+        {
+            visitor.VisitFunctionCall(this);
+        }
+
+        public override TResult Accept<TResult>(SyntaxVisitor<TResult> visitor)
+        {
+            return visitor.VisitFunctionCall(this);
+        }
     }
 
     public enum SigilKind

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -18,15 +19,17 @@ namespace SciAdvNet.NSScript.Execution
         private readonly Dictionary<string, Action<ArgumentStack>> _builtinsDispatchTable;
 
         private readonly ExecutingVisitor _execVisitor;
-        private readonly INssBuiltInMethods _builtIns;
+        private readonly INssBuiltInFunctions _builtIns;
 
         private readonly List<ThreadContext> _threads;
         private readonly List<ThreadContext> _activeThreads;
         private readonly Queue<ThreadContext> _idleThreads;
 
+        private readonly Stopwatch _timer;
+
         private uint _nextThreadId;
 
-        public NSScriptInterpreter(IScriptLocator scriptLocator, INssBuiltInMethods builtIns)
+        public NSScriptInterpreter(IScriptLocator scriptLocator, INssBuiltInFunctions builtIns)
         {
             _builtIns = builtIns;
             _execVisitor = new ExecutingVisitor(builtIns);
@@ -40,6 +43,7 @@ namespace SciAdvNet.NSScript.Execution
 
             _builtinsDispatchTable = new Dictionary<string, Action<ArgumentStack>>(StringComparer.OrdinalIgnoreCase)
             {
+                ["Wait"] = Wait,
                 ["WaitKey"] = WaitKey,
                 ["Request"] = Request,
                 ["Delete"] = Delete,
@@ -56,15 +60,18 @@ namespace SciAdvNet.NSScript.Execution
                 ["SetLoopPoint"] = SetLoopPoint
             };
 
+            PredefinedConstants.Preload();
+
             Status = NSScriptInterpreterStatus.Idle;
+            _timer = new Stopwatch();
         }
 
         public VariableTable Globals { get; }
         public NSScriptSession Session { get; }
         public NSScriptInterpreterStatus Status { get; private set; }
-        public ImmutableArray<BuiltInMethodCall> PendingBuiltInCalls => _execVisitor.PendingBuiltInCalls.ToImmutableArray();
+        //public ImmutableArray<BuiltInFunctionCall> PendingBuiltInCalls => _execVisitor.PendingBuiltInCalls.ToImmutableArray();
 
-        //public event EventHandler<BuiltInMethodCall>
+        public event EventHandler<BuiltInFunctionCall> BuiltInCallScheduled;
 
         public void CreateThread(Module module, Statement entryPoint)
         {
@@ -77,10 +84,16 @@ namespace SciAdvNet.NSScript.Execution
         public void CreateThread(Module module) => CreateThread(module, module.MainChapter.Body);
         public void CreateThread(string moduleName) => CreateThread(Session.GetModule(moduleName));
 
-        public void Run()
+        public void Run(TimeSpan maxQuota)
         {
-            Status = NSScriptInterpreterStatus.Running;
+            if (_activeThreads.Count == 0)
+            {
+                //DispatchPendingBuiltInCalls();
+                return;
+            }
 
+            Status = NSScriptInterpreterStatus.Running;
+            _timer.Restart();
             while (Status == NSScriptInterpreterStatus.Running && _threads.Count > 0)
             {
                 while (_idleThreads.Count > 0)
@@ -90,14 +103,21 @@ namespace SciAdvNet.NSScript.Execution
                     _threads.Remove(thread);
                 }
 
-                if (_activeThreads.Count == 0)
+                if (_activeThreads.Count == 0 || _timer.Elapsed >= maxQuota)
                 {
+                    if (_activeThreads.Count > 0 && _timer.Elapsed >= TimeSpan.FromMilliseconds(90))
+                    {
+                        Console.BackgroundColor = ConsoleColor.Red;
+                        Console.WriteLine($"Quota exceded: {_timer.Elapsed.TotalMilliseconds}");
+                        Console.ResetColor();
+                    }
+                    _timer.Stop();
                     return;
                 }
 
                 foreach (var thread in _activeThreads)
                 {
-                    _execVisitor.ExecuteNode(thread);
+                    _execVisitor.Tick(thread);
                     if (thread.DoneExecuting)
                     {
                         _idleThreads.Enqueue(thread);
@@ -106,6 +126,8 @@ namespace SciAdvNet.NSScript.Execution
 
                 DispatchPendingBuiltInCalls();
             }
+
+            _timer.Stop();
         }
 
         public void Suspend()
@@ -131,7 +153,12 @@ namespace SciAdvNet.NSScript.Execution
 
         public void ResumeThread(uint threadId)
         {
-            var thread = _threads.FirstOrDefault(x => x.Id == threadId);
+            if (threadId >= _threads.Count)
+            {
+                throw new ArgumentOutOfRangeException($"There is no thread with ID {threadId}.");
+            }
+
+            var thread = _threads[(int)threadId];
             if (thread != null)
             {
                 thread.Resume();
@@ -143,20 +170,21 @@ namespace SciAdvNet.NSScript.Execution
         {
             while (_execVisitor.PendingBuiltInCalls.Count > 0 && Status != NSScriptInterpreterStatus.Suspended)
             {
-                var methodCall = _execVisitor.PendingBuiltInCalls.Dequeue();
+                var functionCall = _execVisitor.PendingBuiltInCalls.Dequeue();
 
-                Console.WriteLine(methodCall);
+                //Console.WriteLine(functionCall);
 
                 Action<ArgumentStack> handler;
-                _builtinsDispatchTable.TryGetValue(methodCall.MethodName, out handler);
-                handler?.Invoke(methodCall.MutableArguments);
+                _builtinsDispatchTable.TryGetValue(functionCall.FunctionName, out handler);
+                BuiltInCallScheduled?.Invoke(this, functionCall);
+                handler?.Invoke(functionCall.MutableArguments);
             }
         }
 
         private void Wait(ArgumentStack args)
         {
             TimeSpan delay = args.PopTimeSpan();
-            _builtIns.Wait(delay);
+            _builtIns.Delay(delay);
         }
 
         private void WaitKey(ArgumentStack args)
@@ -327,7 +355,7 @@ namespace SciAdvNet.NSScript.Execution
             string entityName = args.PopString();
             bool looping = args.PopBool();
 
-            _builtIns.SetLoop(entityName, looping);
+            _builtIns.ToggleLooping(entityName, looping);
         }
 
         private void SetLoopPoint(ArgumentStack args)
@@ -342,66 +370,148 @@ namespace SciAdvNet.NSScript.Execution
 
     internal sealed class ExecutingVisitor : SyntaxVisitor
     {
-        private readonly ExpressionEvaluator _exprEvaluator;
-        private readonly INssBuiltInMethods _builtIns;
+        private readonly ExpressionFlattener _exprFlattener;
+        private readonly ExpressionReducer _exprReducer;
+        private readonly RecursiveExpressionEvaluator _recursiveEvaluator;
+        private readonly INssBuiltInFunctions _builtIns;
 
         private ThreadContext _threadContext;
 
-        public ExecutingVisitor(INssBuiltInMethods builtIns)
+        public ExecutingVisitor(INssBuiltInFunctions builtIns)
         {
-            _exprEvaluator = new ExpressionEvaluator();
             _builtIns = builtIns;
-            PendingBuiltInCalls = new Queue<BuiltInMethodCall>();
+            _exprFlattener = new ExpressionFlattener();
+            _exprReducer = new ExpressionReducer();
+            _recursiveEvaluator = new RecursiveExpressionEvaluator();
+            PendingBuiltInCalls = new Queue<BuiltInFunctionCall>();
         }
 
-        public Queue<BuiltInMethodCall> PendingBuiltInCalls { get; }
+        private Frame CurrentFrame => _threadContext.CurrentFrame;
+        public Queue<BuiltInFunctionCall> PendingBuiltInCalls { get; }
 
-        public void ExecuteNode(ThreadContext context)
+        public void Tick(ThreadContext context)
         {
             _threadContext = context;
             Frame prevFrame = context.CurrentFrame;
+
             Visit(context.CurrentNode);
-            if (prevFrame == context.CurrentFrame)
+
+            var currentFrame = CurrentFrame;
+            if (_threadContext.CurrentFrame.EvaluationStack.Count == 0 && prevFrame == _threadContext.CurrentFrame)
             {
                 context.Advance();
             }
         }
 
-        private ConstantValue Evaluate(Expression expression)
+        private ConstantValue EvaluateTrivial(Expression expression)
         {
-            return _exprEvaluator.EvaluateExpression(expression, _threadContext.CurrentFrame);
+            return _recursiveEvaluator.EvaluateExpression(expression, _threadContext.CurrentFrame);
+        }
+
+        private bool Eval(Expression expression, out ConstantValue result)
+        {
+            //result = EvaluateTrivial(expression);
+            //return true;
+
+            if (CurrentFrame.EvaluationStack.Count == 0)
+            {
+                _exprFlattener.Flatten(expression, CurrentFrame.OperandStack, CurrentFrame.OperationStack);
+            }
+
+            _exprReducer.CurrentFrame = _threadContext.CurrentFrame;
+            while (CurrentFrame.OperationStack.Count > 0)
+            {
+                var operation = CurrentFrame.OperationStack.Pop();
+                var opCategory = OperationInfo.GetCategory(operation);
+                switch (opCategory)
+                {
+                    case OperationCategory.None:
+                        var operand = CurrentFrame.OperandStack.Pop();
+                        CurrentFrame.EvaluationStack.Push(operand);
+                        continue;
+
+                    case OperationCategory.Unary:
+                        operand = CurrentFrame.EvaluationStack.Pop();
+                        var intermediateResult = _exprReducer.ApplyUnaryOperation(operand, operation);
+
+                        CurrentFrame.EvaluationStack.Push(intermediateResult);
+                        break;
+
+                    case OperationCategory.Binary:
+                        var leftOperand = CurrentFrame.EvaluationStack.Pop();
+                        if (leftOperand.Kind == SyntaxNodeKind.FunctionCall)
+                        {
+                            PrepareFunctionCall(leftOperand as FunctionCall);
+                            result = default(ConstantValue);
+                            return false;
+                        }
+
+                        var rightOperand = CurrentFrame.EvaluationStack.Pop();
+                        intermediateResult = _exprReducer.ApplyBinaryOperation(_exprReducer.ReduceExpression(leftOperand), operation, _exprReducer.ReduceExpression(rightOperand));
+
+                        CurrentFrame.EvaluationStack.Push(intermediateResult);
+                        break;
+
+                    case OperationCategory.Assignment:
+                        var targetVariable = CurrentFrame.EvaluationStack.Pop() as Variable;
+                        var value = _exprReducer.ReduceExpression(CurrentFrame.EvaluationStack.Pop());
+
+                        string targetName = targetVariable.Name.SimplifiedName;
+                        _threadContext.CurrentFrame.Globals[targetName] = value;
+                        CurrentFrame.EvaluationStack.Push(value);
+                        break;
+                }
+            }
+
+            result = (ConstantValue)CurrentFrame.EvaluationStack.Pop();
+            return true;
         }
 
         public override void VisitExpressionStatement(ExpressionStatement expressionStatement)
         {
-            Evaluate(expressionStatement.Expression);
+            var expr = expressionStatement.Expression;
+
+            // Fast path for simple function calls.
+            if (expr is FunctionCall fc)
+            {
+                PrepareFunctionCall(fc);
+                return;
+            }
+
+            Eval(expr, out var _);
         }
 
         public override void VisitIfStatement(IfStatement ifStatement)
         {
-            if (Evaluate(ifStatement.Condition) == ConstantValue.True)
+            if (Eval(ifStatement.Condition, out var condition))
             {
-                _threadContext.PushContinuation(ifStatement.IfTrueStatement);
-            }
-            else if (ifStatement.IfFalseStatement != null)
-            {
-                _threadContext.PushContinuation(ifStatement.IfFalseStatement);
+                _threadContext.Advance();
+                if (condition == ConstantValue.True)
+                {
+                    _threadContext.PushContinuation(ifStatement.IfTrueStatement);
+                }
+                else if (ifStatement.IfFalseStatement != null)
+                {
+                    _threadContext.PushContinuation(ifStatement.IfFalseStatement);
+                }
             }
         }
 
         public override void VisitWhileStatement(WhileStatement whileStatement)
         {
-            if (Evaluate(whileStatement.Condition) == ConstantValue.True)
+            if (Eval(whileStatement.Condition, out var condition))
             {
-                _threadContext.PushContinuation(whileStatement.Body);
-                _threadContext.PushContinuation(whileStatement);
+                if (condition.RawValue is 1)
+                {
+                    _threadContext.PushContinuation(whileStatement.Body);
+                }
             }
         }
 
-        public override void VisitDialogueBlock(DialogueBlock dialogueBlock)
-        {
-            _threadContext.PushContinuation(dialogueBlock.Statements);
-        }
+        //public override void VisitDialogueBlock(DialogueBlock dialogueBlock)
+        //{
+        //    _threadContext.PushContinuation(dialogueBlock.Statements);
+        //}
 
         public override void VisitBlock(Block block)
         {
@@ -413,13 +523,19 @@ namespace SciAdvNet.NSScript.Execution
             _builtIns.DisplayDialogue(dialogueLine);
         }
 
-        public override void VisitMethodCall(MethodCall methodCall)
+        public void PrepareFunctionCall(FunctionCall functionCall)
         {
-            string name = methodCall.TargetMethodName.SimplifiedName;
-            Method target;
-            if (!_threadContext.CurrentModule.TryGetMethod(name, out target))
+            string name = functionCall.TargetFunctionName.SimplifiedName;
+
+            if (name == "WaitText")
             {
-                EnqueueBuiltIn(methodCall);
+                Debugger.Break();
+            }
+
+            Function target;
+            if (!_threadContext.CurrentModule.TryGetFunction(name, out target))
+            {
+                EnqueueBuiltIn(functionCall);
                 return;
             }
 
@@ -427,18 +543,19 @@ namespace SciAdvNet.NSScript.Execution
             for (int i = 0; i < target.Parameters.Length; i++)
             {
                 ParameterReference param = target.Parameters[i];
-                ConstantValue arg = Evaluate(methodCall.Arguments[i]);
+                ConstantValue arg = EvaluateTrivial(functionCall.Arguments[i]);
                 arguments[param.ParameterName.SimplifiedName] = arg;
             }
 
+            _threadContext.Advance();
             _threadContext.PushContinuation(target.Body, arguments);
         }
 
-        private void EnqueueBuiltIn(MethodCall methodCall)
+        private void EnqueueBuiltIn(FunctionCall functionCall)
         {
-            string name = methodCall.TargetMethodName.SimplifiedName;
-            var args = new ArgumentStack(methodCall.Arguments.Select(Evaluate).Reverse());
-            PendingBuiltInCalls.Enqueue(new BuiltInMethodCall(name, args, _threadContext.Id));
+            string name = functionCall.TargetFunctionName.SimplifiedName;
+            var args = new ArgumentStack(functionCall.Arguments.Select(EvaluateTrivial).Reverse());
+            PendingBuiltInCalls.Enqueue(new BuiltInFunctionCall(name, args, _threadContext.Id));
         }
     }
 }

@@ -25,9 +25,9 @@ namespace SciAdvNet.NSScript
             DefaultVisitNode(chapter);
         }
 
-        public virtual void VisitMethod(Method method)
+        public virtual void VisitFunction(Function function)
         {
-            DefaultVisitNode(method);
+            DefaultVisitNode(function);
         }
 
         public virtual void VisitBlock(Block block)
@@ -85,9 +85,9 @@ namespace SciAdvNet.NSScript
             DefaultVisitNode(assignmentExpression);
         }
 
-        public virtual void VisitMethodCall(MethodCall methodCall)
+        public virtual void VisitFunctionCall(FunctionCall functionCall)
         {
-            DefaultVisitNode(methodCall);
+            DefaultVisitNode(functionCall);
         }
 
         public virtual void VisitIfStatement(IfStatement ifStatement)
@@ -186,9 +186,9 @@ namespace SciAdvNet.NSScript
             return DefaultVisitNode(chapter);
         }
 
-        public virtual TResult VisitMethod(Method method)
+        public virtual TResult VisitFunction(Function function)
         {
-            return DefaultVisitNode(method);
+            return DefaultVisitNode(function);
         }
 
         public virtual TResult VisitBlock(Block block)
@@ -246,9 +246,9 @@ namespace SciAdvNet.NSScript
             return DefaultVisitNode(assignmentExpression);
         }
 
-        public virtual TResult VisitMethodCall(MethodCall methodCall)
+        public virtual TResult VisitFunctionCall(FunctionCall functionCall)
         {
-            return DefaultVisitNode(methodCall);
+            return DefaultVisitNode(functionCall);
         }
 
         public virtual TResult VisitIfStatement(IfStatement ifStatement)

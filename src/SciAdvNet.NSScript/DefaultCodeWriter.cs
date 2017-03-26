@@ -17,17 +17,17 @@ namespace SciAdvNet.NSScript
             Visit(chapter.Body);
         }
 
-        public override void VisitMethod(Method method)
+        public override void VisitFunction(Function function)
         {
             Write(SyntaxFacts.GetText(SyntaxTokenKind.FunctionKeyword));
             WriteSpace();
-            Visit(method.Name);
+            Visit(function.Name);
             Write("(");
 
-            var parameters = method.Parameters;
+            var parameters = function.Parameters;
             for (int i = 0; i < parameters.Length; i++)
             {
-                Visit(method.Parameters[i]);
+                Visit(function.Parameters[i]);
                 if (i != parameters.Length - 1)
                 {
                     Write(", ");
@@ -35,7 +35,7 @@ namespace SciAdvNet.NSScript
             }
 
             Write(")");
-            Visit(method.Body);
+            Visit(function.Body);
         }
 
         public override void VisitBlock(Block block)
@@ -90,16 +90,16 @@ namespace SciAdvNet.NSScript
         public override void VisitUnaryExpression(UnaryExpression unaryExpression)
         {
             var operationKind = unaryExpression.OperationKind;
-            if (Operation.IsPrefixOperation(operationKind))
+            if (OperationInfo.IsPrefixUnary(operationKind))
             {
-                Write(Operation.GetText(operationKind));
+                Write(OperationInfo.GetText(operationKind));
             }
 
             Visit(unaryExpression.Operand);
 
-            if (Operation.IsPostfixOperation(operationKind))
+            if (OperationInfo.IsPostfixUnary(operationKind))
             {
-                Write(Operation.GetText(operationKind));
+                Write(OperationInfo.GetText(operationKind));
             }
         }
 
@@ -107,7 +107,7 @@ namespace SciAdvNet.NSScript
         {
             Visit(binaryExpression.Left);
             WriteSpace();
-            Write(Operation.GetText(binaryExpression.OperationKind));
+            Write(OperationInfo.GetText(binaryExpression.OperationKind));
             WriteSpace();
             Visit(binaryExpression.Right);
         }
@@ -116,20 +116,20 @@ namespace SciAdvNet.NSScript
         {
             Visit(assignmentExpression.Target);
             WriteSpace();
-            Write(Operation.GetText(assignmentExpression.OperationKind));
+            Write(OperationInfo.GetText(assignmentExpression.OperationKind));
             WriteSpace();
             Visit(assignmentExpression.Value);
         }
 
-        public override void VisitMethodCall(MethodCall methodCall)
+        public override void VisitFunctionCall(FunctionCall functionCall)
         {
-            Visit(methodCall.TargetMethodName);
+            Visit(functionCall.TargetFunctionName);
             Write("(");
 
-            var args = methodCall.Arguments;
+            var args = functionCall.Arguments;
             for (int i = 0; i < args.Length; i++)
             {
-                Visit(methodCall.Arguments[i]);
+                Visit(functionCall.Arguments[i]);
                 if (i != args.Length - 1)
                 {
                     Write(", ");

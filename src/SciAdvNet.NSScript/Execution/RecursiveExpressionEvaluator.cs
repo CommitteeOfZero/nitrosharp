@@ -2,16 +2,16 @@
 
 namespace SciAdvNet.NSScript.Execution
 {
-    public sealed class ExpressionEvaluator
+    public sealed class RecursiveExpressionEvaluator
     {
         private readonly EvaluatingVisitor _evalVisitor;
 
-        public ExpressionEvaluator()
+        public RecursiveExpressionEvaluator()
         {
             _evalVisitor = new EvaluatingVisitor();
         }
 
-        public ConstantValue EvaluateExpression(Expression expression, IFrame frame)
+        public ConstantValue EvaluateExpression(Expression expression, Frame frame)
         {
             _evalVisitor.Frame = frame;
             return _evalVisitor.Visit(expression);
@@ -20,7 +20,7 @@ namespace SciAdvNet.NSScript.Execution
 
     internal sealed class EvaluatingVisitor : SyntaxVisitor<ConstantValue>
     {
-        public IFrame Frame { get; set; }
+        public Frame Frame { get; set; }
 
         public override ConstantValue VisitLiteral(Literal literal)
         {
@@ -110,7 +110,7 @@ namespace SciAdvNet.NSScript.Execution
             if (operand.Kind != SyntaxNodeKind.Variable &&
                 (operationKind == OperationKind.PostfixIncrement || operationKind == OperationKind.PostfixIncrement))
             {
-                string op = Operation.GetText(operationKind);
+                string op = OperationInfo.GetText(operationKind);
                 throw new InvalidOperationException($"Unary operator '{op}' can only be applied to variables.");
             }
 

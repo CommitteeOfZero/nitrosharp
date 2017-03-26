@@ -4,6 +4,8 @@
     <OutputType>Exe</OutputType>
     <OutputPath>$(SolutionDir)\bin\$(Configuration)\</OutputPath>
     <TargetFramework>netcoreapp1.1</TargetFramework>
+    <!--<TargetFramework>netcoreapp2.0</TargetFramework>
+    <RuntimeFrameworkVersion>2.0.0-beta-001834-00</RuntimeFrameworkVersion>-->
     <PackageTargetFallback>portable-net45+win8+wpa81</PackageTargetFallback>
   </PropertyGroup>
 

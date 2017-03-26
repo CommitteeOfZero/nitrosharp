@@ -2,14 +2,14 @@
 
 namespace SciAdvNet.NSScript.Execution
 {
-    public interface INssBuiltInMethods
+    public interface INssBuiltInFunctions
     {
         uint CallingThreadId { get; }
 
         void DisplayDialogue(DialogueLine dialogue);
 
         void SetAlias(string entityName, string alias);
-        void Wait(TimeSpan delay);
+        void Delay(TimeSpan delay);
 
         /// <summary>
         /// Original name: WaitKey
@@ -56,7 +56,7 @@ namespace SciAdvNet.NSScript.Execution
         void Zoom(string entityName, TimeSpan duration, NssCoordinate x, NssCoordinate y, bool wait);
 
         void SetLoopPoint(string entityName, TimeSpan loopStart, TimeSpan loopEnd);
-        void SetLoop(string entityName, bool looping);
+        void ToggleLooping(string entityName, bool looping);
         void SetVolume(string entityName, TimeSpan duration, int volume);
 
         void CreateChoice(string entityName);

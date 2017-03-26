@@ -21,7 +21,7 @@ namespace SciAdvNet.NSScript
 
         // A marker that we set at the beginning of each lexeme.
         private int _lexemeStart;
-        private bool _scanningMethodSignature;
+        private bool _scanningFunctionSignature;
 
         // Indicates whether we're inside a dialogue block, a.k.a <PRE> element.
         private bool _isInsideDialogueBlock;
@@ -127,7 +127,7 @@ namespace SciAdvNet.NSScript
             switch (character)
             {
                 case '"':
-                    if (!_scanningMethodSignature && PeekChar(1) != '$')
+                    if (!_scanningFunctionSignature && PeekChar(1) != '$')
                     {
                         ScanStringLiteral();
                         kind = SyntaxTokenKind.StringLiteralToken;
@@ -276,9 +276,9 @@ namespace SciAdvNet.NSScript
                     AdvanceChar();
                     kind = SyntaxTokenKind.CloseParenToken;
 
-                    if (_scanningMethodSignature)
+                    if (_scanningFunctionSignature)
                     {
-                        _scanningMethodSignature = false;
+                        _scanningFunctionSignature = false;
                     }
                     break;
 
@@ -452,7 +452,7 @@ namespace SciAdvNet.NSScript
                             break;
 
                         case SyntaxTokenKind.FunctionKeyword:
-                            _scanningMethodSignature = true;
+                            _scanningFunctionSignature = true;
                             break;
                     }
                     break;

@@ -1,6 +1,8 @@
-﻿using ProjectHoppy.Content;
+﻿using Microsoft.Extensions.Logging;
+using ProjectHoppy.Content;
 using ProjectHoppy.Graphics;
 using SciAdvNet.NSScript.Execution;
+using System;
 using System.IO;
 
 namespace ProjectHoppy
@@ -12,6 +14,8 @@ namespace ProjectHoppy
         private N2SystemImplementation _nssBuiltIns;
         private HoppyConfig _config;
 
+        private ILogger _interpreterLog;
+
         public Noah()
         {
             AddStartupTask(Init);
@@ -19,15 +23,28 @@ namespace ProjectHoppy
 
         private void Init()
         {
+            SetupLogging();
             _config = HoppyConfig.Read();
             _content = new ContentManager(_config.ContentPath);
 
             _nssBuiltIns = new N2SystemImplementation(Entities, _content);
             _nssInterpreter = new NSScriptInterpreter(new ScriptLocator(_config.NssFolderPath), _nssBuiltIns);
             _nssBuiltIns.Interpreter = _nssInterpreter;
+            _nssInterpreter.BuiltInCallScheduled += OnBuiltInCallDispatched;
 
-            //_nssInterpreter.CreateMicrothread("nss/boot-logo.nss");
+            //_nssInterpreter.CreateThread("nss/boot-logo.nss");
             _nssInterpreter.CreateThread("nss/ch01_007_円山町殺人現場");
+        }
+
+        private void OnBuiltInCallDispatched(object sender, BuiltInFunctionCall call)
+        {
+            _interpreterLog.LogInformation($"Built-in call: {call.ToString()}");
+        }
+
+        private void SetupLogging()
+        {
+            var loggerFactory = new LoggerFactory().AddConsole();
+            _interpreterLog = loggerFactory.CreateLogger("Interpreter");
         }
 
         public override void OnGraphicsInitialized()
@@ -52,20 +69,10 @@ namespace ProjectHoppy
         {
             if (!_nssBuiltIns.Waiting)
             {
-                _nssInterpreter.Run();
+                _nssInterpreter.Run(TimeSpan.FromMilliseconds(8.0f));
             }
             base.Update(deltaMilliseconds);
         }
-
-//        private void LogBuiltInCalls()
-//        {
-//#if DEBUG
-//            foreach (var call in _nssInterpreter.PendingBuiltInCalls)
-//            {
-//                Console.WriteLine($"Built-in call: {call}");
-//            }
-//#endif
-//        }
 
         private class ScriptLocator : IScriptLocator
         {

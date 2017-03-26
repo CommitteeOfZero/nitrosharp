@@ -6,11 +6,11 @@ namespace SciAdvNet.NSScript.Execution
 {
     internal static class PredefinedConstants
     {
-        public static ImmutableDictionary<string, NssRelativePosition> Positions { get; }
-        public static ImmutableDictionary<string, NssColor> Colors { get; }
-        public static ImmutableDictionary<string, NssAction> Actions { get; }
+        public static Dictionary<string, NssRelativePosition> Positions { get; private set; }
+        public static Dictionary<string, NssColor> Colors { get; private set; }
+        public static Dictionary<string, NssAction> Actions { get; private set; }
 
-        static PredefinedConstants()
+        public static void Preload()
         {
             Positions = new Dictionary<string, NssRelativePosition>(StringComparer.OrdinalIgnoreCase)
             {
@@ -31,7 +31,7 @@ namespace SciAdvNet.NSScript.Execution
                 ["Bottom"] = NssRelativePosition.Bottom,
                 ["Center"] = NssRelativePosition.Center,
                 ["Middle"] = NssRelativePosition.Center
-            }.ToImmutableDictionary(StringComparer.OrdinalIgnoreCase);
+            };
 
             Colors = new Dictionary<string, NssColor>(StringComparer.OrdinalIgnoreCase)
             {
@@ -40,14 +40,14 @@ namespace SciAdvNet.NSScript.Execution
                 ["RED"] = NssColor.Red,
                 ["GREEN"] = NssColor.Green,
                 ["BLUE"] = NssColor.Blue
-            }.ToImmutableDictionary(StringComparer.OrdinalIgnoreCase);
+            };
 
             Actions = new Dictionary<string, NssAction>(StringComparer.OrdinalIgnoreCase)
             {
                 ["Lock"] = NssAction.Lock,
                 ["UnLock"] = NssAction.Unlock,
                 ["Play"] = NssAction.Play
-            }.ToImmutableDictionary(StringComparer.OrdinalIgnoreCase);
+            };
         }
     }
 

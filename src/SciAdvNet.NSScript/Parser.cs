@@ -28,7 +28,7 @@ namespace SciAdvNet.NSScript
         {
             Chapter main = null;
             var scenes = ImmutableArray.CreateBuilder<Scene>();
-            var methods = ImmutableArray.CreateBuilder<Method>();
+            var functions = ImmutableArray.CreateBuilder<Function>();
             var includes = ImmutableArray.CreateBuilder<string>();
             while (CurrentToken.Kind != SyntaxTokenKind.EndOfFileToken)
             {
@@ -50,8 +50,8 @@ namespace SciAdvNet.NSScript
                         break;
 
                     case SyntaxTokenKind.FunctionKeyword:
-                        var method = ParseMethod();
-                        methods.Add(method);
+                        var function = ParseFunction();
+                        functions.Add(function);
                         break;
 
                     default:
@@ -62,7 +62,7 @@ namespace SciAdvNet.NSScript
                 }
             }
 
-            return new NSSyntaxTree(main, methods.ToImmutable(), scenes.ToImmutable(), includes.ToImmutable());
+            return new NSSyntaxTree(main, functions.ToImmutable(), scenes.ToImmutable(), includes.ToImmutable());
         }
 
         private IEnumerable<SyntaxToken> PreLex()
@@ -134,14 +134,14 @@ namespace SciAdvNet.NSScript
             return StatementFactory.Scene(name, body);
         }
 
-        private Method ParseMethod()
+        private Function ParseFunction()
         {
             EatToken(SyntaxTokenKind.FunctionKeyword);
             var name = ParseIdentifier();
             var parameters = _currentFrame = ParseParameterList();
             var body = ParseBlock();
 
-            return StatementFactory.Method(name, parameters, body);
+            return StatementFactory.Function(name, parameters, body);
         }
 
         private ImmutableArray<ParameterReference> ParseParameterList()
@@ -204,7 +204,14 @@ namespace SciAdvNet.NSScript
 
                 case SyntaxTokenKind.IdentifierToken:
                 case SyntaxTokenKind.StringLiteralToken:
-                    return ParseExpressionStatementOrMethodCall();
+                    if (PeekToken(1).Kind == SyntaxTokenKind.ColonToken)
+                    {
+                        EatToken(SyntaxTokenKind.IdentifierToken);
+                        EatToken(SyntaxTokenKind.ColonToken);
+                        return null;
+                    }
+
+                    return ParseExpressionStatement();
 
                 case SyntaxTokenKind.IfKeyword:
                     return ParseIfStatement();
@@ -253,11 +260,6 @@ namespace SciAdvNet.NSScript
             return CurrentToken.Text.ToUpperInvariant().StartsWith("<PRE");
         }
 
-        private Statement ParseExpressionStatementOrMethodCall()
-        {
-            return IsMethodCall() ? (Statement)ParseMethodCall() : ParseExpressionStatement();
-        }
-
         private ExpressionStatement ParseExpressionStatement()
         {
             var expr = ParseExpression();
@@ -285,7 +287,7 @@ namespace SciAdvNet.NSScript
             {
                 var operationKind = SyntaxFacts.GetPrefixUnaryOperationKind(tk);
                 EatToken();
-                newPrecedence = Operation.GetPrecedence(operationKind);
+                newPrecedence = OperationInfo.GetPrecedence(operationKind);
                 var operand = ParseSubExpression(newPrecedence);
                 leftOperand = ExpressionFactory.Unary(operand, operationKind);
             }
@@ -314,7 +316,7 @@ namespace SciAdvNet.NSScript
                     break;
                 }
 
-                newPrecedence = Operation.GetPrecedence(operationKind);
+                newPrecedence = OperationInfo.GetPrecedence(operationKind);
                 if (newPrecedence < minPrecedence)
                 {
                     break;
@@ -340,6 +342,11 @@ namespace SciAdvNet.NSScript
             switch (CurrentToken.Kind)
             {
                 case SyntaxTokenKind.IdentifierToken:
+                    if (PeekToken(1).Kind == SyntaxTokenKind.OpenParenToken)
+                    {
+                        return ParseFunctionCall();
+                    }
+
                     var symbol = ParseVariableOrParameterOrConstant();
                     return ParsePostfixExpression(symbol);
 
@@ -459,7 +466,7 @@ namespace SciAdvNet.NSScript
             return ExpressionFactory.Identifier(fullName, simplifiedName, sigil);
         }
 
-        private bool IsMethodCall()
+        private bool IsFunctionCall()
         {
             Debug.Assert(CurrentToken.Kind == SyntaxTokenKind.IdentifierToken || CurrentToken.Kind == SyntaxTokenKind.StringLiteralToken);
 
@@ -504,7 +511,7 @@ namespace SciAdvNet.NSScript
             return ExpressionFactory.NamedConstant(ParseIdentifier());
         }
 
-        private MethodCall ParseMethodCall()
+        private FunctionCall ParseFunctionCall()
         {
             var targetName = ParseIdentifier();
 
@@ -514,7 +521,7 @@ namespace SciAdvNet.NSScript
                 args = ParseArgumentList();
             }
 
-            return StatementFactory.MethodCall(targetName, args);
+            return ExpressionFactory.FunctionCall(targetName, args);
         }
 
         private ImmutableArray<Expression> ParseArgumentList()

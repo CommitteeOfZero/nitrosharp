@@ -5,7 +5,22 @@ namespace SciAdvNet.NSScript.Tests
     public class ExpressionParsingTests
     {
         [Fact]
-        public void TestNumericLiteralExpression()
+        public void ParseFunctionCall()
+        {
+            string text = "WaitKey(10000);";
+            var call = NSScript.ParseExpression(text) as FunctionCall;
+            Assert.NotNull(call);
+            Assert.Equal(SyntaxNodeKind.FunctionCall, call.Kind);
+            Assert.Equal("WaitKey", call.TargetFunctionName.FullName);
+            Assert.Equal(call.TargetFunctionName.FullName, call.TargetFunctionName.SimplifiedName);
+            Assert.Equal(SigilKind.None, call.TargetFunctionName.Sigil);
+            Assert.Equal(1, call.Arguments.Length);
+
+            Assert.Equal(text, call.ToString());
+        }
+
+        [Fact]
+        public void ParseNumericLiteralExpression()
         {
             string literal = "42";
             var expr = NSScript.ParseExpression(literal) as Literal;
@@ -18,7 +33,7 @@ namespace SciAdvNet.NSScript.Tests
         }
 
         [Fact]
-        public void TestStringLiteralExpression()
+        public void ParseStringLiteralExpression()
         {
             string literal = "\"stuff\"";
             var expr = NSScript.ParseExpression(literal) as Literal;
@@ -31,7 +46,7 @@ namespace SciAdvNet.NSScript.Tests
         }
 
         [Fact]
-        public void TestNamedConstant()
+        public void ParseNamedConstant()
         {
             string text = "center";
             var constant = NSScript.ParseExpression(text) as NamedConstant;
@@ -43,7 +58,7 @@ namespace SciAdvNet.NSScript.Tests
         }
 
         [Fact]
-        public void TestVariableWithDollarSigil()
+        public void ParseVariableWithDollarSigil()
         {
             string text = "$testVar";
             var variable = NSScript.ParseExpression(text) as Variable;
@@ -57,7 +72,7 @@ namespace SciAdvNet.NSScript.Tests
         }
 
         [Fact]
-        public void TestVariableWithHashSigil()
+        public void ParseVariableWithHashSigil()
         {
             string text = "#testVar";
             var variable = NSScript.ParseExpression(text) as Variable;
@@ -71,7 +86,7 @@ namespace SciAdvNet.NSScript.Tests
         }
 
         [Fact]
-        public void TestVariableInQuotes()
+        public void ParseVariableInQuotes()
         {
             string text = "\"$testVar\"";
             var variable = NSScript.ParseExpression(text) as Variable;
@@ -85,7 +100,7 @@ namespace SciAdvNet.NSScript.Tests
         }
 
         [Fact]
-        public void TestUnaryOperators()
+        public void ParseUnaryOperators()
         {
             TestUnary(OperationKind.LogicalNegation);
             TestUnary(OperationKind.PostfixDecrement);
@@ -95,7 +110,7 @@ namespace SciAdvNet.NSScript.Tests
         }
 
         [Fact]
-        public void TestBinaryOperators()
+        public void ParseBinaryOperators()
         {
             TestBinary(OperationKind.Addition);
             TestBinary(OperationKind.Division);
@@ -112,7 +127,7 @@ namespace SciAdvNet.NSScript.Tests
         }
 
         [Fact]
-        public void TestAssignmentOperators()
+        public void ParseAssignmentOperators()
         {
             TestAssignment(OperationKind.AddAssignment);
             TestAssignment(OperationKind.DivideAssignment);
@@ -124,13 +139,13 @@ namespace SciAdvNet.NSScript.Tests
         private void TestUnary(OperationKind kind)
         {
             string text;
-            if (Operation.IsPrefixOperation(kind))
+            if (OperationInfo.IsPrefixUnary(kind))
             {
-                text = Operation.GetText(kind) + "$a";
+                text = OperationInfo.GetText(kind) + "$a";
             }
             else
             {
-                text = "$a" + Operation.GetText(kind);
+                text = "$a" + OperationInfo.GetText(kind);
             }
 
             var expr = NSScript.ParseExpression(text) as UnaryExpression;
@@ -148,7 +163,7 @@ namespace SciAdvNet.NSScript.Tests
 
         private void TestBinary(OperationKind kind)
         {
-            string text = "$a " + Operation.GetText(kind) + " $b";
+            string text = "$a " + OperationInfo.GetText(kind) + " $b";
             var expr = NSScript.ParseExpression(text) as BinaryExpression;
 
             Assert.NotNull(expr);
@@ -168,7 +183,7 @@ namespace SciAdvNet.NSScript.Tests
 
         private void TestAssignment(OperationKind kind)
         {
-            string text = "$a " + Operation.GetText(kind) + " 42";
+            string text = "$a " + OperationInfo.GetText(kind) + " 42";
             var expr = NSScript.ParseExpression(text) as AssignmentExpression;
 
             Assert.NotNull(expr);
@@ -188,7 +203,7 @@ namespace SciAdvNet.NSScript.Tests
         public void TestVariableReference()
         {
             string text = "SomeMethod($a);";
-            var invocation = NSScript.ParseStatement(text) as MethodCall;
+            var invocation = NSScript.ParseExpression(text) as FunctionCall;
 
             var arg = invocation.Arguments[0] as Variable;
             Assert.NotNull(arg);
@@ -198,11 +213,11 @@ namespace SciAdvNet.NSScript.Tests
         [Fact]
         public void TestIntParameterReference()
         {
-            string text = "function Test(intParam) { SomeMethod(intParam); }";
+            string text = "function Test(intParam) { SomeFunction(intParam); }";
             var root = NSScript.ParseScript(text);
-            var method = root.Methods[0];
+            var function = root.Functions[0];
 
-            var invocation = method.Body.Statements[0] as MethodCall;
+            var invocation = (function.Body.Statements[0] as ExpressionStatement)?.Expression as FunctionCall;
             Assert.NotNull(invocation);
 
             var arg = invocation.Arguments[0] as ParameterReference;
@@ -222,11 +237,11 @@ namespace SciAdvNet.NSScript.Tests
 
         private void TestIntParameterReferenceWithSigilImpl(string fullName, string simplifiedName, SigilKind sigil)
         {
-            string text = $"function Test({fullName}) {{ SomeMethod({fullName}); }}";
+            string text = $"function Test({fullName}) {{ SomeFunction({fullName}); }}";
             var root = NSScript.ParseScript(text);
-            var method = root.Methods[0];
+            var function = root.Functions[0];
 
-            var invocation = method.Body.Statements[0] as MethodCall;
+            var invocation = (function.Body.Statements[0] as ExpressionStatement)?.Expression as FunctionCall;
             Assert.NotNull(invocation);
             var arg = invocation.Arguments[0] as ParameterReference;
             Assert.NotNull(arg);
@@ -241,9 +256,9 @@ namespace SciAdvNet.NSScript.Tests
         {
             string text = "function Test(\"stringParam\") { SomeMethod(\"stringParam\"); }";
             var root = NSScript.ParseScript(text);
-            var method = root.Methods[0];
+            var function = root.Functions[0];
 
-            var invocation = method.Body.Statements[0] as MethodCall;
+            var invocation = (function.Body.Statements[0] as ExpressionStatement)?.Expression as FunctionCall;
             Assert.NotNull(invocation);
             var arg = invocation.Arguments[0] as ParameterReference;
             Assert.NotNull(arg);
@@ -264,9 +279,9 @@ namespace SciAdvNet.NSScript.Tests
         {
             string text = $"function Test({fullName}) {{ SomeMethod({fullName}); }}";
             var root = NSScript.ParseScript(text);
-            var method = root.Methods[0];
+            var function = root.Functions[0];
 
-            var invocation = method.Body.Statements[0] as MethodCall;
+            var invocation = (function.Body.Statements[0] as ExpressionStatement)?.Expression as FunctionCall;
             Assert.NotNull(invocation);
             var arg = invocation.Arguments[0] as ParameterReference;
             Assert.NotNull(arg);

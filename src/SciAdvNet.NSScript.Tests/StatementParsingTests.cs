@@ -6,7 +6,7 @@ namespace SciAdvNet.NSScript.Tests
     public class StatementParsingTests
     {
         [Fact]
-        public void TestChapter()
+        public void ParseChapterDefinition()
         {
             string text = "chapter main{}";
             var root = NSScript.ParseScript(text);
@@ -20,7 +20,7 @@ namespace SciAdvNet.NSScript.Tests
         }
 
         [Fact]
-        public void TestScene()
+        public void ParseSceneDefinition()
         {
             string text = "scene TestScene{}";
             var root = NSScript.ParseScript(text);
@@ -32,43 +32,28 @@ namespace SciAdvNet.NSScript.Tests
         }
 
         [Fact]
-        public void TestMethod()
+        public void ParseFunctionDefinition()
         {
             string text = "function Test(){}";
             var root = NSScript.ParseScript(text);
-            var method = root.Methods[0];
+            var functionDef = root.Functions[0];
 
-            Assert.Equal(SyntaxNodeKind.Method, method.Kind);
-            Assert.Equal("Test", method.Name.FullName);
-            Assert.Equal(0, method.Parameters.Length);
+            Assert.Equal(SyntaxNodeKind.Function, functionDef.Kind);
+            Assert.Equal("Test", functionDef.Name.FullName);
+            Assert.Equal(0, functionDef.Parameters.Length);
 
-            string toStringResult = Helpers.RemoveNewLineCharacters(method.ToString());
+            string toStringResult = Helpers.RemoveNewLineCharacters(functionDef.ToString());
             Assert.Equal(text, toStringResult);
         }
 
         [Fact]
-        public void TestMethodCall()
-        {
-            string text = "WaitKey(10000);";
-            var call = NSScript.ParseStatement(text) as MethodCall;
-            Assert.NotNull(call);
-            Assert.Equal(SyntaxNodeKind.MethodCall, call.Kind);
-            Assert.Equal("WaitKey", call.TargetMethodName.FullName);
-            Assert.Equal(call.TargetMethodName.FullName, call.TargetMethodName.SimplifiedName);
-            Assert.Equal(SigilKind.None, call.TargetMethodName.Sigil);
-            Assert.Equal(1, call.Arguments.Length);
-
-            Assert.Equal(text, call.ToString());
-        }
-
-        [Fact]
-        public void TestMethodWithIntParameter()
+        public void ParseFunctionDefinitionWithIntParameter()
         {
             string text = "function Test(intParam){}";
             var root = NSScript.ParseScript(text);
-            var method = root.Methods[0];
+            var method = root.Functions[0];
 
-            Assert.Equal(SyntaxNodeKind.Method, method.Kind);
+            Assert.Equal(SyntaxNodeKind.Function, method.Kind);
             Assert.Equal("Test", method.Name.FullName);
 
             Assert.Equal(1, method.Parameters.Length);
@@ -83,13 +68,13 @@ namespace SciAdvNet.NSScript.Tests
         }
 
         [Fact]
-        public void TestMethodWithStringParameter()
+        public void ParseFunctionDefinitionWithStringParameter()
         {
             string text = "function Test(\"stringParam\"){}";
             var root = NSScript.ParseScript(text);
-            var method = root.Methods[0];
+            var method = root.Functions[0];
 
-            Assert.Equal(SyntaxNodeKind.Method, method.Kind);
+            Assert.Equal(SyntaxNodeKind.Function, method.Kind);
             Assert.Equal("Test", method.Name.FullName);
 
             Assert.Equal(1, method.Parameters.Length);
@@ -104,19 +89,19 @@ namespace SciAdvNet.NSScript.Tests
         }
 
         [Fact]
-        public void TestMethodWithStringParameterWithSigil()
+        public void ParseFunctionDefinitionWithStringParameterWithSigil()
         {
-            TestMethodWithStringParameterWithSigilImpl("\"$stringParam\"", "stringParam", SigilKind.Dollar);
-            TestMethodWithStringParameterWithSigilImpl("\"#stringParam\"", "stringParam", SigilKind.Hash);
+            TestFunctionWithStringParameterWithSigilImpl("\"$stringParam\"", "stringParam", SigilKind.Dollar);
+            TestFunctionWithStringParameterWithSigilImpl("\"#stringParam\"", "stringParam", SigilKind.Hash);
         }
 
-        private void TestMethodWithStringParameterWithSigilImpl(string fullName, string simplifiedName, SigilKind sigil)
+        private void TestFunctionWithStringParameterWithSigilImpl(string fullName, string simplifiedName, SigilKind sigil)
         {
             string text = $"function Test({fullName}){{}}";
             var root = NSScript.ParseScript(text);
-            var method = root.Methods[0];
+            var method = root.Functions[0];
 
-            Assert.Equal(SyntaxNodeKind.Method, method.Kind);
+            Assert.Equal(SyntaxNodeKind.Function, method.Kind);
             Assert.Equal("Test", method.Name.FullName);
 
             Assert.Equal(1, method.Parameters.Length);
@@ -131,7 +116,7 @@ namespace SciAdvNet.NSScript.Tests
         }
 
         [Fact]
-        public void TestIfStatement()
+        public void ParseIfStatement()
         {
             string text = "if (#flag == true){}";
             var ifStatement = NSScript.ParseStatement(text) as IfStatement;
@@ -146,19 +131,7 @@ namespace SciAdvNet.NSScript.Tests
         }
 
         [Fact]
-        public void TestBreakStatement()
-        {
-            string text = "break;";
-            var statement = NSScript.ParseStatement(text) as BreakStatement;
-            Assert.NotNull(statement);
-            Assert.Equal(SyntaxNodeKind.BreakStatement, statement.Kind);
-
-            string toStringResult = Helpers.RemoveNewLineCharacters(statement.ToString());
-            Assert.Equal(text, toStringResult);
-        }
-
-        [Fact]
-        public void TestIfStatementWithElseClause()
+        public void ParseIfStatementWithElseClause()
         {
             string text = "if (#flag == true){}else{}";
             var ifStatement = NSScript.ParseStatement(text) as IfStatement;
@@ -173,7 +146,19 @@ namespace SciAdvNet.NSScript.Tests
         }
 
         [Fact]
-        public void TestWhileStatement()
+        public void ParseBreakStatement()
+        {
+            string text = "break;";
+            var statement = NSScript.ParseStatement(text) as BreakStatement;
+            Assert.NotNull(statement);
+            Assert.Equal(SyntaxNodeKind.BreakStatement, statement.Kind);
+
+            string toStringResult = Helpers.RemoveNewLineCharacters(statement.ToString());
+            Assert.Equal(text, toStringResult);
+        }
+
+        [Fact]
+        public void ParseWhileStatement()
         {
             string text = "while (true){}";
             var whileStatement = NSScript.ParseStatement(text) as WhileStatement;
@@ -187,14 +172,12 @@ namespace SciAdvNet.NSScript.Tests
         }
 
         [Fact]
-        public void TestSelectStatement()
+        public void ParseSelectStatement()
         {
             string text = @"
 select
 {
-case option1:{}
-case option2:{}
-case option3:{}
+case option:{}
 }";
 
             var selectStatement = NSScript.ParseStatement(text) as SelectStatement;
@@ -202,16 +185,16 @@ case option3:{}
             Assert.Equal(SyntaxNodeKind.SelectStatement, selectStatement.Kind);
 
             var body = selectStatement.Body;
-            Assert.Equal(3, body.Statements.Length);
+            Assert.Equal(1, body.Statements.Length);
             var firstSection = body.Statements[0] as SelectSection;
             Assert.NotNull(firstSection);
             Assert.Equal(SyntaxNodeKind.SelectSection, firstSection.Kind);
-            Assert.Equal("option1", firstSection.Label.FullName);
+            Assert.Equal("option", firstSection.Label.FullName);
             Assert.NotNull(firstSection.Body);
         }
 
         [Fact]
-        public void TestReturnStatement()
+        public void ParseReturnStatement()
         {
             string text = "return;";
             var statement = NSScript.ParseStatement(text) as ReturnStatement;
@@ -221,7 +204,7 @@ case option3:{}
         }
 
         [Fact]
-        public void TestCallChapterStatement()
+        public void ParseCallChapterStatement()
         {
             string text = "call_chapter @->testchapter;";
             var statement = NSScript.ParseStatement(text) as CallChapterStatement;
@@ -232,7 +215,7 @@ case option3:{}
         }
 
         [Fact]
-        public void TestCallSceneStatement()
+        public void ParseCallSceneStatement()
         {
             string text = "call_scene @->testscene;";
             var statement = NSScript.ParseStatement(text) as CallSceneStatement;

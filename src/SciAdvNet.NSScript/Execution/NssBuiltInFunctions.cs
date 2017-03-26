@@ -2,7 +2,7 @@
 
 namespace SciAdvNet.NSScript.Execution
 {
-    public class NssBuiltInMethods : INssBuiltInMethods
+    public class NssBuiltInFunctions : INssBuiltInFunctions
     {
         public uint CallingThreadId { get; }
 
@@ -43,7 +43,7 @@ namespace SciAdvNet.NSScript.Execution
         {
         }
 
-        public virtual void SetLoop(string entityName, bool loop)
+        public virtual void ToggleLooping(string entityName, bool loop)
         {
         }
 
@@ -55,7 +55,7 @@ namespace SciAdvNet.NSScript.Execution
         {
         }
 
-        public virtual void Wait(TimeSpan delay)
+        public virtual void Delay(TimeSpan delay)
         {
         }
 

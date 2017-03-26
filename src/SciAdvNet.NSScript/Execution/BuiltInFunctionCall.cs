@@ -3,20 +3,20 @@ using System.Linq;
 
 namespace SciAdvNet.NSScript.Execution
 {
-    public struct BuiltInMethodCall
+    public struct BuiltInFunctionCall
     {
         private ImmutableArray<ConstantValue> _immutableArgs;
-        internal static BuiltInMethodCall Empty = new BuiltInMethodCall();
+        internal static BuiltInFunctionCall Empty = new BuiltInFunctionCall();
 
-        internal BuiltInMethodCall(string methodName, ArgumentStack arguments, uint callingThreadId)
+        internal BuiltInFunctionCall(string functionName, ArgumentStack arguments, uint callingThreadId)
         {
-            MethodName = methodName;
+            FunctionName = functionName;
             MutableArguments = arguments;
             _immutableArgs = ImmutableArray<ConstantValue>.Empty;
             CallingThreadId = callingThreadId;
         }
 
-        public string MethodName { get; }
+        public string FunctionName { get; }
         public ImmutableArray<ConstantValue> Arguments
         {
             get
@@ -33,7 +33,7 @@ namespace SciAdvNet.NSScript.Execution
         internal ArgumentStack MutableArguments { get; }
 
         public uint CallingThreadId { get; }
-        internal bool IsEmpty => string.IsNullOrEmpty(MethodName);
+        internal bool IsEmpty => string.IsNullOrEmpty(FunctionName);
 
         public override string ToString()
         {
@@ -43,7 +43,7 @@ namespace SciAdvNet.NSScript.Execution
                 args = MutableArguments.Count == 1 ? MutableArguments.First().ToString() : string.Join(", ", MutableArguments);
             }
 
-            return $"{MethodName}({args})";
+            return $"{FunctionName}({args})";
         }
     }
 }

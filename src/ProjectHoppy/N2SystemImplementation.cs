@@ -11,7 +11,7 @@ using SciAdvNet.MediaLayer.Graphics;
 
 namespace ProjectHoppy
 {
-    public class N2SystemImplementation : NssBuiltInMethods
+    public class N2SystemImplementation : NssBuiltInFunctions
     {
         private readonly ContentManager _content;
         private readonly EntityManager _entities;
@@ -52,7 +52,7 @@ namespace ProjectHoppy
             //{
             //    var s = _entities.Get(entityName).GetComponent<SoundComponent>();
             //    s.Looping = true;
-                
+
             //}
         }
 
@@ -67,7 +67,6 @@ namespace ProjectHoppy
 
         public override void Fade(string entityName, TimeSpan duration, int opacity, bool wait)
         {
-            
             foreach (var entity in _entities.PerformQuery(entityName.Replace("@", string.Empty)))
             {
                 if (entity != null)
@@ -104,7 +103,7 @@ namespace ProjectHoppy
             base.CreateDialogueBox(entityName, priority, x, y, width, height);
         }
 
-        public override void Wait(TimeSpan delay)
+        public override void Delay(TimeSpan delay)
         {
             Interpreter.SuspendThread(CallingThreadId, delay);
         }
@@ -121,10 +120,9 @@ namespace ProjectHoppy
                 e.GetComponent<SoundComponent>().Volume = volume;
 
             }
-            base.SetVolume(entityName, duration, volume);
         }
 
-        public override void SetLoop(string entityName, bool looping)
+        public override void ToggleLooping(string entityName, bool looping)
         {
             foreach (var e in _entities.PerformQuery(entityName))
             {
@@ -141,7 +139,6 @@ namespace ProjectHoppy
                 sound.LoopEnd = loopEnd;
                 sound.Looping = true;
             }
-            base.SetLoopPoint(entityName, loopStart, loopEnd);
         }
 
         public override void WaitText(string id, TimeSpan time)

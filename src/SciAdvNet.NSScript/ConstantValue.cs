@@ -2,14 +2,6 @@
 
 namespace SciAdvNet.NSScript
 {
-    public enum NssType
-    {
-        Integer,
-        String,
-        Boolean,
-        Null
-    }
-
     public sealed class ConstantValue : Expression, IEquatable<ConstantValue>
     {
         private static readonly ConstantValue s_true = new ConstantValue(true);

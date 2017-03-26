@@ -17,16 +17,13 @@ namespace SciAdvNet.NSScript
         public static Chapter Chapter(Identifier name, Block body) => new Chapter(name, body);
         public static Scene Scene(Identifier name, Block body) => new Scene(name, body);
 
-        public static Method Method(Identifier name, ImmutableArray<ParameterReference> parameters, Block body) =>
-            new Method(name, parameters, body);
+        public static Function Function(Identifier name, ImmutableArray<ParameterReference> parameters, Block body) =>
+            new Function(name, parameters, body);
 
         public static Block Block(ImmutableArray<Statement> statements) => new Block(statements);
 
         public static ExpressionStatement ExpressionStatement(Expression expression) =>
             new ExpressionStatement(expression);
-
-        public static MethodCall MethodCall(Identifier targetMethodName, ImmutableArray<Expression> arguments) =>
-            new MethodCall(targetMethodName, arguments);
 
         public static IfStatement If(Expression condition, Statement ifTrueStatement, Statement ifFalseStatement) =>
             new IfStatement(condition, ifTrueStatement, ifFalseStatement);
@@ -106,9 +103,9 @@ namespace SciAdvNet.NSScript
         }
     }
 
-    public sealed class Method : Statement
+    public sealed class Function : Statement
     {
-        internal Method(Identifier name, ImmutableArray<ParameterReference> parameters, Block body)
+        internal Function(Identifier name, ImmutableArray<ParameterReference> parameters, Block body)
         {
             Name = name;
             Parameters = parameters;
@@ -119,16 +116,16 @@ namespace SciAdvNet.NSScript
         public ImmutableArray<ParameterReference> Parameters { get; }
         public Block Body { get; }
 
-        public override SyntaxNodeKind Kind => SyntaxNodeKind.Method;
+        public override SyntaxNodeKind Kind => SyntaxNodeKind.Function;
 
         public override void Accept(SyntaxVisitor visitor)
         {
-            visitor.VisitMethod(this);
+            visitor.VisitFunction(this);
         }
 
         public override TResult Accept<TResult>(SyntaxVisitor<TResult> visitor)
         {
-            return visitor.VisitMethod(this);
+            return visitor.VisitFunction(this);
         }
     }
 
@@ -171,30 +168,6 @@ namespace SciAdvNet.NSScript
         public override TResult Accept<TResult>(SyntaxVisitor<TResult> visitor)
         {
             return visitor.VisitExpressionStatement(this);
-        }
-    }
-
-    public sealed class MethodCall : Statement
-    {
-        internal MethodCall(Identifier targetMethodName, ImmutableArray<Expression> arguments)
-        {
-            TargetMethodName = targetMethodName;
-            Arguments = arguments;
-        }
-
-        public Identifier TargetMethodName { get; }
-        public ImmutableArray<Expression> Arguments { get; }
-
-        public override SyntaxNodeKind Kind => SyntaxNodeKind.MethodCall;
-
-        public override void Accept(SyntaxVisitor visitor)
-        {
-            visitor.VisitMethodCall(this);
-        }
-
-        public override TResult Accept<TResult>(SyntaxVisitor<TResult> visitor)
-        {
-            return visitor.VisitMethodCall(this);
         }
     }
 

@@ -5,7 +5,7 @@ namespace SciAdvNet.NSScript.Execution
 {
     public class Module
     {
-        private Dictionary<string, Method> _methods;
+        private Dictionary<string, Function> _functions;
 
         internal Module(string name, NSSyntaxTree syntaxTree, ImmutableArray<Module> dependencies)
         {
@@ -21,24 +21,24 @@ namespace SciAdvNet.NSScript.Execution
         public Chapter MainChapter => SyntaxTree.MainChapter;
         public ImmutableArray<Module> Dependencies { get; }
 
-        public Method GetMethod(string name) => _methods[name];
-        public bool TryGetMethod(string name, out Method method) => _methods.TryGetValue(name, out method);
+        public Function GetFunction(string name) => _functions[name];
+        public bool TryGetFunction(string name, out Function function) => _functions.TryGetValue(name, out function);
 
         private void ConstructDict()
         {
-            _methods = new Dictionary<string, Method>();
-            AddMethods(this);
+            _functions = new Dictionary<string, Function>();
+            AddFunctions(this);
             foreach (var dep in Dependencies)
             {
-                AddMethods(dep);
+                AddFunctions(dep);
             }
         }
 
-        private void AddMethods(Module module)
+        private void AddFunctions(Module module)
         {
-            foreach (var method in module.SyntaxTree.Methods)
+            foreach (var function in module.SyntaxTree.Functions)
             {
-                _methods[method.Name.SimplifiedName] = method;
+                _functions[function.Name.SimplifiedName] = function;
             }
         }
     }

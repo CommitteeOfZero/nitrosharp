@@ -4,17 +4,17 @@ namespace SciAdvNet.NSScript
 {
     public sealed class NSSyntaxTree
     {
-        internal NSSyntaxTree(Chapter mainChapter, ImmutableArray<Method> methods,
+        internal NSSyntaxTree(Chapter mainChapter, ImmutableArray<Function> functions,
             ImmutableArray<Scene> scenes, ImmutableArray<string> includes)
         {
             MainChapter = mainChapter;
-            Methods = methods;
+            Functions = functions;
             Scenes = scenes;
             Includes = includes;
         }
 
         public Chapter MainChapter { get; }
-        public ImmutableArray<Method> Methods { get; }
+        public ImmutableArray<Function> Functions { get; }
         public ImmutableArray<Scene> Scenes { get; }
         public ImmutableArray<string> Includes { get; }
     }

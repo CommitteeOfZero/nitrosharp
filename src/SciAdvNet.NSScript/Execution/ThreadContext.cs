@@ -20,7 +20,10 @@ namespace SciAdvNet.NSScript.Execution
 
         public uint Id { get; }
         public Module CurrentModule { get; }
+
         public Frame CurrentFrame => _frameStack.Peek();
+        
+
         public SyntaxNode CurrentNode => CurrentFrame.Statements[CurrentFrame.Position];
         public bool Suspended { get; private set; }
         public bool DoneExecuting => _frameStack.Count == 0;
@@ -46,7 +49,7 @@ namespace SciAdvNet.NSScript.Execution
 
         public void PushContinuation(ImmutableArray<Statement> statements)
         {
-            Advance();
+            //Advance();
             var frame = new Frame(statements, _globals);
             _frameStack.Push(frame);
         }

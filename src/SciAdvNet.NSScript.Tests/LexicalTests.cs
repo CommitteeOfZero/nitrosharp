@@ -5,14 +5,14 @@ namespace SciAdvNet.NSScript.Tests
     public sealed class LexicalTests
     {
         [Fact]
-        public void TestEmptyString()
+        public void LexEmptyString()
         {
             var token = LexToken(string.Empty);
             Assert.Equal(SyntaxTokenKind.EndOfFileToken, token.Kind);
         }
 
         [Fact]
-        public void TestStringLiteral()
+        public void LexStringLiteral()
         {
             string text = "\"literal\"";
             var token = LexToken(text);
@@ -23,7 +23,7 @@ namespace SciAdvNet.NSScript.Tests
         }
 
         [Fact]
-        public void TestNumericLiteral()
+        public void LexNumericLiteral()
         {
             string text = "42";
             var token = LexToken(text);
@@ -33,7 +33,7 @@ namespace SciAdvNet.NSScript.Tests
         }
 
         [Fact]
-        public void TestAtPrefixedNumericLiteral()
+        public void LexAtPrefixedNumericLiteral()
         {
             string text = "@42";
             var token = LexToken(text);
@@ -43,7 +43,7 @@ namespace SciAdvNet.NSScript.Tests
         }
 
         [Fact]
-        public void TestSingleLetterIdentifier()
+        public void LexSingleLetterIdentifier()
         {
             string text = "a";
             var token = LexToken(text);
@@ -53,7 +53,7 @@ namespace SciAdvNet.NSScript.Tests
         }
 
         [Fact]
-        public void TestDollarPrefixedIdentifier()
+        public void LexDollarPrefixedIdentifier()
         {
             string text = "$globalVar";
             var token = LexToken(text);
@@ -63,7 +63,7 @@ namespace SciAdvNet.NSScript.Tests
         }
 
         [Fact]
-        public void TestHashPrefixedIdentifier()
+        public void LexHashPrefixedIdentifier()
         {
             string text = "#flag";
             var token = LexToken(text);
@@ -73,7 +73,7 @@ namespace SciAdvNet.NSScript.Tests
         }
 
         [Fact]
-        public void TestArrowPrefixedIdentifier()
+        public void LexArrowPrefixedIdentifier()
         {
             string text = "@->test";
             var token = LexToken(text);
@@ -82,7 +82,7 @@ namespace SciAdvNet.NSScript.Tests
         }
 
         [Fact]
-        public void TestJapaneseIdentifier()
+        public void LexJapaneseIdentifier()
         {
             string identifier = "#ev100_06_1_６人祈る_a";
             var token = LexToken(identifier);
@@ -92,7 +92,7 @@ namespace SciAdvNet.NSScript.Tests
         }
 
         [Fact]
-        public void TestIdentifierWithSlash()
+        public void LexIdentifierWithSlash()
         {
             string identifier = "nss/sys_load.nss";
             var token = LexToken(identifier);
@@ -102,7 +102,7 @@ namespace SciAdvNet.NSScript.Tests
         }
 
         [Fact]
-        public void TestIdentifierInQuotes()
+        public void LexIdentifierInQuotes()
         {
             string identifier = "\"$test\"";
             var token = LexToken(identifier);
@@ -112,7 +112,7 @@ namespace SciAdvNet.NSScript.Tests
         }
 
         //[Fact]
-        //public void TestIdentifierStartingWithDigit()
+        //public void LexIdentifierStartingWithDigit()
         //{
         //    string identifier = "7_hoppies";
         //    var token = LexToken(identifier);
@@ -122,7 +122,7 @@ namespace SciAdvNet.NSScript.Tests
         //}
 
         [Fact]
-        public void TestSingleLineComment()
+        public void LexSingleLineComment()
         {
             string comment = "// this is a comment.";
             var token = LexToken(comment);
@@ -130,7 +130,7 @@ namespace SciAdvNet.NSScript.Tests
         }
 
         [Fact]
-        public void TestMultiLineComment()
+        public void LexMultiLineComment()
         {
             string comment = @"/*
 				初回起動時ではないときは、プレイ速度をバックアップ
@@ -140,7 +140,7 @@ namespace SciAdvNet.NSScript.Tests
         }
 
         [Fact]
-        public void TestXmlStartTag()
+        public void LexXmlStartTag()
         {
             string text = "<U>";
             var token = LexToken(text);
@@ -150,7 +150,7 @@ namespace SciAdvNet.NSScript.Tests
         }
 
         [Fact]
-        public void TestXmlEndTag()
+        public void LexXmlEndTag()
         {
             string text = "</U>";
             var token = LexToken(text);
@@ -160,7 +160,7 @@ namespace SciAdvNet.NSScript.Tests
         }
 
         [Fact]
-        public void TestXmlTagWithNewline()
+        public void LexXmlTagWithNewline()
         {
             string text = "<FONT\n incolor=\"#88abda\" outcolor=\"BLACK\">";
             var token = LexToken(text);
@@ -169,7 +169,7 @@ namespace SciAdvNet.NSScript.Tests
         }
 
         //[Fact]
-        //public void TestVerbatimStringLiteral()
+        //public void LexVerbatimStringLiteral()
         //{
         //    string text = "<pre>sample text</pre>";
         //    var token = LexToken(text);
@@ -180,7 +180,7 @@ namespace SciAdvNet.NSScript.Tests
         //}
 
         [Fact]
-        public void TestIncludeDirective()
+        public void LexIncludeDirective()
         {
             string text = "#include \"test.nss\"";
             var token = LexToken(text);
