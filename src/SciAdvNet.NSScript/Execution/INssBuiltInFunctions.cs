@@ -6,8 +6,6 @@ namespace SciAdvNet.NSScript.Execution
     {
         uint CallingThreadId { get; }
 
-        void DisplayDialogue(DialogueLine dialogue);
-
         void SetAlias(string entityName, string alias);
         void Delay(TimeSpan delay);
 

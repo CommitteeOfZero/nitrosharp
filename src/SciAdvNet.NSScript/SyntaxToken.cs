@@ -23,23 +23,9 @@
         public string TrailingTrivia { get; }
         public object Value { get; }
 
-        public bool IsXmlToken
+        public override string ToString()
         {
-            get
-            {
-                switch (Kind)
-                {
-                    case SyntaxTokenKind.XmlElementStartTag:
-                    case SyntaxTokenKind.XmlElementEndTag:
-                    case SyntaxTokenKind.Xml_TextStartTag:
-                    case SyntaxTokenKind.Xml_Text:
-                    case SyntaxTokenKind.Xml_LineBreak:
-                        return true;
-
-                    default:
-                        return false;
-                }
-            }
+            return Text;
         }
     }
 
@@ -102,13 +88,11 @@
         BreakKeyword,
         ReturnKeyword,
 
-        // XML tokens
-        XmlElementStartTag,
-        XmlElementEndTag,
-        Xml_TextStartTag,
-        Xml_Text,
-        Xml_VerbatimText,
-        Xml_LineBreak,
+        DialogueBlockStartTag,
+        DialogueBlockEndTag,
+        DialogueBlockIdentifier,
+        PXmlString,
+        PXmlLineSeparator,
 
         EndOfFileToken
     }

@@ -139,34 +139,34 @@ namespace SciAdvNet.NSScript.Tests
             Assert.Equal(SyntaxTokenKind.EndOfFileToken, token.Kind);
         }
 
-        [Fact]
-        public void LexXmlStartTag()
-        {
-            string text = "<U>";
-            var token = LexToken(text);
+        //[Fact]
+        //public void LexXmlStartTag()
+        //{
+        //    string text = "<U>";
+        //    var token = LexToken(text);
 
-            Assert.Equal(SyntaxTokenKind.XmlElementStartTag, token.Kind);
-            Assert.Equal(text, token.Text);
-        }
+        //    Assert.Equal(SyntaxTokenKind.XmlElementStartTag, token.Kind);
+        //    Assert.Equal(text, token.Text);
+        //}
 
-        [Fact]
-        public void LexXmlEndTag()
-        {
-            string text = "</U>";
-            var token = LexToken(text);
+        //[Fact]
+        //public void LexXmlEndTag()
+        //{
+        //    string text = "</U>";
+        //    var token = LexToken(text);
 
-            Assert.Equal(SyntaxTokenKind.XmlElementEndTag, token.Kind);
-            Assert.Equal(text, token.Text);
-        }
+        //    Assert.Equal(SyntaxTokenKind.XmlElementEndTag, token.Kind);
+        //    Assert.Equal(text, token.Text);
+        //}
 
-        [Fact]
-        public void LexXmlTagWithNewline()
-        {
-            string text = "<FONT\n incolor=\"#88abda\" outcolor=\"BLACK\">";
-            var token = LexToken(text);
+        //[Fact]
+        //public void LexXmlTagWithNewline()
+        //{
+        //    string text = "<FONT\n incolor=\"#88abda\" outcolor=\"BLACK\">";
+        //    var token = LexToken(text);
 
-            Assert.Equal(SyntaxTokenKind.XmlElementStartTag, token.Kind);
-        }
+        //    Assert.Equal(SyntaxTokenKind.XmlElementStartTag, token.Kind);
+        //}
 
         //[Fact]
         //public void LexVerbatimStringLiteral()

@@ -44,15 +44,54 @@ namespace SciAdvNet.NSScript
         public static DialogueBlock DialogueBlock(string blockIdentifier, string boxName, ImmutableArray<Statement> statements) =>
             new DialogueBlock(blockIdentifier, boxName, statements);
 
-        public static DialogueLine DialogueLine(PXmlContent content) => new DialogueLine(content);
+        public static PXmlString PXmlString(string text) => new PXmlString(text);
+    }
 
-        public static PXmlText Text(string text) => new PXmlText(text);
-        public static PXmlVerbatimText VerbatimText(string text) => new PXmlVerbatimText(text);
-        public static ColorElement ColorElement(int colorCode, PXmlContent content) => new ColorElement(colorCode, content);
-        public static RubyElement RubyElement(PXmlContent rubyBase, string rubyText) => new RubyElement(rubyBase, rubyText);
+    public sealed class DialogueBlock : Statement, IBlock
+    {
+        internal DialogueBlock(string blockIdentifier, string boxName, ImmutableArray<Statement> statements)
+        {
+            Identifier = blockIdentifier;
+            BoxName = boxName;
+            Statements = statements;
+        }
 
-        public static Voice Voice(string characterName, string fileName) =>
-            new Voice(characterName, fileName);
+        public string Identifier { get; }
+        public string BoxName { get; }
+        public ImmutableArray<Statement> Statements { get; }
+
+        public override SyntaxNodeKind Kind => SyntaxNodeKind.DialogueBlock;
+
+        public override void Accept(SyntaxVisitor visitor)
+        {
+            visitor.VisitDialogueBlock(this);
+        }
+
+        public override TResult Accept<TResult>(SyntaxVisitor<TResult> visitor)
+        {
+            return visitor.VisitDialogueBlock(this);
+        }
+    }
+
+    public sealed class PXmlString : Statement
+    {
+        internal PXmlString(string text)
+        {
+            Text = text;
+        }
+
+        public string Text { get; }
+        public override SyntaxNodeKind Kind => SyntaxNodeKind.PXmlString;
+
+        public override void Accept(SyntaxVisitor visitor)
+        {
+            visitor.VisitPXmlString(this);
+        }
+
+        public override TResult Accept<TResult>(SyntaxVisitor<TResult> visitor)
+        {
+            return visitor.VisitPXmlString(this);
+        }
     }
 
     public sealed class Chapter : Statement
@@ -336,182 +375,5 @@ namespace SciAdvNet.NSScript
         {
             return visitor.VisitCallSceneStatement(this);
         }
-    }
-
-    public sealed class DialogueBlock : Statement, IBlock
-    {
-        internal DialogueBlock(string blockIdentifier, string boxName, ImmutableArray<Statement> statements)
-        {
-            Identifier = blockIdentifier;
-            BoxName = boxName;
-            Statements = statements;
-        }
-
-        public string Identifier { get; }
-        public string BoxName { get; }
-        public ImmutableArray<Statement> Statements { get; }
-
-        public override SyntaxNodeKind Kind => SyntaxNodeKind.DialogueBlock;
-
-        public override void Accept(SyntaxVisitor visitor)
-        {
-            visitor.VisitDialogueBlock(this);
-        }
-
-        public override TResult Accept<TResult>(SyntaxVisitor<TResult> visitor)
-        {
-            return visitor.VisitDialogueBlock(this);
-        }
-    }
-
-    public sealed class DialogueLine : Statement
-    {
-        internal DialogueLine(PXmlContent content)
-        {
-            Content = content;
-        }
-
-        public override SyntaxNodeKind Kind => SyntaxNodeKind.DialogueLine;
-        public PXmlContent Content { get; }
-
-        public override void Accept(SyntaxVisitor visitor)
-        {
-            visitor.VisitDialogueLine(this);
-        }
-
-        public override TResult Accept<TResult>(SyntaxVisitor<TResult> visitor)
-        {
-            return visitor.VisitDialogueLine(this);
-        }
-    }
-
-    public sealed class Voice : Statement
-    {
-        internal Voice(string characterName, string fileName)
-        {
-            CharacterName = characterName;
-            FileName = fileName;
-        }
-
-        public string CharacterName { get; }
-        public string FileName { get; }
-
-        public override SyntaxNodeKind Kind => SyntaxNodeKind.Voice;
-
-        public override void Accept(SyntaxVisitor visitor)
-        {
-            visitor.VisitVoice(this);
-        }
-
-        public override TResult Accept<TResult>(SyntaxVisitor<TResult> visitor)
-        {
-            return visitor.VisitVoice(this);
-        }
-    }
-
-    public abstract class PXmlNode : Statement
-    {
-    }
-
-    public sealed class PXmlContent : PXmlNode
-    {
-        internal PXmlContent(ImmutableArray<PXmlNode> children)
-        {
-            Children = children;
-        }
-
-        public ImmutableArray<PXmlNode> Children { get; }
-
-        public override SyntaxNodeKind Kind => SyntaxNodeKind.PXmlContent;
-
-        public override void Accept(SyntaxVisitor visitor)
-        {
-            visitor.VisitPXmlContent(this);
-        }
-
-        public override TResult Accept<TResult>(SyntaxVisitor<TResult> visitor)
-        {
-            throw new NotImplementedException();
-        }
-    }
-
-    public sealed class ColorElement : PXmlNode
-    {
-        public ColorElement(int colorCode, PXmlContent content)
-        {
-            ColorCode = colorCode;
-            Content = content;
-        }
-
-        public int ColorCode { get; }
-        public PXmlContent Content { get; }
-
-        public override SyntaxNodeKind Kind => SyntaxNodeKind.ColorElement;
-
-        public override void Accept(SyntaxVisitor visitor)
-        {
-            visitor.VisitColorElement(this);
-        }
-
-        public override TResult Accept<TResult>(SyntaxVisitor<TResult> visitor)
-        {
-            throw new NotImplementedException();
-        }
-    }
-
-    public sealed class RubyElement : PXmlNode
-    {
-        public RubyElement(PXmlContent rubyBase, string rubyText)
-        {
-            RubyBase = rubyBase;
-            RubyText = rubyText;
-        }
-
-        public override SyntaxNodeKind Kind => SyntaxNodeKind.RubyElement;
-
-        public PXmlContent RubyBase { get; }
-        public string RubyText { get; }
-
-        public override void Accept(SyntaxVisitor visitor)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override TResult Accept<TResult>(SyntaxVisitor<TResult> visitor)
-        {
-            throw new NotImplementedException();
-        }
-    }
-
-    public class PXmlText : PXmlNode
-    {
-        internal PXmlText(string text)
-        {
-            Text = text;
-        }
-
-        public override SyntaxNodeKind Kind => SyntaxNodeKind.PXmlText;
-
-        public string Text { get; }
-
-        public override void Accept(SyntaxVisitor visitor)
-        {
-            visitor.VisitPXmlText(this);
-        }
-
-        public override TResult Accept<TResult>(SyntaxVisitor<TResult> visitor)
-        {
-            throw new NotImplementedException();
-        }
-    }
-
-    public sealed class PXmlVerbatimText : PXmlText
-    {
-        public PXmlVerbatimText(string text)
-            : base(text)
-        {
-        }
-
-        public override SyntaxNodeKind Kind => SyntaxNodeKind.PXmlVerbatimText;
     }
 }

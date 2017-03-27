@@ -115,6 +115,11 @@ namespace SciAdvNet.NSScript
             DefaultVisitNode(selectStatement);
         }
 
+        public virtual void VisitPXmlString(PXmlString pxmlString)
+        {
+            DefaultVisitNode(pxmlString);
+        }
+
         public void VisitScene(Scene scene)
         {
             throw new NotImplementedException();
@@ -138,29 +143,6 @@ namespace SciAdvNet.NSScript
         public virtual void VisitDialogueBlock(DialogueBlock dialogueBlock)
         {
             DefaultVisitNode(dialogueBlock);
-        }
-
-        public virtual void VisitVoice(Voice voice)
-        {
-            DefaultVisitNode(voice);
-        }
-
-        public virtual void VisitDialogueLine(DialogueLine dialogueLine)
-        {
-            DefaultVisitNode(dialogueLine);
-        }
-
-        public virtual void VisitPXmlContent(PXmlContent pXmlContent)
-        {
-
-        }
-
-        public virtual void VisitPXmlText(PXmlText pXmlText)
-        {
-        }
-
-        public virtual void VisitColorElement(ColorElement colorElement)
-        {
         }
     }
 
@@ -296,19 +278,14 @@ namespace SciAdvNet.NSScript
             return DefaultVisitNode(dialogueBlock);
         }
 
-        public virtual TResult VisitVoice(Voice voice)
-        {
-            return DefaultVisitNode(voice);
-        }
-
-        public virtual TResult VisitDialogueLine(DialogueLine dialogueLine)
-        {
-            return DefaultVisitNode(dialogueLine);
-        }
-
         public virtual TResult VisitScene(Scene scene)
         {
             return DefaultVisitNode(scene);
+        }
+
+        public virtual TResult VisitPXmlString(PXmlString pxmlString)
+        {
+            return DefaultVisitNode(pxmlString);
         }
     }
 }

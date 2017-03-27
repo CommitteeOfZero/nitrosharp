@@ -510,28 +510,23 @@ namespace SciAdvNet.NSScript.Execution
 
         //public override void VisitDialogueBlock(DialogueBlock dialogueBlock)
         //{
+        //    _threadContext.Advance();
         //    _threadContext.PushContinuation(dialogueBlock.Statements);
         //}
+
+        public override void VisitPXmlString(PXmlString pxmlNode)
+        {
+            Debug.WriteLine(pxmlNode.Text);
+        }
 
         public override void VisitBlock(Block block)
         {
             _threadContext.PushContinuation(block.Statements);
         }
 
-        public override void VisitDialogueLine(DialogueLine dialogueLine)
-        {
-            _builtIns.DisplayDialogue(dialogueLine);
-        }
-
         public void PrepareFunctionCall(FunctionCall functionCall)
         {
             string name = functionCall.TargetFunctionName.SimplifiedName;
-
-            if (name == "WaitText")
-            {
-                Debugger.Break();
-            }
-
             Function target;
             if (!_threadContext.CurrentModule.TryGetFunction(name, out target))
             {

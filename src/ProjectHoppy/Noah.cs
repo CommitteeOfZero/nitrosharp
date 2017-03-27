@@ -3,6 +3,7 @@ using ProjectHoppy.Content;
 using ProjectHoppy.Graphics;
 using SciAdvNet.NSScript.Execution;
 using System;
+using System.Diagnostics;
 using System.IO;
 
 namespace ProjectHoppy
@@ -33,12 +34,16 @@ namespace ProjectHoppy
             _nssInterpreter.BuiltInCallScheduled += OnBuiltInCallDispatched;
 
             //_nssInterpreter.CreateThread("nss/boot-logo.nss");
+            var sw = Stopwatch.StartNew();
             _nssInterpreter.CreateThread("nss/ch01_007_円山町殺人現場");
+            sw.Stop();
+
+            Console.WriteLine($"Parsed in {sw.ElapsedMilliseconds}");
         }
 
         private void OnBuiltInCallDispatched(object sender, BuiltInFunctionCall call)
         {
-            _interpreterLog.LogInformation($"Built-in call: {call.ToString()}");
+            //_interpreterLog.LogInformation($"Built-in call: {call.ToString()}");
         }
 
         private void SetupLogging()

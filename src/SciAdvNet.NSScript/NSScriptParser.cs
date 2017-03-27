@@ -6,15 +6,15 @@ using System.Linq;
 
 namespace SciAdvNet.NSScript
 {
-    internal sealed partial class Parser
+    internal sealed partial class NSScriptParser
     {
-        private readonly Lexer _lexer;
+        private readonly NSScriptLexer _lexer;
         private readonly SyntaxToken[] _tokens;
         private int _tokenOffset;
 
         private ImmutableArray<ParameterReference> _currentFrame;
 
-        public Parser(Lexer lexer)
+        public NSScriptParser(NSScriptLexer lexer)
         {
             _lexer = lexer;
             _tokens = PreLex().ToArray();
@@ -237,12 +237,11 @@ namespace SciAdvNet.NSScript
                 case SyntaxTokenKind.CallSceneKeyword:
                     return ParseSceneCall();
 
-                case SyntaxTokenKind.XmlElementStartTag:
-                    if (!IsDialogueBlockStart())
-                    {
-                        goto default;
-                    }
+                case SyntaxTokenKind.DialogueBlockStartTag:
                     return ParseDialogueBlock();
+
+                case SyntaxTokenKind.PXmlString:
+                    return StatementFactory.PXmlString(EatToken().Text);
 
                 case SyntaxTokenKind.SlashToken:
                     EatToken();
@@ -255,9 +254,23 @@ namespace SciAdvNet.NSScript
             }
         }
 
-        private bool IsDialogueBlockStart()
+        private DialogueBlock ParseDialogueBlock()
         {
-            return CurrentToken.Text.ToUpperInvariant().StartsWith("<PRE");
+            EatToken(SyntaxTokenKind.DialogueBlockStartTag);
+            EatToken(SyntaxTokenKind.DialogueBlockIdentifier);
+
+            var statements = ImmutableArray.CreateBuilder<Statement>();
+            while (CurrentToken.Kind != SyntaxTokenKind.DialogueBlockEndTag)
+            {
+                var statement = ParseStatement();
+                if (statement != null)
+                {
+                    statements.Add(statement);
+                }
+            }
+
+            EatToken(SyntaxTokenKind.DialogueBlockEndTag);
+            return StatementFactory.DialogueBlock(string.Empty, string.Empty, statements.ToImmutable());
         }
 
         private ExpressionStatement ParseExpressionStatement()
@@ -552,7 +565,7 @@ namespace SciAdvNet.NSScript
                             args.Add(ParseLiteral());
                         }
                         break;
-                    
+
                     case SyntaxTokenKind.IdentifierToken:
                         var name = ParseVariableOrParameterOrConstant();
                         args.Add(name);

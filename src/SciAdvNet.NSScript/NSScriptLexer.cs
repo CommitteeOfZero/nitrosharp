@@ -2,50 +2,36 @@
 using System.IO;
 using System.Text;
 using System.Globalization;
+using System.Collections.Generic;
 
 namespace SciAdvNet.NSScript
 {
-    internal enum LexerMode
+    internal sealed class NSScriptLexer : TextScanner
     {
-        Normal,
-        PXmlSyntax
-    }
-
-    internal sealed class Lexer
-    {
-        // Indicates that we've reached the end of the stream.
-        // Not a valid UTF-16 character.
-        private const char EofCharacter = char.MaxValue;
+        private enum Location
+        {
+            Code,
+            ParameterList,
+            DialogueBlock
+        }
 
         private static readonly Encoding s_defaultEncoding;
+        private const string DialogueBlockEndTag = "</PRE>";
 
-        // A marker that we set at the beginning of each lexeme.
-        private int _lexemeStart;
-        private bool _scanningFunctionSignature;
-
-        // Indicates whether we're inside a dialogue block, a.k.a <PRE> element.
-        private bool _isInsideDialogueBlock;
-        // Number of unmatched braces inside a dialogue block.
-        // When it's equal to 0, the lexer mode is switched back from Normal to PXmlSyntax.
-        private uint _dlgUnmatchedBraces = 0;
-
-        static Lexer()
+        static NSScriptLexer()
         {
             Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
             s_defaultEncoding = Encoding.GetEncoding("shift-jis");
         }
 
-        public Lexer(string sourceText)
-        {
-            if (sourceText == null)
-            {
-                throw new ArgumentNullException(nameof(sourceText));
-            }
+        private Stack<Location> _nestingStack = new Stack<Location>();
 
-            SourceText = sourceText;
+        public NSScriptLexer(string sourceText) : base(sourceText)
+        {
+            _nestingStack.Push(Location.Code);
         }
 
-        public Lexer(string fileName, Stream stream)
+        public NSScriptLexer(string fileName, Stream stream)
         {
             FileName = fileName;
             if (stream == null)
@@ -62,56 +48,55 @@ namespace SciAdvNet.NSScript
             {
                 SourceText = reader.ReadToEnd();
             }
+
+            _nestingStack.Push(Location.Code);
         }
 
         public string FileName { get; }
-        public string SourceText { get; }
-        public int Position { get; private set; }
-        public LexerMode Mode { get; private set; } = LexerMode.Normal;
-
-        /// <summary>
-        /// Gets the current lexeme, which is the characters between the lexemeStart marker and the current position.
-        /// </summary>
-        private string CurrentLexeme
-        {
-            get
-            {
-                return CurrentLexemeLength != 0 ? SourceText.Substring(_lexemeStart, Position - _lexemeStart) : string.Empty;
-            }
-        }
-
-        private int CurrentLexemeLength => Position - _lexemeStart;
-
-        private char PeekChar() => PeekChar(0);
-        private char PeekChar(int offset)
-        {
-            if (Position + offset >= SourceText.Length)
-            {
-                return EofCharacter;
-            }
-
-            return SourceText[Position + offset];
-        }
-
-        private void AdvanceChar() => Position++;
-        private void AdvanceChar(int n) => Position += n;
-
-        /// <summary>
-        /// Sets a marker at the current position.
-        /// </summary>
-        private void StartScanning() => _lexemeStart = Position;
+        private Location CurrentLocation => _nestingStack.Peek();
 
         public SyntaxToken Lex()
         {
-            switch (Mode)
+            if (CurrentLocation == Location.DialogueBlock)
             {
-                case LexerMode.Normal:
-                    return LexSyntaxToken();
-
-                case LexerMode.PXmlSyntax:
-                default:
-                    return LexXmlToken();
+                if (PeekChar() != '{' && !IsDialogueBlockEndTag())
+                {
+                    return LexPXmlToken();
+                }
             }
+
+            var token = LexSyntaxToken();
+            switch (token.Kind)
+            {
+                case SyntaxTokenKind.OpenBraceToken:
+                    _nestingStack.Push(Location.Code);
+                    break;
+
+                case SyntaxTokenKind.CloseBraceToken:
+                    _nestingStack.Pop();
+                    break;
+
+                case SyntaxTokenKind.FunctionKeyword:
+                    _nestingStack.Push(Location.ParameterList);
+                    break;
+
+                case SyntaxTokenKind.CloseParenToken:
+                    if (CurrentLocation == Location.ParameterList)
+                    {
+                        _nestingStack.Pop();
+                    }
+                    break;
+
+                case SyntaxTokenKind.DialogueBlockStartTag:
+                    _nestingStack.Push(Location.DialogueBlock);
+                    break;
+
+                case SyntaxTokenKind.DialogueBlockEndTag:
+                    _nestingStack.Pop();
+                    break;
+            }
+
+            return token;
         }
 
         private SyntaxToken LexSyntaxToken()
@@ -127,7 +112,7 @@ namespace SciAdvNet.NSScript
             switch (character)
             {
                 case '"':
-                    if (!_scanningFunctionSignature && PeekChar(1) != '$')
+                    if (CurrentLocation != Location.ParameterList && PeekChar(1) != '$')
                     {
                         ScanStringLiteral();
                         kind = SyntaxTokenKind.StringLiteralToken;
@@ -226,16 +211,13 @@ namespace SciAdvNet.NSScript
                     // I've yet to find an exception to that.
                     else if (SyntaxFacts.IsLatinLetter(nextChar))
                     {
-                        kind = SyntaxTokenKind.XmlElementStartTag;
-                        ScanXmlTag();
-
-                        Mode = LexerMode.PXmlSyntax;
-                        _isInsideDialogueBlock = true;
+                        kind = SyntaxTokenKind.DialogueBlockStartTag;
+                        ScanPXmlTag();
                     }
                     else if (nextChar == '/')
                     {
-                        kind = SyntaxTokenKind.XmlElementEndTag;
-                        ScanXmlTag();
+                        kind = SyntaxTokenKind.DialogueBlockEndTag;
+                        ScanPXmlTag();
                     }
                     else
                     {
@@ -247,24 +229,11 @@ namespace SciAdvNet.NSScript
                 case '{':
                     AdvanceChar();
                     kind = SyntaxTokenKind.OpenBraceToken;
-                    if (_isInsideDialogueBlock)
-                    {
-                        _dlgUnmatchedBraces++;
-                    }
                     break;
 
                 case '}':
                     AdvanceChar();
                     kind = SyntaxTokenKind.CloseBraceToken;
-
-                    if (_isInsideDialogueBlock)
-                    {
-                        _dlgUnmatchedBraces--;
-                        if (_dlgUnmatchedBraces == 0)
-                        {
-                            Mode = LexerMode.PXmlSyntax;
-                        }
-                    }
                     break;
 
                 case '(':
@@ -275,11 +244,6 @@ namespace SciAdvNet.NSScript
                 case ')':
                     AdvanceChar();
                     kind = SyntaxTokenKind.CloseParenToken;
-
-                    if (_scanningFunctionSignature)
-                    {
-                        _scanningFunctionSignature = false;
-                    }
                     break;
 
                 case '.':
@@ -450,10 +414,6 @@ namespace SciAdvNet.NSScript
                         case SyntaxTokenKind.FalseKeyword:
                             value = false;
                             break;
-
-                        case SyntaxTokenKind.FunctionKeyword:
-                            _scanningFunctionSignature = true;
-                            break;
                     }
                     break;
             }
@@ -468,93 +428,80 @@ namespace SciAdvNet.NSScript
             return new SyntaxToken(kind, leadingTrivia, text, trailingTrivia, value);
         }
 
-        private SyntaxToken LexXmlToken()
+        private SyntaxToken LexPXmlToken()
         {
-            string leadingTrivia = ScanSyntaxTrivia(isTrailing: false);
             SyntaxTokenKind kind = SyntaxTokenKind.None;
-
+            string trailingTrivia = string.Empty;
+            bool scanTrailingTrivia = false;
             StartScanning();
+
             char character = PeekChar();
             switch (character)
             {
-                case '<':
-                    if (PeekChar(1) == '/')
-                    {
-                        ScanXmlTag();
-                        kind = SyntaxTokenKind.XmlElementEndTag;
-                    }
-                    else
-                    {
-                        ScanXmlTag();
-                        kind = SyntaxTokenKind.XmlElementStartTag;
-                    }
-                    break;
-
                 case '[':
-                    while ((character = PeekChar()) != ']' && character != EofCharacter)
-                    {
-                        AdvanceChar();
-                    }
-
-                    AdvanceChar();
-                    kind = SyntaxTokenKind.Xml_TextStartTag;
+                    kind = SyntaxTokenKind.DialogueBlockIdentifier;
+                    ScanDialogueBlockIdentifier();
+                    scanTrailingTrivia = true;
                     break;
 
                 case '\r':
                 case '\n':
-                    while (SyntaxFacts.IsNewLine(PeekChar()))
-                    {
-                        ScanEndOfLine();
-                    }
-
-                    kind = SyntaxTokenKind.Xml_LineBreak;
+                    kind = SyntaxTokenKind.PXmlLineSeparator;
+                    ScanEndOfLineSequence();
                     break;
 
-                case '{':
-                    AdvanceChar();
-                    Mode = LexerMode.Normal;
-                    kind = SyntaxTokenKind.OpenBraceToken;
-                    _dlgUnmatchedBraces++;
-                    break;
-
-                case EofCharacter:
-                    kind = SyntaxTokenKind.EndOfFileToken;
-                    break;
 
                 default:
-                    ScanText();
-                    kind = SyntaxTokenKind.Xml_Text;
+                    kind = SyntaxTokenKind.PXmlString;
+                    ScanPXmlNode();
                     break;
             }
-            
+
             string text = CurrentLexeme;
-            switch (text)
+            if (scanTrailingTrivia)
             {
-                case "<pre>":
-                case "<PRE>":
-                    kind = SyntaxTokenKind.Xml_VerbatimText;
-                    StartScanning();
-                    ScanVerbatimText();
-                    text = CurrentLexeme;
-                    // Skip </pre>
-                    AdvanceChar(6);
-                    break;
-
-                case "</PRE>":
-                case "</pre>":
-                    Mode = LexerMode.Normal;
-                    _isInsideDialogueBlock = false;
-                    break;
+                trailingTrivia = ScanSyntaxTrivia(isTrailing: true);
             }
 
-            string trailingTrivia = ScanSyntaxTrivia(isTrailing: true);
-            return new SyntaxToken(kind, leadingTrivia, text, trailingTrivia);
+            return new SyntaxToken(kind, string.Empty, text, trailingTrivia);
+        }
+
+        private void ScanPXmlNode()
+        {
+            char c;
+            while (!IsDialogueBlockEndTag() && (c = PeekChar()) != '{' && c != EofCharacter)
+            {
+                int newlineSequenceLength = 0;
+                while (SyntaxFacts.IsNewLine(PeekChar(newlineSequenceLength)))
+                {
+                    newlineSequenceLength++;
+                    if (newlineSequenceLength >= 4)
+                    {
+                        return;
+                    }
+                }
+
+                AdvanceChar();
+            }
+        }
+
+        private void ScanDialogueBlockIdentifier()
+        {
+            AdvanceChar();
+
+            char c;
+            while ((c = PeekChar()) != ']' && c != EofCharacter)
+            {
+                AdvanceChar();
+            }
+
+            AdvanceChar();
         }
 
         private void ScanIdentifier()
         {
             char character = PeekChar();
-            bool startsWithQuoteChar = false;
+            bool startsWithQuote = false;
             switch (character)
             {
                 case '@':
@@ -573,7 +520,7 @@ namespace SciAdvNet.NSScript
 
                 case '"':
                     AdvanceChar();
-                    startsWithQuoteChar = true;
+                    startsWithQuote = true;
                     break;
             }
 
@@ -583,7 +530,7 @@ namespace SciAdvNet.NSScript
                 AdvanceChar();
             }
 
-            if (startsWithQuoteChar)
+            if (startsWithQuote)
             {
                 AdvanceChar();
             }
@@ -689,7 +636,20 @@ namespace SciAdvNet.NSScript
             return result;
         }
 
-        private void ScanXmlTag()
+        private bool IsDialogueBlockEndTag()
+        {
+            for (int i = 0; i < DialogueBlockEndTag.Length; i++)
+            {
+                if (PeekChar(i) != DialogueBlockEndTag[i])
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private void ScanPXmlTag()
         {
             char c;
             while ((c = PeekChar()) != '>' && c != EofCharacter)
@@ -700,61 +660,61 @@ namespace SciAdvNet.NSScript
             AdvanceChar();
         }
 
-        private void ScanText()
-        {
-            while (true)
-            {
-                switch (PeekChar())
-                {
-                    case '<':
-                    case '{':
-                    case EofCharacter:
-                        return;
+        //private void ScanText()
+        //{
+        //    while (true)
+        //    {
+        //        switch (PeekChar())
+        //        {
+        //            case '<':
+        //            case '{':
+        //            case EofCharacter:
+        //                return;
 
-                    case '/':
-                        if (PeekChar(1) == '/')
-                        {
-                            return;
-                        }
-                        AdvanceChar();
-                        break;
+        //            case '/':
+        //                if (PeekChar(1) == '/')
+        //                {
+        //                    return;
+        //                }
+        //                AdvanceChar();
+        //                break;
 
-                    case '\r':
-                    case '\n':
-                        if (SyntaxFacts.IsNewLine(PeekChar(2)))
-                        {
-                            // We have a blank line (\r\n\r\n).
-                            return;
-                        }
-                        else
-                        {
-                            ScanEndOfLine();
-                        }
-                        break;
+        //            case '\r':
+        //            case '\n':
+        //                if (SyntaxFacts.IsNewLine(PeekChar(2)))
+        //                {
+        //                    // We have a blank line (\r\n\r\n).
+        //                    return;
+        //                }
+        //                else
+        //                {
+        //                    ScanEndOfLine();
+        //                }
+        //                break;
 
-                    default:
-                        AdvanceChar();
-                        break;
-                }
-            }
-        }
+        //            default:
+        //                AdvanceChar();
+        //                break;
+        //        }
+        //    }
+        //}
 
-        private void ScanVerbatimText()
-        {
-            char c;
-            while ((c = PeekChar()) != EofCharacter)
-            {
-                if (c == '<')
-                {
-                    string peek = SourceText.Substring(Position, 6);
-                    if (peek.Equals("</pre>", StringComparison.OrdinalIgnoreCase))
-                    {
-                        break;
-                    }
-                }
-                AdvanceChar();
-            }
-        }
+        //private void ScanVerbatimText()
+        //{
+        //    char c;
+        //    while ((c = PeekChar()) != EofCharacter)
+        //    {
+        //        if (c == '<')
+        //        {
+        //            string peek = SourceText.Substring(Position, 6);
+        //            if (peek.Equals("</pre>", StringComparison.OrdinalIgnoreCase))
+        //            {
+        //                break;
+        //            }
+        //        }
+        //        AdvanceChar();
+        //    }
+        //}
 
         private string ScanSyntaxTrivia(bool isTrailing)
         {
@@ -771,12 +731,6 @@ namespace SciAdvNet.NSScript
 
                 if (SyntaxFacts.IsNewLine(character))
                 {
-                    // If we're inside  dialogue block, blank lines aren't considered trivia.
-                    if (Mode == LexerMode.PXmlSyntax && SyntaxFacts.IsNewLine(PeekChar(2)))
-                    {
-                        break;
-                    }
-
                     ScanEndOfLine();
                     if (isTrailing)
                     {
@@ -806,20 +760,9 @@ namespace SciAdvNet.NSScript
                         break;
 
                     // Lines starting with '.' are pretty common.
-                    // Treat them as single line comments, unless we're in the XmlSyntax mode.
+                    // Treat them as single line comments.
                     case '.':
-                        if (Mode == LexerMode.PXmlSyntax)
-                        {
-                            ScanToEndOfLine();
-                        }
-                        else if (_isInsideDialogueBlock)
-                        {
-                            trivia = false;
-                        }
-                        else
-                        {
-                            ScanToEndOfLine();
-                        }
+                        ScanToEndOfLine();
                         break;
 
                     case '>':
@@ -883,6 +826,14 @@ namespace SciAdvNet.NSScript
                         AdvanceChar();
                     }
                     break;
+            }
+        }
+
+        private void ScanEndOfLineSequence()
+        {
+            while (SyntaxFacts.IsNewLine(PeekChar()))
+            {
+                ScanEndOfLine();
             }
         }
 

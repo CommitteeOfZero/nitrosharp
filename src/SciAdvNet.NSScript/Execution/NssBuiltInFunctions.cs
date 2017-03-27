@@ -71,10 +71,6 @@ namespace SciAdvNet.NSScript.Execution
         {
         }
 
-        public virtual void DisplayDialogue(DialogueLine dialogue)
-        {
-        }
-
         public virtual void CreateDialogueBox(string entityName, int priority, NssCoordinate x, NssCoordinate y, int width, int height)
         {
         }
