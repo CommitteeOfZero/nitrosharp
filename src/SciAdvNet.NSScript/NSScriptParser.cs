@@ -256,8 +256,18 @@ namespace SciAdvNet.NSScript
 
         private DialogueBlock ParseDialogueBlock()
         {
-            EatToken(SyntaxTokenKind.DialogueBlockStartTag);
-            EatToken(SyntaxTokenKind.DialogueBlockIdentifier);
+            var startTag = EatToken(SyntaxTokenKind.DialogueBlockStartTag);
+            string boxName = ExtractBoxName(startTag.Text);
+
+            string ExtractBoxName(string text)
+            {
+                int idxStart = 5;
+                int idxEnd = text.Length - 1;
+
+                return text.Substring(idxStart, idxEnd - idxStart);
+            }
+
+            var identifier = EatToken(SyntaxTokenKind.DialogueBlockIdentifier);
 
             var statements = ImmutableArray.CreateBuilder<Statement>();
             while (CurrentToken.Kind != SyntaxTokenKind.DialogueBlockEndTag)
@@ -270,7 +280,7 @@ namespace SciAdvNet.NSScript
             }
 
             EatToken(SyntaxTokenKind.DialogueBlockEndTag);
-            return StatementFactory.DialogueBlock(string.Empty, string.Empty, statements.ToImmutable());
+            return StatementFactory.DialogueBlock(identifier.Text, boxName, statements.ToImmutable());
         }
 
         private ExpressionStatement ParseExpressionStatement()

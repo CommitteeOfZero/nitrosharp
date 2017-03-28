@@ -1,10 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace SciAdvNet.NSScript.PXml
+﻿namespace SciAdvNet.NSScript.PXml
 {
-    public class PXmlNode
+    public abstract class PXmlNode
     {
+        public abstract PXmlNodeKind Kind { get; }
+        internal abstract void Accept(PXmlSyntaxVisitor visitor);
     }
 }

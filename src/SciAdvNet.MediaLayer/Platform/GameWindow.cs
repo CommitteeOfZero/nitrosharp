@@ -1,6 +1,7 @@
 ﻿#if !WINDOWS_UWP
 using OpenTK;
 using OpenTK.Graphics;
+using SciAdvNet.MediaLayer.Input;
 using System;
 
 namespace SciAdvNet.MediaLayer.Platform
@@ -21,12 +22,24 @@ namespace SciAdvNet.MediaLayer.Platform
             _nativeWindow.Resize += OnWindowResized;
             _nativeWindow.Closing += OnWindowClosing;
             _nativeWindow.Closed += OnWindowClosed;
-            //_nativeWindow.FocusedChanged += OnWindowFocusedChanged;
+            _nativeWindow.FocusedChanged += OnWindowFocusedChanged;
 
             SubsribeToInputEvents();
 
             WindowState = state;
             IsVisible = true;
+        }
+
+        private void OnWindowFocusedChanged(object sender, EventArgs e)
+        {
+            if (_nativeWindow.Focused)
+            {
+                GotFocus?.Invoke(this, EventArgs.Empty);
+            }
+            else
+            {
+                LostFocus?.Invoke(this, EventArgs.Empty);
+            }
         }
 
         public override event EventHandler Resized;
@@ -77,6 +90,7 @@ namespace SciAdvNet.MediaLayer.Platform
 
         public override void ProcessEvents()
         {
+            Mouse.NewlyPressedButtons.Clear();
             _nativeWindow.ProcessEvents();
         }
 

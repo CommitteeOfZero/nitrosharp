@@ -6,6 +6,10 @@ namespace SciAdvNet.NSScript.Execution
     {
         public uint CallingThreadId { get; }
 
+        public virtual void DisplayDialogue(string pxmlString)
+        {
+        }
+
         public virtual void CreateChoice(string entityName)
         {
         }
@@ -35,7 +39,7 @@ namespace SciAdvNet.NSScript.Execution
         {
         }
 
-        public virtual void Request(string entityName, NssAction action)
+        public virtual void Request(string entityName, NssEntityAction action)
         {
         }
 

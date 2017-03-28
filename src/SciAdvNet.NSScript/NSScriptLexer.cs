@@ -786,57 +786,6 @@ namespace SciAdvNet.NSScript
             return CurrentLexeme;
         }
 
-        private void ScanWhitespace()
-        {
-            char c;
-            while (SyntaxFacts.IsWhitespace((c = PeekChar())) && c != EofCharacter)
-            {
-                AdvanceChar();
-            }
-        }
-        private void ScanToEndOfLine()
-        {
-            char c;
-            while (!SyntaxFacts.IsNewLine((c = PeekChar())) && c != EofCharacter)
-            {
-                AdvanceChar();
-            }
-        }
-
-        private void ScanEndOfLine()
-        {
-            char c = PeekChar();
-            switch (c)
-            {
-                case '\r':
-                    AdvanceChar();
-                    if (PeekChar() == '\n')
-                    {
-                        AdvanceChar();
-                    }
-                    break;
-
-                case '\n':
-                    AdvanceChar();
-                    break;
-
-                default:
-                    if (SyntaxFacts.IsNewLine(c))
-                    {
-                        AdvanceChar();
-                    }
-                    break;
-            }
-        }
-
-        private void ScanEndOfLineSequence()
-        {
-            while (SyntaxFacts.IsNewLine(PeekChar()))
-            {
-                ScanEndOfLine();
-            }
-        }
-
         private void ScanMultiLineComment()
         {
             char c;

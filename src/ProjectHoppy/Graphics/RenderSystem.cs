@@ -3,6 +3,7 @@ using SciAdvNet.MediaLayer;
 using SciAdvNet.MediaLayer.Graphics;
 using System.Linq;
 using ProjectHoppy.Content;
+using ProjectHoppy.Text;
 
 namespace ProjectHoppy.Graphics
 {

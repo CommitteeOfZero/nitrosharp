@@ -5,6 +5,7 @@ using MlKeyboard = SciAdvNet.MediaLayer.Input.Keyboard;
 using MlKey = SciAdvNet.MediaLayer.Input.Key;
 using MlButton = SciAdvNet.MediaLayer.Input.MouseButton;
 using MlMouse = SciAdvNet.MediaLayer.Input.Mouse;
+using System;
 
 namespace SciAdvNet.MediaLayer.Platform
 {
@@ -16,6 +17,19 @@ namespace SciAdvNet.MediaLayer.Platform
             _nativeWindow.KeyUp += OnKeyUp;
             _nativeWindow.MouseDown += OnMouseDown;
             _nativeWindow.MouseUp += OnMouseUp;
+
+            GotFocus += OnGotFocus;
+            LostFocus += OnLostFocus;
+        }
+
+        private void OnGotFocus(object sender, EventArgs e)
+        {
+            ClearState();
+        }
+
+        private void OnLostFocus(object sender, EventArgs e)
+        {
+            ClearState();
         }
 
         private void RefreshMouseState()

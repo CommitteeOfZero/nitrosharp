@@ -6,6 +6,8 @@ namespace SciAdvNet.NSScript.Execution
     {
         uint CallingThreadId { get; }
 
+        void DisplayDialogue(string pxmlString);
+
         void SetAlias(string entityName, string alias);
         void Delay(TimeSpan delay);
 
@@ -46,7 +48,7 @@ namespace SciAdvNet.NSScript.Execution
         void AddRectangle(string entityName, int priority, NssCoordinate x, NssCoordinate y, int width, int height, NssColor color);
 
         
-        void Request(string entityName, NssAction action);
+        void Request(string entityName, NssEntityAction action);
         void RemoveEntity(string entityName);
 
         void Fade(string entityName, TimeSpan duration, int finalOpacity, bool wait);

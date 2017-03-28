@@ -23,25 +23,29 @@ namespace SciAdvNet.NSScript.Execution
 
         private readonly List<ThreadContext> _threads;
         private readonly List<ThreadContext> _activeThreads;
+        private readonly List<ThreadContext> _suspendedThreads;
         private readonly Queue<ThreadContext> _idleThreads;
 
         private readonly Stopwatch _timer;
 
         private uint _nextThreadId;
 
+        private TimeSpan _totalElapsed = TimeSpan.Zero;
+
         public NSScriptInterpreter(IScriptLocator scriptLocator, INssBuiltInFunctions builtIns)
         {
             _builtIns = builtIns;
-            _execVisitor = new ExecutingVisitor(builtIns);
+            _execVisitor = new ExecutingVisitor();
 
             _threads = new List<ThreadContext>();
             _activeThreads = new List<ThreadContext>();
+            _suspendedThreads = new List<ThreadContext>();
             _idleThreads = new Queue<ThreadContext>();
 
             Session = new NSScriptSession(scriptLocator);
             Globals = new VariableTable();
 
-            _builtinsDispatchTable = new Dictionary<string, Action<ArgumentStack>>(StringComparer.OrdinalIgnoreCase)
+            _builtinsDispatchTable = new Dictionary<string, Action<ArgumentStack>>
             {
                 ["Wait"] = Wait,
                 ["WaitKey"] = WaitKey,
@@ -57,7 +61,8 @@ namespace SciAdvNet.NSScript.Execution
                 ["LoadText"] = LoadText,
                 ["WaitText"] = WaitText,
                 ["SetLoop"] = SetLoop,
-                ["SetLoopPoint"] = SetLoopPoint
+                ["SetLoopPoint"] = SetLoopPoint,
+                ["DisplayDialogue"] = DisplayDialogue
             };
 
             PredefinedConstants.Preload();
@@ -69,7 +74,6 @@ namespace SciAdvNet.NSScript.Execution
         public VariableTable Globals { get; }
         public NSScriptSession Session { get; }
         public NSScriptInterpreterStatus Status { get; private set; }
-        //public ImmutableArray<BuiltInFunctionCall> PendingBuiltInCalls => _execVisitor.PendingBuiltInCalls.ToImmutableArray();
 
         public event EventHandler<BuiltInFunctionCall> BuiltInCallScheduled;
 
@@ -84,18 +88,45 @@ namespace SciAdvNet.NSScript.Execution
         public void CreateThread(Module module) => CreateThread(module, module.MainChapter.Body);
         public void CreateThread(string moduleName) => CreateThread(Session.GetModule(moduleName));
 
-        public void Run(TimeSpan maxQuota)
+
+        private Queue<uint> _threadsToResume = new Queue<uint>();
+
+        public TimeSpan Run(TimeSpan timeQuota)
         {
+            foreach (var suspendedThread in _suspendedThreads)
+            {
+                if (suspendedThread.SleepCounter >= suspendedThread.SleepTimeout)
+                {
+                    //ResumeThread(suspendedThread.Id);
+                    _threadsToResume.Enqueue(suspendedThread.Id);
+                }
+            }
+
+            while (_threadsToResume.Count > 0)
+            {
+                ResumeThread(_threadsToResume.Dequeue());
+            }
+
             if (_activeThreads.Count == 0)
             {
-                //DispatchPendingBuiltInCalls();
-                return;
+                return TimeSpan.Zero;
             }
 
             Status = NSScriptInterpreterStatus.Running;
             _timer.Restart();
             while (Status == NSScriptInterpreterStatus.Running && _threads.Count > 0)
             {
+                while (_execVisitor.PendingBuiltInCalls.Count > 0)
+                {
+                    if (IsApproaching(_timer.Elapsed, timeQuota))
+                    {
+                        goto exit;
+                    }
+
+                    var call = _execVisitor.PendingBuiltInCalls.Dequeue();
+                    DispatchBuiltInCall(call);
+                }
+
                 while (_idleThreads.Count > 0)
                 {
                     var thread = _idleThreads.Dequeue();
@@ -103,20 +134,18 @@ namespace SciAdvNet.NSScript.Execution
                     _threads.Remove(thread);
                 }
 
-                if (_activeThreads.Count == 0 || _timer.Elapsed >= maxQuota)
+                if (_activeThreads.Count == 0)
                 {
-                    if (_activeThreads.Count > 0 && _timer.Elapsed >= TimeSpan.FromMilliseconds(90))
-                    {
-                        Console.BackgroundColor = ConsoleColor.Red;
-                        Console.WriteLine($"Quota exceded: {_timer.Elapsed.TotalMilliseconds}");
-                        Console.ResetColor();
-                    }
-                    _timer.Stop();
-                    return;
+                    break;
                 }
 
                 foreach (var thread in _activeThreads)
                 {
+                    if (IsApproaching(_timer.Elapsed, timeQuota))
+                    {
+                        goto exit;
+                    }
+
                     _execVisitor.Tick(thread);
                     if (thread.DoneExecuting)
                     {
@@ -124,10 +153,38 @@ namespace SciAdvNet.NSScript.Execution
                     }
                 }
 
-                DispatchPendingBuiltInCalls();
+                while (_execVisitor.PendingBuiltInCalls.Count > 0)
+                {
+                    if (IsApproaching(_timer.Elapsed, timeQuota))
+                    {
+                        goto exit;
+                    }
+
+                    var call = _execVisitor.PendingBuiltInCalls.Dequeue();
+                    DispatchBuiltInCall(call);
+                }
             }
 
+            exit:
             _timer.Stop();
+            _totalElapsed += _timer.Elapsed;
+
+            foreach (var suspendedThread in _suspendedThreads)
+            {
+                suspendedThread.SleepCounter += _timer.Elapsed;
+            }
+
+            return _timer.Elapsed;
+        }
+
+        private static bool IsApproaching(TimeSpan elapsedTime, TimeSpan timeQuota)
+        {
+            if (elapsedTime >= timeQuota)
+            {
+                return true;
+            }
+
+            return (timeQuota - elapsedTime).TotalMilliseconds <= 2.0f;
         }
 
         public void Suspend()
@@ -137,18 +194,23 @@ namespace SciAdvNet.NSScript.Execution
 
         public void SuspendThread(uint threadId)
         {
-            var thread = _threads.FirstOrDefault(x => x.Id == threadId);
-            if (thread != null)
-            {
-                thread.Suspend();
-                _activeThreads.Remove(thread);
-            }
+            SuspendThread(threadId, TimeSpan.MaxValue);
         }
 
         public void SuspendThread(uint threadId, TimeSpan timeout)
         {
-            SuspendThread(threadId);
-            Task.Delay(timeout).ContinueWith(x => ResumeThread(threadId), TaskContinuationOptions.ExecuteSynchronously);
+            if (threadId >= _threads.Count)
+            {
+                throw new ArgumentOutOfRangeException($"There is no thread with ID {threadId}.");
+            }
+
+            var thread = _threads[(int)threadId];
+            thread.Suspend(timeout);
+            _activeThreads.Remove(thread);
+            _suspendedThreads.Add(thread);
+
+            //SuspendThread(threadId, timeout);
+            //Task.Delay(timeout).ContinueWith(x => ResumeThread(threadId), TaskContinuationOptions.ExecuteSynchronously);
         }
 
         public void ResumeThread(uint threadId)
@@ -163,22 +225,25 @@ namespace SciAdvNet.NSScript.Execution
             {
                 thread.Resume();
                 _activeThreads.Add(thread);
+                _suspendedThreads.Remove(thread);
             }
         }
 
-        public void DispatchPendingBuiltInCalls()
+        public void DispatchBuiltInCall(BuiltInFunctionCall functionCall)
         {
-            while (_execVisitor.PendingBuiltInCalls.Count > 0 && Status != NSScriptInterpreterStatus.Suspended)
-            {
-                var functionCall = _execVisitor.PendingBuiltInCalls.Dequeue();
+            //while (_execVisitor.PendingBuiltInCalls.Count > 0 && Status != NSScriptInterpreterStatus.Suspended)
+            //{
+            Action<ArgumentStack> handler;
+            _builtinsDispatchTable.TryGetValue(functionCall.FunctionName, out handler);
+            BuiltInCallScheduled?.Invoke(this, functionCall);
+            handler?.Invoke(functionCall.MutableArguments);
+            //}
+        }
 
-                //Console.WriteLine(functionCall);
-
-                Action<ArgumentStack> handler;
-                _builtinsDispatchTable.TryGetValue(functionCall.FunctionName, out handler);
-                BuiltInCallScheduled?.Invoke(this, functionCall);
-                handler?.Invoke(functionCall.MutableArguments);
-            }
+        private void DisplayDialogue(ArgumentStack args)
+        {
+            var text = args.PopString();
+            _builtIns.DisplayDialogue(text);
         }
 
         private void Wait(ArgumentStack args)
@@ -211,7 +276,7 @@ namespace SciAdvNet.NSScript.Execution
         private void Request(ArgumentStack args)
         {
             string entityName = args.PopString();
-            NssAction action = args.PopNssAction();
+            NssEntityAction action = args.PopNssAction();
 
             _builtIns.Request(entityName, action);
         }
@@ -306,6 +371,11 @@ namespace SciAdvNet.NSScript.Execution
             string entityName = args.PopString();
             TimeSpan time = args.PopTimeSpan();
 
+            uint threadId = _builtIns.CallingThreadId;
+            var thread = _threads[(int)threadId];
+
+            thread.PushContinuation(_execVisitor.CurrentDialogueBlock);
+
             _builtIns.WaitText(entityName, time);
         }
 
@@ -373,13 +443,11 @@ namespace SciAdvNet.NSScript.Execution
         private readonly ExpressionFlattener _exprFlattener;
         private readonly ExpressionReducer _exprReducer;
         private readonly RecursiveExpressionEvaluator _recursiveEvaluator;
-        private readonly INssBuiltInFunctions _builtIns;
 
         private ThreadContext _threadContext;
 
-        public ExecutingVisitor(INssBuiltInFunctions builtIns)
+        public ExecutingVisitor()
         {
-            _builtIns = builtIns;
             _exprFlattener = new ExpressionFlattener();
             _exprReducer = new ExpressionReducer();
             _recursiveEvaluator = new RecursiveExpressionEvaluator();
@@ -388,16 +456,16 @@ namespace SciAdvNet.NSScript.Execution
 
         private Frame CurrentFrame => _threadContext.CurrentFrame;
         public Queue<BuiltInFunctionCall> PendingBuiltInCalls { get; }
+        public DialogueBlock CurrentDialogueBlock { get; private set; }
 
         public void Tick(ThreadContext context)
         {
             _threadContext = context;
-            Frame prevFrame = context.CurrentFrame;
 
+            Frame prevFrame = context.CurrentFrame;
             Visit(context.CurrentNode);
 
-            var currentFrame = CurrentFrame;
-            if (_threadContext.CurrentFrame.EvaluationStack.Count == 0 && prevFrame == _threadContext.CurrentFrame)
+            if (prevFrame == CurrentFrame)
             {
                 context.Advance();
             }
@@ -485,7 +553,6 @@ namespace SciAdvNet.NSScript.Execution
         {
             if (Eval(ifStatement.Condition, out var condition))
             {
-                _threadContext.Advance();
                 if (condition == ConstantValue.True)
                 {
                     _threadContext.PushContinuation(ifStatement.IfTrueStatement);
@@ -508,15 +575,18 @@ namespace SciAdvNet.NSScript.Execution
             }
         }
 
-        //public override void VisitDialogueBlock(DialogueBlock dialogueBlock)
-        //{
-        //    _threadContext.Advance();
-        //    _threadContext.PushContinuation(dialogueBlock.Statements);
-        //}
-
-        public override void VisitPXmlString(PXmlString pxmlNode)
+        public override void VisitDialogueBlock(DialogueBlock dialogueBlock)
         {
-            Debug.WriteLine(pxmlNode.Text);
+            CurrentFrame.Globals["SYSTEM_present_preprocess"] = new ConstantValue(dialogueBlock.BoxName);
+            CurrentFrame.Globals["SYSTEM_present_text"] = new ConstantValue(dialogueBlock.Identifier);
+
+            CurrentDialogueBlock = dialogueBlock;
+        }
+
+        public override void VisitPXmlString(PXmlString pxmlString)
+        {
+            var arg = new ConstantValue(pxmlString.Text);
+            ScheduleBuiltInCall("DisplayDialogue", new ArgumentStack(ImmutableArray.Create(arg)));
         }
 
         public override void VisitBlock(Block block)
@@ -530,7 +600,7 @@ namespace SciAdvNet.NSScript.Execution
             Function target;
             if (!_threadContext.CurrentModule.TryGetFunction(name, out target))
             {
-                EnqueueBuiltIn(functionCall);
+                ScheduleBuiltInCall(functionCall);
                 return;
             }
 
@@ -542,15 +612,19 @@ namespace SciAdvNet.NSScript.Execution
                 arguments[param.ParameterName.SimplifiedName] = arg;
             }
 
-            _threadContext.Advance();
             _threadContext.PushContinuation(target.Body, arguments);
         }
 
-        private void EnqueueBuiltIn(FunctionCall functionCall)
+        private void ScheduleBuiltInCall(FunctionCall functionCall)
         {
             string name = functionCall.TargetFunctionName.SimplifiedName;
             var args = new ArgumentStack(functionCall.Arguments.Select(EvaluateTrivial).Reverse());
-            PendingBuiltInCalls.Enqueue(new BuiltInFunctionCall(name, args, _threadContext.Id));
+            ScheduleBuiltInCall(name, args);
+        }
+
+        private void ScheduleBuiltInCall(string functionName, ArgumentStack arguments)
+        {
+            PendingBuiltInCalls.Enqueue(new BuiltInFunctionCall(functionName, arguments, _threadContext.Id));
         }
     }
 }

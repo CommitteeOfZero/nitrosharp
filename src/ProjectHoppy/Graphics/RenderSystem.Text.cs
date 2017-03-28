@@ -1,4 +1,5 @@
-﻿using SciAdvNet.MediaLayer;
+﻿using ProjectHoppy.Text;
+using SciAdvNet.MediaLayer;
 using SciAdvNet.MediaLayer.Graphics;
 using SciAdvNet.MediaLayer.Graphics.Text;
 using System.Collections.Generic;
@@ -11,7 +12,6 @@ namespace ProjectHoppy.Graphics
         private Dictionary<TextComponent, TextLayout> _textLayouts;
         private TextFormat _textFormat;
 
-        private int _prevGlyphIndex;
         private ColorBrush _transparentTextBrush;
         private ColorBrush _currentGlyphBrush;
 
@@ -21,7 +21,7 @@ namespace ProjectHoppy.Graphics
             _textFormat = new TextFormat
             {
                 FontFamily = "Noto Sans CJK JP",
-                FontSize = 19,
+                FontSize = 20,
                 FontWeight = FontWeight.Normal,
                 VerticalAlignment = VerticalAlignment.Center
             };
@@ -54,11 +54,11 @@ namespace ProjectHoppy.Graphics
 
             if (textComponent.Animated)
             {
-                if (textComponent.CurrentGlyphIndex != _prevGlyphIndex)
+                if (textComponent.CurrentGlyphIndex != textComponent.PrevGlyphIndex)
                 {
                     layout.SetGlyphBrush(textComponent.CurrentGlyphIndex, _currentGlyphBrush);
-                    layout.SetGlyphBrush(_prevGlyphIndex, _colorBrush);
-                    _prevGlyphIndex = textComponent.CurrentGlyphIndex;
+                    layout.SetGlyphBrush(textComponent.PrevGlyphIndex, _colorBrush);
+                    textComponent.PrevGlyphIndex = textComponent.CurrentGlyphIndex;
                 }
             }
 

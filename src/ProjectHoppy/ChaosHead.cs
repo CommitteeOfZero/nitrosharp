@@ -8,7 +8,7 @@ using System.IO;
 
 namespace ProjectHoppy
 {
-    public class Noah : Game
+    public class ChaosHead : Game
     {
         private ContentManager _content;
         private NSScriptInterpreter _nssInterpreter;
@@ -17,7 +17,7 @@ namespace ProjectHoppy
 
         private ILogger _interpreterLog;
 
-        public Noah()
+        public ChaosHead()
         {
             AddStartupTask(Init);
         }
@@ -34,11 +34,7 @@ namespace ProjectHoppy
             _nssInterpreter.BuiltInCallScheduled += OnBuiltInCallDispatched;
 
             //_nssInterpreter.CreateThread("nss/boot-logo.nss");
-            var sw = Stopwatch.StartNew();
             _nssInterpreter.CreateThread("nss/ch01_007_円山町殺人現場");
-            sw.Stop();
-
-            Console.WriteLine($"Parsed in {sw.ElapsedMilliseconds}");
         }
 
         private void OnBuiltInCallDispatched(object sender, BuiltInFunctionCall call)
@@ -57,6 +53,9 @@ namespace ProjectHoppy
             Window.Title = "Chaos;Hoppy";
             _content.InitContentLoaders(RenderContext.ResourceFactory, AudioEngine.ResourceFactory);
 
+            var inputHandler = new InputHandler(_nssBuiltIns);
+            Systems.RegisterSystem(inputHandler);
+
             var animationSystem = new AnimationSystem();
             Systems.RegisterSystem(animationSystem);
 
@@ -72,10 +71,15 @@ namespace ProjectHoppy
 
         public override void Update(float deltaMilliseconds)
         {
-            if (!_nssBuiltIns.Waiting)
+            var timeQuota = TimeSpan.FromMilliseconds(8.0f);
+            TimeSpan elapsed = _nssInterpreter.Run(timeQuota);
+
+            if (elapsed > timeQuota)
             {
-                _nssInterpreter.Run(TimeSpan.FromMilliseconds(8.0f));
+                _interpreterLog.LogCritical(666, $"Interpreter execution time quota exceeded " +
+                    $"(quota: {timeQuota.TotalMilliseconds} ms; elapsed: {elapsed.TotalMilliseconds} ms).");
             }
+
             base.Update(deltaMilliseconds);
         }
 

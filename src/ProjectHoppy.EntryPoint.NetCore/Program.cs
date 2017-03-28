@@ -4,7 +4,7 @@
     {
         public static void Main(string[] args)
         {
-            var noah = new Noah();
+            var noah = new ChaosHead();
             noah.Run();
         }
     }

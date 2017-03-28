@@ -3,10 +3,10 @@ using System.IO;
 
 namespace SciAdvNet.NSScript
 {
-    internal class TextScanner
+    public abstract class TextScanner
     {
         // char.MaxValue is not a valid UTF-16 character, so it can safely be used as a EOF character.
-        public const char EofCharacter = char.MaxValue;
+        protected const char EofCharacter = char.MaxValue;
 
         // A marker that we set at the beginning of each lexeme.
         protected int _lexemeStart;
@@ -18,22 +18,22 @@ namespace SciAdvNet.NSScript
         //// When it's equal to 0, the lexer mode is switched back from Normal to PXmlSyntax.
         //private uint _dlgUnmatchedBraces = 0;
 
-        public TextScanner()
+        protected TextScanner()
         {
         }
 
-        public TextScanner(string sourceText)
+        protected TextScanner(string sourceText)
         {
             SourceText = sourceText ?? throw new ArgumentNullException(nameof(sourceText));
         }
 
-        public string SourceText { get; protected set; }
-        public int Position { get; private set; }
+        protected string SourceText { get; set; }
+        protected int Position { get; private set; }
 
         /// <summary>
         /// Gets the current lexeme, which is the characters between the lexemeStart marker and the current position.
         /// </summary>
-        public string CurrentLexeme
+        protected string CurrentLexeme
         {
             get
             {
@@ -41,10 +41,10 @@ namespace SciAdvNet.NSScript
             }
         }
 
-        public int CurrentLexemeLength => Position - _lexemeStart;
+        protected int CurrentLexemeLength => Position - _lexemeStart;
 
-        public char PeekChar() => PeekChar(0);
-        public char PeekChar(int offset)
+        protected char PeekChar() => PeekChar(0);
+        protected char PeekChar(int offset)
         {
             if (Position + offset >= SourceText.Length)
             {
@@ -54,10 +54,10 @@ namespace SciAdvNet.NSScript
             return SourceText[Position + offset];
         }
 
-        public void AdvanceChar() => Position++;
-        public void AdvanceChar(int n) => Position += n;
+        protected void AdvanceChar() => Position++;
+        protected void AdvanceChar(int n) => Position += n;
 
-        public void EatChar(char c)
+        protected void EatChar(char c)
         {
             char actualCharacter = PeekChar();
             if (actualCharacter != c)
@@ -71,6 +71,58 @@ namespace SciAdvNet.NSScript
         /// <summary>
         /// Sets the LexemeStart marker at the current position.
         /// </summary>
-        public void StartScanning() => _lexemeStart = Position;
+        protected void StartScanning() => _lexemeStart = Position;
+
+        protected void ScanWhitespace()
+        {
+            char c;
+            while (SyntaxFacts.IsWhitespace((c = PeekChar())) && c != EofCharacter)
+            {
+                AdvanceChar();
+            }
+        }
+
+        protected void ScanToEndOfLine()
+        {
+            char c;
+            while (!SyntaxFacts.IsNewLine((c = PeekChar())) && c != EofCharacter)
+            {
+                AdvanceChar();
+            }
+        }
+
+        protected void ScanEndOfLine()
+        {
+            char c = PeekChar();
+            switch (c)
+            {
+                case '\r':
+                    AdvanceChar();
+                    if (PeekChar() == '\n')
+                    {
+                        AdvanceChar();
+                    }
+                    break;
+
+                case '\n':
+                    AdvanceChar();
+                    break;
+
+                default:
+                    if (SyntaxFacts.IsNewLine(c))
+                    {
+                        AdvanceChar();
+                    }
+                    break;
+            }
+        }
+
+        protected void ScanEndOfLineSequence()
+        {
+            while (SyntaxFacts.IsNewLine(PeekChar()))
+            {
+                ScanEndOfLine();
+            }
+        }
     }
 }

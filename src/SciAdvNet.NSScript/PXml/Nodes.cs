@@ -1,11 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Text;
 
 namespace SciAdvNet.NSScript.PXml
 {
-    public sealed class PXmlContent
+    public sealed class PXmlContent : PXmlNode
     {
         internal PXmlContent(ImmutableArray<PXmlNode> children)
         {
@@ -13,42 +11,13 @@ namespace SciAdvNet.NSScript.PXml
         }
 
         public ImmutableArray<PXmlNode> Children { get; }
-    }
 
-    public sealed class VoiceElement
-    {
-        internal VoiceElement(string characterName, string fileName)
+        public override PXmlNodeKind Kind => PXmlNodeKind.Content;
+
+        internal override void Accept(PXmlSyntaxVisitor visitor)
         {
-            CharacterName = characterName;
-            FileName = fileName;
+            visitor.VisitContent(this);
         }
-
-        public string CharacterName { get; }
-        public string FileName { get; }
-    }
-
-    public sealed class ColorElement : PXmlNode
-    {
-        public ColorElement(int colorCode, PXmlContent content)
-        {
-            ColorCode = colorCode;
-            Content = content;
-        }
-
-        public int ColorCode { get; }
-        public PXmlContent Content { get; }
-    }
-
-    public sealed class RubyElement : PXmlNode
-    {
-        public RubyElement(PXmlContent rubyBase, string rubyText)
-        {
-            RubyBase = rubyBase;
-            RubyText = rubyText;
-        }
-
-        public PXmlContent RubyBase { get; }
-        public string RubyText { get; }
     }
 
     public class PXmlText : PXmlNode
@@ -59,11 +28,75 @@ namespace SciAdvNet.NSScript.PXml
         }
 
         public string Text { get; }
+        public override PXmlNodeKind Kind => PXmlNodeKind.Text;
+
+        internal override void Accept(PXmlSyntaxVisitor visitor)
+        {
+            visitor.VisitText(this);
+        }
     }
+
+    public sealed class VoiceElement : PXmlNode
+    {
+        internal VoiceElement(VoiceAction action, string characterName, string fileName)
+        {
+            Action = action;
+            CharacterName = characterName;
+            FileName = fileName;
+        }
+
+        public override PXmlNodeKind Kind => PXmlNodeKind.VoiceElement;
+        public VoiceAction Action { get; }
+        public string CharacterName { get; }
+        public string FileName { get; }
+
+        internal override void Accept(PXmlSyntaxVisitor visitor)
+        {
+            visitor.VisitVoiceElement(this);
+        }
+    }
+
+    public sealed class FontColorElement : PXmlNode
+    {
+        internal FontColorElement(NssColor color, PXmlContent content)
+        {
+            Color = color;
+            Content = content;
+        }
+
+        public NssColor Color { get; }
+        public PXmlContent Content { get; }
+
+        public override PXmlNodeKind Kind => PXmlNodeKind.FontColorElement;
+
+        internal override void Accept(PXmlSyntaxVisitor visitor)
+        {
+            visitor.VisitFontColorElement(this);
+        }
+    }
+
+    public sealed class RubyElement : PXmlNode
+    {
+        internal RubyElement(PXmlContent rubyBase, string rubyText)
+        {
+            RubyBase = rubyBase;
+            RubyText = rubyText;
+        }
+
+        public PXmlContent RubyBase { get; }
+        public string RubyText { get; }
+
+        public override PXmlNodeKind Kind => PXmlNodeKind.RubyElement;
+
+        internal override void Accept(PXmlSyntaxVisitor visitor)
+        {
+            visitor.VisitRubyElement(this);
+        }
+    }    
 
     public sealed class PXmlVerbatimText : PXmlText
     {
-        public PXmlVerbatimText(string text)
+        internal PXmlVerbatimText(string text)
             : base(text)
         {
         }

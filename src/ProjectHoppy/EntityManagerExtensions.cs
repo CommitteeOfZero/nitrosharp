@@ -22,7 +22,15 @@ namespace ProjectHoppy
         public static IEnumerable<Entity> WildcardQuery(this EntityManager entityManager, string query)
         {
             query = query.Replace("*", string.Empty).ToUpper();
-            return entityManager.AllEntities.Where(x => x.Key.ToUpper().StartsWith(query)).Select(x => x.Value);
+            //return entityManager.AllEntities.Where(x => x.Key.ToUpper().StartsWith(query)).Select(x => x.Value);
+
+            foreach (var pair in entityManager.AllEntities)
+            {
+                if (pair.Key.ToUpperInvariant().StartsWith(query))
+                {
+                    yield return pair.Value;
+                }
+            }
         }
     }
 }

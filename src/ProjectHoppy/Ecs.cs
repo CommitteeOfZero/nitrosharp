@@ -191,15 +191,15 @@ namespace ProjectHoppy
 
         internal void RefreshLocalEntityList(IEnumerable<Entity> updatedEntities, IEnumerable<Entity> removedEntities)
         {
-            foreach (var updated in updatedEntities)
-            {
-                EntityChanged(updated);
-            }
-
             foreach (var removed in removedEntities)
             {
                 _entities.Remove(removed);
                 EntityRemoved?.Invoke(this, removed);
+            }
+
+            foreach (var updated in updatedEntities)
+            {
+                EntityChanged(updated);
             }
         }
 

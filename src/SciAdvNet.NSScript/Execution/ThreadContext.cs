@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 
 namespace SciAdvNet.NSScript.Execution
@@ -20,13 +21,14 @@ namespace SciAdvNet.NSScript.Execution
 
         public uint Id { get; }
         public Module CurrentModule { get; }
-
-        public Frame CurrentFrame => _frameStack.Peek();
-        
+        public Frame CurrentFrame => _frameStack.Peek();   
 
         public SyntaxNode CurrentNode => CurrentFrame.Statements[CurrentFrame.Position];
         public bool Suspended { get; private set; }
         public bool DoneExecuting => _frameStack.Count == 0;
+
+        public TimeSpan SleepTimeout { get; private set; }
+        public TimeSpan SleepCounter { get; set; }
 
         public void Advance()
         {
@@ -44,26 +46,45 @@ namespace SciAdvNet.NSScript.Execution
             }
         }
 
-        public void Suspend() => Suspended = true;
-        public void Resume() => Suspended = false;
-
-        public void PushContinuation(ImmutableArray<Statement> statements)
+        public void Suspend()
         {
-            //Advance();
+            Suspended = true;
+        }
+
+        public void Suspend(TimeSpan timeout)
+        {
+            Suspended = true;
+            SleepTimeout = timeout;
+            SleepCounter = TimeSpan.Zero;
+        }
+
+        public void Resume()
+        {
+            SleepTimeout = TimeSpan.Zero;
+            Suspended = false;
+        }
+
+        public void PushContinuation(ImmutableArray<Statement> statements, bool advance = true)
+        {
+            if (advance)
+            {
+                Advance();
+            }
+
             var frame = new Frame(statements, _globals);
             _frameStack.Push(frame);
         }
 
-        public void PushContinuation(Statement statement)
+        public void PushContinuation(Statement statement, bool advance = true)
         {
             var block = statement as IBlock;
             var array = block?.Statements ?? ImmutableArray.Create(statement);
-            PushContinuation(array);
+            PushContinuation(array, advance);
         }
 
-        public void PushContinuation(Statement statement, VariableTable arguments)
+        public void PushContinuation(Statement statement, VariableTable arguments, bool advance = true)
         {
-            PushContinuation(statement);
+            PushContinuation(statement, advance);
             CurrentFrame.Arguments = arguments;
         }
     }

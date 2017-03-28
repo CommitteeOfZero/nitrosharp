@@ -8,6 +8,9 @@ using System.Diagnostics;
 using ProjectHoppy.Content;
 using System.IO;
 using SciAdvNet.MediaLayer.Graphics;
+using ProjectHoppy.Text;
+using SciAdvNet.NSScript.PXml;
+using SciAdvNet.NSScript;
 
 namespace ProjectHoppy
 {
@@ -23,7 +26,6 @@ namespace ProjectHoppy
         }
 
         public NSScriptInterpreter Interpreter { get; internal set; }
-        public bool Waiting { get; private set; }
 
         public override void AddRectangle(string entityName, int priority, NssCoordinate x, NssCoordinate y, int width, int height, NssColor color)
         {
@@ -43,25 +45,26 @@ namespace ProjectHoppy
 
         public override void LoadAudio(string entityName, AudioKind kind, string fileName)
         {
-
-            _entities.Create(entityName, replace: true)
-                .WithComponent(new AssetComponent(fileName))
-                .WithComponent(new SoundComponent());
-
-            //if (kind == AudioKind.SoundEffect)
-            //{
-            //    var s = _entities.Get(entityName).GetComponent<SoundComponent>();
-            //    s.Looping = true;
-
-            //}
+            //_entities.Create(entityName, replace: true)
+            //    .WithComponent(new AssetComponent(fileName))
+            //    .WithComponent(new SoundComponent());
         }
+
+        private Queue<Entity> _entitiesToRemove = new Queue<Entity>();
 
         public override void RemoveEntity(string entityName)
         {
-            foreach (var e in _entities.PerformQuery(entityName).Where(x => !x.Locked).ToArray())
+            foreach (var e in _entities.PerformQuery(entityName))
             {
-                Debug.WriteLine($"Removing entity '{e.Name}'");
-                _entities.Remove(e);
+                if (!e.Locked)
+                {
+                    _entitiesToRemove.Enqueue(e);
+                }
+            }
+
+            while (_entitiesToRemove.Count > 0)
+            {
+                _entities.Remove(_entitiesToRemove.Dequeue());
             }
         }
 
@@ -113,48 +116,57 @@ namespace ProjectHoppy
             Interpreter.SuspendThread(CallingThreadId, timeout);
         }
 
-        public override void SetVolume(string entityName, TimeSpan duration, int volume)
-        {
-            foreach (var e in _entities.PerformQuery(entityName))
-            {
-                e.GetComponent<SoundComponent>().Volume = volume;
+        //public override void SetVolume(string entityName, TimeSpan duration, int volume)
+        //{
+        //    foreach (var e in _entities.PerformQuery(entityName))
+        //    {
+        //        e.GetComponent<SoundComponent>().Volume = volume;
 
-            }
-        }
+        //    }
+        //}
 
-        public override void ToggleLooping(string entityName, bool looping)
-        {
-            foreach (var e in _entities.PerformQuery(entityName))
-            {
-                e.GetComponent<SoundComponent>().Looping = looping;
-            }
-        }
+        //public override void ToggleLooping(string entityName, bool looping)
+        //{
+        //    foreach (var e in _entities.PerformQuery(entityName))
+        //    {
+        //        e.GetComponent<SoundComponent>().Looping = looping;
+        //    }
+        //}
 
-        public override void SetLoopPoint(string entityName, TimeSpan loopStart, TimeSpan loopEnd)
-        {
-            foreach (var e in _entities.PerformQuery(entityName))
-            {
-                var sound = e.GetComponent<SoundComponent>();
-                sound.LoopStart = loopEnd;
-                sound.LoopEnd = loopEnd;
-                sound.Looping = true;
-            }
-        }
+        //public override void SetLoopPoint(string entityName, TimeSpan loopStart, TimeSpan loopEnd)
+        //{
+        //    foreach (var e in _entities.PerformQuery(entityName))
+        //    {
+        //        var sound = e.GetComponent<SoundComponent>();
+        //        sound.LoopStart = loopEnd;
+        //        sound.LoopEnd = loopEnd;
+        //        sound.Looping = true;
+        //    }
+        //}
 
         public override void WaitText(string id, TimeSpan time)
         {
-            var visual = new VisualComponent { Kind = VisualKind.Text, X = 40, Y = 470 + 10, Width = 800 - 80, Height = 130, Priority = 30000, Color = RgbaValueF.White };
-            var text = new TextComponent { Animated = true, Text = "I took a peek inside my bag. Several textbooks and a gaming - enabled cellphone were the only things inside." };
 
-            _entities.Create("text")
-                .WithComponent(visual)
-                .WithComponent(text);
-
-            Interpreter.Suspend();
-            Waiting = true;
         }
 
-        public override void Request(string entityName, NssAction action)
+        public override void DisplayDialogue(string pxmlString)
+        {
+            Interpreter.SuspendThread(CallingThreadId);
+
+            var visual = new VisualComponent { Kind = VisualKind.Text, X = 40, Y = 470 + 5, Width = 800 - 80, Height = 130, Priority = 30000, Color = RgbaValueF.White };
+
+            var root = PXmlStatic.ParsePXmlContent(pxmlString);
+            var flattener = new PXmlTreeFlattener();
+
+            var text = flattener.Flatten(root);
+            text.Animated = true;
+
+            _entities.Create("text", replace: true)
+                .WithComponent(visual)
+                .WithComponent(text);
+        }
+
+        public override void Request(string entityName, NssEntityAction action)
         {
             if (entityName == null)
                 return;
@@ -163,11 +175,11 @@ namespace ProjectHoppy
             {
                 switch (action)
                 {
-                    case NssAction.Lock:
+                    case NssEntityAction.Lock:
                         e.Locked = true;
                         break;
 
-                    case NssAction.Unlock:
+                    case NssEntityAction.Unlock:
                         e.Locked = false;
                         break;
                 }

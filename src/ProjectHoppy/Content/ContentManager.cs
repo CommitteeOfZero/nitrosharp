@@ -106,7 +106,7 @@ namespace ProjectHoppy.Content
             return asset;
         }
 
-        public void StartLoading<T>(string path) => _workItems.Post((path, typeof(T)));
+        public void StartLoading<T>(string path) => _workItems.SendAsync((path, typeof(T)));
         public bool IsLoaded(string path) => _loadedItems.ContainsKey(path);
         public T Get<T>(string path) => (T)_loadedItems[path];
 

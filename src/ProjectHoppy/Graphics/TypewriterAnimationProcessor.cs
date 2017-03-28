@@ -1,4 +1,5 @@
-﻿using SciAdvNet.MediaLayer.Graphics;
+﻿using ProjectHoppy.Text;
+using SciAdvNet.MediaLayer.Graphics;
 
 namespace ProjectHoppy.Graphics
 {
@@ -18,7 +19,7 @@ namespace ProjectHoppy.Graphics
                 return;
             }
 
-            text.CurrentGlyphOpacity += 1.0f * (deltaMilliseconds / (float)100);
+            text.CurrentGlyphOpacity += 1.0f * (deltaMilliseconds / 80.0f);
 
             if (text.CurrentGlyphOpacity >= 1.0f || text.Text[text.CurrentGlyphIndex] == ' ')
             {
