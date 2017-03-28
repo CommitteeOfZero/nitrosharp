@@ -28,7 +28,7 @@ namespace SciAdvNet.NSScript.Execution
         public bool DoneExecuting => _frameStack.Count == 0;
 
         public TimeSpan SleepTimeout { get; private set; }
-        public TimeSpan SleepCounter { get; set; }
+        public TimeSpan SuspensionTime { get; private set; }
 
         public void Advance()
         {
@@ -51,16 +51,15 @@ namespace SciAdvNet.NSScript.Execution
             Suspended = true;
         }
 
-        public void Suspend(TimeSpan timeout)
+        public void Suspend(TimeSpan suspensionTime, TimeSpan sleepTimeout)
         {
+            SuspensionTime = suspensionTime;
+            SleepTimeout = sleepTimeout;
             Suspended = true;
-            SleepTimeout = timeout;
-            SleepCounter = TimeSpan.Zero;
         }
 
         public void Resume()
         {
-            SleepTimeout = TimeSpan.Zero;
             Suspended = false;
         }
 

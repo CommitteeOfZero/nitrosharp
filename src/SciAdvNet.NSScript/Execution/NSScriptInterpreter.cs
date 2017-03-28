@@ -25,12 +25,10 @@ namespace SciAdvNet.NSScript.Execution
         private readonly List<ThreadContext> _activeThreads;
         private readonly List<ThreadContext> _suspendedThreads;
         private readonly Queue<ThreadContext> _idleThreads;
+        private readonly Queue<ThreadContext> _threadsToResume;
 
         private readonly Stopwatch _timer;
-
         private uint _nextThreadId;
-
-        private TimeSpan _totalElapsed = TimeSpan.Zero;
 
         public NSScriptInterpreter(IScriptLocator scriptLocator, INssBuiltInFunctions builtIns)
         {
@@ -41,6 +39,7 @@ namespace SciAdvNet.NSScript.Execution
             _activeThreads = new List<ThreadContext>();
             _suspendedThreads = new List<ThreadContext>();
             _idleThreads = new Queue<ThreadContext>();
+            _threadsToResume = new Queue<ThreadContext>();
 
             Session = new NSScriptSession(scriptLocator);
             Globals = new VariableTable();
@@ -68,7 +67,7 @@ namespace SciAdvNet.NSScript.Execution
             PredefinedConstants.Preload();
 
             Status = NSScriptInterpreterStatus.Idle;
-            _timer = new Stopwatch();
+            _timer = Stopwatch.StartNew();
         }
 
         public VariableTable Globals { get; }
@@ -88,37 +87,21 @@ namespace SciAdvNet.NSScript.Execution
         public void CreateThread(Module module) => CreateThread(module, module.MainChapter.Body);
         public void CreateThread(string moduleName) => CreateThread(Session.GetModule(moduleName));
 
-
-        private Queue<uint> _threadsToResume = new Queue<uint>();
-
         public TimeSpan Run(TimeSpan timeQuota)
         {
-            foreach (var suspendedThread in _suspendedThreads)
-            {
-                if (suspendedThread.SleepCounter >= suspendedThread.SleepTimeout)
-                {
-                    //ResumeThread(suspendedThread.Id);
-                    _threadsToResume.Enqueue(suspendedThread.Id);
-                }
-            }
-
-            while (_threadsToResume.Count > 0)
-            {
-                ResumeThread(_threadsToResume.Dequeue());
-            }
-
+            ProcessSuspendedThreads();
             if (_activeThreads.Count == 0)
             {
                 return TimeSpan.Zero;
             }
 
             Status = NSScriptInterpreterStatus.Running;
-            _timer.Restart();
+            var startTime = _timer.Elapsed;
             while (Status == NSScriptInterpreterStatus.Running && _threads.Count > 0)
             {
                 while (_execVisitor.PendingBuiltInCalls.Count > 0)
                 {
-                    if (IsApproaching(_timer.Elapsed, timeQuota))
+                    if (IsApproachingQuota(_timer.Elapsed - startTime, timeQuota))
                     {
                         goto exit;
                     }
@@ -141,7 +124,7 @@ namespace SciAdvNet.NSScript.Execution
 
                 foreach (var thread in _activeThreads)
                 {
-                    if (IsApproaching(_timer.Elapsed, timeQuota))
+                    if (IsApproachingQuota(_timer.Elapsed - startTime, timeQuota))
                     {
                         goto exit;
                     }
@@ -155,7 +138,7 @@ namespace SciAdvNet.NSScript.Execution
 
                 while (_execVisitor.PendingBuiltInCalls.Count > 0)
                 {
-                    if (IsApproaching(_timer.Elapsed, timeQuota))
+                    if (IsApproachingQuota(_timer.Elapsed - startTime, timeQuota))
                     {
                         goto exit;
                     }
@@ -166,25 +149,35 @@ namespace SciAdvNet.NSScript.Execution
             }
 
             exit:
-            _timer.Stop();
-            _totalElapsed += _timer.Elapsed;
-
-            foreach (var suspendedThread in _suspendedThreads)
-            {
-                suspendedThread.SleepCounter += _timer.Elapsed;
-            }
-
-            return _timer.Elapsed;
+            return _timer.Elapsed - startTime;
         }
 
-        private static bool IsApproaching(TimeSpan elapsedTime, TimeSpan timeQuota)
+        private void ProcessSuspendedThreads()
+        {
+            var time = _timer.Elapsed;
+            foreach (var suspendedThread in _suspendedThreads)
+            {
+                var delta = time - suspendedThread.SuspensionTime;
+                if (delta > suspendedThread.SleepTimeout)
+                {
+                    _threadsToResume.Enqueue(suspendedThread);
+                }
+            }
+
+            while (_threadsToResume.Count > 0)
+            {
+                ResumeThread(_threadsToResume.Dequeue());
+            }
+        }
+
+        private static bool IsApproachingQuota(TimeSpan elapsedTime, TimeSpan timeQuota)
         {
             if (elapsedTime >= timeQuota)
             {
                 return true;
             }
 
-            return (timeQuota - elapsedTime).TotalMilliseconds <= 2.0f;
+            return (timeQuota - elapsedTime).TotalMilliseconds <= 3.0f;
         }
 
         public void Suspend()
@@ -197,6 +190,13 @@ namespace SciAdvNet.NSScript.Execution
             SuspendThread(threadId, TimeSpan.MaxValue);
         }
 
+        internal void SuspendThread(ThreadContext thread, TimeSpan timeout)
+        {
+            thread.Suspend(_timer.Elapsed, timeout);
+            _activeThreads.Remove(thread);
+            _suspendedThreads.Add(thread);
+        }
+
         public void SuspendThread(uint threadId, TimeSpan timeout)
         {
             if (threadId >= _threads.Count)
@@ -205,12 +205,17 @@ namespace SciAdvNet.NSScript.Execution
             }
 
             var thread = _threads[(int)threadId];
-            thread.Suspend(timeout);
-            _activeThreads.Remove(thread);
-            _suspendedThreads.Add(thread);
+            SuspendThread(thread, timeout);
 
             //SuspendThread(threadId, timeout);
             //Task.Delay(timeout).ContinueWith(x => ResumeThread(threadId), TaskContinuationOptions.ExecuteSynchronously);
+        }
+
+        internal void ResumeThread(ThreadContext thread)
+        {
+            thread.Resume();
+            _activeThreads.Add(thread);
+            _suspendedThreads.Remove(thread);
         }
 
         public void ResumeThread(uint threadId)
@@ -221,23 +226,15 @@ namespace SciAdvNet.NSScript.Execution
             }
 
             var thread = _threads[(int)threadId];
-            if (thread != null)
-            {
-                thread.Resume();
-                _activeThreads.Add(thread);
-                _suspendedThreads.Remove(thread);
-            }
+            ResumeThread(thread);
         }
 
         public void DispatchBuiltInCall(BuiltInFunctionCall functionCall)
         {
-            //while (_execVisitor.PendingBuiltInCalls.Count > 0 && Status != NSScriptInterpreterStatus.Suspended)
-            //{
             Action<ArgumentStack> handler;
             _builtinsDispatchTable.TryGetValue(functionCall.FunctionName, out handler);
             BuiltInCallScheduled?.Invoke(this, functionCall);
             handler?.Invoke(functionCall.MutableArguments);
-            //}
         }
 
         private void DisplayDialogue(ArgumentStack args)
