@@ -103,6 +103,7 @@ namespace ProjectHoppy.Content
             }
 
             object asset = loader.Load(stream);
+            _loadedItems[path] = asset;
             return asset;
         }
 

@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
-using System.Threading.Tasks;
 
 namespace SciAdvNet.NSScript.Execution
 {
@@ -89,7 +88,11 @@ namespace SciAdvNet.NSScript.Execution
 
         public TimeSpan Run(TimeSpan timeQuota)
         {
-            ProcessSuspendedThreads();
+            if (_suspendedThreads.Count > 0)
+            {
+                ProcessSuspendedThreads();
+            }
+
             if (_activeThreads.Count == 0)
             {
                 return TimeSpan.Zero;
@@ -130,21 +133,11 @@ namespace SciAdvNet.NSScript.Execution
                     }
 
                     _execVisitor.Tick(thread);
+
                     if (thread.DoneExecuting)
                     {
                         _idleThreads.Enqueue(thread);
                     }
-                }
-
-                while (_execVisitor.PendingBuiltInCalls.Count > 0)
-                {
-                    if (IsApproachingQuota(_timer.Elapsed - startTime, timeQuota))
-                    {
-                        goto exit;
-                    }
-
-                    var call = _execVisitor.PendingBuiltInCalls.Dequeue();
-                    DispatchBuiltInCall(call);
                 }
             }
 
@@ -206,9 +199,6 @@ namespace SciAdvNet.NSScript.Execution
 
             var thread = _threads[(int)threadId];
             SuspendThread(thread, timeout);
-
-            //SuspendThread(threadId, timeout);
-            //Task.Delay(timeout).ContinueWith(x => ResumeThread(threadId), TaskContinuationOptions.ExecuteSynchronously);
         }
 
         internal void ResumeThread(ThreadContext thread)

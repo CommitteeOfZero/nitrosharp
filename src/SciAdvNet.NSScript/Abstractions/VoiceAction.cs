@@ -1,4 +1,4 @@
-﻿namespace SciAdvNet.NSScript.PXml
+﻿namespace SciAdvNet.NSScript
 {
     public enum VoiceAction
     {

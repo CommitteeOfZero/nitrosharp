@@ -92,13 +92,5 @@ namespace SciAdvNet.NSScript.PXml
         {
             visitor.VisitRubyElement(this);
         }
-    }    
-
-    public sealed class PXmlVerbatimText : PXmlText
-    {
-        internal PXmlVerbatimText(string text)
-            : base(text)
-        {
-        }
     }
 }

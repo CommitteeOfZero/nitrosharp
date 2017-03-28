@@ -9,8 +9,6 @@ namespace SciAdvNet.NSScript.PXml
             node.Accept(this);
         }
 
-        //private void DefaultVisitNode(PXmlNode node) { }
-
         public void VisitArray(IEnumerable<PXmlNode> list)
         {
             foreach (var node in list)

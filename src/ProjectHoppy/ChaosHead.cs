@@ -12,7 +12,7 @@ namespace ProjectHoppy
     {
         private ContentManager _content;
         private NSScriptInterpreter _nssInterpreter;
-        private N2SystemImplementation _nssBuiltIns;
+        private N2System _n2system;
         private HoppyConfig _config;
 
         private ILogger _interpreterLog;
@@ -28,9 +28,9 @@ namespace ProjectHoppy
             _config = HoppyConfig.Read();
             _content = new ContentManager(_config.ContentPath);
 
-            _nssBuiltIns = new N2SystemImplementation(Entities, _content);
-            _nssInterpreter = new NSScriptInterpreter(new ScriptLocator(_config.NssFolderPath), _nssBuiltIns);
-            _nssBuiltIns.Interpreter = _nssInterpreter;
+            _n2system = new N2System(Entities, _content);
+            _nssInterpreter = new NSScriptInterpreter(new ScriptLocator(_config.NssFolderPath), _n2system);
+            _n2system.Interpreter = _nssInterpreter;
             _nssInterpreter.BuiltInCallScheduled += OnBuiltInCallDispatched;
 
             //_nssInterpreter.CreateThread("nss/boot-logo.nss");
@@ -53,7 +53,7 @@ namespace ProjectHoppy
             Window.Title = "Chaos;Hoppy";
             _content.InitContentLoaders(RenderContext.ResourceFactory, AudioEngine.ResourceFactory);
 
-            var inputHandler = new InputHandler(_nssBuiltIns);
+            var inputHandler = new InputHandler(_n2system);
             Systems.RegisterSystem(inputHandler);
 
             var animationSystem = new AnimationSystem();
@@ -71,10 +71,10 @@ namespace ProjectHoppy
 
         public override void Update(float deltaMilliseconds)
         {
-            var timeQuota = TimeSpan.FromMilliseconds(8.0f);
+            var timeQuota = TimeSpan.FromMilliseconds(6);
             TimeSpan elapsed = _nssInterpreter.Run(timeQuota);
 
-            if (elapsed > timeQuota)
+            if (elapsed - timeQuota > TimeSpan.FromMilliseconds(4))
             {
                 _interpreterLog.LogCritical(666, $"Interpreter execution time quota exceeded " +
                     $"(quota: {timeQuota.TotalMilliseconds} ms; elapsed: {elapsed.TotalMilliseconds} ms).");

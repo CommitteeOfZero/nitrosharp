@@ -27,7 +27,7 @@ namespace ProjectHoppy.Graphics
                         animation.IsEnabled = false;
                     }
 
-                    animation.PropertySetter(entity, animation.CurrentValue);
+                    animation.PropertySetter(animation.TargetComponent, animation.CurrentValue);
                 }
             }
 

@@ -4,7 +4,8 @@ namespace ProjectHoppy.Graphics
 {
     public class FloatAnimation : Component
     {
-        public Action<Entity, float> PropertySetter { get; set; }
+        public Component TargetComponent { get; set; }
+        public Action<Component, float> PropertySetter { get; set; }
         public float InitialValue { get; set; }
         public float FinalValue { get; set; }
         public float CurrentValue { get; set; }

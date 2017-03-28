@@ -1,16 +1,12 @@
 ﻿using SciAdvNet.MediaLayer.Input;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Text;
 
 namespace ProjectHoppy
 {
     public class InputHandler : System
     {
-        private readonly N2SystemImplementation _n2system;
+        private readonly N2System _n2system;
 
-        public InputHandler(N2SystemImplementation n2system)
+        public InputHandler(N2System n2system)
         {
             _n2system = n2system;
         }

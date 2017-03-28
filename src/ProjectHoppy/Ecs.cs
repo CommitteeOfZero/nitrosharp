@@ -8,7 +8,7 @@ namespace ProjectHoppy
     public class Entity
     {
         private readonly EntityManager _manager;
-        private readonly Dictionary<Type, ICollection<Component>> _components;
+        private readonly Dictionary<Type, IList<Component>> _components;
 
         internal Entity(EntityManager manager, ulong id, string name, TimeSpan creationTime)
         {
@@ -17,7 +17,7 @@ namespace ProjectHoppy
             Name = name;
             CreationTime = creationTime;
 
-            _components = new Dictionary<Type, ICollection<Component>>();
+            _components = new Dictionary<Type, IList<Component>>();
         }
 
         public ulong Id { get; }
@@ -37,7 +37,7 @@ namespace ProjectHoppy
             var type = typeof(T);
             if (!_components.TryGetValue(type, out var collection))
             {
-                collection = new HashSet<Component>();
+                collection = new List<Component>();
                 _components.Add(type, collection);
             }
 
@@ -58,7 +58,16 @@ namespace ProjectHoppy
         public bool HasComponent<T>() where T : Component => _components.ContainsKey(typeof(T));
         public bool HasComponent(Type type) => _components.ContainsKey(type);
 
-        public T GetComponent<T>() where T : Component => GetComponents<T>().FirstOrDefault();
+        public T GetComponent<T>() where T : Component
+        {
+            if (_components.TryGetValue(typeof(T), out var collection))
+            {
+                return collection?.Count > 0 ? (T)collection[0] : null;
+            }
+
+            return null;
+        }
+
         public IEnumerable<T> GetComponents<T>() where T : Component
         {
             if (_components.TryGetValue(typeof(T), out var collection))

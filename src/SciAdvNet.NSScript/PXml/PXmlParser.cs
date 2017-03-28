@@ -15,20 +15,6 @@ namespace SciAdvNet.NSScript.PXml
             return ParseContent(string.Empty);
         }
 
-        private PXmlNode ParseNode()
-        {
-            SkipTrivia();
-            StartScanning();
-
-            char peek = PeekChar();
-            if (peek == '<')
-            {
-                return ParseElement();
-            }
-
-            return ParsePlainText();
-        }
-
         private PXmlContent ParseContent(string rootElementName)
         {
             var children = ImmutableArray.CreateBuilder<PXmlNode>();
@@ -50,23 +36,19 @@ namespace SciAdvNet.NSScript.PXml
             return new PXmlContent(children.ToImmutable());
         }
 
-        private PXmlText ParsePlainText()
+        private PXmlNode ParseNode()
         {
-            char c;
-            while ((c = PeekChar()) != '<' && c != EofCharacter)
+            SkipTrivia();
+            StartScanning();
+
+            char peek = PeekChar();
+            if (peek == '<')
             {
-                AdvanceChar();
+                return ParseElement();
             }
 
-            var sb = new StringBuilder(CurrentLexeme);
-            sb.Replace("&.", ".");
-            sb.Replace("&,", ",");
-
-            string processedText = sb.ToString();
-            return new PXmlText(processedText);
+            return ParsePlainText();
         }
-
-        private bool IsEndTag() => PeekChar() == '<' && PeekChar(1) == '/';
 
         private PXmlNode ParseElement()
         {
@@ -80,6 +62,11 @@ namespace SciAdvNet.NSScript.PXml
 
                 case "RUBY":
                     node = ParseRubyElement(startTag);
+                    break;
+
+                case "pre":
+                    node = ParsePlainText();
+                    ParsePXmlTag();
                     break;
 
                 case "voice":
@@ -119,6 +106,26 @@ namespace SciAdvNet.NSScript.PXml
 
             return new RubyElement(rubyBase, rubyText);
         }
+
+        private PXmlText ParsePlainText()
+        {
+            StartScanning();
+
+            char c;
+            while ((c = PeekChar()) != '<' && c != EofCharacter)
+            {
+                AdvanceChar();
+            }
+
+            var sb = new StringBuilder(CurrentLexeme);
+            sb.Replace("&.", ".");
+            sb.Replace("&,", ",");
+
+            string processedText = sb.ToString();
+            return new PXmlText(processedText);
+        }
+
+        private bool IsEndTag() => PeekChar() == '<' && PeekChar(1) == '/';
 
         private void SkipTrivia()
         {
