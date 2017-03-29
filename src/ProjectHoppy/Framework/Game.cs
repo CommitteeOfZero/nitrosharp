@@ -9,7 +9,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace ProjectHoppy
+namespace ProjectHoppy.Framework
 {
     public abstract class Game
     {
@@ -46,7 +46,7 @@ namespace ProjectHoppy
             _startupTasks.Add(action);
         }
 
-        private void InitializeGraphics()
+        private void Initialize()
         {
             Window = new GameWindow();
             Window.WindowState = WindowState.Normal;
@@ -87,7 +87,7 @@ namespace ProjectHoppy
         public void Run()
         {
             Task.WhenAll(_startupTasks.Select(x => Task.Run(x))).Wait();
-            InitializeGraphics();
+            Initialize();
             EnterLoop();
         }
 

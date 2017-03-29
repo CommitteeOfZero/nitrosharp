@@ -1,4 +1,5 @@
-﻿using ProjectHoppy.Text;
+﻿using ProjectHoppy.Framework;
+using ProjectHoppy.Text;
 using SciAdvNet.MediaLayer;
 using SciAdvNet.MediaLayer.Graphics;
 using SciAdvNet.MediaLayer.Graphics.Text;

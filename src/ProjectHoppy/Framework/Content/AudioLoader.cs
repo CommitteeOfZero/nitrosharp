@@ -1,10 +1,7 @@
 ﻿using SciAdvNet.MediaLayer.Audio;
-using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Text;
 
-namespace ProjectHoppy.Content
+namespace ProjectHoppy.Framework.Content
 {
     public class AudioLoader : ContentLoader
     {
@@ -14,8 +11,6 @@ namespace ProjectHoppy.Content
         {
             _resourceFactory = resourceFactory;
         }
-
-        //public override IEnumerable<string> FileSignatures => throw new NotImplementedException();
 
         public override object Load(Stream stream)
         {

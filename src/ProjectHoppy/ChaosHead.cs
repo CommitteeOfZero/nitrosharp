@@ -1,9 +1,9 @@
 ﻿using Microsoft.Extensions.Logging;
-using ProjectHoppy.Content;
+using ProjectHoppy.Framework;
+using ProjectHoppy.Framework.Content;
 using ProjectHoppy.Graphics;
 using SciAdvNet.NSScript.Execution;
 using System;
-using System.Diagnostics;
 using System.IO;
 
 namespace ProjectHoppy
@@ -26,9 +26,8 @@ namespace ProjectHoppy
         {
             SetupLogging();
             _config = HoppyConfig.Read();
-            _content = new ContentManager(_config.ContentPath);
 
-            _n2system = new N2System(Entities, _content);
+            _n2system = new N2System(Entities);
             _nssInterpreter = new NSScriptInterpreter(new ScriptLocator(_config.NssFolderPath), _n2system);
             _n2system.Interpreter = _nssInterpreter;
             _nssInterpreter.BuiltInCallScheduled += OnBuiltInCallDispatched;
@@ -39,7 +38,7 @@ namespace ProjectHoppy
 
         private void OnBuiltInCallDispatched(object sender, BuiltInFunctionCall call)
         {
-            _interpreterLog.LogInformation($"Built-in call: {call.ToString()}");
+            //_interpreterLog.LogInformation($"Built-in call: {call.ToString()}");
         }
 
         private void SetupLogging()
@@ -51,7 +50,9 @@ namespace ProjectHoppy
         public override void OnInitialized()
         {
             Window.Title = "Chaos;Hoppy";
-            _content.InitContentLoaders(RenderContext.ResourceFactory, AudioEngine.ResourceFactory);
+
+            _content = new ContentManager(_config.ContentPath, RenderContext.ResourceFactory, AudioEngine.ResourceFactory);
+            _n2system.SetContent(_content);
 
             var inputHandler = new InputHandler(_n2system);
             Systems.RegisterSystem(inputHandler);

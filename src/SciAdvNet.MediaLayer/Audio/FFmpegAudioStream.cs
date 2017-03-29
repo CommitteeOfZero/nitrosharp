@@ -140,7 +140,6 @@ namespace SciAdvNet.MediaLayer.Audio
                     // and then set the position to LoopStart.
                     if (Timestamp_IsInCurrentFrame(_loopEndInStreamUnits))
                     {
-                        Debug.WriteLine("looping");
                         Seek(LoopStart);
                         continue;
                     }
@@ -219,11 +218,6 @@ namespace SciAdvNet.MediaLayer.Audio
                 {
                     ThrowIfNotZero(ffmpeg.avcodec_send_packet(_context.CodecContext, _context.Packet));
                     receiveResult = ffmpeg.avcodec_receive_frame(_context.CodecContext, _context.CurrentFrame);
-
-                    if (_context.CurrentFrame->key_frame == 0)
-                    {
-                        Debugger.Break();
-                    }
                 }
                 catch
                 {

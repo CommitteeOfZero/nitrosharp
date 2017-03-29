@@ -2,8 +2,9 @@
 using SciAdvNet.MediaLayer;
 using SciAdvNet.MediaLayer.Graphics;
 using System.Linq;
-using ProjectHoppy.Content;
+using ProjectHoppy.Framework.Content;
 using ProjectHoppy.Text;
+using ProjectHoppy.Framework;
 
 namespace ProjectHoppy.Graphics
 {

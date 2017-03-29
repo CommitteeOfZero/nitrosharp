@@ -1,4 +1,5 @@
-﻿using System;
+﻿using ProjectHoppy.Framework;
+using System;
 
 namespace ProjectHoppy.Graphics
 {

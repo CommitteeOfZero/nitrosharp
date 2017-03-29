@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.IO;
 
-namespace ProjectHoppy.Content
+namespace ProjectHoppy.Framework.Content
 {
     public abstract class ContentLoader
     {

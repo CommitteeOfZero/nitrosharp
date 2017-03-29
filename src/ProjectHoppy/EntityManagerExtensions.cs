@@ -1,24 +1,10 @@
-﻿using System.Collections.Generic;
-using System.Collections.Immutable;
-using System.Linq;
+﻿using ProjectHoppy.Framework;
+using System.Collections.Generic;
 
 namespace ProjectHoppy
 {
     public static class EntityManagerExtensions
     {
-        //public static IEnumerable<Entity> PerformQuery(this EntityManager entityManager, string query)
-        //{
-        //    if (query.Contains('*'))
-        //    {
-        //        return WildcardQuery(entityManager, query);
-        //    }
-        //    else
-        //    {
-        //        var result = entityManager.SafeGet(query);
-        //        return result != null ? new[] { result } : Enumerable.Empty<Entity>();
-        //    }
-        //}
-
         public static IEnumerable<Entity> WildcardQuery(this EntityManager entityManager, string query)
         {
             query = query.ToUpperInvariant();
@@ -41,10 +27,6 @@ namespace ProjectHoppy
                 {
                     yield return pair.Value;
                 }
-                //if (pair.Key.ToUpperInvariant().StartsWith(query))
-                //{
-                //    yield return pair.Value;
-                //}
             }
         }
     }

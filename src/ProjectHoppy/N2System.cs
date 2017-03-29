@@ -3,24 +3,26 @@ using SciAdvNet.NSScript.Execution;
 using System.Collections.Generic;
 using ProjectHoppy.Graphics;
 using SciAdvNet.MediaLayer;
-using ProjectHoppy.Content;
+using ProjectHoppy.Framework.Content;
 using SciAdvNet.MediaLayer.Graphics;
 using ProjectHoppy.Text;
 using SciAdvNet.NSScript.PXml;
 using SciAdvNet.NSScript;
+using ProjectHoppy.Framework;
 
 namespace ProjectHoppy
 {
     public class N2System : NssBuiltInFunctions
     {
-        private readonly ContentManager _content;
+        private ContentManager _content;
         private readonly EntityManager _entities;
 
-        public N2System(EntityManager entities, ContentManager content)
+        public N2System(EntityManager entities)
         {
             _entities = entities;
-            _content = content;
         }
+
+        public void SetContent(ContentManager content) => _content = content;
 
         public NSScriptInterpreter Interpreter { get; internal set; }
 

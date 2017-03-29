@@ -1,4 +1,4 @@
-﻿namespace ProjectHoppy.Content
+﻿namespace ProjectHoppy.Framework.Content
 {
     public struct AssetRef
     {

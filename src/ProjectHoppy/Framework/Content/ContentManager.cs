@@ -6,34 +6,32 @@ using SciAdvNet.MediaLayer.Graphics;
 using SciAdvNet.MediaLayer.Audio;
 using System.Threading.Tasks;
 
-namespace ProjectHoppy.Content
+namespace ProjectHoppy.Framework.Content
 {
     public class ContentManager
     {
         private readonly Dictionary<Type, ContentLoader> _contentLoaders;
-
         private readonly ConcurrentDictionary<string, object> _loadedItems;
 
-        public ContentManager(string rootDirectory)
+        public ContentManager(string rootDirectory, SciAdvNet.MediaLayer.Graphics.ResourceFactory graphicsResourceFactory,
+            SciAdvNet.MediaLayer.Audio.ResourceFactory audioResourceFactory)
         {
             RootDirectory = rootDirectory;
             _contentLoaders = new Dictionary<Type, ContentLoader>();
 
             _loadedItems = new ConcurrentDictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+
+            RegisterContentLoader(typeof(Texture2D), new TextureLoader(graphicsResourceFactory));
+            RegisterContentLoader(typeof(AudioStream), new AudioLoader(audioResourceFactory));
         }
 
-        public ContentManager() : this(string.Empty)
+        public ContentManager(SciAdvNet.MediaLayer.Graphics.ResourceFactory graphicsResourceFactory,
+            SciAdvNet.MediaLayer.Audio.ResourceFactory audioResourceFactory)
+            : this(string.Empty, graphicsResourceFactory, audioResourceFactory)
         {
         }
 
         public string RootDirectory { get; }
-
-        public void InitContentLoaders(SciAdvNet.MediaLayer.Graphics.ResourceFactory graphicsResourceFactory,
-            SciAdvNet.MediaLayer.Audio.ResourceFactory audioResourceFactory)
-        {
-            RegisterContentLoader(typeof(Texture2D), new TextureLoader(graphicsResourceFactory));
-            RegisterContentLoader(typeof(AudioStream), new AudioLoader(audioResourceFactory));
-        }
 
         public T Load<T>(AssetRef assetRef)
         {
@@ -73,8 +71,6 @@ namespace ProjectHoppy.Content
             }, TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.OnlyOnRanToCompletion);
         }
 
-
-        //public bool IsLoaded(string path) => _loadedItems.ContainsKey(path);
         public bool TryGetAsset<T>(AssetRef assetRef, out T asset)
         {
             bool result = _loadedItems.TryGetValue(assetRef, out object value);
@@ -87,7 +83,7 @@ namespace ProjectHoppy.Content
             _contentLoaders[t] = loader;
         }
 
-        public virtual Stream OpenStream(string path)
+        protected virtual Stream OpenStream(string path)
         {
             string fullPath = Path.Combine(RootDirectory, path);
             return File.OpenRead(fullPath);

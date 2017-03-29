@@ -1,4 +1,5 @@
-﻿using ProjectHoppy.Content;
+﻿using ProjectHoppy.Framework;
+using ProjectHoppy.Framework.Content;
 using System;
 
 namespace ProjectHoppy

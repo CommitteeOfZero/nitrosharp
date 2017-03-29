@@ -1,4 +1,4 @@
-﻿using ProjectHoppy.Content;
+﻿using ProjectHoppy.Framework;
 using SciAdvNet.MediaLayer;
 
 namespace ProjectHoppy.Graphics

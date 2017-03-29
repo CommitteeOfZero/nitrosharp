@@ -1,7 +1,6 @@
-﻿using SciAdvNet.MediaLayer;
+﻿using ProjectHoppy.Framework;
+using SciAdvNet.MediaLayer;
 using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace ProjectHoppy.Graphics
 {

@@ -1,4 +1,6 @@
-﻿namespace ProjectHoppy.Text
+﻿using ProjectHoppy.Framework;
+
+namespace ProjectHoppy.Text
 {
     public class TextComponent : Component
     {

@@ -1,8 +1,9 @@
 ﻿using SciAdvNet.MediaLayer.Input;
+using ProjectHoppy.Framework;
 
 namespace ProjectHoppy
 {
-    public class InputHandler : System
+    public class InputHandler : GameSystem
     {
         private readonly N2System _n2system;
 
