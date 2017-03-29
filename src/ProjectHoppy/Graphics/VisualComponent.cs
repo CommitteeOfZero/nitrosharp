@@ -1,4 +1,5 @@
-﻿using SciAdvNet.MediaLayer;
+﻿using ProjectHoppy.Content;
+using SciAdvNet.MediaLayer;
 
 namespace ProjectHoppy.Graphics
 {
@@ -6,7 +7,8 @@ namespace ProjectHoppy.Graphics
     {
         Rectangle,
         Texture,
-        Text
+        Text,
+        MaskEffect
     }
 
     public class VisualComponent : Component
@@ -32,6 +34,7 @@ namespace ProjectHoppy.Graphics
         public float Height { get; set; }
 
         public RgbaValueF Color { get; set; }
+        //public AssetRef TextureRef { get; set; }
         public float Opacity { get; set; } = 1.0f;
         public int Priority { get; set; }
     }

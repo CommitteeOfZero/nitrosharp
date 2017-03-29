@@ -27,5 +27,10 @@ namespace SciAdvNet.MediaLayer.Graphics.DirectX
         {
             return new DXColorBrush(_renderContext, color, opacity);
         }
+
+        public override BitmapBrush CreateBitmapBrush(Texture2D bitmap, float opacity)
+        {
+            return new DXBitmapBrush(_renderContext, bitmap, opacity);
+        }
     }
 }

@@ -81,7 +81,7 @@ namespace SciAdvNet.MediaLayer.Graphics.DirectX
         public override void Dispose()
         {
             _rc.DeviceContext.EndDraw();
-            _rc.SwapChain.Present(0, SharpDX.DXGI.PresentFlags.None);
+            _rc.SwapChain.Present(1, SharpDX.DXGI.PresentFlags.None);
         }
     }
 }

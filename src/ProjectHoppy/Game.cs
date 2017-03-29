@@ -53,10 +53,10 @@ namespace ProjectHoppy
             RenderContext = new DXRenderContext(Window);
             AudioEngine = new XAudio2AudioEngine(16, 44100, 2);
 
-            OnGraphicsInitialized();
+            OnInitialized();
         }
 
-        public virtual void OnGraphicsInitialized()
+        public virtual void OnInitialized()
         {
         }
 

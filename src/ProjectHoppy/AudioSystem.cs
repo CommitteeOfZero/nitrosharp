@@ -26,15 +26,11 @@ namespace ProjectHoppy
         private void OnEntityAdded(object sender, Entity e)
         {
             var sound = e.GetComponent<SoundComponent>();
-            var assetComponent = e.GetComponent<AssetComponent>();
-            if (assetComponent != null)
-            {
-                var stream = _content.Load<AudioStream>(assetComponent.FilePath + ".ogg");
-                var audioSource = GetFreeAudioSource();
-                audioSource.SetStream(stream);
+            var stream = _content.Load<AudioStream>(sound.AudioFile + ".ogg");
+            var audioSource = GetFreeAudioSource();
+            audioSource.SetStream(stream);
 
-                _audioSources[sound] = audioSource;
-            }
+            _audioSources[sound] = audioSource;
         }
 
         private AudioSource GetFreeAudioSource()

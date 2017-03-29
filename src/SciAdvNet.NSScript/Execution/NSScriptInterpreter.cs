@@ -60,6 +60,7 @@ namespace SciAdvNet.NSScript.Execution
                 ["WaitText"] = WaitText,
                 ["SetLoop"] = SetLoop,
                 ["SetLoopPoint"] = SetLoopPoint,
+                ["DrawTransition"] = DrawTransition,
                 ["DisplayDialogue"] = DisplayDialogue
             };
 
@@ -422,6 +423,23 @@ namespace SciAdvNet.NSScript.Execution
             TimeSpan loopEnd = args.PopTimeSpan();
 
             _builtIns.SetLoopPoint(entityName, loopStart, loopEnd);
+        }
+
+        private void DrawTransition(ArgumentStack args)
+        {
+            //void DrawTransition(string entityName, TimeSpan duration, int initialOpacity, int finalOpacity, int boundary, string filename, bool wait);
+            string entityName = args.PopString();
+            TimeSpan duration = args.PopTimeSpan();
+            int initialOpacity = args.PopInt();
+            int finalOpacity = args.PopInt();
+            int boundary = args.PopInt();
+
+            var unk = args.Pop();
+
+            string fileName = args.PopString();
+            bool wait = args.PopBool();
+
+            _builtIns.DrawTransition(entityName, duration, initialOpacity, finalOpacity, boundary, fileName, wait);
         }
     }
 

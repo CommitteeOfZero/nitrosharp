@@ -15,6 +15,8 @@ namespace ProjectHoppy.Graphics
 
         private ColorBrush _colorBrush;
 
+        private Dictionary<Texture2D, BitmapBrush> _bitmapBrushCache;
+
         public RenderSystem(RenderContext renderContext, ContentManager contentManager)
             : base(typeof(VisualComponent))
         {
@@ -22,6 +24,8 @@ namespace ProjectHoppy.Graphics
             _content = contentManager;
 
             EntityAdded += OnTextAdded;
+
+            _bitmapBrushCache = new Dictionary<Texture2D, BitmapBrush>();
 
             _colorBrush = renderContext.ResourceFactory.CreateColorBrush(RgbaValueF.White, 1.0f);
             CreateTextResources();
@@ -50,11 +54,15 @@ namespace ProjectHoppy.Graphics
                     break;
 
                 case VisualKind.Texture:
-                    DrawTexture(visualComponent, entity.GetComponent<AssetComponent>());
+                    DrawTexture(visualComponent, entity.GetComponent<TextureComponent>());
                     break;
 
                 case VisualKind.Text:
                     DrawText(visualComponent, entity.GetComponent<TextComponent>());
+                    break;
+
+                case VisualKind.MaskEffect:
+                    DrawMaskEffect(visualComponent, entity.GetComponent<MaskEffect>());
                     break;
             }
         }
@@ -67,12 +75,27 @@ namespace ProjectHoppy.Graphics
             _drawingSession.FillRectangle(visual.X, visual.Y, visual.Width, visual.Height, _colorBrush);
         }
 
-        private void DrawTexture(VisualComponent visual, AssetComponent asset)
+        private void DrawTexture(VisualComponent visual, TextureComponent textureComponent)
         {
-            if (asset != null && _content.IsLoaded(asset.FilePath))
+            if (_content.TryGetAsset<Texture2D>(textureComponent.AssetRef, out var texture))
             {
-                var texture = _content.Get<Texture2D>(asset.FilePath);
                 _drawingSession.DrawTexture(texture, visual.X, visual.Y, visual.Opacity);
+            }
+        }
+
+        private void DrawMaskEffect(VisualComponent visual, MaskEffect maskEffect)
+        {
+            if (_content.TryGetAsset<Texture2D>(maskEffect.TextureRef, out var texture)
+                && _content.TryGetAsset<Texture2D>(maskEffect.MaskRef, out var mask))
+            {
+                if (!_bitmapBrushCache.TryGetValue(texture, out var bitmapBrush))
+                {
+                    bitmapBrush = _rc.ResourceFactory.CreateBitmapBrush(texture, visual.Opacity);
+                    _bitmapBrushCache[texture] = bitmapBrush;
+                }
+
+                bitmapBrush.Opacity = visual.Opacity;
+                //_drawingSession.FillOpacityMask(mask, bitmapBrush);
             }
         }
     }

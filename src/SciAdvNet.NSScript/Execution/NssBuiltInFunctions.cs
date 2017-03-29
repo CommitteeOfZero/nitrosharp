@@ -18,11 +18,6 @@ namespace SciAdvNet.NSScript.Execution
         {
         }
 
-
-        public virtual void DrawTransition(int time, int start, int end, int unk, string filename, bool wait)
-        {
-        }
-
         public virtual void Fade(string entityName, TimeSpan duration, int opacity, bool wait)
         {
         }
@@ -96,6 +91,10 @@ namespace SciAdvNet.NSScript.Execution
         }
 
         public virtual void Zoom(string entityName, TimeSpan duration, NssCoordinate x, NssCoordinate y, bool wait)
+        {
+        }
+
+        public virtual void DrawTransition(string entityName, TimeSpan duration, int initialOpacity, int finalOpacity, int boundary, string fileName, bool wait)
         {
         }
     }

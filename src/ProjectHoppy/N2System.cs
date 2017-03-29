@@ -8,7 +8,6 @@ using SciAdvNet.MediaLayer.Graphics;
 using ProjectHoppy.Text;
 using SciAdvNet.NSScript.PXml;
 using SciAdvNet.NSScript;
-using System.Threading.Tasks;
 
 namespace ProjectHoppy
 {
@@ -35,17 +34,17 @@ namespace ProjectHoppy
         {
             _entities.Create(entityName)
                 .WithComponent(new VisualComponent(VisualKind.Texture, x.Value, y.Value, 0, 0, priority))
-                .WithComponent(new AssetComponent(fileOrEntityName));
+                .WithComponent(new TextureComponent { AssetRef = fileOrEntityName });
 
 
-            Task.Run(() => _content.Load<Texture2D>(fileOrEntityName));
+            _content.StartLoading<Texture2D>(fileOrEntityName);
+            //Task.Run(() => _content.Load<Texture2D>(fileOrEntityName));
         }
 
         public override void LoadAudio(string entityName, AudioKind kind, string fileName)
         {
             _entities.Create(entityName, replace: true)
-                .WithComponent(new AssetComponent(fileName))
-                .WithComponent(new SoundComponent());
+                .WithComponent(new SoundComponent { AudioFile = fileName });
         }
 
         private Queue<Entity> _entitiesToRemove = new Queue<Entity>();
@@ -128,6 +127,40 @@ namespace ProjectHoppy
                 {
                     entity.GetComponent<VisualComponent>().Opacity = opacity / 1000.0f;
                 }
+            }
+        }
+
+        public override void DrawTransition(string entityName, TimeSpan duration, int initialOpacity, int finalOpacity, int boundary, string fileName, bool wait)
+        {
+            foreach (var entity in _entities.WildcardQuery(entityName))
+            {
+                var originalTexture = entity.GetComponent<TextureComponent>();
+                var maskEffect = new MaskEffect
+                {
+                    TextureRef = originalTexture.AssetRef,
+                    MaskRef = fileName
+                };
+
+                _content.StartLoading<Texture2D>(fileName);
+
+                var visual = entity.GetComponent<VisualComponent>();
+                visual.Kind = VisualKind.MaskEffect;
+                //visual.Opacity = 0.3f;
+                entity.RemoveComponent(originalTexture);
+                entity.AddComponent(maskEffect);
+
+                duration += TimeSpan.FromSeconds(3);
+                var animation = new FloatAnimation
+                {
+                    TargetComponent = visual,
+                    PropertySetter = (c, v) => (c as VisualComponent).Opacity = v,
+                    InitialValue =  initialOpacity / 1000.0f,
+                    CurrentValue = initialOpacity / 1000.0f,
+                    FinalValue = finalOpacity / 1000.0f,
+                    Duration = duration
+                };
+
+                entity.AddComponent(animation);
             }
         }
 

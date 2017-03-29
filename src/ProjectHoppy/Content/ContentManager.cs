@@ -1,13 +1,10 @@
 ﻿using System;
-using System.Threading.Tasks.Dataflow;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using SciAdvNet.MediaLayer.Graphics;
-using System.Linq;
-using SharpDX.Text;
-using System.Runtime.CompilerServices;
 using SciAdvNet.MediaLayer.Audio;
+using System.Threading.Tasks;
 
 namespace ProjectHoppy.Content
 {
@@ -16,7 +13,6 @@ namespace ProjectHoppy.Content
         private readonly Dictionary<Type, ContentLoader> _contentLoaders;
 
         private readonly ConcurrentDictionary<string, object> _loadedItems;
-        private readonly BufferBlock<(string filePath, Type contentType)> _workItems;
 
         public ContentManager(string rootDirectory)
         {
@@ -24,19 +20,6 @@ namespace ProjectHoppy.Content
             _contentLoaders = new Dictionary<Type, ContentLoader>();
 
             _loadedItems = new ConcurrentDictionary<string, object>(StringComparer.OrdinalIgnoreCase);
-            _workItems = new BufferBlock<(string, Type)>();
-
-            var executionOptions = new ExecutionDataflowBlockOptions { MaxDegreeOfParallelism = 1 };
-            var load = new ActionBlock<(string filePath, Type contentType)>(x =>
-            {
-                try
-                {
-                    _loadedItems[x.filePath] = Load(x.filePath, x.contentType);
-                }
-                catch { }
-            }, executionOptions);
-
-            _workItems.LinkTo(load, new DataflowLinkOptions { PropagateCompletion = true });
         }
 
         public ContentManager() : this(string.Empty)
@@ -52,41 +35,16 @@ namespace ProjectHoppy.Content
             RegisterContentLoader(typeof(AudioStream), new AudioLoader(audioResourceFactory));
         }
 
-        //public object Load(string path)
-        //{
-        //    using (var stream = OpenStream(path))
-        //    {
-        //        var contentType = GetContentType(stream);
-        //        if (contentType == null)
-        //        {
-        //            throw UnsupportedFormat(path);
-        //        }
-
-        //        return Load(stream, path, contentType);
-        //    }
-        //}
-
-        //private Type GetContentType(Stream stream)
-        //{
-        //    byte[] buffer = new byte[4];
-        //    stream.Read(buffer, 0, 4);
-        //    stream.Seek(0, SeekOrigin.Begin);
-
-        //    string signature = Encoding.UTF8.GetString(buffer);
-        //    return _contentLoaders.Where(x => x.Value.FileSignatures.Contains(signature))
-        //        .Select(x => x.Key).FirstOrDefault();
-        //}
-
-        public T Load<T>(string path)
+        public T Load<T>(AssetRef assetRef)
         {
-            return (T)Load(path, typeof(T));
+            return (T)Load(assetRef, typeof(T));
         }
 
-        public object Load(string path, Type contentType)
+        public object Load(AssetRef assetRef, Type contentType)
         {
-            var stream = OpenStream(path);
+            var stream = OpenStream(assetRef);
             {
-                return Load(stream, path, contentType);
+                return Load(stream, assetRef, contentType);
             }
         }
 
@@ -107,9 +65,22 @@ namespace ProjectHoppy.Content
             return asset;
         }
 
-        public void StartLoading<T>(string path) => _workItems.SendAsync((path, typeof(T)));
-        public bool IsLoaded(string path) => _loadedItems.ContainsKey(path);
-        public T Get<T>(string path) => (T)_loadedItems[path];
+        public void StartLoading<T>(AssetRef assetRef)
+        {
+            Task.Run(() => Load(assetRef, typeof(T))).ContinueWith(x =>
+            {
+                _loadedItems[assetRef] = (T)x.Result;
+            }, TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.OnlyOnRanToCompletion);
+        }
+
+
+        //public bool IsLoaded(string path) => _loadedItems.ContainsKey(path);
+        public bool TryGetAsset<T>(AssetRef assetRef, out T asset)
+        {
+            bool result = _loadedItems.TryGetValue(assetRef, out object value);
+            asset = result ? (T)value : default(T);
+            return result;
+        }
 
         public void RegisterContentLoader(Type t, ContentLoader loader)
         {

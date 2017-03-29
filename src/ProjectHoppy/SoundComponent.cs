@@ -1,9 +1,12 @@
-﻿using System;
+﻿using ProjectHoppy.Content;
+using System;
 
 namespace ProjectHoppy
 {
     public class SoundComponent : Component
     {
+        public AssetRef AudioFile { get; set; }
+
         public bool Loaded { get; set; }
         public bool Playing { get; set; }
         public TimeSpan LoopStart { get; set; }

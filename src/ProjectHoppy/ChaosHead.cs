@@ -33,13 +33,13 @@ namespace ProjectHoppy
             _n2system.Interpreter = _nssInterpreter;
             _nssInterpreter.BuiltInCallScheduled += OnBuiltInCallDispatched;
 
-            //_nssInterpreter.CreateThread("nss/boot-logo.nss");
+            //_nssInterpreter.CreateThread("nss/test.nss");
             _nssInterpreter.CreateThread("nss/ch01_007_円山町殺人現場");
         }
 
         private void OnBuiltInCallDispatched(object sender, BuiltInFunctionCall call)
         {
-            //_interpreterLog.LogInformation($"Built-in call: {call.ToString()}");
+            _interpreterLog.LogInformation($"Built-in call: {call.ToString()}");
         }
 
         private void SetupLogging()
@@ -48,7 +48,7 @@ namespace ProjectHoppy
             _interpreterLog = loggerFactory.CreateLogger("Interpreter");
         }
 
-        public override void OnGraphicsInitialized()
+        public override void OnInitialized()
         {
             Window.Title = "Chaos;Hoppy";
             _content.InitContentLoaders(RenderContext.ResourceFactory, AudioEngine.ResourceFactory);
