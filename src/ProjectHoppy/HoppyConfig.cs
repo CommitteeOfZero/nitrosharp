@@ -8,8 +8,7 @@ namespace ProjectHoppy
     {
         private const string ConfigFileName = "hoppy.json";
 
-        public string ContentPath { get; private set; }
-        public string NssFolderPath { get; private set; }
+        public string ContentRoot { get; private set; }
 
         public static HoppyConfig Read()
         {
@@ -17,14 +16,8 @@ namespace ProjectHoppy
 
             string json = File.ReadAllText(ConfigFileName, Encoding.UTF8);
             var root = JObject.Parse(json);
-//#if DEBUG
-            config.ContentPath = root["debug.contentRoot"].ToString();
-            config.NssFolderPath = root["debug.nssFolder"].ToString();
-//#else
-//            config.ContentPath = "./Content";
-//            config.NssFolderPath = "./nss";
-//#endif
 
+            config.ContentRoot = root["debug.contentRoot"].ToString();
             return config;
         }
     }

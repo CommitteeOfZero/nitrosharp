@@ -25,10 +25,12 @@ namespace ProjectHoppy
         private void Init()
         {
             SetupLogging();
+
             _config = HoppyConfig.Read();
+            var scriptLocator = new ScriptLocator(_config.ContentRoot);
 
             _n2system = new N2System(Entities);
-            _nssInterpreter = new NSScriptInterpreter(new ScriptLocator(_config.NssFolderPath), _n2system);
+            _nssInterpreter = new NSScriptInterpreter(scriptLocator, _n2system);
             _n2system.Interpreter = _nssInterpreter;
             _nssInterpreter.BuiltInCallScheduled += OnBuiltInCallDispatched;
 
@@ -51,7 +53,7 @@ namespace ProjectHoppy
         {
             Window.Title = "Chaos;Hoppy";
 
-            _content = new ContentManager(_config.ContentPath, RenderContext.ResourceFactory, AudioEngine.ResourceFactory);
+            _content = new ContentManager(_config.ContentRoot, RenderContext.ResourceFactory, AudioEngine.ResourceFactory);
             _n2system.SetContent(_content);
 
             var inputHandler = new InputHandler(_n2system);
@@ -86,16 +88,16 @@ namespace ProjectHoppy
 
         private class ScriptLocator : IScriptLocator
         {
-            private readonly string _root;
+            private readonly string _nssFolder;
 
-            public ScriptLocator(string root)
+            public ScriptLocator(string contentRoot)
             {
-                _root = root;
+                _nssFolder = Path.Combine(contentRoot, "nss");
             }
 
             public Stream Locate(string fileName)
             {
-                return File.OpenRead(Path.Combine(_root, fileName.Replace("nss/", string.Empty)));
+                return File.OpenRead(Path.Combine(_nssFolder, fileName.Replace("nss/", string.Empty)));
             }
         }
     }

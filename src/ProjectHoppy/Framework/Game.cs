@@ -48,7 +48,7 @@ namespace ProjectHoppy.Framework
 
         private void Initialize()
         {
-            Window = new GameWindow();
+            Window = new GameWindow("Chaos;Hoppy Noah", 800, 600, WindowState.Normal);
             Window.WindowState = WindowState.Normal;
             RenderContext = new DXRenderContext(Window);
             AudioEngine = new XAudio2AudioEngine(16, 44100, 2);

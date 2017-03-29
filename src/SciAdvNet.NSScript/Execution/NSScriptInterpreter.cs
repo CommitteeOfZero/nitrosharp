@@ -536,7 +536,7 @@ namespace SciAdvNet.NSScript.Execution
                 }
             }
 
-            result = (ConstantValue)CurrentFrame.EvaluationStack.Pop();
+            result = _exprReducer.ReduceExpression(CurrentFrame.EvaluationStack.Pop());
             return true;
         }
 
@@ -584,6 +584,11 @@ namespace SciAdvNet.NSScript.Execution
         {
             CurrentFrame.Globals["SYSTEM_present_preprocess"] = new ConstantValue(dialogueBlock.BoxName);
             CurrentFrame.Globals["SYSTEM_present_text"] = new ConstantValue(dialogueBlock.Identifier);
+
+            CurrentFrame.Globals["boxtype"] = new ConstantValue(dialogueBlock.BoxName);
+            CurrentFrame.Globals["textnumber"] = new ConstantValue(dialogueBlock.Identifier);
+
+            CurrentFrame.Globals["Pretextnumber"] = new ConstantValue("xxx");
 
             CurrentDialogueBlock = dialogueBlock;
         }
