@@ -38,7 +38,7 @@ namespace ProjectHoppy
 
         private void OnBuiltInCallDispatched(object sender, BuiltInFunctionCall call)
         {
-            //_interpreterLog.LogInformation($"Built-in call: {call.ToString()}");
+            _interpreterLog.LogInformation($"Built-in call: {call.ToString()}");
         }
 
         private void SetupLogging()

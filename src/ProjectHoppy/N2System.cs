@@ -134,6 +134,13 @@ namespace ProjectHoppy
 
         public override void DrawTransition(string entityName, TimeSpan duration, int initialOpacity, int finalOpacity, int boundary, string fileName, bool wait)
         {
+            if (entityName.Length > 0 && entityName[0] == '@')
+            {
+                entityName = entityName.Substring(1);
+            }
+
+            return;
+
             foreach (var entity in _entities.WildcardQuery(entityName))
             {
                 var originalTexture = entity.GetComponent<TextureComponent>();
@@ -183,6 +190,11 @@ namespace ProjectHoppy
 
         public override void SetVolume(string entityName, TimeSpan duration, int volume)
         {
+            if (entityName.Length > 0 && entityName[0] == '@')
+            {
+                entityName = entityName.Substring(1);
+            }
+
             if (!IsWildcardQuery(entityName))
             {
                 var entity = _entities.SafeGet(entityName);
@@ -198,11 +210,19 @@ namespace ProjectHoppy
 
         private void SetVolumeCore(Entity entity, TimeSpan duration, int volume)
         {
-            entity.GetComponent<SoundComponent>().Volume = volume;
+            if (entity != null)
+            {
+                entity.GetComponent<SoundComponent>().Volume = volume;
+            }
         }
 
         public override void ToggleLooping(string entityName, bool looping)
         {
+            if (entityName.Length > 0 && entityName[0] == '@')
+            {
+                entityName = entityName.Substring(1);
+            }
+
             if (!IsWildcardQuery(entityName))
             {
                 var entity = _entities.SafeGet(entityName);
@@ -218,11 +238,19 @@ namespace ProjectHoppy
 
         private void ToggleLoopingCore(Entity entity, bool looping)
         {
-            entity.GetComponent<SoundComponent>().Looping = looping;
+            if (entity != null)
+            {
+                entity.GetComponent<SoundComponent>().Looping = looping;
+            }
         }
 
         public override void SetLoopPoint(string entityName, TimeSpan loopStart, TimeSpan loopEnd)
         {
+            if (entityName.Length > 0 && entityName[0] == '@')
+            {
+                entityName = entityName.Substring(1);
+            }
+
             if (!IsWildcardQuery(entityName))
             {
                 var entity = _entities.SafeGet(entityName);
@@ -238,10 +266,13 @@ namespace ProjectHoppy
 
         private void SetLoopingCore(Entity entity, TimeSpan loopStart, TimeSpan loopEnd)
         {
-            var sound = entity.GetComponent<SoundComponent>();
-            sound.LoopStart = loopEnd;
-            sound.LoopEnd = loopEnd;
-            sound.Looping = true;
+            if (entity != null)
+            {
+                var sound = entity.GetComponent<SoundComponent>();
+                sound.LoopStart = loopEnd;
+                sound.LoopEnd = loopEnd;
+                sound.Looping = true;
+            }
         }
 
         public override void WaitText(string id, TimeSpan time)
