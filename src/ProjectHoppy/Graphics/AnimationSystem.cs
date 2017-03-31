@@ -1,4 +1,4 @@
-﻿using ProjectHoppy.Framework;
+﻿using HoppyFramework;
 using System.Numerics;
 
 namespace ProjectHoppy.Graphics
@@ -31,13 +31,13 @@ namespace ProjectHoppy.Graphics
                 }
             }
 
-            foreach (var colorAnimation in entity.GetComponents<ColorAnimation>())
-            {
-                if (colorAnimation.IsEnabled)
-                {
-                    ProcessColorAnimation(entity, colorAnimation, deltaMilliseconds);
-                }
-            }
+            //foreach (var colorAnimation in entity.GetComponents<ColorAnimation>())
+            //{
+            //    if (colorAnimation.IsEnabled)
+            //    {
+            //        ProcessColorAnimation(entity, colorAnimation, deltaMilliseconds);
+            //    }
+            //}
         }
 
         private void ProcessColorAnimation(Entity e, ColorAnimation animation, float deltaMilliseconds)

@@ -1,5 +1,5 @@
-﻿using ProjectHoppy.Framework;
-using ProjectHoppy.Framework.Content;
+﻿using HoppyFramework;
+using HoppyFramework.Content;
 
 namespace ProjectHoppy.Graphics
 {

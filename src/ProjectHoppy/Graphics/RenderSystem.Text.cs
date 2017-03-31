@@ -1,8 +1,9 @@
-﻿using ProjectHoppy.Framework;
+﻿using HoppyFramework;
+using HoppyFramework.Graphics;
 using ProjectHoppy.Text;
-using SciAdvNet.MediaLayer;
-using SciAdvNet.MediaLayer.Graphics;
-using SciAdvNet.MediaLayer.Graphics.Text;
+using SharpDX.Direct2D1;
+using SharpDX.DirectWrite;
+using SharpDX.Mathematics.Interop;
 using System.Collections.Generic;
 using System.Numerics;
 
@@ -10,25 +11,25 @@ namespace ProjectHoppy.Graphics
 {
     public partial class RenderSystem
     {
+        private CustomBrushTextRenderer _textRenderer;
         private Dictionary<TextComponent, TextLayout> _textLayouts;
         private TextFormat _textFormat;
 
-        private ColorBrush _transparentTextBrush;
-        private ColorBrush _currentGlyphBrush;
+        private SolidColorBrush _transparentTextBrush;
+        private SolidColorBrush _currentGlyphBrush;
 
         private void CreateTextResources()
         {
             _textLayouts = new Dictionary<TextComponent, TextLayout>();
-            _textFormat = new TextFormat
-            {
-                FontFamily = "Noto Sans CJK JP",
-                FontSize = 20,
-                FontWeight = FontWeight.Normal,
-                VerticalAlignment = VerticalAlignment.Center
-            };
+            _textFormat = new TextFormat(_rc.DWriteFactory, "Noto Sans CJK JP", 20);
 
-            _transparentTextBrush = _rc.ResourceFactory.CreateColorBrush(RgbaValueF.White, 0.0f);
-            _currentGlyphBrush = _rc.ResourceFactory.CreateColorBrush(RgbaValueF.White, 0.0f);
+            _transparentTextBrush = new SolidColorBrush(_rc.DeviceContext, RgbaValueF.White);
+            _transparentTextBrush.Opacity = 0.0f;
+
+            _currentGlyphBrush = new SolidColorBrush(_rc.DeviceContext, RgbaValueF.White);
+            _currentGlyphBrush.Opacity = 0.0f;
+
+            _textRenderer = new CustomBrushTextRenderer(_rc.DeviceContext, _transparentTextBrush, false);
         }
         
         private void OnTextAdded(object sender, Entity e)
@@ -37,7 +38,7 @@ namespace ProjectHoppy.Graphics
             {
                 var visual = e.GetComponent<VisualComponent>();
                 var txt = e.GetComponent<TextComponent>();
-                var layout = _rc.ResourceFactory.CreateTextLayout(txt.Text, _textFormat, visual.Width, visual.Height);
+                var layout = new TextLayout(_rc.DWriteFactory, txt.Text, _textFormat, visual.Width, visual.Height);
                 _textLayouts[txt] = layout;
             }
         }
@@ -57,13 +58,14 @@ namespace ProjectHoppy.Graphics
             {
                 if (textComponent.CurrentGlyphIndex != textComponent.PrevGlyphIndex)
                 {
-                    layout.SetGlyphBrush(textComponent.CurrentGlyphIndex, _currentGlyphBrush);
-                    layout.SetGlyphBrush(textComponent.PrevGlyphIndex, _colorBrush);
+                    layout.SetDrawingEffect(_currentGlyphBrush, new TextRange(textComponent.CurrentGlyphIndex, 1));
+                    layout.SetDrawingEffect(_colorBrush, new TextRange(textComponent.PrevGlyphIndex, 1));
                     textComponent.PrevGlyphIndex = textComponent.CurrentGlyphIndex;
                 }
             }
 
-            _drawingSession.DrawTextLayout(layout, new Vector2(visualComponent.X, visualComponent.Y), new RgbaValueF(1, 1, 1, 0));
+            var origin = new RawVector2(visualComponent.X, visualComponent.Y);
+            layout.Draw(_textRenderer, visualComponent.X, visualComponent.Y);
         }
     }
 }

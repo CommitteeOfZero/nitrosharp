@@ -1,6 +1,7 @@
-﻿using Microsoft.Extensions.Logging;
-using ProjectHoppy.Framework;
-using ProjectHoppy.Framework.Content;
+﻿using HoppyFramework;
+using HoppyFramework.Audio;
+using HoppyFramework.Content;
+using Microsoft.Extensions.Logging;
 using ProjectHoppy.Graphics;
 using SciAdvNet.NSScript.Execution;
 using System;
@@ -53,7 +54,13 @@ namespace ProjectHoppy
         {
             Window.Title = "Chaos;Hoppy";
 
-            _content = new ContentManager(_config.ContentRoot, RenderContext.ResourceFactory, AudioEngine.ResourceFactory);
+            _content = new ContentManager(_config.ContentRoot);
+
+            var textureLoader = new WicTextureLoader(RenderContext);
+            var audioLoader = new FFmpegAudioLoader();
+            _content.RegisterContentLoader(typeof(TextureAsset), textureLoader);
+            _content.RegisterContentLoader(typeof(AudioStream), audioLoader);
+
             _n2system.SetContent(_content);
 
             var inputHandler = new InputHandler(_n2system);
@@ -62,7 +69,7 @@ namespace ProjectHoppy
             var animationSystem = new AnimationSystem();
             Systems.RegisterSystem(animationSystem);
 
-            var typewriterProcessor = new TypewriterAnimationProcessor(RenderContext);
+            var typewriterProcessor = new TypewriterAnimationProcessor();
             Systems.RegisterSystem(typewriterProcessor);
 
             var audioSystem = new AudioSystem(AudioEngine, _content);

@@ -1,6 +1,6 @@
-﻿using ProjectHoppy.Framework;
-using ProjectHoppy.Framework.Content;
-using SciAdvNet.MediaLayer.Audio;
+﻿using HoppyFramework;
+using HoppyFramework.Audio;
+using HoppyFramework.Content;
 using System.Collections.Generic;
 
 namespace ProjectHoppy

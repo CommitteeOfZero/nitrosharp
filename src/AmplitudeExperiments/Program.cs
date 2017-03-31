@@ -1,8 +1,6 @@
-﻿using SciAdvNet.MediaLayer.Audio;
+﻿using HoppyFramework.Audio;
 using System;
 using System.IO;
-using System.Linq;
-using System.Numerics;
 using System.Runtime.InteropServices;
 
 namespace AmplitudeExperiments

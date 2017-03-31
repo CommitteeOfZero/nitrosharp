@@ -6,12 +6,21 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\SciAdvNet.MediaLayer\SciAdvNet.MediaLayer.csproj" />
+    <ProjectReference Include="..\HoppyFramework\HoppyFramework.csproj" />
     <ProjectReference Include="..\SciAdvNet.NSScript\SciAdvNet.NSScript.csproj" />
   </ItemGroup>
   
   <ItemGroup>
     <Content Include="nss/**" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <Content Include="Shaders\Dissolve.bin">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Shaders\Dissolve.hlsl">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   
   <ItemGroup>

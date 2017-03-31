@@ -1,4 +1,4 @@
-﻿using ProjectHoppy.Framework;
+﻿using HoppyFramework;
 
 namespace ProjectHoppy.Text
 {

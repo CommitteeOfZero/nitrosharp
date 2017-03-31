@@ -1,5 +1,4 @@
-﻿using ProjectHoppy.Framework;
-using SciAdvNet.MediaLayer;
+﻿using HoppyFramework;
 
 namespace ProjectHoppy.Graphics
 {
@@ -7,8 +6,7 @@ namespace ProjectHoppy.Graphics
     {
         Rectangle,
         Texture,
-        Text,
-        MaskEffect
+        Text
     }
 
     public class VisualComponent : Component

@@ -2,13 +2,11 @@
 using SciAdvNet.NSScript.Execution;
 using System.Collections.Generic;
 using ProjectHoppy.Graphics;
-using SciAdvNet.MediaLayer;
-using ProjectHoppy.Framework.Content;
-using SciAdvNet.MediaLayer.Graphics;
 using ProjectHoppy.Text;
 using SciAdvNet.NSScript.PXml;
 using SciAdvNet.NSScript;
-using ProjectHoppy.Framework;
+using HoppyFramework.Content;
+using HoppyFramework;
 
 namespace ProjectHoppy
 {
@@ -39,8 +37,7 @@ namespace ProjectHoppy
                 .WithComponent(new TextureComponent { AssetRef = fileOrEntityName });
 
 
-            _content.StartLoading<Texture2D>(fileOrEntityName);
-            //Task.Run(() => _content.Load<Texture2D>(fileOrEntityName));
+            _content.StartLoading<TextureAsset>(fileOrEntityName);
         }
 
         public override void LoadAudio(string entityName, AudioKind kind, string fileName)
@@ -141,36 +138,36 @@ namespace ProjectHoppy
 
             return;
 
-            foreach (var entity in _entities.WildcardQuery(entityName))
-            {
-                var originalTexture = entity.GetComponent<TextureComponent>();
-                var maskEffect = new MaskEffect
-                {
-                    TextureRef = originalTexture.AssetRef,
-                    MaskRef = fileName
-                };
+            //foreach (var entity in _entities.WildcardQuery(entityName))
+            //{
+            //    var originalTexture = entity.GetComponent<TextureComponent>();
+            //    var maskEffect = new MaskEffect
+            //    {
+            //        TextureRef = originalTexture.AssetRef,
+            //        MaskRef = fileName
+            //    };
 
-                _content.StartLoading<Texture2D>(fileName);
+            //    _content.StartLoading<TextureAsset>(fileName);
 
-                var visual = entity.GetComponent<VisualComponent>();
-                visual.Kind = VisualKind.MaskEffect;
-                //visual.Opacity = 0.3f;
-                entity.RemoveComponent(originalTexture);
-                entity.AddComponent(maskEffect);
+            //    var visual = entity.GetComponent<VisualComponent>();
+            //    visual.Kind = VisualKind.MaskEffect;
+            //    //visual.Opacity = 0.3f;
+            //    entity.RemoveComponent(originalTexture);
+            //    entity.AddComponent(maskEffect);
 
-                duration += TimeSpan.FromSeconds(3);
-                var animation = new FloatAnimation
-                {
-                    TargetComponent = visual,
-                    PropertySetter = (c, v) => (c as VisualComponent).Opacity = v,
-                    InitialValue =  initialOpacity / 1000.0f,
-                    CurrentValue = initialOpacity / 1000.0f,
-                    FinalValue = finalOpacity / 1000.0f,
-                    Duration = duration
-                };
+            //    duration += TimeSpan.FromSeconds(3);
+            //    var animation = new FloatAnimation
+            //    {
+            //        TargetComponent = visual,
+            //        PropertySetter = (c, v) => (c as VisualComponent).Opacity = v,
+            //        InitialValue =  initialOpacity / 1000.0f,
+            //        CurrentValue = initialOpacity / 1000.0f,
+            //        FinalValue = finalOpacity / 1000.0f,
+            //        Duration = duration
+            //    };
 
-                entity.AddComponent(animation);
-            }
+            //    entity.AddComponent(animation);
+            //}
         }
 
         public override void CreateDialogueBox(string entityName, int priority, NssCoordinate x, NssCoordinate y, int width, int height)

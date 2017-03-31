@@ -1,5 +1,5 @@
-﻿using SciAdvNet.MediaLayer.Input;
-using ProjectHoppy.Framework;
+﻿using HoppyFramework;
+using HoppyFramework.Input;
 
 namespace ProjectHoppy
 {

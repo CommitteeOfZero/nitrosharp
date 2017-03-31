@@ -1,12 +1,11 @@
-﻿using ProjectHoppy.Framework;
+﻿using HoppyFramework;
 using ProjectHoppy.Text;
-using SciAdvNet.MediaLayer.Graphics;
 
 namespace ProjectHoppy.Graphics
 {
     public class TypewriterAnimationProcessor : EntityProcessingSystem
     {
-        public TypewriterAnimationProcessor(RenderContext renderContext)
+        public TypewriterAnimationProcessor()
             : base(typeof(TextComponent))
         {
             

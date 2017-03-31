@@ -24,7 +24,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\SciAdvNet.MediaLayer\SciAdvNet.MediaLayer.csproj" />
+    <ProjectReference Include="..\HoppyFramework\HoppyFramework.csproj" />
   </ItemGroup>
 
 </Project>

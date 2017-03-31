@@ -1,4 +1,4 @@
-﻿using ProjectHoppy.Framework;
+﻿using HoppyFramework;
 using System.Collections.Generic;
 
 namespace ProjectHoppy
