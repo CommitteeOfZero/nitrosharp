@@ -4,23 +4,23 @@ using SharpDX.DirectWrite;
 
 namespace HoppyFramework.Graphics
 {
-    public class CustomBrushTextRenderer : TextRendererBase
+    public class CustomTextRenderer : TextRendererBase
     {
         private readonly RenderTarget _renderTarget;
-        private readonly SharpDX.Direct2D1.Brush _defaultBrush;
+        private readonly Brush _defaultBrush;
         private readonly bool _isPixelSnappingDisabled;
 
-        public CustomBrushTextRenderer(RenderTarget renderTarget, SharpDX.Direct2D1.Brush defaultBrush, bool isPixelSnappingDisabled)
+        public CustomTextRenderer(RenderTarget renderTarget, Brush defaultBrush, bool isPixelSnappingDisabled)
         {
             _renderTarget = renderTarget;
             _defaultBrush = defaultBrush;
             _isPixelSnappingDisabled = isPixelSnappingDisabled;
         }
 
-        public override Result DrawGlyphRun(object clientDrawingContext, float baselineOriginX, float baselineOriginY, MeasuringMode measuringMode,
-            GlyphRun glyphRun, GlyphRunDescription glyphRunDescription, ComObject clientDrawingEffect)
+        public override Result DrawGlyphRun(object clientDrawingContext, float baselineOriginX, float baselineOriginY,
+            MeasuringMode measuringMode, GlyphRun glyphRun, GlyphRunDescription glyphRunDescription, ComObject clientDrawingEffect)
         {
-            var brush = clientDrawingEffect as SharpDX.Direct2D1.Brush ?? _defaultBrush;
+            var brush = clientDrawingEffect as Brush ?? _defaultBrush;
             _renderTarget.DrawGlyphRun(new Vector2(baselineOriginX, baselineOriginY), glyphRun, brush, measuringMode);
             return Result.Ok;
         }

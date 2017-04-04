@@ -11,7 +11,7 @@ namespace ProjectHoppy.Graphics
 {
     public partial class RenderSystem
     {
-        private CustomBrushTextRenderer _textRenderer;
+        private CustomTextRenderer _textRenderer;
         private Dictionary<TextComponent, TextLayout> _textLayouts;
         private TextFormat _textFormat;
 
@@ -29,18 +29,18 @@ namespace ProjectHoppy.Graphics
             _currentGlyphBrush = new SolidColorBrush(_rc.DeviceContext, RgbaValueF.White);
             _currentGlyphBrush.Opacity = 0.0f;
 
-            _textRenderer = new CustomBrushTextRenderer(_rc.DeviceContext, _transparentTextBrush, false);
+            _textRenderer = new CustomTextRenderer(_rc.DeviceContext, _transparentTextBrush, false);
         }
         
         private void OnTextAdded(object sender, Entity e)
         {
-			if (e.HasComponent<TextComponent>())
-            {
-                var visual = e.GetComponent<VisualComponent>();
-                var txt = e.GetComponent<TextComponent>();
-                var layout = new TextLayout(_rc.DWriteFactory, txt.Text, _textFormat, visual.Width, visual.Height);
-                _textLayouts[txt] = layout;
-            }
+			//if (e.HasComponent<TextComponent>())
+   //         {
+   //             var visual = e.GetComponent<VisualComponent>();
+   //             var txt = e.GetComponent<TextComponent>();
+   //             var layout = new TextLayout(_rc.DWriteFactory, txt.Text, _textFormat, visual.Width, visual.Height);
+   //             _textLayouts[txt] = layout;
+   //         }
         }
 
         private void DrawText(VisualComponent visualComponent, TextComponent textComponent)

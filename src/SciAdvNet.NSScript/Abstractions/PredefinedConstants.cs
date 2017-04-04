@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 
 namespace SciAdvNet.NSScript
 {
@@ -52,7 +53,7 @@ namespace SciAdvNet.NSScript
         public static NssColor ParseColor(string colorString)
         {
             string strNum = colorString.Substring(1);
-            if (int.TryParse(strNum, out int num))
+            if (int.TryParse(strNum, NumberStyles.HexNumber, null, out int num))
             {
                 return NssColor.FromRgb(num);
             }

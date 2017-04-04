@@ -11,8 +11,6 @@ namespace HoppyFramework.Graphics
             _rc = renderContext;
         }
 
-        public SharpDX.Direct2D1.DeviceContext DeviceContext => _rc.DeviceContext;
-
         internal void Reset(RgbaValueF clearColor)
         {
             _rc.DeviceContext.BeginDraw();
@@ -22,7 +20,7 @@ namespace HoppyFramework.Graphics
         public void Dispose()
         {
             _rc.DeviceContext.EndDraw();
-            _rc.SwapChain.Present(0, SharpDX.DXGI.PresentFlags.None);
+            _rc.SwapChain.Present(1, SharpDX.DXGI.PresentFlags.None);
         }
     }
 }

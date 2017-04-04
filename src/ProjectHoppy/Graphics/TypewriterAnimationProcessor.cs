@@ -1,4 +1,5 @@
 ﻿using HoppyFramework;
+using ProjectHoppy.Graphics.RenderItems;
 using ProjectHoppy.Text;
 
 namespace ProjectHoppy.Graphics
@@ -6,14 +7,14 @@ namespace ProjectHoppy.Graphics
     public class TypewriterAnimationProcessor : EntityProcessingSystem
     {
         public TypewriterAnimationProcessor()
-            : base(typeof(TextComponent))
+            : base(typeof(GameText))
         {
             
         }
 
         public override void Process(Entity entity, float deltaMilliseconds)
         {
-            var text = entity.GetComponent<TextComponent>();
+            var text = entity.GetComponent<GameText>();
             if (text.CurrentGlyphIndex >= text.Text.Length)
             {
                 return;

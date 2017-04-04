@@ -114,6 +114,11 @@ namespace HoppyFramework.Audio
             _context.ResamplerContext = pSwrContext;
         }
 
+        private static int ChannelCountToLayout(int channelCount)
+        {
+            return ffmpeg.AV_CH_LAYOUT_STEREO;
+        }
+
         public override bool Read(AudioBuffer buffer)
         {
             do
@@ -212,7 +217,7 @@ namespace HoppyFramework.Audio
                 if ((readResult = (uint)ffmpeg.av_read_frame(_context.FormatContext, _context.Packet)) != 0)
                 {
                     ffmpeg.av_packet_unref(_context.Packet);
-                    return readResult == AVError_Eof ? AVError_Eof : throw EncodingFailed("av_read_frame() returned a non-zero value.");
+                    return readResult == AVError_Eof || readResult == 0xfffffffb ? AVError_Eof : throw EncodingFailed("av_read_frame() returned a non-zero value.");
                 }
                 try
                 {
@@ -233,12 +238,22 @@ namespace HoppyFramework.Audio
             return 0;
         }
 
-        private unsafe int WriteToBuffer(AVFrame* frame, AudioBuffer buffer, int nbSamples)
+        private unsafe int WriteToBuffer(AVFrame* frame, AudioBuffer buffer, int inputSampleCount)
         {
             byte* pBuf = (byte*)buffer.CurrentPointer;
-            ffmpeg.swr_convert(_context.ResamplerContext, &pBuf, nbSamples, frame->extended_data, nbSamples);
 
-            return _targetBytesPerSample * nbSamples * frame->channels;
+            int outSampleCount = inputSampleCount;
+            if (OriginalSampleRate != TargetSampleRate)
+            {
+                long delay = ffmpeg.swr_get_delay(_context.ResamplerContext, OriginalSampleRate);
+                outSampleCount = (int)ffmpeg.av_rescale_rnd(inputSampleCount, TargetSampleRate, OriginalSampleRate, AVRounding.AV_ROUND_DOWN);
+            }
+
+            ffmpeg.swr_convert(_context.ResamplerContext, &pBuf, outSampleCount, frame->extended_data, inputSampleCount);
+            //dst_bufsize = av_samples_get_buffer_size(&dst_linesize, dst_nb_channels, ret, dst_sample_fmt, 1);
+
+            //return ffmpeg.av_samples_get_buffer_size()
+            return _targetBytesPerSample * outSampleCount * frame->channels;
         }
 
         public override void Seek(TimeSpan timeCode)

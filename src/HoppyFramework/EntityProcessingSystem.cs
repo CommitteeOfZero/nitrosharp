@@ -55,6 +55,7 @@ namespace HoppyFramework
         {
             foreach (Type interest in _interests)
             {
+
                 if (entity.HasComponent(interest))
                 {
                     if (_entities.Add(entity))

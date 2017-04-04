@@ -7,6 +7,7 @@ using SciAdvNet.NSScript.PXml;
 using SciAdvNet.NSScript;
 using HoppyFramework.Content;
 using HoppyFramework;
+using System.Linq;
 
 namespace ProjectHoppy
 {
@@ -32,10 +33,18 @@ namespace ProjectHoppy
 
         public override void AddTexture(string entityName, int priority, NssCoordinate x, NssCoordinate y, string fileOrEntityName)
         {
-            _entities.Create(entityName)
-                .WithComponent(new VisualComponent(VisualKind.Texture, x.Value, y.Value, 0, 0, priority))
-                .WithComponent(new TextureComponent { AssetRef = fileOrEntityName });
+            var entity =_entities.Create(entityName)
+                .WithComponent(new VisualComponent(VisualKind.Texture, x.Value, y.Value, 0, 0, priority));
 
+            if (fileOrEntityName != "SCREEN")
+            {
+                entity.AddComponent(new TextureComponent { AssetRef = fileOrEntityName });
+            }
+            else
+            {
+                entity.GetComponent<VisualComponent>().Kind = VisualKind.Screenshot;
+                return;
+            }
 
             _content.StartLoading<TextureAsset>(fileOrEntityName);
         }
@@ -79,6 +88,11 @@ namespace ProjectHoppy
 
         public override void Fade(string entityName, TimeSpan duration, int opacity, bool wait)
         {
+            //if (entityName == "黒")
+            //{
+            //    duration += TimeSpan.FromSeconds(5);
+            //}
+
             if (entityName.Length > 0 && entityName[0] == '@')
             {
                 entityName = entityName.Substring(1);
@@ -113,10 +127,10 @@ namespace ProjectHoppy
                     var animation = new FloatAnimation
                     {
                         TargetComponent = visual,
+                        PropertyGetter = c => (c as VisualComponent).Opacity,
                         PropertySetter = (c, v) => (c as VisualComponent).Opacity = v,
                         Duration = duration,
                         InitialValue = visual.Opacity,
-                        CurrentValue = visual.Opacity,
                         FinalValue = opacity / 1000.0f,
                     };
 
@@ -136,38 +150,36 @@ namespace ProjectHoppy
                 entityName = entityName.Substring(1);
             }
 
-            return;
+            foreach (var entity in _entities.WildcardQuery(entityName))
+            {
+                var originalTexture = entity.GetComponent<TextureComponent>();
+                var transition = new DissolveTransition
+                {
+                    Texture = originalTexture.AssetRef,
+                    AlphaMask = fileName
+                };
 
-            //foreach (var entity in _entities.WildcardQuery(entityName))
-            //{
-            //    var originalTexture = entity.GetComponent<TextureComponent>();
-            //    var maskEffect = new MaskEffect
-            //    {
-            //        TextureRef = originalTexture.AssetRef,
-            //        MaskRef = fileName
-            //    };
+                _content.StartLoading<TextureAsset>(fileName);
 
-            //    _content.StartLoading<TextureAsset>(fileName);
+                var visual = entity.GetComponent<VisualComponent>();
+                visual.Kind = VisualKind.DissolveTransition;
+                entity.RemoveComponent(originalTexture);
+                entity.AddComponent(transition);
 
-            //    var visual = entity.GetComponent<VisualComponent>();
-            //    visual.Kind = VisualKind.MaskEffect;
-            //    //visual.Opacity = 0.3f;
-            //    entity.RemoveComponent(originalTexture);
-            //    entity.AddComponent(maskEffect);
+                var animation = new FloatAnimation
+                {
+                    TargetComponent = transition,
+                    PropertyGetter = c => (c as DissolveTransition).Opacity,
+                    PropertySetter = (c, v) => (c as DissolveTransition).Opacity = v,
+                    InitialValue = 0.0f,
+                    FinalValue = 1.0f,
+                    Duration = duration
+                };
 
-            //    duration += TimeSpan.FromSeconds(3);
-            //    var animation = new FloatAnimation
-            //    {
-            //        TargetComponent = visual,
-            //        PropertySetter = (c, v) => (c as VisualComponent).Opacity = v,
-            //        InitialValue =  initialOpacity / 1000.0f,
-            //        CurrentValue = initialOpacity / 1000.0f,
-            //        FinalValue = finalOpacity / 1000.0f,
-            //        Duration = duration
-            //    };
+                entity.AddComponent(animation);
+            }
 
-            //    entity.AddComponent(animation);
-            //}
+            Interpreter.SuspendThread(CallingThreadId, duration);
         }
 
         public override void CreateDialogueBox(string entityName, int priority, NssCoordinate x, NssCoordinate y, int width, int height)
@@ -187,6 +199,9 @@ namespace ProjectHoppy
 
         public override void SetVolume(string entityName, TimeSpan duration, int volume)
         {
+            if (entityName == null)
+                return;
+
             if (entityName.Length > 0 && entityName[0] == '@')
             {
                 entityName = entityName.Substring(1);
@@ -281,16 +296,24 @@ namespace ProjectHoppy
         {
             Interpreter.SuspendThread(CallingThreadId);
 
-            var visual = new VisualComponent { Kind = VisualKind.Text, X = 40, Y = 470 + 5, Width = 800 - 80, Height = 130, Priority = 30000, Color = RgbaValueF.White };
+            //var visual = new VisualComponent { Kind = VisualKind.Text, X = 40, Y = 470 + 5, Width = 800 - 80, Height = 130, Priority = 30000, Color = RgbaValueF.White };
 
             var root = PXmlBlock.Parse(pxmlString);
             var flattener = new PXmlTreeFlattener();
 
             var text = flattener.Flatten(root);
-            text.Animated = true;
+            text.X = 40;
+            text.Y = 475;
+            text.Width = 800 - 80;
+            text.Height = 130;
+            text.Priority = 30000;
+            text.Color = RgbaValueF.White;
+
+
+            //text.Animated = true;
 
             _entities.Create("text", replace: true)
-                .WithComponent(visual)
+                //.WithComponent(visual)
                 .WithComponent(text);
         }
 

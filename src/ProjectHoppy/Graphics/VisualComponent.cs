@@ -1,4 +1,7 @@
-﻿using HoppyFramework;
+﻿using System;
+using HoppyFramework;
+using HoppyFramework.Graphics;
+using ProjectHoppy.Graphics.RenderItems;
 
 namespace ProjectHoppy.Graphics
 {
@@ -6,10 +9,12 @@ namespace ProjectHoppy.Graphics
     {
         Rectangle,
         Texture,
-        Text
+        DissolveTransition,
+        Text,
+        Screenshot
     }
 
-    public class VisualComponent : Component
+    public class VisualComponent : Visual
     {
         public VisualComponent()
         {
@@ -26,14 +31,18 @@ namespace ProjectHoppy.Graphics
         }
 
         public VisualKind Kind { get; set; }
-        public float X { get; set; }
-        public float Y { get; set; }
-        public float Width { get; set; }
-        public float Height { get; set; }
 
-        public RgbaValueF Color { get; set; }
-        //public AssetRef TextureRef { get; set; }
-        public float Opacity { get; set; } = 1.0f;
-        public int Priority { get; set; }
+        public override void Render(DXRenderContext renderContext)
+        {
+        }
+        //public float X { get; set; }
+        //public float Y { get; set; }
+        //public float Width { get; set; }
+        //public float Height { get; set; }
+
+        //public RgbaValueF Color { get; set; }
+        ////public AssetRef TextureRef { get; set; }
+        //public float Opacity { get; set; } = 1.0f;
+        //public int Priority { get; set; }
     }
 }

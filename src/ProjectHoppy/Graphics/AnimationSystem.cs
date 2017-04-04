@@ -1,14 +1,19 @@
 ﻿using HoppyFramework;
-using System.Numerics;
+using System;
 
 namespace ProjectHoppy.Graphics
 {
     public class AnimationSystem : EntityProcessingSystem
     {
-        public AnimationSystem()
-            : base(typeof(FloatAnimation), typeof(ColorAnimation))
+        public AnimationSystem() : base(typeof(FloatAnimation))
         {
+            EntityAdded += OnEntityAdded;
+        }
 
+        private void OnEntityAdded(object sender, Entity e)
+        {
+            var animation = e.GetComponent<FloatAnimation>();
+            animation.PropertySetter(animation.TargetComponent, animation.InitialValue);
         }
 
         public override void Process(Entity entity, float deltaMilliseconds)
@@ -17,42 +22,51 @@ namespace ProjectHoppy.Graphics
             {
                 if (animation.IsEnabled)
                 {
-                    bool incr = animation.FinalValue > animation.InitialValue;
-                    var delta = (animation.FinalValue - animation.InitialValue) * (deltaMilliseconds / (float)animation.Duration.TotalMilliseconds);
-                    animation.CurrentValue += delta;
+                    float currentValue = animation.PropertyGetter(animation.TargetComponent);
+                    bool increasing = animation.FinalValue > animation.InitialValue;
 
-                    if (incr && animation.CurrentValue >= animation.FinalValue || !incr && animation.CurrentValue <= animation.FinalValue)
+                    float change = animation.FinalValue - animation.InitialValue;
+                    float progress = animation.Elapsed / (float)animation.Duration.TotalMilliseconds;
+                    currentValue = change * Factor(progress, animation.TimingFunction);
+
+                    if (increasing && currentValue >= animation.FinalValue || !increasing && currentValue <= animation.FinalValue)
                     {
-                        animation.CurrentValue = animation.FinalValue;
+                        currentValue = animation.FinalValue;
                         animation.IsEnabled = false;
                     }
 
-                    animation.PropertySetter(animation.TargetComponent, animation.CurrentValue);
+                    animation.PropertySetter(animation.TargetComponent, currentValue);
+                    animation.Elapsed += deltaMilliseconds;
                 }
             }
-
-            //foreach (var colorAnimation in entity.GetComponents<ColorAnimation>())
-            //{
-            //    if (colorAnimation.IsEnabled)
-            //    {
-            //        ProcessColorAnimation(entity, colorAnimation, deltaMilliseconds);
-            //    }
-            //}
         }
 
-        private void ProcessColorAnimation(Entity e, ColorAnimation animation, float deltaMilliseconds)
+        private static float Factor(float progress, TimingFunction function)
         {
-            Vector4 delta = (Vector4)animation.FinalValue * (deltaMilliseconds / (float)animation.Duration.TotalMilliseconds);
-            animation.CurrentValue += delta;
-
-            if (animation.CurrentValue.R >= animation.FinalValue.R)
+            switch (function)
             {
-                animation.CurrentValue = animation.InitialValue;
-                //animation.CurrentValue = animation.FinalValue;
-                //animation.IsEnabled = false;
-            }
+                case TimingFunction.QuadraticEaseIn:
+                    return (float)Math.Pow(progress, 2);
 
-            animation.PropertySetter(e, animation.CurrentValue);
+                case TimingFunction.CubicEaseIn:
+                    return (float)Math.Pow(progress, 3);
+
+                case TimingFunction.QuarticEaseIn:
+                    return (float)Math.Pow(progress, 4);
+
+                case TimingFunction.QuadraticEaseOut:
+                    return 1.0f - (float)Math.Pow(1.0f - progress, 2);
+
+                case TimingFunction.CubicEaseOut:
+                    return 1.0f - (float)Math.Pow(1.0f - progress, 3);
+
+                case TimingFunction.QuarticEaseOut:
+                    return 1.0f - (float)Math.Pow(1.0f - progress, 4);
+
+                case TimingFunction.Linear:
+                default:
+                    return progress;
+            }
         }
     }
 }

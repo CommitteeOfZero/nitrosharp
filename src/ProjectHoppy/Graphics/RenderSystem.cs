@@ -6,6 +6,11 @@ using HoppyFramework.Graphics;
 using HoppyFramework.Content;
 using SharpDX.Direct2D1;
 using SharpDX.Mathematics.Interop;
+using ProjectHoppy.Graphics.Effects;
+using System.Diagnostics;
+using System;
+using SharpDX;
+using ProjectHoppy.Graphics.RenderItems;
 
 namespace ProjectHoppy.Graphics
 {
@@ -17,16 +22,28 @@ namespace ProjectHoppy.Graphics
 
         private SolidColorBrush _colorBrush;
 
+        private Bitmap1 _screenshot;
+
         public RenderSystem(DXRenderContext renderContext, ContentManager contentManager)
-            : base(typeof(VisualComponent))
+            : base(typeof(VisualComponent), typeof(RenderItem))
         {
             _rc = renderContext;
             _content = contentManager;
 
-            EntityAdded += OnTextAdded;
+            //EntityAdded += OnTextAdded;
+            //EntityAdded += OnScreenshotRequested;
 
             _colorBrush = new SolidColorBrush(_rc.DeviceContext, RgbaValueF.White);
             CreateTextResources();
+        }
+
+        private void OnScreenshotRequested(object sender, Entity e)
+        {
+            //if (e.GetComponent<VisualComponent>().Kind == VisualKind.Screenshot)
+            //{
+            //    _screenshot = new Bitmap1(_rc.DeviceContext, new Size2(800, 600), new BitmapProperties1(_rc.DeviceContext.PixelFormat, 96, 96));
+            //    _screenshot.CopyFromRenderTarget(_rc.DeviceContext);
+            //}
         }
 
         public override void Update(float deltaMilliseconds)
@@ -39,26 +56,47 @@ namespace ProjectHoppy.Graphics
 
         public override IEnumerable<Entity> SortEntities(IEnumerable<Entity> entities)
         {
-            return entities.OrderBy(x => x.GetComponent<VisualComponent>().Priority);
+            return entities.OrderBy(x => x.GetComponent<Visual>().Priority);
         }
 
         public override void Process(Entity entity, float deltaMilliseconds)
         {
             var visualComponent = entity.GetComponent<VisualComponent>();
-            switch (visualComponent.Kind)
+            if (visualComponent != null)
             {
-                case VisualKind.Rectangle:
-                    DrawRectangle(visualComponent);
-                    break;
+                switch (visualComponent.Kind)
+                {
+                    case VisualKind.Rectangle:
+                        DrawRectangle(visualComponent);
+                        break;
 
-                case VisualKind.Texture:
-                    DrawTexture(visualComponent, entity.GetComponent<TextureComponent>());
-                    break;
+                    case VisualKind.Texture:
+                        DrawTexture(visualComponent, entity.GetComponent<TextureComponent>());
+                        break;
 
-                case VisualKind.Text:
-                    DrawText(visualComponent, entity.GetComponent<TextComponent>());
-                    break;
+                    case VisualKind.Text:
+                        DrawText(visualComponent, entity.GetComponent<TextComponent>());
+                        break;
+
+                    case VisualKind.DissolveTransition:
+                        DrawTransition(visualComponent, entity.GetComponent<DissolveTransition>());
+                        break;
+
+                    case VisualKind.Screenshot:
+                        DrawScreenshot(visualComponent);
+                        break;
+                }
             }
+            else
+            {
+                entity.GetComponent<RenderItem>().Render(_rc);
+            }
+        }
+
+        private void DrawScreenshot(VisualComponent visual)
+        {
+            var dest = new RawRectangleF(visual.X, visual.Y, _screenshot.Size.Width, _screenshot.Size.Height);
+            _rc.DeviceContext.DrawBitmap(_screenshot, dest, visual.Opacity, BitmapInterpolationMode.Linear);
         }
 
         private void DrawRectangle(VisualComponent visual)
@@ -76,6 +114,28 @@ namespace ProjectHoppy.Graphics
             {
                 var dest = new RawRectangleF(visual.X, visual.Y, texture.Width, texture.Height);
                 _rc.DeviceContext.DrawBitmap(texture, dest, visual.Opacity, BitmapInterpolationMode.Linear);
+            }
+        }
+
+        private Effect<DissolveEffect> _effect = null;
+
+        private void DrawTransition(VisualComponent visual, DissolveTransition transition)
+        {
+            if (_content.TryGetAsset<TextureAsset>(transition.Texture, out var texture)
+                && _content.TryGetAsset<TextureAsset>(transition.AlphaMask, out var alphaMask))
+            {
+                if (_effect == null)
+                {
+                    _rc.D2DFactory.RegisterEffect<DissolveEffect>();
+
+                    _effect = new Effect<DissolveEffect>(_rc.DeviceContext);
+                    _effect.SetInput(0, texture, true);
+                    _effect.SetInput(1, alphaMask, true);
+
+                }
+                
+                _effect.SetValue(0, transition.Opacity);
+                _rc.DeviceContext.DrawImage(_effect);
             }
         }
     }

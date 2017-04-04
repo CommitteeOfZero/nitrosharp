@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Reflection;
 
 namespace HoppyFramework
 {
@@ -53,18 +54,31 @@ namespace HoppyFramework
             }
         }
 
-        public bool HasComponent<T>() where T : Component => _components.ContainsKey(typeof(T));
-        public bool HasComponent(Type type) => _components.ContainsKey(type);
+        public bool HasComponent<T>() where T : Component => GetComponent<T>() != null;
+        public bool HasComponent(Type type) => GetComponent(type) != null;
 
-        public T GetComponent<T>() where T : Component
+        public object GetComponent(Type type)
         {
-            if (_components.TryGetValue(typeof(T), out var collection))
+            if (_components.TryGetValue(type, out var collection))
             {
-                return collection?.Count > 0 ? (T)collection[0] : null;
+                return collection?.Count > 0 ? collection[0] : null;
+            }
+            else
+            {
+                foreach (var pair in _components)
+                {
+                    if (type.GetTypeInfo().IsAssignableFrom(pair.Key.GetTypeInfo()))
+                    {
+                        collection = pair.Value;
+                        return collection?.Count > 0 ? collection[0] : null;
+                    }
+                }
             }
 
             return null;
         }
+
+        public T GetComponent<T>() where T : Component => (T)GetComponent(typeof(T));
 
         public IEnumerable<T> GetComponents<T>() where T : Component
         {

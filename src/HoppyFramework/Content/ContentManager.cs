@@ -57,9 +57,22 @@ namespace HoppyFramework.Content
 
         public void StartLoading<T>(AssetRef assetRef)
         {
-            Task.Run(() => Load(assetRef, typeof(T))).ContinueWith(x =>
+            Task.Run(() =>
             {
-                _loadedItems[assetRef] = (T)x.Result;
+                try
+                {
+                    return Load(assetRef, typeof(T));
+                }
+                catch
+                {
+                    return null;
+                }
+            }).ContinueWith(x =>
+            {
+                if (x.Result != null)
+                {
+                    _loadedItems[assetRef] = (T)x.Result;
+                }
             }, TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.OnlyOnRanToCompletion);
         }
 

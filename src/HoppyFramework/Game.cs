@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace HoppyFramework
@@ -47,11 +48,12 @@ namespace HoppyFramework
 
         private void Initialize()
         {
-            Window = new GameWindow("Chaos;Hoppy Noah", 800, 600, WindowState.Normal);
+            Window = new GameWindow("Chaos;Hoppy", 800, 600, WindowState.Normal);
             Window.WindowState = WindowState.Normal;
             RenderContext = new DXRenderContext(Window);
             AudioEngine = new XAudio2AudioEngine(16, 44100, 2);
 
+            Window.ProcessEvents();
             OnInitialized();
         }
 
@@ -74,6 +76,14 @@ namespace HoppyFramework
             {
                 long currentFrameTicks = _gameTimer.ElapsedTicks;
                 float deltaMilliseconds = (currentFrameTicks - prevFrameTicks) / Stopwatch.Frequency * 1000.0f;
+
+                while (deltaMilliseconds < 1000.0f / 60.0f)
+                {
+                    Thread.Sleep(1);
+                    currentFrameTicks = _gameTimer.ElapsedTicks;
+                    deltaMilliseconds = (currentFrameTicks - prevFrameTicks) / Stopwatch.Frequency * 1000.0f;
+                }
+
                 prevFrameTicks = currentFrameTicks;
 
                 Window.ProcessEvents();
@@ -85,8 +95,10 @@ namespace HoppyFramework
 
         public void Run()
         {
-            Task.WhenAll(_startupTasks.Select(x => Task.Run(x))).Wait();
+            var startup = Task.WhenAll(_startupTasks.Select(x => Task.Run(x)));
             Initialize();
+            startup.Wait();
+
             EnterLoop();
         }
 

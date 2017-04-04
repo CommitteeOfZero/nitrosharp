@@ -26,7 +26,7 @@ namespace HoppyFramework.Content
 
                     var props = new BitmapProperties1()
                     {
-                        BitmapOptions = BitmapOptions.Target,
+                        BitmapOptions = BitmapOptions.None,
                         PixelFormat = _rc.DeviceContext.PixelFormat,
                         DpiX = 96,
                         DpiY = 96

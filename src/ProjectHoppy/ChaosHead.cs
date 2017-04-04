@@ -81,7 +81,7 @@ namespace ProjectHoppy
 
         public override void Update(float deltaMilliseconds)
         {
-            var timeQuota = TimeSpan.FromMilliseconds(6);
+            var timeQuota = TimeSpan.MaxValue;
             TimeSpan elapsed = _nssInterpreter.Run(timeQuota);
 
             if (elapsed - timeQuota > TimeSpan.FromMilliseconds(4))

@@ -1,4 +1,5 @@
 ﻿using HoppyFramework.Platform;
+using SharpDX;
 using SharpDX.Direct2D1;
 using SharpDX.Direct3D;
 using SharpDX.Direct3D11;
@@ -29,6 +30,7 @@ namespace HoppyFramework.Graphics
         public SharpDX.WIC.ImagingFactory WicFactory { get; private set; }
 
         public SharpDX.Direct2D1.DeviceContext DeviceContext { get; private set; }
+        public SolidColorBrush ColorBrush { get; private set; }
 
         private void Initialize()
         {
@@ -64,6 +66,8 @@ namespace HoppyFramework.Graphics
             _dxgiDevice = _d3dDevice.QueryInterface<SharpDX.DXGI.Device2>();
             _d2dDevice = new SharpDX.Direct2D1.Device(D2DFactory, _dxgiDevice);
             DeviceContext = new SharpDX.Direct2D1.DeviceContext(_d2dDevice, new DeviceContextOptions());
+
+            ColorBrush = new SolidColorBrush(DeviceContext, Color.CornflowerBlue);
         }
 
         private void CreateSizeDependentResources()
@@ -103,6 +107,7 @@ namespace HoppyFramework.Graphics
 
         public void Dispose()
         {
+            ColorBrush.Dispose();
             D2DFactory.Dispose();
             DWriteFactory.Dispose();
             WicFactory.Dispose();

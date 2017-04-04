@@ -72,22 +72,5 @@ namespace HoppyFramework
         public static RgbaValueF Red { get; } = new RgbaValueF(1.0f, 0.0f, 0.0f, 1.0f);
         public static RgbaValueF Green { get; } = new RgbaValueF(0.0f, 1.0f, 0.0f, 1.0f);
         public static RgbaValueF Blue { get; } = new RgbaValueF(0.0f, 0.0f, 1.0f, 1.0f);
-
-        //public static Color FromRgba(uint rgba)
-        //{
-        //    byte r = (byte)((rgba >> 24) & 255);
-        //    byte g = (byte)((rgba >> 16) & 255);
-        //    byte b = (byte)((rgba >> 8 ) & 255);
-        //    byte a = (byte)(rgba & 255);
-        //    return new Color(r, g, b, a);
-        //}
-
-        //public static Color FromRgb(int rgb)
-        //{
-        //    byte r = (byte)((rgb >> 16) & 255);
-        //    byte g = (byte)((rgb >> 8) & 255);
-        //    byte b = (byte)(rgb & 255);
-        //    return new Color(r, g, b);
-        //}
     }
 }

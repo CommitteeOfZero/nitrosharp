@@ -20,6 +20,7 @@ namespace SciAdvNet.NSScript.Execution
         private readonly ExecutingVisitor _execVisitor;
         private readonly INssBuiltInFunctions _builtIns;
 
+        private ThreadContext _currentThread;
         private readonly List<ThreadContext> _threads;
         private readonly List<ThreadContext> _activeThreads;
         private readonly List<ThreadContext> _suspendedThreads;
@@ -61,7 +62,9 @@ namespace SciAdvNet.NSScript.Execution
                 ["SetLoop"] = SetLoop,
                 ["SetLoopPoint"] = SetLoopPoint,
                 ["DrawTransition"] = DrawTransition,
-                ["DisplayDialogue"] = DisplayDialogue
+                ["DisplayDialogue"] = DisplayDialogue,
+
+                ["RemainTime"] = RemainTime
             };
 
             PredefinedConstants.Preload();
@@ -74,6 +77,7 @@ namespace SciAdvNet.NSScript.Execution
         public NSScriptSession Session { get; }
         public NSScriptInterpreterStatus Status { get; private set; }
 
+        public event EventHandler<Function> EnteredFunction;
         public event EventHandler<BuiltInFunctionCall> BuiltInCallScheduled;
 
         public void CreateThread(Module module, Statement entryPoint)
@@ -133,6 +137,7 @@ namespace SciAdvNet.NSScript.Execution
                         goto exit;
                     }
 
+                    _currentThread = thread;
                     _execVisitor.Tick(thread);
 
                     if (thread.DoneExecuting)
@@ -441,6 +446,12 @@ namespace SciAdvNet.NSScript.Execution
 
             _builtIns.DrawTransition(entityName, duration, initialOpacity, finalOpacity, boundary, fileName, wait);
         }
+
+        private void RemainTime(ArgumentStack args)
+        {
+            string entityName = args.PopString();
+            _currentThread.CurrentFrame.EvaluationStack.Push(new ConstantValue(0));
+        }
     }
 
     internal sealed class ExecutingVisitor : SyntaxVisitor
@@ -470,7 +481,7 @@ namespace SciAdvNet.NSScript.Execution
             Frame prevFrame = context.CurrentFrame;
             Visit(context.CurrentNode);
 
-            if (prevFrame == CurrentFrame)
+            if (prevFrame == CurrentFrame && prevFrame.OperationStack.Count == 0)
             {
                 context.Advance();
             }
@@ -483,9 +494,6 @@ namespace SciAdvNet.NSScript.Execution
 
         private bool Eval(Expression expression, out ConstantValue result)
         {
-            //result = EvaluateTrivial(expression);
-            //return true;
-
             if (CurrentFrame.EvaluationStack.Count == 0)
             {
                 _exprFlattener.Flatten(expression, CurrentFrame.OperandStack, CurrentFrame.OperationStack);
@@ -500,6 +508,14 @@ namespace SciAdvNet.NSScript.Execution
                 {
                     case OperationCategory.None:
                         var operand = CurrentFrame.OperandStack.Pop();
+
+                        if (operand is FunctionCall call)
+                        {
+                            PrepareFunctionCall(call);
+                            result = default(ConstantValue);
+                            return false;
+                        }
+
                         CurrentFrame.EvaluationStack.Push(operand);
                         continue;
 
@@ -512,15 +528,11 @@ namespace SciAdvNet.NSScript.Execution
 
                     case OperationCategory.Binary:
                         var leftOperand = CurrentFrame.EvaluationStack.Pop();
-                        if (leftOperand.Kind == SyntaxNodeKind.FunctionCall)
-                        {
-                            PrepareFunctionCall(leftOperand as FunctionCall);
-                            result = default(ConstantValue);
-                            return false;
-                        }
-
                         var rightOperand = CurrentFrame.EvaluationStack.Pop();
-                        intermediateResult = _exprReducer.ApplyBinaryOperation(_exprReducer.ReduceExpression(leftOperand), operation, _exprReducer.ReduceExpression(rightOperand));
+
+                        var leftReduced = _exprReducer.ReduceExpression(leftOperand);
+                        var rightReduced = _exprReducer.ReduceExpression(rightOperand);
+                        intermediateResult = _exprReducer.ApplyBinaryOperation(leftReduced, operation, rightReduced);
 
                         CurrentFrame.EvaluationStack.Push(intermediateResult);
                         break;
