@@ -7,14 +7,16 @@ using SciAdvNet.NSScript.PXml;
 using SciAdvNet.NSScript;
 using HoppyFramework.Content;
 using HoppyFramework;
-using System.Linq;
+using ProjectHoppy.Graphics.RenderItems;
 
 namespace ProjectHoppy
 {
-    public class N2System : NssBuiltInFunctions
+    public class N2System : NssImplementation
     {
         private ContentManager _content;
         private readonly EntityManager _entities;
+
+        private DialogueBox _currentDialogueBox;
 
         public N2System(EntityManager entities)
         {
@@ -27,26 +29,45 @@ namespace ProjectHoppy
 
         public override void AddRectangle(string entityName, int priority, NssCoordinate x, NssCoordinate y, int width, int height, NssColor color)
         {
-            _entities.Create(entityName, replace: true)
-                .WithComponent(new VisualComponent(VisualKind.Rectangle, x.Value, y.Value, width, height, priority) { Color = RgbaValueF.Black });
+            var rect = new RectangleVisual
+            {
+                X = x.Value,
+                Y = y.Value,
+                Width = width,
+                Height = height,
+                Color = new RgbaValueF(color.R / 255.0f, color.G / 255.0f, color.B / 255.0f, 1.0f),
+                Priority = priority
+            };
+
+            _entities.Create(entityName, replace: true).WithComponent(rect);
         }
 
         public override void AddTexture(string entityName, int priority, NssCoordinate x, NssCoordinate y, string fileOrEntityName)
         {
-            var entity =_entities.Create(entityName)
-                .WithComponent(new VisualComponent(VisualKind.Texture, x.Value, y.Value, 0, 0, priority));
-
             if (fileOrEntityName != "SCREEN")
             {
-                entity.AddComponent(new TextureComponent { AssetRef = fileOrEntityName });
+                _content.StartLoading<TextureAsset>(fileOrEntityName);
+                var visual = new TextureVisual
+                {
+                    X = x.Value,
+                    Y = y.Value,
+                    Priority = priority,
+                    AssetRef = fileOrEntityName
+                };
+
+                var entity = _entities.Create(entityName).WithComponent(visual);
             }
             else
             {
-                entity.GetComponent<VisualComponent>().Kind = VisualKind.Screenshot;
-                return;
-            }
+                var screencap = new ScreenCap
+                {
+                    X = x.Value,
+                    Y = y.Value,
+                    Priority = priority,
+                };
 
-            _content.StartLoading<TextureAsset>(fileOrEntityName);
+                var entity = _entities.Create(entityName).WithComponent(screencap);
+            }
         }
 
         public override void LoadAudio(string entityName, AudioKind kind, string fileName)
@@ -86,13 +107,8 @@ namespace ProjectHoppy
 
         private bool IsWildcardQuery(string s) => s[s.Length - 1] == '*';
 
-        public override void Fade(string entityName, TimeSpan duration, int opacity, bool wait)
+        public override void Fade(string entityName, TimeSpan duration, Rational opacity, bool wait)
         {
-            //if (entityName == "黒")
-            //{
-            //    duration += TimeSpan.FromSeconds(5);
-            //}
-
             if (entityName.Length > 0 && entityName[0] == '@')
             {
                 entityName = entityName.Substring(1);
@@ -113,88 +129,99 @@ namespace ProjectHoppy
 
             if (duration > TimeSpan.Zero)
             {
-                Interpreter.SuspendThread(CallingThreadId, duration);
+                Interpreter.SuspendThread(CurrentThread, duration);
             }
         }
 
-        private void FadeCore(Entity entity, TimeSpan duration, int opacity, bool wait)
+        private void FadeCore(Entity entity, TimeSpan duration, Rational opacity, bool wait)
         {
             if (entity != null)
             {
+                float adjustedOpacity = opacity.Rebase(1);
                 if (duration > TimeSpan.Zero)
                 {
-                    var visual = entity.GetComponent<VisualComponent>();
+                    var visual = entity.GetComponent<Visual>();
                     var animation = new FloatAnimation
                     {
                         TargetComponent = visual,
-                        PropertyGetter = c => (c as VisualComponent).Opacity,
-                        PropertySetter = (c, v) => (c as VisualComponent).Opacity = v,
+                        PropertyGetter = c => (c as Visual).Opacity,
+                        PropertySetter = (c, v) => (c as Visual).Opacity = v,
                         Duration = duration,
                         InitialValue = visual.Opacity,
-                        FinalValue = opacity / 1000.0f,
+                        FinalValue = adjustedOpacity,
                     };
 
                     entity.AddComponent(animation);
                 }
                 else
                 {
-                    entity.GetComponent<VisualComponent>().Opacity = opacity / 1000.0f;
+                    entity.GetComponent<Visual>().Opacity = adjustedOpacity;
                 }
             }
         }
 
-        public override void DrawTransition(string entityName, TimeSpan duration, int initialOpacity, int finalOpacity, int boundary, string fileName, bool wait)
+        public override void DrawTransition(string entityName, TimeSpan duration, Rational initialOpacity,
+            Rational finalOpacity, Rational feather, string fileName, bool wait)
         {
             if (entityName.Length > 0 && entityName[0] == '@')
             {
                 entityName = entityName.Substring(1);
             }
 
+            initialOpacity = initialOpacity.Rebase(1);
+            finalOpacity = finalOpacity.Rebase(1);
+
             foreach (var entity in _entities.WildcardQuery(entityName))
             {
-                var originalTexture = entity.GetComponent<TextureComponent>();
-                var transition = new DissolveTransition
+                var originalTexture = entity.GetComponent<TextureVisual>();
+                var transition = new TransitionVisual
                 {
-                    Texture = originalTexture.AssetRef,
-                    AlphaMask = fileName
+                    SourceAsset = originalTexture.AssetRef,
+                    MaskAsset = fileName
                 };
 
                 _content.StartLoading<TextureAsset>(fileName);
 
-                var visual = entity.GetComponent<VisualComponent>();
-                visual.Kind = VisualKind.DissolveTransition;
                 entity.RemoveComponent(originalTexture);
                 entity.AddComponent(transition);
 
                 var animation = new FloatAnimation
                 {
                     TargetComponent = transition,
-                    PropertyGetter = c => (c as DissolveTransition).Opacity,
-                    PropertySetter = (c, v) => (c as DissolveTransition).Opacity = v,
-                    InitialValue = 0.0f,
-                    FinalValue = 1.0f,
+                    PropertyGetter = c => (c as TransitionVisual).Opacity,
+                    PropertySetter = (c, v) => (c as TransitionVisual).Opacity = v,
+                    InitialValue = initialOpacity,
+                    FinalValue = finalOpacity,
                     Duration = duration
                 };
 
                 entity.AddComponent(animation);
             }
 
-            Interpreter.SuspendThread(CallingThreadId, duration);
+            Interpreter.SuspendThread(CurrentThread, duration);
         }
 
         public override void CreateDialogueBox(string entityName, int priority, NssCoordinate x, NssCoordinate y, int width, int height)
         {
-            base.CreateDialogueBox(entityName, priority, x, y, width, height);
+            var box = new DialogueBox
+            {
+                X = x.Value,
+                Y = y.Value,
+                Width = width,
+                Height = height
+            };
+
+            _entities.Create(entityName).WithComponent(box);
         }
 
         public override void Delay(TimeSpan delay)
         {
-            Interpreter.SuspendThread(CallingThreadId, delay);
+            Interpreter.SuspendThread(CurrentThread, delay);
         }
 
         public override void WaitForInput(TimeSpan timeout)
         {
-            Interpreter.SuspendThread(CallingThreadId, timeout);
+            Interpreter.SuspendThread(CurrentThread, timeout);
         }
 
         public override void SetVolume(string entityName, TimeSpan duration, int volume)
@@ -287,16 +314,14 @@ namespace ProjectHoppy
             }
         }
 
-        public override void WaitText(string id, TimeSpan time)
-        {
+        //public override void WaitText(string id, TimeSpan time)
+        //{
 
-        }
+        //}
 
         public override void DisplayDialogue(string pxmlString)
         {
-            Interpreter.SuspendThread(CallingThreadId);
-
-            //var visual = new VisualComponent { Kind = VisualKind.Text, X = 40, Y = 470 + 5, Width = 800 - 80, Height = 130, Priority = 30000, Color = RgbaValueF.White };
+            Interpreter.SuspendThread(CurrentThread);
 
             var root = PXmlBlock.Parse(pxmlString);
             var flattener = new PXmlTreeFlattener();
@@ -309,12 +334,7 @@ namespace ProjectHoppy
             text.Priority = 30000;
             text.Color = RgbaValueF.White;
 
-
-            //text.Animated = true;
-
-            _entities.Create("text", replace: true)
-                //.WithComponent(visual)
-                .WithComponent(text);
+            _entities.Create("text", replace: true).WithComponent(text);
         }
 
         public override void Request(string entityName, NssEntityAction action)

@@ -13,12 +13,12 @@ namespace ProjectHoppy.Text
             _builder = new StringBuilder();
         }
 
-        public GameText Flatten(PXmlContent treeRoot)
+        public GameTextVisual Flatten(PXmlContent treeRoot)
         {
             _builder.Clear();
             Visit(treeRoot);
 
-            return new GameText
+            return new GameTextVisual
             {
                 Text = _builder.ToString()
             };

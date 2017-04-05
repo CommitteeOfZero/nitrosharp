@@ -660,62 +660,6 @@ namespace SciAdvNet.NSScript
             AdvanceChar();
         }
 
-        //private void ScanText()
-        //{
-        //    while (true)
-        //    {
-        //        switch (PeekChar())
-        //        {
-        //            case '<':
-        //            case '{':
-        //            case EofCharacter:
-        //                return;
-
-        //            case '/':
-        //                if (PeekChar(1) == '/')
-        //                {
-        //                    return;
-        //                }
-        //                AdvanceChar();
-        //                break;
-
-        //            case '\r':
-        //            case '\n':
-        //                if (SyntaxFacts.IsNewLine(PeekChar(2)))
-        //                {
-        //                    // We have a blank line (\r\n\r\n).
-        //                    return;
-        //                }
-        //                else
-        //                {
-        //                    ScanEndOfLine();
-        //                }
-        //                break;
-
-        //            default:
-        //                AdvanceChar();
-        //                break;
-        //        }
-        //    }
-        //}
-
-        //private void ScanVerbatimText()
-        //{
-        //    char c;
-        //    while ((c = PeekChar()) != EofCharacter)
-        //    {
-        //        if (c == '<')
-        //        {
-        //            string peek = SourceText.Substring(Position, 6);
-        //            if (peek.Equals("</pre>", StringComparison.OrdinalIgnoreCase))
-        //            {
-        //                break;
-        //            }
-        //        }
-        //        AdvanceChar();
-        //    }
-        //}
-
         private string ScanSyntaxTrivia(bool isTrailing)
         {
             StartScanning();

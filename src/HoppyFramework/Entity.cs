@@ -70,7 +70,10 @@ namespace HoppyFramework
                     if (type.GetTypeInfo().IsAssignableFrom(pair.Key.GetTypeInfo()))
                     {
                         collection = pair.Value;
-                        return collection?.Count > 0 ? collection[0] : null;
+                        if (collection?.Count > 0)
+                        {
+                            return collection[0];
+                        }
                     }
                 }
             }

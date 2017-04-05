@@ -9,6 +9,7 @@ namespace SciAdvNet.NSScript
         public static Dictionary<string, NssRelativePosition> Positions { get; private set; }
         public static Dictionary<string, NssColor> Colors { get; private set; }
         public static Dictionary<string, NssEntityAction> Actions { get; private set; }
+        public static Dictionary<string, EasingFunction> EasingFunctions { get; private set; }
 
         public static void Preload()
         {
@@ -48,6 +49,16 @@ namespace SciAdvNet.NSScript
                 ["UnLock"] = NssEntityAction.Unlock,
                 ["Play"] = NssEntityAction.Play
             };
+
+            EasingFunctions = new Dictionary<string, EasingFunction>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["Axl1"] = EasingFunction.QuadraticEaseIn,
+                ["Axl2"] = EasingFunction.CubicEaseIn,
+                ["Axl3"] = EasingFunction.QuarticEaseIn,
+                ["Dxl1"] = EasingFunction.QuadraticEaseOut,
+                ["Dxl2"] = EasingFunction.CubicEaseOut,
+                ["Dxl3"] = EasingFunction.QuarticEaseOut
+            };
         }
 
         public static NssColor ParseColor(string colorString)
@@ -61,7 +72,6 @@ namespace SciAdvNet.NSScript
             {
                 return Colors[colorString];
             }
-
         }
     }
 }

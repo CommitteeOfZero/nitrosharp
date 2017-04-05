@@ -12,10 +12,19 @@ D2D_PS_ENTRY(main)
     float4 color = D2DGetInput(0);
     float mask = D2DGetInput(1).r;
 
-    // Adjust the range of the mask threshold so that 0 and 1 map all
-    // the way to fully on or off, even if the presence of feathering.
-    float adjustedMask = mask * (1 - feather) + feather / 2;
-	float alpha = saturate((opacity - adjustedMask) / feather + 0.5);
+	float alpha;
+	if (opacity >= mask)
+	{
+		alpha = 1.0;
+	}
+	else if (opacity + feather - mask >= 0)
+	{
+		alpha = 0.0;
+	}
+	else
+	{
+		alpha = saturate((opacity - mask) / feather);
+	}
 	
     return color * alpha;
 }

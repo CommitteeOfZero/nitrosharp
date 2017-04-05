@@ -10,9 +10,9 @@ namespace ProjectHoppy.Graphics.Effects
     [CustomEffect("Nigga", "ProjectHoppy", "SomeAnonDev")]
     [CustomEffectInput("Texture")]
     [CustomEffectInput("Mask")]
-    public class DissolveEffect : CustomEffectBase, DrawTransform
+    public class TransitionEffect : CustomEffectBase, DrawTransform
     {
-        private static readonly Guid EffectGuid = new Guid("ebbd02e0-755f-45ac-a1a8-d6bb729c4e46");
+        private static readonly Guid EffectGuid = Guid.NewGuid(); //new Guid("ebbd02e0-755f-45ac-a1a8-d6bb729c4e46");
         private DrawInformation _drawInformation;
         private EffectConstantBuffer _constants;
 
@@ -24,7 +24,7 @@ namespace ProjectHoppy.Graphics.Effects
             get => _constants.Opacity;
             set
             {
-                //if (_constants.Opacity != value)
+                if (_constants.Opacity != value)
                 {
                     _constants.Opacity = MathUtil.Clamp(value, 0.0f, 1.0f);
                     UpdateConstants();
@@ -43,14 +43,9 @@ namespace ProjectHoppy.Graphics.Effects
             }
         }
 
-        public override void SetGraph(TransformGraph transformGraph)
-        {
-            throw new NotImplementedException();
-        }
-
         public override void Initialize(EffectContext effectContext, TransformGraph transformGraph)
         {
-            var bytecode = File.ReadAllBytes("Shaders/dissolve.bin");
+            var bytecode = File.ReadAllBytes("Shaders/Transition.bin");
             effectContext.LoadPixelShader(EffectGuid, bytecode);
             transformGraph.SetSingleTransformNode(this);
         }

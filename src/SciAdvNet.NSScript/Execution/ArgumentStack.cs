@@ -62,5 +62,11 @@ namespace SciAdvNet.NSScript.Execution
             int ms = PopInt();
             return TimeSpan.FromMilliseconds(ms);
         }
+
+        public EasingFunction PopEasingFunction()
+        {
+            string str = PopString();
+            return string.IsNullOrEmpty(str) ? EasingFunction.None : PredefinedConstants.EasingFunctions[str];
+        }
     }
 }

@@ -36,7 +36,7 @@ namespace ProjectHoppy
             _nssInterpreter.BuiltInCallScheduled += OnBuiltInCallDispatched;
 
             //_nssInterpreter.CreateThread("nss/test.nss");
-            _nssInterpreter.CreateThread("nss/ch01_007_円山町殺人現場");
+           _nssInterpreter.CreateThread("nss/ch01_007_円山町殺人現場");
         }
 
         private void OnBuiltInCallDispatched(object sender, BuiltInFunctionCall call)
@@ -77,6 +77,8 @@ namespace ProjectHoppy
 
             var renderSystem = new RenderSystem(RenderContext, _content);
             Systems.RegisterSystem(renderSystem);
+
+            renderSystem.LoadSharedResources();
         }
 
         public override void Update(float deltaMilliseconds)

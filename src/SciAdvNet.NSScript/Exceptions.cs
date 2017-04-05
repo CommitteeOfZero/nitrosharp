@@ -2,20 +2,6 @@
 
 namespace SciAdvNet.NSScript
 {
-    internal static class ExceptionUtilities
-    {
-        public static NssParseException UnexpectedToken(string scriptName, string token)
-        {
-            return new NssParseException($"Parsing '{scriptName}' failed: unexpected token '{token}'");
-        }
-
-        public static NssRuntimeErrorException RuntimeError(string faultyModule, string message, Exception innerException)
-        {
-            string text = $"An error occured while executing '{faultyModule}': {message}";
-            return new NssRuntimeErrorException(text, faultyModule, innerException);
-        }
-    }
-
     public sealed class NssParseException : Exception
     {
         public NssParseException()

@@ -7,14 +7,14 @@ namespace ProjectHoppy.Graphics
     public class TypewriterAnimationProcessor : EntityProcessingSystem
     {
         public TypewriterAnimationProcessor()
-            : base(typeof(GameText))
+            : base(typeof(GameTextVisual))
         {
             
         }
 
         public override void Process(Entity entity, float deltaMilliseconds)
         {
-            var text = entity.GetComponent<GameText>();
+            var text = entity.GetComponent<GameTextVisual>();
             if (text.CurrentGlyphIndex >= text.Text.Length)
             {
                 return;

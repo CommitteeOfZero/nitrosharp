@@ -55,10 +55,8 @@ namespace SciAdvNet.NSScript
                         break;
 
                     default:
-                        Console.WriteLine(CurrentToken.Text);
                         EatToken();
                         break;
-                        //throw ExceptionUtilities.UnexpectedToken(FileName, CurrentToken.Text);
                 }
             }
 
@@ -86,7 +84,7 @@ namespace SciAdvNet.NSScript
         {
             if (CurrentToken.Kind != expectedKind)
             {
-                throw ExceptionUtilities.UnexpectedToken(FileName, CurrentToken.Text);
+                throw UnexpectedToken(FileName, CurrentToken.Text);
             }
 
             return _tokens[_tokenOffset++];
@@ -163,7 +161,7 @@ namespace SciAdvNet.NSScript
                         break;
 
                     default:
-                        throw ExceptionUtilities.UnexpectedToken(FileName, CurrentToken.Text);
+                        throw UnexpectedToken(FileName, CurrentToken.Text);
                 }
             }
 
@@ -396,7 +394,7 @@ namespace SciAdvNet.NSScript
                     return expr;
 
                 default:
-                    throw ExceptionUtilities.UnexpectedToken(FileName, CurrentToken.Text);
+                    throw UnexpectedToken(FileName, CurrentToken.Text);
             }
         }
 
@@ -436,7 +434,7 @@ namespace SciAdvNet.NSScript
                     return ExpressionFactory.False;
 
                 default:
-                    throw ExceptionUtilities.UnexpectedToken(FileName, CurrentToken.Text);
+                    throw UnexpectedToken(FileName, CurrentToken.Text);
             }
         }
 
@@ -672,6 +670,11 @@ namespace SciAdvNet.NSScript
             var sceneName = ParseIdentifier();
             EatStatementTerminator();
             return StatementFactory.CallScene(sceneName);
+        }
+
+        private static NssParseException UnexpectedToken(string scriptName, string token)
+        {
+            return new NssParseException($"Parsing '{scriptName}' failed: unexpected token '{token}'");
         }
     }
 }

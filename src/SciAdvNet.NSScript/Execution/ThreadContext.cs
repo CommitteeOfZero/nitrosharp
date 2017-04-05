@@ -4,7 +4,7 @@ using System.Collections.Immutable;
 
 namespace SciAdvNet.NSScript.Execution
 {
-    internal sealed class ThreadContext
+    public sealed class ThreadContext
     {
         private readonly VariableTable _globals;
         private readonly Stack<Frame> _frameStack;

@@ -5,7 +5,7 @@ using SharpDX.Mathematics.Interop;
 
 namespace ProjectHoppy.Graphics.RenderItems
 {
-    public class GameText : Visual
+    public class GameTextVisual : Visual
     {
         private static CustomTextRenderer s_textRenderer;
         private static TextFormat s_textFormat;
@@ -19,28 +19,29 @@ namespace ProjectHoppy.Graphics.RenderItems
         public int PrevGlyphIndex { get; set; }
         public float CurrentGlyphOpacity { get; set; }
 
-        public override void Render(DXRenderContext renderContext)
+        public override void Render(RenderSystem renderSystem)
         {
-            CreateStaticResources(renderContext);
+            var context = renderSystem.RenderContext;
+            CreateStaticResources(context);
 
             if (_layout == null)
             {
-                _layout = new TextLayout(renderContext.DWriteFactory, Text, s_textFormat, Width, Height);
+                _layout = new TextLayout(context.DWriteFactory, Text, s_textFormat, Width, Height);
             }
 
             s_transparentTextBrush.Color = Color;
             s_transparentTextBrush.Opacity = 0;
             s_currentGlyphBrush.Color = Color;
             s_currentGlyphBrush.Opacity = CurrentGlyphOpacity;
-            renderContext.ColorBrush.Color = Color;
-            renderContext.ColorBrush.Opacity = Opacity;
+            context.ColorBrush.Color = Color;
+            context.ColorBrush.Opacity = Opacity;
 
             //if (textComponent.Animated)
             {
                 if (CurrentGlyphIndex != PrevGlyphIndex)
                 {
                     _layout.SetDrawingEffect(s_currentGlyphBrush, new TextRange(CurrentGlyphIndex, 1));
-                    _layout.SetDrawingEffect(renderContext.ColorBrush, new TextRange(PrevGlyphIndex, 1));
+                    _layout.SetDrawingEffect(context.ColorBrush, new TextRange(PrevGlyphIndex, 1));
                     PrevGlyphIndex = CurrentGlyphIndex;
                 }
             }

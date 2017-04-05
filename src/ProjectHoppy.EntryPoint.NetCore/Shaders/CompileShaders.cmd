@@ -19,7 +19,7 @@ if not exist %INCLUDEPATH%\d2d1effecthelpers.hlsli (
     goto WRONG_COMMAND_PROMPT
 )
 
-call :COMPILE Dissolve.hlsl   || goto END
+call :COMPILE Transition.hlsl || goto END
 goto END
 
 :COMPILE
