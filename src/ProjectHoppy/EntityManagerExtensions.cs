@@ -12,6 +12,10 @@ namespace ProjectHoppy
             foreach (var pair in entityManager.AllEntities)
             {
                 string key = pair.Key.ToUpperInvariant();
+                if (key.Length < query.Length - 1)
+                {
+                    continue;
+                }
 
                 bool matches = true;
                 for (int i = 0; i < query.Length - 1; i++)

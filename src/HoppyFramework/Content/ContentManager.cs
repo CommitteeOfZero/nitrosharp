@@ -2,12 +2,15 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace HoppyFramework.Content
 {
     public class ContentManager
     {
+        private int _nbCurrentlyLoading;
+
         private readonly Dictionary<Type, ContentLoader> _contentLoaders;
         private readonly ConcurrentDictionary<string, object> _loadedItems;
 
@@ -24,6 +27,7 @@ namespace HoppyFramework.Content
         }
 
         public string RootDirectory { get; }
+        public bool IsBusy => _nbCurrentlyLoading > 0;
 
         public T Load<T>(AssetRef assetRef)
         {
@@ -57,6 +61,7 @@ namespace HoppyFramework.Content
 
         public void StartLoading<T>(AssetRef assetRef)
         {
+            Interlocked.Increment(ref _nbCurrentlyLoading);
             Task.Run(() =>
             {
                 try
@@ -66,6 +71,10 @@ namespace HoppyFramework.Content
                 catch
                 {
                     return null;
+                }
+                finally
+                {
+                    Interlocked.Decrement(ref _nbCurrentlyLoading);
                 }
             }).ContinueWith(x =>
             {

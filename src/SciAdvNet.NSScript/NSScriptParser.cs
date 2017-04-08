@@ -651,7 +651,10 @@ namespace SciAdvNet.NSScript
         {
             EatToken(SyntaxTokenKind.CaseKeyword);
             var label = ParseIdentifier();
-            EatToken(SyntaxTokenKind.ColonToken);
+            if (CurrentToken.Kind == SyntaxTokenKind.ColonToken)
+            {
+                EatToken();
+            }
             var body = ParseBlock();
             return StatementFactory.SelectSection(label, body);
         }

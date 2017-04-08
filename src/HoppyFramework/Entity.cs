@@ -52,6 +52,20 @@ namespace HoppyFramework
                 collection.Remove(component);
                 _manager.RaiseEntityUpdated(this);
             }
+            else
+            {
+                foreach (var pair in _components)
+                {
+                    if (type.GetTypeInfo().IsAssignableFrom(pair.Key.GetTypeInfo()))
+                    {
+                        collection = pair.Value;
+                        if (collection?.Remove(component) == true)
+                        {
+                            break;
+                        }
+                    }
+                }
+            }
         }
 
         public bool HasComponent<T>() where T : Component => GetComponent<T>() != null;
@@ -92,6 +106,11 @@ namespace HoppyFramework
                     yield return (T)component;
                 }
             }
+        }
+
+        public override string ToString()
+        {
+            return Name;
         }
     }
 }

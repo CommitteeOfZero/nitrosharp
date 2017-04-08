@@ -1,16 +1,17 @@
 ﻿using HoppyFramework;
 using System;
+using System.Numerics;
 
 namespace ProjectHoppy.Graphics
 {
-    public class FloatAnimation : Component
+    public class Vector2Animation : Component
     {
         public Component TargetComponent { get; set; }
-        public Func<Component, float> PropertyGetter { get; set; }
-        public Action<Component, float> PropertySetter { get; set; }
+        public Func<Component, Vector2> PropertyGetter { get; set; }
+        public Action<Component, Vector2> PropertySetter { get; set; }
 
-        public float InitialValue { get; set; }
-        public float FinalValue { get; set; }
+        public Vector2 InitialValue { get; set; }
+        public Vector2 FinalValue { get; set; }
         public TimeSpan Duration { get; set; }
         public TimingFunction TimingFunction { get; set; }
 

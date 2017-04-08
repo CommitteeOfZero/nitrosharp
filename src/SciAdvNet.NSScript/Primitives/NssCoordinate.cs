@@ -2,14 +2,13 @@
 {
     public struct NssCoordinate
     {
-        public NssCoordinate(int value, NssRelativePosition relativeTo = NssRelativePosition.Zero)
+        public NssCoordinate(int value, NssPositionOrigin relativeTo = NssPositionOrigin.Zero)
         {
             Value = value;
-            RelativeTo = relativeTo;
+            Origin = relativeTo;
         }
 
         public int Value { get; }
-        public NssRelativePosition RelativeTo { get; }
-
+        public NssPositionOrigin Origin { get; }
     }
 }

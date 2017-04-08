@@ -1,7 +1,6 @@
 ﻿using HoppyFramework.Graphics;
 using SharpDX.Direct2D1;
 using SharpDX.DirectWrite;
-using SharpDX.Mathematics.Interop;
 
 namespace ProjectHoppy.Graphics.RenderItems
 {
@@ -18,6 +17,20 @@ namespace ProjectHoppy.Graphics.RenderItems
         public int CurrentGlyphIndex { get; set; }
         public int PrevGlyphIndex { get; set; }
         public float CurrentGlyphOpacity { get; set; }
+
+        public GameTextVisual()
+        {
+
+        }
+
+        public void Reset()
+        {
+            _layout?.Dispose();
+            _layout = null;
+            PrevGlyphIndex = 0;
+            CurrentGlyphIndex = 0;
+            CurrentGlyphOpacity = 0.0f;
+        }
 
         public override void Render(RenderSystem renderSystem)
         {
@@ -46,8 +59,7 @@ namespace ProjectHoppy.Graphics.RenderItems
                 }
             }
 
-            var origin = new RawVector2(X, Y);
-            _layout.Draw(s_textRenderer, X, Y);
+            _layout.Draw(s_textRenderer, 0, 0);
         }
 
         private static void CreateStaticResources(DXRenderContext renderContext)

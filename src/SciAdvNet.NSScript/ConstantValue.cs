@@ -58,6 +58,14 @@ namespace SciAdvNet.NSScript
 
         public static ConstantValue operator +(ConstantValue a, ConstantValue b)
         {
+            if (a.Type == NssType.String)
+            {
+                if (a.As<string>() == "@" && b.Type == NssType.Integer)
+                {
+                    return new ConstantValue(b.RawValue, isRelative: true);
+                }
+            }
+
             if (a.Type != b.Type)
             {
                 ThrowInvalidBinary("+", a, b);

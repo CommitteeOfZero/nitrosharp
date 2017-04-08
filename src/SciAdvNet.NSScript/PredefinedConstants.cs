@@ -6,32 +6,32 @@ namespace SciAdvNet.NSScript
 {
     internal static class PredefinedConstants
     {
-        public static Dictionary<string, NssRelativePosition> Positions { get; private set; }
+        public static Dictionary<string, NssPositionOrigin> Positions { get; private set; }
         public static Dictionary<string, NssColor> Colors { get; private set; }
         public static Dictionary<string, NssEntityAction> Actions { get; private set; }
         public static Dictionary<string, EasingFunction> EasingFunctions { get; private set; }
 
         public static void Preload()
         {
-            Positions = new Dictionary<string, NssRelativePosition>(StringComparer.OrdinalIgnoreCase)
+            Positions = new Dictionary<string, NssPositionOrigin>(StringComparer.OrdinalIgnoreCase)
             {
-                ["InLeft"] = NssRelativePosition.InLeft,
-                ["OnLeft"] = NssRelativePosition.OnLeft,
-                ["OutLeft"] = NssRelativePosition.OutLeft,
-                ["Left"] = NssRelativePosition.Left,
-                ["InTop"] = NssRelativePosition.InTop,
-                ["OnTop"] = NssRelativePosition.OnTop,
-                ["OutTop"] = NssRelativePosition.OutTop,
-                ["InRight"] = NssRelativePosition.InRight,
-                ["OnRight"] = NssRelativePosition.OnRight,
-                ["OutRight"] = NssRelativePosition.OutRight,
-                ["Right"] = NssRelativePosition.Right,
-                ["InBottom"] = NssRelativePosition.InBottom,
-                ["OnBottom"] = NssRelativePosition.OnBottom,
-                ["OutBottom"] = NssRelativePosition.OutBottom,
-                ["Bottom"] = NssRelativePosition.Bottom,
-                ["Center"] = NssRelativePosition.Center,
-                ["Middle"] = NssRelativePosition.Center
+                ["InLeft"] = NssPositionOrigin.InLeft,
+                ["OnLeft"] = NssPositionOrigin.OnLeft,
+                ["OutLeft"] = NssPositionOrigin.OutLeft,
+                ["Left"] = NssPositionOrigin.Left,
+                ["InTop"] = NssPositionOrigin.InTop,
+                ["OnTop"] = NssPositionOrigin.OnTop,
+                ["OutTop"] = NssPositionOrigin.OutTop,
+                ["InRight"] = NssPositionOrigin.InRight,
+                ["OnRight"] = NssPositionOrigin.OnRight,
+                ["OutRight"] = NssPositionOrigin.OutRight,
+                ["Right"] = NssPositionOrigin.Right,
+                ["InBottom"] = NssPositionOrigin.InBottom,
+                ["OnBottom"] = NssPositionOrigin.OnBottom,
+                ["OutBottom"] = NssPositionOrigin.OutBottom,
+                ["Bottom"] = NssPositionOrigin.Bottom,
+                ["Center"] = NssPositionOrigin.Center,
+                ["Middle"] = NssPositionOrigin.Center
             };
 
             Colors = new Dictionary<string, NssColor>(StringComparer.OrdinalIgnoreCase)

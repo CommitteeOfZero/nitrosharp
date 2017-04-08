@@ -7,6 +7,13 @@ namespace SciAdvNet.NSScript.Execution
         public ThreadContext CurrentThread { get; internal set; }
         public DialogueBlock CurrentDialogueBlock { get; internal set; }
 
+        public event EventHandler<DialogueBlock> EnteredDialogueBlock;
+
+        internal void RaiseEnteredDialogueBlock(DialogueBlock block)
+        {
+            EnteredDialogueBlock?.Invoke(this, block);
+        }
+
         public virtual void DisplayDialogue(string pxmlString)
         {
         }
@@ -117,7 +124,7 @@ namespace SciAdvNet.NSScript.Execution
         {
         }
 
-        public virtual void Zoom(string entityName, TimeSpan duration, int scaleX, int scaleY, EasingFunction easingFunction, bool wait)
+        public virtual void Zoom(string entityName, TimeSpan duration, Rational scaleX, Rational scaleY, EasingFunction easingFunction, bool wait)
         {
         }
 

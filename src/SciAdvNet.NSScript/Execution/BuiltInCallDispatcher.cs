@@ -36,8 +36,15 @@ namespace SciAdvNet.NSScript.Execution
                 ["DrawTransition"] = DrawTransition,
                 ["DisplayDialogue"] = DisplayDialogue,
 
-                ["RemainTime"] = RemainTime
+                ["RemainTime"] = RemainTime,
+                ["ImageHorizon"] = ImageHorizon
             };
+        }
+
+        private void ImageHorizon(ArgumentStack args)
+        {
+            string entityName = args.PopString();
+            _nssImpl.CurrentThread.CurrentFrame.EvaluationStack.Push(new ConstantValue(1200));
         }
 
         public void DispatchBuiltInCall(BuiltInFunctionCall functionCall)
@@ -177,8 +184,8 @@ namespace SciAdvNet.NSScript.Execution
         {
             string entityName = args.PopString();
             TimeSpan duration = args.PopTimeSpan();
-            int scaleX = args.PopInt();
-            int scaleY = args.PopInt();
+            var scaleX = new Rational(args.PopInt(), 1000);
+            var scaleY = new Rational(args.PopInt(), 1000);
             EasingFunction easingFunction = args.PopEasingFunction();
             bool wait = args.PopBool();
 

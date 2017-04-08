@@ -8,7 +8,7 @@
             context.ColorBrush.Color = Color;
             context.ColorBrush.Opacity = Opacity;
 
-            var dest = new SharpDX.RectangleF(X, Y, Width, Height);
+            var dest = new SharpDX.RectangleF(0, 0, Width, Height);
             context.DeviceContext.FillRectangle(dest, context.ColorBrush);
         }
     }

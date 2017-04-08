@@ -15,8 +15,9 @@ namespace ProjectHoppy.Graphics.RenderItems
 
             if (content.TryGetAsset<TextureAsset>(AssetRef, out var texture))
             {
-                var dest = new RawRectangleF(X, Y, texture.Width, texture.Height);
-                canvas.DrawBitmap(texture, dest, Opacity, BitmapInterpolationMode.Linear);
+                Width = texture.Width;
+                Height = texture.Height;
+                canvas.DrawBitmap(texture, Opacity, InterpolationMode.Anisotropic);
             }
         }
     }

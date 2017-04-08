@@ -32,11 +32,17 @@ namespace ProjectHoppy
 
             _n2system = new N2System(Entities);
             _nssInterpreter = new NSScriptInterpreter(scriptLocator, _n2system);
-            _n2system.Interpreter = _nssInterpreter;
             _nssInterpreter.BuiltInCallScheduled += OnBuiltInCallDispatched;
+            _nssInterpreter.EnteredFunction += OnEnteredFunction;
 
-            //_nssInterpreter.CreateThread("nss/test.nss");
-           _nssInterpreter.CreateThread("nss/ch01_007_円山町殺人現場");
+            _nssInterpreter.CreateThread("nss/test.nss");
+            //_nssInterpreter.CreateThread("nss/ch01_007_円山町殺人現場");
+            //_nssInterpreter.CreateThread("nss/ch01_019_１０月２日木.nss");
+        }
+
+        private void OnEnteredFunction(object sender, SciAdvNet.NSScript.Function function)
+        {
+            _interpreterLog.LogCritical($"Entered function {function.Name.SimplifiedName}");
         }
 
         private void OnBuiltInCallDispatched(object sender, BuiltInFunctionCall call)
@@ -83,14 +89,16 @@ namespace ProjectHoppy
 
         public override void Update(float deltaMilliseconds)
         {
-            var timeQuota = TimeSpan.MaxValue;
-            TimeSpan elapsed = _nssInterpreter.Run(timeQuota);
-
-            if (elapsed - timeQuota > TimeSpan.FromMilliseconds(4))
+            //if (!_content.IsBusy)
             {
-                _interpreterLog.LogCritical(666, $"Interpreter execution time quota exceeded " +
-                    $"(quota: {timeQuota.TotalMilliseconds} ms; elapsed: {elapsed.TotalMilliseconds} ms).");
+                _nssInterpreter.Run(TimeSpan.MaxValue);
             }
+
+            //if (elapsed - timeQuota > TimeSpan.FromMilliseconds(4))
+            //{
+            //    _interpreterLog.LogCritical(666, $"Interpreter execution time quota exceeded " +
+            //        $"(quota: {timeQuota.TotalMilliseconds} ms; elapsed: {elapsed.TotalMilliseconds} ms).");
+            //}
 
             base.Update(deltaMilliseconds);
         }

@@ -1,6 +1,6 @@
 ﻿namespace SciAdvNet.NSScript
 {
-    public enum NssRelativePosition
+    public enum NssPositionOrigin
     {
         Zero,
         Current,

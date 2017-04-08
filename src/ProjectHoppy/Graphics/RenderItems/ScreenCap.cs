@@ -15,7 +15,7 @@ namespace ProjectHoppy.Graphics.RenderItems
         {
             var canvas = renderSystem.RenderContext.DeviceContext;
             var bitmap = renderSystem.SharedResources.ScreenCapBitmap;
-            var dest = new RawRectangleF(X, Y, bitmap.Size.Width, bitmap.Size.Height);
+            var dest = new RawRectangleF(0, 0, bitmap.Size.Width, bitmap.Size.Height);
             canvas.DrawBitmap(bitmap, dest, Opacity, BitmapInterpolationMode.Linear);
         }
     }

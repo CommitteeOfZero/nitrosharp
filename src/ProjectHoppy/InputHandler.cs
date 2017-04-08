@@ -16,7 +16,7 @@ namespace ProjectHoppy
         {
             if (Mouse.IsButtonDownThisFrame(MouseButton.Left))
             {
-                _n2system.Interpreter.ResumeThread(_n2system.CurrentThread);
+                _n2system.CurrentThread.Resume();
             }
         }
     }

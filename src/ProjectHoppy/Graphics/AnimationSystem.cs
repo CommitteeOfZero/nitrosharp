@@ -1,5 +1,7 @@
 ﻿using HoppyFramework;
 using System;
+using System.Diagnostics;
+using System.Numerics;
 
 namespace ProjectHoppy.Graphics
 {
@@ -22,23 +24,47 @@ namespace ProjectHoppy.Graphics
             {
                 if (animation.IsEnabled)
                 {
-                    float currentValue = animation.PropertyGetter(animation.TargetComponent);
-                    bool increasing = animation.FinalValue > animation.InitialValue;
-
-                    float change = animation.FinalValue - animation.InitialValue;
-                    float progress = animation.Elapsed / (float)animation.Duration.TotalMilliseconds;
-                    currentValue = change * Factor(progress, animation.TimingFunction);
-
-                    if (increasing && currentValue >= animation.FinalValue || !increasing && currentValue <= animation.FinalValue)
-                    {
-                        currentValue = animation.FinalValue;
-                        animation.IsEnabled = false;
-                    }
-
-                    animation.PropertySetter(animation.TargetComponent, currentValue);
+                    float newValue = AdvanceAnimation(animation.InitialValue, animation.FinalValue, animation.Elapsed, animation.Duration, animation.TimingFunction);                    
+                    animation.PropertySetter(animation.TargetComponent, newValue);
                     animation.Elapsed += deltaMilliseconds;
+
+                    if (newValue == animation.FinalValue)
+                    {
+                        animation.IsEnabled = false;
+                        animation.RaiseCompleted();
+                    }
                 }
             }
+
+            foreach (var animation in entity.GetComponents<Vector2Animation>())
+            {
+                if (animation.IsEnabled)
+                {
+                    Vector2 newValue = AdvanceAnimation(animation.InitialValue, animation.FinalValue, animation.Elapsed, animation.Duration, animation.TimingFunction);
+                    animation.PropertySetter(animation.TargetComponent, newValue);
+                    animation.Elapsed += deltaMilliseconds;
+
+                    if (newValue == animation.FinalValue)
+                    {
+                        animation.IsEnabled = false;
+                        animation.RaiseCompleted();
+                    }
+                }
+            }
+        }
+
+        private static float AdvanceAnimation(float initialValue, float finalValue, float elapsed, TimeSpan duration, TimingFunction timingFunction)
+        {
+            float change = finalValue - initialValue;
+            float progress = SharpDX.MathUtil.Clamp(elapsed / (float)duration.TotalMilliseconds, 0.0f, 1.0f);
+            return initialValue + change * Factor(progress, timingFunction);
+        }
+
+        private static Vector2 AdvanceAnimation(Vector2 initialValue, Vector2 finalValue, float elapsed, TimeSpan duration, TimingFunction timingFunction)
+        {
+            Vector2 change = finalValue - initialValue;
+            float progress = SharpDX.MathUtil.Clamp(elapsed / (float)duration.TotalMilliseconds, 0.0f, 1.0f);
+            return initialValue + change * Factor(progress, timingFunction);
         }
 
         private static float Factor(float progress, TimingFunction function)

@@ -1,5 +1,4 @@
-﻿using ProjectHoppy.Graphics.RenderItems;
-using SciAdvNet.NSScript.PXml;
+﻿using SciAdvNet.NSScript.PXml;
 using System.Text;
 
 namespace ProjectHoppy.Text
@@ -13,15 +12,12 @@ namespace ProjectHoppy.Text
             _builder = new StringBuilder();
         }
 
-        public GameTextVisual Flatten(PXmlContent treeRoot)
+        public string Flatten(PXmlContent treeRoot)
         {
             _builder.Clear();
             Visit(treeRoot);
 
-            return new GameTextVisual
-            {
-                Text = _builder.ToString()
-            };
+            return _builder.ToString();
         }
 
         public override void VisitContent(PXmlContent content)

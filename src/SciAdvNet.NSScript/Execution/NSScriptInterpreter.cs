@@ -83,7 +83,7 @@ namespace SciAdvNet.NSScript.Execution
         public void CreateThread(Module module, Statement entryPoint)
         {
             uint id = _nextThreadId++;
-            var thread = new ThreadContext(id, module, entryPoint, Globals);
+            var thread = new ThreadContext(id, this, module, entryPoint, Globals);
             _threads.Add(thread);
             _activeThreads.Add(thread);
         }
@@ -154,6 +154,7 @@ namespace SciAdvNet.NSScript.Execution
         private void DispatchBuiltInCall(BuiltInFunctionCall call)
         {
             BuiltInCallScheduled?.Invoke(this, call);
+
             _nssImplementation.CurrentThread = _currentThread;
             _nssImplementation.CurrentDialogueBlock = _currentDialogueBlock;
 
@@ -257,6 +258,7 @@ namespace SciAdvNet.NSScript.Execution
             currentFrame.Globals["Pretextnumber"] = new ConstantValue("xxx");
 
             _currentDialogueBlock = dialogueBlock;
+            _nssImplementation.RaiseEnteredDialogueBlock(dialogueBlock);
         }
 
         private void HandlePXmlString(PXmlString pxmlString)
@@ -349,6 +351,7 @@ namespace SciAdvNet.NSScript.Execution
             }
 
             _currentThread.PushContinuation(target.Body, arguments);
+            EnteredFunction?.Invoke(this, target);
         }
 
         private void ScheduleBuiltInCall(FunctionCall functionCall)
@@ -396,21 +399,9 @@ namespace SciAdvNet.NSScript.Execution
             Status = NSScriptInterpreterStatus.Suspended;
         }
 
-        public void SuspendThread(uint threadId)
-        {
-            SuspendThread(threadId, TimeSpan.MaxValue);
-        }
-
-        public void SuspendThread(ThreadContext thread)
-        {
-            SuspendThread(thread, TimeSpan.MaxValue);
-        }
-
         public void SuspendThread(ThreadContext thread, TimeSpan timeout)
         {
-            thread.Suspend(_timer.Elapsed, timeout);
-            _activeThreads.Remove(thread);
-            _suspendedThreads.Add(thread);
+            SuspendThreadCore(thread, timeout);
         }
 
         public void SuspendThread(uint threadId, TimeSpan timeout)
@@ -421,14 +412,32 @@ namespace SciAdvNet.NSScript.Execution
             }
 
             var thread = _threads[(int)threadId];
-            SuspendThread(thread, timeout);
+            SuspendThreadCore(thread, timeout);
         }
 
+        public void SuspendThread(uint threadId)
+        {
+            SuspendThread(threadId, TimeSpan.MaxValue);
+        }
+
+        public void SuspendThread(ThreadContext thread)
+        {
+            SuspendThread(thread, TimeSpan.MaxValue);
+        }
+
+        internal void SuspendThreadCore(ThreadContext thread, TimeSpan timeout)
+        {
+            thread.SuspensionTime = _timer.Elapsed;
+            thread.SleepTimeout = timeout;
+            thread.Suspended = true;
+
+            _activeThreads.Remove(thread);
+            _suspendedThreads.Add(thread);
+        }
+ 
         public void ResumeThread(ThreadContext thread)
         {
-            thread.Resume();
-            _activeThreads.Add(thread);
-            _suspendedThreads.Remove(thread);
+            ResumeThreadCore(thread);
         }
 
         public void ResumeThread(uint threadId)
@@ -439,7 +448,14 @@ namespace SciAdvNet.NSScript.Execution
             }
 
             var thread = _threads[(int)threadId];
-            ResumeThread(thread);
-        }  
+            ResumeThreadCore(thread);
+        }
+
+        internal void ResumeThreadCore(ThreadContext thread)
+        {
+            thread.Suspended = false;
+            _activeThreads.Add(thread);
+            _suspendedThreads.Remove(thread);
+        }
     }
 }

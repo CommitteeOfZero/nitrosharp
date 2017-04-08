@@ -8,31 +8,80 @@ using SciAdvNet.NSScript;
 using HoppyFramework.Content;
 using HoppyFramework;
 using ProjectHoppy.Graphics.RenderItems;
+using System.Numerics;
 
 namespace ProjectHoppy
 {
     public class N2System : NssImplementation
     {
+        private System.Drawing.Size _viewport = new System.Drawing.Size(800, 600);
         private ContentManager _content;
         private readonly EntityManager _entities;
 
         private DialogueBox _currentDialogueBox;
+        private Entity _textEntity;
 
         public N2System(EntityManager entities)
         {
             _entities = entities;
+            EnteredDialogueBlock += OnEnteredDialogueBlock;
+        }
+
+        private Vector2 Position(NssCoordinate x, NssCoordinate y, Vector2 current, int width, int height)
+        {
+            float absoluteX = NssToAbsoluteCoordinate(x, current.X, width, _viewport.Width);
+            float absoluteY = NssToAbsoluteCoordinate(y, current.Y, height, _viewport.Height);
+
+            return new Vector2(absoluteX, absoluteY);
+        }
+
+        private void OnEnteredDialogueBlock(object sender, DialogueBlock block)
+        {
+            if (_textEntity != null)
+            {
+                _entities.Remove(_textEntity);
+            }
+
+            _currentDialogueBox = _entities.SafeGet(block.BoxName)?.GetComponent<DialogueBox>();
+            var textVisual = new GameTextVisual
+            {
+                Position = _currentDialogueBox.Position,
+                Width = _currentDialogueBox.Width,
+                Height = _currentDialogueBox.Height,
+                IsEnabled = false
+            };
+
+            _textEntity = _entities.Create(block.Identifier, replace: true).WithComponent(textVisual);
+        }
+
+        public override void DisplayDialogue(string pxmlString)
+        {
+            CurrentThread.Suspend();
+
+            var root = PXmlBlock.Parse(pxmlString);
+            var flattener = new PXmlTreeFlattener();
+
+            string plainText = flattener.Flatten(root);
+
+            var textVisual = _entities.SafeGet(CurrentDialogueBlock.Identifier)?.GetComponent<GameTextVisual>();
+            if (textVisual != null)
+            {
+                textVisual.Reset();
+
+                textVisual.Text = plainText;
+                textVisual.Priority = 30000;
+                textVisual.Color = RgbaValueF.White;
+                textVisual.IsEnabled = true;
+            }
         }
 
         public void SetContent(ContentManager content) => _content = content;
-
-        public NSScriptInterpreter Interpreter { get; internal set; }
 
         public override void AddRectangle(string entityName, int priority, NssCoordinate x, NssCoordinate y, int width, int height, NssColor color)
         {
             var rect = new RectangleVisual
             {
-                X = x.Value,
-                Y = y.Value,
+                Position = Position(x, y, Vector2.Zero, width, height),
                 Width = width,
                 Height = height,
                 Color = new RgbaValueF(color.R / 255.0f, color.G / 255.0f, color.B / 255.0f, 1.0f),
@@ -44,29 +93,39 @@ namespace ProjectHoppy
 
         public override void AddTexture(string entityName, int priority, NssCoordinate x, NssCoordinate y, string fileOrEntityName)
         {
+            int w = _viewport.Width, h = _viewport.Height;
+            TextureAsset ass;
+            try
+            {
+                ass = _content.Load<TextureAsset>(fileOrEntityName);
+                w = (int)ass.Width;
+                h = (int)ass.Height;
+            }
+            catch { }
+
+            var position = Position(x, y, Vector2.Zero, w, h);
             if (fileOrEntityName != "SCREEN")
             {
-                _content.StartLoading<TextureAsset>(fileOrEntityName);
                 var visual = new TextureVisual
                 {
-                    X = x.Value,
-                    Y = y.Value,
+                    Position = position,
                     Priority = priority,
-                    AssetRef = fileOrEntityName
+                    AssetRef = fileOrEntityName,
+                    Width = w,
+                    Height = h
                 };
 
-                var entity = _entities.Create(entityName).WithComponent(visual);
+                var entity = _entities.Create(entityName, replace: true).WithComponent(visual);
             }
             else
             {
                 var screencap = new ScreenCap
                 {
-                    X = x.Value,
-                    Y = y.Value,
+                    Position = position,
                     Priority = priority,
                 };
 
-                var entity = _entities.Create(entityName).WithComponent(screencap);
+                var entity = _entities.Create(entityName, replace: true).WithComponent(screencap);
             }
         }
 
@@ -127,9 +186,9 @@ namespace ProjectHoppy
                 FadeCore(entity, duration, opacity, wait);
             }
 
-            if (duration > TimeSpan.Zero)
+            if (duration > TimeSpan.Zero && wait)
             {
-                Interpreter.SuspendThread(CurrentThread, duration);
+                CurrentThread.Suspend(duration);
             }
         }
 
@@ -137,7 +196,7 @@ namespace ProjectHoppy
         {
             if (entity != null)
             {
-                float adjustedOpacity = opacity.Rebase(1);
+                float adjustedOpacity = opacity.Rebase(1.0f);
                 if (duration > TimeSpan.Zero)
                 {
                     var visual = entity.GetComponent<Visual>();
@@ -148,7 +207,7 @@ namespace ProjectHoppy
                         PropertySetter = (c, v) => (c as Visual).Opacity = v,
                         Duration = duration,
                         InitialValue = visual.Opacity,
-                        FinalValue = adjustedOpacity,
+                        FinalValue = adjustedOpacity
                     };
 
                     entity.AddComponent(animation);
@@ -168,21 +227,22 @@ namespace ProjectHoppy
                 entityName = entityName.Substring(1);
             }
 
-            initialOpacity = initialOpacity.Rebase(1);
-            finalOpacity = finalOpacity.Rebase(1);
+            initialOpacity = initialOpacity.Rebase(1.0f);
+            finalOpacity = finalOpacity.Rebase(1.0f);
 
             foreach (var entity in _entities.WildcardQuery(entityName))
             {
-                var originalTexture = entity.GetComponent<TextureVisual>();
+                var sourceVisual = entity.GetComponent<Visual>();
                 var transition = new TransitionVisual
                 {
-                    SourceAsset = originalTexture.AssetRef,
-                    MaskAsset = fileName
+                    Source = sourceVisual,
+                    MaskAsset = fileName,
+                    Priority = sourceVisual.Priority
                 };
 
                 _content.StartLoading<TextureAsset>(fileName);
 
-                entity.RemoveComponent(originalTexture);
+                entity.RemoveComponent(sourceVisual);
                 entity.AddComponent(transition);
 
                 var animation = new FloatAnimation
@@ -196,17 +256,21 @@ namespace ProjectHoppy
                 };
 
                 entity.AddComponent(animation);
+                animation.Completed += (o, e) =>
+                {
+                    entity.RemoveComponent(transition);
+                    entity.AddComponent(sourceVisual);
+                };
             }
 
-            Interpreter.SuspendThread(CurrentThread, duration);
+            CurrentThread.Suspend(duration);
         }
 
         public override void CreateDialogueBox(string entityName, int priority, NssCoordinate x, NssCoordinate y, int width, int height)
         {
             var box = new DialogueBox
             {
-                X = x.Value,
-                Y = y.Value,
+                Position = Position(x, y, Vector2.Zero, width, height),
                 Width = width,
                 Height = height
             };
@@ -216,12 +280,12 @@ namespace ProjectHoppy
 
         public override void Delay(TimeSpan delay)
         {
-            Interpreter.SuspendThread(CurrentThread, delay);
+            CurrentThread.Suspend(delay);
         }
 
         public override void WaitForInput(TimeSpan timeout)
         {
-            Interpreter.SuspendThread(CurrentThread, timeout);
+            CurrentThread.Suspend(timeout);
         }
 
         public override void SetVolume(string entityName, TimeSpan duration, int volume)
@@ -314,27 +378,118 @@ namespace ProjectHoppy
             }
         }
 
-        //public override void WaitText(string id, TimeSpan time)
-        //{
-
-        //}
-
-        public override void DisplayDialogue(string pxmlString)
+        public override void Move(string entityName, TimeSpan duration, NssCoordinate x, NssCoordinate y, EasingFunction easingFunction, bool wait)
         {
-            Interpreter.SuspendThread(CurrentThread);
+            if (entityName.Length > 0 && entityName[0] == '@')
+            {
+                entityName = entityName.Substring(1);
+            }
 
-            var root = PXmlBlock.Parse(pxmlString);
-            var flattener = new PXmlTreeFlattener();
+            if (IsWildcardQuery(entityName))
+            {
+                foreach (var entity in _entities.WildcardQuery(entityName))
+                {
+                    MoveCore(entity, duration, x, y, easingFunction, wait);
+                }
+            }
+            else
+            {
+                var entity = _entities.SafeGet(entityName);
+                MoveCore(entity, duration, x, y, easingFunction, wait);
+            }
 
-            var text = flattener.Flatten(root);
-            text.X = 40;
-            text.Y = 475;
-            text.Width = 800 - 80;
-            text.Height = 130;
-            text.Priority = 30000;
-            text.Color = RgbaValueF.White;
+            if (duration > TimeSpan.Zero && wait)
+            {
+                CurrentThread.Suspend(duration);
+            }
+        }
 
-            _entities.Create("text", replace: true).WithComponent(text);
+        private void MoveCore(Entity entity, TimeSpan duration, NssCoordinate x, NssCoordinate y, EasingFunction easingFunction, bool wait)
+        {
+            if (entity != null)
+            {
+                var visual = entity.GetComponent<Visual>();
+                var dst = Position(x, y, visual.Position, (int)visual.Width, (int)visual.Height);
+
+                if (duration > TimeSpan.Zero)
+                {
+                    var animation = new Vector2Animation
+                    {
+                        TargetComponent = visual,
+                        PropertyGetter = c => (c as Visual).Position,
+                        PropertySetter = (c, v) => (c as Visual).Position = v,
+                        Duration = duration,
+                        InitialValue = visual.Position,
+                        FinalValue = dst
+                    };
+                }
+                else
+                {
+                    visual.Position = dst;
+                }
+            }
+        }
+
+        public override void Zoom(string entityName, TimeSpan duration, Rational scaleX, Rational scaleY, EasingFunction easingFunction, bool wait)
+        {
+            if (entityName.Length > 0 && entityName[0] == '@')
+            {
+                entityName = entityName.Substring(1);
+            }
+
+            if (IsWildcardQuery(entityName))
+            {
+                foreach (var entity in _entities.WildcardQuery(entityName))
+                {
+                    ZoomCore(entity, duration, scaleX, scaleY, easingFunction, wait);
+                }
+            }
+            else
+            {
+                var entity = _entities.SafeGet(entityName);
+                ZoomCore(entity, duration, scaleX, scaleY, easingFunction, wait);
+            }
+
+            if (duration > TimeSpan.Zero && wait)
+            {
+                CurrentThread.Suspend(duration);
+            }
+        }
+
+        private void ZoomCore(Entity entity, TimeSpan duration, Rational scaleX, Rational scaleY, EasingFunction easingFunction, bool wait)
+        {
+            if (entity != null)
+            {
+                var visual = entity.GetComponent<Visual>();
+                scaleX = scaleX.Rebase(1.0f);
+                scaleY = scaleY.Rebase(1.0f);
+
+                float centerX = (visual.Position.X + visual.Width) / 2.0f;
+                float centerY = (visual.Position.Y + visual.Height) / 2.0f;
+                var scaleOrigin = new Vector2(centerX, centerY);
+
+                visual.ScaleOrigin = scaleOrigin;
+                if (duration > TimeSpan.Zero)
+                {
+                    visual.Scale = new Vector2(0, 0);
+                    var animation = new Vector2Animation
+                    {
+                        TargetComponent = visual,
+                        PropertyGetter = c => (c as Visual).Scale,
+                        PropertySetter = (c, v) => (c as Visual).Scale = v,
+                        Duration = duration,
+                        InitialValue = visual.Scale,
+                        FinalValue = new Vector2(scaleX, scaleY),
+                        TimingFunction = (TimingFunction)easingFunction
+                    };
+
+                    entity.AddComponent(animation);
+                }
+                else
+                {
+                    visual.Scale = new Vector2(scaleX, scaleY);
+                }
+            }
         }
 
         public override void Request(string entityName, NssEntityAction action)
@@ -374,6 +529,25 @@ namespace ProjectHoppy
                         entity.Locked = false;
                         break;
                 }
+            }
+        }
+
+        private static float NssToAbsoluteCoordinate(NssCoordinate coordinate, float currentValue, float objectDimension, float viewportDimension)
+        {
+            switch (coordinate.Origin)
+            {
+                case NssPositionOrigin.Zero:
+                default:
+                    return coordinate.Value;
+
+                case NssPositionOrigin.Current:
+                    return currentValue + coordinate.Value;
+
+                case NssPositionOrigin.Center:
+                    return viewportDimension / 2.0f - objectDimension / 2.0f;
+
+                case NssPositionOrigin.InBottom:
+                    return viewportDimension - objectDimension;
             }
         }
     }

@@ -2,6 +2,7 @@
 using HoppyFramework.Audio;
 using HoppyFramework.Content;
 using System.Collections.Generic;
+using System.IO;
 
 namespace ProjectHoppy
 {
@@ -27,7 +28,14 @@ namespace ProjectHoppy
         private void OnEntityAdded(object sender, Entity e)
         {
             var sound = e.GetComponent<SoundComponent>();
-            var stream = _content.Load<AudioStream>(sound.AudioFile + ".ogg");
+
+            string path = Path.Combine(_content.RootDirectory, sound.AudioFile);
+            if (!File.Exists(path))
+            {
+                path += ".ogg";
+            }
+
+            var stream = _content.Load<AudioStream>(path);
             var audioSource = GetFreeAudioSource();
             audioSource.SetStream(stream);
 

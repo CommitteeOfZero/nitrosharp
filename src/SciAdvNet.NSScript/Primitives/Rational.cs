@@ -4,21 +4,26 @@ namespace SciAdvNet.NSScript
 {
     public struct Rational
     {
-        public Rational(int numerator, int denominator)
+        public Rational(float numerator, float denominator)
         {
             Numerator = numerator;
             Denominator = denominator;
         }
 
-        public int Numerator { get; }
-        public int Denominator { get; }
+        public float Numerator { get; }
+        public float Denominator { get; }
 
-        public Rational Rebase(int newBase)
+        public Rational Rebase(float newBase)
         {
-            int newNumerator = (int)Math.Round((float)Numerator * newBase / Denominator);
+            float newNumerator = Numerator * newBase / Denominator;
             return new Rational(newNumerator, newBase);
         }
 
-        public static implicit operator float(Rational rational) => (float)rational.Numerator / rational.Denominator;
+        public static implicit operator float(Rational rational) => rational.Numerator / rational.Denominator;
+
+        public override string ToString()
+        {
+            return $"{Numerator} / {Denominator}";
+        }
     }
 }

@@ -47,7 +47,20 @@ namespace ProjectHoppy.Graphics
 
         public override void Process(Entity entity, float deltaMilliseconds)
         {
-            entity.GetComponent<RenderItem>().Render(this);
+            var canvas = RenderContext.DeviceContext;
+            var renderItem = entity.GetComponent<RenderItem>();
+            if (renderItem.IsEnabled)
+            {
+                var originalTransform = canvas.Transform;
+
+                var scale = renderItem.Scale;
+                var scaleOrigin = new SharpDX.Vector2(renderItem.ScaleOrigin.X, renderItem.ScaleOrigin.Y);
+                canvas.Transform *= SharpDX.Matrix3x2.Scaling(scale.X, scale.Y, scaleOrigin);
+                canvas.Transform *= SharpDX.Matrix3x2.Translation(renderItem.Position.X, renderItem.Position.Y);
+
+                renderItem.Render(this);
+                canvas.Transform = originalTransform;
+            }
         }
 
         public void LoadSharedResources()

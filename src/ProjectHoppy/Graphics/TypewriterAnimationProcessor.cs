@@ -9,13 +9,13 @@ namespace ProjectHoppy.Graphics
         public TypewriterAnimationProcessor()
             : base(typeof(GameTextVisual))
         {
-            
+
         }
 
         public override void Process(Entity entity, float deltaMilliseconds)
         {
             var text = entity.GetComponent<GameTextVisual>();
-            if (text.CurrentGlyphIndex >= text.Text.Length)
+            if (text.CurrentGlyphIndex >= text.Text?.Length || string.IsNullOrEmpty(text.Text))
             {
                 return;
             }

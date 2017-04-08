@@ -6,12 +6,14 @@ namespace SciAdvNet.NSScript.Execution
 {
     public sealed class ThreadContext
     {
+        private readonly NSScriptInterpreter _interpreter;
         private readonly VariableTable _globals;
         private readonly Stack<Frame> _frameStack;
 
-        public ThreadContext(uint id, Module module, Statement target, VariableTable globals)
+        internal ThreadContext(uint id, NSScriptInterpreter interpreter, Module module, Statement target, VariableTable globals)
         {
             Id = id;
+            _interpreter = interpreter;
             CurrentModule = module;
             _globals = globals;
             _frameStack = new Stack<Frame>();
@@ -24,13 +26,13 @@ namespace SciAdvNet.NSScript.Execution
         public Frame CurrentFrame => _frameStack.Peek();   
 
         public SyntaxNode CurrentNode => CurrentFrame.Statements[CurrentFrame.Position];
-        public bool Suspended { get; private set; }
+        public bool Suspended { get; internal set; }
         public bool DoneExecuting => _frameStack.Count == 0;
 
-        public TimeSpan SleepTimeout { get; private set; }
-        public TimeSpan SuspensionTime { get; private set; }
+        public TimeSpan SleepTimeout { get; internal set; }
+        public TimeSpan SuspensionTime { get; internal set; }
 
-        public void Advance()
+        internal void Advance()
         {
             if (!DoneExecuting)
             {
@@ -48,29 +50,34 @@ namespace SciAdvNet.NSScript.Execution
 
         public void Suspend()
         {
-            Suspended = true;
+            _interpreter.SuspendThreadCore(this, TimeSpan.MaxValue);
         }
 
-        public void Suspend(TimeSpan suspensionTime, TimeSpan sleepTimeout)
+        public void Suspend(TimeSpan sleepTimeout)
         {
-            SuspensionTime = suspensionTime;
-            SleepTimeout = sleepTimeout;
-            Suspended = true;
+            _interpreter.SuspendThreadCore(this, sleepTimeout);
         }
 
         public void Resume()
         {
-            Suspended = false;
+            _interpreter.ResumeThreadCore(this);
         }
 
         public void PushContinuation(ImmutableArray<Statement> statements, bool advance = true)
         {
+            Frame prevFrame = null;
+            if (_frameStack.Count > 0)
+            {
+                prevFrame = CurrentFrame;
+            }
+
             if (advance)
             {
                 Advance();
             }
 
             var frame = new Frame(statements, _globals);
+            frame.Arguments = prevFrame?.Arguments;
             _frameStack.Push(frame);
         }
 
