@@ -57,6 +57,12 @@ namespace SciAdvNet.NSScript.Execution
             _operationStack.Push(OperationKind.NoOp);
         }
 
+        public override void VisitDeltaExpression(DeltaExpression deltaExpression)
+        {
+            _operandStack.Push(deltaExpression);
+            _operationStack.Push(OperationKind.NoOp);
+        }
+
         public override void VisitLiteral(Literal literal)
         {
             _operandStack.Push(literal.Value);
@@ -72,6 +78,12 @@ namespace SciAdvNet.NSScript.Execution
         public override void VisitFunctionCall(FunctionCall functionCall)
         {
             _operandStack.Push(functionCall);
+            _operationStack.Push(OperationKind.NoOp);
+        }
+
+        public override void VisitNamedConstant(NamedConstant namedConstant)
+        {
+            _operandStack.Push(namedConstant);
             _operationStack.Push(OperationKind.NoOp);
         }
     }

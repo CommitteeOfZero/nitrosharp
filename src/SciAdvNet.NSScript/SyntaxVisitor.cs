@@ -40,6 +40,11 @@ namespace SciAdvNet.NSScript
             DefaultVisitNode(expressionStatement);
         }
 
+        public virtual void VisitDeltaExpression(DeltaExpression deltaExpression)
+        {
+            DefaultVisitNode(deltaExpression);
+        }
+
         public virtual void VisitLiteral(Literal literal)
         {
             DefaultVisitNode(literal);
@@ -181,6 +186,11 @@ namespace SciAdvNet.NSScript
         public virtual TResult VisitExpressionStatement(ExpressionStatement expressionStatement)
         {
             return DefaultVisitNode(expressionStatement);
+        }
+
+        public virtual TResult VisitDeltaExpression(DeltaExpression deltaExpression)
+        {
+            return DefaultVisitNode(deltaExpression);
         }
 
         public virtual TResult VisitLiteral(Literal literal)

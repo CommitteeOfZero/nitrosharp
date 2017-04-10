@@ -33,16 +33,6 @@ namespace SciAdvNet.NSScript.Tests
         }
 
         [Fact]
-        public void LexAtPrefixedNumericLiteral()
-        {
-            string text = "@42";
-            var token = LexToken(text);
-
-            Assert.Equal(SyntaxTokenKind.NumericLiteralToken, token.Kind);
-            Assert.Equal(42, token.Value);
-        }
-
-        [Fact]
         public void LexSingleLetterIdentifier()
         {
             string text = "a";

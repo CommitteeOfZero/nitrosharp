@@ -1,4 +1,5 @@
-﻿using System.Collections.Immutable;
+﻿using System;
+using System.Collections.Immutable;
 
 namespace SciAdvNet.NSScript
 {
@@ -16,6 +17,8 @@ namespace SciAdvNet.NSScript
         public static Literal Null => s_null;
         public static Literal True => s_true;
         public static Literal False => s_false;
+
+        public static DeltaExpression DeltaExpression(Expression expression) => new DeltaExpression(expression);
 
         public static Identifier Identifier(string fullName, string simplifiedName, SigilKind sigil) =>
             new Identifier(fullName, simplifiedName, sigil);
@@ -69,6 +72,27 @@ namespace SciAdvNet.NSScript
         Hash,
         At,
         Arrow
+    }
+
+    public sealed class DeltaExpression : Expression
+    {
+        internal DeltaExpression(Expression expression)
+        {
+            Expression = expression;
+        }
+
+        public Expression Expression { get; }
+        public override SyntaxNodeKind Kind => SyntaxNodeKind.DeltaExpression;
+
+        public override void Accept(SyntaxVisitor visitor)
+        {
+            visitor.VisitDeltaExpression(this);
+        }
+
+        public override TResult Accept<TResult>(SyntaxVisitor<TResult> visitor)
+        {
+            return visitor.VisitDeltaExpression(this);
+        }
     }
 
     public sealed class Literal : Expression

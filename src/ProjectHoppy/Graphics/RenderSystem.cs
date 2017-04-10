@@ -42,7 +42,7 @@ namespace ProjectHoppy.Graphics
 
         public override IEnumerable<Entity> SortEntities(IEnumerable<Entity> entities)
         {
-            return entities.OrderBy(x => x.GetComponent<Visual>().Priority);
+            return entities.OrderBy(x => x.GetComponent<Visual>().Priority).ThenBy(x => x.CreationTime);
         }
 
         public override void Process(Entity entity, float deltaMilliseconds)
@@ -54,7 +54,11 @@ namespace ProjectHoppy.Graphics
                 var originalTransform = canvas.Transform;
 
                 var scale = renderItem.Scale;
-                var scaleOrigin = new SharpDX.Vector2(renderItem.ScaleOrigin.X, renderItem.ScaleOrigin.Y);
+
+                float centerX = renderItem.Width / 2.0f;
+                float centerY = renderItem.Height / 2.0f;
+                var scaleOrigin = new SharpDX.Vector2(centerX, centerY);
+
                 canvas.Transform *= SharpDX.Matrix3x2.Scaling(scale.X, scale.Y, scaleOrigin);
                 canvas.Transform *= SharpDX.Matrix3x2.Translation(renderItem.Position.X, renderItem.Position.Y);
 

@@ -62,6 +62,12 @@ namespace SciAdvNet.NSScript
             Write(";");
         }
 
+        public override void VisitDeltaExpression(DeltaExpression deltaExpression)
+        {
+            Write("@");
+            Visit(deltaExpression.Expression);
+        }
+
         public override void VisitLiteral(Literal literal)
         {
             Write(literal.Text);

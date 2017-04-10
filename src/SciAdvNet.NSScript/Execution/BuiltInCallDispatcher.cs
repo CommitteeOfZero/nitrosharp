@@ -44,7 +44,8 @@ namespace SciAdvNet.NSScript.Execution
         private void ImageHorizon(ArgumentStack args)
         {
             string entityName = args.PopString();
-            _nssImpl.CurrentThread.CurrentFrame.EvaluationStack.Push(new ConstantValue(0));
+            int r = _nssImpl.GetTextureWidth(entityName);
+            _nssImpl.CurrentThread.CurrentFrame.EvaluationStack.Push(new ConstantValue(r));
         }
 
         public void DispatchBuiltInCall(BuiltInFunctionCall functionCall)
@@ -278,8 +279,8 @@ namespace SciAdvNet.NSScript.Execution
 
         private void RemainTime(ArgumentStack args)
         {
-            //string entityName = args.PopString();
-            //_currentThread.CurrentFrame.EvaluationStack.Push(new ConstantValue(0));
+            string entityName = args.PopString();
+            _nssImpl.CurrentThread.CurrentFrame.EvaluationStack.Push(new ConstantValue(0));
         }
     }
 }

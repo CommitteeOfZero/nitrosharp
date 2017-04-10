@@ -14,7 +14,7 @@ namespace SciAdvNet.NSScript
         public static ConstantValue Zero => s_zero;
         public static ConstantValue Null => s_null;
 
-        public ConstantValue(object value, bool? isRelative = null)
+        public ConstantValue(object value, bool? isDelta = null)
         {
             if (value == null)
             {
@@ -25,7 +25,7 @@ namespace SciAdvNet.NSScript
             if (value.GetType() == typeof(int))
             {
                 Type = NssType.Integer;
-                IsRelative = isRelative;
+                IsDelta = isDelta;
             }
             else if (value.GetType() == typeof(string))
             {
@@ -47,7 +47,7 @@ namespace SciAdvNet.NSScript
 
         public object RawValue { get; }
         public NssType Type { get; }
-        public bool? IsRelative { get; }
+        public bool? IsDelta { get; }
 
         public override SyntaxNodeKind Kind => SyntaxNodeKind.ConstantValue;
 
@@ -62,7 +62,7 @@ namespace SciAdvNet.NSScript
             {
                 if (a.As<string>() == "@" && b.Type == NssType.Integer)
                 {
-                    return new ConstantValue(b.RawValue, isRelative: true);
+                    return new ConstantValue(b.RawValue, isDelta: true);
                 }
             }
 
@@ -191,7 +191,7 @@ namespace SciAdvNet.NSScript
                 ThrowInvalidUnary("-", value);
             }
 
-            return new ConstantValue(-(int)value.RawValue, isRelative: value.IsRelative);
+            return new ConstantValue(-(int)value.RawValue, isDelta: value.IsDelta);
         }
 
         public static ConstantValue operator++(ConstantValue value)

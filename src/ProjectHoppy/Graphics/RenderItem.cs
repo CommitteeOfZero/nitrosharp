@@ -7,7 +7,6 @@ namespace ProjectHoppy.Graphics
     {
         public Vector2 Position { get; set; }
         public Vector2 Scale { get; set; }
-        public Vector2 ScaleOrigin { get; set; }
         public float Width { get; set; }
         public float Height { get; set; }
 

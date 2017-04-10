@@ -14,6 +14,8 @@ namespace SciAdvNet.NSScript.Execution
                     return constant;
                 case Literal literal:
                     return literal.Value;
+                case DeltaExpression deltaExpr:
+                    return new ConstantValue(ReduceExpression(deltaExpr.Expression).RawValue, isDelta: true);
                 case Variable variable:
                     string name = variable.Name.SimplifiedName;
                     return CurrentFrame.Globals[name];
@@ -21,6 +23,12 @@ namespace SciAdvNet.NSScript.Execution
                     return CurrentFrame.Arguments[parameterRef.ParameterName.SimplifiedName];
                 case NamedConstant namedConstant:
                     return new ConstantValue(namedConstant.Name.FullName);
+
+                case UnaryExpression unaryExpr:
+                    return ApplyUnaryOperation(ReduceExpression(unaryExpr.Operand), unaryExpr.OperationKind);
+
+                case BinaryExpression binaryExpr:
+                    return ApplyBinaryOperation(ReduceExpression(binaryExpr.Left), binaryExpr.OperationKind, ReduceExpression(binaryExpr.Right));
 
                 default:
                     throw new InvalidOperationException($"Expression '{expression.ToString()}' can't be reduced.");

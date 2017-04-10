@@ -14,7 +14,7 @@ namespace ProjectHoppy
 {
     public class N2System : NssImplementation
     {
-        private System.Drawing.Size _viewport = new System.Drawing.Size(800, 600);
+        private System.Drawing.Size _viewport = new System.Drawing.Size(1280, 720);
         private ContentManager _content;
         private readonly EntityManager _entities;
 
@@ -33,6 +33,21 @@ namespace ProjectHoppy
             float absoluteY = NssToAbsoluteCoordinate(y, current.Y, height, _viewport.Height);
 
             return new Vector2(absoluteX, absoluteY);
+        }
+
+        public override int GetTextureWidth(string entityName)
+        {
+            var entity = _entities.SafeGet(entityName);
+            if (entity != null)
+            {
+                var texture = entity.GetComponent<TextureVisual>();
+                if (texture != null)
+                {
+                    return (int)texture.Width;
+                }
+            }
+
+            return 0;
         }
 
         private void OnEnteredDialogueBlock(object sender, DialogueBlock block)
@@ -202,9 +217,9 @@ namespace ProjectHoppy
             if (entity != null)
             {
                 float adjustedOpacity = opacity.Rebase(1.0f);
+                var visual = entity.GetComponent<Visual>();
                 if (duration > TimeSpan.Zero)
                 {
-                    var visual = entity.GetComponent<Visual>();
                     var animation = new FloatAnimation
                     {
                         TargetComponent = visual,
@@ -219,7 +234,7 @@ namespace ProjectHoppy
                 }
                 else
                 {
-                    entity.GetComponent<Visual>().Opacity = adjustedOpacity;
+                    visual.Opacity = adjustedOpacity;
                 }
             }
         }
@@ -286,6 +301,11 @@ namespace ProjectHoppy
         public override void Delay(TimeSpan delay)
         {
             CurrentThread.Suspend(delay);
+        }
+
+        public override void WaitForInput()
+        {
+            CurrentThread.Suspend();
         }
 
         public override void WaitForInput(TimeSpan timeout)
@@ -468,15 +488,14 @@ namespace ProjectHoppy
                 var visual = entity.GetComponent<Visual>();
                 scaleX = scaleX.Rebase(1.0f);
                 scaleY = scaleY.Rebase(1.0f);
-
-                float centerX = (visual.Position.X + visual.Width) / 2.0f;
-                float centerY = (visual.Position.Y + visual.Height) / 2.0f;
-                var scaleOrigin = new Vector2(centerX, centerY);
-
-                visual.ScaleOrigin = scaleOrigin;
                 if (duration > TimeSpan.Zero)
                 {
-                    visual.Scale = new Vector2(0, 0);
+                    Vector2 final = new Vector2(scaleX, scaleY);
+                    if (visual.Scale == final)
+                    {
+                        visual.Scale = new Vector2(0.0f, 0.0f);
+                    }
+
                     var animation = new Vector2Animation
                     {
                         TargetComponent = visual,
@@ -484,7 +503,7 @@ namespace ProjectHoppy
                         PropertySetter = (c, v) => (c as Visual).Scale = v,
                         Duration = duration,
                         InitialValue = visual.Scale,
-                        FinalValue = new Vector2(scaleX, scaleY),
+                        FinalValue = final,
                         TimingFunction = (TimingFunction)easingFunction
                     };
 
@@ -542,7 +561,7 @@ namespace ProjectHoppy
                         var visual = entity.GetComponent<Visual>();
                         if (visual != null)
                         {
-                            visual.IsEnabled = false;
+                            //visual.IsEnabled = false;
                         }
                         break;
 

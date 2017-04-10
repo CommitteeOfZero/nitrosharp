@@ -162,41 +162,36 @@ namespace SciAdvNet.NSScript
                     break;
 
                 case '@':
-                    character = PeekChar(1);
-                    switch (character)
+                    char next = PeekChar(1);
+                    if (PeekChar(1) == '-' && PeekChar(2) == '>')
                     {
-                        case '+':
-                            AdvanceChar(2);
-                            kind = SyntaxTokenKind.PlusToken;
-                            break;
-
-                        case '-':
-                            character = PeekChar(2);
-                            if (character == '>')
-                            {
-                                ScanIdentifier();
-                                kind = SyntaxTokenKind.IdentifierToken;
-                            }
-                            else
-                            {
-                                AdvanceChar(2);
-                                kind = SyntaxTokenKind.MinusToken;
-                            }
-                            break;
-
-                        default:
-                            if (SyntaxFacts.IsDecDigit(character))
-                            {
-                                value = ScanNumericLiteral();
-                                kind = SyntaxTokenKind.NumericLiteralToken;
-                            }
-                            else
-                            {
-                                ScanIdentifier();
-                                kind = SyntaxTokenKind.IdentifierToken;
-                            }
-                            break;
+                        // TODO
                     }
+                    else if (next == '+' || next == '-' || SyntaxFacts.IsDecDigit(next))
+                    {
+                        AdvanceChar();
+                        kind = SyntaxTokenKind.AtToken;
+                    }
+                    else
+                    {
+                        ScanIdentifier();
+                        kind = SyntaxTokenKind.IdentifierToken;
+                    }
+                    //switch (nextChar)
+                    //{
+                    //    case '-':
+                    //        character = PeekChar(2);
+                    //        if (character == '>')
+                    //        {
+                    //            ScanIdentifier();
+                    //            kind = SyntaxTokenKind.IdentifierToken;
+                    //        }
+                    //        else
+                    //        {
+                    //            AdvanceChar(2);
+                    //            kind = SyntaxTokenKind.MinusToken;
+                    //        }
+                    //        break;
                     break;
 
                 case '<':

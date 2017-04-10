@@ -14,6 +14,11 @@ namespace SciAdvNet.NSScript.Execution
             EnteredDialogueBlock?.Invoke(this, block);
         }
 
+        public virtual int GetTextureWidth(string fileName)
+        {
+            return 0;
+        }
+
         public virtual void DisplayDialogue(string pxmlString)
         {
         }

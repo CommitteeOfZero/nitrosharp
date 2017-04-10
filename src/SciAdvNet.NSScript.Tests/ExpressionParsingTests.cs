@@ -20,6 +20,18 @@ namespace SciAdvNet.NSScript.Tests
         }
 
         [Fact]
+        public void ParseDeltaExpression()
+        {
+            string text = "@100";
+            var deltaExpr = NSScript.ParseExpression(text) as DeltaExpression;
+
+            Assert.NotNull(deltaExpr);
+            Assert.Equal(SyntaxNodeKind.DeltaExpression, deltaExpr.Kind);
+            Assert.NotNull(deltaExpr.Expression);
+            Assert.Equal(text, deltaExpr.ToString());
+        }
+
+        [Fact]
         public void ParseNumericLiteralExpression()
         {
             string literal = "42";

@@ -309,7 +309,7 @@ namespace SciAdvNet.NSScript
             }
             else
             {
-                leftOperand = ParseTerm();
+                leftOperand = ParseTerm(minPrecedence);
             }
 
             while (true)
@@ -353,7 +353,7 @@ namespace SciAdvNet.NSScript
             return leftOperand;
         }
 
-        private Expression ParseTerm()
+        private Expression ParseTerm(OperationPrecedence precedence)
         {
             switch (CurrentToken.Kind)
             {
@@ -388,9 +388,19 @@ namespace SciAdvNet.NSScript
                     EatToken(SyntaxTokenKind.CloseParenToken);
                     return expr;
 
+                case SyntaxTokenKind.AtToken:
+                    return ParseDeltaExpression(precedence);
+
                 default:
                     throw UnexpectedToken(FileName, CurrentToken.Text);
             }
+        }
+
+        private DeltaExpression ParseDeltaExpression(OperationPrecedence precedence)
+        {
+            EatToken(SyntaxTokenKind.AtToken);
+            var expr = ParseSubExpression(precedence);
+            return ExpressionFactory.DeltaExpression(expr);
         }
 
         private Expression ParsePostfixExpression(Expression expr)

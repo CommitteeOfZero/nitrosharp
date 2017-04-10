@@ -20,7 +20,7 @@ namespace SciAdvNet.NSScript.Execution
             var value = Pop();
             if (value.Type == NssType.Integer)
             {
-                NssPositionOrigin relativeTo = value.IsRelative == true ? NssPositionOrigin.Current : NssPositionOrigin.Zero;
+                NssPositionOrigin relativeTo = value.IsDelta == true ? NssPositionOrigin.Current : NssPositionOrigin.Zero;
                 return new NssCoordinate(value.As<int>(), relativeTo);
             }
             else

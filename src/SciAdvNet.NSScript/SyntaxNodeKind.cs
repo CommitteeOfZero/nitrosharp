@@ -31,6 +31,7 @@
         CallChapterStatement,
         Scene,
         BreakStatement,
-        PXmlString
+        PXmlString,
+        DeltaExpression
     }
 }

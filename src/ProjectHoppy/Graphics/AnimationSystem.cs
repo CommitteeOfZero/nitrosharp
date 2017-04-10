@@ -7,15 +7,18 @@ namespace ProjectHoppy.Graphics
 {
     public class AnimationSystem : EntityProcessingSystem
     {
-        public AnimationSystem() : base(typeof(FloatAnimation))
+        public AnimationSystem() : base(typeof(FloatAnimation), typeof(Vector2Animation))
         {
             EntityAdded += OnEntityAdded;
         }
 
         private void OnEntityAdded(object sender, Entity e)
         {
-            var animation = e.GetComponent<FloatAnimation>();
-            animation.PropertySetter(animation.TargetComponent, animation.InitialValue);
+            var floatAnimation = e.GetComponent<FloatAnimation>();
+            floatAnimation?.PropertySetter(floatAnimation.TargetComponent, floatAnimation.InitialValue);
+
+            var vector2Animation = e.GetComponent<Vector2Animation>();
+            vector2Animation?.PropertySetter(vector2Animation.TargetComponent, vector2Animation.InitialValue);
         }
 
         public override void Process(Entity entity, float deltaMilliseconds)
@@ -24,7 +27,8 @@ namespace ProjectHoppy.Graphics
             {
                 if (animation.IsEnabled)
                 {
-                    float newValue = AdvanceAnimation(animation.InitialValue, animation.FinalValue, animation.Elapsed, animation.Duration, animation.TimingFunction);                    
+                    float newValue = AdvanceAnimation(animation.InitialValue, animation.FinalValue, animation.Elapsed, animation.Duration, animation.TimingFunction);
+
                     animation.PropertySetter(animation.TargetComponent, newValue);
                     animation.Elapsed += deltaMilliseconds;
 
@@ -41,6 +45,9 @@ namespace ProjectHoppy.Graphics
                 if (animation.IsEnabled)
                 {
                     Vector2 newValue = AdvanceAnimation(animation.InitialValue, animation.FinalValue, animation.Elapsed, animation.Duration, animation.TimingFunction);
+
+                    Debug.WriteLine(newValue);
+
                     animation.PropertySetter(animation.TargetComponent, newValue);
                     animation.Elapsed += deltaMilliseconds;
 

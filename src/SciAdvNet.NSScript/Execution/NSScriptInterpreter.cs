@@ -17,7 +17,6 @@ namespace SciAdvNet.NSScript.Execution
     {
         private readonly ExpressionFlattener _exprFlattener;
         private readonly ExpressionReducer _exprReducer;
-        private readonly RecursiveExpressionEvaluator _recursiveEvaluator;
 
         private readonly NssImplementation _nssImplementation;
         private readonly BuiltInCallDispatcher _builtInCallDispatcher;
@@ -39,7 +38,6 @@ namespace SciAdvNet.NSScript.Execution
         {
             _exprFlattener = new ExpressionFlattener();
             _exprReducer = new ExpressionReducer();
-            _recursiveEvaluator = new RecursiveExpressionEvaluator();
 
             _nssImplementation = nssImplementation;
             _builtInCallDispatcher = new BuiltInCallDispatcher(_nssImplementation);
@@ -257,6 +255,8 @@ namespace SciAdvNet.NSScript.Execution
 
             currentFrame.Globals["Pretextnumber"] = new ConstantValue("xxx");
 
+            currentFrame.Globals["YuaVoice"] = new ConstantValue(false);
+
             _currentDialogueBlock = dialogueBlock;
             _nssImplementation.RaiseEnteredDialogueBlock(dialogueBlock);
         }
@@ -269,15 +269,17 @@ namespace SciAdvNet.NSScript.Execution
 
         private ConstantValue EvaluateTrivial(Expression expression)
         {
-            return _recursiveEvaluator.EvaluateExpression(expression, _currentThread.CurrentFrame);
+            _exprReducer.CurrentFrame = _currentThread.CurrentFrame;
+            return _exprReducer.ReduceExpression(expression);
         }
 
         private bool Eval(Expression expression, out ConstantValue result)
         {
             var currentFrame = _currentThread.CurrentFrame;
-            if (currentFrame.EvaluationStack.Count == 0)
+            if (currentFrame.CurrentExpression != expression)
             {
                 _exprFlattener.Flatten(expression, currentFrame.OperandStack, currentFrame.OperationStack);
+                currentFrame.CurrentExpression = expression;
             }
 
             _exprReducer.CurrentFrame = _currentThread.CurrentFrame;
@@ -330,6 +332,7 @@ namespace SciAdvNet.NSScript.Execution
             }
 
             result = _exprReducer.ReduceExpression(currentFrame.EvaluationStack.Pop());
+            Debug.Assert(currentFrame.EvaluationStack.Count == 0, "Evaluation stack should be empty.");
             return true;
         }
 

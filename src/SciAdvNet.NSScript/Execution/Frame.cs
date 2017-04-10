@@ -21,6 +21,7 @@ namespace SciAdvNet.NSScript.Execution
         public VariableTable Globals { get; }
         public VariableTable Arguments { get; set; }
 
+        public Expression CurrentExpression { get; internal set; }
         public Stack<Expression> OperandStack { get; }
         public Stack<OperationKind> OperationStack { get; }
         public Stack<Expression> EvaluationStack { get; }

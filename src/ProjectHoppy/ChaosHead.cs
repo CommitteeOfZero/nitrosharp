@@ -58,7 +58,7 @@ namespace ProjectHoppy
 
         public override void OnInitialized()
         {
-            Window.Title = "Chaos;Hoppy";
+            Window.Title = "COWS;HEAD NOAH";
 
             _content = new ContentManager(_config.ContentRoot);
 
