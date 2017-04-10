@@ -139,46 +139,6 @@ namespace SciAdvNet.NSScript.Tests
             Assert.Equal(SyntaxTokenKind.EndOfFileToken, token.Kind);
         }
 
-        //[Fact]
-        //public void LexXmlStartTag()
-        //{
-        //    string text = "<U>";
-        //    var token = LexToken(text);
-
-        //    Assert.Equal(SyntaxTokenKind.XmlElementStartTag, token.Kind);
-        //    Assert.Equal(text, token.Text);
-        //}
-
-        //[Fact]
-        //public void LexXmlEndTag()
-        //{
-        //    string text = "</U>";
-        //    var token = LexToken(text);
-
-        //    Assert.Equal(SyntaxTokenKind.XmlElementEndTag, token.Kind);
-        //    Assert.Equal(text, token.Text);
-        //}
-
-        //[Fact]
-        //public void LexXmlTagWithNewline()
-        //{
-        //    string text = "<FONT\n incolor=\"#88abda\" outcolor=\"BLACK\">";
-        //    var token = LexToken(text);
-
-        //    Assert.Equal(SyntaxTokenKind.XmlElementStartTag, token.Kind);
-        //}
-
-        //[Fact]
-        //public void LexVerbatimStringLiteral()
-        //{
-        //    string text = "<pre>sample text</pre>";
-        //    var token = LexToken(text);
-
-        //    Assert.Equal(SyntaxTokenKind.Xml_VerbatimText, token.Kind);
-        //    Assert.Equal(text, token.Text);
-        //    Assert.Equal("sample text", token.Value);
-        //}
-
         [Fact]
         public void LexIncludeDirective()
         {

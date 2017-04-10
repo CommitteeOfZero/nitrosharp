@@ -12,13 +12,13 @@ namespace SciAdvNet.NSScript
         private readonly SyntaxToken[] _tokens;
         private int _tokenOffset;
 
-        private ImmutableArray<ParameterReference> _currentFrame;
+        private ImmutableArray<ParameterReference> _scope;
 
         public NSScriptParser(NSScriptLexer lexer)
         {
             _lexer = lexer;
             _tokens = PreLex().ToArray();
-            _currentFrame = ImmutableArray<ParameterReference>.Empty;
+            _scope = ImmutableArray<ParameterReference>.Empty;
         }
 
         private string FileName => _lexer.FileName;
@@ -32,7 +32,7 @@ namespace SciAdvNet.NSScript
             var includes = ImmutableArray.CreateBuilder<string>();
             while (CurrentToken.Kind != SyntaxTokenKind.EndOfFileToken)
             {
-                _currentFrame = ImmutableArray<ParameterReference>.Empty;
+                _scope = ImmutableArray<ParameterReference>.Empty;
                 switch (CurrentToken.Kind)
                 {
                     case SyntaxTokenKind.IncludeDirective:
@@ -136,7 +136,7 @@ namespace SciAdvNet.NSScript
         {
             EatToken(SyntaxTokenKind.FunctionKeyword);
             var name = ParseIdentifier();
-            var parameters = _currentFrame = ParseParameterList();
+            var parameters = _scope = ParseParameterList();
             var body = ParseBlock();
 
             return StatementFactory.Function(name, parameters, body);
@@ -241,14 +241,9 @@ namespace SciAdvNet.NSScript
                 case SyntaxTokenKind.PXmlString:
                     return StatementFactory.PXmlString(EatToken().Text);
 
-                case SyntaxTokenKind.SlashToken:
-                    EatToken();
-                    return null;
-
                 default:
                     EatToken();
                     return null;
-                    //throw ExceptionUtilities.UnexpectedToken(FileName, CurrentToken.Text);
             }
         }
 
@@ -501,7 +496,7 @@ namespace SciAdvNet.NSScript
             {
                 case SyntaxTokenKind.IdentifierToken:
                 case SyntaxTokenKind.StringLiteralToken:
-                    return _currentFrame.Any(x => x.ParameterName.FullName.Equals(CurrentToken.Text, StringComparison.OrdinalIgnoreCase));
+                    return _scope.Any(x => x.ParameterName.FullName.Equals(CurrentToken.Text, StringComparison.OrdinalIgnoreCase));
 
                 default:
                     return false;
