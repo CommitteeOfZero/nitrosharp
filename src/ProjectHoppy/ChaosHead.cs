@@ -35,8 +35,8 @@ namespace ProjectHoppy
             _nssInterpreter.BuiltInCallScheduled += OnBuiltInCallDispatched;
             _nssInterpreter.EnteredFunction += OnEnteredFunction;
 
-            _nssInterpreter.CreateThread("nss/test.nss");
-            //_nssInterpreter.CreateThread("nss/ch01_007_円山町殺人現場");
+            //_nssInterpreter.CreateThread("nss/test.nss");
+            _nssInterpreter.CreateThread("nss/ch01_007_円山町殺人現場");
             //_nssInterpreter.CreateThread("nss/ch01_019_１０月２日木.nss");
         }
 

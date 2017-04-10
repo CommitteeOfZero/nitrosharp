@@ -191,7 +191,7 @@ namespace SciAdvNet.NSScript
                 ThrowInvalidUnary("-", value);
             }
 
-            return new ConstantValue(-(int)value.RawValue);
+            return new ConstantValue(-(int)value.RawValue, isRelative: value.IsRelative);
         }
 
         public static ConstantValue operator++(ConstantValue value)

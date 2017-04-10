@@ -91,6 +91,11 @@ namespace ProjectHoppy
             _entities.Create(entityName, replace: true).WithComponent(rect);
         }
 
+        public override void LoadImage(string entityName, string fileName)
+        {
+
+        }
+
         public override void AddTexture(string entityName, int priority, NssCoordinate x, NssCoordinate y, string fileOrEntityName)
         {
             int w = _viewport.Width, h = _viewport.Height;
@@ -527,6 +532,22 @@ namespace ProjectHoppy
 
                     case NssEntityAction.Unlock:
                         entity.Locked = false;
+                        break;
+
+                    case NssEntityAction.ResetText:
+                        entity.GetComponent<GameTextVisual>()?.Reset();
+                        break;
+
+                    case NssEntityAction.Hide:
+                        var visual = entity.GetComponent<Visual>();
+                        if (visual != null)
+                        {
+                            visual.IsEnabled = false;
+                        }
+                        break;
+
+                    case NssEntityAction.Dispose:
+                        _entities.Remove(entity);
                         break;
                 }
             }

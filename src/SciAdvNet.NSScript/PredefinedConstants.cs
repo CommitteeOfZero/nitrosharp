@@ -47,7 +47,10 @@ namespace SciAdvNet.NSScript
             {
                 ["Lock"] = NssEntityAction.Lock,
                 ["UnLock"] = NssEntityAction.Unlock,
-                ["Play"] = NssEntityAction.Play
+                ["Play"] = NssEntityAction.Play,
+                ["Disused"] = NssEntityAction.Dispose,
+                ["Erase"] = NssEntityAction.ResetText,
+                ["Hideable"] = NssEntityAction.Hide
             };
 
             EasingFunctions = new Dictionary<string, EasingFunction>(StringComparer.OrdinalIgnoreCase)

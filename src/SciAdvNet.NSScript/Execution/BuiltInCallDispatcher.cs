@@ -44,7 +44,7 @@ namespace SciAdvNet.NSScript.Execution
         private void ImageHorizon(ArgumentStack args)
         {
             string entityName = args.PopString();
-            _nssImpl.CurrentThread.CurrentFrame.EvaluationStack.Push(new ConstantValue(1200));
+            _nssImpl.CurrentThread.CurrentFrame.EvaluationStack.Push(new ConstantValue(0));
         }
 
         public void DispatchBuiltInCall(BuiltInFunctionCall functionCall)

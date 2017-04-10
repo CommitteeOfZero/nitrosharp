@@ -1,6 +1,8 @@
 ﻿using HoppyFramework.Graphics;
 using SharpDX.Direct2D1;
 using SharpDX.WIC;
+using System;
+using System.Diagnostics;
 using System.IO;
 
 namespace HoppyFramework.Content
@@ -37,6 +39,8 @@ namespace HoppyFramework.Content
                     return new TextureAsset(bitmap);
                 }
             }
+
+            
         }
     }
 }

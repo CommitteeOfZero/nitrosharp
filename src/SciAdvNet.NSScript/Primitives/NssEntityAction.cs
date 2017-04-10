@@ -4,6 +4,9 @@
     {
         Unlock,
         Lock,
+        Hide,
+        Dispose,
+        ResetText,
         Play,
         Other
     }

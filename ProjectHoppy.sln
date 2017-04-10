@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.26228.10
+VisualStudioVersion = 15.0.26403.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SciAdvNet.NSScript", "src\SciAdvNet.NSScript\SciAdvNet.NSScript.csproj", "{D141E5DC-81DB-4352-8BAE-E3772BDC23DE}"
 EndProject
@@ -14,6 +14,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AmplitudeExperiments", "src\AmplitudeExperiments\AmplitudeExperiments.csproj", "{BDA4FDCE-166A-4573-A518-75EB2767A9B0}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HoppyFramework", "src\HoppyFramework\HoppyFramework.csproj", "{6E5187F9-61C7-4CDC-BCA2-4379A20B0E6C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NSScripter", "src\NSScripter\NSScripter.csproj", "{680682A3-D7C4-4238-B7E2-4FE56E4B02EF}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -123,6 +125,22 @@ Global
 		{6E5187F9-61C7-4CDC-BCA2-4379A20B0E6C}.Release|x64.Build.0 = Release|Any CPU
 		{6E5187F9-61C7-4CDC-BCA2-4379A20B0E6C}.Release|x86.ActiveCfg = Release|Any CPU
 		{6E5187F9-61C7-4CDC-BCA2-4379A20B0E6C}.Release|x86.Build.0 = Release|Any CPU
+		{680682A3-D7C4-4238-B7E2-4FE56E4B02EF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{680682A3-D7C4-4238-B7E2-4FE56E4B02EF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{680682A3-D7C4-4238-B7E2-4FE56E4B02EF}.Debug|ARM.ActiveCfg = Debug|Any CPU
+		{680682A3-D7C4-4238-B7E2-4FE56E4B02EF}.Debug|ARM.Build.0 = Debug|Any CPU
+		{680682A3-D7C4-4238-B7E2-4FE56E4B02EF}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{680682A3-D7C4-4238-B7E2-4FE56E4B02EF}.Debug|x64.Build.0 = Debug|Any CPU
+		{680682A3-D7C4-4238-B7E2-4FE56E4B02EF}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{680682A3-D7C4-4238-B7E2-4FE56E4B02EF}.Debug|x86.Build.0 = Debug|Any CPU
+		{680682A3-D7C4-4238-B7E2-4FE56E4B02EF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{680682A3-D7C4-4238-B7E2-4FE56E4B02EF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{680682A3-D7C4-4238-B7E2-4FE56E4B02EF}.Release|ARM.ActiveCfg = Release|Any CPU
+		{680682A3-D7C4-4238-B7E2-4FE56E4B02EF}.Release|ARM.Build.0 = Release|Any CPU
+		{680682A3-D7C4-4238-B7E2-4FE56E4B02EF}.Release|x64.ActiveCfg = Release|Any CPU
+		{680682A3-D7C4-4238-B7E2-4FE56E4B02EF}.Release|x64.Build.0 = Release|Any CPU
+		{680682A3-D7C4-4238-B7E2-4FE56E4B02EF}.Release|x86.ActiveCfg = Release|Any CPU
+		{680682A3-D7C4-4238-B7E2-4FE56E4B02EF}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
