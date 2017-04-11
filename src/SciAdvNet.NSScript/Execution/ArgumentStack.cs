@@ -22,7 +22,7 @@ namespace SciAdvNet.NSScript.Execution
             {
                 int i = value.As<int>();
                 var origin = value.IsDelta.Value ? CoordinateOrigin.CurrentValue : CoordinateOrigin.Zero;
-                return new Coordinate(i, origin, new Rational(0, 0));
+                return new Coordinate(i, origin, 0.0f);
             }
             else
             {

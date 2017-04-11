@@ -15,40 +15,40 @@ namespace SciAdvNet.NSScript
             switch (s.ToUpperInvariant())
             {
                 case "INLEFT":
-                    return new Coordinate(0.0f, CoordinateOrigin.Left, new Rational(0, 0));
+                    return new Coordinate(0, CoordinateOrigin.Left, 0.0f);
                 case "ONLEFT":
-                    return new Coordinate(0.0f, CoordinateOrigin.Left, new Rational(1, 2));
+                    return new Coordinate(0, CoordinateOrigin.Left, 0.5f);
                 case "OUTLEFT":
                 case "LEFT":
-                    return new Coordinate(0.0f, CoordinateOrigin.Left, new Rational(1, 1));
+                    return new Coordinate(0, CoordinateOrigin.Left, 1.0f);
 
                 case "INTOP":
-                    return new Coordinate(0.0f, CoordinateOrigin.Top, new Rational(0, 0));
+                    return new Coordinate(0, CoordinateOrigin.Top, 0.0f);
                 case "ONTOP":
-                    return new Coordinate(0.0f, CoordinateOrigin.Top, new Rational(1, 2));
+                    return new Coordinate(0, CoordinateOrigin.Top, 0.5f);
                 case "OUTTOP":
                 case "TOP":
-                    return new Coordinate(0.0f, CoordinateOrigin.Top, new Rational(1, 1));
+                    return new Coordinate(0, CoordinateOrigin.Top, 1.0f);
 
                 case "INRIGHT":
-                    return new Coordinate(0.0f, CoordinateOrigin.Right, new Rational(1, 1));
+                    return new Coordinate(0, CoordinateOrigin.Right, 1.0f);
                 case "ONRIGHT":
-                    return new Coordinate(0.0f, CoordinateOrigin.Right, new Rational(1, 2));
+                    return new Coordinate(0, CoordinateOrigin.Right, 0.5f);
                 case "OUTRIGHT":
                 case "RIGHT":
-                    return new Coordinate(0.0f, CoordinateOrigin.Right, new Rational(0, 0));
+                    return new Coordinate(0, CoordinateOrigin.Right, 0.0f);
 
                 case "INBOTTOM":
-                    return new Coordinate(0.0f, CoordinateOrigin.Bottom, new Rational(1, 1));
+                    return new Coordinate(0, CoordinateOrigin.Bottom, 1.0f);
                 case "ONBOTTOM":
-                    return new Coordinate(0.0f, CoordinateOrigin.Bottom, new Rational(1, 2));
+                    return new Coordinate(0, CoordinateOrigin.Bottom, 0.5f);
                 case "OUTBOTTOM":
                 case "BOTTOM":
-                    return new Coordinate(0.0f, CoordinateOrigin.Bottom, new Rational(0, 0));
+                    return new Coordinate(0, CoordinateOrigin.Bottom, 0.0f);
 
                 case "CENTER":
                 case "MIDDLE":
-                    return new Coordinate(0.0f, CoordinateOrigin.Center, new Rational(1, 2));
+                    return new Coordinate(0, CoordinateOrigin.Center, 0.5f);
 
                 default:
                     throw new ArgumentException(nameof(s));

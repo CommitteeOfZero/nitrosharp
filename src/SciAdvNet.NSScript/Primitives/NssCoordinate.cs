@@ -2,16 +2,16 @@
 {
     public struct Coordinate
     {
-        public Coordinate(float value, CoordinateOrigin origin, Rational anchorPoint)
+        public Coordinate(int value, CoordinateOrigin origin, float anchorPoint)
         {
             Value = value;
             Origin = origin;
             AnchorPoint = anchorPoint;
         }
 
-        public float Value { get; }
+        public int Value { get; }
         public CoordinateOrigin Origin { get; }
-        public Rational AnchorPoint { get; }
+        public float AnchorPoint { get; }
     }
 
     public enum CoordinateOrigin
