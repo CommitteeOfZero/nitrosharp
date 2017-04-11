@@ -15,18 +15,18 @@ namespace SciAdvNet.NSScript.Execution
         public string PopString() => Pop().As<string>();
         public bool PopBool() => Pop().As<bool>();
 
-        public NssCoordinate PopCoordinate()
+        public Coordinate PopCoordinate()
         {
             var value = Pop();
             if (value.Type == NssType.Integer)
             {
-                NssPositionOrigin relativeTo = value.IsDelta == true ? NssPositionOrigin.Current : NssPositionOrigin.Zero;
-                return new NssCoordinate(value.As<int>(), relativeTo);
+                int i = value.As<int>();
+                var origin = value.IsDelta.Value ? CoordinateOrigin.CurrentValue : CoordinateOrigin.Zero;
+                return new Coordinate(i, origin, new Rational(0, 0));
             }
             else
             {
-                var relativeTo = PredefinedConstants.Positions[value.As<string>()];
-                return new NssCoordinate(0, relativeTo);
+                return PredefinedConstants.GetCoordinate(value.As<string>());
             }
         }
 

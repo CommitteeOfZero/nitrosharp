@@ -6,34 +6,57 @@ namespace SciAdvNet.NSScript
 {
     internal static class PredefinedConstants
     {
-        public static Dictionary<string, NssPositionOrigin> Positions { get; private set; }
         public static Dictionary<string, NssColor> Colors { get; private set; }
         public static Dictionary<string, NssEntityAction> Actions { get; private set; }
         public static Dictionary<string, EasingFunction> EasingFunctions { get; private set; }
 
+        public static Coordinate GetCoordinate(string s)
+        {
+            switch (s.ToUpperInvariant())
+            {
+                case "INLEFT":
+                    return new Coordinate(0.0f, CoordinateOrigin.Left, new Rational(0, 0));
+                case "ONLEFT":
+                    return new Coordinate(0.0f, CoordinateOrigin.Left, new Rational(1, 2));
+                case "OUTLEFT":
+                case "LEFT":
+                    return new Coordinate(0.0f, CoordinateOrigin.Left, new Rational(1, 1));
+
+                case "INTOP":
+                    return new Coordinate(0.0f, CoordinateOrigin.Top, new Rational(0, 0));
+                case "ONTOP":
+                    return new Coordinate(0.0f, CoordinateOrigin.Top, new Rational(1, 2));
+                case "OUTTOP":
+                case "TOP":
+                    return new Coordinate(0.0f, CoordinateOrigin.Top, new Rational(1, 1));
+
+                case "INRIGHT":
+                    return new Coordinate(0.0f, CoordinateOrigin.Right, new Rational(1, 1));
+                case "ONRIGHT":
+                    return new Coordinate(0.0f, CoordinateOrigin.Right, new Rational(1, 2));
+                case "OUTRIGHT":
+                case "RIGHT":
+                    return new Coordinate(0.0f, CoordinateOrigin.Right, new Rational(0, 0));
+
+                case "INBOTTOM":
+                    return new Coordinate(0.0f, CoordinateOrigin.Bottom, new Rational(1, 1));
+                case "ONBOTTOM":
+                    return new Coordinate(0.0f, CoordinateOrigin.Bottom, new Rational(1, 2));
+                case "OUTBOTTOM":
+                case "BOTTOM":
+                    return new Coordinate(0.0f, CoordinateOrigin.Bottom, new Rational(0, 0));
+
+                case "CENTER":
+                case "MIDDLE":
+                    return new Coordinate(0.0f, CoordinateOrigin.Center, new Rational(1, 2));
+
+                default:
+                    throw new ArgumentException(nameof(s));
+            }
+        }
+
         public static void Preload()
         {
-            Positions = new Dictionary<string, NssPositionOrigin>(StringComparer.OrdinalIgnoreCase)
-            {
-                ["InLeft"] = NssPositionOrigin.InLeft,
-                ["OnLeft"] = NssPositionOrigin.OnLeft,
-                ["OutLeft"] = NssPositionOrigin.OutLeft,
-                ["Left"] = NssPositionOrigin.Left,
-                ["InTop"] = NssPositionOrigin.InTop,
-                ["OnTop"] = NssPositionOrigin.OnTop,
-                ["OutTop"] = NssPositionOrigin.OutTop,
-                ["InRight"] = NssPositionOrigin.InRight,
-                ["OnRight"] = NssPositionOrigin.OnRight,
-                ["OutRight"] = NssPositionOrigin.OutRight,
-                ["Right"] = NssPositionOrigin.Right,
-                ["InBottom"] = NssPositionOrigin.InBottom,
-                ["OnBottom"] = NssPositionOrigin.OnBottom,
-                ["OutBottom"] = NssPositionOrigin.OutBottom,
-                ["Bottom"] = NssPositionOrigin.Bottom,
-                ["Center"] = NssPositionOrigin.Center,
-                ["Middle"] = NssPositionOrigin.Center
-            };
-
             Colors = new Dictionary<string, NssColor>(StringComparer.OrdinalIgnoreCase)
             {
                 ["BLACK"] = NssColor.Black,

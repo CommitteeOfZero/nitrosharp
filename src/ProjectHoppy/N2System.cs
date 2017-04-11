@@ -27,7 +27,7 @@ namespace ProjectHoppy
             EnteredDialogueBlock += OnEnteredDialogueBlock;
         }
 
-        private Vector2 Position(NssCoordinate x, NssCoordinate y, Vector2 current, int width, int height)
+        private Vector2 Position(Coordinate x, Coordinate y, Vector2 current, int width, int height)
         {
             float absoluteX = NssToAbsoluteCoordinate(x, current.X, width, _viewport.Width);
             float absoluteY = NssToAbsoluteCoordinate(y, current.Y, height, _viewport.Height);
@@ -92,7 +92,7 @@ namespace ProjectHoppy
 
         public void SetContent(ContentManager content) => _content = content;
 
-        public override void AddRectangle(string entityName, int priority, NssCoordinate x, NssCoordinate y, int width, int height, NssColor color)
+        public override void AddRectangle(string entityName, int priority, Coordinate x, Coordinate y, int width, int height, NssColor color)
         {
             var rect = new RectangleVisual
             {
@@ -111,7 +111,7 @@ namespace ProjectHoppy
 
         }
 
-        public override void AddTexture(string entityName, int priority, NssCoordinate x, NssCoordinate y, string fileOrEntityName)
+        public override void AddTexture(string entityName, int priority, Coordinate x, Coordinate y, string fileOrEntityName)
         {
             int w = _viewport.Width, h = _viewport.Height;
             TextureAsset ass;
@@ -286,7 +286,7 @@ namespace ProjectHoppy
             CurrentThread.Suspend(duration);
         }
 
-        public override void CreateDialogueBox(string entityName, int priority, NssCoordinate x, NssCoordinate y, int width, int height)
+        public override void CreateDialogueBox(string entityName, int priority, Coordinate x, Coordinate y, int width, int height)
         {
             var box = new DialogueBox
             {
@@ -403,7 +403,7 @@ namespace ProjectHoppy
             }
         }
 
-        public override void Move(string entityName, TimeSpan duration, NssCoordinate x, NssCoordinate y, EasingFunction easingFunction, bool wait)
+        public override void Move(string entityName, TimeSpan duration, Coordinate x, Coordinate y, EasingFunction easingFunction, bool wait)
         {
             if (entityName.Length > 0 && entityName[0] == '@')
             {
@@ -429,7 +429,7 @@ namespace ProjectHoppy
             }
         }
 
-        private void MoveCore(Entity entity, TimeSpan duration, NssCoordinate x, NssCoordinate y, EasingFunction easingFunction, bool wait)
+        private void MoveCore(Entity entity, TimeSpan duration, Coordinate x, Coordinate y, EasingFunction easingFunction, bool wait)
         {
             if (entity != null)
             {
@@ -572,23 +572,47 @@ namespace ProjectHoppy
             }
         }
 
-        private static float NssToAbsoluteCoordinate(NssCoordinate coordinate, float currentValue, float objectDimension, float viewportDimension)
+        private static float NssToAbsoluteCoordinate(Coordinate coordinate, float currentValue, float objectDimension, float viewportDimension)
         {
             switch (coordinate.Origin)
             {
-                case NssPositionOrigin.Zero:
-                default:
+                case CoordinateOrigin.Zero:
                     return coordinate.Value;
 
-                case NssPositionOrigin.Current:
-                    return currentValue + coordinate.Value;
+                case CoordinateOrigin.CurrentValue:
+                    return coordinate.Value + currentValue;
 
-                case NssPositionOrigin.Center:
-                    return viewportDimension / 2.0f - objectDimension / 2.0f;
+                case CoordinateOrigin.Left:
+                    return coordinate.Value - objectDimension * coordinate.AnchorPoint;
+                case CoordinateOrigin.Top:
+                    return coordinate.Value - objectDimension * coordinate.AnchorPoint;
+                case CoordinateOrigin.Right:
+                    return viewportDimension - objectDimension * coordinate.AnchorPoint;
+                case CoordinateOrigin.Bottom:
+                    return viewportDimension - objectDimension * coordinate.AnchorPoint;
 
-                case NssPositionOrigin.InBottom:
-                    return viewportDimension - objectDimension;
+                case CoordinateOrigin.Center:
+                    return (viewportDimension + objectDimension) / 2.0f;
+
+                default:
+                    return 0.0f;
             }
+
+            //switch (coordinate.Origin)
+            //{
+            //    case NssPositionOrigin.Zero:
+            //    default:
+            //        return coordinate.Value;
+
+            //    case NssPositionOrigin.Current:
+            //        return currentValue + coordinate.Value;
+
+            //    case NssPositionOrigin.Center:
+            //        return viewportDimension / 2.0f - objectDimension / 2.0f;
+
+            //    case NssPositionOrigin.InBottom:
+            //        return viewportDimension - objectDimension;
+            //}
         }
     }
 }

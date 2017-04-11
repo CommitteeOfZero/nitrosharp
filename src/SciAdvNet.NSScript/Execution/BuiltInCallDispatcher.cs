@@ -106,8 +106,8 @@ namespace SciAdvNet.NSScript.Execution
         {
             string entityName = args.PopString();
             int priority = args.PopInt();
-            NssCoordinate x = args.PopCoordinate();
-            NssCoordinate y = args.PopCoordinate();
+            Coordinate x = args.PopCoordinate();
+            Coordinate y = args.PopCoordinate();
             string fileOrEntityName = args.PopString();
 
             _nssImpl.AddTexture(entityName, priority, x, y, fileOrEntityName);
@@ -138,8 +138,8 @@ namespace SciAdvNet.NSScript.Execution
         {
             string entityName = args.PopString();
             int priority = args.PopInt();
-            NssCoordinate x = args.PopCoordinate();
-            NssCoordinate y = args.PopCoordinate();
+            Coordinate x = args.PopCoordinate();
+            Coordinate y = args.PopCoordinate();
             int width = args.PopInt();
             int height = args.PopInt();
             NssColor color = args.PopColor();
@@ -173,8 +173,8 @@ namespace SciAdvNet.NSScript.Execution
         {
             string entityName = args.PopString();
             TimeSpan duration = args.PopTimeSpan();
-            NssCoordinate x = args.PopCoordinate();
-            NssCoordinate y = args.PopCoordinate();
+            Coordinate x = args.PopCoordinate();
+            Coordinate y = args.PopCoordinate();
             EasingFunction easingFunction = args.PopEasingFunction();
             bool wait = args.PopBool();
 
@@ -197,8 +197,8 @@ namespace SciAdvNet.NSScript.Execution
         {
             string entityName = args.PopString();
             int priority = args.PopInt();
-            NssCoordinate x = args.PopCoordinate();
-            NssCoordinate y = args.PopCoordinate();
+            Coordinate x = args.PopCoordinate();
+            Coordinate y = args.PopCoordinate();
             int width = args.PopInt();
             int height = args.PopInt();
 

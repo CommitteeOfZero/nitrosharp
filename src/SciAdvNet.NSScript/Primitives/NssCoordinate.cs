@@ -1,14 +1,27 @@
 ﻿namespace SciAdvNet.NSScript
 {
-    public struct NssCoordinate
+    public struct Coordinate
     {
-        public NssCoordinate(int value, NssPositionOrigin relativeTo = NssPositionOrigin.Zero)
+        public Coordinate(float value, CoordinateOrigin origin, Rational anchorPoint)
         {
             Value = value;
-            Origin = relativeTo;
+            Origin = origin;
+            AnchorPoint = anchorPoint;
         }
 
-        public int Value { get; }
-        public NssPositionOrigin Origin { get; }
+        public float Value { get; }
+        public CoordinateOrigin Origin { get; }
+        public Rational AnchorPoint { get; }
+    }
+
+    public enum CoordinateOrigin
+    {
+        Zero,
+        CurrentValue,
+        Left,
+        Top,
+        Right,
+        Bottom,
+        Center
     }
 }

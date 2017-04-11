@@ -68,28 +68,28 @@ namespace SciAdvNet.NSScript.Execution
         /// <param name="y"></param>
         /// <param name="width"></param>
         /// <param name="height"></param>
-        public virtual void CreateDialogueBox(string entityName, int priority, NssCoordinate x, NssCoordinate y, int width, int height)
+        public virtual void CreateDialogueBox(string entityName, int priority, Coordinate x, Coordinate y, int width, int height)
         {
         }
 
         /// <summary>
         /// Original name: CreateText.
         /// </summary>
-        public virtual void AddText(string entityName, int priority, NssCoordinate x, NssCoordinate y, int width, int height, string text)
+        public virtual void AddText(string entityName, int priority, Coordinate x, Coordinate y, int width, int height, string text)
         {
         }
 
         /// <summary>
         /// Original name: CreateTexture.
         /// </summary>
-        public virtual void AddTexture(string entityName, int priority, NssCoordinate x, NssCoordinate y, string fileOrEntityName)
+        public virtual void AddTexture(string entityName, int priority, Coordinate x, Coordinate y, string fileOrEntityName)
         {
         }
 
         /// <summary>
         /// Original name: CreateColor.
         /// </summary>
-        public virtual void AddRectangle(string entityName, int priority, NssCoordinate x, NssCoordinate y, int width, int height, NssColor color)
+        public virtual void AddRectangle(string entityName, int priority, Coordinate x, Coordinate y, int width, int height, NssColor color)
         {
         }
 
@@ -125,7 +125,7 @@ namespace SciAdvNet.NSScript.Execution
         {
         }
 
-        public virtual void Move(string entityName, TimeSpan duration, NssCoordinate x, NssCoordinate y, EasingFunction easingFunction, bool wait)
+        public virtual void Move(string entityName, TimeSpan duration, Coordinate x, Coordinate y, EasingFunction easingFunction, bool wait)
         {
         }
 
