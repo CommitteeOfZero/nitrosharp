@@ -1,4 +1,4 @@
-﻿using SciAdvNet.NSScript.PXml;
+﻿using CommitteeOfZero.NsScript.PXml;
 using System.Text;
 
 namespace ProjectHoppy.Text

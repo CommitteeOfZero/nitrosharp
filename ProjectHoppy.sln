@@ -1,11 +1,11 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.26403.0
+VisualStudioVersion = 15.0.26403.3
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SciAdvNet.NSScript", "src\SciAdvNet.NSScript\SciAdvNet.NSScript.csproj", "{D141E5DC-81DB-4352-8BAE-E3772BDC23DE}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CommitteeOfZero.NsScript", "src\CommitteeOfZero.NsScript\CommitteeOfZero.NsScript.csproj", "{D141E5DC-81DB-4352-8BAE-E3772BDC23DE}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SciAdvNet.NSScript.Tests", "src\SciAdvNet.NSScript.Tests\SciAdvNet.NSScript.Tests.csproj", "{EC39394D-3A99-4EBB-83F3-9D800A8D4BCC}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CommitteeOfZero.NsScript.Tests", "src\CommitteeOfZero.NsScript.Tests\CommitteeOfZero.NsScript.Tests.csproj", "{EC39394D-3A99-4EBB-83F3-9D800A8D4BCC}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProjectHoppy.EntryPoint.NetCore", "src\ProjectHoppy.EntryPoint.NetCore\ProjectHoppy.EntryPoint.NetCore.csproj", "{D3FD53D0-2DBF-4AD4-8B5B-2A95639B1E20}"
 EndProject

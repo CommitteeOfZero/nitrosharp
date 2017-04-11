@@ -28,7 +28,6 @@ namespace ProjectHoppy.Graphics
                 if (animation.IsEnabled)
                 {
                     float newValue = AdvanceAnimation(animation.InitialValue, animation.FinalValue, animation.Elapsed, animation.Duration, animation.TimingFunction);
-
                     animation.PropertySetter(animation.TargetComponent, newValue);
                     animation.Elapsed += deltaMilliseconds;
 
@@ -45,9 +44,6 @@ namespace ProjectHoppy.Graphics
                 if (animation.IsEnabled)
                 {
                     Vector2 newValue = AdvanceAnimation(animation.InitialValue, animation.FinalValue, animation.Elapsed, animation.Duration, animation.TimingFunction);
-
-                    Debug.WriteLine(newValue);
-
                     animation.PropertySetter(animation.TargetComponent, newValue);
                     animation.Elapsed += deltaMilliseconds;
 

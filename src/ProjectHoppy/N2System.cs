@@ -1,10 +1,10 @@
 ﻿using System;
-using SciAdvNet.NSScript.Execution;
+using CommitteeOfZero.NsScript.Execution;
 using System.Collections.Generic;
 using ProjectHoppy.Graphics;
 using ProjectHoppy.Text;
-using SciAdvNet.NSScript.PXml;
-using SciAdvNet.NSScript;
+using CommitteeOfZero.NsScript.PXml;
+using CommitteeOfZero.NsScript;
 using HoppyFramework.Content;
 using HoppyFramework;
 using ProjectHoppy.Graphics.RenderItems;
@@ -12,7 +12,7 @@ using System.Numerics;
 
 namespace ProjectHoppy
 {
-    public class N2System : NssImplementation
+    public class N2System : BuiltInFunctionsBase
     {
         private System.Drawing.Size _viewport = new System.Drawing.Size(1280, 720);
         private ContentManager _content;
@@ -27,7 +27,7 @@ namespace ProjectHoppy
             EnteredDialogueBlock += OnEnteredDialogueBlock;
         }
 
-        private Vector2 Position(Coordinate x, Coordinate y, Vector2 current, int width, int height)
+        private Vector2 Position(NsCoordinate x, NsCoordinate y, Vector2 current, int width, int height)
         {
             float absoluteX = NssToAbsoluteCoordinate(x, current.X, width, _viewport.Width);
             float absoluteY = NssToAbsoluteCoordinate(y, current.Y, height, _viewport.Height);
@@ -92,7 +92,7 @@ namespace ProjectHoppy
 
         public void SetContent(ContentManager content) => _content = content;
 
-        public override void AddRectangle(string entityName, int priority, Coordinate x, Coordinate y, int width, int height, NssColor color)
+        public override void AddRectangle(string entityName, int priority, NsCoordinate x, NsCoordinate y, int width, int height, NsColor color)
         {
             var rect = new RectangleVisual
             {
@@ -111,7 +111,7 @@ namespace ProjectHoppy
 
         }
 
-        public override void AddTexture(string entityName, int priority, Coordinate x, Coordinate y, string fileOrEntityName)
+        public override void AddTexture(string entityName, int priority, NsCoordinate x, NsCoordinate y, string fileOrEntityName)
         {
             int w = _viewport.Width, h = _viewport.Height;
             TextureAsset ass;
@@ -149,7 +149,7 @@ namespace ProjectHoppy
             }
         }
 
-        public override void LoadAudio(string entityName, AudioKind kind, string fileName)
+        public override void LoadAudio(string entityName, NsAudioKind kind, string fileName)
         {
             _entities.Create(entityName, replace: true)
                 .WithComponent(new SoundComponent { AudioFile = fileName });
@@ -186,7 +186,7 @@ namespace ProjectHoppy
 
         private bool IsWildcardQuery(string s) => s[s.Length - 1] == '*';
 
-        public override void Fade(string entityName, TimeSpan duration, Rational opacity, bool wait)
+        public override void Fade(string entityName, TimeSpan duration, NsRational opacity, bool wait)
         {
             if (entityName.Length > 0 && entityName[0] == '@')
             {
@@ -212,7 +212,7 @@ namespace ProjectHoppy
             }
         }
 
-        private void FadeCore(Entity entity, TimeSpan duration, Rational opacity, bool wait)
+        private void FadeCore(Entity entity, TimeSpan duration, NsRational opacity, bool wait)
         {
             if (entity != null)
             {
@@ -239,8 +239,8 @@ namespace ProjectHoppy
             }
         }
 
-        public override void DrawTransition(string entityName, TimeSpan duration, Rational initialOpacity,
-            Rational finalOpacity, Rational feather, string fileName, bool wait)
+        public override void DrawTransition(string entityName, TimeSpan duration, NsRational initialOpacity,
+            NsRational finalOpacity, NsRational feather, string fileName, bool wait)
         {
             if (entityName.Length > 0 && entityName[0] == '@')
             {
@@ -286,7 +286,7 @@ namespace ProjectHoppy
             CurrentThread.Suspend(duration);
         }
 
-        public override void CreateDialogueBox(string entityName, int priority, Coordinate x, Coordinate y, int width, int height)
+        public override void CreateDialogueBox(string entityName, int priority, NsCoordinate x, NsCoordinate y, int width, int height)
         {
             var box = new DialogueBox
             {
@@ -403,7 +403,7 @@ namespace ProjectHoppy
             }
         }
 
-        public override void Move(string entityName, TimeSpan duration, Coordinate x, Coordinate y, EasingFunction easingFunction, bool wait)
+        public override void Move(string entityName, TimeSpan duration, NsCoordinate x, NsCoordinate y, NsEasingFunction easingFunction, bool wait)
         {
             if (entityName.Length > 0 && entityName[0] == '@')
             {
@@ -429,7 +429,7 @@ namespace ProjectHoppy
             }
         }
 
-        private void MoveCore(Entity entity, TimeSpan duration, Coordinate x, Coordinate y, EasingFunction easingFunction, bool wait)
+        private void MoveCore(Entity entity, TimeSpan duration, NsCoordinate x, NsCoordinate y, NsEasingFunction easingFunction, bool wait)
         {
             if (entity != null)
             {
@@ -455,7 +455,7 @@ namespace ProjectHoppy
             }
         }
 
-        public override void Zoom(string entityName, TimeSpan duration, Rational scaleX, Rational scaleY, EasingFunction easingFunction, bool wait)
+        public override void Zoom(string entityName, TimeSpan duration, NsRational scaleX, NsRational scaleY, NsEasingFunction easingFunction, bool wait)
         {
             if (entityName.Length > 0 && entityName[0] == '@')
             {
@@ -481,7 +481,7 @@ namespace ProjectHoppy
             }
         }
 
-        private void ZoomCore(Entity entity, TimeSpan duration, Rational scaleX, Rational scaleY, EasingFunction easingFunction, bool wait)
+        private void ZoomCore(Entity entity, TimeSpan duration, NsRational scaleX, NsRational scaleY, NsEasingFunction easingFunction, bool wait)
         {
             if (entity != null)
             {
@@ -516,7 +516,7 @@ namespace ProjectHoppy
             }
         }
 
-        public override void Request(string entityName, NssEntityAction action)
+        public override void Request(string entityName, NsEntityAction action)
         {
             if (entityName == null)
                 return;
@@ -539,25 +539,25 @@ namespace ProjectHoppy
             }
         }
 
-        private void RequestCore(Entity entity, NssEntityAction action)
+        private void RequestCore(Entity entity, NsEntityAction action)
         {
             if (entity != null)
             {
                 switch (action)
                 {
-                    case NssEntityAction.Lock:
+                    case NsEntityAction.Lock:
                         entity.Locked = true;
                         break;
 
-                    case NssEntityAction.Unlock:
+                    case NsEntityAction.Unlock:
                         entity.Locked = false;
                         break;
 
-                    case NssEntityAction.ResetText:
+                    case NsEntityAction.ResetText:
                         entity.GetComponent<GameTextVisual>()?.Reset();
                         break;
 
-                    case NssEntityAction.Hide:
+                    case NsEntityAction.Hide:
                         var visual = entity.GetComponent<Visual>();
                         if (visual != null)
                         {
@@ -565,54 +565,38 @@ namespace ProjectHoppy
                         }
                         break;
 
-                    case NssEntityAction.Dispose:
+                    case NsEntityAction.Dispose:
                         _entities.Remove(entity);
                         break;
                 }
             }
         }
 
-        private static float NssToAbsoluteCoordinate(Coordinate coordinate, float currentValue, float objectDimension, float viewportDimension)
+        private static float NssToAbsoluteCoordinate(NsCoordinate coordinate, float currentValue, float objectDimension, float viewportDimension)
         {
             switch (coordinate.Origin)
             {
-                case CoordinateOrigin.Zero:
+                case NsCoordinateOrigin.Zero:
                     return coordinate.Value;
 
-                case CoordinateOrigin.CurrentValue:
+                case NsCoordinateOrigin.CurrentValue:
                     return coordinate.Value + currentValue;
 
-                case CoordinateOrigin.Left:
+                case NsCoordinateOrigin.Left:
                     return coordinate.Value - objectDimension * coordinate.AnchorPoint;
-                case CoordinateOrigin.Top:
+                case NsCoordinateOrigin.Top:
                     return coordinate.Value - objectDimension * coordinate.AnchorPoint;
-                case CoordinateOrigin.Right:
+                case NsCoordinateOrigin.Right:
                     return viewportDimension - objectDimension * coordinate.AnchorPoint;
-                case CoordinateOrigin.Bottom:
+                case NsCoordinateOrigin.Bottom:
                     return viewportDimension - objectDimension * coordinate.AnchorPoint;
 
-                case CoordinateOrigin.Center:
-                    return (viewportDimension + objectDimension) / 2.0f;
+                case NsCoordinateOrigin.Center:
+                    return (viewportDimension - objectDimension) / 2.0f;
 
                 default:
-                    return 0.0f;
+                    throw new ArgumentException("Illegal value.", nameof(coordinate));
             }
-
-            //switch (coordinate.Origin)
-            //{
-            //    case NssPositionOrigin.Zero:
-            //    default:
-            //        return coordinate.Value;
-
-            //    case NssPositionOrigin.Current:
-            //        return currentValue + coordinate.Value;
-
-            //    case NssPositionOrigin.Center:
-            //        return viewportDimension / 2.0f - objectDimension / 2.0f;
-
-            //    case NssPositionOrigin.InBottom:
-            //        return viewportDimension - objectDimension;
-            //}
         }
     }
 }

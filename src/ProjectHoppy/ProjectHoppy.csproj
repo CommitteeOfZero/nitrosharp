@@ -6,8 +6,8 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\CommitteeOfZero.NsScript\CommitteeOfZero.NsScript.csproj" />
     <ProjectReference Include="..\HoppyFramework\HoppyFramework.csproj" />
-    <ProjectReference Include="..\SciAdvNet.NSScript\SciAdvNet.NSScript.csproj" />
   </ItemGroup>
   
   <ItemGroup>

@@ -3,7 +3,7 @@ using HoppyFramework.Audio;
 using HoppyFramework.Content;
 using Microsoft.Extensions.Logging;
 using ProjectHoppy.Graphics;
-using SciAdvNet.NSScript.Execution;
+using CommitteeOfZero.NsScript.Execution;
 using System;
 using System.IO;
 
@@ -12,7 +12,7 @@ namespace ProjectHoppy
     public class ChaosHead : Game
     {
         private ContentManager _content;
-        private NSScriptInterpreter _nssInterpreter;
+        private NsScriptInterpreter _nssInterpreter;
         private N2System _n2system;
         private HoppyConfig _config;
 
@@ -31,7 +31,7 @@ namespace ProjectHoppy
             var scriptLocator = new ScriptLocator(_config.ContentRoot);
 
             _n2system = new N2System(Entities);
-            _nssInterpreter = new NSScriptInterpreter(scriptLocator, _n2system);
+            _nssInterpreter = new NsScriptInterpreter(scriptLocator, _n2system);
             _nssInterpreter.BuiltInCallScheduled += OnBuiltInCallDispatched;
             _nssInterpreter.EnteredFunction += OnEnteredFunction;
 
@@ -40,7 +40,7 @@ namespace ProjectHoppy
             //_nssInterpreter.CreateThread("nss/ch01_006_妄想トリガー１■.nss");
         }
 
-        private void OnEnteredFunction(object sender, SciAdvNet.NSScript.Function function)
+        private void OnEnteredFunction(object sender, CommitteeOfZero.NsScript.Function function)
         {
             _interpreterLog.LogCritical($"Entered function {function.Name.SimplifiedName}");
         }
