@@ -37,7 +37,7 @@ namespace ProjectHoppy
 
             //_nssInterpreter.CreateThread("nss/test.nss");
             _nssInterpreter.CreateThread("nss/ch01_007_円山町殺人現場");
-            //_nssInterpreter.CreateThread("nss/ch01_019_１０月２日木.nss");
+            //_nssInterpreter.CreateThread("nss/ch01_006_妄想トリガー１■.nss");
         }
 
         private void OnEnteredFunction(object sender, SciAdvNet.NSScript.Function function)
