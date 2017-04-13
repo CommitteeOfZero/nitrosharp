@@ -20,6 +20,7 @@ namespace CommitteeOfZero.Nitro
             _audioEngine = audioEngine;
             _content = content;
             EntityAdded += OnEntityAdded;
+            EntityRemoved += OnEntityRemoved;
 
             _audioSources = new Dictionary<SoundComponent, AudioSource>();
             _freeAudioSources = new Queue<AudioSource>();
@@ -45,6 +46,14 @@ namespace CommitteeOfZero.Nitro
             audioSource.SetStream(stream);
 
             _audioSources[sound] = audioSource;
+        }
+
+        private void OnEntityRemoved(object sender, Entity e)
+        {
+            var sound = e.GetComponent<SoundComponent>();
+            _audioSources.TryGetValue(sound, out var source);
+
+            source?.Stop();
         }
 
         private AudioSource GetFreeAudioSource()

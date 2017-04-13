@@ -1,5 +1,5 @@
-﻿using MoeGame.Framework.Content;
-using SharpDX.Mathematics.Interop;
+﻿using System;
+using MoeGame.Framework.Content;
 using SharpDX.Direct2D1;
 
 namespace CommitteeOfZero.Nitro.Graphics.RenderItems

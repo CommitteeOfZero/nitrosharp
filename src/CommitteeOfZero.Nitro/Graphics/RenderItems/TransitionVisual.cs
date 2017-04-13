@@ -5,7 +5,7 @@ using System.Diagnostics;
 
 namespace CommitteeOfZero.Nitro.Graphics.RenderItems
 {
-    public class TransitionVisual : Visual
+    public class TransitionVisual : Visual, IDisposable
     {
         private bool _inputsSet = false;
         private Bitmap1 _srcBitmap;
@@ -56,6 +56,11 @@ namespace CommitteeOfZero.Nitro.Graphics.RenderItems
                 effect.SetValue(0, Opacity);
                 canvas.DrawImage(effect);
             }
+        }
+
+        public void Dispose()
+        {
+            _srcBitmap?.Dispose();
         }
     }
 }

@@ -4,7 +4,7 @@ using System.Reflection;
 
 namespace MoeGame.Framework
 {
-    public class Entity
+    public sealed class Entity
     {
         private readonly EntityManager _manager;
         private readonly Dictionary<Type, IList<Component>> _components;
@@ -17,13 +17,13 @@ namespace MoeGame.Framework
             CreationTime = creationTime;
 
             _components = new Dictionary<Type, IList<Component>>();
+            AdditionalProperties = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
         }
 
         public ulong Id { get; }
         public string Name { get; }
         public TimeSpan CreationTime { get; }
-
-        public bool Locked { get; set; }
+        public Dictionary<string, object> AdditionalProperties { get; }
 
         public Entity WithComponent<T>(T component) where T : Component
         {

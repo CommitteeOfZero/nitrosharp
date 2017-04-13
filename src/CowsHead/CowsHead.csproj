@@ -10,7 +10,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Content Include="cowshead.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="CowsHead.json" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="Shaders\Transition.bin">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>

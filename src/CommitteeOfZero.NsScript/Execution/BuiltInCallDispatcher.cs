@@ -40,9 +40,19 @@ namespace CommitteeOfZero.NsScript.Execution
             };
         }
 
+        private static string PreprocessEntityName(string rawEntityName)
+        {
+            if (string.IsNullOrEmpty(rawEntityName) || rawEntityName.Length < 2)
+            {
+                return rawEntityName;
+            }
+
+            return rawEntityName[0] == '@' ? rawEntityName.Substring(1) : rawEntityName;
+        }
+
         private void ImageHorizon(ArgumentStack args)
         {
-            string entityName = args.PopString();
+            string entityName = PreprocessEntityName(args.PopString());
             int r = _builtinsImpl.GetTextureWidth(entityName);
             _builtinsImpl.CurrentThread.CurrentFrame.EvaluationStack.Push(new ConstantValue(r));
         }
@@ -81,15 +91,15 @@ namespace CommitteeOfZero.NsScript.Execution
 
         private void SetAlias(ArgumentStack args)
         {
-            string entityName = args.PopString();
-            string alias = args.PopString();
+            string entityName = PreprocessEntityName(args.PopString());
+            string alias = PreprocessEntityName(args.PopString());
 
             _builtinsImpl.SetAlias(entityName, alias);
         }
 
         private void Request(ArgumentStack args)
         {
-            string entityName = args.PopString();
+            string entityName = PreprocessEntityName(args.PopString());
             NsEntityAction action = args.PopNssAction();
 
             _builtinsImpl.Request(entityName, action);
@@ -97,45 +107,32 @@ namespace CommitteeOfZero.NsScript.Execution
 
         private void Delete(ArgumentStack args)
         {
-            string entityName = args.PopString();
+            string entityName = PreprocessEntityName(args.PopString());
             _builtinsImpl.RemoveEntity(entityName);
         }
 
         private void CreateTexture(ArgumentStack args)
         {
-            string entityName = args.PopString();
+            string entityName = PreprocessEntityName(args.PopString());
             int priority = args.PopInt();
             NsCoordinate x = args.PopCoordinate();
             NsCoordinate y = args.PopCoordinate();
-            string fileOrEntityName = args.PopString();
+            string fileOrEntityName = PreprocessEntityName(args.PopString());
 
             _builtinsImpl.AddTexture(entityName, priority, x, y, fileOrEntityName);
         }
 
         private void CreateSound(ArgumentStack args)
         {
-            string entityName = args.PopString();
-            string strAudioKind = args.PopString();
-            NsAudioKind kind;
-            switch (strAudioKind)
-            {
-                case "SE":
-                    kind = NsAudioKind.SoundEffect;
-                    break;
-
-                case "BGM":
-                default:
-                    kind = NsAudioKind.BackgroundMusic;
-                    break;
-            }
-
+            string entityName = PreprocessEntityName(args.PopString());
+            NsAudioKind kind = args.PopAudioKind();
             string fileName = args.PopString();
             _builtinsImpl.LoadAudio(entityName, kind, fileName);
         }
 
         private void CreateColor(ArgumentStack args)
         {
-            string entityName = args.PopString();
+            string entityName = PreprocessEntityName(args.PopString());
             int priority = args.PopInt();
             NsCoordinate x = args.PopCoordinate();
             NsCoordinate y = args.PopCoordinate();
@@ -148,7 +145,7 @@ namespace CommitteeOfZero.NsScript.Execution
 
         private void SetVolume(ArgumentStack args)
         {
-            string entityName = args.PopString();
+            string entityName = PreprocessEntityName(args.PopString());
             TimeSpan duration = args.PopTimeSpan();
             int volume = args.PopInt();
 
@@ -157,7 +154,7 @@ namespace CommitteeOfZero.NsScript.Execution
 
         private void Fade(ArgumentStack args)
         {
-            string entityName = args.PopString();
+            string entityName = PreprocessEntityName(args.PopString());
             TimeSpan duration = args.PopTimeSpan();
             var opacity = new NsRational(args.PopInt(), NssMaxOpacity);
 
@@ -170,7 +167,7 @@ namespace CommitteeOfZero.NsScript.Execution
 
         private void Move(ArgumentStack args)
         {
-            string entityName = args.PopString();
+            string entityName = PreprocessEntityName(args.PopString());
             TimeSpan duration = args.PopTimeSpan();
             NsCoordinate x = args.PopCoordinate();
             NsCoordinate y = args.PopCoordinate();
@@ -182,7 +179,7 @@ namespace CommitteeOfZero.NsScript.Execution
 
         private void Zoom(ArgumentStack args)
         {
-            string entityName = args.PopString();
+            string entityName = PreprocessEntityName(args.PopString());
             TimeSpan duration = args.PopTimeSpan();
             var scaleX = new NsRational(args.PopInt(), 1000);
             var scaleY = new NsRational(args.PopInt(), 1000);
@@ -194,7 +191,7 @@ namespace CommitteeOfZero.NsScript.Execution
 
         private void CreateWindow(ArgumentStack args)
         {
-            string entityName = args.PopString();
+            string entityName = PreprocessEntityName(args.PopString());
             int priority = args.PopInt();
             NsCoordinate x = args.PopCoordinate();
             NsCoordinate y = args.PopCoordinate();
@@ -206,7 +203,7 @@ namespace CommitteeOfZero.NsScript.Execution
 
         private void WaitText(ArgumentStack args)
         {
-            string entityName = args.PopString();
+            string entityName = PreprocessEntityName(args.PopString());
             TimeSpan time = args.PopTimeSpan();
 
             _builtinsImpl.WaitText(entityName, time);
@@ -245,7 +242,7 @@ namespace CommitteeOfZero.NsScript.Execution
 
         private void SetLoop(ArgumentStack args)
         {
-            string entityName = args.PopString();
+            string entityName = PreprocessEntityName(args.PopString());
             bool looping = args.PopBool();
 
             _builtinsImpl.ToggleLooping(entityName, looping);
@@ -253,7 +250,7 @@ namespace CommitteeOfZero.NsScript.Execution
 
         private void SetLoopPoint(ArgumentStack args)
         {
-            string entityName = args.PopString();
+            string entityName = PreprocessEntityName(args.PopString());
             TimeSpan loopStart = args.PopTimeSpan();
             TimeSpan loopEnd = args.PopTimeSpan();
 
@@ -262,7 +259,7 @@ namespace CommitteeOfZero.NsScript.Execution
 
         private void DrawTransition(ArgumentStack args)
         {
-            string entityName = args.PopString();
+            string entityName = PreprocessEntityName(args.PopString());
             TimeSpan duration = args.PopTimeSpan();
             var initialOpacity = new NsRational(args.PopInt(), NssMaxOpacity);
             var finalOpacity = new NsRational(args.PopInt(), NssMaxOpacity);
@@ -278,7 +275,7 @@ namespace CommitteeOfZero.NsScript.Execution
 
         private void RemainTime(ArgumentStack args)
         {
-            string entityName = args.PopString();
+            string entityName = PreprocessEntityName(args.PopString());
             _builtinsImpl.CurrentThread.CurrentFrame.EvaluationStack.Push(new ConstantValue(0));
         }
     }

@@ -37,8 +37,7 @@ namespace CommitteeOfZero.Nitro
 
         public override int GetTextureWidth(string entityName)
         {
-            var entity = _entities.SafeGet(entityName);
-            if (entity != null)
+            if (_entities.TryGet(entityName, out var entity))
             {
                 var texture = entity.GetComponent<TextureVisual>();
                 if (texture != null)
@@ -57,7 +56,9 @@ namespace CommitteeOfZero.Nitro
                 _entities.Remove(_textEntity);
             }
 
-            _currentDialogueBox = _entities.SafeGet(block.BoxName)?.GetComponent<DialogueBox>();
+            _entities.TryGet(block.BoxName, out var boxEntity);
+            _currentDialogueBox = boxEntity?.GetComponent<DialogueBox>();
+
             var textVisual = new GameTextVisual
             {
                 Position = _currentDialogueBox.Position,
@@ -78,7 +79,8 @@ namespace CommitteeOfZero.Nitro
 
             string plainText = flattener.Flatten(root);
 
-            var textVisual = _entities.SafeGet(CurrentDialogueBlock.Identifier)?.GetComponent<GameTextVisual>();
+            _entities.TryGet(CurrentDialogueBlock.Identifier, out var textEntity);
+            var textVisual = textEntity?.GetComponent<GameTextVisual>();
             if (textVisual != null)
             {
                 textVisual.Reset();
@@ -159,11 +161,6 @@ namespace CommitteeOfZero.Nitro
 
         public override void RemoveEntity(string entityName)
         {
-            if (entityName.Length > 0 && entityName[0] == '@')
-            {
-                entityName = entityName.Substring(1);
-            }
-
             if (!IsWildcardQuery(entityName))
             {
                 _entities.Remove(entityName);
@@ -172,7 +169,7 @@ namespace CommitteeOfZero.Nitro
 
             foreach (var e in _entities.WildcardQuery(entityName))
             {
-                if (!e.Locked)
+                if (!e.IsLocked())
                 {
                     _entitiesToRemove.Enqueue(e);
                 }
@@ -188,11 +185,6 @@ namespace CommitteeOfZero.Nitro
 
         public override void Fade(string entityName, TimeSpan duration, NsRational opacity, bool wait)
         {
-            if (entityName.Length > 0 && entityName[0] == '@')
-            {
-                entityName = entityName.Substring(1);
-            }
-
             if (IsWildcardQuery(entityName))
             {
                 foreach (var entity in _entities.WildcardQuery(entityName))
@@ -202,8 +194,10 @@ namespace CommitteeOfZero.Nitro
             }
             else
             {
-                var entity = _entities.SafeGet(entityName);
-                FadeCore(entity, duration, opacity, wait);
+                if (_entities.TryGet(entityName, out var entity))
+                {
+                    FadeCore(entity, duration, opacity, wait);
+                }
             }
 
             if (duration > TimeSpan.Zero && wait)
@@ -214,39 +208,31 @@ namespace CommitteeOfZero.Nitro
 
         private void FadeCore(Entity entity, TimeSpan duration, NsRational opacity, bool wait)
         {
-            if (entity != null)
+            float adjustedOpacity = opacity.Rebase(1.0f);
+            var visual = entity.GetComponent<Visual>();
+            if (duration > TimeSpan.Zero)
             {
-                float adjustedOpacity = opacity.Rebase(1.0f);
-                var visual = entity.GetComponent<Visual>();
-                if (duration > TimeSpan.Zero)
+                var animation = new FloatAnimation
                 {
-                    var animation = new FloatAnimation
-                    {
-                        TargetComponent = visual,
-                        PropertyGetter = c => (c as Visual).Opacity,
-                        PropertySetter = (c, v) => (c as Visual).Opacity = v,
-                        Duration = duration,
-                        InitialValue = visual.Opacity,
-                        FinalValue = adjustedOpacity
-                    };
+                    TargetComponent = visual,
+                    PropertyGetter = c => (c as Visual).Opacity,
+                    PropertySetter = (c, v) => (c as Visual).Opacity = v,
+                    Duration = duration,
+                    InitialValue = visual.Opacity,
+                    FinalValue = adjustedOpacity
+                };
 
-                    entity.AddComponent(animation);
-                }
-                else
-                {
-                    visual.Opacity = adjustedOpacity;
-                }
+                entity.AddComponent(animation);
+            }
+            else
+            {
+                visual.Opacity = adjustedOpacity;
             }
         }
 
         public override void DrawTransition(string entityName, TimeSpan duration, NsRational initialOpacity,
             NsRational finalOpacity, NsRational feather, string fileName, bool wait)
         {
-            if (entityName.Length > 0 && entityName[0] == '@')
-            {
-                entityName = entityName.Substring(1);
-            }
-
             initialOpacity = initialOpacity.Rebase(1.0f);
             finalOpacity = finalOpacity.Rebase(1.0f);
 
@@ -318,16 +304,13 @@ namespace CommitteeOfZero.Nitro
             if (entityName == null)
                 return;
 
-            if (entityName.Length > 0 && entityName[0] == '@')
-            {
-                entityName = entityName.Substring(1);
-            }
-
             if (!IsWildcardQuery(entityName))
             {
-                var entity = _entities.SafeGet(entityName);
-                SetVolumeCore(entity, duration, volume);
-                return;
+                if (_entities.TryGet(entityName, out var entity))
+                {
+                    SetVolumeCore(entity, duration, volume);
+                    return;
+                }
             }
 
             foreach (var e in _entities.WildcardQuery(entityName))
@@ -338,89 +321,73 @@ namespace CommitteeOfZero.Nitro
 
         private void SetVolumeCore(Entity entity, TimeSpan duration, int volume)
         {
-            if (entity != null)
-            {
-                entity.GetComponent<SoundComponent>().Volume = volume;
-            }
+            entity.GetComponent<SoundComponent>().Volume = volume;
         }
 
         public override void ToggleLooping(string entityName, bool looping)
         {
-            if (entityName.Length > 0 && entityName[0] == '@')
-            {
-                entityName = entityName.Substring(1);
-            }
-
             if (!IsWildcardQuery(entityName))
             {
-                var entity = _entities.SafeGet(entityName);
-                ToggleLoopingCore(entity, looping);
-                return;
+                if (_entities.TryGet(entityName, out var entity))
+                {
+                    ToggleLoopingCore(entity, looping);
+                }
             }
-
-            foreach (var e in _entities.WildcardQuery(entityName))
+            else
             {
-                ToggleLoopingCore(e, looping);
+                foreach (var e in _entities.WildcardQuery(entityName))
+                {
+                    ToggleLoopingCore(e, looping);
+                }
             }
         }
 
         private void ToggleLoopingCore(Entity entity, bool looping)
         {
-            if (entity != null)
-            {
-                entity.GetComponent<SoundComponent>().Looping = looping;
-            }
+            entity.GetComponent<SoundComponent>().Looping = looping;
         }
 
         public override void SetLoopPoint(string entityName, TimeSpan loopStart, TimeSpan loopEnd)
         {
-            if (entityName.Length > 0 && entityName[0] == '@')
-            {
-                entityName = entityName.Substring(1);
-            }
-
             if (!IsWildcardQuery(entityName))
             {
-                var entity = _entities.SafeGet(entityName);
-                SetLoopingCore(entity, loopStart, loopEnd);
-                return;
+                if (_entities.TryGet(entityName, out var entity))
+                {
+                    SetLoopingCore(entity, loopStart, loopEnd);
+                }
             }
-
-            foreach (var e in _entities.WildcardQuery(entityName))
+            else
             {
-                SetLoopingCore(e, loopStart, loopEnd);
+                foreach (var e in _entities.WildcardQuery(entityName))
+                {
+                    SetLoopingCore(e, loopStart, loopEnd);
+                }
             }
         }
 
         private void SetLoopingCore(Entity entity, TimeSpan loopStart, TimeSpan loopEnd)
         {
-            if (entity != null)
-            {
-                var sound = entity.GetComponent<SoundComponent>();
-                sound.LoopStart = loopEnd;
-                sound.LoopEnd = loopEnd;
-                sound.Looping = true;
-            }
+            var sound = entity.GetComponent<SoundComponent>();
+            sound.LoopStart = loopEnd;
+            sound.LoopEnd = loopEnd;
+            sound.Looping = true;
         }
 
         public override void Move(string entityName, TimeSpan duration, NsCoordinate x, NsCoordinate y, NsEasingFunction easingFunction, bool wait)
         {
-            if (entityName.Length > 0 && entityName[0] == '@')
+            if (!IsWildcardQuery(entityName))
             {
-                entityName = entityName.Substring(1);
-            }
-
-            if (IsWildcardQuery(entityName))
-            {
-                foreach (var entity in _entities.WildcardQuery(entityName))
+                if (_entities.TryGet(entityName, out var entity))
                 {
                     MoveCore(entity, duration, x, y, easingFunction, wait);
                 }
             }
             else
             {
-                var entity = _entities.SafeGet(entityName);
-                MoveCore(entity, duration, x, y, easingFunction, wait);
+                foreach (var entity in _entities.WildcardQuery(entityName))
+                {
+                    MoveCore(entity, duration, x, y, easingFunction, wait);
+                }
             }
 
             if (duration > TimeSpan.Zero && wait)
@@ -431,48 +398,42 @@ namespace CommitteeOfZero.Nitro
 
         private void MoveCore(Entity entity, TimeSpan duration, NsCoordinate x, NsCoordinate y, NsEasingFunction easingFunction, bool wait)
         {
-            if (entity != null)
-            {
-                var visual = entity.GetComponent<Visual>();
-                var dst = Position(x, y, visual.Position, (int)visual.Width, (int)visual.Height);
+            var visual = entity.GetComponent<Visual>();
+            var dst = Position(x, y, visual.Position, (int)visual.Width, (int)visual.Height);
 
-                if (duration > TimeSpan.Zero)
+            if (duration > TimeSpan.Zero)
+            {
+                var animation = new Vector2Animation
                 {
-                    var animation = new Vector2Animation
-                    {
-                        TargetComponent = visual,
-                        PropertyGetter = c => (c as Visual).Position,
-                        PropertySetter = (c, v) => (c as Visual).Position = v,
-                        Duration = duration,
-                        InitialValue = visual.Position,
-                        FinalValue = dst
-                    };
-                }
-                else
-                {
-                    visual.Position = dst;
-                }
+                    TargetComponent = visual,
+                    PropertyGetter = c => (c as Visual).Position,
+                    PropertySetter = (c, v) => (c as Visual).Position = v,
+                    Duration = duration,
+                    InitialValue = visual.Position,
+                    FinalValue = dst
+                };
+            }
+            else
+            {
+                visual.Position = dst;
             }
         }
 
         public override void Zoom(string entityName, TimeSpan duration, NsRational scaleX, NsRational scaleY, NsEasingFunction easingFunction, bool wait)
         {
-            if (entityName.Length > 0 && entityName[0] == '@')
+            if (!IsWildcardQuery(entityName))
             {
-                entityName = entityName.Substring(1);
-            }
-
-            if (IsWildcardQuery(entityName))
-            {
-                foreach (var entity in _entities.WildcardQuery(entityName))
+                if (_entities.TryGet(entityName, out var entity))
                 {
                     ZoomCore(entity, duration, scaleX, scaleY, easingFunction, wait);
                 }
             }
             else
             {
-                var entity = _entities.SafeGet(entityName);
-                ZoomCore(entity, duration, scaleX, scaleY, easingFunction, wait);
+                foreach (var entity in _entities.WildcardQuery(entityName))
+                {
+                    ZoomCore(entity, duration, scaleX, scaleY, easingFunction, wait);
+                }
             }
 
             if (duration > TimeSpan.Zero && wait)
@@ -483,36 +444,33 @@ namespace CommitteeOfZero.Nitro
 
         private void ZoomCore(Entity entity, TimeSpan duration, NsRational scaleX, NsRational scaleY, NsEasingFunction easingFunction, bool wait)
         {
-            if (entity != null)
+            var visual = entity.GetComponent<Visual>();
+            scaleX = scaleX.Rebase(1.0f);
+            scaleY = scaleY.Rebase(1.0f);
+            if (duration > TimeSpan.Zero)
             {
-                var visual = entity.GetComponent<Visual>();
-                scaleX = scaleX.Rebase(1.0f);
-                scaleY = scaleY.Rebase(1.0f);
-                if (duration > TimeSpan.Zero)
+                Vector2 final = new Vector2(scaleX, scaleY);
+                if (visual.Scale == final)
                 {
-                    Vector2 final = new Vector2(scaleX, scaleY);
-                    if (visual.Scale == final)
-                    {
-                        visual.Scale = new Vector2(0.0f, 0.0f);
-                    }
-
-                    var animation = new Vector2Animation
-                    {
-                        TargetComponent = visual,
-                        PropertyGetter = c => (c as Visual).Scale,
-                        PropertySetter = (c, v) => (c as Visual).Scale = v,
-                        Duration = duration,
-                        InitialValue = visual.Scale,
-                        FinalValue = final,
-                        TimingFunction = (TimingFunction)easingFunction
-                    };
-
-                    entity.AddComponent(animation);
+                    visual.Scale = new Vector2(0.0f, 0.0f);
                 }
-                else
+
+                var animation = new Vector2Animation
                 {
-                    visual.Scale = new Vector2(scaleX, scaleY);
-                }
+                    TargetComponent = visual,
+                    PropertyGetter = c => (c as Visual).Scale,
+                    PropertySetter = (c, v) => (c as Visual).Scale = v,
+                    Duration = duration,
+                    InitialValue = visual.Scale,
+                    FinalValue = final,
+                    TimingFunction = (TimingFunction)easingFunction
+                };
+
+                entity.AddComponent(animation);
+            }
+            else
+            {
+                visual.Scale = new Vector2(scaleX, scaleY);
             }
         }
 
@@ -521,54 +479,49 @@ namespace CommitteeOfZero.Nitro
             if (entityName == null)
                 return;
 
-            if (entityName.Length > 0 && entityName[0] == '@')
-            {
-                entityName = entityName.Substring(1);
-            }
-
             if (!IsWildcardQuery(entityName))
             {
-                var entity = _entities.SafeGet(entityName);
-                RequestCore(entity, action);
-                return;
+                if (_entities.TryGet(entityName, out var entity))
+                {
+                    RequestCore(entity, action);
+                }
             }
-
-            foreach (var e in _entities.WildcardQuery(entityName))
+            else
             {
-                RequestCore(e, action);
+                foreach (var e in _entities.WildcardQuery(entityName))
+                {
+                    RequestCore(e, action);
+                }
             }
         }
 
         private void RequestCore(Entity entity, NsEntityAction action)
         {
-            if (entity != null)
+            switch (action)
             {
-                switch (action)
-                {
-                    case NsEntityAction.Lock:
-                        entity.Locked = true;
-                        break;
+                case NsEntityAction.Lock:
+                    entity.Lock();
+                    break;
 
-                    case NsEntityAction.Unlock:
-                        entity.Locked = false;
-                        break;
+                case NsEntityAction.Unlock:
+                    entity.Unlock();
+                    break;
 
-                    case NsEntityAction.ResetText:
-                        entity.GetComponent<GameTextVisual>()?.Reset();
-                        break;
+                case NsEntityAction.ResetText:
+                    entity.GetComponent<GameTextVisual>()?.Reset();
+                    break;
 
-                    case NsEntityAction.Hide:
-                        var visual = entity.GetComponent<Visual>();
-                        if (visual != null)
-                        {
-                            //visual.IsEnabled = false;
-                        }
-                        break;
+                case NsEntityAction.Hide:
+                    var visual = entity.GetComponent<Visual>();
+                    if (visual != null)
+                    {
+                        //visual.IsEnabled = false;
+                    }
+                    break;
 
-                    case NsEntityAction.Dispose:
-                        _entities.Remove(entity);
-                        break;
-                }
+                case NsEntityAction.Dispose:
+                    _entities.Remove(entity);
+                    break;
             }
         }
 

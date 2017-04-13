@@ -4,7 +4,7 @@ namespace CowsHead
 {
     public class Program
     {
-        private const string ConfigFileName = "cowshead.json";
+        private const string ConfigFileName = "CowsHead.json";
 
         public static void Main(string[] args)
         {

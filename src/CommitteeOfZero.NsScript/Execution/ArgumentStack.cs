@@ -8,7 +8,6 @@ namespace CommitteeOfZero.NsScript.Execution
         public ArgumentStack(IEnumerable<ConstantValue> collection)
             : base(collection)
         {
-
         }
 
         public int PopInt() => Pop().As<int>();
@@ -45,6 +44,13 @@ namespace CommitteeOfZero.NsScript.Execution
         {
             string actionName = PopString();
             return PredefinedConstants.EntityAction(actionName);
+        }
+
+        public NsAudioKind PopAudioKind()
+        {
+            string value = Pop().As<string>();
+            bool soundEffect = value.Equals("SE", StringComparison.OrdinalIgnoreCase);
+            return soundEffect ? NsAudioKind.SoundEffect : NsAudioKind.BackgroundMusic;
         }
 
         public TimeSpan PopTimeSpan()

@@ -49,21 +49,21 @@ namespace CommitteeOfZero.Nitro.Graphics
         public override void Process(Entity entity, float deltaMilliseconds)
         {
             var canvas = RenderContext.DeviceContext;
-            var renderItem = entity.GetComponent<RenderItem>();
-            if (renderItem.IsEnabled)
+            var visual = entity.GetComponent<Visual>();
+            if (visual.IsEnabled)
             {
                 var originalTransform = canvas.Transform;
 
-                var scale = renderItem.Scale;
+                var scale = visual.Scale;
 
-                float centerX = renderItem.Width / 2.0f;
-                float centerY = renderItem.Height / 2.0f;
+                float centerX = visual.Width / 2.0f;
+                float centerY = visual.Height / 2.0f;
                 var scaleOrigin = new SharpDX.Vector2(centerX, centerY);
 
                 canvas.Transform *= SharpDX.Matrix3x2.Scaling(scale.X, scale.Y, scaleOrigin);
-                canvas.Transform *= SharpDX.Matrix3x2.Translation(renderItem.Position.X, renderItem.Position.Y);
+                canvas.Transform *= SharpDX.Matrix3x2.Translation(visual.Position.X, visual.Position.Y);
 
-                renderItem.Render(this);
+                visual.Render(this);
                 canvas.Transform = originalTransform;
             }
         }

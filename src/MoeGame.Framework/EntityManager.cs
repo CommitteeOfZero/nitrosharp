@@ -41,22 +41,13 @@ namespace MoeGame.Framework
         }
 
         public bool Exists(string name) => _allEntities.ContainsKey(name);
+        public bool TryGet(string name, out Entity entity) => _allEntities.TryGetValue(name, out entity);
 
         public Entity Get(string name)
         {
-            if (!_allEntities.TryGetValue(name, out var entity))
+            if (!TryGet(name, out var entity))
             {
                 throw new ArgumentException($"Entity '{name}' does not exist.");
-            }
-
-            return entity;
-        }
-
-        public Entity SafeGet(string name)
-        {
-            if (!_allEntities.TryGetValue(name, out var entity))
-            {
-                return null;
             }
 
             return entity;
