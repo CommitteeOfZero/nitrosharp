@@ -39,11 +39,5 @@ namespace CommitteeOfZero.NsScript
             var parser = new NsScriptParser(new NsScriptLexer(statement));
             return parser.ParseStatement();
         }
-
-        //public static DialogueBlock ParseDialogueBlock(string text)
-        //{
-        //    var parser = new NSScriptParser(new NSScriptLexer(text));
-        //    return parser.ParseDialogueBlock();
-        //}
     }
 }

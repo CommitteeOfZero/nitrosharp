@@ -6,7 +6,7 @@ using System.Linq;
 
 namespace CommitteeOfZero.NsScript
 {
-    internal sealed partial class NsScriptParser
+    internal sealed class NsScriptParser
     {
         private readonly NsScriptLexer _lexer;
         private readonly SyntaxToken[] _tokens;

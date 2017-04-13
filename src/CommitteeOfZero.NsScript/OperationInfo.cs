@@ -2,7 +2,6 @@
 
 namespace CommitteeOfZero.NsScript
 {
-
     public static class OperationInfo
     {
         public static OperationCategory GetCategory(OperationKind operationKind)

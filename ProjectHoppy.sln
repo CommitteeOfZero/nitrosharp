@@ -7,13 +7,13 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CommitteeOfZero.NsScript", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CommitteeOfZero.NsScript.Tests", "src\CommitteeOfZero.NsScript.Tests\CommitteeOfZero.NsScript.Tests.csproj", "{EC39394D-3A99-4EBB-83F3-9D800A8D4BCC}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProjectHoppy.EntryPoint.NetCore", "src\ProjectHoppy.EntryPoint.NetCore\ProjectHoppy.EntryPoint.NetCore.csproj", "{D3FD53D0-2DBF-4AD4-8B5B-2A95639B1E20}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CowsHead", "src\CowsHead\CowsHead.csproj", "{D3FD53D0-2DBF-4AD4-8B5B-2A95639B1E20}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProjectHoppy", "src\ProjectHoppy\ProjectHoppy.csproj", "{D5D100EF-CB4E-4DE2-B20F-D5D85091DD52}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CommitteeOfZero.Nitro", "src\CommitteeOfZero.Nitro\CommitteeOfZero.Nitro.csproj", "{D5D100EF-CB4E-4DE2-B20F-D5D85091DD52}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AmplitudeExperiments", "src\AmplitudeExperiments\AmplitudeExperiments.csproj", "{BDA4FDCE-166A-4573-A518-75EB2767A9B0}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HoppyFramework", "src\HoppyFramework\HoppyFramework.csproj", "{6E5187F9-61C7-4CDC-BCA2-4379A20B0E6C}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MoeGame.Framework", "src\MoeGame.Framework\MoeGame.Framework.csproj", "{6E5187F9-61C7-4CDC-BCA2-4379A20B0E6C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -126,6 +126,9 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(Performance) = preSolution
+		HasPerformanceSessions = true
 	EndGlobalSection
 	GlobalSection(Performance) = preSolution
 		HasPerformanceSessions = true

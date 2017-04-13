@@ -1,0 +1,22 @@
+﻿{
+  "activeProfile": "Noah",
+  "graphics.vsync": true,
+
+  "profiles": {
+    "CH": {
+      "window.title": "COWS;HEAD",
+      "window.width": 800,
+      "window.height": 600,
+      "startupScript": "ch01_007_円山町殺人現場.nss",
+      "debug.contentRoot": "S:/ChaosContent/CH"
+    },
+
+    "Noah": {
+      "window.title": "COWS;HEAD Noah",
+      "window.width": 1280,
+      "window.height": 720,
+      "startupScript": "ch01_007_円山町殺人現場.nss",
+      "debug.contentRoot": "S:/ChaosContent/Noah"
+    }
+  }
+}

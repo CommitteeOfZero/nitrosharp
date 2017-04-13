@@ -24,7 +24,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\HoppyFramework\HoppyFramework.csproj" />
+    <ProjectReference Include="..\MoeGame.Framework\MoeGame.Framework.csproj" />
   </ItemGroup>
 
 </Project>
