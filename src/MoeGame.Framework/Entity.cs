@@ -25,6 +25,8 @@ namespace MoeGame.Framework
         public TimeSpan CreationTime { get; }
         public Dictionary<string, object> AdditionalProperties { get; }
 
+        internal Dictionary<Type, IList<Component>> Components => _components;
+
         public Entity WithComponent<T>(T component) where T : Component
         {
             AddComponent(component);

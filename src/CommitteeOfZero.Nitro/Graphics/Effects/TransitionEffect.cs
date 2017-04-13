@@ -7,7 +7,7 @@ using System.Runtime.InteropServices;
 
 namespace CommitteeOfZero.Nitro.Graphics.Effects
 {
-    [CustomEffect("Nigga", "CommitteeOfZero.Nitro", "SomeAnonDev")]
+    [CustomEffect("Transition", "CommitteeOfZero.Nitro", "CommitteeOfZero")]
     [CustomEffectInput("Texture")]
     [CustomEffectInput("Mask")]
     public class TransitionEffect : CustomEffectBase, DrawTransform
@@ -53,7 +53,8 @@ namespace CommitteeOfZero.Nitro.Graphics.Effects
         public RawRectangle MapInputRectanglesToOutputRectangle(RawRectangle[] inputRects, RawRectangle[] inputOpaqueSubRects, out RawRectangle outputOpaqueSubRect)
         {
             outputOpaqueSubRect = default(Rectangle);
-            return inputRects[0];
+            //return inputRects[1];
+            return new RawRectangle(0, 0, 1280, 720 + 120);
         }
 
         public RawRectangle MapInvalidRect(int inputIndex, RawRectangle invalidInputRect)
@@ -63,10 +64,12 @@ namespace CommitteeOfZero.Nitro.Graphics.Effects
 
         public void MapOutputRectangleToInputRectangles(RawRectangle outputRect, RawRectangle[] inputRects)
         {
-            for (int i = 0; i < InputCount; i++)
-            {
-                inputRects[i] = outputRect;
-            }
+            inputRects[0] = outputRect;
+            inputRects[1] = new RawRectangle(0, 0, outputRect.Right, outputRect.Bottom - outputRect.Top);
+            //for (int i = 0; i < InputCount; i++)
+            //{
+            //    inputRects[i] = outputRect;
+            //}
         }
 
         public void SetDrawInformation(DrawInformation drawInfo)

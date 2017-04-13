@@ -51,9 +51,11 @@ namespace CommitteeOfZero.Nitro
         private void OnEntityRemoved(object sender, Entity e)
         {
             var sound = e.GetComponent<SoundComponent>();
-            _audioSources.TryGetValue(sound, out var source);
-
-            source?.Stop();
+            if (sound != null)
+            {
+                _audioSources.TryGetValue(sound, out var source);
+                source?.Stop();
+            }
         }
 
         private AudioSource GetFreeAudioSource()

@@ -14,16 +14,17 @@ namespace CommitteeOfZero.Nitro
 {
     public sealed class NitroCore : BuiltInFunctionsBase
     {
-        private System.Drawing.Size _viewport = new System.Drawing.Size(1280, 720);
+        private System.Drawing.Size _viewport;
         private ContentManager _content;
         private readonly EntityManager _entities;
 
         private DialogueBox _currentDialogueBox;
         private Entity _textEntity;
 
-        public NitroCore(EntityManager entities)
+        public NitroCore(NitroConfiguration configuration, EntityManager entities)
         {
             _entities = entities;
+            _viewport = new System.Drawing.Size(configuration.WindowWidth, configuration.WindowHeight);
             EnteredDialogueBlock += OnEnteredDialogueBlock;
         }
 
@@ -163,21 +164,35 @@ namespace CommitteeOfZero.Nitro
         {
             if (!IsWildcardQuery(entityName))
             {
-                _entities.Remove(entityName);
-                return;
-            }
-
-            foreach (var e in _entities.WildcardQuery(entityName))
-            {
-                if (!e.IsLocked())
+                if (_entities.TryGet(entityName, out var entity))
                 {
-                    _entitiesToRemove.Enqueue(e);
+                    RemoveEntityCore(entity);
+                }
+            }
+            else
+            {
+                foreach (var e in _entities.WildcardQuery(entityName))
+                {
+                    if (!e.IsLocked())
+                    {
+                        RemoveEntityCore(e);
+                    }
                 }
             }
 
             while (_entitiesToRemove.Count > 0)
             {
                 _entities.Remove(_entitiesToRemove.Dequeue());
+            }
+        }
+
+        private void RemoveEntityCore(Entity entity)
+        {
+            _entitiesToRemove.Enqueue(entity);
+            var texture = entity.GetComponent<TextureVisual>();
+            if (texture != null)
+            {
+                //_content.Unload(texture.AssetRef);
             }
         }
 
@@ -243,7 +258,8 @@ namespace CommitteeOfZero.Nitro
                 {
                     Source = sourceVisual,
                     MaskAsset = fileName,
-                    Priority = sourceVisual.Priority
+                    Priority = sourceVisual.Priority,
+                    Position = sourceVisual.Position
                 };
 
                 _content.StartLoading<TextureAsset>(fileName);

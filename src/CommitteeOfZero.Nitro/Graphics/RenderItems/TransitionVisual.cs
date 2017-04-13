@@ -1,11 +1,10 @@
 ﻿using MoeGame.Framework.Content;
 using SharpDX.Direct2D1;
 using System;
-using System.Diagnostics;
 
 namespace CommitteeOfZero.Nitro.Graphics.RenderItems
 {
-    public class TransitionVisual : Visual, IDisposable
+    public class TransitionVisual : Visual
     {
         private bool _inputsSet = false;
         private Bitmap1 _srcBitmap;
@@ -22,13 +21,9 @@ namespace CommitteeOfZero.Nitro.Graphics.RenderItems
             {
                 if (Source is RectangleVisual rectangle)
                 {
-                    var sw = Stopwatch.StartNew();
                     var size = new SharpDX.Size2((int)rectangle.Width, (int)rectangle.Height);
                     var props = new BitmapProperties1(canvas.PixelFormat, 96, 96, BitmapOptions.Target);
                     _srcBitmap = new Bitmap1(canvas, size, props);
-
-                    sw.Stop();
-                    Console.WriteLine(sw.Elapsed.TotalMilliseconds);
 
                     var originalTarget = canvas.Target;
                     canvas.Target = _srcBitmap;
@@ -52,15 +47,9 @@ namespace CommitteeOfZero.Nitro.Graphics.RenderItems
 
                     _inputsSet = true;
                 }
-
                 effect.SetValue(0, Opacity);
                 canvas.DrawImage(effect);
             }
-        }
-
-        public void Dispose()
-        {
-            _srcBitmap?.Dispose();
         }
     }
 }

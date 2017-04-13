@@ -72,7 +72,7 @@ namespace CommitteeOfZero.Nitro
         {
             var scriptLocator = new ScriptLocator(_configuration.ContentRoot);
 
-            _nitroCore = new NitroCore(Entities);
+            _nitroCore = new NitroCore(_configuration, Entities);
             _nssInterpreter = new NsScriptInterpreter(scriptLocator, _nitroCore);
             _nssInterpreter.BuiltInCallScheduled += OnBuiltInCallDispatched;
             _nssInterpreter.EnteredFunction += OnEnteredFunction;

@@ -34,6 +34,15 @@ namespace MoeGame.Framework.Content
             return (T)Load(assetRef, typeof(T));
         }
 
+        public void Unload(AssetRef assetRef)
+        {
+            if (_loadedItems.TryGetValue(assetRef, out object asset))
+            {
+                (asset as IDisposable)?.Dispose();
+                _loadedItems.TryRemove(assetRef, out var _);
+            }
+        }
+
         public object Load(AssetRef assetRef, Type contentType)
         {
             var stream = OpenStream(assetRef);

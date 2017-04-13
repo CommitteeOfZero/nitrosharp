@@ -60,8 +60,7 @@ namespace MoeGame.Framework.Audio
 
         public void Stop()
         {
-            _cts.Cancel();
-
+            _cts?.Cancel();
         }
 
         internal abstract void StartAcceptingBuffers();

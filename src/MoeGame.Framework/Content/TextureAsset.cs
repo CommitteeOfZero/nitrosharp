@@ -1,4 +1,6 @@
-﻿namespace MoeGame.Framework.Content
+﻿using System;
+
+namespace MoeGame.Framework.Content
 {
     public struct TextureAsset
     {
