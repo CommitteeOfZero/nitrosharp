@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace MoeGame.Framework
@@ -23,6 +24,7 @@ namespace MoeGame.Framework
             _gameTimer = new Stopwatch();
             Entities = new EntityManager(_gameTimer);
             Systems = new SystemManager(Entities);
+            MainLoopTaskScheduler = new MainLoopTaskScheduler(Environment.CurrentManagedThreadId);
         }
 
         public DxRenderContext RenderContext { get; private set; }
@@ -31,6 +33,8 @@ namespace MoeGame.Framework
         public Window Window { get; private set; }
         public EntityManager Entities { get; }
         public SystemManager Systems { get; }
+
+        public MainLoopTaskScheduler MainLoopTaskScheduler { get; }
 
         protected virtual void SetParameters(GameParameters parameters)
         {
@@ -100,6 +104,7 @@ namespace MoeGame.Framework
 
         public virtual void Update(float deltaMilliseconds)
         {
+            MainLoopTaskScheduler.FlushQueuedTasks();
             Systems.Update(deltaMilliseconds);
         }
 

@@ -72,7 +72,7 @@ namespace CommitteeOfZero.Nitro
         {
             var scriptLocator = new ScriptLocator(_configuration.ContentRoot);
 
-            _nitroCore = new NitroCore(_configuration, Entities);
+            _nitroCore = new NitroCore(this, _configuration, Entities);
             _nssInterpreter = new NsScriptInterpreter(scriptLocator, _nitroCore);
             _nssInterpreter.BuiltInCallScheduled += OnBuiltInCallDispatched;
             _nssInterpreter.EnteredFunction += OnEnteredFunction;
@@ -103,8 +103,13 @@ namespace CommitteeOfZero.Nitro
 
         public override void Update(float deltaMilliseconds)
         {
-            _nssInterpreter.Run(TimeSpan.MaxValue);
-            base.Update(deltaMilliseconds);
+            MainLoopTaskScheduler.FlushQueuedTasks();
+            if (!Content.IsBusy)
+            {
+                var elapsed = _nssInterpreter.Run(TimeSpan.MaxValue);
+            }
+
+            Systems.Update(deltaMilliseconds);
         }
     }
 }

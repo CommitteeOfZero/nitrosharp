@@ -53,8 +53,7 @@ namespace CommitteeOfZero.Nitro.Graphics.Effects
         public RawRectangle MapInputRectanglesToOutputRectangle(RawRectangle[] inputRects, RawRectangle[] inputOpaqueSubRects, out RawRectangle outputOpaqueSubRect)
         {
             outputOpaqueSubRect = default(Rectangle);
-            //return inputRects[1];
-            return new RawRectangle(0, 0, 1280, 720 + 120);
+            return inputRects[0];
         }
 
         public RawRectangle MapInvalidRect(int inputIndex, RawRectangle invalidInputRect)
@@ -65,11 +64,7 @@ namespace CommitteeOfZero.Nitro.Graphics.Effects
         public void MapOutputRectangleToInputRectangles(RawRectangle outputRect, RawRectangle[] inputRects)
         {
             inputRects[0] = outputRect;
-            inputRects[1] = new RawRectangle(0, 0, outputRect.Right, outputRect.Bottom - outputRect.Top);
-            //for (int i = 0; i < InputCount; i++)
-            //{
-            //    inputRects[i] = outputRect;
-            //}
+            inputRects[1] = new RawRectangle(0, 0, outputRect.Right - outputRect.Left, outputRect.Bottom - outputRect.Top);
         }
 
         public void SetDrawInformation(DrawInformation drawInfo)

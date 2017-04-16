@@ -9,6 +9,8 @@ using MoeGame.Framework.Content;
 using MoeGame.Framework;
 using CommitteeOfZero.Nitro.Graphics.RenderItems;
 using System.Numerics;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace CommitteeOfZero.Nitro
 {
@@ -18,14 +20,72 @@ namespace CommitteeOfZero.Nitro
         private ContentManager _content;
         private readonly EntityManager _entities;
 
+        private readonly Game _game;
         private DialogueBox _currentDialogueBox;
         private Entity _textEntity;
 
-        public NitroCore(NitroConfiguration configuration, EntityManager entities)
+        public NitroCore(Game game, NitroConfiguration configuration, EntityManager entities)
         {
+            _game = game;
             _entities = entities;
             _viewport = new System.Drawing.Size(configuration.WindowWidth, configuration.WindowHeight);
             EnteredDialogueBlock += OnEnteredDialogueBlock;
+        }
+
+        public void SetContent(ContentManager content) => _content = content;
+
+        public override void AddRectangle(string entityName, int priority, NsCoordinate x, NsCoordinate y, int width, int height, NsColor color)
+        {
+            var rect = new RectangleVisual
+            {
+                Position = Position(x, y, Vector2.Zero, width, height),
+                Width = width,
+                Height = height,
+                Color = new RgbaValueF(color.R / 255.0f, color.G / 255.0f, color.B / 255.0f, 1.0f),
+                Priority = priority
+            };
+
+            _entities.Create(entityName, replace: true).WithComponent(rect);
+        }
+
+        public override void LoadImage(string entityName, string fileName)
+        {
+
+        }
+
+        public override void AddTexture(string entityName, int priority, NsCoordinate x, NsCoordinate y, string fileOrEntityName)
+        {
+            if (fileOrEntityName.Equals("SCREEN", StringComparison.OrdinalIgnoreCase))
+            {
+                var position = Position(x, y, Vector2.Zero, _viewport.Width, _viewport.Height);
+                var screencap = new ScreenCap
+                {
+                    Position = position,
+                    Priority = priority,
+                };
+
+                _entities.Create(entityName, replace: true).WithComponent(screencap);
+            }
+            else
+            {
+                CurrentThread.Suspend();
+                _content.LoadAsync<TextureAsset>(fileOrEntityName).ContinueWith(t =>
+                {
+                    var texture = t.Result;
+                    var position = Position(x, y, Vector2.Zero, (int)texture.Width, (int)texture.Height);
+                    var visual = new TextureVisual
+                    {
+                        Position = position,
+                        Priority = priority,
+                        AssetRef = fileOrEntityName,
+                        Width = texture.Width,
+                        Height = texture.Height
+                    };
+
+                    _entities.Create(entityName, replace: true).WithComponent(visual);
+                    CurrentThread.Resume();
+                }, CancellationToken.None, TaskContinuationOptions.OnlyOnRanToCompletion, _game.MainLoopTaskScheduler);
+            }
         }
 
         private Vector2 Position(NsCoordinate x, NsCoordinate y, Vector2 current, int width, int height)
@@ -75,81 +135,28 @@ namespace CommitteeOfZero.Nitro
         {
             CurrentThread.Suspend();
 
-            var root = PXmlBlock.Parse(pxmlString);
-            var flattener = new PXmlTreeFlattener();
-
-            string plainText = flattener.Flatten(root);
-
-            _entities.TryGet(CurrentDialogueBlock.Identifier, out var textEntity);
-            var textVisual = textEntity?.GetComponent<GameTextVisual>();
-            if (textVisual != null)
+            Task.Run(() =>
             {
-                textVisual.Reset();
+                var root = PXmlBlock.Parse(pxmlString);
+                var flattener = new PXmlTreeFlattener();
 
-                textVisual.Text = plainText;
-                textVisual.Priority = 30000;
-                textVisual.Color = RgbaValueF.White;
-                textVisual.IsEnabled = true;
-            }
-        }
-
-        public void SetContent(ContentManager content) => _content = content;
-
-        public override void AddRectangle(string entityName, int priority, NsCoordinate x, NsCoordinate y, int width, int height, NsColor color)
-        {
-            var rect = new RectangleVisual
+                string plainText = flattener.Flatten(root);
+                return Task.FromResult(plainText);
+            }).ContinueWith(t =>
             {
-                Position = Position(x, y, Vector2.Zero, width, height),
-                Width = width,
-                Height = height,
-                Color = new RgbaValueF(color.R / 255.0f, color.G / 255.0f, color.B / 255.0f, 1.0f),
-                Priority = priority
-            };
-
-            _entities.Create(entityName, replace: true).WithComponent(rect);
-        }
-
-        public override void LoadImage(string entityName, string fileName)
-        {
-
-        }
-
-        public override void AddTexture(string entityName, int priority, NsCoordinate x, NsCoordinate y, string fileOrEntityName)
-        {
-            int w = _viewport.Width, h = _viewport.Height;
-            TextureAsset ass;
-            try
-            {
-                ass = _content.Load<TextureAsset>(fileOrEntityName);
-                w = (int)ass.Width;
-                h = (int)ass.Height;
-            }
-            catch { }
-
-            var position = Position(x, y, Vector2.Zero, w, h);
-            if (fileOrEntityName != "SCREEN")
-            {
-                var visual = new TextureVisual
+                string plainText = t.Result;
+                _entities.TryGet(CurrentDialogueBlock.Identifier, out var textEntity);
+                var textVisual = textEntity?.GetComponent<GameTextVisual>();
+                if (textVisual != null)
                 {
-                    Position = position,
-                    Priority = priority,
-                    AssetRef = fileOrEntityName,
-                    Width = w,
-                    Height = h
-                };
+                    textVisual.Reset();
 
-                var entity = _entities.Create(entityName, replace: true).WithComponent(visual);
-            }
-            else
-            {
-                var screencap = new ScreenCap
-                {
-                    Position = position,
-                    Priority = priority,
-                };
-
-                var entity = _entities.Create(entityName, replace: true).WithComponent(screencap);
-            }
+                    textVisual.Text = plainText;
+                    textVisual.Priority = 30000;
+                    textVisual.Color = RgbaValueF.White;
+                    textVisual.IsEnabled = true;
+                }
+            }, _game.MainLoopTaskScheduler);
         }
 
         public override void LoadAudio(string entityName, NsAudioKind kind, string fileName)
@@ -230,7 +237,6 @@ namespace CommitteeOfZero.Nitro
                 var animation = new FloatAnimation
                 {
                     TargetComponent = visual,
-                    PropertyGetter = c => (c as Visual).Opacity,
                     PropertySetter = (c, v) => (c as Visual).Opacity = v,
                     Duration = duration,
                     InitialValue = visual.Opacity,
@@ -246,7 +252,7 @@ namespace CommitteeOfZero.Nitro
         }
 
         public override void DrawTransition(string entityName, TimeSpan duration, NsRational initialOpacity,
-            NsRational finalOpacity, NsRational feather, string fileName, bool wait)
+            NsRational finalOpacity, NsRational feather, string maskFileName, bool wait)
         {
             initialOpacity = initialOpacity.Rebase(1.0f);
             finalOpacity = finalOpacity.Rebase(1.0f);
@@ -257,35 +263,35 @@ namespace CommitteeOfZero.Nitro
                 var transition = new TransitionVisual
                 {
                     Source = sourceVisual,
-                    MaskAsset = fileName,
+                    MaskAsset = maskFileName,
                     Priority = sourceVisual.Priority,
                     Position = sourceVisual.Position
                 };
 
-                _content.StartLoading<TextureAsset>(fileName);
-
-                entity.RemoveComponent(sourceVisual);
-                entity.AddComponent(transition);
-
                 var animation = new FloatAnimation
                 {
                     TargetComponent = transition,
-                    PropertyGetter = c => (c as TransitionVisual).Opacity,
                     PropertySetter = (c, v) => (c as TransitionVisual).Opacity = v,
                     InitialValue = initialOpacity,
                     FinalValue = finalOpacity,
                     Duration = duration
                 };
 
-                entity.AddComponent(animation);
                 animation.Completed += (o, e) =>
                 {
                     entity.RemoveComponent(transition);
                     entity.AddComponent(sourceVisual);
                 };
-            }
 
-            CurrentThread.Suspend(duration);
+                entity.RemoveComponent(sourceVisual);
+                CurrentThread.Suspend();
+                _content.LoadAsync<TextureAsset>(maskFileName).ContinueWith(t =>
+                {
+                    entity.AddComponent(transition);
+                    entity.AddComponent(animation);
+                    CurrentThread.Resume();
+                }, CancellationToken.None, TaskContinuationOptions.OnlyOnRanToCompletion, _game.MainLoopTaskScheduler);
+            }
         }
 
         public override void CreateDialogueBox(string entityName, int priority, NsCoordinate x, NsCoordinate y, int width, int height)
@@ -422,7 +428,6 @@ namespace CommitteeOfZero.Nitro
                 var animation = new Vector2Animation
                 {
                     TargetComponent = visual,
-                    PropertyGetter = c => (c as Visual).Position,
                     PropertySetter = (c, v) => (c as Visual).Position = v,
                     Duration = duration,
                     InitialValue = visual.Position,
@@ -474,7 +479,6 @@ namespace CommitteeOfZero.Nitro
                 var animation = new Vector2Animation
                 {
                     TargetComponent = visual,
-                    PropertyGetter = c => (c as Visual).Scale,
                     PropertySetter = (c, v) => (c as Visual).Scale = v,
                     Duration = duration,
                     InitialValue = visual.Scale,

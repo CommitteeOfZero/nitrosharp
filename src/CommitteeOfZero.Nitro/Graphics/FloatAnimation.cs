@@ -6,7 +6,6 @@ namespace CommitteeOfZero.Nitro.Graphics
     public class FloatAnimation : Component
     {
         public Component TargetComponent { get; set; }
-        public Func<Component, float> PropertyGetter { get; set; }
         public Action<Component, float> PropertySetter { get; set; }
 
         public float InitialValue { get; set; }

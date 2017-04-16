@@ -29,6 +29,24 @@ namespace MoeGame.Framework.Content
         public string RootDirectory { get; }
         public bool IsBusy => _nbCurrentlyLoading > 0;
 
+        public bool Exists(string path)
+        {
+            Stream stream = null;
+            try
+            {
+                stream = OpenStream(path);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+            finally
+            {
+                stream?.Dispose();
+            }
+        }
+
         public T Load<T>(AssetRef assetRef)
         {
             return (T)Load(assetRef, typeof(T));
@@ -68,30 +86,26 @@ namespace MoeGame.Framework.Content
             return asset;
         }
 
-        public void StartLoading<T>(AssetRef assetRef)
+        public Task<T> LoadAsync<T>(AssetRef assetRef)
         {
             Interlocked.Increment(ref _nbCurrentlyLoading);
-            Task.Run(() =>
+            return Task.Run(() =>
             {
                 try
                 {
-                    return Load(assetRef, typeof(T));
+                    var result = Load(assetRef, typeof(T));
+                    _loadedItems[assetRef] = (T)result;
+                    return Task.FromResult((T)result);
                 }
                 catch
                 {
-                    return null;
+                    return Task.FromResult(default(T));
                 }
                 finally
                 {
                     Interlocked.Decrement(ref _nbCurrentlyLoading);
                 }
-            }).ContinueWith(x =>
-            {
-                if (x.Result != null)
-                {
-                    _loadedItems[assetRef] = (T)x.Result;
-                }
-            }, TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.OnlyOnRanToCompletion);
+            });
         }
 
         public bool TryGetAsset<T>(AssetRef assetRef, out T asset)
