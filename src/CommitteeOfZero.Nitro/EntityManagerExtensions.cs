@@ -8,7 +8,7 @@ namespace CommitteeOfZero.Nitro
     {
         private static Entity[] s_oneElementArray = new Entity[1];
 
-        public static bool IsWildcardQuery(string s) => s[s.Length - 1] == '*';
+        private static bool IsWildcardQuery(string s) => s[s.Length - 1] == '*';
 
         public static IEnumerable<Entity> Query(this EntityManager entityManager, string query)
         {
@@ -18,17 +18,21 @@ namespace CommitteeOfZero.Nitro
             }
             else
             {
+                var list = new List<Entity>();
                 if (entityManager.TryGet(query, out var result))
                 {
+                    //list.Add(result);
                     s_oneElementArray[0] = result;
                     return s_oneElementArray;
                 }
 
-                return Enumerable.Empty<Entity>();
+                list.AddRange(WildcardQuery(entityManager, query + "/*"));
+                return list;
+                //return Enumerable.Empty<Entity>();
             }
         }
 
-        public static IEnumerable<Entity> WildcardQuery(this EntityManager entityManager, string query)
+        private static IEnumerable<Entity> WildcardQuery(this EntityManager entityManager, string query)
         {
             query = query.ToUpperInvariant();
 

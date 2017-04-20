@@ -30,6 +30,7 @@ namespace CommitteeOfZero.Nitro
             parameters.WindowWidth = _configuration.WindowWidth;
             parameters.WindowHeight = _configuration.WindowHeight;
             parameters.WindowTitle = _configuration.WindowTitle;
+            parameters.EnableVSync = _configuration.EnableVSync;
         }
 
         protected override void RegisterStartupTasks(IList<Action> tasks)
@@ -82,12 +83,15 @@ namespace CommitteeOfZero.Nitro
 
         private void OnEnteredFunction(object sender, Function function)
         {
-            _interpreterLog.LogCritical($"Entered function {function.Name.SimplifiedName}");
+            //_interpreterLog.LogCritical($"Entered function {function.Name.SimplifiedName}");
         }
 
         private void OnBuiltInCallDispatched(object sender, BuiltInFunctionCall call)
         {
-            _interpreterLog.LogInformation($"Built-in call: {call.ToString()}");
+            if (call.CallingThreadId == _nitroCore.MainThread.Id)
+            {
+                //_interpreterLog.LogInformation($"Built-in call: {call.ToString()}");
+            }
         }
 
         private void SetupLogging()

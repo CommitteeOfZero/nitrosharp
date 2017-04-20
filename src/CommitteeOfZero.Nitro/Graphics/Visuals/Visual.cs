@@ -2,10 +2,11 @@
 using System;
 using System.Numerics;
 
-namespace CommitteeOfZero.Nitro.Graphics.RenderItems
+namespace CommitteeOfZero.Nitro.Graphics.Visuals
 {
     public abstract class Visual : Component
     {
+        public Visual ParentVisual { get; set; }
         public Vector2 Position { get; set; }
         public Vector2 Scale { get; set; }
 

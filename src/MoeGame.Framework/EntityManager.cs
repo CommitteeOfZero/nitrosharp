@@ -21,6 +21,11 @@ namespace MoeGame.Framework
         public event EventHandler<Entity> EntityUpdated;
         public event EventHandler<Entity> EntityRemoved;
 
+        public void Add(string name, Entity entity)
+        {
+            _allEntities[name] = entity;
+        }
+
         public Entity Create(string name, bool replace = false)
         {
             if (_allEntities.ContainsKey(name))

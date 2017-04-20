@@ -4,10 +4,14 @@ namespace CommitteeOfZero.NsScript.Execution
 {
     public abstract class BuiltInFunctionsBase
     {
+        public NsScriptInterpreter Interpreter { get; private set; }
+        public ThreadContext MainThread { get; internal set; }
         public ThreadContext CurrentThread { get; internal set; }
         public DialogueBlock CurrentDialogueBlock { get; internal set; }
 
         public event EventHandler<DialogueBlock> EnteredDialogueBlock;
+
+        internal void SetInterpreter(NsScriptInterpreter instance) => Interpreter = instance;
 
         internal void RaiseEnteredDialogueBlock(DialogueBlock block)
         {
@@ -56,7 +60,7 @@ namespace CommitteeOfZero.NsScript.Execution
 
         public virtual void WaitText(string id, TimeSpan time)
         {
-            CurrentThread.PushContinuation(CurrentDialogueBlock);
+            CurrentThread.PushContinuation(CurrentThread.CurrentFrame.Function, CurrentDialogueBlock);
         }
 
         /// <summary>
@@ -82,7 +86,7 @@ namespace CommitteeOfZero.NsScript.Execution
         /// <summary>
         /// Original name: CreateTexture.
         /// </summary>
-        public virtual void AddTexture(string entityName, int priority, NsCoordinate x, NsCoordinate y, string fileOrEntityName)
+        public virtual void AddTexture(string entityName, int priority, NsCoordinate x, NsCoordinate y, string fileOrExistingEntityName)
         {
         }
 
@@ -129,6 +133,11 @@ namespace CommitteeOfZero.NsScript.Execution
         {
         }
 
+        public virtual void CreateThread(string name, string target)
+        {
+            Interpreter.CreateThread(CurrentThread.CurrentModule, target);
+        }
+
         public virtual void Zoom(string entityName, TimeSpan duration, NsRational scaleX, NsRational scaleY, NsEasingFunction easingFunction, bool wait)
         {
         }
@@ -143,6 +152,15 @@ namespace CommitteeOfZero.NsScript.Execution
 
         public virtual void PlayCutscene(string entityName, int priority, bool loop, bool alpha, string fileName, bool enableAudio)
         {
+        }
+
+        public virtual void AddClippedTexture(string entityName, int priority, NsCoordinate x1, NsCoordinate y1, NsCoordinate x2, NsCoordinate y2, int width, int height, string srcEntityName)
+        {
+        }
+
+        public virtual int GetSoundAmplitude()
+        {
+            return 0;
         }
     }
 }

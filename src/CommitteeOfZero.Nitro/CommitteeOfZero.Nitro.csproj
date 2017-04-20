@@ -6,6 +6,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Include="NitroCore.Effects.cs" />
+    <None Include="NitroCore.Graphics.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\CommitteeOfZero.NsScript\CommitteeOfZero.NsScript.csproj" />
     <ProjectReference Include="..\MoeGame.Framework\MoeGame.Framework.csproj" />
   </ItemGroup>

@@ -1,5 +1,5 @@
 ﻿using MoeGame.Framework;
-using CommitteeOfZero.Nitro.Graphics.RenderItems;
+using CommitteeOfZero.Nitro.Graphics.Visuals;
 using System;
 using System.Collections.Generic;
 

@@ -24,8 +24,8 @@ namespace CommitteeOfZero.NsScript.Execution
 
         private ThreadContext _currentThread;
         private readonly List<ThreadContext> _threads;
-        private readonly List<ThreadContext> _activeThreads;
-        private readonly List<ThreadContext> _suspendedThreads;
+        private readonly HashSet<ThreadContext> _activeThreads;
+        private readonly HashSet<ThreadContext> _suspendedThreads;
         private readonly Queue<ThreadContext> _idleThreads;
         private readonly Queue<ThreadContext> _threadsToResume;
 
@@ -39,13 +39,14 @@ namespace CommitteeOfZero.NsScript.Execution
             _exprFlattener = new ExpressionFlattener();
             _exprReducer = new ExpressionReducer();
 
+            builtinFunctions.SetInterpreter(this);
             _builtinsImpl = builtinFunctions;
             _builtInCallDispatcher = new BuiltInCallDispatcher(_builtinsImpl);
             _pendingBuiltInCalls = new Queue<BuiltInFunctionCall>();
 
             _threads = new List<ThreadContext>();
-            _activeThreads = new List<ThreadContext>();
-            _suspendedThreads = new List<ThreadContext>();
+            _activeThreads = new HashSet<ThreadContext>();
+            _suspendedThreads = new HashSet<ThreadContext>();
             _idleThreads = new Queue<ThreadContext>();
             _threadsToResume = new Queue<ThreadContext>();
 
@@ -54,6 +55,10 @@ namespace CommitteeOfZero.NsScript.Execution
 
             Status = NsScriptInterpreterStatus.Idle;
             _timer = Stopwatch.StartNew();
+
+            Globals["YuaVoice"] = new ConstantValue(false);
+            Globals["Pretextnumber"] = new ConstantValue("xxx");
+            Globals["SYSTEM_play_speed"] = new ConstantValue(3, isDelta: false);
         }
 
         public VariableTable Globals { get; }
@@ -76,15 +81,25 @@ namespace CommitteeOfZero.NsScript.Execution
         public event EventHandler<Function> EnteredFunction;
         public event EventHandler<BuiltInFunctionCall> BuiltInCallScheduled;
 
-        public void CreateThread(Module module, Statement entryPoint)
+        public void CreateThread(Module module, IJumpTarget entryPoint)
         {
             uint id = _nextThreadId++;
             var thread = new ThreadContext(id, this, module, entryPoint, Globals);
             _threads.Add(thread);
             _activeThreads.Add(thread);
+
+            if (_threads.Count == 1)
+            {
+                _builtinsImpl.MainThread = thread;
+            }
         }
 
-        public void CreateThread(Module module) => CreateThread(module, module.MainChapter.Body);
+        public void CreateThread(Module module, string functionName)
+        {
+            CreateThread(module, module.GetFunction(functionName));
+        }
+
+        public void CreateThread(Module module) => CreateThread(module, module.MainChapter);
         public void CreateThread(string moduleName) => CreateThread(Session.GetModule(moduleName));
 
         public TimeSpan Run(TimeSpan timeQuota)
@@ -151,10 +166,16 @@ namespace CommitteeOfZero.NsScript.Execution
         {
             BuiltInCallScheduled?.Invoke(this, call);
 
-            _builtinsImpl.CurrentThread = _currentThread;
+            var currentThread = _threads.First(x => x.Id == call.CallingThreadId);
+            _builtinsImpl.CurrentThread = currentThread;
             _builtinsImpl.CurrentDialogueBlock = _currentDialogueBlock;
 
             _builtInCallDispatcher.DispatchBuiltInCall(call);
+            if (_builtInCallDispatcher.Result != null)
+            {
+                var result = _builtInCallDispatcher.Result;
+                currentThread.CurrentFrame.EvaluationStack.Push(result);
+            }
         }
 
         private void Tick()
@@ -187,6 +208,10 @@ namespace CommitteeOfZero.NsScript.Execution
                     HandleWhile(node as WhileStatement);
                     break;
 
+                case SyntaxNodeKind.ReturnStatement:
+                    HandleReturn();
+                    break;
+
                 case SyntaxNodeKind.DialogueBlock:
                     HandleDialogueBlock(node as DialogueBlock);
                     break;
@@ -199,7 +224,8 @@ namespace CommitteeOfZero.NsScript.Execution
 
         private void HandleBlock(Block block)
         {
-            _currentThread.PushContinuation(block.Statements);
+            var frame = CurrentThread.CurrentFrame;
+            _currentThread.PushContinuation(frame.Function, block.Statements);
         }
 
         private void HandleExpressionStatement(ExpressionStatement expressionStatement)
@@ -220,13 +246,14 @@ namespace CommitteeOfZero.NsScript.Execution
         {
             if (Eval(ifStatement.Condition, out var condition))
             {
+                var frame = CurrentThread.CurrentFrame;
                 if (condition == ConstantValue.True)
                 {
-                    _currentThread.PushContinuation(ifStatement.IfTrueStatement);
+                    _currentThread.PushContinuation(frame.Function, ifStatement.IfTrueStatement);
                 }
                 else if (ifStatement.IfFalseStatement != null)
                 {
-                    _currentThread.PushContinuation(ifStatement.IfFalseStatement);
+                    _currentThread.PushContinuation(frame.Function, ifStatement.IfFalseStatement);
                 }
             }
         }
@@ -237,8 +264,18 @@ namespace CommitteeOfZero.NsScript.Execution
             {
                 if (condition.RawValue is 1)
                 {
-                    _currentThread.PushContinuation(whileStatement.Body);
+                    var frame = CurrentThread.CurrentFrame;
+                    _currentThread.PushContinuation(frame.Function, whileStatement.Body, advance: false);
                 }
+            }
+        }
+
+        private void HandleReturn()
+        {
+            var function = CurrentThread.CurrentFrame.Function;
+            while (CurrentThread.CurrentFrame.Function == function)
+            {
+                CurrentThread._frameStack.Pop();
             }
         }
 
@@ -331,6 +368,7 @@ namespace CommitteeOfZero.NsScript.Execution
 
             result = _exprReducer.ReduceExpression(currentFrame.EvaluationStack.Pop());
             Debug.Assert(currentFrame.EvaluationStack.Count == 0, "Evaluation stack should be empty.");
+            currentFrame.CurrentExpression = null;
             return true;
         }
 
@@ -351,7 +389,7 @@ namespace CommitteeOfZero.NsScript.Execution
                 arguments[param.ParameterName.SimplifiedName] = arg;
             }
 
-            _currentThread.PushContinuation(target.Body, arguments);
+            _currentThread.PushContinuation(target, target.Body, arguments);
             EnteredFunction?.Invoke(this, target);
         }
 
@@ -392,7 +430,7 @@ namespace CommitteeOfZero.NsScript.Execution
                 return true;
             }
 
-            return (timeQuota - elapsedTime).TotalMilliseconds <= 3.0f;
+            return (timeQuota - elapsedTime).TotalMilliseconds <= 2.0f;
         }
 
         public void Suspend()
@@ -455,6 +493,8 @@ namespace CommitteeOfZero.NsScript.Execution
         internal void ResumeThreadCore(ThreadContext thread)
         {
             thread.Suspended = false;
+            thread.SuspensionTime = TimeSpan.Zero;
+            thread.SleepTimeout = TimeSpan.Zero;
             _activeThreads.Add(thread);
             _suspendedThreads.Remove(thread);
         }

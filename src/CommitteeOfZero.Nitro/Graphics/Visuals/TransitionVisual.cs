@@ -2,7 +2,7 @@
 using SharpDX.Direct2D1;
 using System;
 
-namespace CommitteeOfZero.Nitro.Graphics.RenderItems
+namespace CommitteeOfZero.Nitro.Graphics.Visuals
 {
     public class TransitionVisual : Visual
     {

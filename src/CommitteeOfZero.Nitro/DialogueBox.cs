@@ -1,6 +1,6 @@
 ﻿using System;
 using CommitteeOfZero.Nitro.Graphics;
-using CommitteeOfZero.Nitro.Graphics.RenderItems;
+using CommitteeOfZero.Nitro.Graphics.Visuals;
 
 namespace CommitteeOfZero.Nitro
 {

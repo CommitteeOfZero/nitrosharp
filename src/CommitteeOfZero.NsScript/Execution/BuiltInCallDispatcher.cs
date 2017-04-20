@@ -9,6 +9,9 @@ namespace CommitteeOfZero.NsScript.Execution
 
         private readonly Dictionary<string, Action<ArgumentStack>> _dispatchTable;
         private readonly BuiltInFunctionsBase _builtinsImpl;
+        private readonly Random _randomGen;
+
+        internal ConstantValue Result { get; private set; }
 
         public BuiltInCallDispatcher(BuiltInFunctionsBase builtinFunctions)
         {
@@ -20,8 +23,11 @@ namespace CommitteeOfZero.NsScript.Execution
                 ["Request"] = Request,
                 ["Delete"] = Delete,
                 ["SetAlias"] = SetAlias,
+                ["CreateProcess"] = CreateProcess,
+                ["LoadImage"] = LoadImage,
                 ["CreateColor"] = CreateColor,
                 ["CreateTexture"] = CreateTexture,
+                ["CreateClipTexture"] = CreateClipTexture,
                 ["CreateSound"] = CreateSound,
                 ["Fade"] = Fade,
                 ["Move"] = Move,
@@ -36,29 +42,17 @@ namespace CommitteeOfZero.NsScript.Execution
                 ["DisplayDialogue"] = DisplayDialogue,
 
                 ["RemainTime"] = RemainTime,
-                ["ImageHorizon"] = ImageHorizon
+                ["ImageHorizon"] = ImageHorizon,
+                ["Random"] = Random,
+                ["SoundAmplitude"] = SoundAmplitude
             };
-        }
 
-        private static string PreprocessEntityName(string rawEntityName)
-        {
-            if (string.IsNullOrEmpty(rawEntityName) || rawEntityName.Length < 2)
-            {
-                return rawEntityName;
-            }
-
-            return rawEntityName[0] == '@' ? rawEntityName.Substring(1) : rawEntityName;
-        }
-
-        private void ImageHorizon(ArgumentStack args)
-        {
-            string entityName = PreprocessEntityName(args.PopString());
-            int r = _builtinsImpl.GetTextureWidth(entityName);
-            _builtinsImpl.CurrentThread.CurrentFrame.EvaluationStack.Push(new ConstantValue(r));
+            _randomGen = new Random();
         }
 
         public void DispatchBuiltInCall(BuiltInFunctionCall functionCall)
         {
+            Result = null;
             Action<ArgumentStack> handler;
             _dispatchTable.TryGetValue(functionCall.FunctionName, out handler);
             handler?.Invoke(functionCall.MutableArguments);
@@ -97,6 +91,17 @@ namespace CommitteeOfZero.NsScript.Execution
             _builtinsImpl.SetAlias(entityName, alias);
         }
 
+        private void CreateProcess(ArgumentStack args)
+        {
+            string name = args.PopString();
+            args.Pop();
+            args.Pop();
+            args.Pop();
+            string target = args.PopString();
+
+            _builtinsImpl.CreateThread(name, target);
+        }
+
         private void Request(ArgumentStack args)
         {
             string entityName = PreprocessEntityName(args.PopString());
@@ -111,6 +116,14 @@ namespace CommitteeOfZero.NsScript.Execution
             _builtinsImpl.RemoveEntity(entityName);
         }
 
+        private void LoadImage(ArgumentStack args)
+        {
+            string entityName = PreprocessEntityName(args.PopString());
+            string fileName = args.PopString();
+
+            _builtinsImpl.LoadImage(entityName, fileName);
+        }
+
         private void CreateTexture(ArgumentStack args)
         {
             string entityName = PreprocessEntityName(args.PopString());
@@ -120,6 +133,21 @@ namespace CommitteeOfZero.NsScript.Execution
             string fileOrEntityName = PreprocessEntityName(args.PopString());
 
             _builtinsImpl.AddTexture(entityName, priority, x, y, fileOrEntityName);
+        }
+
+        private void CreateClipTexture(ArgumentStack args)
+        {
+            string entityName = PreprocessEntityName(args.PopString());
+            int priority = args.PopInt();
+            NsCoordinate x1 = args.PopCoordinate();
+            NsCoordinate y1 = args.PopCoordinate();
+            NsCoordinate x2 = args.PopCoordinate();
+            NsCoordinate y2 = args.PopCoordinate();
+            int width = args.PopInt();
+            int height = args.PopInt();
+            string srcEntityName = args.PopString();
+
+            _builtinsImpl.AddClippedTexture(entityName, priority, x1, y1, x2, y2, width, height, srcEntityName);
         }
 
         private void CreateSound(ArgumentStack args)
@@ -273,10 +301,44 @@ namespace CommitteeOfZero.NsScript.Execution
             _builtinsImpl.DrawTransition(entityName, duration, initialOpacity, finalOpacity, feather, fileName, wait);
         }
 
+        private static string PreprocessEntityName(string rawEntityName)
+        {
+            if (string.IsNullOrEmpty(rawEntityName) || rawEntityName.Length < 2)
+            {
+                return rawEntityName;
+            }
+
+            return rawEntityName[0] == '@' ? rawEntityName.Substring(1) : rawEntityName;
+        }
+
+        private void ImageHorizon(ArgumentStack args)
+        {
+            string entityName = PreprocessEntityName(args.PopString());
+            int width = _builtinsImpl.GetTextureWidth(entityName);
+            Result = new ConstantValue(width, isDelta: false);
+        }
+
         private void RemainTime(ArgumentStack args)
         {
             string entityName = PreprocessEntityName(args.PopString());
-            _builtinsImpl.CurrentThread.CurrentFrame.EvaluationStack.Push(new ConstantValue(0));
+
+            Result = ConstantValue.Zero;
+        }
+
+        private void SoundAmplitude(ArgumentStack args)
+        {
+            string s1 = args.PopString();
+            string s2 = args.PopString();
+
+            int amplitude = _builtinsImpl.GetSoundAmplitude();
+            Result = new ConstantValue(amplitude, isDelta: false);
+        }
+
+        private void Random(ArgumentStack args)
+        {
+            int max = args.PopInt();
+            int number = _randomGen.Next() % max;
+            Result = new ConstantValue(10, isDelta: false);
         }
     }
 }

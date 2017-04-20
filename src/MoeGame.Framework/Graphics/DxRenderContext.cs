@@ -10,6 +10,7 @@ namespace MoeGame.Framework.Graphics
     public class DxRenderContext : IDisposable
     {
         private readonly Window _window;
+        private readonly bool _vsyncEnabled;
         private DxDrawingSession _session;
 
         private SharpDX.Direct2D1.Device _d2dDevice;
@@ -19,9 +20,10 @@ namespace MoeGame.Framework.Graphics
 
         internal SharpDX.DXGI.SwapChain1 SwapChain;
 
-        public DxRenderContext(Window window)
+        public DxRenderContext(Window window, bool enableVSync)
         {
             _window = window;
+            _vsyncEnabled = enableVSync;
             Initialize();
         }
 
@@ -38,7 +40,7 @@ namespace MoeGame.Framework.Graphics
             CreateDeviceResources();
             CreateSizeDependentResources();
 
-            _session = new DxDrawingSession(this);
+            _session = new DxDrawingSession(this, _vsyncEnabled);
         }
 
         private void CreateDeviceIndependentResources()

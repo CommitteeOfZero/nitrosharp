@@ -5,8 +5,9 @@ namespace CommitteeOfZero.NsScript.Execution
 {
     public sealed class Frame
     {
-        public Frame(ImmutableArray<Statement> statements, VariableTable globals)
+        public Frame(IJumpTarget function, ImmutableArray<Statement> statements, VariableTable globals)
         {
+            Function = function;
             Statements = statements;
             Globals = globals;
             Arguments = new VariableTable();
@@ -16,6 +17,7 @@ namespace CommitteeOfZero.NsScript.Execution
             EvaluationStack = new Stack<Expression>();
         }
 
+        public IJumpTarget Function { get; }
         public ImmutableArray<Statement> Statements { get; }
         public int Position { get; set; }
         public VariableTable Globals { get; }

@@ -1,4 +1,4 @@
-﻿namespace CommitteeOfZero.Nitro.Graphics.RenderItems
+﻿namespace CommitteeOfZero.Nitro.Graphics.Visuals
 {
     public class RectangleVisual : Visual
     {

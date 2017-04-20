@@ -421,8 +421,8 @@ namespace CommitteeOfZero.NsScript
             {
                 case SyntaxTokenKind.NumericLiteralToken:
                 case SyntaxTokenKind.StringLiteralToken:
-                    bool relativeValue = CurrentToken.Text[0] == '@';
-                    var literal = ExpressionFactory.Literal(CurrentToken.Text, new ConstantValue(CurrentToken.Value, relativeValue));
+                    bool isDeltaExpr = CurrentToken.Text[0] == '@';
+                    var literal = ExpressionFactory.Literal(CurrentToken.Text, new ConstantValue(CurrentToken.Value, isDeltaExpr));
                     EatToken();
                     return literal;
 

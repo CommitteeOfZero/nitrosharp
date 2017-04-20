@@ -36,7 +36,7 @@ namespace CommitteeOfZero.Nitro
             var sound = e.GetComponent<SoundComponent>();
 
             string path = Path.Combine(_content.RootDirectory, sound.AudioFile);
-            if (!File.Exists(path))
+            if (!_content.Exists(path))
             {
                 path += ".ogg";
             }
@@ -50,12 +50,12 @@ namespace CommitteeOfZero.Nitro
 
         private void OnEntityRemoved(object sender, Entity e)
         {
-            var sound = e.GetComponent<SoundComponent>();
-            if (sound != null)
-            {
-                _audioSources.TryGetValue(sound, out var source);
-                source?.Stop();
-            }
+            //var sound = e.GetComponent<SoundComponent>();
+            //if (sound != null)
+            //{
+            //    _audioSources.TryGetValue(sound, out var source);
+            //    source?.Stop();
+            //}
         }
 
         private AudioSource GetFreeAudioSource()

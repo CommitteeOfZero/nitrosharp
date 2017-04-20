@@ -13,6 +13,11 @@ namespace CowsHead
             string json = File.ReadAllText(configPath, Encoding.UTF8);
             var root = JObject.Parse(json);
 
+            foreach (JProperty property in root.AsJEnumerable())
+            {
+                SetProperty(configuration, property);
+            }
+
             string profileName = root["activeProfile"].ToString();
             var profile = root["profiles"][profileName];
 
@@ -46,6 +51,10 @@ namespace CowsHead
 
                 case "debug.contentRoot":
                     configuration.ContentRoot = property.Value.Value<string>();
+                    break;
+
+                case "graphics.vsync":
+                    configuration.EnableVSync = property.Value.Value<bool>();
                     break;
             }
         }

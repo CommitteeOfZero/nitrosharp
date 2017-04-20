@@ -10,8 +10,8 @@ namespace CowsHead
         {
             var config = ConfigurationReader.Read(ConfigFileName);
 
-            var noah = new NitroGame(config);
-            noah.Run();
+            var game = new NitroGame(config);
+            game.Run();
         }
     }
 }

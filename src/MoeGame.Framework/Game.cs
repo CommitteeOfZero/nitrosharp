@@ -7,7 +7,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace MoeGame.Framework
@@ -117,7 +116,7 @@ namespace MoeGame.Framework
         private void InitializeGraphicsAndSound()
         {
             Window = new GameWindow(_parameters.WindowTitle, _parameters.WindowWidth, _parameters.WindowHeight, WindowState.Normal);
-            RenderContext = new DxRenderContext(Window);
+            RenderContext = new DxRenderContext(Window, _parameters.EnableVSync);
             AudioEngine = new XAudio2AudioEngine(16, 44100, 2);
             Content = CreateContentManager();
             Window.ProcessEvents();

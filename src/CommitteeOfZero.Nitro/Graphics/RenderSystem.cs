@@ -3,7 +3,7 @@ using System.Linq;
 using MoeGame.Framework;
 using MoeGame.Framework.Graphics;
 using MoeGame.Framework.Content;
-using CommitteeOfZero.Nitro.Graphics.RenderItems;
+using CommitteeOfZero.Nitro.Graphics.Visuals;
 using System;
 
 namespace CommitteeOfZero.Nitro.Graphics
@@ -53,7 +53,6 @@ namespace CommitteeOfZero.Nitro.Graphics
             if (visual.IsEnabled)
             {
                 var originalTransform = canvas.Transform;
-
                 var scale = visual.Scale;
 
                 float centerX = visual.Width / 2.0f;
@@ -61,7 +60,15 @@ namespace CommitteeOfZero.Nitro.Graphics
                 var scaleOrigin = new SharpDX.Vector2(centerX, centerY);
 
                 canvas.Transform *= SharpDX.Matrix3x2.Scaling(scale.X, scale.Y, scaleOrigin);
-                canvas.Transform *= SharpDX.Matrix3x2.Translation(visual.Position.X, visual.Position.Y);
+                if (visual.ParentVisual != null)
+                {
+                    var parent = visual.ParentVisual;
+                    canvas.Transform *= SharpDX.Matrix3x2.Translation(parent.Position.X + visual.Position.X, parent.Position.Y + visual.Position.Y);
+                }
+                else
+                {
+                    canvas.Transform *= SharpDX.Matrix3x2.Translation(visual.Position.X, visual.Position.Y);
+                }
 
                 visual.Render(this);
                 canvas.Transform = originalTransform;

@@ -94,7 +94,7 @@ namespace CommitteeOfZero.NsScript
         }
     }
 
-    public sealed class Chapter : Statement
+    public sealed class Chapter : Statement, IJumpTarget
     {
         internal Chapter(Identifier name, Block body)
         {
@@ -118,7 +118,7 @@ namespace CommitteeOfZero.NsScript
         }
     }
 
-    public sealed class Scene : Statement
+    public sealed class Scene : Statement, IJumpTarget
     {
         internal Scene(Identifier name, Block body)
         {
@@ -142,7 +142,7 @@ namespace CommitteeOfZero.NsScript
         }
     }
 
-    public sealed class Function : Statement
+    public sealed class Function : Statement, IJumpTarget
     {
         internal Function(Identifier name, ImmutableArray<ParameterReference> parameters, Block body)
         {

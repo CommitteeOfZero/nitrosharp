@@ -53,6 +53,11 @@ namespace CommitteeOfZero.NsScript
 
         public TResult As<TResult>()
         {
+            if (Type == NsType.Integer && typeof(TResult) == typeof(bool))
+            {
+                object b = (int)RawValue > 0;
+                return (TResult)b;
+            }
             return Type == NsType.Null ? default(TResult) : (TResult)RawValue;
         }
 
@@ -78,7 +83,7 @@ namespace CommitteeOfZero.NsScript
 
             if (a.Type == NsType.Integer)
             {
-                return new ConstantValue((int)a.RawValue + (int)b.RawValue);
+                return new ConstantValue((int)a.RawValue + (int)b.RawValue, isDelta: a.IsDelta.Value || b.IsDelta.Value);
             }
 
             return new ConstantValue((string)a.RawValue + (string)b.RawValue);
@@ -91,7 +96,7 @@ namespace CommitteeOfZero.NsScript
                 ThrowInvalidBinary("-", a, b);
             }
 
-            return new ConstantValue((int)a.RawValue - (int)b.RawValue);
+            return new ConstantValue((int)a.RawValue - (int)b.RawValue, isDelta: a.IsDelta.Value || b.IsDelta.Value);
         }
 
         public static ConstantValue operator *(ConstantValue a, ConstantValue b)
@@ -101,7 +106,7 @@ namespace CommitteeOfZero.NsScript
                 ThrowInvalidBinary("*", a, b);
             }
 
-            return new ConstantValue((int)a.RawValue * (int)b.RawValue);
+            return new ConstantValue((int)a.RawValue * (int)b.RawValue, isDelta: a.IsDelta.Value || b.IsDelta.Value);
         }
 
         public static ConstantValue operator /(ConstantValue a, ConstantValue b)
@@ -111,7 +116,7 @@ namespace CommitteeOfZero.NsScript
                 ThrowInvalidBinary("/", a, b);
             }
 
-            return new ConstantValue((int)a.RawValue / (int)b.RawValue);
+            return new ConstantValue((int)a.RawValue / (int)b.RawValue, isDelta: a.IsDelta.Value || b.IsDelta.Value);
         }
 
         public static ConstantValue operator ==(ConstantValue a, ConstantValue b)
@@ -181,7 +186,7 @@ namespace CommitteeOfZero.NsScript
                 ThrowInvalidUnary("+", value);
             }
 
-            return new ConstantValue(value.RawValue);
+            return new ConstantValue(value.RawValue, value.IsDelta);
         }
 
         public static ConstantValue operator -(ConstantValue value)
@@ -201,7 +206,7 @@ namespace CommitteeOfZero.NsScript
                 ThrowInvalidUnary("++", value);
             }
 
-            return new ConstantValue((int)value.RawValue + 1);
+            return new ConstantValue((int)value.RawValue + 1, value.IsDelta);
         }
 
         public static ConstantValue operator --(ConstantValue value)
@@ -211,7 +216,7 @@ namespace CommitteeOfZero.NsScript
                 ThrowInvalidUnary("--", value);
             }
 
-            return new ConstantValue((int)value.RawValue - 1);
+            return new ConstantValue((int)value.RawValue - 1, value.IsDelta);
         }
 
         public static bool operator true(ConstantValue value)

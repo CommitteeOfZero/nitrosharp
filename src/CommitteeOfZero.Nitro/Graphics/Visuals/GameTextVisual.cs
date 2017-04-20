@@ -2,7 +2,7 @@
 using SharpDX.Direct2D1;
 using SharpDX.DirectWrite;
 
-namespace CommitteeOfZero.Nitro.Graphics.RenderItems
+namespace CommitteeOfZero.Nitro.Graphics.Visuals
 {
     public class GameTextVisual : Visual
     {
@@ -69,7 +69,7 @@ namespace CommitteeOfZero.Nitro.Graphics.RenderItems
                 s_transparentTextBrush = new SolidColorBrush(renderContext.DeviceContext, SharpDX.Color.Transparent);
                 s_currentGlyphBrush = new SolidColorBrush(renderContext.DeviceContext, SharpDX.Color.Transparent);
 
-                s_textFormat = new TextFormat(renderContext.DWriteFactory, "Noto Sans CJK JP", 20);
+                s_textFormat = new TextFormat(renderContext.DWriteFactory, "Noto Sans CJK JP", 22);
                 s_textRenderer = new CustomTextRenderer(renderContext.DeviceContext, s_transparentTextBrush, false);
             }
         }

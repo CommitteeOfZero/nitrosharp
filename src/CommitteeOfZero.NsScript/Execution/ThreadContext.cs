@@ -8,9 +8,9 @@ namespace CommitteeOfZero.NsScript.Execution
     {
         private readonly NsScriptInterpreter _interpreter;
         private readonly VariableTable _globals;
-        private readonly Stack<Frame> _frameStack;
+        internal readonly Stack<Frame> _frameStack;
 
-        internal ThreadContext(uint id, NsScriptInterpreter interpreter, Module module, Statement target, VariableTable globals)
+        internal ThreadContext(uint id, NsScriptInterpreter interpreter, Module module, IJumpTarget target, VariableTable globals)
         {
             Id = id;
             _interpreter = interpreter;
@@ -18,7 +18,7 @@ namespace CommitteeOfZero.NsScript.Execution
             _globals = globals;
             _frameStack = new Stack<Frame>();
 
-            PushContinuation(target);
+            PushContinuation(target, target.Body);
         }
 
         public uint Id { get; }
@@ -63,7 +63,7 @@ namespace CommitteeOfZero.NsScript.Execution
             _interpreter.ResumeThreadCore(this);
         }
 
-        public void PushContinuation(ImmutableArray<Statement> statements, bool advance = true)
+        public void PushContinuation(IJumpTarget function, ImmutableArray<Statement> statements, bool advance = true)
         {
             Frame prevFrame = null;
             if (_frameStack.Count > 0)
@@ -76,21 +76,21 @@ namespace CommitteeOfZero.NsScript.Execution
                 Advance();
             }
 
-            var frame = new Frame(statements, _globals);
+            var frame = new Frame(function, statements, _globals);
             frame.Arguments = prevFrame?.Arguments;
             _frameStack.Push(frame);
         }
 
-        public void PushContinuation(Statement statement, bool advance = true)
+        public void PushContinuation(IJumpTarget function, Statement statement, bool advance = true)
         {
             var block = statement as IBlock;
             var array = block?.Statements ?? ImmutableArray.Create(statement);
-            PushContinuation(array, advance);
+            PushContinuation(function, array, advance);
         }
 
-        public void PushContinuation(Statement statement, VariableTable arguments, bool advance = true)
+        public void PushContinuation(IJumpTarget function, Statement statement, VariableTable arguments, bool advance = true)
         {
-            PushContinuation(statement, advance);
+            PushContinuation(function, statement, advance);
             CurrentFrame.Arguments = arguments;
         }
     }

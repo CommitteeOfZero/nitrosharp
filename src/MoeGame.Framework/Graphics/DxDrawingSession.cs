@@ -5,10 +5,12 @@ namespace MoeGame.Framework.Graphics
     public class DxDrawingSession : IDisposable
     {
         private readonly DxRenderContext _rc;
+        private readonly bool _vsync;
 
-        internal DxDrawingSession(DxRenderContext renderContext)
+        internal DxDrawingSession(DxRenderContext renderContext, bool vsync)
         {
             _rc = renderContext;
+            _vsync = vsync;
         }
 
         internal void Reset(RgbaValueF clearColor)
@@ -20,7 +22,7 @@ namespace MoeGame.Framework.Graphics
         public void Dispose()
         {
             _rc.DeviceContext.EndDraw();
-            _rc.SwapChain.Present(1, SharpDX.DXGI.PresentFlags.None);
+            _rc.SwapChain.Present(_vsync ? 1 : 0, SharpDX.DXGI.PresentFlags.None);
         }
     }
 }
