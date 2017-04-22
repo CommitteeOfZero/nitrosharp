@@ -9,7 +9,6 @@ namespace CommitteeOfZero.NsScript.Execution
 
         private readonly Dictionary<string, Action<ArgumentStack>> _dispatchTable;
         private readonly BuiltInFunctionsBase _builtinsImpl;
-        private readonly Random _randomGen;
 
         internal ConstantValue Result { get; private set; }
 
@@ -46,8 +45,6 @@ namespace CommitteeOfZero.NsScript.Execution
                 ["Random"] = Random,
                 ["SoundAmplitude"] = SoundAmplitude
             };
-
-            _randomGen = new Random();
         }
 
         public void DispatchBuiltInCall(BuiltInFunctionCall functionCall)
@@ -337,8 +334,9 @@ namespace CommitteeOfZero.NsScript.Execution
         private void Random(ArgumentStack args)
         {
             int max = args.PopInt();
-            int number = _randomGen.Next() % max;
-            Result = new ConstantValue(10, isDelta: false);
+
+            int n = _builtinsImpl.GenerateRandomNumber(max);
+            Result = new ConstantValue(n, isDelta: false);
         }
     }
 }

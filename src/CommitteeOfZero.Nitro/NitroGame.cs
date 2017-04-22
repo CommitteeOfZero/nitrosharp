@@ -10,7 +10,7 @@ using System.Collections.Generic;
 
 namespace CommitteeOfZero.Nitro
 {
-    public partial class NitroGame : Game
+    public class NitroGame : Game
     {
         private readonly NitroConfiguration _configuration;
         private RenderSystem _renderSystem;
@@ -83,14 +83,14 @@ namespace CommitteeOfZero.Nitro
 
         private void OnEnteredFunction(object sender, Function function)
         {
-            //_interpreterLog.LogCritical($"Entered function {function.Name.SimplifiedName}");
+            _interpreterLog.LogCritical($"Entered function {function.Name.SimplifiedName}");
         }
 
         private void OnBuiltInCallDispatched(object sender, BuiltInFunctionCall call)
         {
             if (call.CallingThreadId == _nitroCore.MainThread.Id)
             {
-                //_interpreterLog.LogInformation($"Built-in call: {call.ToString()}");
+                _interpreterLog.LogInformation($"Built-in call: {call.ToString()}");
             }
         }
 

@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Text;
 
@@ -70,9 +71,11 @@ namespace CommitteeOfZero.NsScript.PXml
                     break;
 
                 case "voice":
-                default:
                     node = ParseVoiceElement(startTag);
                     break;
+
+                default:
+                    throw new NotImplementedException($"PXml tag '{startTag.Name}' is not yet supported.");
             }
 
             return node;

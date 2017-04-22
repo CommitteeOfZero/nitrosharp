@@ -161,7 +161,6 @@ namespace CommitteeOfZero.Nitro
                 };
 
                 entity.RemoveComponent(sourceVisual);
-
                 if (duration > TimeSpan.Zero && wait)
                 {
                     CurrentThread.Suspend(duration);
@@ -171,12 +170,6 @@ namespace CommitteeOfZero.Nitro
                 {
                     entity.AddComponent(transition);
                     entity.AddComponent(animation);
-
-                    if (duration > TimeSpan.Zero && wait)
-                    {
-                        //CurrentThread.Suspend(duration);
-                    }
-
                 }, CancellationToken.None, TaskContinuationOptions.OnlyOnRanToCompletion, _game.MainLoopTaskScheduler);
             }
         }

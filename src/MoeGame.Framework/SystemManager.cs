@@ -7,6 +7,7 @@ namespace MoeGame.Framework
     public class SystemManager : IDisposable
     {
         private readonly List<GameSystem> _systems;
+        private readonly EntityManager _entities;
 
         private readonly HashSet<Entity> _updatedEntities;
         private readonly HashSet<Entity> _removedEntities;
@@ -14,6 +15,7 @@ namespace MoeGame.Framework
         public SystemManager(EntityManager entities)
         {
             _systems = new List<GameSystem>();
+            _entities = entities;
 
             _updatedEntities = new HashSet<Entity>();
             _removedEntities = new HashSet<Entity>();
@@ -31,6 +33,7 @@ namespace MoeGame.Framework
 
         public void Update(float deltaMilliseconds)
         {
+            _entities.FlushDeletedEntities();
             foreach (var system in _systems)
             {
                 if (_updatedEntities.Count > 0 || _removedEntities.Count > 0)

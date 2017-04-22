@@ -4,9 +4,7 @@
     <OutputType>Exe</OutputType>
     <OutputPath>$(SolutionDir)\bin\$(Configuration)\</OutputPath>
     <TargetFramework>netcoreapp1.1</TargetFramework>
-    <PackageTargetFallback>portable-net45+win8+wpa81</PackageTargetFallback>
-    <!--<TargetFramework>netcoreapp2.0</TargetFramework>
-    <RuntimeFrameworkVersion>2.0.0-beta-005825-00</RuntimeFrameworkVersion>-->
+    <RuntimeIdentifiers>win7-x64</RuntimeIdentifiers>
   </PropertyGroup>
 
   <ItemGroup>
@@ -27,6 +25,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\CommitteeOfZero.Nitro\CommitteeOfZero.Nitro.csproj" />
+    <ProjectReference Include="..\MoeGame.Framework\MoeGame.Framework.csproj" />
   </ItemGroup>
 
 </Project>

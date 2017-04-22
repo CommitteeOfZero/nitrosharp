@@ -7,12 +7,14 @@ namespace MoeGame.Framework
     public class EntityManager
     {
         private readonly Dictionary<string, Entity> _allEntities;
+        private readonly Queue<Entity> _entitiesToRemove;
         private ulong _nextId;
         private readonly Stopwatch _gameTimer;
 
         public EntityManager(Stopwatch gameTimer)
         {
             _allEntities = new Dictionary<string, Entity>(StringComparer.OrdinalIgnoreCase);
+            _entitiesToRemove = new Queue<Entity>();
             _gameTimer = gameTimer;
         }
 
@@ -63,8 +65,18 @@ namespace MoeGame.Framework
         {
             if (_allEntities.TryGetValue(entityName, out var entity))
             {
-                _allEntities.Remove(entityName);
-                EntityRemoved?.Invoke(this, entity);
+                _entitiesToRemove.Enqueue(entity);
+            }
+        }
+
+        internal void FlushDeletedEntities()
+        {
+            while (_entitiesToRemove.Count > 0)
+            {
+                var e = _entitiesToRemove.Dequeue();
+                _allEntities.Remove(e.Name);
+
+                EntityRemoved?.Invoke(this, e);
             }
         }
 

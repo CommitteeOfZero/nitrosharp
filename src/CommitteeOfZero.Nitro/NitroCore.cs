@@ -1,6 +1,5 @@
 ﻿using System;
 using CommitteeOfZero.NsScript.Execution;
-using System.Collections.Generic;
 using CommitteeOfZero.NsScript;
 using MoeGame.Framework.Content;
 using MoeGame.Framework;
@@ -33,27 +32,15 @@ namespace CommitteeOfZero.Nitro
             }
         }
 
-        private Queue<Entity> _entitiesToRemove = new Queue<Entity>();
-
         public override void RemoveEntity(string entityName)
         {
             foreach (var entity in _entities.Query(entityName))
             {
                 if (!entity.IsLocked())
                 {
-                    RemoveEntityCore(entity);
+                    _entities.Remove(entity);
                 }
             }
-
-            while (_entitiesToRemove.Count > 0)
-            {
-                _entities.Remove(_entitiesToRemove.Dequeue());
-            }
-        }
-
-        private void RemoveEntityCore(Entity entity)
-        {
-            _entitiesToRemove.Enqueue(entity);
         }
 
         public override void Delay(TimeSpan delay)
@@ -107,7 +94,7 @@ namespace CommitteeOfZero.Nitro
                     break;
 
                 case NsEntityAction.Dispose:
-                    _entities.Remove(entity);
+                    //_entities.Remove(entity);
                     break;
             }
         }

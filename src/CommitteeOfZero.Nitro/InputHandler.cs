@@ -4,7 +4,7 @@ using System;
 
 namespace CommitteeOfZero.Nitro
 {
-    public class InputHandler : GameSystem
+    public sealed class InputHandler : GameSystem
     {
         private readonly NitroCore _nitroCore;
 

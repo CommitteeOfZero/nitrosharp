@@ -91,6 +91,7 @@ namespace MoeGame.Framework.Platform
         public override void ProcessEvents()
         {
             Mouse.NewlyPressedButtons.Clear();
+            Keyboard.NewlyPressedKeys.Clear();
             _nativeWindow.ProcessEvents();
         }
 

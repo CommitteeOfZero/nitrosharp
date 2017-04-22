@@ -1,6 +1,6 @@
 ﻿{
   "activeProfile": "Demo1",
-  "graphics.vsync": false,
+  "graphics.vsync": true,
 
   "profiles": {
     "CH": {

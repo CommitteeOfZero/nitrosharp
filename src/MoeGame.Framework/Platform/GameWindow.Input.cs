@@ -1,10 +1,9 @@
 ﻿#if !WINDOWS_UWP
-using OpenTK;
 using OpenTK.Input;
-using MlKeyboard = MoeGame.Framework.Input.Keyboard;
-using MlKey = MoeGame.Framework.Input.Key;
-using MlButton = MoeGame.Framework.Input.MouseButton;
-using MlMouse = MoeGame.Framework.Input.Mouse;
+using MoeKeyboard = MoeGame.Framework.Input.Keyboard;
+using MoeKey = MoeGame.Framework.Input.Key;
+using MoeButton = MoeGame.Framework.Input.MouseButton;
+using MoeMouse = MoeGame.Framework.Input.Mouse;
 using System;
 
 namespace MoeGame.Framework.Platform
@@ -35,47 +34,47 @@ namespace MoeGame.Framework.Platform
         private void RefreshMouseState()
         {
             var state = OpenTK.Input.Mouse.GetCursorState();
-            MlMouse.Position = new System.Drawing.Point(state.X, state.Y);
+            MoeMouse.Position = new System.Drawing.Point(state.X, state.Y);
         }
 
         private void OnKeyDown(object sender, KeyboardKeyEventArgs e)
         {
-            var mlKey = (MlKey)e.Key;
-            if (MlKeyboard.PressedKeys.Add(mlKey))
+            var mlKey = (MoeKey)e.Key;
+            if (MoeKeyboard.PressedKeys.Add(mlKey))
             {
-                MlKeyboard.NewlyPressedKeys.Add(mlKey);
+                MoeKeyboard.NewlyPressedKeys.Add(mlKey);
             }
         }
 
         private void OnKeyUp(object sender, KeyboardKeyEventArgs e)
         {
-            var mlKey = (MlKey)e.Key;
-            MlKeyboard.PressedKeys.Remove(mlKey);
-            MlKeyboard.NewlyPressedKeys.Remove(mlKey);
+            var mlKey = (MoeKey)e.Key;
+            MoeKeyboard.PressedKeys.Remove(mlKey);
+            MoeKeyboard.NewlyPressedKeys.Remove(mlKey);
         }
 
         private void OnMouseDown(object sender, MouseButtonEventArgs e)
         {
-            var mlButton = (MlButton)e.Button;
-            if (MlMouse.PressedButtons.Add(mlButton))
+            var mlButton = (MoeButton)e.Button;
+            if (MoeMouse.PressedButtons.Add(mlButton))
             {
-                MlMouse.NewlyPressedButtons.Add(mlButton);
+                MoeMouse.NewlyPressedButtons.Add(mlButton);
             }
         }
 
         private void OnMouseUp(object sender, MouseButtonEventArgs e)
         {
-            var mlButton = (MlButton)e.Button;
-            MlMouse.PressedButtons.Remove(mlButton);
-            MlMouse.NewlyPressedButtons.Remove(mlButton);
+            var mlButton = (MoeButton)e.Button;
+            MoeMouse.PressedButtons.Remove(mlButton);
+            MoeMouse.NewlyPressedButtons.Remove(mlButton);
         }
 
         private void ClearState()
         {
-            MlKeyboard.NewlyPressedKeys.Clear();
-            MlKeyboard.PressedKeys.Clear();
-            MlMouse.NewlyPressedButtons.Clear();
-            MlMouse.PressedButtons.Clear();
+            MoeKeyboard.NewlyPressedKeys.Clear();
+            MoeKeyboard.PressedKeys.Clear();
+            MoeMouse.NewlyPressedButtons.Clear();
+            MoeMouse.PressedButtons.Clear();
         }
     }
 }

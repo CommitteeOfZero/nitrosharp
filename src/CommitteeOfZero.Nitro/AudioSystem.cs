@@ -7,7 +7,7 @@ using System;
 
 namespace CommitteeOfZero.Nitro
 {
-    public class AudioSystem : EntityProcessingSystem
+    public sealed class AudioSystem : EntityProcessingSystem
     {
         private readonly AudioEngine _audioEngine;
         private readonly ContentManager _content;

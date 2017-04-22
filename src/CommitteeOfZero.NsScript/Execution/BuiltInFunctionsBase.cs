@@ -4,6 +4,8 @@ namespace CommitteeOfZero.NsScript.Execution
 {
     public abstract class BuiltInFunctionsBase
     {
+        private readonly Random _randomGen = new Random();
+
         public NsScriptInterpreter Interpreter { get; private set; }
         public ThreadContext MainThread { get; internal set; }
         public ThreadContext CurrentThread { get; internal set; }
@@ -161,6 +163,11 @@ namespace CommitteeOfZero.NsScript.Execution
         public virtual int GetSoundAmplitude()
         {
             return 0;
+        }
+
+        public virtual int GenerateRandomNumber(int max)
+        {
+            return _randomGen.Next(max);
         }
     }
 }

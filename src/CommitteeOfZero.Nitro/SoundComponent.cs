@@ -4,7 +4,7 @@ using System;
 
 namespace CommitteeOfZero.Nitro
 {
-    public class SoundComponent : Component
+    public sealed class SoundComponent : Component
     {
         public AssetRef AudioFile { get; set; }
 

@@ -8,6 +8,7 @@ namespace MoeGame.Framework
     {
         private readonly EntityManager _manager;
         private readonly Dictionary<Type, IList<Component>> _components;
+        private Dictionary<string, object> _additionalProperties;
 
         internal Entity(EntityManager manager, ulong id, string name, TimeSpan creationTime)
         {
@@ -17,13 +18,24 @@ namespace MoeGame.Framework
             CreationTime = creationTime;
 
             _components = new Dictionary<Type, IList<Component>>();
-            AdditionalProperties = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
         }
 
         public ulong Id { get; }
         public string Name { get; }
         public TimeSpan CreationTime { get; }
-        public Dictionary<string, object> AdditionalProperties { get; }
+
+        public Dictionary<string, object> AdditionalProperties
+        {
+            get
+            {
+                if (_additionalProperties == null)
+                {
+                    _additionalProperties = new Dictionary<string, object>();
+                }
+
+                return _additionalProperties;
+            }
+        }
 
         internal Dictionary<Type, IList<Component>> Components => _components;
 
@@ -52,7 +64,6 @@ namespace MoeGame.Framework
             if (_components.TryGetValue(type, out var collection))
             {
                 collection.Remove(component);
-                _manager.RaiseEntityUpdated(this);
             }
             else
             {
@@ -68,6 +79,8 @@ namespace MoeGame.Framework
                     }
                 }
             }
+
+            _manager.RaiseEntityUpdated(this);
         }
 
         public bool HasComponent<T>() where T : Component => GetComponent<T>() != null;
