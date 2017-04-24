@@ -1,7 +1,7 @@
 ﻿using MoeGame.Framework;
 using System;
 
-namespace CommitteeOfZero.Nitro.Graphics
+namespace CommitteeOfZero.Nitro
 {
     public class FloatAnimation : Component
     {

@@ -1,4 +1,4 @@
-﻿namespace CommitteeOfZero.Nitro.Graphics
+﻿namespace CommitteeOfZero.Nitro
 {
     public enum TimingFunction
     {

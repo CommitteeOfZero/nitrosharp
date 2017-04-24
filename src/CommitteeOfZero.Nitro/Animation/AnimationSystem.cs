@@ -3,7 +3,7 @@ using System;
 using System.Numerics;
 using System.Collections.Generic;
 
-namespace CommitteeOfZero.Nitro.Graphics
+namespace CommitteeOfZero.Nitro
 {
     public class AnimationSystem : EntityProcessingSystem
     {

@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace MoeGame.Framework.Audio.XAudio
+﻿namespace MoeGame.Framework.Audio.XAudio
 {
     public class XAudio2ResourceFactory : ResourceFactory
     {
@@ -13,9 +9,9 @@ namespace MoeGame.Framework.Audio.XAudio
             _engine = engine;
         }
 
-        public override AudioSource CreateAudioSource()
+        public override AudioSource CreateAudioSource(uint bufferSize)
         {
-            return new XAudio2AudioSource(_engine);
+            return new XAudio2AudioSource(_engine, bufferSize);
         }
     }
 }

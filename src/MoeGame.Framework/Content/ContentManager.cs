@@ -12,14 +12,14 @@ namespace MoeGame.Framework.Content
         private int _nbCurrentlyLoading;
 
         private readonly Dictionary<Type, ContentLoader> _contentLoaders;
-        private readonly ConcurrentDictionary<string, object> _loadedItems;
+        private readonly ConcurrentDictionary<string, object> _cache;
 
         public ContentManager(string rootDirectory)
         {
             RootDirectory = rootDirectory;
             _contentLoaders = new Dictionary<Type, ContentLoader>();
 
-            _loadedItems = new ConcurrentDictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+            _cache = new ConcurrentDictionary<string, object>(StringComparer.OrdinalIgnoreCase);
         }
 
         public ContentManager() : this(string.Empty)
@@ -54,15 +54,20 @@ namespace MoeGame.Framework.Content
 
         public void Unload(AssetRef assetRef)
         {
-            if (_loadedItems.TryGetValue(assetRef, out object asset))
+            if (_cache.TryGetValue(assetRef, out object asset))
             {
                 (asset as IDisposable)?.Dispose();
-                _loadedItems.TryRemove(assetRef, out var _);
+                _cache.TryRemove(assetRef, out var _);
             }
         }
 
         public object Load(AssetRef assetRef, Type contentType)
         {
+            if (_cache.TryGetValue(assetRef, out var asset))
+            {
+                return asset;
+            }
+
             var stream = OpenStream(assetRef);
             {
                 return Load(stream, assetRef, contentType);
@@ -82,7 +87,7 @@ namespace MoeGame.Framework.Content
             }
 
             object asset = loader.Load(stream);
-            _loadedItems[path] = asset;
+            _cache[path] = asset;
             return asset;
         }
 
@@ -94,7 +99,7 @@ namespace MoeGame.Framework.Content
                 try
                 {
                     var result = Load(assetRef, typeof(T));
-                    _loadedItems[assetRef] = (T)result;
+                    _cache[assetRef] = (T)result;
                     return Task.FromResult((T)result);
                 }
                 catch
@@ -110,7 +115,7 @@ namespace MoeGame.Framework.Content
 
         public bool TryGetAsset<T>(AssetRef assetRef, out T asset)
         {
-            bool result = _loadedItems.TryGetValue(assetRef, out object value);
+            bool result = _cache.TryGetValue(assetRef, out object value);
             asset = result ? (T)value : default(T);
             return result;
         }

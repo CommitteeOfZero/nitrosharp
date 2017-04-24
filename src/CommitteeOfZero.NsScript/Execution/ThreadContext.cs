@@ -25,7 +25,7 @@ namespace CommitteeOfZero.NsScript.Execution
         public Module CurrentModule { get; }
         public Frame CurrentFrame => _frameStack.Peek();   
 
-        public SyntaxNode CurrentNode => CurrentFrame.Statements[CurrentFrame.Position];
+        public SyntaxNode CurrentNode => CurrentFrame.Statements.Length > 0 ? CurrentFrame.Statements[CurrentFrame.Position] : null;
         public bool Suspended { get; internal set; }
         public bool DoneExecuting => _frameStack.Count == 0;
 

@@ -34,7 +34,7 @@ namespace MoeGame.Framework
             {
                 if (replace)
                 {
-                    Remove(name);
+                    _allEntities.Remove(name);
                 }
                 else
                 {

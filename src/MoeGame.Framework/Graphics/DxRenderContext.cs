@@ -36,6 +36,9 @@ namespace MoeGame.Framework.Graphics
 
         private void Initialize()
         {
+#if DEBUG
+            SharpDX.Configuration.EnableObjectTracking = true;
+#endif
             CreateDeviceIndependentResources();
             CreateDeviceResources();
             CreateSizeDependentResources();
@@ -86,7 +89,8 @@ namespace MoeGame.Framework.Graphics
                 Scaling = SharpDX.DXGI.Scaling.Stretch
             };
 
-            using (var dxgiFactory = _dxgiDevice.Adapter.GetParent<SharpDX.DXGI.Factory2>())
+            using (var adapter = _dxgiDevice.Adapter)
+            using (var dxgiFactory = adapter.GetParent<SharpDX.DXGI.Factory2>())
             {
                 SwapChain = new SharpDX.DXGI.SwapChain1(dxgiFactory, _d3dDevice, _window.Handle, ref swapChainDesc);
             }

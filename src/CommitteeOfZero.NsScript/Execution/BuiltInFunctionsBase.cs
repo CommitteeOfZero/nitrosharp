@@ -123,7 +123,7 @@ namespace CommitteeOfZero.NsScript.Execution
         {
         }
 
-        public virtual void SetVolume(string entityName, TimeSpan duration, int volume)
+        public virtual void SetVolume(string entityName, TimeSpan duration, NsRational volume)
         {
         }
 

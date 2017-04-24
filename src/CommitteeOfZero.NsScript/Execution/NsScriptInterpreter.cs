@@ -181,6 +181,10 @@ namespace CommitteeOfZero.NsScript.Execution
         private void Tick()
         {
             Frame prevFrame = _currentThread.CurrentFrame;
+            if (_currentThread.CurrentNode == null)
+            {
+                _currentThread.Advance();
+            }
             ExecuteNode(_currentThread.CurrentNode);
             if (prevFrame == _currentThread.CurrentFrame && prevFrame.OperationStack.Count == 0)
             {

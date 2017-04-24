@@ -9,7 +9,7 @@ namespace AmplitudeExperiments
     {
         static void Main(string[] args)
         {
-            var fs = File.OpenRead("00700120ri.ogg");
+            var fs = File.OpenRead("00100030ri");
             var audio = new FFmpegAudioStream(fs);
 
             audio.TargetBitDepth = 16;

@@ -1,8 +1,6 @@
 ﻿using MoeGame.Framework.Graphics;
 using SharpDX.Direct2D1;
 using SharpDX.WIC;
-using System;
-using System.Diagnostics;
 using System.IO;
 
 namespace MoeGame.Framework.Content
@@ -19,13 +17,12 @@ namespace MoeGame.Framework.Content
         public override object Load(Stream stream)
         {
             using (stream)
+            using (var bitmapDecoder = new BitmapDecoder(_rc.WicFactory, stream, DecodeOptions.CacheOnDemand))
             {
-                using (var bitmapDecoder = new BitmapDecoder(_rc.WicFactory, stream, DecodeOptions.CacheOnDemand))
+                using (var frameDecode = bitmapDecoder.GetFrame(0))
+                using (var converter = new FormatConverter(_rc.WicFactory))
                 {
-                    var frame = bitmapDecoder.GetFrame(0);
-                    var converter = new FormatConverter(_rc.WicFactory);
-                    converter.Initialize(frame, SharpDX.WIC.PixelFormat.Format32bppPBGRA);
-
+                    converter.Initialize(frameDecode, SharpDX.WIC.PixelFormat.Format32bppPBGRA);
                     var props = new BitmapProperties1()
                     {
                         BitmapOptions = BitmapOptions.None,
@@ -39,8 +36,6 @@ namespace MoeGame.Framework.Content
                     return new TextureAsset(bitmap);
                 }
             }
-
-            
         }
     }
 }

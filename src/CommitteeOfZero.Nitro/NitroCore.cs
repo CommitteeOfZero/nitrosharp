@@ -4,6 +4,7 @@ using CommitteeOfZero.NsScript;
 using MoeGame.Framework.Content;
 using MoeGame.Framework;
 using CommitteeOfZero.Nitro.Graphics.Visuals;
+using CommitteeOfZero.Nitro.Audio;
 
 namespace CommitteeOfZero.Nitro
 {
@@ -13,7 +14,7 @@ namespace CommitteeOfZero.Nitro
         private readonly EntityManager _entities;
 
         private readonly Game _game;
-        
+
         public NitroCore(Game game, NitroConfiguration configuration, EntityManager entities)
         {
             _game = game;
@@ -26,6 +27,11 @@ namespace CommitteeOfZero.Nitro
 
         public override void SetAlias(string entityName, string alias)
         {
+            if (entityName == alias)
+            {
+                return;
+            }
+
             if (_entities.TryGet(entityName, out var entity))
             {
                 _entities.Add(alias, entity);
@@ -94,7 +100,18 @@ namespace CommitteeOfZero.Nitro
                     break;
 
                 case NsEntityAction.Dispose:
-                    //_entities.Remove(entity);
+                    if (entity.HasComponent<Visual>())
+                    {
+                        _entities.Remove(entity);
+                    }
+                    else
+                    {
+                        var sound = entity.GetComponent<SoundComponent>();
+                        if (sound != null)
+                        {
+                            sound.RemoveOncePlayed = true;
+                        }
+                    }
                     break;
             }
         }

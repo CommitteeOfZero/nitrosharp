@@ -1,15 +1,17 @@
 ﻿using CommitteeOfZero.Nitro.Graphics.Visuals;
-using CommitteeOfZero.Nitro.Text;
+using CommitteeOfZero.Nitro.Dialogue;
 using CommitteeOfZero.NsScript;
 using CommitteeOfZero.NsScript.PXml;
 using MoeGame.Framework;
 using System.Numerics;
 using System.Threading.Tasks;
+using CommitteeOfZero.Nitro.Audio;
 
 namespace CommitteeOfZero.Nitro
 {
     public sealed partial class NitroCore
     {
+        private readonly PXmlTreeFlattener _pxmlFlattener = new PXmlTreeFlattener();
         private DialogueBox _currentDialogueBox;
         private Entity _textEntity;
 
@@ -50,28 +52,59 @@ namespace CommitteeOfZero.Nitro
         {
             CurrentThread.Suspend();
 
-            Task.Run(() =>
-            {
-                var root = PXmlBlock.Parse(pxmlString);
-                var flattener = new PXmlTreeFlattener();
+            Task.Run(() => ParseDialogueLine(pxmlString))
+                .ContinueWith(t => DisplayDialogueCore(t.Result), _game.MainLoopTaskScheduler);
+        }
 
-                string plainText = flattener.Flatten(root);
-                return Task.FromResult(plainText);
-            }).ContinueWith(t =>
+        private DialogueLine ParseDialogueLine(string pxmlString)
+        {
+            var root = PXmlBlock.Parse(pxmlString);
+            return _pxmlFlattener.Flatten(root);
+        }
+
+        private void DisplayDialogueCore(DialogueLine dialogueLine)
+        {
+            _entities.TryGet(CurrentDialogueBlock.Identifier, out var textEntity);
+            var textVisual = textEntity?.GetComponent<GameTextVisual>();
+            if (textVisual != null)
             {
-                string plainText = t.Result;
-                _entities.TryGet(CurrentDialogueBlock.Identifier, out var textEntity);
-                var textVisual = textEntity?.GetComponent<GameTextVisual>();
-                if (textVisual != null)
+                textVisual.Reset();
+
+                textVisual.Text = dialogueLine.Text;
+                textVisual.Priority = 30000;
+                textVisual.Color = RgbaValueF.White;
+                textVisual.IsEnabled = true;
+            }
+
+            if (dialogueLine.Voice != null)
+            {
+                VoiceAction(dialogueLine.Voice);
+            }
+        }
+
+        private Entity _voiceEntity;
+        private void VoiceAction(Voice voice)
+        {
+            if (voice.Action == Dialogue.VoiceAction.Play)
+            {
+                if (_voiceEntity != null)
                 {
-                    textVisual.Reset();
-
-                    textVisual.Text = plainText;
-                    textVisual.Priority = 30000;
-                    textVisual.Color = RgbaValueF.White;
-                    textVisual.IsEnabled = true;
+                    _entities.Remove(_voiceEntity);
                 }
-            }, _game.MainLoopTaskScheduler);
+
+                var sound = new SoundComponent
+                {
+                    AudioFile = "voice/" + voice.FileName,
+                    Volume = 1.0f,
+                    Kind = AudioKind.Voice
+                };
+
+                _voiceEntity = _entities.Create(voice.FileName).WithComponent(sound);
+            }
+            else
+            {
+                _entities.Remove(voice.FileName);
+            }
         }
     }
 }

@@ -29,7 +29,7 @@ namespace MoeGame.Framework
         {
             return entities;
         }
-        
+
         public void ProcessAll(IEnumerable<Entity> entities, float deltaMilliseconds)
         {
             foreach (var item in SortEntities(entities))
@@ -44,8 +44,10 @@ namespace MoeGame.Framework
         {
             foreach (var removed in removedEntities)
             {
-                _entities.Remove(removed);
-                EntityRemoved?.Invoke(this, removed);
+                if (_entities.Remove(removed))
+                {
+                    EntityRemoved?.Invoke(this, removed);
+                }
             }
 
             foreach (var updated in updatedEntities)
@@ -56,18 +58,23 @@ namespace MoeGame.Framework
 
         private void EntityChanged(Entity entity)
         {
+            if (InterestsThisSystem(entity) && _entities.Add(entity))
+            {
+                EntityAdded?.Invoke(this, entity);
+            }
+        }
+
+        private bool InterestsThisSystem(Entity entity)
+        {
             foreach (Type interest in _interests)
             {
-
                 if (entity.HasComponent(interest))
                 {
-                    if (_entities.Add(entity))
-                    {
-                        EntityAdded?.Invoke(this, entity);
-                    }
-                    break;
+                    return true;
                 }
             }
+
+            return false;
         }
     }
 }

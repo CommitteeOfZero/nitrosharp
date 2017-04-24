@@ -30,7 +30,8 @@ namespace CommitteeOfZero.Nitro
 
         public override void LoadImage(string entityName, string fileName)
         {
-            CurrentThread.Suspend();
+            var thread = CurrentThread;
+            thread.Suspend();
             _content.LoadAsync<TextureAsset>(fileName).ContinueWith(t =>
             {
                 var visual = new TextureVisual
@@ -42,7 +43,7 @@ namespace CommitteeOfZero.Nitro
                 };
 
                 _entities.Create(entityName, replace: true).WithComponent(visual);
-                CurrentThread.Resume();
+                thread.Resume();
             }, CancellationToken.None, TaskContinuationOptions.OnlyOnRanToCompletion, _game.MainLoopTaskScheduler);
         }
 
@@ -123,7 +124,8 @@ namespace CommitteeOfZero.Nitro
             }
             else
             {
-                CurrentThread.Suspend();
+                var thread = CurrentThread;
+                thread.Suspend();
                 _content.LoadAsync<TextureAsset>(fileOrExistingEntityName).ContinueWith(t =>
                 {
                     var asset = t.Result;
@@ -139,7 +141,7 @@ namespace CommitteeOfZero.Nitro
                     }
 
                     _entities.Create(entityName, replace: true).WithComponent(texture);
-                    CurrentThread.Resume();
+                    thread.Resume();
 
                 }, CancellationToken.None, TaskContinuationOptions.OnlyOnRanToCompletion, _game.MainLoopTaskScheduler);
             }

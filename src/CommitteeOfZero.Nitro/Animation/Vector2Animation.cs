@@ -2,7 +2,7 @@
 using System;
 using System.Numerics;
 
-namespace CommitteeOfZero.Nitro.Graphics
+namespace CommitteeOfZero.Nitro
 {
     public class Vector2Animation : Component
     {

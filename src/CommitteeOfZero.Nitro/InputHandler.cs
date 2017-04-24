@@ -22,6 +22,11 @@ namespace CommitteeOfZero.Nitro
                     _nitroCore.MainThread.Resume();
                 }
             }
+
+            if (Keyboard.IsKeyDownThisFrame(Key.R))
+            {
+                Console.WriteLine(SharpDX.Diagnostics.ObjectTracker.ReportActiveObjects());
+            }
         }
 
         private static bool ShouldAdvance()

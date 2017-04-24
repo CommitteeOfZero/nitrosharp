@@ -69,7 +69,7 @@ namespace CommitteeOfZero.Nitro.Graphics.Visuals
                 s_transparentTextBrush = new SolidColorBrush(renderContext.DeviceContext, SharpDX.Color.Transparent);
                 s_currentGlyphBrush = new SolidColorBrush(renderContext.DeviceContext, SharpDX.Color.Transparent);
 
-                s_textFormat = new TextFormat(renderContext.DWriteFactory, "Noto Sans CJK JP", 24);
+                s_textFormat = new TextFormat(renderContext.DWriteFactory, "Noto Sans CJK JP", 28);
                 s_textRenderer = new CustomTextRenderer(renderContext.DeviceContext, s_transparentTextBrush, false);
             }
         }

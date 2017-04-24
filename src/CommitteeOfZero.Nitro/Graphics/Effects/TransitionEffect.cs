@@ -12,6 +12,9 @@ namespace CommitteeOfZero.Nitro.Graphics.Effects
     [CustomEffectInput("Mask")]
     public class TransitionEffect : CustomEffectBase, DrawTransform
     {
+        private EffectContext _context;
+        private TransformGraph _transformGraph;
+
         private static readonly Guid EffectGuid = Guid.NewGuid(); //new Guid("ebbd02e0-755f-45ac-a1a8-d6bb729c4e46");
         private DrawInformation _drawInformation;
         private EffectConstantBuffer _constants;
@@ -45,9 +48,20 @@ namespace CommitteeOfZero.Nitro.Graphics.Effects
 
         public override void Initialize(EffectContext effectContext, TransformGraph transformGraph)
         {
+            _context = effectContext;
+            _transformGraph = transformGraph;
+
             var bytecode = File.ReadAllBytes("Shaders/Transition.bin");
             effectContext.LoadPixelShader(EffectGuid, bytecode);
             transformGraph.SetSingleTransformNode(this);
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            _context.Dispose();
+            _transformGraph.Dispose();
+
+            base.Dispose(disposing);
         }
 
         public RawRectangle MapInputRectanglesToOutputRectangle(RawRectangle[] inputRects, RawRectangle[] inputOpaqueSubRects, out RawRectangle outputOpaqueSubRect)

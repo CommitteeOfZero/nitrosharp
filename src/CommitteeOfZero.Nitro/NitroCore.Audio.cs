@@ -1,4 +1,5 @@
-﻿using CommitteeOfZero.NsScript;
+﻿using CommitteeOfZero.Nitro.Audio;
+using CommitteeOfZero.NsScript;
 using MoeGame.Framework;
 using System;
 
@@ -8,17 +9,27 @@ namespace CommitteeOfZero.Nitro
     {
         public override int GetSoundAmplitude()
         {
-            //CurrentThread.Suspend(TimeSpan.FromMilliseconds(100));
-            return 0;
+            var ampl = AudioSystem.Amplitude;
+            if (ampl == 0)
+            {
+                //CurrentThread.Suspend(TimeSpan.FromMilliseconds(100));
+            }
+
+            return AudioSystem.Amplitude;
         }
 
         public override void LoadAudio(string entityName, NsAudioKind kind, string fileName)
         {
-            _entities.Create(entityName, replace: true)
-                .WithComponent(new SoundComponent { AudioFile = fileName });
+            var sound = new SoundComponent
+            {
+                AudioFile = fileName,
+                Kind = (AudioKind)kind
+            };
+
+            _entities.Create(entityName, replace: true).WithComponent(sound);
         }
 
-        public override void SetVolume(string entityName, TimeSpan duration, int volume)
+        public override void SetVolume(string entityName, TimeSpan duration, NsRational volume)
         {
             if (entityName == null)
                 return;
@@ -29,9 +40,27 @@ namespace CommitteeOfZero.Nitro
             }
         }
 
-        private void SetVolumeCore(Entity entity, TimeSpan duration, int volume)
+        private void SetVolumeCore(Entity entity, TimeSpan duration, NsRational volume)
         {
-            entity.GetComponent<SoundComponent>().Volume = volume;
+            var sound = entity.GetComponent<SoundComponent>();
+            volume = volume.Rebase(1.0f);
+            if (duration > TimeSpan.Zero)
+            {
+                var animation = new FloatAnimation
+                {
+                    TargetComponent = sound,
+                    PropertySetter = (c, v) => (c as SoundComponent).Volume = v,
+                    InitialValue = sound.Volume,
+                    FinalValue = volume,
+                    Duration = duration
+                };
+
+                entity.AddComponent(animation);
+            }
+            else
+            {
+                sound.Volume = volume;
+            }
         }
 
         public override void ToggleLooping(string entityName, bool looping)

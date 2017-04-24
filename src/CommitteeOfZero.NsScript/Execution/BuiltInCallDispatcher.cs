@@ -6,6 +6,7 @@ namespace CommitteeOfZero.NsScript.Execution
     public sealed class BuiltInCallDispatcher
     {
         private const int NssMaxOpacity = 1000;
+        private const int NssMaxVolume = 1000;
 
         private readonly Dictionary<string, Action<ArgumentStack>> _dispatchTable;
         private readonly BuiltInFunctionsBase _builtinsImpl;
@@ -172,7 +173,7 @@ namespace CommitteeOfZero.NsScript.Execution
         {
             string entityName = PreprocessEntityName(args.PopString());
             TimeSpan duration = args.PopTimeSpan();
-            int volume = args.PopInt();
+            NsRational volume = new NsRational(args.PopInt(), NssMaxVolume);
 
             _builtinsImpl.SetVolume(entityName, duration, volume);
         }

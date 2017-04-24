@@ -1,11 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace MoeGame.Framework.Audio
+﻿namespace MoeGame.Framework.Audio
 {
     public abstract class ResourceFactory
     {
-        public abstract AudioSource CreateAudioSource();
+        public abstract AudioSource CreateAudioSource(uint bufferSize);
     }
 }

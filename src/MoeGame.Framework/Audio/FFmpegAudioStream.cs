@@ -1,6 +1,5 @@
 ﻿using FFmpeg.AutoGen;
 using System;
-using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 
@@ -90,8 +89,6 @@ namespace MoeGame.Framework.Audio
 
         internal override void OnAttachedToSource()
         {
-            _targetSampleFormat = BitDepthToSampleFormat(TargetBitDepth);
-            _targetBytesPerSample = ffmpeg.av_get_bytes_per_sample(_targetSampleFormat);
             SetupResampler();
         }
 
@@ -104,7 +101,7 @@ namespace MoeGame.Framework.Audio
             ffmpeg.av_opt_set_int(pSwrContext, "in_channel_count", OriginalChannelCount, 0);
             ffmpeg.av_opt_set_int(pSwrContext, "out_channel_count", TargetChannelCount, 0);
             ffmpeg.av_opt_set_int(pSwrContext, "in_channel_layout", (long)_context.CodecContext->channel_layout, 0);
-            ffmpeg.av_opt_set_int(pSwrContext, "out_channel_layout", (long)_context.CodecContext->channel_layout, 0);
+            ffmpeg.av_opt_set_int(pSwrContext, "out_channel_layout", ChannelCountToLayout(TargetChannelCount), 0);
             ffmpeg.av_opt_set_int(pSwrContext, "in_sample_rate", OriginalSampleRate, 0);
             ffmpeg.av_opt_set_int(pSwrContext, "out_sample_rate", TargetSampleRate, 0);
             ffmpeg.av_opt_set_sample_fmt(pSwrContext, "in_sample_fmt", _context.CodecContext->sample_fmt, 0);
@@ -116,7 +113,7 @@ namespace MoeGame.Framework.Audio
 
         private static int ChannelCountToLayout(int channelCount)
         {
-            return ffmpeg.AV_CH_LAYOUT_STEREO;
+            return channelCount == 2 ? ffmpeg.AV_CH_LAYOUT_STEREO : ffmpeg.AV_CH_LAYOUT_MONO;
         }
 
         public override bool Read(AudioBuffer buffer)
@@ -250,10 +247,7 @@ namespace MoeGame.Framework.Audio
             }
 
             ffmpeg.swr_convert(_context.ResamplerContext, &pBuf, outSampleCount, frame->extended_data, inputSampleCount);
-            //dst_bufsize = av_samples_get_buffer_size(&dst_linesize, dst_nb_channels, ret, dst_sample_fmt, 1);
-
-            //return ffmpeg.av_samples_get_buffer_size()
-            return _targetBytesPerSample * outSampleCount * frame->channels;
+            return _targetBytesPerSample * outSampleCount * TargetChannelCount;
         }
 
         public override void Seek(TimeSpan timeCode)

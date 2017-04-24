@@ -7,11 +7,15 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="00100030ri" />
     <None Remove="00500070mi.ogg" />
     <None Remove="00700120ri.ogg" />
   </ItemGroup>
 
   <ItemGroup>
+    <Content Include="00100030ri">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="00700120ri.ogg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>

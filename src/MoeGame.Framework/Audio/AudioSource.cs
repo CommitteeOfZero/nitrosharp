@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace MoeGame.Framework.Audio
 {
@@ -13,12 +15,13 @@ namespace MoeGame.Framework.Audio
         private AudioStream _audioStream;
         private CancellationTokenSource _cts;
 
-        public AudioSource(AudioEngine audioEngine)
+        public AudioSource(AudioEngine audioEngine, uint bufferSize)
         {
             _engineBase = audioEngine;
-            _bufferPool = new AudioBufferPool(2, audioEngine.SampleRate * audioEngine.ChannelCount);
+            _bufferPool = new AudioBufferPool(2, (int)bufferSize);
             _buffers = new Dictionary<int, AudioBuffer>();
 
+            Status = AudioSourceStatus.Idle;
             BufferEnd += OnBufferEnd;
         }
 
@@ -27,12 +30,20 @@ namespace MoeGame.Framework.Audio
             _bufferPool.Release(buffer);
         }
 
-        public abstract float Volume { get; set; }
+        public AudioSourceStatus Status { get; private set; }
         public AudioStream CurrentStream => _audioStream;
+        public abstract float Volume { get; set; }
+
+        public event EventHandler<AudioBuffer> PreviewBufferSent;
         public abstract event EventHandler<AudioBuffer> BufferEnd;
 
         public void SetStream(AudioStream stream)
         {
+            if (Status == AudioSourceStatus.Playing)
+            {
+                throw new InvalidOperationException();
+            }
+
             stream.TargetBitDepth = _engineBase.BitDepth;
             stream.TargetChannelCount = _engineBase.ChannelCount;
             stream.TargetSampleRate = _engineBase.SampleRate;
@@ -43,27 +54,55 @@ namespace MoeGame.Framework.Audio
 
         public async void Play()
         {
+            if (Status == AudioSourceStatus.Playing)
+            {
+                return;
+            }
+            if (CurrentStream == null)
+            {
+                throw new InvalidOperationException("Audio stream not set.");
+            }
+
             _cts = new CancellationTokenSource();
             StartAcceptingBuffers();
+            Status = AudioSourceStatus.Playing;
             while (!_cts.IsCancellationRequested)
             {
-                AudioBuffer buffer = await _bufferPool.TakeAsync(_cts.Token).ConfigureAwait(false);
+                AudioBuffer buffer = null;
+                try
+                {
+                    buffer = await _bufferPool.TakeAsync(_cts.Token).ConfigureAwait(false);
+                }
+                catch (TaskCanceledException)
+                {
+                    return;
+                }
+
                 buffer.ResetPosition();
-                if (_audioStream.Read(buffer) == false)
+                bool eof = !_audioStream.Read(buffer);
+
+                PreviewBufferSent?.Invoke(this, buffer);
+
+                AcceptBuffer(buffer);
+                if (eof)
                 {
                     break;
                 }
-
-                AcceptBuffer(buffer);
             }
         }
 
         public void Stop()
         {
-            _cts?.Cancel();
+            if (Status == AudioSourceStatus.Playing)
+            {
+                StopAcceptingBuffers();
+                _cts?.Cancel();
+                Status = AudioSourceStatus.Idle;
+            }
         }
 
         internal abstract void StartAcceptingBuffers();
+        internal abstract void StopAcceptingBuffers();
         internal virtual void AcceptBuffer(AudioBuffer buffer)
         {
             _buffers[buffer.Id] = buffer;

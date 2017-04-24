@@ -5,12 +5,14 @@ using System;
 
 namespace MoeGame.Framework.Audio.XAudio
 {
-    public class XAudio2AudioSource : AudioSource
+    public sealed class XAudio2AudioSource : AudioSource
     {
         private readonly XAudio2AudioEngine _engine;
         private SourceVoice _sourceVoice;
+        private float _volume;
 
-        internal XAudio2AudioSource(XAudio2AudioEngine engine) : base(engine)
+        internal XAudio2AudioSource(XAudio2AudioEngine engine, uint bufferSize)
+            : base(engine, bufferSize)
         {
             _engine = engine;
             var waveFormat = new WaveFormat(engine.SampleRate, engine.BitDepth, engine.ChannelCount);
@@ -28,13 +30,25 @@ namespace MoeGame.Framework.Audio.XAudio
 
         public override float Volume
         {
-            get => _sourceVoice.Volume;
-            set => _sourceVoice.SetVolume(value);
+            get => _volume;
+            set
+            {
+                if (_volume != value)
+                {
+                    _volume = value;
+                    _sourceVoice.SetVolume(value);
+                }
+            }
         }
 
         internal override void StartAcceptingBuffers()
         {
             _sourceVoice.Start();
+        }
+
+        internal override void StopAcceptingBuffers()
+        {
+            _sourceVoice.Stop();
         }
 
         internal override void AcceptBuffer(AudioBuffer buffer)
