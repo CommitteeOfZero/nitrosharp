@@ -2,7 +2,7 @@
 using SharpDX.Direct2D1;
 using SharpDX.DirectWrite;
 
-namespace MoeGame.Framework.Graphics
+namespace CommitteeOfZero.Nitro.Graphics
 {
     public class CustomTextRenderer : TextRendererBase
     {
@@ -20,8 +20,17 @@ namespace MoeGame.Framework.Graphics
         public override Result DrawGlyphRun(object clientDrawingContext, float baselineOriginX, float baselineOriginY,
             MeasuringMode measuringMode, GlyphRun glyphRun, GlyphRunDescription glyphRunDescription, ComObject clientDrawingEffect)
         {
-            var brush = clientDrawingEffect as Brush ?? _defaultBrush;
+            Brush brush = _defaultBrush;
+            float originalOpacity = brush.Opacity;
+
+            var context = clientDrawingEffect as TextDrawingContext;
+            if (context != null)
+            {
+                brush.Opacity = context.OpacityOverride;
+            }
+
             _renderTarget.DrawGlyphRun(new Vector2(baselineOriginX, baselineOriginY), glyphRun, brush, measuringMode);
+            brush.Opacity = originalOpacity;
             return Result.Ok;
         }
 

@@ -93,13 +93,13 @@ namespace CommitteeOfZero.NsScript.PXml
             return new VoiceElement(action, characterName, fileName);
         }
 
-        private FontColorElement ParseFontElement(PXmlTag startTag)
+        private ColorElement ParseFontElement(PXmlTag startTag)
         {
             string colorString = startTag.Attributes["incolor"];
             NsColor color = NsColor.FromString(colorString);
 
             var content = ParseContent(startTag.Name);
-            return new FontColorElement(color, content);
+            return new ColorElement(color, content);
         }
 
         private RubyElement ParseRubyElement(PXmlTag startTag)

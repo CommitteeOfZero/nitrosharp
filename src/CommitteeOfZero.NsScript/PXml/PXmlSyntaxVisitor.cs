@@ -29,7 +29,7 @@ namespace CommitteeOfZero.NsScript.PXml
         {
         }
 
-        public virtual void VisitFontColorElement(FontColorElement fontColorElement)
+        public virtual void VisitColorElement(ColorElement colorElement)
         {
         }
 

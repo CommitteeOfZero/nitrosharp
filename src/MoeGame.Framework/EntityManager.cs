@@ -30,11 +30,11 @@ namespace MoeGame.Framework
 
         public Entity Create(string name, bool replace = false)
         {
-            if (_allEntities.ContainsKey(name))
+            if (_allEntities.TryGetValue(name, out var existingEntity))
             {
                 if (replace)
                 {
-                    _allEntities.Remove(name);
+                    CommitDestroy(existingEntity);
                 }
                 else
                 {
@@ -42,9 +42,9 @@ namespace MoeGame.Framework
                 }
             }
 
-            var entity = new Entity(this, _nextId++, name, _gameTimer.Elapsed);
-            _allEntities[name] = entity;
-            return entity;
+            var newEntity = new Entity(this, _nextId++, name, _gameTimer.Elapsed);
+            _allEntities[name] = newEntity;
+            return newEntity;
         }
 
         public bool Exists(string name) => _allEntities.ContainsKey(name);
@@ -74,10 +74,23 @@ namespace MoeGame.Framework
             while (_entitiesToRemove.Count > 0)
             {
                 var e = _entitiesToRemove.Dequeue();
-                _allEntities.Remove(e.Name);
-
-                EntityRemoved?.Invoke(this, e);
+                CommitDestroy(e);
             }
+        }
+
+        private void CommitDestroy(Entity entity)
+        {
+            EntityRemoved?.Invoke(this, entity);
+            //foreach (var componentList in entity.Components.Values)
+            //{
+            //    foreach (var component in componentList)
+            //    {
+            //        component.OnRemoved();
+            //    }
+            //}
+
+            _allEntities.Remove(entity.Name);
+            //entity.Components.Clear();
         }
 
         internal void RaiseEntityUpdated(Entity entity)

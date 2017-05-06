@@ -1,4 +1,4 @@
-﻿using CommitteeOfZero.Nitro.Graphics.Visuals;
+﻿using CommitteeOfZero.Nitro.Graphics;
 using CommitteeOfZero.NsScript;
 using MoeGame.Framework;
 using MoeGame.Framework.Content;
@@ -62,7 +62,7 @@ namespace CommitteeOfZero.Nitro
         private void AddScreencap(string entityName, NsCoordinate x, NsCoordinate y, int priority)
         {
             var position = Position(x, y, Vector2.Zero, _viewport.Width, _viewport.Height);
-            var screencap = new ScreenCap
+            var screencap = new Screenshot
             {
                 Position = position,
                 Priority = priority,

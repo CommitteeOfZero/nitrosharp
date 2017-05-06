@@ -1,15 +1,10 @@
-﻿namespace CommitteeOfZero.Nitro.Graphics.Visuals
+﻿namespace CommitteeOfZero.Nitro.Graphics
 {
     public class RectangleVisual : Visual
     {
-        public override void Render(RenderSystem renderSystem)
+        public override void Render(ICanvas canvas)
         {
-            var context = renderSystem.RenderContext;
-            context.ColorBrush.Color = Color;
-            context.ColorBrush.Opacity = Opacity;
-
-            var dest = new SharpDX.RectangleF(0, 0, Width, Height);
-            context.DeviceContext.FillRectangle(dest, context.ColorBrush);
+            canvas.DrawRectangle(this);
         }
     }
 }

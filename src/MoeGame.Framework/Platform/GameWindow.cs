@@ -68,7 +68,7 @@ namespace MoeGame.Framework.Platform
 
         public override WindowState WindowState
         {
-            get { return OtkToMlWindowState(_nativeWindow.WindowState); }
+            get { return OtkToMoeWindowState(_nativeWindow.WindowState); }
             set { SetWindowState(value); }
         }
 
@@ -85,7 +85,7 @@ namespace MoeGame.Framework.Platform
             set { _nativeWindow.CursorVisible = value; }
         }
 
-        public override System.Drawing.Rectangle Bounds => OtkToMlRectangle(_nativeWindow.Bounds);
+        public override System.Drawing.Rectangle Bounds => OtkToMoeRectangle(_nativeWindow.Bounds);
         internal override IntPtr Handle => _nativeWindow.WindowInfo.Handle;
 
         public override void ProcessEvents()
@@ -115,12 +115,12 @@ namespace MoeGame.Framework.Platform
             Closed?.Invoke(this, e);
         }
 
-        private static System.Drawing.Rectangle OtkToMlRectangle(OpenTK.Rectangle rect)
+        private static System.Drawing.Rectangle OtkToMoeRectangle(OpenTK.Rectangle rect)
         {
             return new System.Drawing.Rectangle(rect.X, rect.Y, rect.Width, rect.Height);
         }
 
-        private static WindowState OtkToMlWindowState(OpenTK.WindowState otkWindowState)
+        private static WindowState OtkToMoeWindowState(OpenTK.WindowState otkWindowState)
         {
             switch (otkWindowState)
             {
@@ -137,7 +137,7 @@ namespace MoeGame.Framework.Platform
             }
         }
 
-        private static OpenTK.WindowState MlToOtkWindowState(WindowState mlWindowState)
+        private static OpenTK.WindowState MoeToOtkWindowState(WindowState mlWindowState)
         {
             switch (mlWindowState)
             {
@@ -164,7 +164,7 @@ namespace MoeGame.Framework.Platform
                     break;
             }
 
-            _nativeWindow.WindowState = MlToOtkWindowState(state);
+            _nativeWindow.WindowState = MoeToOtkWindowState(state);
         }
     }
 }

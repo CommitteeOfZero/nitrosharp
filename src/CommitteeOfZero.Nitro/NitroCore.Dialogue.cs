@@ -1,18 +1,17 @@
-﻿using CommitteeOfZero.Nitro.Graphics.Visuals;
-using CommitteeOfZero.Nitro.Dialogue;
+﻿using CommitteeOfZero.Nitro.Dialogue;
 using CommitteeOfZero.NsScript;
 using CommitteeOfZero.NsScript.PXml;
 using MoeGame.Framework;
 using System.Numerics;
 using System.Threading.Tasks;
 using CommitteeOfZero.Nitro.Audio;
+using CommitteeOfZero.Nitro.Graphics;
 
 namespace CommitteeOfZero.Nitro
 {
     public sealed partial class NitroCore
     {
         private readonly PXmlTreeFlattener _pxmlFlattener = new PXmlTreeFlattener();
-        private DialogueBox _currentDialogueBox;
         private Entity _textEntity;
 
         public override void CreateDialogueBox(string entityName, int priority, NsCoordinate x, NsCoordinate y, int width, int height)
@@ -33,19 +32,6 @@ namespace CommitteeOfZero.Nitro
             {
                 _entities.Remove(_textEntity);
             }
-
-            _entities.TryGet(block.BoxName, out var boxEntity);
-            _currentDialogueBox = boxEntity?.GetComponent<DialogueBox>();
-
-            var textVisual = new GameTextVisual
-            {
-                Position = _currentDialogueBox.Position,
-                Width = _currentDialogueBox.Width,
-                Height = _currentDialogueBox.Height,
-                IsEnabled = false
-            };
-
-            _textEntity = _entities.Create(block.Identifier, replace: true).WithComponent(textVisual);
         }
 
         public override void DisplayDialogue(string pxmlString)
@@ -64,21 +50,26 @@ namespace CommitteeOfZero.Nitro
 
         private void DisplayDialogueCore(DialogueLine dialogueLine)
         {
-            _entities.TryGet(CurrentDialogueBlock.Identifier, out var textEntity);
-            var textVisual = textEntity?.GetComponent<GameTextVisual>();
-            if (textVisual != null)
+            if (_entities.TryGet(CurrentDialogueBlock.BoxName, out var boxEntity))
             {
-                textVisual.Reset();
+                var dialogueBox = boxEntity.GetComponent<DialogueBox>();
+                var textVisual = new TextVisual
+                {
+                    Text = dialogueLine.Text,
+                    Position = dialogueBox.Position,
+                    Width = dialogueBox.Width,
+                    Height = dialogueBox.Height,
+                    IsEnabled = true,
+                    Priority = int.MaxValue,
+                    Color = RgbaValueF.White
+                };
 
-                textVisual.Text = dialogueLine.Text;
-                textVisual.Priority = 30000;
-                textVisual.Color = RgbaValueF.White;
-                textVisual.IsEnabled = true;
-            }
+                _textEntity = _entities.Create(CurrentDialogueBlock.Identifier, replace: true).WithComponent(textVisual);
 
-            if (dialogueLine.Voice != null)
-            {
-                VoiceAction(dialogueLine.Voice);
+                if (dialogueLine.Voice != null)
+                {
+                    VoiceAction(dialogueLine.Voice);
+                }
             }
         }
 

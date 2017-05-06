@@ -7,19 +7,45 @@ using System.Threading.Tasks;
 
 namespace MoeGame.Framework.Content
 {
+    internal class CacheItem
+    {
+        private volatile int _refCount;
+
+        public CacheItem(object asset)
+        {
+            Asset = asset;
+            _refCount = 1;
+        }
+
+        public object Asset { get; }
+        public int RefCount => _refCount;
+
+        public void IncrementRefCount()
+        {
+            Interlocked.Increment(ref _refCount);
+        }
+
+        public void DecrementRefCount()
+        {
+            Interlocked.Decrement(ref _refCount);
+        }
+    }
+
     public class ContentManager
     {
         private int _nbCurrentlyLoading;
 
         private readonly Dictionary<Type, ContentLoader> _contentLoaders;
-        private readonly ConcurrentDictionary<string, object> _cache;
+        private readonly ConcurrentDictionary<string, CacheItem> _cache;
+        private readonly Queue<AssetRef> _assetsToDispose;
 
         public ContentManager(string rootDirectory)
         {
             RootDirectory = rootDirectory;
             _contentLoaders = new Dictionary<Type, ContentLoader>();
 
-            _cache = new ConcurrentDictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+            _cache = new ConcurrentDictionary<string, CacheItem>(StringComparer.OrdinalIgnoreCase);
+            _assetsToDispose = new Queue<AssetRef>();
         }
 
         public ContentManager() : this(string.Empty)
@@ -52,20 +78,12 @@ namespace MoeGame.Framework.Content
             return (T)Load(assetRef, typeof(T));
         }
 
-        public void Unload(AssetRef assetRef)
-        {
-            if (_cache.TryGetValue(assetRef, out object asset))
-            {
-                (asset as IDisposable)?.Dispose();
-                _cache.TryRemove(assetRef, out var _);
-            }
-        }
-
         public object Load(AssetRef assetRef, Type contentType)
         {
-            if (_cache.TryGetValue(assetRef, out var asset))
+            if (_cache.TryGetValue(assetRef, out var cacheItem))
             {
-                return asset;
+                cacheItem.IncrementRefCount();
+                return cacheItem.Asset;
             }
 
             var stream = OpenStream(assetRef);
@@ -87,7 +105,7 @@ namespace MoeGame.Framework.Content
             }
 
             object asset = loader.Load(stream);
-            _cache[path] = asset;
+            _cache[path] = new CacheItem(asset);
             return asset;
         }
 
@@ -99,7 +117,6 @@ namespace MoeGame.Framework.Content
                 try
                 {
                     var result = Load(assetRef, typeof(T));
-                    _cache[assetRef] = (T)result;
                     return Task.FromResult((T)result);
                 }
                 catch
@@ -113,10 +130,34 @@ namespace MoeGame.Framework.Content
             });
         }
 
+        public void Unref(AssetRef assetRef)
+        {
+            if (_cache.TryGetValue(assetRef, out var cacheItem))
+            {
+                cacheItem.DecrementRefCount();
+                if (cacheItem.RefCount <= 0)
+                {
+                    _assetsToDispose.Enqueue(assetRef);
+                }
+            }
+        }
+
+        public void FlushUnusedAssets()
+        {
+            while (_assetsToDispose.Count > 0)
+            {
+                var assetRef = _assetsToDispose.Dequeue();
+                if (_cache.TryRemove(assetRef, out var cacheItem))
+                {
+                    (cacheItem.Asset as IDisposable)?.Dispose();
+                }
+            }
+        }
+
         public bool TryGetAsset<T>(AssetRef assetRef, out T asset)
         {
-            bool result = _cache.TryGetValue(assetRef, out object value);
-            asset = result ? (T)value : default(T);
+            bool result = _cache.TryGetValue(assetRef, out var cacheItem);
+            asset = result ? (T)cacheItem.Asset : default(T);
             return result;
         }
 

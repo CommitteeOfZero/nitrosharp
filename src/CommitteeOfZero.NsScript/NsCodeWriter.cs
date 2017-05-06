@@ -2,9 +2,9 @@
 
 namespace CommitteeOfZero.NsScript
 {
-    public class DefaultCodeWriter : CodeWriter
+    public class NsCodeWriter : CodeWriter
     {
-        public DefaultCodeWriter(TextWriter textWriter)
+        public NsCodeWriter(TextWriter textWriter)
             : base(textWriter)
         {
         }

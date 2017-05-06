@@ -1,8 +1,7 @@
 ﻿using MoeGame.Framework;
-using System;
 using System.Numerics;
 
-namespace CommitteeOfZero.Nitro.Graphics.Visuals
+namespace CommitteeOfZero.Nitro.Graphics
 {
     public abstract class Visual : Component
     {
@@ -23,6 +22,9 @@ namespace CommitteeOfZero.Nitro.Graphics.Visuals
             Scale = new Vector2(1.0f, 1.0f);
         }
 
-        public abstract void Render(RenderSystem renderSystem);
+        public abstract void Render(ICanvas canvas);
+        public virtual void Free(ICanvas canvas)
+        {
+        }
     }
 }

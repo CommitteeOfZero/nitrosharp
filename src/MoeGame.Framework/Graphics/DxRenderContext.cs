@@ -37,7 +37,7 @@ namespace MoeGame.Framework.Graphics
         private void Initialize()
         {
 #if DEBUG
-            SharpDX.Configuration.EnableObjectTracking = true;
+            //SharpDX.Configuration.EnableObjectTracking = true;
 #endif
             CreateDeviceIndependentResources();
             CreateDeviceResources();

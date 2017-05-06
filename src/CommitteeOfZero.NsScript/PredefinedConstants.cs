@@ -2,7 +2,7 @@
 
 namespace CommitteeOfZero.NsScript
 {
-    internal static class PredefinedConstants
+    public static class PredefinedConstants
     {
         public static NsCoordinate Coordinate(string s)
         {

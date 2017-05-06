@@ -5,7 +5,7 @@ using SharpDX.Mathematics.Interop;
 using SharpDX;
 using System.Runtime.InteropServices;
 
-namespace CommitteeOfZero.Nitro.Graphics.Effects
+namespace CommitteeOfZero.Nitro.Graphics
 {
     [CustomEffect("Transition", "CommitteeOfZero.Nitro", "CommitteeOfZero")]
     [CustomEffectInput("Texture")]

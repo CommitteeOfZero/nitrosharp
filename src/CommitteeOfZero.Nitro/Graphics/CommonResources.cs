@@ -1,29 +1,21 @@
 ﻿using MoeGame.Framework.Graphics;
-using CommitteeOfZero.Nitro.Graphics.Effects;
 using SharpDX.Direct2D1;
 using System;
+using SharpDX.DirectWrite;
 
 namespace CommitteeOfZero.Nitro.Graphics
 {
-    public class CommonResources : IDisposable
+    public class CommonResources
     {
         public CommonResources(DxRenderContext renderContext)
         {
-            var canvas = renderContext.DeviceContext;
-            renderContext.D2DFactory.RegisterEffect<TransitionEffect>();
-            TransitionEffect = new Effect<TransitionEffect>(canvas);
-
-            var props = new BitmapProperties1(canvas.PixelFormat, 96, 96, BitmapOptions.None);
-            ScreenCapBitmap = new Bitmap1(canvas, canvas.PixelSize, props);
+            CurrentGlyphBrush = new SolidColorBrush(renderContext.DeviceContext, SharpDX.Color.Transparent);
+            TransparentBrush = new SolidColorBrush(renderContext.DeviceContext, SharpDX.Color.Transparent);
+            CustomTextRenderer = new CustomTextRenderer(renderContext.DeviceContext, TransparentBrush, false);
         }
 
-        public Effect<TransitionEffect> TransitionEffect { get; }
-        public Bitmap1 ScreenCapBitmap { get; }
-
-        public void Dispose()
-        {
-            ScreenCapBitmap.Dispose();
-            TransitionEffect.Dispose();
-        }
+        public TextRenderer CustomTextRenderer { get; }
+        public SolidColorBrush CurrentGlyphBrush { get; }
+        public SolidColorBrush TransparentBrush { get; }
     }
 }

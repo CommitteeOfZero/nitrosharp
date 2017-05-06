@@ -20,7 +20,7 @@ namespace CommitteeOfZero.NsScript.PXml
         }
     }
 
-    public class PXmlText : PXmlNode
+    public sealed class PXmlText : PXmlNode
     {
         internal PXmlText(string text)
         {
@@ -56,9 +56,9 @@ namespace CommitteeOfZero.NsScript.PXml
         }
     }
 
-    public sealed class FontColorElement : PXmlNode
+    public sealed class ColorElement : PXmlNode
     {
-        internal FontColorElement(NsColor color, PXmlContent content)
+        internal ColorElement(NsColor color, PXmlContent content)
         {
             Color = color;
             Content = content;
@@ -67,11 +67,11 @@ namespace CommitteeOfZero.NsScript.PXml
         public NsColor Color { get; }
         public PXmlContent Content { get; }
 
-        public override PXmlNodeKind Kind => PXmlNodeKind.FontColorElement;
+        public override PXmlNodeKind Kind => PXmlNodeKind.ColorElement;
 
         internal override void Accept(PXmlSyntaxVisitor visitor)
         {
-            visitor.VisitFontColorElement(this);
+            visitor.VisitColorElement(this);
         }
     }
 

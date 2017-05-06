@@ -30,7 +30,7 @@ namespace CommitteeOfZero.Nitro.Dialogue
             VisitArray(content.Children);
         }
 
-        public override void VisitFontColorElement(FontColorElement fontColorElement)
+        public override void VisitColorElement(ColorElement fontColorElement)
         {
             Visit(fontColorElement.Content);
         }

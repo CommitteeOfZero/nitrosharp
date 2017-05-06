@@ -80,6 +80,7 @@ namespace MoeGame.Framework
                 }
             }
 
+            //component.OnRemoved();
             _manager.RaiseEntityUpdated(this);
         }
 

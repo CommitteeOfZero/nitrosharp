@@ -24,7 +24,7 @@ namespace CommitteeOfZero.NsScript.Tests
             string text = "<FONT incolor=\"WHITE\" outcolor=\"BLACK\">Sample Text</FONT>";
             var content = PXmlBlock.Parse(text);
 
-            var fontElement = content.Children[0] as FontColorElement;
+            var fontElement = content.Children[0] as ColorElement;
             Assert.NotNull(fontElement);
             var sampleContent = fontElement.Content.Children[0] as PXmlText;
 
@@ -38,7 +38,7 @@ namespace CommitteeOfZero.NsScript.Tests
             string text = "<FONT incolor=\"white\" outcolor=\"black\">Sample Text <RUBY text=\"sample_ruby_text\">sample_ruby_base</RUBY></FONT>";
             var content = PXmlBlock.Parse(text);
 
-            var fontElement = content.Children[0] as FontColorElement;
+            var fontElement = content.Children[0] as ColorElement;
             Assert.NotNull(fontElement);
             Assert.Equal(2, fontElement.Content.Children.Length);
 

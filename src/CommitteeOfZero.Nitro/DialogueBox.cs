@@ -1,12 +1,10 @@
-﻿using System;
-using CommitteeOfZero.Nitro.Graphics;
-using CommitteeOfZero.Nitro.Graphics.Visuals;
+﻿using CommitteeOfZero.Nitro.Graphics;
 
 namespace CommitteeOfZero.Nitro
 {
     public sealed class DialogueBox : Visual
     {
-        public override void Render(RenderSystem renderSystem)
+        public override void Render(ICanvas canvas)
         {
         }
     }

@@ -9,7 +9,7 @@ namespace CommitteeOfZero.Nitro
     {
         public AnimationSystem()
         {
-            EntityAdded += OnEntityAdded;
+            RelevantEntityAdded += OnEntityAdded;
         }
 
         protected override void DeclareInterests(ISet<Type> interests)

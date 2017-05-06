@@ -19,6 +19,7 @@ namespace CommitteeOfZero.Nitro
         private NitroCore _nitroCore;
 
         private ILogger _interpreterLog;
+        private ILogger _entityLog;
 
         public NitroGame(NitroConfiguration configuration)
         {
@@ -99,6 +100,9 @@ namespace CommitteeOfZero.Nitro
         {
             var loggerFactory = new LoggerFactory().AddConsole();
             _interpreterLog = loggerFactory.CreateLogger("Interpreter");
+            _entityLog = loggerFactory.CreateLogger("Entity System");
+
+            Entities.EntityRemoved += (o, e) => _entityLog.LogInformation($"Removed entity '{e.Name}'");
         }
 
         public override void LoadCommonResources()
@@ -109,6 +113,7 @@ namespace CommitteeOfZero.Nitro
         public override void Update(float deltaMilliseconds)
         {
             MainLoopTaskScheduler.FlushQueuedTasks();
+            Content.FlushUnusedAssets();
             if (!Content.IsBusy)
             {
                 var elapsed = _nssInterpreter.Run(TimeSpan.MaxValue);

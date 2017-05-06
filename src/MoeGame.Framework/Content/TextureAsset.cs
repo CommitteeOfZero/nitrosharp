@@ -1,8 +1,9 @@
-﻿using System;
+﻿using SharpDX.Direct2D1;
+using System;
 
 namespace MoeGame.Framework.Content
 {
-    public struct TextureAsset
+    public struct TextureAsset : IDisposable
     {
         public TextureAsset(object deviceTexture)
         {
@@ -19,5 +20,10 @@ namespace MoeGame.Framework.Content
         public float Width => ((SharpDX.Direct2D1.Bitmap1)DeviceTexture).Size.Width;
 
         public float Height => ((SharpDX.Direct2D1.Bitmap1)DeviceTexture).Size.Height;
+
+        public void Dispose()
+        {
+            (DeviceTexture as Bitmap1)?.Dispose();
+        }
     }
 }

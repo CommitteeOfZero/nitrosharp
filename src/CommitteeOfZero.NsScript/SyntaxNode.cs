@@ -11,7 +11,7 @@ namespace CommitteeOfZero.NsScript
         public override string ToString()
         {
             var sw = new StringWriter();
-            var codeWriter = new DefaultCodeWriter(sw);
+            var codeWriter = new NsCodeWriter(sw);
             codeWriter.WriteNode(this);
 
             return sw.ToString();

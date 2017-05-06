@@ -3,35 +3,44 @@ using System.Linq;
 using MoeGame.Framework;
 using MoeGame.Framework.Graphics;
 using MoeGame.Framework.Content;
-using CommitteeOfZero.Nitro.Graphics.Visuals;
 using System;
+using System.Numerics;
 
 namespace CommitteeOfZero.Nitro.Graphics
 {
     public partial class RenderSystem : EntityProcessingSystem, IDisposable
     {
+        private ICanvas _canvas;
+
         public RenderSystem(DxRenderContext renderContext, ContentManager contentManager)
         {
             RenderContext = renderContext;
             Content = contentManager;
 
-            EntityAdded += OnEntityAdded;
+            RelevantEntityAdded += OnEntityAdded;
+            RelevantEntityRemoved += OnEntityRemoved;
         }
+
+        public DxRenderContext RenderContext { get; }
+        public ContentManager Content { get; }
+        public CommonResources CommonResources { get; private set; }
 
         protected override void DeclareInterests(ISet<Type> interests)
         {
             interests.Add(typeof(Visual));
         }
 
-        private void OnEntityAdded(object sender, Entity e)
+        private void OnEntityAdded(object sender, Entity entity)
         {
-            var screencap = e.GetComponent<ScreenCap>();
-            screencap?.Take(this);
+            var screencap = entity.GetComponent<Screenshot>();
+            screencap?.Take(_canvas);
         }
 
-        public DxRenderContext RenderContext { get; }
-        public ContentManager Content { get; }
-        public CommonResources CommonResources { get; private set; }
+        private void OnEntityRemoved(object sender, Entity entity)
+        {
+            var visual = entity.GetComponent<Visual>();
+            visual.Free(_canvas);
+        }
 
         public override void Update(float deltaMilliseconds)
         {
@@ -48,41 +57,36 @@ namespace CommitteeOfZero.Nitro.Graphics
 
         public override void Process(Entity entity, float deltaMilliseconds)
         {
-            var canvas = RenderContext.DeviceContext;
             var visual = entity.GetComponent<Visual>();
             if (visual.IsEnabled)
             {
-                var originalTransform = canvas.Transform;
-                var scale = visual.Scale;
+                var transform = Matrix3x2.Identity;
 
                 float centerX = visual.Width / 2.0f;
                 float centerY = visual.Height / 2.0f;
-                var scaleOrigin = new SharpDX.Vector2(centerX, centerY);
+                var scaleOrigin = new Vector2(centerX, centerY);
 
-                canvas.Transform *= SharpDX.Matrix3x2.Scaling(scale.X, scale.Y, scaleOrigin);
+                transform *= Matrix3x2.CreateScale(visual.Scale, scaleOrigin);
+                transform *= Matrix3x2.CreateTranslation(visual.Position);
                 if (visual.ParentVisual != null)
                 {
                     var parent = visual.ParentVisual;
-                    canvas.Transform *= SharpDX.Matrix3x2.Translation(parent.Position.X + visual.Position.X, parent.Position.Y + visual.Position.Y);
-                }
-                else
-                {
-                    canvas.Transform *= SharpDX.Matrix3x2.Translation(visual.Position.X, visual.Position.Y);
-                }
+                    transform *= Matrix3x2.CreateTranslation(parent.Position);
+                }  
 
-                visual.Render(this);
-                canvas.Transform = originalTransform;
+                _canvas.SetTransform(transform);
+                visual.Render(_canvas);
             }
         }
 
         public void LoadCommonResources()
         {
             CommonResources = new CommonResources(RenderContext);
+            _canvas = new DxCanvas(RenderContext, Content);
         }
 
         public void Dispose()
         {
-            CommonResources.Dispose();
         }
     }
 }

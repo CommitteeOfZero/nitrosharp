@@ -4,7 +4,6 @@ using MoeGame.Framework.Content;
 using System.Collections.Generic;
 using System;
 using System.Runtime.InteropServices;
-using System.Diagnostics;
 
 namespace CommitteeOfZero.Nitro.Audio
 {
@@ -26,8 +25,8 @@ namespace CommitteeOfZero.Nitro.Audio
         {
             _audioEngine = audioEngine;
             _content = content;
-            EntityAdded += OnEntityAdded;
-            EntityRemoved += OnEntityRemoved;
+            RelevantEntityAdded += OnEntityAdded;
+            RelevantEntityRemoved += OnEntityRemoved;
 
             _voiceAudioSource = _audioEngine.ResourceFactory.CreateAudioSource(VoiceBufferSize);
             _voiceAudioSource.PreviewBufferSent += _voiceAudioSource_PreviewBufferSent;
@@ -80,7 +79,10 @@ namespace CommitteeOfZero.Nitro.Audio
         private void OnEntityRemoved(object sender, Entity e)
         {
             var sound = e.GetComponent<SoundComponent>();
-            Remove(sound);
+            //if (sound != null)
+            {
+                Remove(sound);
+            }
         }
 
         private void Remove(SoundComponent sound)

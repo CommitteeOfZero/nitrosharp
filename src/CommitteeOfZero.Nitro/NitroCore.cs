@@ -3,8 +3,8 @@ using CommitteeOfZero.NsScript.Execution;
 using CommitteeOfZero.NsScript;
 using MoeGame.Framework.Content;
 using MoeGame.Framework;
-using CommitteeOfZero.Nitro.Graphics.Visuals;
 using CommitteeOfZero.Nitro.Audio;
+using CommitteeOfZero.Nitro.Graphics;
 
 namespace CommitteeOfZero.Nitro
 {
@@ -88,7 +88,7 @@ namespace CommitteeOfZero.Nitro
                     break;
 
                 case NsEntityAction.ResetText:
-                    entity.GetComponent<GameTextVisual>()?.Reset();
+                    entity.GetComponent<TextVisual>()?.Reset();
                     break;
 
                 case NsEntityAction.Hide:
@@ -104,14 +104,14 @@ namespace CommitteeOfZero.Nitro
                     {
                         _entities.Remove(entity);
                     }
-                    else
-                    {
-                        var sound = entity.GetComponent<SoundComponent>();
-                        if (sound != null)
-                        {
-                            sound.RemoveOncePlayed = true;
-                        }
-                    }
+                    //else
+                    //{
+                    //    var sound = entity.GetComponent<SoundComponent>();
+                    //    if (sound != null)
+                    //    {
+                    //        sound.RemoveOncePlayed = true;
+                    //    }
+                    //}
                     break;
             }
         }

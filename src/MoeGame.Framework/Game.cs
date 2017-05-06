@@ -117,7 +117,7 @@ namespace MoeGame.Framework
         {
             Window = new GameWindow(_parameters.WindowTitle, _parameters.WindowWidth, _parameters.WindowHeight, WindowState.Normal);
             RenderContext = new DxRenderContext(Window, _parameters.EnableVSync);
-            AudioEngine = new XAudio2AudioEngine(16, 44100, 1);
+            AudioEngine = new XAudio2AudioEngine(16, 44100, 2);
             Content = CreateContentManager();
             Window.ProcessEvents();
 

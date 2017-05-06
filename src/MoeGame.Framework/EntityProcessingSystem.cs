@@ -8,8 +8,8 @@ namespace MoeGame.Framework
         private readonly HashSet<Entity> _entities;
         private readonly HashSet<Type> _interests;
 
-        public event EventHandler<Entity> EntityAdded;
-        public event EventHandler<Entity> EntityRemoved;
+        public event EventHandler<Entity> RelevantEntityAdded;
+        public event EventHandler<Entity> RelevantEntityRemoved;
 
         protected EntityProcessingSystem()
         {
@@ -46,7 +46,7 @@ namespace MoeGame.Framework
             {
                 if (_entities.Remove(removed))
                 {
-                    EntityRemoved?.Invoke(this, removed);
+                    RelevantEntityRemoved?.Invoke(this, removed);
                 }
             }
 
@@ -58,13 +58,13 @@ namespace MoeGame.Framework
 
         private void EntityChanged(Entity entity)
         {
-            if (InterestsThisSystem(entity) && _entities.Add(entity))
+            if (IsRelevant(entity) && _entities.Add(entity))
             {
-                EntityAdded?.Invoke(this, entity);
+                RelevantEntityAdded?.Invoke(this, entity);
             }
         }
 
-        private bool InterestsThisSystem(Entity entity)
+        private bool IsRelevant(Entity entity)
         {
             foreach (Type interest in _interests)
             {
