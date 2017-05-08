@@ -8,9 +8,6 @@ namespace MoeGame.Framework
         private readonly HashSet<Entity> _entities;
         private readonly HashSet<Type> _interests;
 
-        public event EventHandler<Entity> RelevantEntityAdded;
-        public event EventHandler<Entity> RelevantEntityRemoved;
-
         protected EntityProcessingSystem()
         {
             _entities = new HashSet<Entity>();
@@ -19,6 +16,7 @@ namespace MoeGame.Framework
         }
 
         public IEnumerable<Type> Interests => _interests;
+
         protected abstract void DeclareInterests(ISet<Type> interests);
 
         public override void Update(float deltaMilliseconds)
@@ -31,6 +29,7 @@ namespace MoeGame.Framework
             return entities;
         }
 
+        public abstract void Process(Entity entity, float deltaMilliseconds);
         public void ProcessAll(IEnumerable<Entity> entities, float deltaMilliseconds)
         {
             foreach (var item in SortEntities(entities))
@@ -39,7 +38,14 @@ namespace MoeGame.Framework
             }
         }
 
-        public abstract void Process(Entity entity, float deltaMilliseconds);
+
+        public virtual void OnRelevantEntityAdded(Entity entity)
+        {
+        }
+
+        public virtual void OnRelevantEntityRemoved(Entity entity)
+        {
+        }
 
         internal void RefreshLocalEntityList(IEnumerable<Entity> updatedEntities, IEnumerable<Entity> removedEntities)
         {
@@ -47,7 +53,7 @@ namespace MoeGame.Framework
             {
                 if (_entities.Remove(removed))
                 {
-                    RelevantEntityRemoved?.Invoke(this, removed);
+                    OnRelevantEntityRemoved(removed);
                 }
             }
 
@@ -61,7 +67,7 @@ namespace MoeGame.Framework
         {
             if (IsRelevant(entity) && _entities.Add(entity))
             {
-                RelevantEntityAdded?.Invoke(this, entity);
+                OnRelevantEntityAdded(entity);
             }
         }
 

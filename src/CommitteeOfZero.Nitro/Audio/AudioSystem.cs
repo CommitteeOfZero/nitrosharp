@@ -25,8 +25,6 @@ namespace CommitteeOfZero.Nitro.Audio
         {
             _audioEngine = audioEngine;
             _content = content;
-            RelevantEntityAdded += OnEntityAdded;
-            RelevantEntityRemoved += OnEntityRemoved;
 
             _voiceAudioSource = _audioEngine.ResourceFactory.CreateAudioSource(VoiceBufferSize);
             _voiceAudioSource.PreviewBufferSent += _voiceAudioSource_PreviewBufferSent;
@@ -41,9 +39,9 @@ namespace CommitteeOfZero.Nitro.Audio
             interests.Add(typeof(SoundComponent));
         }
 
-        private void OnEntityAdded(object sender, Entity e)
+        public override void OnRelevantEntityAdded(Entity entity)
         {
-            var sound = e.GetComponent<SoundComponent>();
+            var sound = entity.GetComponent<SoundComponent>();
 
             string path = sound.AudioFile;
             if (!_content.Exists(path))
@@ -76,9 +74,9 @@ namespace CommitteeOfZero.Nitro.Audio
             Amplitude = (int)Math.Round(amplitude);
         }
 
-        private void OnEntityRemoved(object sender, Entity e)
+        public override void OnRelevantEntityRemoved(Entity entity)
         {
-            var sound = e.GetComponent<SoundComponent>();
+            var sound = entity.GetComponent<SoundComponent>();
             Remove(sound);
         }
 

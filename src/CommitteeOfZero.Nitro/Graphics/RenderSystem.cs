@@ -16,9 +16,6 @@ namespace CommitteeOfZero.Nitro.Graphics
         {
             RenderContext = renderContext;
             Content = contentManager;
-
-            RelevantEntityAdded += OnEntityAdded;
-            RelevantEntityRemoved += OnEntityRemoved;
         }
 
         public DxRenderContext RenderContext { get; }
@@ -30,13 +27,13 @@ namespace CommitteeOfZero.Nitro.Graphics
             interests.Add(typeof(Visual));
         }
 
-        private void OnEntityAdded(object sender, Entity entity)
+        public override void OnRelevantEntityAdded(Entity entity)
         {
             var screencap = entity.GetComponent<Screenshot>();
             screencap?.Take(_canvas);
         }
 
-        private void OnEntityRemoved(object sender, Entity entity)
+        public override void OnRelevantEntityRemoved(Entity entity)
         {
             var visual = entity.GetComponent<Visual>();
             visual.Free(_canvas);

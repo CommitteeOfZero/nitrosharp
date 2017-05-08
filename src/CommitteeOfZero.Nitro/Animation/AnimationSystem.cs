@@ -6,18 +6,13 @@ namespace CommitteeOfZero.Nitro.Animation
 {
     public class AnimationSystem : EntityProcessingSystem
     {
-        public AnimationSystem()
-        {
-            RelevantEntityAdded += OnAnimationAdded;
-        }
-
         protected override void DeclareInterests(ISet<Type> interests)
         {
             interests.Add(typeof(FloatAnimation));
             interests.Add(typeof(Vector2Animation));
         }
 
-        private void OnAnimationAdded(object sender, Entity entity)
+        public override void OnRelevantEntityAdded(Entity entity)
         {
             var animation = entity.GetComponent<Animation>();
             animation.SetInitialValue();
