@@ -58,9 +58,41 @@ namespace MoeGame.Framework
             _manager.RaiseEntityUpdated(this);
         }
 
+        public bool HasComponent<T>() where T : Component => GetComponent<T>() != null;
+        public bool HasComponent(Type type) => GetComponent(type) != null;
+
+        public T GetComponent<T>() where T : Component => (T)GetComponent(typeof(T));
+        public object GetComponent(Type type)
+        {
+            var componentBag = GetComponentBag(type);
+            return componentBag?.Count > 0 ? componentBag[0] : null;
+        }
+
+        public IEnumerable<T> GetComponents<T>() where T : Component
+        {
+            var bag = GetComponentBag(typeof(T));
+            if (bag != null)
+            {
+                foreach (var component in GetComponentBag(typeof(T)))
+                {
+                    yield return (T)component;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Schedules the specified component to be removed on the next update.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="component"></param>
         public void RemoveComponent<T>(T component) where T : Component
         {
-            var type = typeof(T);
+            _manager.ScheduleComponentRemoval(this, component);
+        }
+
+        internal void CommitDestroyComponent(Component component)
+        {
+            var type = component.GetType();
             if (_components.TryGetValue(type, out var collection))
             {
                 collection.Remove(component);
@@ -80,18 +112,14 @@ namespace MoeGame.Framework
                 }
             }
 
-            //component.OnRemoved();
             _manager.RaiseEntityUpdated(this);
         }
 
-        public bool HasComponent<T>() where T : Component => GetComponent<T>() != null;
-        public bool HasComponent(Type type) => GetComponent(type) != null;
-
-        public object GetComponent(Type type)
+        private IList<Component> GetComponentBag(Type type)
         {
             if (_components.TryGetValue(type, out var collection))
             {
-                return collection?.Count > 0 ? collection[0] : null;
+                return collection?.Count > 0 ? collection : null;
             }
             else
             {
@@ -102,26 +130,13 @@ namespace MoeGame.Framework
                         collection = pair.Value;
                         if (collection?.Count > 0)
                         {
-                            return collection[0];
+                            return collection;
                         }
                     }
                 }
             }
 
             return null;
-        }
-
-        public T GetComponent<T>() where T : Component => (T)GetComponent(typeof(T));
-
-        public IEnumerable<T> GetComponents<T>() where T : Component
-        {
-            if (_components.TryGetValue(typeof(T), out var collection))
-            {
-                foreach (var component in collection)
-                {
-                    yield return (T)component;
-                }
-            }
         }
 
         public override string ToString()

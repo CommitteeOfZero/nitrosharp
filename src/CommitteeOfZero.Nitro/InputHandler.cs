@@ -1,6 +1,7 @@
 ﻿using MoeGame.Framework;
 using MoeGame.Framework.Input;
 using System;
+using System.Diagnostics;
 
 namespace CommitteeOfZero.Nitro
 {
@@ -19,6 +20,7 @@ namespace CommitteeOfZero.Nitro
             {
                 if (_nitroCore.MainThread.SleepTimeout == TimeSpan.MaxValue)
                 {
+                    Debug.WriteLine("skip");
                     _nitroCore.MainThread.Resume();
                 }
             }

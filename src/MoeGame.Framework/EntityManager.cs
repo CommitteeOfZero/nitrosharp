@@ -7,14 +7,16 @@ namespace MoeGame.Framework
     public class EntityManager
     {
         private readonly Dictionary<string, Entity> _allEntities;
-        private readonly Queue<Entity> _entitiesToRemove;
+        private readonly HashSet<(Entity entity, Component component)> _componentsToRemove;
+        private readonly HashSet<Entity> _entitiesToRemove;
         private ulong _nextId;
         private readonly Stopwatch _gameTimer;
 
         public EntityManager(Stopwatch gameTimer)
         {
             _allEntities = new Dictionary<string, Entity>(StringComparer.OrdinalIgnoreCase);
-            _entitiesToRemove = new Queue<Entity>();
+            _componentsToRemove = new HashSet<(Entity entity, Component component)>();
+            _entitiesToRemove = new HashSet<Entity>();
             _gameTimer = gameTimer;
         }
 
@@ -34,7 +36,7 @@ namespace MoeGame.Framework
             {
                 if (replace)
                 {
-                    CommitDestroy(existingEntity);
+                    Remove(existingEntity);
                 }
                 else
                 {
@@ -60,42 +62,65 @@ namespace MoeGame.Framework
             return entity;
         }
 
+        /// <summary>
+        /// Schedules the specified <see cref="Entity"/> to be removed on the next update.
+        /// </summary>
+        /// <param name="entity"></param>
         public void Remove(Entity entity) => Remove(entity.Name);
+
+        /// <summary>
+        /// Schedules the specified <see cref="Entity"/> to be removed on the next update.
+        /// </summary>
+        /// <param name="entity"></param>
         public void Remove(string entityName)
         {
             if (_allEntities.TryGetValue(entityName, out var entity))
             {
-                _entitiesToRemove.Enqueue(entity);
+                _entitiesToRemove.Add(entity);
             }
         }
 
-        internal void FlushDeletedEntities()
+        internal void ScheduleComponentRemoval(Entity entity, Component component)
         {
-            while (_entitiesToRemove.Count > 0)
+            _componentsToRemove.Add((entity, component));
+        }
+
+        internal void FlushRemovedComponents()
+        {
+            foreach (var tuple in _componentsToRemove)
             {
-                var e = _entitiesToRemove.Dequeue();
-                CommitDestroy(e);
+                tuple.entity.CommitDestroyComponent(tuple.component);
             }
+
+            _componentsToRemove.Clear();
         }
 
-        private void CommitDestroy(Entity entity)
+        internal void FlushRemovedEntities()
         {
-            EntityRemoved?.Invoke(this, entity);
-            //foreach (var componentList in entity.Components.Values)
-            //{
-            //    foreach (var component in componentList)
-            //    {
-            //        component.OnRemoved();
-            //    }
-            //}
+            foreach (var entity in _entitiesToRemove)
+            {
+                CommitRemoveEntity(entity);
+            }
 
-            _allEntities.Remove(entity.Name);
-            //entity.Components.Clear();
+            _entitiesToRemove.Clear();
         }
 
         internal void RaiseEntityUpdated(Entity entity)
         {
             EntityUpdated?.Invoke(this, entity);
+        }
+
+        private void CommitRemoveEntity(Entity entity)
+        {
+            if (_allEntities.TryGetValue(entity.Name, out var currentValue))
+            {
+                if (entity == currentValue)
+                {
+                    _allEntities.Remove(entity.Name);
+                }
+            }
+
+            EntityRemoved?.Invoke(this, entity);
         }
     }
 }

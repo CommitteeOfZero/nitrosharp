@@ -52,11 +52,11 @@ namespace MoeGame.Framework
 
             foreach (var updated in updatedEntities)
             {
-                EntityChanged(updated);
+                EntityUpdated(updated);
             }
         }
 
-        private void EntityChanged(Entity entity)
+        private void EntityUpdated(Entity entity)
         {
             if (IsRelevant(entity) && _entities.Add(entity))
             {
@@ -66,6 +66,11 @@ namespace MoeGame.Framework
 
         private bool IsRelevant(Entity entity)
         {
+            if (entity.Components.Values.Count == 0)
+            {
+                return false;
+            }
+
             foreach (Type interest in _interests)
             {
                 if (entity.HasComponent(interest))

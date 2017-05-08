@@ -102,7 +102,7 @@ namespace CommitteeOfZero.Nitro
             _interpreterLog = loggerFactory.CreateLogger("Interpreter");
             _entityLog = loggerFactory.CreateLogger("Entity System");
 
-            Entities.EntityRemoved += (o, e) => _entityLog.LogInformation($"Removed entity '{e.Name}'");
+            //Entities.EntityRemoved += (o, e) => _entityLog.LogInformation($"Removed entity '{e.Name}'");
         }
 
         public override void LoadCommonResources()

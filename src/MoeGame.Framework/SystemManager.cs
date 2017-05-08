@@ -33,19 +33,24 @@ namespace MoeGame.Framework
 
         public void Update(float deltaMilliseconds)
         {
-            _entities.FlushDeletedEntities();
+            _entities.FlushRemovedComponents();
+            _entities.FlushRemovedEntities();
+
             foreach (var system in _systems)
             {
                 if (_updatedEntities.Count > 0 || _removedEntities.Count > 0)
                 {
                     (system as EntityProcessingSystem)?.RefreshLocalEntityList(_updatedEntities, _removedEntities);
                 }
-
-                system.Update(deltaMilliseconds);
             }
 
             _updatedEntities.Clear();
             _removedEntities.Clear();
+
+            foreach (var system in _systems)
+            {
+                system.Update(deltaMilliseconds);
+            }
         }
 
         private void OnEntityUpdated(object sender, Entity e)
@@ -56,6 +61,7 @@ namespace MoeGame.Framework
         private void OnEntityRemoved(object sender, Entity e)
         {
             _removedEntities.Add(e);
+            _updatedEntities.Remove(e);
         }
 
         public void Dispose()
