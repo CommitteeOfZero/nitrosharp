@@ -6,9 +6,9 @@ using System.Linq;
 
 namespace CommitteeOfZero.NsScript.Execution
 {
-    public enum NsScriptInterpreterStatus
+    public enum InterpreterStatus
     {
-        Running,
+        Active,
         Suspended,
         Idle
     }
@@ -53,7 +53,7 @@ namespace CommitteeOfZero.NsScript.Execution
             Session = new NsScriptSession(scriptLocator);
             Globals = new VariableTable();
 
-            Status = NsScriptInterpreterStatus.Idle;
+            Status = InterpreterStatus.Idle;
             _timer = Stopwatch.StartNew();
 
             Globals["YuaVoice"] = new ConstantValue(false);
@@ -63,16 +63,16 @@ namespace CommitteeOfZero.NsScript.Execution
 
         public VariableTable Globals { get; }
         public NsScriptSession Session { get; }
-        public NsScriptInterpreterStatus Status { get; private set; }
+        public InterpreterStatus Status { get; private set; }
 
         public ThreadContext CurrentThread
         {
             get
             {
-                if (Status == NsScriptInterpreterStatus.Idle)
-                {
-                    throw new InvalidOperationException("The interpreter is not running.");
-                }
+                //if (Status == InterpreterStatus.Idle)
+                //{
+                //    throw new InvalidOperationException("The interpreter is not running.");
+                //}
 
                 return _currentThread;
             }
@@ -104,6 +104,11 @@ namespace CommitteeOfZero.NsScript.Execution
 
         public TimeSpan Run(TimeSpan timeQuota)
         {
+            if (Status == InterpreterStatus.Suspended)
+            {
+                return TimeSpan.Zero;
+            }
+
             if (_suspendedThreads.Count > 0)
             {
                 ProcessSuspendedThreads();
@@ -114,9 +119,8 @@ namespace CommitteeOfZero.NsScript.Execution
                 return TimeSpan.Zero;
             }
 
-            Status = NsScriptInterpreterStatus.Running;
             var startTime = _timer.Elapsed;
-            while (Status == NsScriptInterpreterStatus.Running && _threads.Count > 0)
+            while (_threads.Count > 0)
             {
                 while (_pendingBuiltInCalls.Count > 0)
                 {
@@ -127,6 +131,11 @@ namespace CommitteeOfZero.NsScript.Execution
 
                     var call = _pendingBuiltInCalls.Dequeue();
                     DispatchBuiltInCall(call);
+
+                    if (Status == InterpreterStatus.Suspended)
+                    {
+                        goto exit;
+                    }
                 }
 
                 while (_idleThreads.Count > 0)
@@ -439,7 +448,12 @@ namespace CommitteeOfZero.NsScript.Execution
 
         public void Suspend()
         {
-            Status = NsScriptInterpreterStatus.Suspended;
+            Status = InterpreterStatus.Suspended;
+        }
+
+        public void Resume()
+        {
+            Status = InterpreterStatus.Active;
         }
 
         public void SuspendThread(ThreadContext thread, TimeSpan timeout)

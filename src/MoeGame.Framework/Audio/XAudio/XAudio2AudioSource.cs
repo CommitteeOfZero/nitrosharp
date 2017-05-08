@@ -51,6 +51,11 @@ namespace MoeGame.Framework.Audio.XAudio
             _sourceVoice.Stop();
         }
 
+        internal override void FlushBuffers()
+        {
+            _sourceVoice.FlushSourceBuffers();
+        }
+
         internal override void AcceptBuffer(AudioBuffer buffer)
         {
             base.AcceptBuffer(buffer);

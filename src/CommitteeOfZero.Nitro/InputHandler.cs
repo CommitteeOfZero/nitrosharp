@@ -18,9 +18,8 @@ namespace CommitteeOfZero.Nitro
         {
             if (ShouldAdvance())
             {
-                if (_nitroCore.MainThread.SleepTimeout == TimeSpan.MaxValue)
+                if (_nitroCore.Interpreter.Status == NsScript.Execution.InterpreterStatus.Active && _nitroCore.MainThread.SleepTimeout == TimeSpan.MaxValue)
                 {
-                    Debug.WriteLine("skip");
                     _nitroCore.MainThread.Resume();
                 }
             }

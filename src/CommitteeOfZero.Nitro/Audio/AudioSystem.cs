@@ -79,10 +79,7 @@ namespace CommitteeOfZero.Nitro.Audio
         private void OnEntityRemoved(object sender, Entity e)
         {
             var sound = e.GetComponent<SoundComponent>();
-            //if (sound != null)
-            {
-                Remove(sound);
-            }
+            Remove(sound);
         }
 
         private void Remove(SoundComponent sound)

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -91,7 +90,14 @@ namespace MoeGame.Framework.Audio
             }
         }
 
+        public void Pause() => PauseCore();
         public void Stop()
+        {
+            PauseCore();
+            FlushBuffers();
+        }
+
+        private void PauseCore()
         {
             if (Status == AudioSourceStatus.Playing)
             {
@@ -103,6 +109,8 @@ namespace MoeGame.Framework.Audio
 
         internal abstract void StartAcceptingBuffers();
         internal abstract void StopAcceptingBuffers();
+        internal abstract void FlushBuffers();
+
         internal virtual void AcceptBuffer(AudioBuffer buffer)
         {
             _buffers[buffer.Id] = buffer;

@@ -114,10 +114,8 @@ namespace CommitteeOfZero.Nitro
         {
             MainLoopTaskScheduler.FlushQueuedTasks();
             Content.FlushUnusedAssets();
-            if (!Content.IsBusy)
-            {
-                var elapsed = _nssInterpreter.Run(TimeSpan.MaxValue);
-            }
+
+            _nssInterpreter.Run(TimeSpan.MaxValue);
 
             Systems.Update(deltaMilliseconds);
         }
