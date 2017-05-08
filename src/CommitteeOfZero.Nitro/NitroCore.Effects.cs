@@ -1,4 +1,5 @@
-﻿using CommitteeOfZero.Nitro.Graphics;
+﻿using CommitteeOfZero.Nitro.Animation;
+using CommitteeOfZero.Nitro.Graphics;
 using CommitteeOfZero.NsScript;
 using MoeGame.Framework;
 using MoeGame.Framework.Content;

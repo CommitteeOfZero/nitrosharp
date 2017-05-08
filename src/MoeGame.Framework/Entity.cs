@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 
 namespace MoeGame.Framework
@@ -62,20 +63,21 @@ namespace MoeGame.Framework
         public bool HasComponent(Type type) => GetComponent(type) != null;
 
         public T GetComponent<T>() where T : Component => (T)GetComponent(typeof(T));
-        public object GetComponent(Type type)
+        public Component GetComponent(Type type)
         {
             var componentBag = GetComponentBag(type);
             return componentBag?.Count > 0 ? componentBag[0] : null;
         }
 
-        public IEnumerable<T> GetComponents<T>() where T : Component
+        public IEnumerable<T> GetComponents<T>() where T : Component => GetComponents(typeof(T)).Cast<T>();
+        public IEnumerable<Component> GetComponents(Type type)
         {
-            var bag = GetComponentBag(typeof(T));
+            var bag = GetComponentBag(type);
             if (bag != null)
             {
-                foreach (var component in GetComponentBag(typeof(T)))
+                foreach (var component in GetComponentBag(type))
                 {
-                    yield return (T)component;
+                    yield return component;
                 }
             }
         }

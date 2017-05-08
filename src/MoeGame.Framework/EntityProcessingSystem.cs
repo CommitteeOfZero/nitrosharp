@@ -18,6 +18,7 @@ namespace MoeGame.Framework
             DeclareInterests(_interests);
         }
 
+        public IEnumerable<Type> Interests => _interests;
         protected abstract void DeclareInterests(ISet<Type> interests);
 
         public override void Update(float deltaMilliseconds)

@@ -2,25 +2,28 @@
 using System;
 using System.Numerics;
 
-namespace CommitteeOfZero.Nitro
+namespace CommitteeOfZero.Nitro.Animation
 {
-    public class Vector2Animation : Component
+    public class Vector2Animation : Animation
     {
         public Component TargetComponent { get; set; }
         public Action<Component, Vector2> PropertySetter { get; set; }
 
         public Vector2 InitialValue { get; set; }
         public Vector2 FinalValue { get; set; }
-        public TimeSpan Duration { get; set; }
-        public TimingFunction TimingFunction { get; set; }
 
-        public float Elapsed { get; set; }
-
-        public event EventHandler Completed;
-
-        public void RaiseCompleted()
+        public override void SetInitialValue()
         {
-            Completed?.Invoke(this, EventArgs.Empty);
+            PropertySetter(TargetComponent, InitialValue);
+        }
+
+        public override void Advance(float deltaMilliseconds)
+        {
+            Vector2 change = FinalValue - InitialValue;
+            Vector2 newValue = InitialValue + change * CalculateFactor(Progress, TimingFunction);
+
+            PropertySetter(TargetComponent, newValue);
+            base.Advance(deltaMilliseconds);
         }
     }
 }

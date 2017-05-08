@@ -9,6 +9,7 @@ using CommitteeOfZero.NsScript;
 using System.Collections.Generic;
 using CommitteeOfZero.Nitro.Audio;
 using System.IO;
+using CommitteeOfZero.Nitro.Animation;
 
 namespace CommitteeOfZero.Nitro
 {

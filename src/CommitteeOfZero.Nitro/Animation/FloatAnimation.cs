@@ -1,25 +1,28 @@
 ﻿using MoeGame.Framework;
 using System;
 
-namespace CommitteeOfZero.Nitro
+namespace CommitteeOfZero.Nitro.Animation
 {
-    public class FloatAnimation : Component
+    public class FloatAnimation : Animation
     {
         public Component TargetComponent { get; set; }
         public Action<Component, float> PropertySetter { get; set; }
 
         public float InitialValue { get; set; }
         public float FinalValue { get; set; }
-        public TimeSpan Duration { get; set; }
-        public TimingFunction TimingFunction { get; set; }
 
-        public float Elapsed { get; set; }
-
-        public event EventHandler Completed;
-
-        public void RaiseCompleted()
+        public override void SetInitialValue()
         {
-            Completed?.Invoke(this, EventArgs.Empty);
+            PropertySetter(TargetComponent, InitialValue);
+        }
+
+        public override void Advance(float deltaMilliseconds)
+        {
+            float change = FinalValue - InitialValue;
+            float newValue = InitialValue + change * CalculateFactor(Progress, TimingFunction);
+
+            PropertySetter(TargetComponent, newValue);
+            base.Advance(deltaMilliseconds);
         }
     }
 }
