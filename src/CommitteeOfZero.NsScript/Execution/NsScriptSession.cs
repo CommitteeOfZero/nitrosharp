@@ -1,16 +1,18 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.IO;
 
 namespace CommitteeOfZero.NsScript.Execution
 {
     public sealed class NsScriptSession
     {
         private const string NssExtension = ".nss";
-        private readonly IScriptLocator _scriptLocator;
+        private readonly Func<string, Stream> _scriptLocator;
         private Dictionary<string, NsSyntaxTree> _syntaxTrees;
         private Dictionary<string, Module> _loadedModules;
 
-        public NsScriptSession(IScriptLocator scriptLocator)
+        public NsScriptSession(Func<string, Stream> scriptLocator)
         {
             _scriptLocator = scriptLocator;
             _syntaxTrees = new Dictionary<string, NsSyntaxTree>();
@@ -54,7 +56,7 @@ namespace CommitteeOfZero.NsScript.Execution
                 return tree;
             }
 
-            var stream = _scriptLocator.Locate(fileName);
+            var stream = _scriptLocator(fileName);
             tree = NsScript.ParseScript(fileName, stream);
             stream.Dispose();
             return tree;

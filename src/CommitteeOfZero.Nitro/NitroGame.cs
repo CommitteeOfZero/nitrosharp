@@ -8,15 +8,18 @@ using System;
 using CommitteeOfZero.NsScript;
 using System.Collections.Generic;
 using CommitteeOfZero.Nitro.Audio;
+using System.IO;
 
 namespace CommitteeOfZero.Nitro
 {
     public class NitroGame : Game
     {
         private readonly NitroConfiguration _configuration;
-        private RenderSystem _renderSystem;
+        private readonly string _nssFolder;
+
         private NsScriptInterpreter _nssInterpreter;
         private NitroCore _nitroCore;
+        private RenderSystem _renderSystem;
 
         private ILogger _interpreterLog;
         private ILogger _entityLog;
@@ -24,6 +27,7 @@ namespace CommitteeOfZero.Nitro
         public NitroGame(NitroConfiguration configuration)
         {
             _configuration = configuration;
+            _nssFolder = Path.Combine(configuration.ContentRoot, "nss");
             SetupLogging();
         }
 
@@ -73,14 +77,17 @@ namespace CommitteeOfZero.Nitro
 
         private void RunStartupScript()
         {
-            var scriptLocator = new ScriptLocator(_configuration.ContentRoot);
-
             _nitroCore = new NitroCore(this, _configuration, Entities);
-            _nssInterpreter = new NsScriptInterpreter(scriptLocator, _nitroCore);
+            _nssInterpreter = new NsScriptInterpreter(_nitroCore, LocateScript);
             _nssInterpreter.BuiltInCallScheduled += OnBuiltInCallDispatched;
             _nssInterpreter.EnteredFunction += OnEnteredFunction;
 
             _nssInterpreter.CreateThread(_configuration.StartupScript);
+        }
+
+        private Stream LocateScript(string path)
+        {
+            return File.OpenRead(Path.Combine(_nssFolder, path.Replace("nss/", string.Empty)));
         }
 
         private void OnEnteredFunction(object sender, Function function)

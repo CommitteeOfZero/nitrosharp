@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 
 namespace CommitteeOfZero.NsScript.Execution
@@ -34,7 +35,7 @@ namespace CommitteeOfZero.NsScript.Execution
 
         private DialogueBlock _currentDialogueBlock;
 
-        public NsScriptInterpreter(IScriptLocator scriptLocator, BuiltInFunctionsBase builtinFunctions)
+        public NsScriptInterpreter(BuiltInFunctionsBase builtinFunctions, Func<string, Stream> scriptLocator)
         {
             _exprFlattener = new ExpressionFlattener();
             _exprReducer = new ExpressionReducer();
