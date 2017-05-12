@@ -3,18 +3,13 @@ using System;
 
 namespace CommitteeOfZero.Nitro.Animation
 {
-    public class FloatAnimation : Animation
+    public sealed class FloatAnimation : SinglePropertyAnimation
     {
         public Component TargetComponent { get; set; }
         public Action<Component, float> PropertySetter { get; set; }
 
         public float InitialValue { get; set; }
         public float FinalValue { get; set; }
-
-        public override void SetInitialValue()
-        {
-            PropertySetter(TargetComponent, InitialValue);
-        }
 
         public override void Advance(float deltaMilliseconds)
         {

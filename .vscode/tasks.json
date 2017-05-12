@@ -7,7 +7,7 @@
         {
             "taskName": "build",
             "args": [
-                "${workspaceRoot}\\src\\ProjectHoppy.NetCore\\ProjectHoppy.NetCore.csproj"
+                "${workspaceRoot}/src/CommitteeOfZero.NsScript.Tests/CommitteeOfZero.NsScript.Tests.csproj"
             ],
             "isBuildCommand": true,
             "problemMatcher": "$msCompile"

@@ -65,19 +65,50 @@ namespace MoeGame.Framework
         public T GetComponent<T>() where T : Component => (T)GetComponent(typeof(T));
         public Component GetComponent(Type type)
         {
-            var componentBag = GetComponentBag(type);
-            return componentBag?.Count > 0 ? componentBag[0] : null;
+            if (_components.TryGetValue(type, out var collection))
+            {
+                return collection?.Count > 0 ? collection[0] : null;
+            }
+            else
+            {
+                foreach (var pair in _components)
+                {
+                    if (type.GetTypeInfo().IsAssignableFrom(pair.Key.GetTypeInfo()))
+                    {
+                        collection = pair.Value;
+                        if (collection?.Count > 0)
+                        {
+                            return collection[0];
+                        }
+                    }
+                }
+            }
+
+            return null;
         }
 
-        public IEnumerable<T> GetComponents<T>() where T : Component => GetComponents(typeof(T)).Cast<T>();
-        public IEnumerable<Component> GetComponents(Type type)
+        public IEnumerable<T> GetComponents<T>() where T : Component
         {
-            var bag = GetComponentBag(type);
-            if (bag != null)
+            var type = typeof(T);
+            if (_components.TryGetValue(type, out var collection))
             {
-                foreach (var component in GetComponentBag(type))
+                foreach (var component in collection)
                 {
-                    yield return component;
+                    yield return (T)component;
+                }
+            }
+            else
+            {
+                foreach (var pair in _components.ToArray())
+                {
+                    if (type.GetTypeInfo().IsAssignableFrom(pair.Key.GetTypeInfo()))
+                    {
+                        collection = pair.Value;
+                        foreach (var component in collection.ToArray())
+                        {
+                            yield return (T)component;
+                        }
+                    }
                 }
             }
         }
@@ -115,30 +146,6 @@ namespace MoeGame.Framework
             }
 
             _manager.RaiseEntityUpdated(this);
-        }
-
-        private IList<Component> GetComponentBag(Type type)
-        {
-            if (_components.TryGetValue(type, out var collection))
-            {
-                return collection?.Count > 0 ? collection : null;
-            }
-            else
-            {
-                foreach (var pair in _components)
-                {
-                    if (type.GetTypeInfo().IsAssignableFrom(pair.Key.GetTypeInfo()))
-                    {
-                        collection = pair.Value;
-                        if (collection?.Count > 0)
-                        {
-                            return collection;
-                        }
-                    }
-                }
-            }
-
-            return null;
         }
 
         public override string ToString()

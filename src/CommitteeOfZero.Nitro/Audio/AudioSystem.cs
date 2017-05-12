@@ -11,7 +11,7 @@ namespace CommitteeOfZero.Nitro.Audio
     {
         public static int Amplitude { get; set; }
 
-        private static uint VoiceBufferSize = 2330;
+        private static uint VoiceBufferSize = 4400;
 
         private readonly AudioEngine _audioEngine;
         private uint _defaultBufferSize;

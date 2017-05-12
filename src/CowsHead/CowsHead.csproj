@@ -4,7 +4,7 @@
     <OutputType>Exe</OutputType>
     <OutputPath>$(SolutionDir)\bin\$(Configuration)\</OutputPath>
     <TargetFramework>netcoreapp1.1</TargetFramework>
-    <RuntimeIdentifiers>win7-x64</RuntimeIdentifiers>
+    <!--<RuntimeIdentifiers>win10-x64</RuntimeIdentifiers>-->
   </PropertyGroup>
 
   <ItemGroup>
