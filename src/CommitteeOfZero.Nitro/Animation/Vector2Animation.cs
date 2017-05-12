@@ -4,7 +4,7 @@ using System.Numerics;
 
 namespace CommitteeOfZero.Nitro.Animation
 {
-    public class Vector2Animation : SinglePropertyAnimation
+    public class Vector2Animation : Animation
     {
         public Component TargetComponent { get; set; }
         public Action<Component, Vector2> PropertySetter { get; set; }

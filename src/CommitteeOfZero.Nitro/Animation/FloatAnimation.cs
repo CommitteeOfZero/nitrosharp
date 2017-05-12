@@ -3,7 +3,7 @@ using System;
 
 namespace CommitteeOfZero.Nitro.Animation
 {
-    public sealed class FloatAnimation : SinglePropertyAnimation
+    public sealed class FloatAnimation : Animation
     {
         public Component TargetComponent { get; set; }
         public Action<Component, float> PropertySetter { get; set; }

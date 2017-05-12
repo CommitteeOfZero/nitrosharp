@@ -56,6 +56,7 @@ namespace MoeGame.Framework
             }
 
             collection.Add(component);
+            component.AttachToEntity(this);
             _manager.RaiseEntityUpdated(this);
         }
 
