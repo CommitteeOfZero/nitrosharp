@@ -33,8 +33,6 @@ namespace CommitteeOfZero.NsScript.Execution
         private readonly Stopwatch _timer;
         private uint _nextThreadId;
 
-        private DialogueBlock _currentDialogueBlock;
-
         public NsScriptInterpreter(BuiltInFunctionsBase builtinFunctions, Func<string, Stream> scriptLocator)
         {
             _exprFlattener = new ExpressionFlattener();
@@ -178,8 +176,6 @@ namespace CommitteeOfZero.NsScript.Execution
 
             var currentThread = _threads.First(x => x.Id == call.CallingThreadId);
             _builtinsImpl.CurrentThread = currentThread;
-            _builtinsImpl.CurrentDialogueBlock = _currentDialogueBlock;
-
             _builtInCallDispatcher.DispatchBuiltInCall(call);
             if (_builtInCallDispatcher.Result != null)
             {
@@ -226,8 +222,8 @@ namespace CommitteeOfZero.NsScript.Execution
                     HandleReturn();
                     break;
 
-                case SyntaxNodeKind.DialogueBlock:
-                    HandleDialogueBlock(node as DialogueBlock);
+                case SyntaxNodeKind.Paragraph:
+                    HandleParagraph(node as Paragraph);
                     break;
 
                 case SyntaxNodeKind.PXmlString:
@@ -293,21 +289,20 @@ namespace CommitteeOfZero.NsScript.Execution
             }
         }
 
-        private void HandleDialogueBlock(DialogueBlock dialogueBlock)
+        private void HandleParagraph(Paragraph paragraph)
         {
             var currentFrame = _currentThread.CurrentFrame;
-            currentFrame.Globals["SYSTEM_present_preprocess"] = new ConstantValue(dialogueBlock.BoxName);
-            currentFrame.Globals["SYSTEM_present_text"] = new ConstantValue(dialogueBlock.Identifier);
+            currentFrame.Globals["SYSTEM_present_preprocess"] = new ConstantValue(paragraph.AssociatedBox);
+            currentFrame.Globals["SYSTEM_present_text"] = new ConstantValue(paragraph.Identifier);
 
-            currentFrame.Globals["boxtype"] = new ConstantValue(dialogueBlock.BoxName);
-            currentFrame.Globals["textnumber"] = new ConstantValue(dialogueBlock.Identifier);
+            currentFrame.Globals["boxtype"] = new ConstantValue(paragraph.AssociatedBox);
+            currentFrame.Globals["textnumber"] = new ConstantValue(paragraph.Identifier);
 
             currentFrame.Globals["Pretextnumber"] = new ConstantValue("xxx");
 
             currentFrame.Globals["YuaVoice"] = new ConstantValue(false);
 
-            _currentDialogueBlock = dialogueBlock;
-            _builtinsImpl.RaiseEnteredDialogueBlock(dialogueBlock);
+            _builtinsImpl.NotifyParagraphEntered(paragraph);
         }
 
         private void HandlePXmlString(PXmlString pxmlString)

@@ -124,6 +124,11 @@ namespace MoeGame.Framework
             _manager.ScheduleComponentRemoval(this, component);
         }
 
+        public void Destroy()
+        {
+            _manager.Remove(this);
+        }
+
         internal void CommitDestroyComponent(Component component)
         {
             var type = component.GetType();

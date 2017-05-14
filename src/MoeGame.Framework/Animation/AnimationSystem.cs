@@ -1,23 +1,22 @@
-﻿using MoeGame.Framework;
-using System;
+﻿using System;
 using System.Collections.Generic;
 
-namespace CommitteeOfZero.Nitro.Animation
+namespace MoeGame.Framework.Animation
 {
     public sealed class AnimationSystem : EntityProcessingSystem
     {
         protected override void DeclareInterests(ISet<Type> interests)
         {
-            interests.Add(typeof(Animation));
+            interests.Add(typeof(AnimationBase));
         }
 
         public override void Process(Entity entity, float deltaMilliseconds)
         {
-            foreach (Animation animation in entity.GetComponents<Animation>())
+            foreach (AnimationBase animation in entity.GetComponents<AnimationBase>())
             {
                 if (animation.IsEnabled)
                 {
-                    animation.Advance(deltaMilliseconds);
+                    animation.Advance(animation.Started ? deltaMilliseconds : 0.0f);
                 }
             }
         }

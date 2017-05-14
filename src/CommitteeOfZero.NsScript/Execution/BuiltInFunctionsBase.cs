@@ -5,19 +5,22 @@ namespace CommitteeOfZero.NsScript.Execution
     public abstract class BuiltInFunctionsBase
     {
         private readonly Random _randomGen = new Random();
+        private Paragraph _currentParagraph;
 
         public NsScriptInterpreter Interpreter { get; private set; }
         public ThreadContext MainThread { get; internal set; }
         public ThreadContext CurrentThread { get; internal set; }
-        public DialogueBlock CurrentDialogueBlock { get; internal set; }
 
-        public event EventHandler<DialogueBlock> EnteredDialogueBlock;
+        protected virtual void OnParagraphEntered(Paragraph paragraph)
+        {
+        }
 
         internal void SetInterpreter(NsScriptInterpreter instance) => Interpreter = instance;
 
-        internal void RaiseEnteredDialogueBlock(DialogueBlock block)
+        internal void NotifyParagraphEntered(Paragraph paragraph)
         {
-            EnteredDialogueBlock?.Invoke(this, block);
+            _currentParagraph = paragraph;
+            OnParagraphEntered(paragraph);
         }
 
         public virtual int GetTextureWidth(string fileName)
@@ -62,7 +65,7 @@ namespace CommitteeOfZero.NsScript.Execution
 
         public virtual void WaitText(string id, TimeSpan time)
         {
-            CurrentThread.PushContinuation(CurrentThread.CurrentFrame.Function, CurrentDialogueBlock);
+            CurrentThread.PushContinuation(CurrentThread.CurrentFrame.Function, _currentParagraph);
         }
 
         /// <summary>

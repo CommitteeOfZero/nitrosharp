@@ -1,7 +1,5 @@
 ﻿using MoeGame.Framework;
 using SharpDX;
-using SharpDX.Direct2D1;
-using System.Diagnostics;
 
 namespace CommitteeOfZero.Nitro.Graphics
 {

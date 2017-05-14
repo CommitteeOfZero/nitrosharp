@@ -9,7 +9,7 @@ using CommitteeOfZero.NsScript;
 using System.Collections.Generic;
 using CommitteeOfZero.Nitro.Audio;
 using System.IO;
-using CommitteeOfZero.Nitro.Animation;
+using MoeGame.Framework.Animation;
 
 namespace CommitteeOfZero.Nitro
 {
@@ -67,7 +67,7 @@ namespace CommitteeOfZero.Nitro
             systems.Add(animationSystem);
 
             var typewriterProcessor = new TypewriterAnimationProcessor();
-            systems.Add(typewriterProcessor);
+            //systems.Add(typewriterProcessor);
 
             var audioSystem = new AudioSystem(AudioEngine, Content);
             systems.Add(audioSystem);

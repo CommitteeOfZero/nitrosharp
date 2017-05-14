@@ -19,7 +19,6 @@ namespace CommitteeOfZero.Nitro
             _game = game;
             _entities = entities;
             _viewport = new System.Drawing.Size(configuration.WindowWidth, configuration.WindowHeight);
-            EnteredDialogueBlock += OnEnteredDialogueBlock;
         }
 
         public void SetContent(ContentManager content) => _content = content;

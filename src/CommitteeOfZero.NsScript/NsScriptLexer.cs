@@ -87,11 +87,11 @@ namespace CommitteeOfZero.NsScript
                     }
                     break;
 
-                case SyntaxTokenKind.DialogueBlockStartTag:
+                case SyntaxTokenKind.ParagraphStartTag:
                     _nestingStack.Push(Location.DialogueBlock);
                     break;
 
-                case SyntaxTokenKind.DialogueBlockEndTag:
+                case SyntaxTokenKind.ParagraphEndTag:
                     _nestingStack.Pop();
                     break;
             }
@@ -192,12 +192,12 @@ namespace CommitteeOfZero.NsScript
                     // I've yet to find an exception to that.
                     else if (SyntaxFacts.IsLatinLetter(nextChar))
                     {
-                        kind = SyntaxTokenKind.DialogueBlockStartTag;
+                        kind = SyntaxTokenKind.ParagraphStartTag;
                         ScanPXmlTag();
                     }
                     else if (nextChar == '/')
                     {
-                        kind = SyntaxTokenKind.DialogueBlockEndTag;
+                        kind = SyntaxTokenKind.ParagraphEndTag;
                         ScanPXmlTag();
                     }
                     else
@@ -420,7 +420,7 @@ namespace CommitteeOfZero.NsScript
             switch (character)
             {
                 case '[':
-                    kind = SyntaxTokenKind.DialogueBlockIdentifier;
+                    kind = SyntaxTokenKind.ParagraphIdentifier;
                     ScanDialogueBlockIdentifier();
                     scanTrailingTrivia = true;
                     break;

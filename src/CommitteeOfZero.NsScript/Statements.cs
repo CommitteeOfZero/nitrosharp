@@ -41,35 +41,35 @@ namespace CommitteeOfZero.NsScript
         public static CallChapterStatement CallChapter(Identifier chapterName) => new CallChapterStatement(chapterName);
         public static CallSceneStatement CallScene(Identifier sceneName) => new CallSceneStatement(sceneName);
 
-        public static DialogueBlock DialogueBlock(string blockIdentifier, string boxName, ImmutableArray<Statement> statements) =>
-            new DialogueBlock(blockIdentifier, boxName, statements);
+        public static Paragraph Paragraph(string blockIdentifier, string boxName, ImmutableArray<Statement> statements) =>
+            new Paragraph(blockIdentifier, boxName, statements);
 
         public static PXmlString PXmlString(string text) => new PXmlString(text);
     }
 
-    public sealed class DialogueBlock : Statement, IBlock
+    public sealed class Paragraph : Statement, IBlock
     {
-        internal DialogueBlock(string blockIdentifier, string boxName, ImmutableArray<Statement> statements)
+        internal Paragraph(string identifier, string associatedBox, ImmutableArray<Statement> statements)
         {
-            Identifier = blockIdentifier;
-            BoxName = boxName;
+            Identifier = identifier;
+            AssociatedBox = associatedBox;
             Statements = statements;
         }
 
         public string Identifier { get; }
-        public string BoxName { get; }
+        public string AssociatedBox { get; }
         public ImmutableArray<Statement> Statements { get; }
 
-        public override SyntaxNodeKind Kind => SyntaxNodeKind.DialogueBlock;
+        public override SyntaxNodeKind Kind => SyntaxNodeKind.Paragraph;
 
         public override void Accept(SyntaxVisitor visitor)
         {
-            visitor.VisitDialogueBlock(this);
+            visitor.VisitParagraph(this);
         }
 
         public override TResult Accept<TResult>(SyntaxVisitor<TResult> visitor)
         {
-            return visitor.VisitDialogueBlock(this);
+            return visitor.VisitParagraph(this);
         }
     }
 

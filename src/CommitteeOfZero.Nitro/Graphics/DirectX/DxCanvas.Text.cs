@@ -14,7 +14,7 @@ namespace CommitteeOfZero.Nitro.Graphics
         private void CreateTextResources()
         {
             _customTextRenderer = new CustomTextRenderer(_rc.DeviceContext, _rc.ColorBrush, false);
-            _textFormat = new TextFormat(_rc.DWriteFactory, "Segoe UI", 28);
+            _textFormat = new TextFormat(_rc.DWriteFactory, "Segoe UI", 30);
 
             _visibleRegion.context = new TextDrawingContext { OpacityOverride = 1.0f };
             _animatedRegion.context = new TextDrawingContext();
@@ -30,16 +30,22 @@ namespace CommitteeOfZero.Nitro.Graphics
             _rc.ColorBrush.Color = text.Color;
             _rc.ColorBrush.Opacity = 0;
 
-            if (_visibleRegion.range != text.VisibleRegion)
-            {
-                var range = _visibleRegion.range = text.VisibleRegion;
-                _textLayout.SetDrawingEffect(_visibleRegion.context, new SharpDX.DirectWrite.TextRange(range.RangeStart, range.Length));
-            }
-
             if (_animatedRegion.range != text.AnimatedRegion)
             {
                 var range = _animatedRegion.range = text.AnimatedRegion;
-                _textLayout.SetDrawingEffect(_animatedRegion.context, new SharpDX.DirectWrite.TextRange(range.RangeStart, range.Length));
+                if (range.Length > 0)
+                {
+                    _textLayout.SetDrawingEffect(_animatedRegion.context, new SharpDX.DirectWrite.TextRange(range.RangeStart, range.Length));
+                }
+            }
+
+            if (_visibleRegion.range != text.VisibleRegion)
+            {
+                var range = _visibleRegion.range = text.VisibleRegion;
+                if (range.Length > 0)
+                {
+                    _textLayout.SetDrawingEffect(_visibleRegion.context, new SharpDX.DirectWrite.TextRange(range.RangeStart, range.Length));
+                }
             }
 
             _animatedRegion.context.OpacityOverride = text.AnimatedOpacity;

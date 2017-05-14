@@ -61,7 +61,7 @@ namespace CommitteeOfZero.Nitro
         private void AddScreencap(string entityName, NsCoordinate x, NsCoordinate y, int priority)
         {
             var position = Position(x, y, Vector2.Zero, _viewport.Width, _viewport.Height);
-            var screencap = new Screenshot
+            var screencap = new ScreenshotVisual
             {
                 Position = position,
                 Priority = priority,

@@ -1,4 +1,4 @@
-﻿namespace CommitteeOfZero.Nitro.Animation
+﻿namespace MoeGame.Framework.Animation
 {
     public enum TimingFunction
     {

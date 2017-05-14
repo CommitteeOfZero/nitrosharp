@@ -8,11 +8,12 @@
         internal void AttachToEntity(Entity entity)
         {
             Entity = entity;
+            OnAttached();
         }
 
-        //public virtual void OnAttached()
-        //{
-        //}
+        public virtual void OnAttached()
+        {
+        }
 
         //public virtual void OnRemoved()
         //{

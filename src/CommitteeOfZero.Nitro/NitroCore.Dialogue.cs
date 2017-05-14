@@ -11,8 +11,9 @@ namespace CommitteeOfZero.Nitro
 {
     public sealed partial class NitroCore
     {
-        private readonly PXmlTreeFlattener _pxmlFlattener = new PXmlTreeFlattener();
-        private Entity _textEntity;
+        private Paragraph _currentParagraph;
+        public Entity TextEntity { get; private set; }
+        private Entity _voiceEntity;
 
         public override void CreateDialogueBox(string entityName, int priority, NsCoordinate x, NsCoordinate y, int width, int height)
         {
@@ -26,45 +27,38 @@ namespace CommitteeOfZero.Nitro
             _entities.Create(entityName).WithComponent(box);
         }
 
-        private void OnEnteredDialogueBlock(object sender, DialogueBlock block)
+        protected override void OnParagraphEntered(Paragraph paragraph)
         {
-            if (_textEntity != null)
-            {
-                _entities.Remove(_textEntity);
-            }
+            _currentParagraph = paragraph;
+            TextEntity?.Destroy();
         }
 
         public override void DisplayDialogue(string pxmlString)
         {
-            CurrentThread.Suspend();
-
-            Task.Run(() => ParseDialogueLine(pxmlString))
+            MainThread.Suspend();
+            Task.Run(() => DialogueParser.Parse(pxmlString))
                 .ContinueWith(t => DisplayDialogueCore(t.Result), _game.MainLoopTaskScheduler);
-        }
-
-        private DialogueLine ParseDialogueLine(string pxmlString)
-        {
-            var root = PXmlBlock.Parse(pxmlString);
-            return _pxmlFlattener.Flatten(root);
         }
 
         private void DisplayDialogueCore(DialogueLine dialogueLine)
         {
-            if (_entities.TryGet(CurrentDialogueBlock.BoxName, out var boxEntity))
+            if (_entities.TryGet(_currentParagraph.AssociatedBox, out var boxEntity))
             {
                 var dialogueBox = boxEntity.GetComponent<DialogueBox>();
                 var textVisual = new TextVisual
                 {
                     Text = dialogueLine.Text,
                     Position = dialogueBox.Position,
-                    Width = dialogueBox.Width,
+                    Width = dialogueBox.Width - 120,
                     Height = dialogueBox.Height,
                     IsEnabled = true,
                     Priority = int.MaxValue,
                     Color = RgbaValueF.White
                 };
 
-                _textEntity = _entities.Create(CurrentDialogueBlock.Identifier, replace: true).WithComponent(textVisual);
+                TextEntity = _entities.Create(_currentParagraph.Identifier, replace: true)
+                    .WithComponent(textVisual)
+                    .WithComponent(new SmoothTextAnimation());
 
                 if (dialogueLine.Voice != null)
                 {
@@ -73,16 +67,11 @@ namespace CommitteeOfZero.Nitro
             }
         }
 
-        private Entity _voiceEntity;
         private void VoiceAction(Voice voice)
         {
             if (voice.Action == Dialogue.VoiceAction.Play)
             {
-                if (_voiceEntity != null)
-                {
-                    _entities.Remove(_voiceEntity);
-                }
-
+                _voiceEntity?.Destroy();
                 var sound = new SoundComponent
                 {
                     AudioFile = "voice/" + voice.FileName,

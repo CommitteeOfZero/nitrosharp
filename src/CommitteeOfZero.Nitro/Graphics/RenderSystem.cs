@@ -29,7 +29,7 @@ namespace CommitteeOfZero.Nitro.Graphics
 
         public override void OnRelevantEntityAdded(Entity entity)
         {
-            var screencap = entity.GetComponent<Screenshot>();
+            var screencap = entity.GetComponent<ScreenshotVisual>();
             screencap?.Take(_canvas);
         }
 

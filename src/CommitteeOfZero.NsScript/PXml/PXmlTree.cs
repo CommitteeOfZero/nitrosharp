@@ -1,8 +1,8 @@
 ﻿namespace CommitteeOfZero.NsScript.PXml
 {
-    public static class PXmlBlock
+    public static class PXmlTree
     {
-        public static PXmlContent Parse(string text)
+        public static PXmlContent ParseString(string text)
         {
             var parser = new PXmlParser(text);
             return parser.Parse();

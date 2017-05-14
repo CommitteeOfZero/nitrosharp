@@ -17,7 +17,7 @@
         FunctionCall,
         ExpressionStatement,
         Function,
-        DialogueBlock,
+        Paragraph,
         Variable,
         NamedConstant,
         Parameter,

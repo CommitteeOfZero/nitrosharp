@@ -1,7 +1,7 @@
-﻿using CommitteeOfZero.Nitro.Animation;
-using CommitteeOfZero.Nitro.Graphics;
+﻿using CommitteeOfZero.Nitro.Graphics;
 using CommitteeOfZero.NsScript;
 using MoeGame.Framework;
+using MoeGame.Framework.Animation;
 using MoeGame.Framework.Content;
 using System;
 using System.Numerics;
@@ -31,15 +31,8 @@ namespace CommitteeOfZero.Nitro
             var visual = entity.GetComponent<Visual>();
             if (duration > TimeSpan.Zero)
             {
-                var animation = new FloatAnimation
-                {
-                    TargetComponent = visual,
-                    PropertySetter = (c, v) => (c as Visual).Opacity = v,
-                    Duration = duration,
-                    InitialValue = visual.Opacity,
-                    FinalValue = adjustedOpacity
-                };
-
+                Action<Component, float> propertySetter = (c, v) => (c as Visual).Opacity = v;
+                var animation = new FloatAnimation(visual, propertySetter, visual.Opacity, adjustedOpacity, duration);
                 entity.AddComponent(animation);
             }
             else
@@ -64,22 +57,17 @@ namespace CommitteeOfZero.Nitro
         private void MoveCore(Entity entity, TimeSpan duration, NsCoordinate x, NsCoordinate y, NsEasingFunction easingFunction, bool wait)
         {
             var visual = entity.GetComponent<Visual>();
-            var dst = Position(x, y, visual.Position, (int)visual.Width, (int)visual.Height);
+            Vector2 destination = Position(x, y, visual.Position, (int)visual.Width, (int)visual.Height);
 
             if (duration > TimeSpan.Zero)
             {
-                var animation = new Vector2Animation
-                {
-                    TargetComponent = visual,
-                    PropertySetter = (c, v) => (c as Visual).Position = v,
-                    Duration = duration,
-                    InitialValue = visual.Position,
-                    FinalValue = dst
-                };
+                Action<Component, Vector2> propertySetter = (c, v) => (c as Visual).Position = v;
+                var animation = new Vector2Animation(visual, propertySetter, visual.Position, destination, duration);
+                entity.AddComponent(animation);
             }
             else
             {
-                visual.Position = dst;
+                visual.Position = destination;
             }
         }
 
@@ -110,16 +98,8 @@ namespace CommitteeOfZero.Nitro
                     visual.Scale = new Vector2(0.0f, 0.0f);
                 }
 
-                var animation = new Vector2Animation
-                {
-                    TargetComponent = visual,
-                    PropertySetter = (c, v) => (c as Visual).Scale = v,
-                    Duration = duration,
-                    InitialValue = visual.Scale,
-                    FinalValue = final,
-                    TimingFunction = (TimingFunction)easingFunction
-                };
-
+                Action<Component, Vector2> propertySetter = (c, v) => (c as Visual).Scale = v;
+                var animation = new Vector2Animation(visual, propertySetter, visual.Scale, final, duration, (TimingFunction)easingFunction);
                 entity.AddComponent(animation);
             }
             else
@@ -145,15 +125,8 @@ namespace CommitteeOfZero.Nitro
                     Position = sourceVisual.Position
                 };
 
-                var animation = new FloatAnimation
-                {
-                    TargetComponent = transition,
-                    PropertySetter = (c, v) => (c as TransitionVisual).Opacity = v,
-                    InitialValue = initialOpacity,
-                    FinalValue = finalOpacity,
-                    Duration = duration
-                };
-
+                Action<Component, float> propertySetter = (c, v) => (c as TransitionVisual).Opacity = v;
+                var animation = new FloatAnimation(transition, propertySetter, initialOpacity, finalOpacity, duration);
                 animation.Completed += (o, e) =>
                 {
                     entity.RemoveComponent(transition);

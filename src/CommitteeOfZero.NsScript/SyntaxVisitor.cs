@@ -145,9 +145,9 @@ namespace CommitteeOfZero.NsScript
             DefaultVisitNode(callSceneStatement);
         }
 
-        public virtual void VisitDialogueBlock(DialogueBlock dialogueBlock)
+        public virtual void VisitParagraph(Paragraph paragraph)
         {
-            DefaultVisitNode(dialogueBlock);
+            DefaultVisitNode(paragraph);
         }
     }
 
@@ -283,9 +283,9 @@ namespace CommitteeOfZero.NsScript
             return DefaultVisitNode(callChapterStatement);
         }
 
-        public virtual TResult VisitDialogueBlock(DialogueBlock dialogueBlock)
+        public virtual TResult VisitParagraph(Paragraph paragraph)
         {
-            return DefaultVisitNode(dialogueBlock);
+            return DefaultVisitNode(paragraph);
         }
 
         public virtual TResult VisitScene(Scene scene)

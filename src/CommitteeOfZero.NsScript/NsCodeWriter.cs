@@ -219,9 +219,9 @@ namespace CommitteeOfZero.NsScript
             }
         }
 
-        public override void VisitDialogueBlock(DialogueBlock dialogueBlock)
+        public override void VisitParagraph(Paragraph dialogueBlock)
         {
-            Write($"<PRE {dialogueBlock.BoxName}>");
+            Write($"<PRE {dialogueBlock.AssociatedBox}>");
             WriteLine();
             Write($"[{dialogueBlock.Identifier}]");
             WriteLine();

@@ -1,7 +1,8 @@
-﻿using MoeGame.Framework;
+﻿using CommitteeOfZero.Nitro.Graphics;
+using CommitteeOfZero.NsScript.Execution;
+using MoeGame.Framework;
 using MoeGame.Framework.Input;
 using System;
-using System.Diagnostics;
 
 namespace CommitteeOfZero.Nitro
 {
@@ -18,7 +19,8 @@ namespace CommitteeOfZero.Nitro
         {
             if (ShouldAdvance())
             {
-                if (_nitroCore.Interpreter.Status == NsScript.Execution.InterpreterStatus.Active && _nitroCore.MainThread.SleepTimeout == TimeSpan.MaxValue)
+                if (TrySkipAnimation()) return;
+                if (_nitroCore.Interpreter.Status == InterpreterStatus.Active && _nitroCore.MainThread.SleepTimeout == TimeSpan.MaxValue)
                 {
                     _nitroCore.MainThread.Resume();
                 }
@@ -28,6 +30,21 @@ namespace CommitteeOfZero.Nitro
             {
                 Console.WriteLine(SharpDX.Diagnostics.ObjectTracker.ReportActiveObjects());
             }
+        }
+
+        private bool TrySkipAnimation()
+        {
+            var text = _nitroCore.TextEntity;
+            var animation = text.GetComponent<SmoothTextAnimation>();
+            if (animation?.Progress < 1.0f)
+            {
+                animation.Stop();
+                text.RemoveComponent(animation);
+                text.AddComponent(new TextSkipAnimation());
+                return true;
+            }
+
+            return false;
         }
 
         private static bool ShouldAdvance()

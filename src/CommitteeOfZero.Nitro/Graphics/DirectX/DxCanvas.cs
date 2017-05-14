@@ -49,7 +49,7 @@ namespace CommitteeOfZero.Nitro.Graphics
             _rc.DeviceContext.FillRectangle(dest, _rc.ColorBrush);
         }
 
-        public void DrawScreenshot(Screenshot screenshot)
+        public void DrawScreenshot(ScreenshotVisual screenshot)
         {
             var dest = new RawRectangleF(0, 0, _screenshotBitmap.Size.Width, _screenshotBitmap.Size.Height);
             _rc.DeviceContext.DrawBitmap(_screenshotBitmap, dest, screenshot.Opacity, BitmapInterpolationMode.Linear);

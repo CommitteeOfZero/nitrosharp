@@ -235,8 +235,8 @@ namespace CommitteeOfZero.NsScript
                 case SyntaxTokenKind.CallSceneKeyword:
                     return ParseSceneCall();
 
-                case SyntaxTokenKind.DialogueBlockStartTag:
-                    return ParseDialogueBlock();
+                case SyntaxTokenKind.ParagraphStartTag:
+                    return ParseParagraph();
 
                 case SyntaxTokenKind.PXmlString:
                     return StatementFactory.PXmlString(EatToken().Text);
@@ -247,10 +247,10 @@ namespace CommitteeOfZero.NsScript
             }
         }
 
-        private DialogueBlock ParseDialogueBlock()
+        private Paragraph ParseParagraph()
         {
-            var startTag = EatToken(SyntaxTokenKind.DialogueBlockStartTag);
-            string boxName = ExtractBoxName(startTag.Text);
+            var startTag = EatToken(SyntaxTokenKind.ParagraphStartTag);
+            string associatedBox = ExtractBoxName(startTag.Text);
 
             string ExtractBoxName(string text)
             {
@@ -260,10 +260,9 @@ namespace CommitteeOfZero.NsScript
                 return text.Substring(idxStart, idxEnd - idxStart);
             }
 
-            var identifier = EatToken(SyntaxTokenKind.DialogueBlockIdentifier);
-
+            var identifier = EatToken(SyntaxTokenKind.ParagraphIdentifier);
             var statements = ImmutableArray.CreateBuilder<Statement>();
-            while (CurrentToken.Kind != SyntaxTokenKind.DialogueBlockEndTag)
+            while (CurrentToken.Kind != SyntaxTokenKind.ParagraphEndTag)
             {
                 var statement = ParseStatement();
                 if (statement != null)
@@ -272,8 +271,19 @@ namespace CommitteeOfZero.NsScript
                 }
             }
 
-            EatToken(SyntaxTokenKind.DialogueBlockEndTag);
-            return StatementFactory.DialogueBlock(identifier.Text, boxName, statements.ToImmutable());
+            EatToken(SyntaxTokenKind.ParagraphEndTag);
+            string identifierString = TrimParagraphIdentifier(identifier.Text);
+            return StatementFactory.Paragraph(identifierString, associatedBox, statements.ToImmutable());
+        }
+
+        private static string TrimParagraphIdentifier(string identifier)
+        {
+            if (identifier.Length > 2 && identifier[0] == '[' && identifier[identifier.Length - 1] == ']')
+            {
+                return identifier.Substring(1, identifier.Length - 2);
+            }
+
+            return identifier;
         }
 
         private ExpressionStatement ParseExpressionStatement()

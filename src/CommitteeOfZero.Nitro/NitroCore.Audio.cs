@@ -1,7 +1,7 @@
-﻿using CommitteeOfZero.Nitro.Animation;
-using CommitteeOfZero.Nitro.Audio;
+﻿using CommitteeOfZero.Nitro.Audio;
 using CommitteeOfZero.NsScript;
 using MoeGame.Framework;
+using MoeGame.Framework.Animation;
 using System;
 
 namespace CommitteeOfZero.Nitro
@@ -47,15 +47,8 @@ namespace CommitteeOfZero.Nitro
             volume = volume.Rebase(1.0f);
             if (duration > TimeSpan.Zero)
             {
-                var animation = new FloatAnimation
-                {
-                    TargetComponent = sound,
-                    PropertySetter = (c, v) => (c as SoundComponent).Volume = v,
-                    InitialValue = sound.Volume,
-                    FinalValue = volume,
-                    Duration = duration
-                };
-
+                Action<Component, float> propertySetter = (c, v) => (c as SoundComponent).Volume = v;
+                var animation = new FloatAnimation(sound, propertySetter, sound.Volume, volume, duration);
                 entity.AddComponent(animation);
             }
             else
