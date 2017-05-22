@@ -25,12 +25,7 @@ namespace CommitteeOfZero.Nitro
 
         public override void SetAlias(string entityName, string alias)
         {
-            if (entityName == alias)
-            {
-                return;
-            }
-
-            if (_entities.TryGet(entityName, out var entity))
+            if (entityName != alias && _entities.TryGet(entityName, out var entity))
             {
                 _entities.Add(alias, entity);
             }
@@ -64,9 +59,6 @@ namespace CommitteeOfZero.Nitro
 
         public override void Request(string entityName, NsEntityAction action)
         {
-            if (entityName == null)
-                return;
-
             foreach (var e in _entities.Query(entityName))
             {
                 RequestCore(e, action);
@@ -86,7 +78,6 @@ namespace CommitteeOfZero.Nitro
                     break;
 
                 case NsEntityAction.ResetText:
-                    entity.GetComponent<TextVisual>()?.Reset();
                     break;
 
                 case NsEntityAction.Hide:

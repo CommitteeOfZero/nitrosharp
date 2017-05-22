@@ -1,6 +1,5 @@
 ﻿using CommitteeOfZero.Nitro.Dialogue;
 using CommitteeOfZero.NsScript;
-using CommitteeOfZero.NsScript.PXml;
 using MoeGame.Framework;
 using System.Numerics;
 using System.Threading.Tasks;
@@ -45,9 +44,8 @@ namespace CommitteeOfZero.Nitro
             if (_entities.TryGet(_currentParagraph.AssociatedBox, out var boxEntity))
             {
                 var dialogueBox = boxEntity.GetComponent<DialogueBox>();
-                var textVisual = new TextVisual
+                var textVisual = new TextVisual(dialogueLine.Text)
                 {
-                    Text = dialogueLine.Text,
                     Position = dialogueBox.Position,
                     Width = dialogueBox.Width - 120,
                     Height = dialogueBox.Height,
@@ -72,13 +70,7 @@ namespace CommitteeOfZero.Nitro
             if (voice.Action == Dialogue.VoiceAction.Play)
             {
                 _voiceEntity?.Destroy();
-                var sound = new SoundComponent
-                {
-                    AudioFile = "voice/" + voice.FileName,
-                    Volume = 1.0f,
-                    Kind = AudioKind.Voice
-                };
-
+                var sound = new SoundComponent("voice/" + voice.FileName, AudioKind.Voice);
                 _voiceEntity = _entities.Create(voice.FileName).WithComponent(sound);
             }
             else

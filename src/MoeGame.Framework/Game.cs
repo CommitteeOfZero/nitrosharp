@@ -110,6 +110,7 @@ namespace MoeGame.Framework
         public virtual void Shutdown()
         {
             Systems.Dispose();
+            AudioEngine.Dispose();
             RenderContext.Dispose();
         }
 

@@ -66,9 +66,6 @@ namespace CommitteeOfZero.Nitro
             var animationSystem = new AnimationSystem();
             systems.Add(animationSystem);
 
-            var typewriterProcessor = new TypewriterAnimationProcessor();
-            //systems.Add(typewriterProcessor);
-
             var audioSystem = new AudioSystem(AudioEngine, Content);
             systems.Add(audioSystem);
 
@@ -93,14 +90,14 @@ namespace CommitteeOfZero.Nitro
 
         private void OnEnteredFunction(object sender, Function function)
         {
-            _interpreterLog.LogCritical($"Entered function {function.Name.SimplifiedName}");
+            //_interpreterLog.LogCritical($"Entered function {function.Name.SimplifiedName}");
         }
 
         private void OnBuiltInCallDispatched(object sender, BuiltInFunctionCall call)
         {
             if (call.CallingThreadId == _nitroCore.MainThread.Id)
             {
-                _interpreterLog.LogInformation($"Built-in call: {call.ToString()}");
+                //_interpreterLog.LogInformation($"Built-in call: {call.ToString()}");
             }
         }
 

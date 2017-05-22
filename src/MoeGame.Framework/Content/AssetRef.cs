@@ -17,7 +17,7 @@ namespace MoeGame.Framework.Content
         public static implicit operator AssetRef(string assetPath) => new AssetRef(assetPath);
         public static implicit operator string(AssetRef assetRef) => assetRef.AssetPath;
 
-        public override string ToString() => $"Asset '{AssetPath}'";
+        public override string ToString() => AssetPath;
 
         public bool Equals(AssetRef other) => EqualsImpl(this, other);
         public override bool Equals(object obj) => EqualsImpl(this, (AssetRef)obj);

@@ -10,31 +10,17 @@ namespace CommitteeOfZero.Nitro
     {
         public override int GetSoundAmplitude()
         {
-            var ampl = AudioSystem.Amplitude;
-            if (ampl == 0)
-            {
-                //CurrentThread.Suspend(TimeSpan.FromMilliseconds(100));
-            }
-
             return AudioSystem.Amplitude;
         }
 
         public override void LoadAudio(string entityName, NsAudioKind kind, string fileName)
         {
-            var sound = new SoundComponent
-            {
-                AudioFile = fileName,
-                Kind = (AudioKind)kind
-            };
-
+            var sound = new SoundComponent(fileName, (AudioKind)kind);
             _entities.Create(entityName, replace: true).WithComponent(sound);
         }
 
         public override void SetVolume(string entityName, TimeSpan duration, NsRational volume)
         {
-            if (entityName == null)
-                return;
-
             foreach (var e in _entities.Query(entityName))
             {
                 SetVolumeCore(e, duration, volume);
@@ -74,15 +60,14 @@ namespace CommitteeOfZero.Nitro
         {
             foreach (var e in _entities.Query(entityName))
             {
-                SetLoopingCore(e, loopStart, loopEnd);
+                SetLoopPointCore(e, loopStart, loopEnd);
             }
         }
 
-        private void SetLoopingCore(Entity entity, TimeSpan loopStart, TimeSpan loopEnd)
+        private void SetLoopPointCore(Entity entity, TimeSpan loopStart, TimeSpan loopEnd)
         {
             var sound = entity.GetComponent<SoundComponent>();
-            sound.LoopStart = loopEnd;
-            sound.LoopEnd = loopEnd;
+            sound.SetLoop(loopStart, loopEnd);
             sound.Looping = true;
         }
     }

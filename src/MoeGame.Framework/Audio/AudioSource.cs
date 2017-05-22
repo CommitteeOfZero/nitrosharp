@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace MoeGame.Framework.Audio
 {
-    public abstract class AudioSource
+    public abstract class AudioSource : IDisposable
     {
         private readonly AudioEngine _engineBase;
         private readonly AudioBufferPool _bufferPool;
@@ -22,6 +22,8 @@ namespace MoeGame.Framework.Audio
 
             Status = AudioSourceStatus.Idle;
             BufferEnd += OnBufferEnd;
+
+            audioEngine.RegisterAudioSource(this);
         }
 
         private void OnBufferEnd(object sender, AudioBuffer buffer)
@@ -115,5 +117,7 @@ namespace MoeGame.Framework.Audio
         {
             _buffers[buffer.Id] = buffer;
         }
+
+        public abstract void Dispose();
     }
 }

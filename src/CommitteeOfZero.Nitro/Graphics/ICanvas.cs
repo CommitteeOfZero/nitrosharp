@@ -1,8 +1,9 @@
-﻿using System.Numerics;
+﻿using System;
+using System.Numerics;
 
 namespace CommitteeOfZero.Nitro.Graphics
 {
-    public interface ICanvas
+    public interface ICanvas : IDisposable
     {
         void SetTransform(Matrix3x2 transform);
 
@@ -16,5 +17,6 @@ namespace CommitteeOfZero.Nitro.Graphics
 
         void Free(TextureVisual texture);
         void Free(TextVisual textVisual);
+        void Free(TransitionVisual transition);
     }
 }

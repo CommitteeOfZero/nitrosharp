@@ -8,7 +8,7 @@ using System.Numerics;
 
 namespace CommitteeOfZero.Nitro.Graphics
 {
-    public partial class RenderSystem : EntityProcessingSystem, IDisposable
+    public sealed class RenderSystem : EntityProcessingSystem, IDisposable
     {
         private ICanvas _canvas;
 
@@ -18,9 +18,9 @@ namespace CommitteeOfZero.Nitro.Graphics
             Content = contentManager;
         }
 
+        public ICanvas Canvas => _canvas;
         public DxRenderContext RenderContext { get; }
         public ContentManager Content { get; }
-        public CommonResources CommonResources { get; private set; }
 
         protected override void DeclareInterests(ISet<Type> interests)
         {
@@ -78,12 +78,12 @@ namespace CommitteeOfZero.Nitro.Graphics
 
         public void LoadCommonResources()
         {
-            CommonResources = new CommonResources(RenderContext);
             _canvas = new DxCanvas(RenderContext, Content);
         }
 
         public void Dispose()
         {
+            _canvas.Dispose();
         }
     }
 }

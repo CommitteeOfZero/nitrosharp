@@ -2,10 +2,8 @@
 using MoeGame.Framework.Graphics;
 using SharpDX.Direct2D1;
 using System.Collections.Generic;
-using System;
 using SharpDX.Mathematics.Interop;
 using System.Numerics;
-using SharpDX.DirectWrite;
 
 namespace CommitteeOfZero.Nitro.Graphics
 {
@@ -124,9 +122,29 @@ namespace CommitteeOfZero.Nitro.Graphics
             _content.Unref(texture.AssetRef);
         }
 
+        public void Free(TransitionVisual transition)
+        {
+            transition.Source.Free(this);
+            if (_transitionState.TryGetValue(transition, out var state))
+            {
+                if (transition.Source is RectangleVisual)
+                {
+                    state.SrcDeviceBitmap.Dispose();
+                }
+
+                _transitionState.Remove(transition);
+            }
+        }
+
         public void SetTransform(Matrix3x2 transform)
         {
             _rc.DeviceContext.Transform = new RawMatrix3x2(transform.M11, transform.M12, transform.M21, transform.M22, transform.M31, transform.M32);
+        }
+
+        public void Dispose()
+        {
+            _screenshotBitmap.Dispose();
+            _transitionEffect.Dispose();
         }
 
         private sealed class TransitionState

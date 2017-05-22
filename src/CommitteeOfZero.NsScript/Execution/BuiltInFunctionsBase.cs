@@ -118,7 +118,7 @@ namespace CommitteeOfZero.NsScript.Execution
         /// </summary>
         /// <param name="entityName"></param>
         /// <param name="looping"></param>
-        public virtual void ToggleLooping(string entityName, bool loop)
+        public virtual void ToggleLooping(string entityName, bool looping)
         {
         }
 
@@ -147,7 +147,7 @@ namespace CommitteeOfZero.NsScript.Execution
         {
         }
 
-        public virtual void DrawTransition(string entityName, TimeSpan duration, NsRational initialOpacity, NsRational finalOpacity, NsRational feather, string fileName, bool wait)
+        public virtual void DrawTransition(string sourceEntityName, TimeSpan duration, NsRational initialOpacity, NsRational finalOpacity, NsRational feather, string maskFileName, bool wait)
         {
         }
 

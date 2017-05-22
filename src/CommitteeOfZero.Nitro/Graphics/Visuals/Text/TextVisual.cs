@@ -1,17 +1,17 @@
 ﻿namespace CommitteeOfZero.Nitro.Graphics
 {
-    public class TextVisual : Visual
+    public sealed class TextVisual : Visual
     {
-        public string Text { get; set; }
-        public float AnimatedOpacity { get; set; }
+        public TextVisual(string text)
+        {
+            Text = text;
+        }
+
+        public string Text { get; }
 
         public TextRange VisibleRegion { get; set; }
         public TextRange AnimatedRegion { get; set; }
-
-        public void Reset()
-        {
-            AnimatedOpacity = 0.0f;
-        }
+        public float AnimatedOpacity { get; set; }
 
         public override void Render(ICanvas canvas)
         {

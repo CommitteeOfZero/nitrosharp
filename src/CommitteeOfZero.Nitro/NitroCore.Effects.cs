@@ -108,13 +108,13 @@ namespace CommitteeOfZero.Nitro
             }
         }
 
-        public override void DrawTransition(string entityName, TimeSpan duration, NsRational initialOpacity,
+        public override void DrawTransition(string sourceEntityName, TimeSpan duration, NsRational initialOpacity,
             NsRational finalOpacity, NsRational feather, string maskFileName, bool wait)
         {
             initialOpacity = initialOpacity.Rebase(1.0f);
             finalOpacity = finalOpacity.Rebase(1.0f);
 
-            foreach (var entity in _entities.Query(entityName))
+            foreach (var entity in _entities.Query(sourceEntityName))
             {
                 var sourceVisual = entity.GetComponent<Visual>();
                 var transition = new TransitionVisual
@@ -127,11 +127,11 @@ namespace CommitteeOfZero.Nitro
 
                 Action<Component, float> propertySetter = (c, v) => (c as TransitionVisual).Opacity = v;
                 var animation = new FloatAnimation(transition, propertySetter, initialOpacity, finalOpacity, duration);
-                animation.Completed += (o, e) =>
-                {
-                    entity.RemoveComponent(transition);
-                    entity.AddComponent(sourceVisual);
-                };
+                //animation.Completed += (o, e) =>
+                //{
+                //    entity.RemoveComponent(transition);
+                //    entity.AddComponent(sourceVisual);
+                //};
 
                 entity.RemoveComponent(sourceVisual);
                 if (duration > TimeSpan.Zero && wait)

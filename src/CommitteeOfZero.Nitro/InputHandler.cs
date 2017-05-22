@@ -35,13 +35,16 @@ namespace CommitteeOfZero.Nitro
         private bool TrySkipAnimation()
         {
             var text = _nitroCore.TextEntity;
-            var animation = text.GetComponent<SmoothTextAnimation>();
-            if (animation?.Progress < 1.0f)
+            if (text != null)
             {
-                animation.Stop();
-                text.RemoveComponent(animation);
-                text.AddComponent(new TextSkipAnimation());
-                return true;
+                var animation = text.GetComponent<SmoothTextAnimation>();
+                if (animation?.Progress < 1.0f)
+                {
+                    animation.Stop();
+                    text.RemoveComponent(animation);
+                    text.AddComponent(new TextSkipAnimation());
+                    return true;
+                }
             }
 
             return false;

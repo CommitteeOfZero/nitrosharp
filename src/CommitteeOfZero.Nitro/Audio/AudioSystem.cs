@@ -7,7 +7,7 @@ using System.Runtime.InteropServices;
 
 namespace CommitteeOfZero.Nitro.Audio
 {
-    public sealed class AudioSystem : EntityProcessingSystem
+    public sealed class AudioSystem : EntityProcessingSystem, IDisposable
     {
         public static int Amplitude { get; set; }
 
@@ -147,6 +147,16 @@ namespace CommitteeOfZero.Nitro.Audio
                 case AudioKind.Voice:
                 default:
                     return 0.75f;
+            }
+        }
+
+        public void Dispose()
+        {
+            _audioEngine.StopAllVoices();
+            _voiceAudioSource.CurrentStream?.Dispose();
+            foreach (var source in _freeAudioSources)
+            {
+                source.CurrentStream?.Dispose();
             }
         }
     }

@@ -3,6 +3,7 @@ using OpenTK;
 using OpenTK.Graphics;
 using MoeGame.Framework.Input;
 using System;
+using System.Drawing;
 
 namespace MoeGame.Framework.Platform
 {
@@ -10,7 +11,7 @@ namespace MoeGame.Framework.Platform
     {
         private NativeWindow _nativeWindow;
 
-        public GameWindow(): this("Sample Text", 800, 600, WindowState.Normal)
+        public GameWindow() : this("Sample Text", 800, 600, WindowState.Normal)
         {
         }
 
@@ -85,7 +86,12 @@ namespace MoeGame.Framework.Platform
             set { _nativeWindow.CursorVisible = value; }
         }
 
+#if NETCOREAPP1_1
         public override System.Drawing.Rectangle Bounds => OtkToMoeRectangle(_nativeWindow.Bounds);
+#else
+        public override Rectangle Bounds => _nativeWindow.Bounds;
+#endif
+
         internal override IntPtr Handle => _nativeWindow.WindowInfo.Handle;
 
         public override void ProcessEvents()
@@ -115,10 +121,12 @@ namespace MoeGame.Framework.Platform
             Closed?.Invoke(this, e);
         }
 
+#if NETCOREAPP1_1
         private static System.Drawing.Rectangle OtkToMoeRectangle(OpenTK.Rectangle rect)
         {
             return new System.Drawing.Rectangle(rect.X, rect.Y, rect.Width, rect.Height);
         }
+#endif
 
         private static WindowState OtkToMoeWindowState(OpenTK.WindowState otkWindowState)
         {

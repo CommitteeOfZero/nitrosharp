@@ -20,7 +20,6 @@ namespace MoeGame.Framework.Audio
 
         private Context _context;
         private AVSampleFormat _targetSampleFormat;
-        private bool _planarAudio = true;
         private int _targetBytesPerSample;
         private int _maxFrameSize;
 
@@ -41,8 +40,8 @@ namespace MoeGame.Framework.Audio
             OpenStream();
         }
 
-        private unsafe long FrameDurationInStreamUnits => NbSamplesToStreamTime(_context.CurrentFrame->nb_samples);
-        private unsafe long PositionInStreamUnits => _context.CurrentFrame->best_effort_timestamp;
+        private unsafe long FrameDurationInStreamUnits => NbSamplesToStreamTime(_context.CurrentFrame == null ? 0 : _context.CurrentFrame->nb_samples);
+        private unsafe long PositionInStreamUnits => _context.CurrentFrame == null ? 0 : _context.CurrentFrame->best_effort_timestamp;
 
         private unsafe void OpenStream()
         {
@@ -66,17 +65,16 @@ namespace MoeGame.Framework.Audio
             AVCodec* pCodec = ffmpeg.avcodec_find_decoder(pCodecContext->codec_id);
             ffmpeg.avcodec_open2(pCodecContext, pCodec, null);
 
-            AVPacket* pPacket = ffmpeg.av_packet_alloc();
-            ffmpeg.av_init_packet(pPacket);
-            AVFrame* pFrame = ffmpeg.av_frame_alloc();
+            AVPacket* packet = ffmpeg.av_packet_alloc();
+            ffmpeg.av_init_packet(packet);
+            AVFrame* frame = ffmpeg.av_frame_alloc();
 
             _context = new Context
             {
-                UnmanagedIOBuffer = ioBuffer,
+                Packet = packet,
+                CurrentFrame = frame,
                 FormatContext = pFormatContext,
                 CodecContext = pCodecContext,
-                Packet = pPacket,
-                CurrentFrame = pFrame,
                 Stream = pFormatContext->streams[0]
             };
 
@@ -166,59 +164,23 @@ namespace MoeGame.Framework.Audio
             return true;
         }
 
-        public unsafe static void memcpy(void* dst, void* src, int count)
-        {
-            const int blockSize = 4096;
-            byte[] block = new byte[blockSize];
-            byte* d = (byte*)dst, s = (byte*)src;
-            for (int i = 0, step; i < count; i += step, d += step, s += step)
-            {
-                step = count - i;
-                if (step > blockSize)
-                {
-                    step = blockSize;
-                }
-                Marshal.Copy(new IntPtr(s), block, 0, step);
-                Marshal.Copy(block, 0, new IntPtr(d), step);
-            }
-        }
-
-        private unsafe void IncrementDataPointers(int incrementBy)
-        {
-            if (incrementBy == 0)
-            {
-                return;
-            }
-
-            if (_planarAudio)
-            {
-                for (int i = 0; i < OriginalChannelCount; i++)
-                {
-                    _context.CurrentFrame->extended_data[i] += incrementBy;
-                    //_context.CurrentFrame->data[(uint)i] += incrementBy;
-                }
-            }
-            else
-            {
-                _context.CurrentFrame->extended_data[0] += incrementBy;
-                //_context.CurrentFrame->data[0] += incrementBy;
-            }
-        }
-
         private unsafe uint ReadFrame()
         {
+            var packet = _context.Packet;
+            ffmpeg.av_frame_unref(_context.CurrentFrame);
+
             uint readResult;
             int receiveResult;
             do
             {
-                if ((readResult = (uint)ffmpeg.av_read_frame(_context.FormatContext, _context.Packet)) != 0)
+                if ((readResult = (uint)ffmpeg.av_read_frame(_context.FormatContext, packet)) != 0)
                 {
-                    ffmpeg.av_packet_unref(_context.Packet);
+                    ffmpeg.av_packet_unref(packet);
                     return readResult == AVError_Eof || readResult == 0xfffffffb ? AVError_Eof : throw EncodingFailed("av_read_frame() returned a non-zero value.");
                 }
                 try
                 {
-                    ThrowIfNotZero(ffmpeg.avcodec_send_packet(_context.CodecContext, _context.Packet));
+                    ThrowIfNotZero(ffmpeg.avcodec_send_packet(_context.CodecContext, packet));
                     receiveResult = ffmpeg.avcodec_receive_frame(_context.CodecContext, _context.CurrentFrame);
                 }
                 catch
@@ -227,7 +189,8 @@ namespace MoeGame.Framework.Audio
                 }
                 finally
                 {
-                    ffmpeg.av_packet_unref(_context.Packet);
+                    ffmpeg.av_packet_unref(packet);
+                    
                 }
             } while (receiveResult == AVError_EAgain);
 
@@ -313,9 +276,8 @@ namespace MoeGame.Framework.Audio
 
         private unsafe int IOReadPacket(void* opaque, byte* buf, int buf_size)
         {
-            var managed = new byte[buf_size];
-            int result = FileStream.Read(managed, 0, buf_size);
-            Marshal.Copy(managed, 0, (IntPtr)buf, result);
+            int result = FileStream.Read(_managedIOBuffer, 0, buf_size);
+            Marshal.Copy(_managedIOBuffer, 0, (IntPtr)buf, result);
             return result;
         }
 
@@ -368,13 +330,12 @@ namespace MoeGame.Framework.Audio
 
         private unsafe class Context : IDisposable
         {
-            public byte* UnmanagedIOBuffer;
             public AVFormatContext* FormatContext;
             public AVCodecContext* CodecContext;
             public SwrContext* ResamplerContext;
-            public AVPacket* Packet;
             public AVFrame* CurrentFrame;
             public AVStream* Stream;
+            internal AVPacket* Packet;
 
             public void Dispose()
             {
@@ -389,15 +350,13 @@ namespace MoeGame.Framework.Audio
 
             private void Free()
             {
-                ffmpeg.av_free(UnmanagedIOBuffer);
-                ffmpeg.avformat_free_context(FormatContext);
+                fixed (AVFormatContext** ppFormatContext = &FormatContext)
+                {
+                    ffmpeg.avformat_close_input(ppFormatContext);
+                }
                 fixed (SwrContext** ppSwr = &ResamplerContext)
                 {
                     ffmpeg.swr_free(ppSwr);
-                }
-                fixed (AVCodecContext** ppCodecContext = &CodecContext)
-                {
-                    ffmpeg.avcodec_free_context(ppCodecContext);
                 }
             }
         }

@@ -11,5 +11,10 @@ namespace CommitteeOfZero.Nitro.Graphics
         {
             canvas.DrawTransition(this);
         }
+
+        public override void Free(ICanvas canvas)
+        {
+            canvas.Free(this);
+        }
     }
 }

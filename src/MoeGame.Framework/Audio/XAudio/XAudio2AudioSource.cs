@@ -66,5 +66,11 @@ namespace MoeGame.Framework.Audio.XAudio
 
             _sourceVoice.SubmitSourceBuffer(xaudio2Buffer, null);
         }
+
+        public override void Dispose()
+        {
+            Stop();
+            _sourceVoice.Dispose();
+        }
     }
 }

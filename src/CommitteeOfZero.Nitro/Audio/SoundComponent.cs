@@ -1,18 +1,35 @@
 ﻿using MoeGame.Framework;
 using MoeGame.Framework.Content;
 using System;
+using System.Diagnostics;
 
 namespace CommitteeOfZero.Nitro.Audio
 {
     public sealed class SoundComponent : Component
     {
-        public AssetRef AudioFile { get; set; }
-        public AudioKind Kind { get; set; }
+        public SoundComponent(AssetRef audioFile, AudioKind kind)
+        {
+            AudioFile = audioFile;
+            Kind = kind;
+            Volume = 1.0f;
+        }
 
-        public TimeSpan LoopStart { get; set; }
-        public TimeSpan LoopEnd { get; set; }
+        public AssetRef AudioFile { get; }
+        public AudioKind Kind { get; }
+
         public float Volume { get; set; }
+        public TimeSpan LoopStart { get; private set; }
+        public TimeSpan LoopEnd { get; private set; }
         public bool Looping { get; set; }
-        public bool RemoveOncePlayed { get; set; }
+
+        public void SetLoop(TimeSpan loopStart, TimeSpan loopEnd)
+        {
+            Debug.Assert(loopEnd > loopStart);
+
+            LoopStart = loopStart;
+            LoopEnd = loopEnd;
+        }
+
+        public override string ToString() => $"Sound '{AudioFile}', kind = {Kind.ToString()}";
     }
 }

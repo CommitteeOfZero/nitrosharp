@@ -18,6 +18,7 @@ namespace MoeGame.Framework.Audio.XAudio
 
         public override void Dispose()
         {
+            base.Dispose();
             _masteringVoice.Dispose();
             Device.Dispose();
         }
