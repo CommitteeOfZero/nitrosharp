@@ -57,17 +57,17 @@ namespace CommitteeOfZero.Nitro
         private void MoveCore(Entity entity, TimeSpan duration, NsCoordinate x, NsCoordinate y, NsEasingFunction easingFunction, bool wait)
         {
             var visual = entity.GetComponent<Visual>();
-            Vector2 destination = Position(x, y, visual.Position, (int)visual.Width, (int)visual.Height);
+            Vector2 destination = Position(x, y, entity.Transform.Position, (int)visual.Width, (int)visual.Height);
 
             if (duration > TimeSpan.Zero)
             {
-                Action<Component, Vector2> propertySetter = (c, v) => (c as Visual).Position = v;
-                var animation = new Vector2Animation(visual, propertySetter, visual.Position, destination, duration);
+                Action<Component, Vector2> propertySetter = (c, v) => (c as Transform).Position = v;
+                var animation = new Vector2Animation(entity.Transform, propertySetter, entity.Transform.Position, destination, duration);
                 entity.AddComponent(animation);
             }
             else
             {
-                visual.Position = destination;
+                entity.Transform.Position = destination;
             }
         }
 
@@ -93,18 +93,18 @@ namespace CommitteeOfZero.Nitro
             if (duration > TimeSpan.Zero)
             {
                 Vector2 final = new Vector2(scaleX, scaleY);
-                if (visual.Scale == final)
+                if (entity.Transform.Scale == final)
                 {
-                    visual.Scale = new Vector2(0.0f, 0.0f);
+                    entity.Transform.Scale = new Vector2(0.0f, 0.0f);
                 }
 
-                Action<Component, Vector2> propertySetter = (c, v) => (c as Visual).Scale = v;
-                var animation = new Vector2Animation(visual, propertySetter, visual.Scale, final, duration, (TimingFunction)easingFunction);
+                Action<Component, Vector2> propertySetter = (c, v) => (c as Transform).Scale = v;
+                var animation = new Vector2Animation(entity.Transform, propertySetter, entity.Transform.Scale, final, duration, (TimingFunction)easingFunction);
                 entity.AddComponent(animation);
             }
             else
             {
-                visual.Scale = new Vector2(scaleX, scaleY);
+                entity.Transform.Scale = new Vector2(scaleX, scaleY);
             }
         }
 
@@ -122,7 +122,7 @@ namespace CommitteeOfZero.Nitro
                     Source = sourceVisual,
                     MaskAsset = maskFileName,
                     Priority = sourceVisual.Priority,
-                    Position = sourceVisual.Position
+                    //Position = sourceVisual.Position
                 };
 
                 Action<Component, float> propertySetter = (c, v) => (c as TransitionVisual).Opacity = v;

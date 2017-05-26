@@ -86,10 +86,10 @@ namespace MoeGame.Framework.Platform
             set { _nativeWindow.CursorVisible = value; }
         }
 
-#if NETCOREAPP1_1
+#if NETSTANDARD1_4
         public override System.Drawing.Rectangle Bounds => OtkToMoeRectangle(_nativeWindow.Bounds);
 #else
-        public override Rectangle Bounds => _nativeWindow.Bounds;
+        public override System.Drawing.Rectangle Bounds => _nativeWindow.Bounds;
 #endif
 
         internal override IntPtr Handle => _nativeWindow.WindowInfo.Handle;
@@ -121,7 +121,7 @@ namespace MoeGame.Framework.Platform
             Closed?.Invoke(this, e);
         }
 
-#if NETCOREAPP1_1
+#if NETSTANDARD1_4
         private static System.Drawing.Rectangle OtkToMoeRectangle(OpenTK.Rectangle rect)
         {
             return new System.Drawing.Rectangle(rect.X, rect.Y, rect.Width, rect.Height);

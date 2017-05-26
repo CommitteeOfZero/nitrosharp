@@ -18,12 +18,13 @@ namespace CommitteeOfZero.Nitro
         {
             var box = new DialogueBox
             {
-                Position = Position(x, y, Vector2.Zero, width, height),
                 Width = width,
                 Height = height
             };
 
-            _entities.Create(entityName).WithComponent(box);
+            _entities.Create(entityName)
+                .WithComponent(box)
+                .WithTransform(t => t.Position = Position(x, y, Vector2.Zero, width, height));
         }
 
         protected override void OnParagraphEntered(Paragraph paragraph)
@@ -46,7 +47,6 @@ namespace CommitteeOfZero.Nitro
                 var dialogueBox = boxEntity.GetComponent<DialogueBox>();
                 var textVisual = new TextVisual(dialogueLine.Text)
                 {
-                    Position = dialogueBox.Position,
                     Width = dialogueBox.Width - 120,
                     Height = dialogueBox.Height,
                     IsEnabled = true,
@@ -55,6 +55,7 @@ namespace CommitteeOfZero.Nitro
                 };
 
                 TextEntity = _entities.Create(_currentParagraph.Identifier, replace: true)
+                    .WithParent(boxEntity)
                     .WithComponent(textVisual)
                     .WithComponent(new SmoothTextAnimation());
 

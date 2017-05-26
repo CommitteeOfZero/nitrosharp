@@ -19,11 +19,16 @@ namespace MoeGame.Framework
             CreationTime = creationTime;
 
             _components = new Dictionary<Type, IList<Component>>();
+
+            var transform = new Transform();
+            AddComponent(transform);
+            Transform = transform;
         }
 
         public ulong Id { get; }
         public string Name { get; }
         public TimeSpan CreationTime { get; }
+        public Transform Transform { get; }
 
         public Dictionary<string, object> AdditionalProperties
         {
@@ -43,6 +48,18 @@ namespace MoeGame.Framework
         public Entity WithComponent<T>(T component) where T : Component
         {
             AddComponent(component);
+            return this;
+        }
+
+        public Entity WithParent(Entity parentEntity)
+        {
+            Transform.Parent = parentEntity.Transform;
+            return this;
+        }
+
+        public Entity WithTransform(Action<Transform> func)
+        {
+            func(Transform);
             return this;
         }
 
@@ -154,9 +171,6 @@ namespace MoeGame.Framework
             _manager.RaiseEntityUpdated(this);
         }
 
-        public override string ToString()
-        {
-            return Name;
-        }
+        public override string ToString() => Name;
     }
 }

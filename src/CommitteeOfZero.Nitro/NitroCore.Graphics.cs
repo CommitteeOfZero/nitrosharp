@@ -18,14 +18,14 @@ namespace CommitteeOfZero.Nitro
         {
             var rect = new RectangleVisual
             {
-                Position = Position(x, y, Vector2.Zero, width, height),
                 Width = width,
                 Height = height,
                 Color = new RgbaValueF(color.R / 255.0f, color.G / 255.0f, color.B / 255.0f, 1.0f),
                 Priority = priority
             };
 
-            _entities.Create(entityName, replace: true).WithComponent(rect);
+            var entity = _entities.Create(entityName, replace: true).WithComponent(rect);
+            entity.Transform.Position = Position(x, y, Vector2.Zero, width, height);
         }
 
         public override void LoadImage(string entityName, string fileName)
@@ -63,11 +63,11 @@ namespace CommitteeOfZero.Nitro
             var position = Position(x, y, Vector2.Zero, _viewport.Width, _viewport.Height);
             var screencap = new ScreenshotVisual
             {
-                Position = position,
                 Priority = priority,
             };
 
-            _entities.Create(entityName, replace: true).WithComponent(screencap);
+            var entity = _entities.Create(entityName, replace: true).WithComponent(screencap);
+            entity.Transform.Position = position;
         }
 
         public override void AddClippedTexture(string entityName, int priority, NsCoordinate dstX, NsCoordinate dstY,
@@ -79,20 +79,16 @@ namespace CommitteeOfZero.Nitro
 
         private void AddTextureCore(string entityName, string fileOrExistingEntityName, NsCoordinate x, NsCoordinate y, int priority, RectangleF? srcRect = null)
         {
-            Visual parentVisual = null;
+            Entity parentEntity = null;
             int idxSlash = entityName.IndexOf('/');
             if (idxSlash > 0)
             {
                 string parentEntityName = entityName.Substring(0, idxSlash);
-                if (_entities.TryGet(parentEntityName, out var parentEntity))
-                {
-                    parentVisual = parentEntity.GetComponent<Visual>();
-                }
+                _entities.TryGet(parentEntityName, out parentEntity);
             }
 
             var texture = new TextureVisual
             {
-                ParentVisual = parentVisual,
                 Priority = priority,
                 SourceRectangle = srcRect
             };
@@ -110,15 +106,16 @@ namespace CommitteeOfZero.Nitro
                 {
                     var position = Position(x, y, Vector2.Zero, (int)existingTexture.Width, (int)existingTexture.Height);
                     texture.AssetRef = existingTexture.AssetRef;
-                    texture.Position = position;
-
+ 
                     if (srcRect == null)
                     {
                         texture.Width = existingTexture.Width;
                         texture.Height = existingTexture.Height;
                     }
 
-                    _entities.Create(entityName, replace: true).WithComponent(texture);
+                    var entity = _entities.Create(entityName, replace: true).WithComponent(texture);
+                    entity.Transform.Parent = parentEntity?.Transform;
+                    entity.Transform.Position = position;
                 }
             }
             else
@@ -130,7 +127,6 @@ namespace CommitteeOfZero.Nitro
                     var position = Position(x, y, Vector2.Zero, (int)asset.Width, (int)asset.Height);
 
                     texture.AssetRef = fileOrExistingEntityName;
-                    texture.Position = position;
 
                     if (srcRect == null)
                     {
@@ -138,7 +134,10 @@ namespace CommitteeOfZero.Nitro
                         texture.Height = asset.Height;
                     }
 
-                    _entities.Create(entityName, replace: true).WithComponent(texture);
+                    var entity = _entities.Create(entityName, replace: true).WithComponent(texture);
+                    entity.Transform.Parent = parentEntity?.Transform;
+                    entity.Transform.Position = position;
+
                     Interpreter.Resume();
 
                 }, CancellationToken.None, TaskContinuationOptions.OnlyOnRanToCompletion, _game.MainLoopTaskScheduler);

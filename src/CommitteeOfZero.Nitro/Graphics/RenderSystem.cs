@@ -63,13 +63,13 @@ namespace CommitteeOfZero.Nitro.Graphics
                 float centerY = visual.Height / 2.0f;
                 var scaleOrigin = new Vector2(centerX, centerY);
 
-                transform *= Matrix3x2.CreateScale(visual.Scale, scaleOrigin);
-                transform *= Matrix3x2.CreateTranslation(visual.Position);
-                if (visual.ParentVisual != null)
+                transform *= Matrix3x2.CreateScale(entity.Transform.LocalScale, scaleOrigin);
+                transform *= Matrix3x2.CreateTranslation(entity.Transform.LocalPosition);
+                if (entity.Transform.Parent != null)
                 {
-                    var parent = visual.ParentVisual;
+                    var parent = entity.Transform.Parent;
                     transform *= Matrix3x2.CreateTranslation(parent.Position);
-                }  
+                }
 
                 _canvas.SetTransform(transform);
                 visual.Render(_canvas);
