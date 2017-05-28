@@ -1,0 +1,25 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <OutputPath>$(SolutionDir)\bin\$(Configuration)\</OutputPath>
+    <TargetFramework>netcoreapp1.1</TargetFramework>
+    <!--<RuntimeIdentifiers>win10-x64</RuntimeIdentifiers>-->
+  </PropertyGroup>
+
+  <ItemGroup>
+
+    <Content Include="FFmpeg/**" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="10.0.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CommitteeOfZero.Nitro\CommitteeOfZero.Nitro.csproj" />
+  </ItemGroup>
+
+  <Import Project="..\CowsHead.Shared\CowsHead.Shared.projitems" Label="Shared" />
+
+</Project>

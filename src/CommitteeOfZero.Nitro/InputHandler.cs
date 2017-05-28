@@ -1,7 +1,7 @@
 ﻿using CommitteeOfZero.Nitro.Graphics;
 using CommitteeOfZero.NsScript.Execution;
-using MoeGame.Framework;
-using MoeGame.Framework.Input;
+using CommitteeOfZero.Nitro.Foundation;
+using CommitteeOfZero.Nitro.Foundation.Input;
 using System;
 
 namespace CommitteeOfZero.Nitro

@@ -1,4 +1,4 @@
-﻿using MoeGame.Framework.Animation;
+﻿using CommitteeOfZero.Nitro.Foundation.Animation;
 using System;
 using System.Linq;
 

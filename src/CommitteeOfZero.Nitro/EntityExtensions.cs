@@ -1,4 +1,5 @@
-﻿using MoeGame.Framework;
+﻿using CommitteeOfZero.NsScript;
+using CommitteeOfZero.Nitro.Foundation;
 
 namespace CommitteeOfZero.Nitro
 {
@@ -17,6 +18,12 @@ namespace CommitteeOfZero.Nitro
         public static void Unlock(this Entity entity)
         {
             entity.AdditionalProperties["Locked"] = false;
+        }
+
+        public static Entity WithPosition(this Entity entity, NsCoordinate x, NsCoordinate y)
+        {
+            NitroCore.SetPosition(entity.Transform, x, y);
+            return entity;
         }
     }
 }

@@ -1,6 +1,6 @@
-﻿using MoeGame.Framework;
-using MoeGame.Framework.Audio;
-using MoeGame.Framework.Content;
+﻿using CommitteeOfZero.Nitro.Foundation;
+using CommitteeOfZero.Nitro.Foundation.Audio;
+using CommitteeOfZero.Nitro.Foundation.Content;
 using Microsoft.Extensions.Logging;
 using CommitteeOfZero.Nitro.Graphics;
 using CommitteeOfZero.NsScript.Execution;
@@ -9,7 +9,7 @@ using CommitteeOfZero.NsScript;
 using System.Collections.Generic;
 using CommitteeOfZero.Nitro.Audio;
 using System.IO;
-using MoeGame.Framework.Animation;
+using CommitteeOfZero.Nitro.Foundation.Animation;
 
 namespace CommitteeOfZero.Nitro
 {

@@ -1,5 +1,5 @@
-﻿using MoeGame.Framework.Content;
-using MoeGame.Framework.Graphics;
+﻿using CommitteeOfZero.Nitro.Foundation.Content;
+using CommitteeOfZero.Nitro.Foundation.Graphics;
 using SharpDX.Direct2D1;
 using System.Collections.Generic;
 using SharpDX.Mathematics.Interop;
@@ -14,13 +14,13 @@ namespace CommitteeOfZero.Nitro.Graphics
 
         private Bitmap1 _screenshotBitmap;
         private Effect<TransitionEffect> _transitionEffect;
-        private Dictionary<TransitionVisual, TransitionState> _transitionState;
+        private Dictionary<Transition, TransitionState> _transitionState;
 
         public DxCanvas(DxRenderContext renderContext, ContentManager content)
         {
             _rc = renderContext;
             _content = content;
-            _transitionState = new Dictionary<TransitionVisual, TransitionState>();
+            _transitionState = new Dictionary<Transition, TransitionState>();
 
             _rc.D2DFactory.RegisterEffect<TransitionEffect>();
             _transitionEffect = new Effect<TransitionEffect>(_rc.DeviceContext);
@@ -53,29 +53,29 @@ namespace CommitteeOfZero.Nitro.Graphics
             _rc.DeviceContext.DrawBitmap(_screenshotBitmap, dest, screenshot.Opacity, BitmapInterpolationMode.Linear);
         }
 
-        public void DrawTexture(TextureVisual texture)
+        public void DrawSprite(Sprite texture)
         {
             var target = _rc.DeviceContext;
-            if (_content.TryGetAsset<TextureAsset>(texture.AssetRef, out var deviceTexture))
+            if (_content.TryGetAsset<TextureAsset>(texture.Source, out var deviceTexture))
             {
                 if (texture.SourceRectangle == null)
                 {
-                    texture.Width = deviceTexture.Width;
-                    texture.Height = deviceTexture.Height;
+                    //texture.Width = deviceTexture.Width;
+                    //texture.Height = deviceTexture.Height;
                     target.DrawBitmap(deviceTexture, texture.Opacity, InterpolationMode.Anisotropic);
                 }
                 else
                 {
-                    var drawingRect = texture.SourceRectangle.Value;
-                    var srcRect = new SharpDX.RectangleF(drawingRect.X, drawingRect.Y, drawingRect.Width, drawingRect.Height);
-                    var dst = new SharpDX.RectangleF(0, 0, texture.Width, texture.Height);
-                    target.DrawBitmap(deviceTexture, dst, texture.Opacity, InterpolationMode.Linear, srcRect, null);
+                    //var drawingRect = texture.SourceRectangle.Value;
+                    //var srcRect = new SharpDX.RectangleF(drawingRect.X, drawingRect.Y, drawingRect.Width, drawingRect.Height);
+                    //var dst = new SharpDX.RectangleF(0, 0, texture.Width, texture.Height);
+                    //target.DrawBitmap(deviceTexture, dst, texture.Opacity, InterpolationMode.Linear, srcRect, null);
                     //canvas.DrawImage(texture, new SharpDX.Vector2(0, 0), srcRect, InterpolationMode.Anisotropic, CompositeMode.SourceOver);
                 }
             }
         }
 
-        public void DrawTransition(TransitionVisual transition)
+        public void DrawTransition(Transition transition)
         {
             _transitionState.TryGetValue(transition, out var state);
             var srcBitmap = state?.SrcDeviceBitmap;
@@ -94,9 +94,9 @@ namespace CommitteeOfZero.Nitro.Graphics
                     DrawRectangle(rectangle);
                     target.Target = originalTarget;
                 }
-                else if (transition.Source is TextureVisual texture)
+                else if (transition.Source is Sprite texture)
                 {
-                    _content.TryGetAsset<TextureAsset>(texture.AssetRef, out var srcAsset);
+                    _content.TryGetAsset<TextureAsset>(texture.Source, out var srcAsset);
                     srcBitmap = srcAsset;
                 }
 
@@ -117,12 +117,12 @@ namespace CommitteeOfZero.Nitro.Graphics
             }
         }
 
-        public void Free(TextureVisual texture)
+        public void Free(Sprite texture)
         {
-            _content.Unref(texture.AssetRef);
+            _content.Unref(texture.Source);
         }
 
-        public void Free(TransitionVisual transition)
+        public void Free(Transition transition)
         {
             transition.Source.Free(this);
             if (_transitionState.TryGetValue(transition, out var state))

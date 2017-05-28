@@ -1,8 +1,8 @@
 ﻿using CommitteeOfZero.Nitro.Graphics;
 using CommitteeOfZero.NsScript;
-using MoeGame.Framework;
-using MoeGame.Framework.Animation;
-using MoeGame.Framework.Content;
+using CommitteeOfZero.Nitro.Foundation;
+using CommitteeOfZero.Nitro.Foundation.Animation;
+using CommitteeOfZero.Nitro.Foundation.Content;
 using System;
 using System.Numerics;
 using System.Threading;
@@ -56,18 +56,19 @@ namespace CommitteeOfZero.Nitro
 
         private void MoveCore(Entity entity, TimeSpan duration, NsCoordinate x, NsCoordinate y, NsEasingFunction easingFunction, bool wait)
         {
-            var visual = entity.GetComponent<Visual>();
-            Vector2 destination = Position(x, y, entity.Transform.Position, (int)visual.Width, (int)visual.Height);
+            float targetX = x.Origin == NsCoordinateOrigin.CurrentValue ? entity.Transform.Margin.X + x.Value : x.Value;
+            float targetY = y.Origin == NsCoordinateOrigin.CurrentValue ? entity.Transform.Margin.Y + y.Value : y.Value;
+            Vector2 destination = new Vector2(targetX, targetY);
 
             if (duration > TimeSpan.Zero)
             {
-                Action<Component, Vector2> propertySetter = (c, v) => (c as Transform).Position = v;
-                var animation = new Vector2Animation(entity.Transform, propertySetter, entity.Transform.Position, destination, duration);
+                Action<Component, Vector2> propertySetter = (c, v) => (c as Transform).Margin = v;
+                var animation = new Vector2Animation(entity.Transform, propertySetter, entity.Transform.Margin, destination, duration);
                 entity.AddComponent(animation);
             }
             else
             {
-                entity.Transform.Position = destination;
+                entity.Transform.Margin = destination;
             }
         }
 
@@ -86,7 +87,6 @@ namespace CommitteeOfZero.Nitro
 
         private void ZoomCore(Entity entity, TimeSpan duration, NsRational scaleX, NsRational scaleY, NsEasingFunction easingFunction, bool wait)
         {
-            var visual = entity.GetComponent<Visual>();
             scaleX = scaleX.Rebase(1.0f);
             scaleY = scaleY.Rebase(1.0f);
 
@@ -117,7 +117,7 @@ namespace CommitteeOfZero.Nitro
             foreach (var entity in _entities.Query(sourceEntityName))
             {
                 var sourceVisual = entity.GetComponent<Visual>();
-                var transition = new TransitionVisual
+                var transition = new Transition
                 {
                     Source = sourceVisual,
                     MaskAsset = maskFileName,
@@ -125,7 +125,7 @@ namespace CommitteeOfZero.Nitro
                     //Position = sourceVisual.Position
                 };
 
-                Action<Component, float> propertySetter = (c, v) => (c as TransitionVisual).Opacity = v;
+                Action<Component, float> propertySetter = (c, v) => (c as Transition).Opacity = v;
                 var animation = new FloatAnimation(transition, propertySetter, initialOpacity, finalOpacity, duration);
                 //animation.Completed += (o, e) =>
                 //{
@@ -139,7 +139,7 @@ namespace CommitteeOfZero.Nitro
                     CurrentThread.Suspend(duration);
                 }
 
-                _content.LoadAsync<TextureAsset>(maskFileName).ContinueWith(t =>
+                _content.LoadOnThreadPool<TextureAsset>(maskFileName).ContinueWith(t =>
                 {
                     entity.AddComponent(transition);
                     entity.AddComponent(animation);

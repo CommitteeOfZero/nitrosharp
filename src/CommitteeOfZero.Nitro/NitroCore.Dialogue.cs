@@ -1,6 +1,6 @@
 ﻿using CommitteeOfZero.Nitro.Dialogue;
 using CommitteeOfZero.NsScript;
-using MoeGame.Framework;
+using CommitteeOfZero.Nitro.Foundation;
 using System.Numerics;
 using System.Threading.Tasks;
 using CommitteeOfZero.Nitro.Audio;
@@ -18,13 +18,13 @@ namespace CommitteeOfZero.Nitro
         {
             var box = new DialogueBox
             {
-                Width = width,
-                Height = height
+                //Width = width,
+                //Height = height
             };
 
             _entities.Create(entityName)
                 .WithComponent(box)
-                .WithTransform(t => t.Position = Position(x, y, Vector2.Zero, width, height));
+                .WithPosition(x, y);
         }
 
         protected override void OnParagraphEntered(Paragraph paragraph)
@@ -47,8 +47,6 @@ namespace CommitteeOfZero.Nitro
                 var dialogueBox = boxEntity.GetComponent<DialogueBox>();
                 var textVisual = new TextVisual(dialogueLine.Text)
                 {
-                    Width = dialogueBox.Width - 120,
-                    Height = dialogueBox.Height,
                     IsEnabled = true,
                     Priority = int.MaxValue,
                     Color = RgbaValueF.White

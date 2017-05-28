@@ -1,6 +1,6 @@
-﻿using MoeGame.Framework;
-using MoeGame.Framework.Audio;
-using MoeGame.Framework.Content;
+﻿using CommitteeOfZero.Nitro.Foundation;
+using CommitteeOfZero.Nitro.Foundation.Audio;
+using CommitteeOfZero.Nitro.Foundation.Content;
 using System.Collections.Generic;
 using System;
 using System.Runtime.InteropServices;

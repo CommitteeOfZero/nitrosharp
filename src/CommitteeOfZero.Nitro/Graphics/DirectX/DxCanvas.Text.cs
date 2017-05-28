@@ -24,7 +24,7 @@ namespace CommitteeOfZero.Nitro.Graphics
         {
             if (_textLayout == null || _textLayout.IsDisposed)
             {
-                _textLayout = new TextLayout(_rc.DWriteFactory, text.Text, _textFormat, text.Width, text.Height);
+                _textLayout = new TextLayout(_rc.DWriteFactory, text.Text, _textFormat, text.Measure().Width, text.Measure().Height);
             }
 
             _rc.ColorBrush.Color = text.Color;

@@ -12,8 +12,8 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\CommitteeOfZero.Nitro.Foundation\CommitteeOfZero.Nitro.Foundation.csproj" />
     <ProjectReference Include="..\CommitteeOfZero.NsScript\CommitteeOfZero.NsScript.csproj" />
-    <ProjectReference Include="..\MoeGame.Framework\MoeGame.Framework.csproj" />
   </ItemGroup>
   
   <ItemGroup>

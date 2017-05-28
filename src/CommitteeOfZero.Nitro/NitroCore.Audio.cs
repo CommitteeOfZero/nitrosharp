@@ -1,7 +1,7 @@
 ﻿using CommitteeOfZero.Nitro.Audio;
 using CommitteeOfZero.NsScript;
-using MoeGame.Framework;
-using MoeGame.Framework.Animation;
+using CommitteeOfZero.Nitro.Foundation;
+using CommitteeOfZero.Nitro.Foundation.Animation;
 using System;
 
 namespace CommitteeOfZero.Nitro

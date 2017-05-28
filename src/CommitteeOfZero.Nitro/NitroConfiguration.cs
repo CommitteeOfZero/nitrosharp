@@ -1,4 +1,4 @@
-﻿using MoeGame.Framework;
+﻿using CommitteeOfZero.Nitro.Foundation;
 
 namespace CommitteeOfZero.Nitro
 {

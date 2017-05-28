@@ -1,5 +1,5 @@
-﻿using MoeGame.Framework;
-using MoeGame.Framework.Content;
+﻿using CommitteeOfZero.Nitro.Foundation;
+using CommitteeOfZero.Nitro.Foundation.Content;
 using System;
 using System.Diagnostics;
 

@@ -1,8 +1,8 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
-using MoeGame.Framework;
-using MoeGame.Framework.Graphics;
-using MoeGame.Framework.Content;
+using CommitteeOfZero.Nitro.Foundation;
+using CommitteeOfZero.Nitro.Foundation.Graphics;
+using CommitteeOfZero.Nitro.Foundation.Content;
 using System;
 using System.Numerics;
 
@@ -57,20 +57,21 @@ namespace CommitteeOfZero.Nitro.Graphics
             var visual = entity.GetComponent<Visual>();
             if (visual.IsEnabled)
             {
-                var transform = Matrix3x2.Identity;
+                //var transform = Matrix3x2.Identity;
 
-                float centerX = visual.Width / 2.0f;
-                float centerY = visual.Height / 2.0f;
-                var scaleOrigin = new Vector2(centerX, centerY);
+                //float centerX = 0;//visual.Width / 2.0f;
+                //float centerY = 0;//visual.Height / 2.0f;
+                //var scaleOrigin = new Vector2(centerX, centerY);
 
-                transform *= Matrix3x2.CreateScale(entity.Transform.LocalScale, scaleOrigin);
-                transform *= Matrix3x2.CreateTranslation(entity.Transform.LocalPosition);
-                if (entity.Transform.Parent != null)
-                {
-                    var parent = entity.Transform.Parent;
-                    transform *= Matrix3x2.CreateTranslation(parent.Position);
-                }
+                //transform *= Matrix3x2.CreateScale(entity.Transform.LocalScale, scaleOrigin);
+                //transform *= Matrix3x2.CreateTranslation(entity.Transform.LocalPosition);
+                //if (entity.Transform.Parent != null)
+                //{
+                //    var parent = entity.Transform.Parent;
+                //    transform *= Matrix3x2.CreateTranslation(parent.Position);
+                //}
 
+                var transform = entity.Transform.GetWorldMatrix(new System.Drawing.SizeF(1280, 720));
                 _canvas.SetTransform(transform);
                 visual.Render(_canvas);
             }

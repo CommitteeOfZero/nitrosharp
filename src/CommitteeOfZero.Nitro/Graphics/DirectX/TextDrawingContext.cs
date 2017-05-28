@@ -1,4 +1,4 @@
-﻿using MoeGame.Framework;
+﻿using CommitteeOfZero.Nitro.Foundation;
 using SharpDX;
 
 namespace CommitteeOfZero.Nitro.Graphics
