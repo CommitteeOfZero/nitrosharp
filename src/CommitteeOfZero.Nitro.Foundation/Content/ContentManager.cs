@@ -6,30 +6,6 @@ using System.Text;
 
 namespace CommitteeOfZero.Nitro.Foundation.Content
 {
-    //internal class CacheItem
-    //{
-    //    private volatile int _refCount;
-
-    //    public CacheItem(object asset)
-    //    {
-    //        Asset = asset;
-    //        _refCount = 1;
-    //    }
-
-    //    public object Asset { get; }
-    //    public int RefCount => _refCount;
-
-    //    public void IncrementRefCount()
-    //    {
-    //        Interlocked.Increment(ref _refCount);
-    //    }
-
-    //    public void DecrementRefCount()
-    //    {
-    //        Interlocked.Decrement(ref _refCount);
-    //    }
-    //}
-
     public class ContentManager
     {
         private readonly Dictionary<Type, ContentLoader> _contentLoaders;
@@ -55,7 +31,6 @@ namespace CommitteeOfZero.Nitro.Foundation.Content
 
         internal static ContentManager Instance { get; private set; }
         public string RootDirectory { get; }
-        //public bool IsBusy => _currentlyLoading.Count > 0;
 
         public bool IsLoaded(AssetId assetId) => _loadedAssets.ContainsKey(assetId);
         public bool Exists(AssetId assetId)
