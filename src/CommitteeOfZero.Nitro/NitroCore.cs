@@ -27,7 +27,7 @@ namespace CommitteeOfZero.Nitro
         {
             if (entityName != alias && _entities.TryGet(entityName, out var entity))
             {
-                _entities.Add(alias, entity);
+                entity.SetAlias(alias);
             }
         }
 

@@ -15,8 +15,8 @@
         {
         }
 
-        //public virtual void OnRemoved()
-        //{
-        //}
+        public virtual void OnRemoved()
+        {
+        }
     }
 }

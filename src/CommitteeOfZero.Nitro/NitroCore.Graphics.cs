@@ -1,12 +1,10 @@
 ﻿using CommitteeOfZero.Nitro.Graphics;
 using CommitteeOfZero.NsScript;
 using CommitteeOfZero.Nitro.Foundation;
-using CommitteeOfZero.Nitro.Foundation.Content;
 using System;
 using System.Drawing;
 using System.Numerics;
-using System.Threading;
-using System.Threading.Tasks;
+using CommitteeOfZero.Nitro.Foundation.Content;
 
 namespace CommitteeOfZero.Nitro
 {
@@ -14,10 +12,11 @@ namespace CommitteeOfZero.Nitro
     {
         private System.Drawing.Size _viewport;
 
-        public override void AddRectangle(string entityName, int priority, NsCoordinate x, NsCoordinate y, int width, int height, NsColor color)
+        public override void AddRectangle(string entityName, int priority,
+            NsCoordinate x, NsCoordinate y, int width, int height, NsColor color)
         {
             var rgba = new RgbaValueF(color.R / 255.0f, color.G / 255.0f, color.B / 255.0f, 1.0f);
-            var rect = new RectangleVisual(width, height, rgba, 1.0f, priority);
+            var rect = new Graphics.RectangleVisual(width, height, rgba, 1.0f, priority);
 
             var entity = _entities.Create(entityName, replace: true)
                 .WithComponent(rect)
@@ -26,19 +25,12 @@ namespace CommitteeOfZero.Nitro
 
         public override void LoadImage(string entityName, string fileName)
         {
-            //var sprite = new Sprite(fileName);
-            //_entities.Create(entityName, replace: true).WithComponent(sprite);
-
-            Interpreter.Suspend();
-            _content.LoadOnThreadPool<TextureAsset>(fileName).ContinueWith(t =>
-            {
-                var sprite = new Sprite(fileName, null, 1.0f, 0);
-                _entities.Create(entityName, replace: true).WithComponent(sprite);
-                Interpreter.Resume();
-            }, CancellationToken.None, TaskContinuationOptions.OnlyOnRanToCompletion, _game.MainLoopTaskScheduler);
+            var sprite = new Sprite(fileName, null, 1.0f, 0);
+            _entities.Create(entityName, replace: true).WithComponent(sprite);
         }
 
-        public override void AddTexture(string entityName, int priority, NsCoordinate x, NsCoordinate y, string fileOrExistingEntityName)
+        public override void AddTexture(string entityName, int priority,
+            NsCoordinate x, NsCoordinate y, string fileOrExistingEntityName)
         {
             if (fileOrExistingEntityName.Equals("SCREEN", StringComparison.OrdinalIgnoreCase))
             {
@@ -69,7 +61,8 @@ namespace CommitteeOfZero.Nitro
             AddTextureCore(entityName, srcEntityName, dstX, dstY, priority, srcRectangle);
         }
 
-        private void AddTextureCore(string entityName, string fileOrExistingEntityName, NsCoordinate x, NsCoordinate y, int priority, RectangleF? srcRect = null)
+        private void AddTextureCore(string entityName, string fileOrExistingEntityName,
+            NsCoordinate x, NsCoordinate y, int priority, RectangleF? srcRect = null)
         {
             Entity parentEntity = null;
             int idxSlash = entityName.IndexOf('/');
@@ -79,55 +72,32 @@ namespace CommitteeOfZero.Nitro
                 _entities.TryGet(parentEntityName, out parentEntity);
             }
 
+            string source = fileOrExistingEntityName;
             if (_entities.TryGet(fileOrExistingEntityName, out var existingEnitity))
             {
-                var existingTexture = existingEnitity.GetComponent<Sprite>();
-                if (existingTexture != null)
+                var existingSprite = existingEnitity.GetComponent<Sprite>();
+                if (existingSprite != null)
                 {
-
-                    var texture = new Sprite(existingTexture.Source, srcRect, 1.0f, priority);
-                    _entities.Create(entityName, replace: true)
-                        .WithComponent(texture)
-                        .WithParent(parentEntity)
-                        .WithPosition(x, y);
+                    source = existingSprite.Source.Id;
                 }
             }
-            else
-            {
-                Interpreter.Suspend();
-                _content.LoadOnThreadPool<TextureAsset>(fileOrExistingEntityName).ContinueWith(t =>
-                {
-                    var asset = t.Result;
-                    var texture = new Sprite(fileOrExistingEntityName, srcRect, 1.0f, priority);
 
-                    _entities.Create(entityName, replace: true)
-                        .WithComponent(texture)
-                        .WithParent(parentEntity)
-                        .WithPosition(x, y);
-
-                    Interpreter.Resume();
-
-                }, CancellationToken.None, TaskContinuationOptions.OnlyOnRanToCompletion, _game.MainLoopTaskScheduler);
-            }
+            var texture = new Sprite(source, srcRect, 1.0f, priority);
+            _entities.Create(entityName, replace: true)
+                .WithComponent(texture)
+                .WithParent(parentEntity)
+                .WithPosition(x, y);
         }
 
         public override int GetTextureWidth(string entityName)
         {
-            if (_entities.TryGet(entityName, out var entity))
-            {
-                var texture = entity.GetComponent<Sprite>();
-                if (texture != null)
-                {
-                    return 0;
-                }
-            }
-
-            return 0;
+            return _entities.TryGet(entityName, out var entity) ? (int)entity.Transform.Bounds.Width : 0;
         }
 
         internal static void SetPosition(Transform transform, NsCoordinate x, NsCoordinate y)
         {
             transform.SetMarginX(x.Origin == NsCoordinateOrigin.CurrentValue ? transform.Margin.X + x.Value : x.Value);
+            transform.SetMarginY(y.Origin == NsCoordinateOrigin.CurrentValue ? transform.Margin.Y + y.Value : y.Value);
             transform.AnchorPoint = new Vector2(x.AnchorPoint, y.AnchorPoint);
 
             switch (x.Origin)
@@ -146,7 +116,6 @@ namespace CommitteeOfZero.Nitro
                     break;
             }
 
-            transform.SetMarginY(y.Origin == NsCoordinateOrigin.CurrentValue ? transform.Margin.Y + y.Value : y.Value);
             switch (y.Origin)
             {
                 case NsCoordinateOrigin.Top:

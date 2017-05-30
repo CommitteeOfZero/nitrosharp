@@ -20,7 +20,7 @@ namespace CommitteeOfZero.Nitro
             if (ShouldAdvance())
             {
                 if (TrySkipAnimation()) return;
-                if (_nitroCore.Interpreter.Status == InterpreterStatus.Active && _nitroCore.MainThread.SleepTimeout == TimeSpan.MaxValue)
+                if (_nitroCore.Interpreter.Status != InterpreterStatus.Suspended && _nitroCore.MainThread.SleepTimeout == TimeSpan.MaxValue)
                 {
                     _nitroCore.MainThread.Resume();
                 }

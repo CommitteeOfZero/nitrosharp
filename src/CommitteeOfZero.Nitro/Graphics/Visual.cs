@@ -1,5 +1,6 @@
 ﻿using CommitteeOfZero.Nitro.Foundation;
 using CommitteeOfZero.Nitro.Foundation.Graphics;
+using System;
 
 namespace CommitteeOfZero.Nitro.Graphics
 {
@@ -7,6 +8,7 @@ namespace CommitteeOfZero.Nitro.Graphics
     {
         protected Visual()
         {
+            Opacity = 1.0f;
         }
 
         protected Visual(RgbaValueF color, float opacity, int priority)
@@ -14,6 +16,12 @@ namespace CommitteeOfZero.Nitro.Graphics
             Color = color;
             Opacity = opacity;
             Priority = priority;
+        }
+
+        protected Visual(RgbaValueF color, int priority)
+            : this(color, 1.0f, priority)
+        {
+
         }
 
         protected Visual(RgbaValueF color, float opacity)

@@ -2,11 +2,10 @@
 using CommitteeOfZero.NsScript;
 using CommitteeOfZero.Nitro.Foundation;
 using CommitteeOfZero.Nitro.Foundation.Animation;
-using CommitteeOfZero.Nitro.Foundation.Content;
 using System;
 using System.Numerics;
-using System.Threading;
-using System.Threading.Tasks;
+using CommitteeOfZero.Nitro.Foundation.Content;
+using System.Linq;
 
 namespace CommitteeOfZero.Nitro
 {
@@ -114,36 +113,37 @@ namespace CommitteeOfZero.Nitro
             initialOpacity = initialOpacity.Rebase(1.0f);
             finalOpacity = finalOpacity.Rebase(1.0f);
 
-            foreach (var entity in _entities.Query(sourceEntityName))
+            initialOpacity = initialOpacity.Rebase(1.0f);
+            finalOpacity = finalOpacity.Rebase(1.0f);
+
+            foreach (var entity in _entities.Query(sourceEntityName).Take(1))
             {
                 var sourceVisual = entity.GetComponent<Visual>();
                 var transition = new Transition
                 {
                     Source = sourceVisual,
-                    MaskAsset = maskFileName,
+                    Mask = maskFileName,
                     Priority = sourceVisual.Priority,
-                    //Position = sourceVisual.Position
                 };
 
                 Action<Component, float> propertySetter = (c, v) => (c as Transition).Opacity = v;
                 var animation = new FloatAnimation(transition, propertySetter, initialOpacity, finalOpacity, duration);
-                //animation.Completed += (o, e) =>
-                //{
-                //    entity.RemoveComponent(transition);
-                //    entity.AddComponent(sourceVisual);
-                //};
+                animation.Completed += (o, e) =>
+                {
+                    sourceVisual.IsEnabled = true;
+                    entity.RemoveComponent(transition);
+                    //entity.AddComponent(sourceVisual);
+                };
 
-                entity.RemoveComponent(sourceVisual);
+                sourceVisual.IsEnabled = false;
+                //entity.RemoveComponent(sourceVisual);
                 if (duration > TimeSpan.Zero && wait)
                 {
                     CurrentThread.Suspend(duration);
                 }
 
-                _content.LoadOnThreadPool<TextureAsset>(maskFileName).ContinueWith(t =>
-                {
-                    entity.AddComponent(transition);
-                    entity.AddComponent(animation);
-                }, CancellationToken.None, TaskContinuationOptions.OnlyOnRanToCompletion, _game.MainLoopTaskScheduler);
+                entity.AddComponent(transition);
+                entity.AddComponent(animation);
             }
         }
     }

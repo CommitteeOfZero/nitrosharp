@@ -1,26 +1,25 @@
 ﻿using CommitteeOfZero.Nitro.Dialogue;
 using CommitteeOfZero.NsScript;
 using CommitteeOfZero.Nitro.Foundation;
-using System.Numerics;
 using System.Threading.Tasks;
 using CommitteeOfZero.Nitro.Audio;
 using CommitteeOfZero.Nitro.Graphics;
+using CommitteeOfZero.Nitro.Foundation.Content;
 
 namespace CommitteeOfZero.Nitro
 {
     public sealed partial class NitroCore
     {
+        private const float TextRightMargin = 120;
+
         private Paragraph _currentParagraph;
         public Entity TextEntity { get; private set; }
         private Entity _voiceEntity;
 
         public override void CreateDialogueBox(string entityName, int priority, NsCoordinate x, NsCoordinate y, int width, int height)
         {
-            var box = new DialogueBox
-            {
-                //Width = width,
-                //Height = height
-            };
+            var box = new RectangleVisual(width, height, RgbaValueF.White, 0.0f, 0);
+            box.IsEnabled = false;
 
             _entities.Create(entityName)
                 .WithComponent(box)
@@ -42,18 +41,14 @@ namespace CommitteeOfZero.Nitro
 
         private void DisplayDialogueCore(DialogueLine dialogueLine)
         {
-            if (_entities.TryGet(_currentParagraph.AssociatedBox, out var boxEntity))
+            if (_entities.TryGet(_currentParagraph.AssociatedBox, out var dialogueBox))
             {
-                var dialogueBox = boxEntity.GetComponent<DialogueBox>();
-                var textVisual = new TextVisual(dialogueLine.Text)
-                {
-                    IsEnabled = true,
-                    Priority = int.MaxValue,
-                    Color = RgbaValueF.White
-                };
+                var bounds = dialogueBox.Transform.Bounds;
+                bounds = new System.Drawing.SizeF(bounds.Width - TextRightMargin, bounds.Height);
 
+                var textVisual = new TextVisual(dialogueLine.Text, bounds, RgbaValueF.White, int.MaxValue);
                 TextEntity = _entities.Create(_currentParagraph.Identifier, replace: true)
-                    .WithParent(boxEntity)
+                    .WithParent(dialogueBox)
                     .WithComponent(textVisual)
                     .WithComponent(new SmoothTextAnimation());
 

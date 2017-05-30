@@ -88,5 +88,15 @@ namespace CommitteeOfZero.Nitro.Foundation
                 _parent = newParent;
             }
         }
+
+        public override void OnRemoved()
+        {
+            if (Parent != null && Parent.Children.Any())
+            {
+                Parent.ChildrenList.Remove(this);
+            }
+
+            Parent = null;
+        }
     }
 }

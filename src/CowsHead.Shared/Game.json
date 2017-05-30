@@ -24,7 +24,7 @@
       "window.width": 1280,
       "window.height": 720,
       "startupScript": "test.nss",
-      "debug.contentRoot": "S:/ChaosContent/Noah"
+      "debug.contentRoot": "S:/ChaosContent/Demo1"
     },
 
     "TestCH": {

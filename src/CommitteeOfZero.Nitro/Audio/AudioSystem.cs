@@ -43,13 +43,13 @@ namespace CommitteeOfZero.Nitro.Audio
         {
             var sound = entity.GetComponent<SoundComponent>();
 
-            string path = sound.AudioFile;
-            if (!_content.Exists(path))
-            {
-                path += ".ogg";
-            }
+            //string path = sound.AudioFile.Id;
+            //if (!_content.Exists(path))
+            //{
+            //    path += ".ogg";
+            //}
 
-            var stream = _content.Load<AudioStream>(path);
+            var stream = sound.Source.Get<AudioStream>();
             var audioSource = GetFreeAudioSource(sound.Kind);
             if (sound.Kind == AudioKind.Voice)
             {

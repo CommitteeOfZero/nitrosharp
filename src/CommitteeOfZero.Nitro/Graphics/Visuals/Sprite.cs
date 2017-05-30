@@ -23,17 +23,23 @@ namespace CommitteeOfZero.Nitro.Graphics
 
         public override SizeF Measure()
         {
-            if (Source.TryResolve<TextureAsset>(out var deviceTexture))
+            var deviceTexture = Source.Get<TextureAsset>();
+            if (SourceRectangle != null)
             {
-                return new SizeF(deviceTexture.Width, deviceTexture.Height);
+                return new SizeF(SourceRectangle.Value.Width, SourceRectangle.Value.Height);
             }
 
-            return SizeF.Empty;
+            return new SizeF(deviceTexture.Width, deviceTexture.Height);
+
         }
 
         public override void Free(ICanvas canvas)
         {
-            canvas.Free(this);
+        }
+
+        public override void OnRemoved()
+        {
+            Source.Release();
         }
     }
 }

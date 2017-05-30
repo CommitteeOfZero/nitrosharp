@@ -68,7 +68,7 @@ namespace CommitteeOfZero.Nitro.Foundation
 
             collection.Add(component);
             component.AttachToEntity(this);
-            _manager.RaiseEntityUpdated(this);
+            _manager.InternalComponentAdded(this);
         }
 
         public bool HasComponent<T>() where T : Component => GetComponent<T>() != null;
@@ -135,9 +135,41 @@ namespace CommitteeOfZero.Nitro.Foundation
             _manager.ScheduleComponentRemoval(this, component);
         }
 
+        /// <summary>
+        /// Schedules this <see cref="Entity"/> to be removed on the next update.
+        /// </summary>
+        /// <param name="entity"></param>
         public void Destroy()
         {
             _manager.Remove(this);
+        }
+
+        public void SetAlias(string alias)
+        {
+            if (string.IsNullOrEmpty(alias))
+            {
+                throw new ArgumentNullException(nameof(alias));
+            }
+
+            _manager.SetAlias(Name, alias);
+        }
+
+        internal void CommitDestroy()
+        {
+            foreach (var child in Transform.Children.ToArray())
+            {
+                child.Entity.CommitDestroy();
+            }
+
+            foreach (var collection in _components.Values)
+            {
+                foreach (var component in collection)
+                {
+                    component.OnRemoved();
+                }
+            }
+
+            _components.Clear();
         }
 
         internal void CommitDestroyComponent(Component component)
@@ -162,7 +194,7 @@ namespace CommitteeOfZero.Nitro.Foundation
                 }
             }
 
-            _manager.RaiseEntityUpdated(this);
+            component.OnRemoved();
         }
 
         public override string ToString() => Name;

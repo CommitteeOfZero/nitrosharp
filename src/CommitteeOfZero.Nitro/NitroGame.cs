@@ -42,7 +42,7 @@ namespace CommitteeOfZero.Nitro
 
         protected override void RegisterStartupTasks(IList<Action> tasks)
         {
-            tasks.Add(RunStartupScript);
+            tasks.Add(() => RunStartupScript());
         }
 
         protected override ContentManager CreateContentManager()
@@ -118,7 +118,7 @@ namespace CommitteeOfZero.Nitro
         public override void Update(float deltaMilliseconds)
         {
             MainLoopTaskScheduler.FlushQueuedTasks();
-            Content.FlushUnusedAssets();
+            //Content.FlushUnusedAssets();
 
             _nssInterpreter.Run(TimeSpan.MaxValue);
 

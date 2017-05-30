@@ -36,8 +36,9 @@ namespace CommitteeOfZero.Nitro.Foundation.Graphics
 
         private void Initialize()
         {
+            //SharpDX.Configuration.EnableReleaseOnFinalizer = true;
 #if DEBUG
-            //SharpDX.Configuration.EnableObjectTracking = true;
+            SharpDX.Configuration.EnableObjectTracking = true;
 #endif
             CreateDeviceIndependentResources();
             CreateDeviceResources();

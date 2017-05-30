@@ -20,8 +20,8 @@ namespace CommitteeOfZero.Nitro.Foundation
             _updatedEntities = new HashSet<Entity>();
             _removedEntities = new HashSet<Entity>();
 
-            entities.EntityUpdated += OnEntityUpdated;
-            entities.EntityRemoved += OnEntityRemoved;
+            entities.EntityUpdateScheduled += OnPreviewEntityUpdated;
+            entities.EntityRemovalScheduled += OnPreviewEntityRemoved;
         }
 
         public IEnumerable<GameSystem> All => _systems;
@@ -33,16 +33,16 @@ namespace CommitteeOfZero.Nitro.Foundation
 
         public void Update(float deltaMilliseconds)
         {
-            _entities.FlushRemovedComponents();
-            _entities.FlushRemovedEntities();
-
-            foreach (var system in _systems)
+            if (_updatedEntities.Count > 0 || _removedEntities.Count > 0)
             {
-                if (_updatedEntities.Count > 0 || _removedEntities.Count > 0)
+                foreach (var system in _systems)
                 {
                     (system as EntityProcessingSystem)?.RefreshLocalEntityList(_updatedEntities, _removedEntities);
                 }
             }
+
+            _entities.FlushRemovedComponents();
+            _entities.FlushRemovedEntities();
 
             _updatedEntities.Clear();
             _removedEntities.Clear();
@@ -53,12 +53,12 @@ namespace CommitteeOfZero.Nitro.Foundation
             }
         }
 
-        private void OnEntityUpdated(object sender, Entity e)
+        private void OnPreviewEntityUpdated(object sender, Entity e)
         {
             _updatedEntities.Add(e);
         }
 
-        private void OnEntityRemoved(object sender, Entity e)
+        private void OnPreviewEntityRemoved(object sender, Entity e)
         {
             _removedEntities.Add(e);
             _updatedEntities.Remove(e);

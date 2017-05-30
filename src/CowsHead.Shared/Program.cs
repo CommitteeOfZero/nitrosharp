@@ -1,16 +1,12 @@
 ﻿using CommitteeOfZero.Nitro;
-using System;
 
-namespace CowsHead.NetFx
+namespace CowsHead
 {
     public class Program
     {
-        private const string ConfigFileName = "CowsHead.json";
-
         public static void Main(string[] args)
         {
-            var config = ConfigurationReader.Read(ConfigFileName);
-
+            var config = ConfigurationReader.Read("Game.json");
             var game = new NitroGame(config);
             game.Run();
         }

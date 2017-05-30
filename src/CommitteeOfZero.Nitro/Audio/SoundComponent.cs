@@ -7,20 +7,21 @@ namespace CommitteeOfZero.Nitro.Audio
 {
     public sealed class SoundComponent : Component
     {
-        public SoundComponent(AssetRef audioFile, AudioKind kind)
+        public SoundComponent(AssetRef source, AudioKind kind)
         {
-            AudioFile = audioFile;
+            Source = source;
             Kind = kind;
             Volume = 1.0f;
         }
 
-        public AssetRef AudioFile { get; }
+        public AssetRef Source { get; }
         public AudioKind Kind { get; }
 
         public float Volume { get; set; }
         public TimeSpan LoopStart { get; private set; }
         public TimeSpan LoopEnd { get; private set; }
         public bool Looping { get; set; }
+
 
         public void SetLoop(TimeSpan loopStart, TimeSpan loopEnd)
         {
@@ -30,6 +31,11 @@ namespace CommitteeOfZero.Nitro.Audio
             LoopEnd = loopEnd;
         }
 
-        public override string ToString() => $"Sound '{AudioFile}', kind = {Kind.ToString()}";
+        public override void OnRemoved()
+        {
+            Source.Release();
+        }
+
+        public override string ToString() => $"Sound '{Source}', kind = {Kind.ToString()}";
     }
 }

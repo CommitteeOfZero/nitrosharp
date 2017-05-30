@@ -1,44 +1,39 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
+using System.Text;
 
 namespace CommitteeOfZero.Nitro.Foundation.Content
 {
-    internal class CacheItem
-    {
-        private volatile int _refCount;
+    //internal class CacheItem
+    //{
+    //    private volatile int _refCount;
 
-        public CacheItem(object asset)
-        {
-            Asset = asset;
-            _refCount = 1;
-        }
+    //    public CacheItem(object asset)
+    //    {
+    //        Asset = asset;
+    //        _refCount = 1;
+    //    }
 
-        public object Asset { get; }
-        public int RefCount => _refCount;
+    //    public object Asset { get; }
+    //    public int RefCount => _refCount;
 
-        public void IncrementRefCount()
-        {
-            Interlocked.Increment(ref _refCount);
-        }
+    //    public void IncrementRefCount()
+    //    {
+    //        Interlocked.Increment(ref _refCount);
+    //    }
 
-        public void DecrementRefCount()
-        {
-            Interlocked.Decrement(ref _refCount);
-        }
-    }
+    //    public void DecrementRefCount()
+    //    {
+    //        Interlocked.Decrement(ref _refCount);
+    //    }
+    //}
 
     public class ContentManager
     {
-        private int _nbCurrentlyLoading;
-
         private readonly Dictionary<Type, ContentLoader> _contentLoaders;
-        private readonly ConcurrentDictionary<AssetRef, CacheItem> _cache;
-        private readonly ConcurrentDictionary<AssetRef, object> _currentlyLoading;
-        private readonly Queue<AssetRef> _assetsToDispose;
+        private readonly Dictionary<AssetId, (object asset, int refCount)> _loadedAssets;
 
         public ContentManager(string rootDirectory)
         {
@@ -49,10 +44,7 @@ namespace CommitteeOfZero.Nitro.Foundation.Content
 
             RootDirectory = rootDirectory;
             _contentLoaders = new Dictionary<Type, ContentLoader>();
-
-            _cache = new ConcurrentDictionary<AssetRef, CacheItem>();
-            _assetsToDispose = new Queue<AssetRef>();
-            _currentlyLoading = new ConcurrentDictionary<AssetRef, object>();
+            _loadedAssets = new Dictionary<AssetId, (object asset, int refCount)>();
 
             Instance = this;
         }
@@ -63,14 +55,15 @@ namespace CommitteeOfZero.Nitro.Foundation.Content
 
         internal static ContentManager Instance { get; private set; }
         public string RootDirectory { get; }
-        public bool IsBusy => _nbCurrentlyLoading > 0;
+        //public bool IsBusy => _currentlyLoading.Count > 0;
 
-        public bool Exists(string path)
+        public bool IsLoaded(AssetId assetId) => _loadedAssets.ContainsKey(assetId);
+        public bool Exists(AssetId assetId)
         {
             Stream stream = null;
             try
             {
-                stream = OpenStream(path);
+                stream = OpenStream(assetId);
                 return true;
             }
             catch
@@ -83,91 +76,70 @@ namespace CommitteeOfZero.Nitro.Foundation.Content
             }
         }
 
-        public T Load<T>(AssetRef assetRef)
-        {
-            return (T)Load(assetRef, typeof(T));
-        }
+        private T Load<T>(AssetId assetId) => (T)Load(assetId, typeof(T));
+        private object Load(AssetId assetId) => Load(assetId, contentType: null);
 
-        public object Load(AssetRef assetRef, Type contentType)
+        private object Load(AssetId assetId, Type contentType)
         {
-            if (_cache.TryGetValue(assetRef, out var cacheItem))
+            if (_loadedAssets.TryGetValue(assetId, out var cacheItem))
             {
-                cacheItem.IncrementRefCount();
-                return cacheItem.Asset;
+                return cacheItem.asset;
             }
 
-            var stream = OpenStream(assetRef);
+            var stream = OpenStream(assetId);
             {
-                return Load(stream, assetRef, contentType);
+                return Load(stream, assetId, contentType);
             }
         }
 
-        private object Load(Stream stream, string path, Type contentType)
+        private Type IdentifyContentType(BinaryReader reader)
+        {
+            Type contentType = null;
+            foreach (var pair in _contentLoaders)
+            {
+                var loader = pair.Value;
+                bool match = loader.IsSupportedContentType(reader);
+                reader.BaseStream.Seek(0, SeekOrigin.Begin);
+                if (match)
+                {
+                    contentType = pair.Key;
+                    break;
+                }
+            }
+
+            return contentType;
+        }
+
+        private object Load(Stream stream, AssetId assetId, Type contentType)
         {
             if (stream == null)
             {
-                throw new ContentLoadException($"Failed to load asset '{path}': file not found.");
+                throw new ContentLoadException($"Failed to load asset '{assetId}': file not found.");
             }
 
-            if (!_contentLoaders.TryGetValue(contentType, out var loader))
+            if (contentType == null)
             {
-                throw UnsupportedFormat(path);
+                using (var reader = new BinaryReader(stream, Encoding.UTF8, leaveOpen: true))
+                {
+                    contentType = IdentifyContentType(reader);
+                }
+            }
+
+            if (contentType == null || !_contentLoaders.TryGetValue(contentType, out var loader))
+            {
+                throw UnsupportedFormat(assetId);
             }
 
             object asset = loader.Load(stream);
-            _cache[path] = new CacheItem(asset);
+            _loadedAssets[assetId] = (asset, 1);
             return asset;
         }
 
-        public Task<T> LoadOnThreadPool<T>(AssetRef assetRef)
+        public T Get<T>(AssetId id) => (T)_loadedAssets[id].asset;
+        public bool TryGetAsset<T>(AssetId assetId, out T asset)
         {
-            Interlocked.Increment(ref _nbCurrentlyLoading);
-            return Task.Run(() =>
-            {
-                try
-                {
-                    var result = Load(assetRef, typeof(T));
-                    return Task.FromResult((T)result);
-                }
-                catch
-                {
-                    return Task.FromResult(default(T));
-                }
-                finally
-                {
-                    Interlocked.Decrement(ref _nbCurrentlyLoading);
-                }
-            });
-        }
-
-        public void Unref(AssetRef assetRef)
-        {
-            if (_cache.TryGetValue(assetRef, out var cacheItem))
-            {
-                cacheItem.DecrementRefCount();
-                if (cacheItem.RefCount <= 0)
-                {
-                    _assetsToDispose.Enqueue(assetRef);
-                }
-            }
-        }
-
-        public void FlushUnusedAssets()
-        {
-            while (_assetsToDispose.Count > 0)
-            {
-                var assetRef = _assetsToDispose.Dequeue();
-                if (_cache.TryRemove(assetRef, out var cacheItem))
-                {
-                    (cacheItem.Asset as IDisposable)?.Dispose();
-                }
-            }
-        }
-
-        public bool TryGetAsset<T>(AssetRef assetRef, out T asset)
-        {
-            bool result = _cache.TryGetValue(assetRef, out var cacheItem);
-            asset = result ? (T)cacheItem.Asset : default(T);
+            bool result = _loadedAssets.TryGetValue(assetId, out var cacheItem);
+            asset = result ? (T)cacheItem.asset : default(T);
             return result;
         }
 
@@ -176,14 +148,31 @@ namespace CommitteeOfZero.Nitro.Foundation.Content
             _contentLoaders[t] = loader;
         }
 
-        internal void RegisterReference(AssetRef reference)
+        internal void RegisterReference(AssetId assetId)
         {
-            if (_cache.ContainsKey(reference) || _currentlyLoading.ContainsKey(reference))
+            if (_loadedAssets.TryGetValue(assetId, out var cacheItem))
             {
+                _loadedAssets[assetId] = (cacheItem.asset, cacheItem.refCount + 1);
                 return;
             }
 
+            Load(assetId);
+        }
 
+        internal void UnregisterReference(AssetId assetId)
+        {
+            if (_loadedAssets.TryGetValue(assetId, out var cacheItem))
+            {
+                _loadedAssets[assetId] = (cacheItem.asset, cacheItem.refCount - 1);
+
+                if (cacheItem.refCount - 1 == 0)
+                {
+                    (cacheItem.asset as IDisposable)?.Dispose();
+                    Debug.WriteLine(assetId + " disposed");
+
+                    _loadedAssets.Remove(assetId);
+                }
+            }
         }
 
         protected virtual Stream OpenStream(string path)

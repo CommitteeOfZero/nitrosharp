@@ -12,26 +12,32 @@ namespace CommitteeOfZero.Nitro.Foundation
         private ulong _nextId;
         private readonly Stopwatch _gameTimer;
 
+        private Dictionary<string, string> _aliases;
+
         public EntityManager(Stopwatch gameTimer)
         {
             _allEntities = new Dictionary<string, Entity>(StringComparer.OrdinalIgnoreCase);
             _componentsToRemove = new HashSet<(Entity entity, Component component)>();
             _entitiesToRemove = new HashSet<Entity>();
             _gameTimer = gameTimer;
+
+            _aliases = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         }
 
         public IReadOnlyDictionary<string, Entity> AllEntities => _allEntities;
 
         public event EventHandler<Entity> EntityUpdated;
         public event EventHandler<Entity> EntityRemoved;
-
-        public void Add(string name, Entity entity)
-        {
-            _allEntities[name] = entity;
-        }
+        public event EventHandler<Entity> EntityUpdateScheduled;
+        public event EventHandler<Entity> EntityRemovalScheduled;
 
         public Entity Create(string name, bool replace = false)
         {
+            if (string.IsNullOrEmpty(name))
+            {
+                throw new ArgumentNullException(nameof(name), "Cannot create an entity with an empty name.");
+            }
+
             if (_allEntities.TryGetValue(name, out var existingEntity))
             {
                 if (replace)
@@ -50,7 +56,7 @@ namespace CommitteeOfZero.Nitro.Foundation
         }
 
         public bool Exists(string name) => _allEntities.ContainsKey(name);
-        public bool TryGet(string name, out Entity entity) => _allEntities.TryGetValue(name, out entity);
+        public bool TryGet(string name, out Entity entity) => TryGetCore(name, out entity);
 
         public Entity Get(string name)
         {
@@ -60,6 +66,25 @@ namespace CommitteeOfZero.Nitro.Foundation
             }
 
             return entity;
+        }
+
+        internal void SetAlias(string entityName, string alias)
+        {
+            _aliases[alias] = entityName;
+        }
+
+        private bool TryGetCore(string name, out Entity entity)
+        {
+            bool exists = _allEntities.TryGetValue(name, out entity);
+            if (!exists)
+            {
+                if (_aliases.TryGetValue(name, out string actualName))
+                {
+                    return TryGetCore(actualName, out entity);
+                }
+            }
+
+            return exists;
         }
 
         /// <summary>
@@ -77,12 +102,14 @@ namespace CommitteeOfZero.Nitro.Foundation
             if (_allEntities.TryGetValue(entityName, out var entity))
             {
                 _entitiesToRemove.Add(entity);
+                EntityRemovalScheduled?.Invoke(this, entity);
             }
         }
 
         internal void ScheduleComponentRemoval(Entity entity, Component component)
         {
             _componentsToRemove.Add((entity, component));
+            EntityUpdateScheduled?.Invoke(this, entity);
         }
 
         internal void FlushRemovedComponents()
@@ -90,6 +117,7 @@ namespace CommitteeOfZero.Nitro.Foundation
             foreach (var tuple in _componentsToRemove)
             {
                 tuple.entity.CommitDestroyComponent(tuple.component);
+                EntityUpdated?.Invoke(this, tuple.entity);
             }
 
             _componentsToRemove.Clear();
@@ -99,28 +127,25 @@ namespace CommitteeOfZero.Nitro.Foundation
         {
             foreach (var entity in _entitiesToRemove)
             {
-                CommitRemoveEntity(entity);
+                if (_allEntities.TryGetValue(entity.Name, out var currentValue))
+                {
+                    if (entity == currentValue)
+                    {
+                        _allEntities.Remove(entity.Name);
+                    }
+                }
+
+                entity.CommitDestroy();
+                EntityRemoved?.Invoke(this, entity);
             }
 
             _entitiesToRemove.Clear();
         }
 
-        internal void RaiseEntityUpdated(Entity entity)
+        internal void InternalComponentAdded(Entity entity)
         {
+            EntityUpdateScheduled?.Invoke(this, entity);
             EntityUpdated?.Invoke(this, entity);
-        }
-
-        private void CommitRemoveEntity(Entity entity)
-        {
-            if (_allEntities.TryGetValue(entity.Name, out var currentValue))
-            {
-                if (entity == currentValue)
-                {
-                    _allEntities.Remove(entity.Name);
-                }
-            }
-
-            EntityRemoved?.Invoke(this, entity);
         }
     }
 }

@@ -13,7 +13,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Program.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="$(MSBuildThisFileDirectory)CowsHead.json">
+    <Content Include="$(MSBuildThisFileDirectory)Game.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="$(MSBuildThisFileDirectory)FFmpeg\avcodec-57.dll">

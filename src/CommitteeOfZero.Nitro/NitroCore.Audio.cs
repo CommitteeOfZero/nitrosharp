@@ -3,6 +3,7 @@ using CommitteeOfZero.NsScript;
 using CommitteeOfZero.Nitro.Foundation;
 using CommitteeOfZero.Nitro.Foundation.Animation;
 using System;
+using CommitteeOfZero.Nitro.Foundation.Content;
 
 namespace CommitteeOfZero.Nitro
 {

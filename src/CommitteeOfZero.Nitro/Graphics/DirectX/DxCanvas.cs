@@ -14,13 +14,13 @@ namespace CommitteeOfZero.Nitro.Graphics
 
         private Bitmap1 _screenshotBitmap;
         private Effect<TransitionEffect> _transitionEffect;
-        private Dictionary<Transition, TransitionState> _transitionState;
+        private Dictionary<int, TransitionState> _transitionState;
 
         public DxCanvas(DxRenderContext renderContext, ContentManager content)
         {
             _rc = renderContext;
             _content = content;
-            _transitionState = new Dictionary<Transition, TransitionState>();
+            _transitionState = new Dictionary<int, TransitionState>();
 
             _rc.D2DFactory.RegisterEffect<TransitionEffect>();
             _transitionEffect = new Effect<TransitionEffect>(_rc.DeviceContext);
@@ -56,20 +56,18 @@ namespace CommitteeOfZero.Nitro.Graphics
         public void DrawSprite(Sprite texture)
         {
             var target = _rc.DeviceContext;
-            if (_content.TryGetAsset<TextureAsset>(texture.Source, out var deviceTexture))
+            if (_content.TryGetAsset<TextureAsset>(texture.Source.Id, out var deviceTexture))
             {
                 if (texture.SourceRectangle == null)
                 {
-                    //texture.Width = deviceTexture.Width;
-                    //texture.Height = deviceTexture.Height;
                     target.DrawBitmap(deviceTexture, texture.Opacity, InterpolationMode.Anisotropic);
                 }
                 else
                 {
-                    //var drawingRect = texture.SourceRectangle.Value;
-                    //var srcRect = new SharpDX.RectangleF(drawingRect.X, drawingRect.Y, drawingRect.Width, drawingRect.Height);
-                    //var dst = new SharpDX.RectangleF(0, 0, texture.Width, texture.Height);
-                    //target.DrawBitmap(deviceTexture, dst, texture.Opacity, InterpolationMode.Linear, srcRect, null);
+                    var drawingRect = texture.SourceRectangle.Value;
+                    var srcRect = new SharpDX.RectangleF(drawingRect.X, drawingRect.Y, drawingRect.Width, drawingRect.Height);
+                    var dst = new SharpDX.RectangleF(0, 0, texture.Measure().Width, texture.Measure().Height);
+                    target.DrawBitmap(deviceTexture, dst, texture.Opacity, InterpolationMode.Linear, srcRect, null);
                     //canvas.DrawImage(texture, new SharpDX.Vector2(0, 0), srcRect, InterpolationMode.Anisotropic, CompositeMode.SourceOver);
                 }
             }
@@ -77,7 +75,7 @@ namespace CommitteeOfZero.Nitro.Graphics
 
         public void DrawTransition(Transition transition)
         {
-            _transitionState.TryGetValue(transition, out var state);
+            _transitionState.TryGetValue(transition.GetHashCode(), out var state);
             var srcBitmap = state?.SrcDeviceBitmap;
             var target = _rc.DeviceContext;
 
@@ -96,14 +94,14 @@ namespace CommitteeOfZero.Nitro.Graphics
                 }
                 else if (transition.Source is Sprite texture)
                 {
-                    _content.TryGetAsset<TextureAsset>(texture.Source, out var srcAsset);
+                    _content.TryGetAsset<TextureAsset>(texture.Source.Id, out var srcAsset);
                     srcBitmap = srcAsset;
                 }
 
-                state = _transitionState[transition] = new TransitionState(srcBitmap);
+                state = _transitionState[transition.GetHashCode()] = new TransitionState(srcBitmap);
             }
 
-            if (srcBitmap != null && _content.TryGetAsset<TextureAsset>(transition.MaskAsset, out var mask))
+            if (srcBitmap != null && _content.TryGetAsset<TextureAsset>(transition.Mask.Id, out var mask))
             {
                 if (!state.InputsSet)
                 {
@@ -117,24 +115,20 @@ namespace CommitteeOfZero.Nitro.Graphics
             }
         }
 
-        public void Free(Sprite texture)
-        {
-            _content.Unref(texture.Source);
-        }
 
-        public void Free(Transition transition)
-        {
-            transition.Source.Free(this);
-            if (_transitionState.TryGetValue(transition, out var state))
-            {
-                if (transition.Source is RectangleVisual)
-                {
-                    state.SrcDeviceBitmap.Dispose();
-                }
+        //public void Free(Transition transition)
+        //{
+        //    transition.Source.Free(this);
+        //    if (_transitionState.TryGetValue(transition, out var state))
+        //    {
+        //        if (transition.Source is RectangleVisual)
+        //        {
+        //            state.SrcDeviceBitmap.Dispose();
+        //        }
 
-                _transitionState.Remove(transition);
-            }
-        }
+        //        _transitionState.Remove(transition);
+        //    }
+        //}
 
         public void SetTransform(Matrix3x2 transform)
         {

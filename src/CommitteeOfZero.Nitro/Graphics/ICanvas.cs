@@ -15,8 +15,8 @@ namespace CommitteeOfZero.Nitro.Graphics
 
         void CaptureScreen();
 
-        void Free(Sprite texture);
+        //void Free(Sprite texture);
         void Free(TextVisual textVisual);
-        void Free(Transition transition);
+        //void Free(Transition transition);
     }
 }
