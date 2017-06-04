@@ -325,10 +325,10 @@ namespace CommitteeOfZero.NsScript.Execution
 
         private void SoundAmplitude(ArgumentStack args)
         {
-            string s1 = args.PopString();
-            string s2 = args.PopString();
+            string unk = args.PopString();
+            string characterName = args.PopString();
 
-            int amplitude = _builtinsImpl.GetSoundAmplitude();
+            int amplitude = _builtinsImpl.GetSoundAmplitude(characterName);
             Result = new ConstantValue(amplitude, isDelta: false);
         }
 

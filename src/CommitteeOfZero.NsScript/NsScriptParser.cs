@@ -12,13 +12,13 @@ namespace CommitteeOfZero.NsScript
         private readonly SyntaxToken[] _tokens;
         private int _tokenOffset;
 
-        private ImmutableArray<ParameterReference> _scope;
+        private ImmutableArray<ParameterReference> _currentParameterList;
 
         public NsScriptParser(NsScriptLexer lexer)
         {
             _lexer = lexer;
             _tokens = PreLex().ToArray();
-            _scope = ImmutableArray<ParameterReference>.Empty;
+            _currentParameterList = ImmutableArray<ParameterReference>.Empty;
         }
 
         private string FileName => _lexer.FileName;
@@ -32,7 +32,7 @@ namespace CommitteeOfZero.NsScript
             var includes = ImmutableArray.CreateBuilder<string>();
             while (CurrentToken.Kind != SyntaxTokenKind.EndOfFileToken)
             {
-                _scope = ImmutableArray<ParameterReference>.Empty;
+                _currentParameterList = ImmutableArray<ParameterReference>.Empty;
                 switch (CurrentToken.Kind)
                 {
                     case SyntaxTokenKind.IncludeDirective:
@@ -91,7 +91,7 @@ namespace CommitteeOfZero.NsScript
         }
 
         // Statement terminator characters used in NSS: ';', ':'.
-        // Double semicolon is allowed.
+        // There may be more than one terminator character in a row.
         private void EatStatementTerminator()
         {
             while (IsStatementTerminator(CurrentToken.Kind))
@@ -136,7 +136,7 @@ namespace CommitteeOfZero.NsScript
         {
             EatToken(SyntaxTokenKind.FunctionKeyword);
             var name = ParseIdentifier();
-            var parameters = _scope = ParseParameterList();
+            var parameters = _currentParameterList = ParseParameterList();
             var body = ParseBlock();
 
             return StatementFactory.Function(name, parameters, body);
@@ -350,14 +350,8 @@ namespace CommitteeOfZero.NsScript
 
                 EatToken();
                 var rightOperand = ParseSubExpression(newPrecedence);
-                if (binary)
-                {
-                    leftOperand = ExpressionFactory.Binary(leftOperand, operationKind, rightOperand);
-                }
-                else
-                {
-                    leftOperand = ExpressionFactory.Assignment(leftOperand as Variable, operationKind, rightOperand);
-                }
+                leftOperand = binary ? (Expression)ExpressionFactory.Binary(leftOperand, operationKind, rightOperand) :
+                    ExpressionFactory.Assignment(leftOperand as Variable, operationKind, rightOperand);
             }
 
             return leftOperand;
@@ -516,7 +510,7 @@ namespace CommitteeOfZero.NsScript
             {
                 case SyntaxTokenKind.IdentifierToken:
                 case SyntaxTokenKind.StringLiteralToken:
-                    return _scope.Any(x => x.ParameterName.FullName.Equals(CurrentToken.Text, StringComparison.OrdinalIgnoreCase));
+                    return _currentParameterList.Any(x => x.ParameterName.FullName.Equals(CurrentToken.Text, StringComparison.OrdinalIgnoreCase));
 
                 default:
                     return false;

@@ -163,7 +163,7 @@ namespace CommitteeOfZero.NsScript.Execution
         {
         }
 
-        public virtual int GetSoundAmplitude()
+        public virtual int GetSoundAmplitude(string characterName)
         {
             return 0;
         }

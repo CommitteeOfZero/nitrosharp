@@ -4,7 +4,7 @@ using CommitteeOfZero.Nitro.Foundation;
 using System;
 using System.Drawing;
 using System.Numerics;
-using CommitteeOfZero.Nitro.Foundation.Content;
+using CommitteeOfZero.Nitro.Foundation.Graphics;
 
 namespace CommitteeOfZero.Nitro
 {
@@ -25,7 +25,7 @@ namespace CommitteeOfZero.Nitro
 
         public override void LoadImage(string entityName, string fileName)
         {
-            var sprite = new Sprite(fileName, null, 1.0f, 0);
+            var sprite = new Sprite(_content.Get<TextureAsset>(fileName), null, 1.0f, 0);
             _entities.Create(entityName, replace: true).WithComponent(sprite);
         }
 
@@ -44,7 +44,7 @@ namespace CommitteeOfZero.Nitro
 
         private void AddScreencap(string entityName, NsCoordinate x, NsCoordinate y, int priority)
         {
-            var screencap = new ScreenshotVisual
+            var screencap = new Screenshot
             {
                 Priority = priority,
             };
@@ -82,7 +82,7 @@ namespace CommitteeOfZero.Nitro
                 }
             }
 
-            var texture = new Sprite(source, srcRect, 1.0f, priority);
+            var texture = new Sprite(_content.Get<TextureAsset>(source), srcRect, 1.0f, priority);
             _entities.Create(entityName, replace: true)
                 .WithComponent(texture)
                 .WithParent(parentEntity)

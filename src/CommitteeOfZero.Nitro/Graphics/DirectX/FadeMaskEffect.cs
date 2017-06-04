@@ -7,15 +7,15 @@ using System.Runtime.InteropServices;
 
 namespace CommitteeOfZero.Nitro.Graphics
 {
-    [CustomEffect("Transition", "CommitteeOfZero.Nitro", "CommitteeOfZero")]
+    [CustomEffect("FadeMask", "CommitteeOfZero.Nitro", "CommitteeOfZero")]
     [CustomEffectInput("Texture")]
     [CustomEffectInput("Mask")]
-    public class TransitionEffect : CustomEffectBase, DrawTransform
+    public class FadeMaskEffect : CustomEffectBase, DrawTransform
     {
         private EffectContext _context;
         private TransformGraph _transformGraph;
 
-        private static readonly Guid EffectGuid = Guid.NewGuid(); //new Guid("ebbd02e0-755f-45ac-a1a8-d6bb729c4e46");
+        private static readonly Guid EffectGuid = Guid.NewGuid();
         private DrawInformation _drawInformation;
         private EffectConstantBuffer _constants;
 
@@ -51,7 +51,7 @@ namespace CommitteeOfZero.Nitro.Graphics
             _context = effectContext;
             _transformGraph = transformGraph;
 
-            var bytecode = File.ReadAllBytes("Shaders/Transition.bin");
+            var bytecode = File.ReadAllBytes("Shaders/FadeMask.bin");
             effectContext.LoadPixelShader(EffectGuid, bytecode);
             transformGraph.SetSingleTransformNode(this);
         }

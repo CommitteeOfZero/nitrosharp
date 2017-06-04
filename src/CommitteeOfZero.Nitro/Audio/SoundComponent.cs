@@ -1,4 +1,5 @@
 ﻿using CommitteeOfZero.Nitro.Foundation;
+using CommitteeOfZero.Nitro.Foundation.Audio;
 using CommitteeOfZero.Nitro.Foundation.Content;
 using System;
 using System.Diagnostics;
@@ -7,14 +8,14 @@ namespace CommitteeOfZero.Nitro.Audio
 {
     public sealed class SoundComponent : Component
     {
-        public SoundComponent(AssetRef source, AudioKind kind)
+        public SoundComponent(AssetRef<AudioStream> source, AudioKind kind)
         {
             Source = source;
             Kind = kind;
             Volume = 1.0f;
         }
 
-        public AssetRef Source { get; }
+        public AssetRef<AudioStream> Source { get; }
         public AudioKind Kind { get; }
 
         public float Volume { get; set; }
@@ -33,7 +34,7 @@ namespace CommitteeOfZero.Nitro.Audio
 
         public override void OnRemoved()
         {
-            Source.Release();
+            Source.Dispose();
         }
 
         public override string ToString() => $"Sound '{Source}', kind = {Kind.ToString()}";

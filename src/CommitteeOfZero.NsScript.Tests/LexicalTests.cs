@@ -101,6 +101,7 @@ namespace CommitteeOfZero.NsScript.Tests
             Assert.Equal(identifier, token.Text);
         }
 
+        // TODO: figure out why it's commented out.
         //[Fact]
         //public void LexIdentifierStartingWithDigit()
         //{

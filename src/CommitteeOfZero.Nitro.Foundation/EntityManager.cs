@@ -109,6 +109,7 @@ namespace CommitteeOfZero.Nitro.Foundation
         internal void ScheduleComponentRemoval(Entity entity, Component component)
         {
             _componentsToRemove.Add((entity, component));
+            component.IsScheduledForRemoval = true;
             EntityUpdateScheduled?.Invoke(this, entity);
         }
 

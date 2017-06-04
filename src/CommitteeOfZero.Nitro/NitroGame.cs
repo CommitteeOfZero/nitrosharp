@@ -1,7 +1,6 @@
 ﻿using CommitteeOfZero.Nitro.Foundation;
 using CommitteeOfZero.Nitro.Foundation.Audio;
 using CommitteeOfZero.Nitro.Foundation.Content;
-using Microsoft.Extensions.Logging;
 using CommitteeOfZero.Nitro.Graphics;
 using CommitteeOfZero.NsScript.Execution;
 using System;
@@ -10,6 +9,7 @@ using System.Collections.Generic;
 using CommitteeOfZero.Nitro.Audio;
 using System.IO;
 using CommitteeOfZero.Nitro.Foundation.Animation;
+using CommitteeOfZero.Nitro.Foundation.Graphics;
 
 namespace CommitteeOfZero.Nitro
 {
@@ -22,8 +22,8 @@ namespace CommitteeOfZero.Nitro
         private NitroCore _nitroCore;
         private RenderSystem _renderSystem;
 
-        private ILogger _interpreterLog;
-        private ILogger _entityLog;
+        //private ILogger _interpreterLog;
+        //private ILogger _entityLog;
 
         public NitroGame(NitroConfiguration configuration)
         {
@@ -66,10 +66,10 @@ namespace CommitteeOfZero.Nitro
             var animationSystem = new AnimationSystem();
             systems.Add(animationSystem);
 
-            var audioSystem = new AudioSystem(AudioEngine, Content);
+            var audioSystem = new AudioSystem(AudioEngine);
             systems.Add(audioSystem);
 
-            _renderSystem = new RenderSystem(RenderContext, Content);
+            _renderSystem = new RenderSystem(RenderContext);
             systems.Add(_renderSystem);
         }
 
@@ -103,9 +103,9 @@ namespace CommitteeOfZero.Nitro
 
         private void SetupLogging()
         {
-            var loggerFactory = new LoggerFactory().AddConsole();
-            _interpreterLog = loggerFactory.CreateLogger("Interpreter");
-            _entityLog = loggerFactory.CreateLogger("Entity System");
+            //var loggerFactory = new LoggerFactory().AddConsole();
+            //_interpreterLog = loggerFactory.CreateLogger("Interpreter");
+            //_entityLog = loggerFactory.CreateLogger("Entity System");
 
             //Entities.EntityRemoved += (o, e) => _entityLog.LogInformation($"Removed entity '{e.Name}'");
         }
@@ -118,10 +118,7 @@ namespace CommitteeOfZero.Nitro
         public override void Update(float deltaMilliseconds)
         {
             MainLoopTaskScheduler.FlushQueuedTasks();
-            //Content.FlushUnusedAssets();
-
             _nssInterpreter.Run(TimeSpan.MaxValue);
-
             Systems.Update(deltaMilliseconds);
         }
     }

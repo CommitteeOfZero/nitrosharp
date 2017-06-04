@@ -4,8 +4,8 @@ using CommitteeOfZero.Nitro.Foundation;
 using CommitteeOfZero.Nitro.Foundation.Animation;
 using System;
 using System.Numerics;
-using CommitteeOfZero.Nitro.Foundation.Content;
 using System.Linq;
+using CommitteeOfZero.Nitro.Foundation.Graphics;
 
 namespace CommitteeOfZero.Nitro
 {
@@ -61,8 +61,8 @@ namespace CommitteeOfZero.Nitro
 
             if (duration > TimeSpan.Zero)
             {
-                Action<Component, Vector2> propertySetter = (c, v) => (c as Transform).Margin = v;
-                var animation = new Vector2Animation(entity.Transform, propertySetter, entity.Transform.Margin, destination, duration);
+                void PropertySetter(Component c, Vector2 v) => (c as Transform).Margin = v;
+                var animation = new Vector2Animation(entity.Transform, PropertySetter, entity.Transform.Margin, destination, duration);
                 entity.AddComponent(animation);
             }
             else
@@ -118,30 +118,37 @@ namespace CommitteeOfZero.Nitro
 
             foreach (var entity in _entities.Query(sourceEntityName).Take(1))
             {
-                var sourceVisual = entity.GetComponent<Visual>();
-                var transition = new Transition
-                {
-                    Source = sourceVisual,
-                    Mask = maskFileName,
-                    Priority = sourceVisual.Priority,
-                };
+                SetupTransition(entity, duration, initialOpacity, finalOpacity, feather, maskFileName);
+            }
+        }
 
-                Action<Component, float> propertySetter = (c, v) => (c as Transition).Opacity = v;
+        private void SetupTransition(Entity entity, TimeSpan duration, NsRational initialOpacity,
+            NsRational finalOpacity, NsRational feather, string maskFileName)
+        {
+            var visual = entity.GetComponent<Visual>();
+            if (visual != null)
+            {
+                var transitionSource = visual is Sprite sprite ?
+                    (FadeTransition.IPixelSource)new FadeTransition.ImageSource(_content.Get<TextureAsset>(sprite.Source.Id))
+                    : new FadeTransition.SolidColorSource(visual.Color);
+
+                var transition = new FadeTransition(transitionSource, _content.Get<TextureAsset>(maskFileName));
+                transition.Priority = visual.Priority;
+                Action<Component, float> propertySetter = (c, v) => (c as FadeTransition).Opacity = v;
                 var animation = new FloatAnimation(transition, propertySetter, initialOpacity, finalOpacity, duration);
-                animation.Completed += (o, e) =>
+
+                animation.Completed += (o, args) =>
                 {
-                    sourceVisual.IsEnabled = true;
+                    if (visual is Sprite originalSprite)
+                    {
+                        originalSprite.Source = _content.Get<TextureAsset>(originalSprite.Source.Id);
+                    }
+
                     entity.RemoveComponent(transition);
-                    //entity.AddComponent(sourceVisual);
+                    entity.AddComponent(visual);
                 };
 
-                sourceVisual.IsEnabled = false;
-                //entity.RemoveComponent(sourceVisual);
-                if (duration > TimeSpan.Zero && wait)
-                {
-                    CurrentThread.Suspend(duration);
-                }
-
+                entity.RemoveComponent(visual);
                 entity.AddComponent(transition);
                 entity.AddComponent(animation);
             }

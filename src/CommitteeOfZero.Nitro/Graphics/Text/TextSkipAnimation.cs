@@ -7,7 +7,7 @@ namespace CommitteeOfZero.Nitro.Graphics
     {
         private TextVisual _textVisual;
 
-        public TextSkipAnimation() : base(TimeSpan.FromMilliseconds(300))
+        public TextSkipAnimation() : base(TimeSpan.FromMilliseconds(200))
         {
         }
 
@@ -28,6 +28,11 @@ namespace CommitteeOfZero.Nitro.Graphics
         {
             base.Advance(deltaMilliseconds);
             _textVisual.AnimatedOpacity = CalculateFactor(Progress, TimingFunction);
+
+            if (LastFrame)
+            {
+                RaiseCompleted();
+            }
         }
     }
 }

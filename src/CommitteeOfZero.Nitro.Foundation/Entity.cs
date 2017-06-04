@@ -125,6 +125,31 @@ namespace CommitteeOfZero.Nitro.Foundation
             }
         }
 
+        public IEnumerable<Component> GetComponents(Type type)
+        {
+            if (_components.TryGetValue(type, out var collection))
+            {
+                foreach (var component in collection)
+                {
+                    yield return component;
+                }
+            }
+            else
+            {
+                foreach (var pair in _components.ToArray())
+                {
+                    if (type.GetTypeInfo().IsAssignableFrom(pair.Key.GetTypeInfo()))
+                    {
+                        collection = pair.Value;
+                        foreach (var component in collection.ToArray())
+                        {
+                            yield return component;
+                        }
+                    }
+                }
+            }
+        }
+
         /// <summary>
         /// Schedules the specified component to be removed on the next update.
         /// </summary>
@@ -194,6 +219,7 @@ namespace CommitteeOfZero.Nitro.Foundation
                 }
             }
 
+            component.IsScheduledForRemoval = false;
             component.OnRemoved();
         }
 

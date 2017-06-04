@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Diagnostics;
 
 namespace CommitteeOfZero.Nitro.Foundation.Graphics
 {
@@ -23,12 +22,7 @@ namespace CommitteeOfZero.Nitro.Foundation.Graphics
         public void Dispose()
         {
             _rc.DeviceContext.EndDraw();
-            var result = _rc.SwapChain.TryPresent(_vsync ? 1 : 0, SharpDX.DXGI.PresentFlags.None);
-
-            if (result.Failure)
-            {
-                Debugger.Break();
-            }
+            _rc.SwapChain.Present(_vsync ? 1 : 0, SharpDX.DXGI.PresentFlags.None);
         }
     }
 }

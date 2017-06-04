@@ -10,16 +10,15 @@ namespace CommitteeOfZero.Nitro
     {
         private readonly NitroCore _nitroCore;
 
-        public InputHandler(NitroCore n2system)
+        public InputHandler(NitroCore nitroCore)
         {
-            _nitroCore = n2system;
+            _nitroCore = nitroCore;
         }
 
         public override void Update(float deltaMilliseconds)
         {
-            if (ShouldAdvance())
+            if (ShouldAdvance() && !TrySkipAnimation())
             {
-                if (TrySkipAnimation()) return;
                 if (_nitroCore.Interpreter.Status != InterpreterStatus.Suspended && _nitroCore.MainThread.SleepTimeout == TimeSpan.MaxValue)
                 {
                     _nitroCore.MainThread.Resume();

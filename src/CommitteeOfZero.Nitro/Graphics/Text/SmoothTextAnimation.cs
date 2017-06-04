@@ -6,7 +6,7 @@ namespace CommitteeOfZero.Nitro.Graphics
 {
     public sealed class SmoothTextAnimation : AnimationBase
     {
-        private const float GlyphTime = 100.0f;
+        private const float GlyphTime = 80.0f;
 
         private TextVisual _textVisual;
         private float _elapsed2;
@@ -57,6 +57,8 @@ namespace CommitteeOfZero.Nitro.Graphics
             {
                 _textVisual.VisibleRegion = new TextRange(0, _textVisual.Text.Length);
                 _textVisual.AnimatedRegion = new TextRange(0, 0);
+
+                RaiseCompleted();
             }
         }
 

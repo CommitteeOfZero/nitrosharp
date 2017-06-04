@@ -1,5 +1,6 @@
 ﻿using FFmpeg.AutoGen;
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 
@@ -31,7 +32,8 @@ namespace CommitteeOfZero.Nitro.Foundation.Audio
 
         static FFmpegAudioStream()
         {
-            FFmpegLibraries.Init();
+            ffmpeg.av_register_all();
+            ffmpeg.avcodec_register_all();
             s_msTimeBase = new AVRational { num = 1, den = 1000 };
         }
 
@@ -157,8 +159,7 @@ namespace CommitteeOfZero.Nitro.Foundation.Audio
                     _maxFrameSize = Math.Max(_maxFrameSize, written);
                 }
 
-                // Potential buffer overflow, nya.
-                // Shall not pass any code review.
+                // TODO: potential buffer overflow, nya.
             } while (buffer.FreeSpace >= _maxFrameSize);
 
             return true;
@@ -176,7 +177,7 @@ namespace CommitteeOfZero.Nitro.Foundation.Audio
                 if ((readResult = (uint)ffmpeg.av_read_frame(_context.FormatContext, packet)) != 0)
                 {
                     ffmpeg.av_packet_unref(packet);
-                    return readResult == AVError_Eof || readResult == 0xfffffffb ? AVError_Eof : throw EncodingFailed("av_read_frame() returned a non-zero value.");
+                    return readResult == AVError_Eof || readResult == 0xfffffffb ? AVError_Eof : throw DecodingFailed("av_read_frame() returned a non-zero value.");
                 }
                 try
                 {
@@ -274,8 +275,22 @@ namespace CommitteeOfZero.Nitro.Foundation.Audio
             return (int)ffmpeg.av_rescale_q(streamTime, streamTimeBase, newTimeBase);
         }
 
+        private unsafe long IOSeek(void* opaque, long offset, int whence)
+        {
+            Debug.Assert(FileStream.CanSeek);
+            if (whence == ffmpeg.AVSEEK_SIZE)
+            {
+                return FileStream.Length;
+            }
+
+            var origin = (SeekOrigin)whence;
+            return FileStream.Seek(offset, origin);
+        }
+
         private unsafe int IOReadPacket(void* opaque, byte* buf, int buf_size)
         {
+            Debug.Assert(FileStream.CanRead);
+
             int result = FileStream.Read(_managedIOBuffer, 0, buf_size);
             Marshal.Copy(_managedIOBuffer, 0, (IntPtr)buf, result);
             return result;
@@ -284,17 +299,6 @@ namespace CommitteeOfZero.Nitro.Foundation.Audio
         private unsafe int IOWritePacket(void* opaque, byte* buf, int buf_size)
         {
             return -1;
-        }
-
-        private unsafe long IOSeek(void* opaque, long offset, int whence)
-        {
-            if (whence == ffmpeg.AVSEEK_SIZE)
-            {
-                return FileStream.Length;
-            }
-
-            var origin = (SeekOrigin)whence;
-            return FileStream.Seek(offset, origin);
         }
 
         public override void Dispose()
@@ -311,9 +315,9 @@ namespace CommitteeOfZero.Nitro.Foundation.Audio
             }
         }
 
-        private Exception EncodingFailed(string details)
+        private Exception DecodingFailed(string details)
         {
-            return new AudioDecodingException($"ERRA: {details}");
+            return new AudioDecodingException($"Error while decoding audio stream: {details}");
         }
 
         private static AVSampleFormat BitDepthToSampleFormat(int bitDepth)

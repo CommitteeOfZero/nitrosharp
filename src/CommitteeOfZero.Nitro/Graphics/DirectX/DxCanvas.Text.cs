@@ -13,7 +13,7 @@ namespace CommitteeOfZero.Nitro.Graphics
 
         private void CreateTextResources()
         {
-            _customTextRenderer = new CustomTextRenderer(_rc.DeviceContext, _rc.ColorBrush, false);
+            _customTextRenderer = new CustomTextRenderer(_rc.DeviceContext, _rc.ColorBrush);
             _textFormat = new TextFormat(_rc.DWriteFactory, "Segoe UI", 30);
 
             _visibleRegion.context = new TextDrawingContext { OpacityOverride = 1.0f };

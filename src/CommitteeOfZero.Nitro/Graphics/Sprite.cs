@@ -1,19 +1,20 @@
 ﻿using CommitteeOfZero.Nitro.Foundation;
 using CommitteeOfZero.Nitro.Foundation.Content;
+using CommitteeOfZero.Nitro.Foundation.Graphics;
 using System.Drawing;
 
 namespace CommitteeOfZero.Nitro.Graphics
 {
     public class Sprite : Visual
     {
-        public Sprite(AssetRef source, RectangleF? sourceRectangle, float opacity, int priority)
+        public Sprite(AssetRef<TextureAsset> source, RectangleF? sourceRectangle, float opacity, int priority)
             : base(RgbaValueF.White, opacity, priority)
         {
             Source = source;
             SourceRectangle = sourceRectangle;
         }
 
-        public AssetRef Source { get; set; }
+        public AssetRef<TextureAsset> Source { get; set; }
         public RectangleF? SourceRectangle { get; set; }
 
         public override void Render(ICanvas canvas)
@@ -23,7 +24,7 @@ namespace CommitteeOfZero.Nitro.Graphics
 
         public override SizeF Measure()
         {
-            var deviceTexture = Source.Get<TextureAsset>();
+            var deviceTexture = Source.Asset;
             if (SourceRectangle != null)
             {
                 return new SizeF(SourceRectangle.Value.Width, SourceRectangle.Value.Height);
@@ -39,7 +40,7 @@ namespace CommitteeOfZero.Nitro.Graphics
 
         public override void OnRemoved()
         {
-            Source.Release();
+            Source.Dispose();
         }
     }
 }

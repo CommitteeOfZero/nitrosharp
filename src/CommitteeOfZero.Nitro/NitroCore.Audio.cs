@@ -3,20 +3,25 @@ using CommitteeOfZero.NsScript;
 using CommitteeOfZero.Nitro.Foundation;
 using CommitteeOfZero.Nitro.Foundation.Animation;
 using System;
-using CommitteeOfZero.Nitro.Foundation.Content;
+using CommitteeOfZero.Nitro.Foundation.Audio;
 
 namespace CommitteeOfZero.Nitro
 {
     public sealed partial class NitroCore
     {
-        public override int GetSoundAmplitude()
+        public override int GetSoundAmplitude(string characterName)
         {
-            return AudioSystem.Amplitude;
+            if (_currentDialogueLine?.Voice?.CharacterName == characterName)
+            {
+                return AudioSystem.Amplitude;
+            }
+
+            return 0;
         }
 
         public override void LoadAudio(string entityName, NsAudioKind kind, string fileName)
         {
-            var sound = new SoundComponent(fileName, (AudioKind)kind);
+            var sound = new SoundComponent(_content.Get<AudioStream>(fileName), (AudioKind)kind);
             _entities.Create(entityName, replace: true).WithComponent(sound);
         }
 

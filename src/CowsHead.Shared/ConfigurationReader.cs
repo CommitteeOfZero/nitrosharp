@@ -10,6 +10,8 @@ namespace CowsHead
         public static NitroConfiguration Read(string configPath)
         {
             var configuration = new NitroConfiguration();
+            configuration.ContentRoot = "Content";
+
             string json = File.ReadAllText(configPath, Encoding.UTF8);
             var root = JObject.Parse(json);
 
@@ -49,13 +51,15 @@ namespace CowsHead
                     configuration.StartupScript = property.Value.Value<string>();
                     break;
 
-                case "debug.contentRoot":
-                    configuration.ContentRoot = property.Value.Value<string>();
-                    break;
-
                 case "graphics.vsync":
                     configuration.EnableVSync = property.Value.Value<bool>();
                     break;
+
+#if DEBUG
+                case "debug.contentRoot":
+                    configuration.ContentRoot = property.Value.Value<string>();
+                    break;
+#endif
             }
         }
     }

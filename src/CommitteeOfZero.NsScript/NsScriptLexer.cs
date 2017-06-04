@@ -16,7 +16,7 @@ namespace CommitteeOfZero.NsScript
         }
 
         private static readonly Encoding s_defaultEncoding;
-        private const string DialogueBlockEndTag = "</PRE>";
+        private const string ParagraphEndTag = "</PRE>";
 
         static NsScriptLexer()
         {
@@ -619,9 +619,9 @@ namespace CommitteeOfZero.NsScript
 
         private bool IsDialogueBlockEndTag()
         {
-            for (int i = 0; i < DialogueBlockEndTag.Length; i++)
+            for (int i = 0; i < ParagraphEndTag.Length; i++)
             {
-                if (PeekChar(i) != DialogueBlockEndTag[i])
+                if (PeekChar(i) != ParagraphEndTag[i])
                 {
                     return false;
                 }

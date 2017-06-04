@@ -9,10 +9,5 @@ namespace CommitteeOfZero.Nitro.Foundation.Content
         {
             return new FFmpegAudioStream(stream);
         }
-
-        public override bool IsSupportedContentType(BinaryReader reader)
-        {
-            return reader.ReadInt16() == 0x80;
-        }
     }
 }

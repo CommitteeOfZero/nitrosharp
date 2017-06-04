@@ -1,5 +1,4 @@
-﻿using CommitteeOfZero.Nitro.Foundation;
-using System;
+﻿using System;
 
 namespace CommitteeOfZero.Nitro.Foundation.Animation
 {
@@ -35,11 +34,12 @@ namespace CommitteeOfZero.Nitro.Foundation.Animation
         {
             Started = true;
             _elapsed += deltaMilliseconds;
-            if (Progress == 1.0f)
-            {
-                Completed?.Invoke(this, EventArgs.Empty);
-                Entity.RemoveComponent(this);
-            }
+        }
+
+        protected void RaiseCompleted()
+        {
+            Completed?.Invoke(this, EventArgs.Empty);
+            Entity.RemoveComponent(this);
         }
 
         protected float CalculateFactor(float progress, TimingFunction function)

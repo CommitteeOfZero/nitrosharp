@@ -17,17 +17,13 @@ namespace CommitteeOfZero.Nitro
             }
             else
             {
-                var list = new List<Entity>();
                 if (entityManager.TryGet(query, out var result))
                 {
-                    //list.Add(result);
                     s_oneElementArray[0] = result;
                     return s_oneElementArray;
                 }
 
-                list.AddRange(WildcardQuery(entityManager, query + "/*"));
-                return list;
-                //return Enumerable.Empty<Entity>();
+                return WildcardQuery(entityManager, query + "/*");
             }
         }
 

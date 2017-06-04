@@ -8,13 +8,11 @@ namespace CommitteeOfZero.Nitro.Graphics
     {
         private readonly RenderTarget _renderTarget;
         private readonly Brush _defaultBrush;
-        private readonly bool _isPixelSnappingDisabled;
 
-        public CustomTextRenderer(RenderTarget renderTarget, Brush defaultBrush, bool isPixelSnappingDisabled)
+        public CustomTextRenderer(RenderTarget renderTarget, Brush defaultBrush)
         {
             _renderTarget = renderTarget;
             _defaultBrush = defaultBrush;
-            _isPixelSnappingDisabled = isPixelSnappingDisabled;
         }
 
         public override Result DrawGlyphRun(object clientDrawingContext, float baselineOriginX, float baselineOriginY,
@@ -34,25 +32,6 @@ namespace CommitteeOfZero.Nitro.Graphics
             return Result.Ok;
         }
 
-        public override bool IsPixelSnappingDisabled(object clientDrawingContext)
-        {
-            return _isPixelSnappingDisabled;
-        }
-
-        //public static void DrawTextLayout(RenderTarget renderTarget, Vector2 origin, TextLayout textLayout, Brush defaultForegroundBrush, DrawTextOptions options = DrawTextOptions.None)
-        //{
-        //    if (options.HasFlag(DrawTextOptions.Clip))
-        //    {
-        //        renderTarget.PushAxisAlignedClip(new RectangleF(origin.X, origin.Y, textLayout.MaxWidth, textLayout.MaxHeight), renderTarget.AntialiasMode);
-        //        using (var renderer = new CustomBrushTextRenderer(renderTarget, defaultForegroundBrush, options.HasFlag(DrawTextOptions.NoSnap)))
-        //            textLayout.Draw(renderer, origin.X, origin.Y);
-        //        renderTarget.PopAxisAlignedClip();
-        //    }
-        //    else
-        //    {
-        //        using (var renderer = new CustomBrushTextRenderer(renderTarget, defaultForegroundBrush, options.HasFlag(DrawTextOptions.NoSnap)))
-        //            textLayout.Draw(renderer, origin.X, origin.Y);
-        //    }
-        //}
+        public override bool IsPixelSnappingDisabled(object clientDrawingContext) => false;
     }
 }

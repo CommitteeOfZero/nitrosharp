@@ -2,34 +2,25 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Text;
 
 namespace CommitteeOfZero.Nitro.Foundation.Content
 {
-    public class ContentManager
+    public class ContentManager : IDisposable
     {
         private readonly Dictionary<Type, ContentLoader> _contentLoaders;
         private readonly Dictionary<AssetId, (object asset, int refCount)> _loadedAssets;
 
         public ContentManager(string rootDirectory)
         {
-            if (Instance != null)
-            {
-                throw new InvalidOperationException("Creating more than 1 instance of ContentManager is not allowed.");
-            }
-
             RootDirectory = rootDirectory;
             _contentLoaders = new Dictionary<Type, ContentLoader>();
             _loadedAssets = new Dictionary<AssetId, (object asset, int refCount)>();
-
-            Instance = this;
         }
 
         public ContentManager() : this(string.Empty)
         {
         }
 
-        internal static ContentManager Instance { get; private set; }
         public string RootDirectory { get; }
 
         public bool IsLoaded(AssetId assetId) => _loadedAssets.ContainsKey(assetId);
@@ -51,38 +42,36 @@ namespace CommitteeOfZero.Nitro.Foundation.Content
             }
         }
 
+        public AssetRef<T> Get<T>(AssetId assetId)
+        {
+            if (_loadedAssets.TryGetValue(assetId, out var cachedItem))
+            {
+                IncrementRefCount(assetId, cachedItem);
+            }
+            else
+            {
+                Load<T>(assetId);
+            }
+
+            return new AssetRef<T>(assetId, this);
+        }
+
+        internal T InternalGetCached<T>(AssetId assetId) => (T)_loadedAssets[assetId].asset;
+
+        public void RegisterContentLoader(Type t, ContentLoader loader)
+        {
+            _contentLoaders[t] = loader;
+        }
+
         private T Load<T>(AssetId assetId) => (T)Load(assetId, typeof(T));
         private object Load(AssetId assetId) => Load(assetId, contentType: null);
 
         private object Load(AssetId assetId, Type contentType)
         {
-            if (_loadedAssets.TryGetValue(assetId, out var cacheItem))
-            {
-                return cacheItem.asset;
-            }
-
             var stream = OpenStream(assetId);
             {
                 return Load(stream, assetId, contentType);
             }
-        }
-
-        private Type IdentifyContentType(BinaryReader reader)
-        {
-            Type contentType = null;
-            foreach (var pair in _contentLoaders)
-            {
-                var loader = pair.Value;
-                bool match = loader.IsSupportedContentType(reader);
-                reader.BaseStream.Seek(0, SeekOrigin.Begin);
-                if (match)
-                {
-                    contentType = pair.Key;
-                    break;
-                }
-            }
-
-            return contentType;
         }
 
         private object Load(Stream stream, AssetId assetId, Type contentType)
@@ -92,13 +81,13 @@ namespace CommitteeOfZero.Nitro.Foundation.Content
                 throw new ContentLoadException($"Failed to load asset '{assetId}': file not found.");
             }
 
-            if (contentType == null)
-            {
-                using (var reader = new BinaryReader(stream, Encoding.UTF8, leaveOpen: true))
-                {
-                    contentType = IdentifyContentType(reader);
-                }
-            }
+            //if (contentType == null)
+            //{
+            //    using (var reader = new BinaryReader(stream, Encoding.UTF8, leaveOpen: true))
+            //    {
+            //        contentType = IdentifyContentType(reader);
+            //    }
+            //}
 
             if (contentType == null || !_contentLoaders.TryGetValue(contentType, out var loader))
             {
@@ -110,42 +99,47 @@ namespace CommitteeOfZero.Nitro.Foundation.Content
             return asset;
         }
 
-        public T Get<T>(AssetId id) => (T)_loadedAssets[id].asset;
-        public bool TryGetAsset<T>(AssetId assetId, out T asset)
+        //private Type IdentifyContentType(BinaryReader reader)
+        //{
+        //    Type contentType = null;
+        //    foreach (var pair in _contentLoaders)
+        //    {
+        //        var loader = pair.Value;
+        //        bool match = loader.IsSupportedContentType(reader);
+        //        reader.BaseStream.Seek(0, SeekOrigin.Begin);
+        //        if (match)
+        //        {
+        //            contentType = pair.Key;
+        //            break;
+        //        }
+        //    }
+
+        //    return contentType;
+        //}
+
+        private int IncrementRefCount(AssetId assetId, (object asset, int refCount) cachedItem)
         {
-            bool result = _loadedAssets.TryGetValue(assetId, out var cacheItem);
-            asset = result ? (T)cacheItem.asset : default(T);
-            return result;
+            _loadedAssets[assetId] = (cachedItem.asset, cachedItem.refCount + 1);
+            return cachedItem.refCount + 1;
         }
 
-        public void RegisterContentLoader(Type t, ContentLoader loader)
+        private int DecrementRefCount(AssetId assetId, (object asset, int refCount) cachedItem)
         {
-            _contentLoaders[t] = loader;
+            _loadedAssets[assetId] = (cachedItem.asset, cachedItem.refCount - 1);
+            return cachedItem.refCount - 1;
         }
 
-        internal void RegisterReference(AssetId assetId)
+        internal void ReleaseReference(AssetId assetId)
         {
-            if (_loadedAssets.TryGetValue(assetId, out var cacheItem))
+            if (_loadedAssets.TryGetValue(assetId, out var cachedItem))
             {
-                _loadedAssets[assetId] = (cacheItem.asset, cacheItem.refCount + 1);
-                return;
-            }
-
-            Load(assetId);
-        }
-
-        internal void UnregisterReference(AssetId assetId)
-        {
-            if (_loadedAssets.TryGetValue(assetId, out var cacheItem))
-            {
-                _loadedAssets[assetId] = (cacheItem.asset, cacheItem.refCount - 1);
-
-                if (cacheItem.refCount - 1 == 0)
+                int newRefCount = DecrementRefCount(assetId, cachedItem);
+                if (newRefCount == 0)
                 {
-                    (cacheItem.asset as IDisposable)?.Dispose();
-                    Debug.WriteLine(assetId + " disposed");
-
+                    (cachedItem.asset as IDisposable)?.Dispose();
                     _loadedAssets.Remove(assetId);
+
+                    Debug.WriteLine(assetId + " disposed");
                 }
             }
         }
@@ -159,6 +153,16 @@ namespace CommitteeOfZero.Nitro.Foundation.Content
         private Exception UnsupportedFormat(string path)
         {
             return new ContentLoadException($"Failed to load asset '{path}': unsupported format.");
+        }
+
+        public void Dispose()
+        {
+            foreach (var cachedItem in _loadedAssets.Values)
+            {
+                (cachedItem.asset as IDisposable)?.Dispose();
+            }
+
+            _loadedAssets.Clear();
         }
     }
 }

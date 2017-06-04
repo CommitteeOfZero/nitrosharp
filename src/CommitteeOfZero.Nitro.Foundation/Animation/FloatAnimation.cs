@@ -33,6 +33,11 @@ namespace CommitteeOfZero.Nitro.Foundation.Animation
             float change = FinalValue - InitialValue;
             float newValue = InitialValue + change * CalculateFactor(Progress, TimingFunction);
             PropertySetter(TargetComponent, newValue);
+
+            if (LastFrame)
+            {
+                RaiseCompleted();
+            }
         }
     }
 }

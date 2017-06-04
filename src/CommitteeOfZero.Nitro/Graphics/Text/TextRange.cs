@@ -24,14 +24,7 @@ namespace CommitteeOfZero.Nitro.Graphics
             return a.RangeStart == b.RangeStart && a.Length == b.Length;
         }
 
-        public override int GetHashCode()
-        {
-            int hash = 29;
-            hash = hash * 17 + RangeStart;
-            hash = hash * 17 + Length;
-            return hash;
-        }
-
+        public override int GetHashCode() => (RangeStart, Length).GetHashCode();
         public override string ToString() => $"<{RangeStart}, {RangeStart + Length}>";
     }
 }

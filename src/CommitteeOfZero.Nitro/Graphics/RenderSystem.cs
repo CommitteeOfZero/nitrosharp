@@ -2,9 +2,7 @@
 using System.Linq;
 using CommitteeOfZero.Nitro.Foundation;
 using CommitteeOfZero.Nitro.Foundation.Graphics;
-using CommitteeOfZero.Nitro.Foundation.Content;
 using System;
-using System.Numerics;
 
 namespace CommitteeOfZero.Nitro.Graphics
 {
@@ -12,15 +10,13 @@ namespace CommitteeOfZero.Nitro.Graphics
     {
         private ICanvas _canvas;
 
-        public RenderSystem(DxRenderContext renderContext, ContentManager contentManager)
+        public RenderSystem(DxRenderContext renderContext)
         {
             RenderContext = renderContext;
-            Content = contentManager;
         }
 
         public ICanvas Canvas => _canvas;
         public DxRenderContext RenderContext { get; }
-        public ContentManager Content { get; }
 
         protected override void DeclareInterests(ISet<Type> interests)
         {
@@ -29,7 +25,7 @@ namespace CommitteeOfZero.Nitro.Graphics
 
         public override void OnRelevantEntityAdded(Entity entity)
         {
-            var screencap = entity.GetComponent<ScreenshotVisual>();
+            var screencap = entity.GetComponent<Screenshot>();
             screencap?.Take(_canvas);
         }
 
@@ -57,20 +53,6 @@ namespace CommitteeOfZero.Nitro.Graphics
             var visual = entity.GetComponent<Visual>();
             if (visual.IsEnabled)
             {
-                //var transform = Matrix3x2.Identity;
-
-                //float centerX = 0;//visual.Width / 2.0f;
-                //float centerY = 0;//visual.Height / 2.0f;
-                //var scaleOrigin = new Vector2(centerX, centerY);
-
-                //transform *= Matrix3x2.CreateScale(entity.Transform.LocalScale, scaleOrigin);
-                //transform *= Matrix3x2.CreateTranslation(entity.Transform.LocalPosition);
-                //if (entity.Transform.Parent != null)
-                //{
-                //    var parent = entity.Transform.Parent;
-                //    transform *= Matrix3x2.CreateTranslation(parent.Position);
-                //}
-
                 var transform = entity.Transform.GetWorldMatrix(new System.Drawing.SizeF(1280, 720));
                 _canvas.SetTransform(transform);
                 visual.Render(_canvas);
@@ -79,7 +61,7 @@ namespace CommitteeOfZero.Nitro.Graphics
 
         public void LoadCommonResources()
         {
-            _canvas = new DxCanvas(RenderContext, Content);
+            _canvas = new DxCanvas(RenderContext);
         }
 
         public void Dispose()

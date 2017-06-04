@@ -8,7 +8,7 @@ namespace CommitteeOfZero.NsScript
         // char.MaxValue is not a valid UTF-16 character, so it can safely be used as a EOF character.
         protected const char EofCharacter = char.MaxValue;
 
-        // A marker that we set at the beginning of each lexeme.
+        // Position in the source text of where the current lexeme starts.
         protected int _lexemeStart;
 
         protected TextScanner()
@@ -24,7 +24,7 @@ namespace CommitteeOfZero.NsScript
         protected int Position { get; private set; }
 
         /// <summary>
-        /// Gets the current lexeme, which is the characters between the lexemeStart marker and the current position.
+        /// Gets the current lexeme, which is the characters between the LexemeStart marker and the current position.
         /// </summary>
         protected string CurrentLexeme
         {
@@ -62,7 +62,7 @@ namespace CommitteeOfZero.NsScript
         }
 
         /// <summary>
-        /// Sets the LexemeStart marker at the current position.
+        /// Marks the current position as the start of a lexeme.
         /// </summary>
         protected void StartScanning() => _lexemeStart = Position;
 

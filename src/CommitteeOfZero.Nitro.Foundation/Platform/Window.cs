@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Drawing;
+using System.Numerics;
 
 namespace CommitteeOfZero.Nitro.Foundation.Platform
 {
@@ -13,6 +14,7 @@ namespace CommitteeOfZero.Nitro.Foundation.Platform
         public abstract bool IsVisible { get; set; }
         public abstract bool IsCursorVisible { get; set; }
         public abstract Rectangle Bounds { get; }
+        public abstract Vector2 ScaleFactor { get; }
         internal abstract IntPtr Handle { get; }
 
         public abstract void ProcessEvents();

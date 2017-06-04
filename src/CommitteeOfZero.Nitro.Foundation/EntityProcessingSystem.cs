@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace CommitteeOfZero.Nitro.Foundation
 {
@@ -65,9 +66,15 @@ namespace CommitteeOfZero.Nitro.Foundation
 
         private void EntityUpdated(Entity entity)
         {
-            if (IsRelevant(entity) && _entities.Add(entity))
+            bool relevant = IsRelevant(entity);
+            if (relevant && _entities.Add(entity))
             {
                 OnRelevantEntityAdded(entity);
+            }
+            else if (_entities.Contains(entity) && !relevant)
+            {
+                _entities.Remove(entity);
+                OnRelevantEntityRemoved(entity);
             }
         }
 
@@ -80,7 +87,7 @@ namespace CommitteeOfZero.Nitro.Foundation
 
             foreach (Type interest in _interests)
             {
-                if (entity.HasComponent(interest))
+                if (entity.GetComponents(interest).Any(x => !x.IsScheduledForRemoval))
                 {
                     return true;
                 }

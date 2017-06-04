@@ -4,15 +4,10 @@ namespace CommitteeOfZero.NsScript
 {
     public sealed class ConstantValue : Expression, IEquatable<ConstantValue>
     {
-        private static readonly ConstantValue s_true = new ConstantValue(true);
-        private static readonly ConstantValue s_false = new ConstantValue(false);
-        private static readonly ConstantValue s_zero = new ConstantValue(0);
-        private static readonly ConstantValue s_null = new ConstantValue(null);
-
-        public static ConstantValue True => s_true;
-        public static ConstantValue False => s_false;
-        public static ConstantValue Zero => s_zero;
-        public static ConstantValue Null => s_null;
+        public static readonly ConstantValue True = new ConstantValue(true);
+        public static readonly ConstantValue False = new ConstantValue(false);
+        public static readonly ConstantValue Zero = new ConstantValue(0);
+        public static readonly ConstantValue Null = new ConstantValue(null);
 
         public ConstantValue(object value, bool? isDelta = null)
         {

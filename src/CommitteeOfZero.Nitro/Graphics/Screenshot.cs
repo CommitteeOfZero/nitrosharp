@@ -1,6 +1,6 @@
 ﻿namespace CommitteeOfZero.Nitro.Graphics
 {
-    public class ScreenshotVisual : Visual
+    public class Screenshot : Visual
     {
         public void Take(ICanvas canvas)
         {

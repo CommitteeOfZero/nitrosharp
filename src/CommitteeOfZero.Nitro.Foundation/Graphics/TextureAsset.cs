@@ -1,12 +1,14 @@
 ﻿using SharpDX.Direct2D1;
 using System;
+using System.Diagnostics;
 
-namespace CommitteeOfZero.Nitro.Foundation.Content
+namespace CommitteeOfZero.Nitro.Foundation.Graphics
 {
     public struct TextureAsset : IDisposable
     {
         public TextureAsset(object deviceTexture)
         {
+            Debug.Assert(deviceTexture != null);
             DeviceTexture = deviceTexture;
         }
 

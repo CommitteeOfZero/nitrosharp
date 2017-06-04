@@ -9,14 +9,12 @@ namespace CommitteeOfZero.Nitro.Graphics
 
         void DrawRectangle(RectangleVisual rectangle);
         void DrawSprite(Sprite texture);
-        void DrawTransition(Transition transition);
-        void DrawScreenshot(ScreenshotVisual screenshot);
+        void DrawTransition(FadeTransition transition);
+        void DrawScreenshot(Screenshot screenshot);
         void DrawText(TextVisual text);
 
         void CaptureScreen();
 
-        //void Free(Sprite texture);
         void Free(TextVisual textVisual);
-        //void Free(Transition transition);
     }
 }

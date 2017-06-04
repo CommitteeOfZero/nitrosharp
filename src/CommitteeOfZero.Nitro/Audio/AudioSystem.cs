@@ -21,10 +21,9 @@ namespace CommitteeOfZero.Nitro.Audio
         private Dictionary<SoundComponent, AudioSource> _audioSources;
         private Queue<AudioSource> _freeAudioSources;
 
-        public AudioSystem(AudioEngine audioEngine, ContentManager content)
+        public AudioSystem(AudioEngine audioEngine)
         {
             _audioEngine = audioEngine;
-            _content = content;
 
             _voiceAudioSource = _audioEngine.ResourceFactory.CreateAudioSource(VoiceBufferSize);
             _voiceAudioSource.PreviewBufferSent += _voiceAudioSource_PreviewBufferSent;
@@ -49,7 +48,7 @@ namespace CommitteeOfZero.Nitro.Audio
             //    path += ".ogg";
             //}
 
-            var stream = sound.Source.Get<AudioStream>();
+            var stream = sound.Source.Asset;
             var audioSource = GetFreeAudioSource(sound.Kind);
             if (sound.Kind == AudioKind.Voice)
             {
@@ -77,10 +76,10 @@ namespace CommitteeOfZero.Nitro.Audio
         public override void OnRelevantEntityRemoved(Entity entity)
         {
             var sound = entity.GetComponent<SoundComponent>();
-            Remove(sound);
+            StopAndRemove(sound);
         }
 
-        private void Remove(SoundComponent sound)
+        private void StopAndRemove(SoundComponent sound)
         {
             var audioSource = GetAssociatedSource(sound);
             audioSource.Stop();
@@ -153,11 +152,6 @@ namespace CommitteeOfZero.Nitro.Audio
         public void Dispose()
         {
             _audioEngine.StopAllVoices();
-            _voiceAudioSource.CurrentStream?.Dispose();
-            foreach (var source in _freeAudioSources)
-            {
-                source.CurrentStream?.Dispose();
-            }
         }
     }
 }

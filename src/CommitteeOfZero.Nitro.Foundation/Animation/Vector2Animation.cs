@@ -34,6 +34,11 @@ namespace CommitteeOfZero.Nitro.Foundation.Animation
             Vector2 change = FinalValue - InitialValue;
             Vector2 newValue = InitialValue + change * CalculateFactor(Progress, TimingFunction);
             PropertySetter(TargetComponent, newValue);
+
+            if (LastFrame)
+            {
+                RaiseCompleted();
+            }
         }
     }
 }

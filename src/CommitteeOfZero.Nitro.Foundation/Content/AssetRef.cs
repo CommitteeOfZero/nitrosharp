@@ -1,24 +1,35 @@
-﻿namespace CommitteeOfZero.Nitro.Foundation.Content
+﻿using System;
+
+namespace CommitteeOfZero.Nitro.Foundation.Content
 {
-    public class AssetRef
+    public sealed class AssetRef<T> : IDisposable
     {
-        public AssetRef(AssetId id)
+        private readonly ContentManager _contentManager;
+        private bool _alive;
+
+        public AssetRef(AssetId id, ContentManager contentManager)
         {
             Id = id;
-            ContentManager.Instance.RegisterReference(Id);
+            _contentManager = contentManager;
+            _alive = true;
         }
 
         public AssetId Id { get; }
+        public T Asset
+        {
+            get
+            {
+                return _alive ? _contentManager.InternalGetCached<T>(Id)
+                    : throw new InvalidOperationException($"Attempted to use an asset reference that has been released. AssetId: {Id}.");
+            }
+        }
 
-        public T Get<T>() => ContentManager.Instance.Get<T>(Id);
-
-        public static implicit operator AssetRef(string assetPath) => new AssetRef(assetPath);
         public override string ToString() => Id;
 
-        public void Release()
+        public void Dispose()
         {
-            ContentManager.Instance.UnregisterReference(Id);
-            //Debug.WriteLine($"Reference to {Id} no longer in use");
+            _alive = false;
+            _contentManager.ReleaseReference(Id);
         }
     }
 }

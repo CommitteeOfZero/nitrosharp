@@ -1,38 +1,36 @@
-﻿using CommitteeOfZero.Nitro.Foundation.Content;
-using CommitteeOfZero.Nitro.Foundation.Graphics;
+﻿using CommitteeOfZero.Nitro.Foundation.Graphics;
 using SharpDX.Direct2D1;
-using System.Collections.Generic;
 using SharpDX.Mathematics.Interop;
 using System.Numerics;
+using SharpDX.Direct2D1.Effects;
 
 namespace CommitteeOfZero.Nitro.Graphics
 {
     public sealed partial class DxCanvas : ICanvas
     {
         private DxRenderContext _rc;
-        private ContentManager _content;
 
         private Bitmap1 _screenshotBitmap;
-        private Effect<TransitionEffect> _transitionEffect;
-        private Dictionary<int, TransitionState> _transitionState;
+        private Flood _floodEffect;
+        private Effect<FadeMaskEffect> _fadeMaskEffect;
 
-        public DxCanvas(DxRenderContext renderContext, ContentManager content)
+        public DxCanvas(DxRenderContext renderContext)
         {
             _rc = renderContext;
-            _content = content;
-            _transitionState = new Dictionary<int, TransitionState>();
 
-            _rc.D2DFactory.RegisterEffect<TransitionEffect>();
-            _transitionEffect = new Effect<TransitionEffect>(_rc.DeviceContext);
+            _rc.D2DFactory.RegisterEffect<FadeMaskEffect>();
+            _floodEffect = new Flood(_rc.DeviceContext);
+            _fadeMaskEffect = new Effect<FadeMaskEffect>(_rc.DeviceContext);
 
-            var props = new BitmapProperties1(_rc.DeviceContext.PixelFormat, 96, 96, BitmapOptions.None);
+            var dpi = _rc.D2DFactory.DesktopDpi;
+            var props = new BitmapProperties1(_rc.DeviceContext.PixelFormat, dpi.Width, dpi.Height, BitmapOptions.None);
             _screenshotBitmap = new Bitmap1(_rc.DeviceContext, _rc.DeviceContext.PixelSize, props);
 
             CreateTextResources();
         }
 
         public Matrix3x2 Transform { get; set; }
-       
+
         public void CaptureScreen()
         {
             _screenshotBitmap.CopyFromRenderTarget(_rc.DeviceContext);
@@ -47,88 +45,57 @@ namespace CommitteeOfZero.Nitro.Graphics
             _rc.DeviceContext.FillRectangle(dest, _rc.ColorBrush);
         }
 
-        public void DrawScreenshot(ScreenshotVisual screenshot)
+        public void DrawScreenshot(Screenshot screenshot)
         {
-            var dest = new RawRectangleF(0, 0, _screenshotBitmap.Size.Width, _screenshotBitmap.Size.Height);
-            _rc.DeviceContext.DrawBitmap(_screenshotBitmap, dest, screenshot.Opacity, BitmapInterpolationMode.Linear);
+            var dst = new SharpDX.RectangleF(0, 0, _screenshotBitmap.Size.Width, _screenshotBitmap.Size.Height);
+            _rc.DeviceContext.DrawBitmap(_screenshotBitmap, dst, screenshot.Opacity, BitmapInterpolationMode.Linear);
         }
 
-        public void DrawSprite(Sprite texture)
+        public void DrawSprite(Sprite sprite)
         {
             var target = _rc.DeviceContext;
-            if (_content.TryGetAsset<TextureAsset>(texture.Source.Id, out var deviceTexture))
+            var deviceTexture = sprite.Source.Asset;
+            if (sprite.SourceRectangle == null)
             {
-                if (texture.SourceRectangle == null)
-                {
-                    target.DrawBitmap(deviceTexture, texture.Opacity, InterpolationMode.Anisotropic);
-                }
-                else
-                {
-                    var drawingRect = texture.SourceRectangle.Value;
-                    var srcRect = new SharpDX.RectangleF(drawingRect.X, drawingRect.Y, drawingRect.Width, drawingRect.Height);
-                    var dst = new SharpDX.RectangleF(0, 0, texture.Measure().Width, texture.Measure().Height);
-                    target.DrawBitmap(deviceTexture, dst, texture.Opacity, InterpolationMode.Linear, srcRect, null);
-                    //canvas.DrawImage(texture, new SharpDX.Vector2(0, 0), srcRect, InterpolationMode.Anisotropic, CompositeMode.SourceOver);
-                }
+                var dst = new SharpDX.RectangleF(0, 0, deviceTexture.Width, deviceTexture.Height);
+                target.DrawBitmap(deviceTexture, dst, sprite.Opacity, BitmapInterpolationMode.Linear);
+            }
+            else
+            {
+                var drawingRect = sprite.SourceRectangle.Value;
+                var srcRect = new SharpDX.RectangleF(drawingRect.X, drawingRect.Y, drawingRect.Width, drawingRect.Height);
+                var dst = new SharpDX.RectangleF(0, 0, sprite.Measure().Width, sprite.Measure().Height);
+                target.DrawBitmap(deviceTexture, dst, sprite.Opacity, InterpolationMode.Linear, srcRect, null);
             }
         }
 
-        public void DrawTransition(Transition transition)
+        public void DrawTransition(FadeTransition transition)
         {
-            _transitionState.TryGetValue(transition.GetHashCode(), out var state);
-            var srcBitmap = state?.SrcDeviceBitmap;
-            var target = _rc.DeviceContext;
-
-            if (srcBitmap == null)
-            {
-                if (transition.Source is RectangleVisual rectangle)
-                {
-                    var size = new SharpDX.Size2((int)rectangle.Width, (int)rectangle.Height);
-                    var props = new BitmapProperties1(target.PixelFormat, 96, 96, BitmapOptions.Target);
-                    srcBitmap = new Bitmap1(target, size, props);
-
-                    var originalTarget = target.Target;
-                    target.Target = srcBitmap;
-                    DrawRectangle(rectangle);
-                    target.Target = originalTarget;
-                }
-                else if (transition.Source is Sprite texture)
-                {
-                    _content.TryGetAsset<TextureAsset>(texture.Source.Id, out var srcAsset);
-                    srcBitmap = srcAsset;
-                }
-
-                state = _transitionState[transition.GetHashCode()] = new TransitionState(srcBitmap);
-            }
-
-            if (srcBitmap != null && _content.TryGetAsset<TextureAsset>(transition.Mask.Id, out var mask))
-            {
-                if (!state.InputsSet)
-                {
-                    _transitionEffect.SetInput(0, srcBitmap, false);
-                    _transitionEffect.SetInput(1, mask, false);
-
-                    state.InputsSet = true;
-                }
-                _transitionEffect.SetValue(0, transition.Opacity);
-                target.DrawImage(_transitionEffect);
-            }
+            DrawTransition2(transition);
         }
 
+        public void DrawTransition2(FadeTransition transition)
+        {
+            SetTransitionEffectInputs(transition);
+            _fadeMaskEffect.SetValue(0, transition.Opacity);
+            _rc.DeviceContext.DrawImage(_fadeMaskEffect);
+        }
 
-        //public void Free(Transition transition)
-        //{
-        //    transition.Source.Free(this);
-        //    if (_transitionState.TryGetValue(transition, out var state))
-        //    {
-        //        if (transition.Source is RectangleVisual)
-        //        {
-        //            state.SrcDeviceBitmap.Dispose();
-        //        }
+        private void SetTransitionEffectInputs(FadeTransition transition)
+        {
+            if (transition.TransitionSource is FadeTransition.SolidColorSource colorSource)
+            {
+                _floodEffect.Color = colorSource.Color;
+                _fadeMaskEffect.SetInputEffect(0, _floodEffect, false);
+            }
+            else
+            {
+                var imageSource = (FadeTransition.ImageSource)transition.TransitionSource;
+                _fadeMaskEffect.SetInput(0, imageSource.Source.Asset, false);
+            }
 
-        //        _transitionState.Remove(transition);
-        //    }
-        //}
+            _fadeMaskEffect.SetInput(1, transition.Mask.Asset, false);
+        }
 
         public void SetTransform(Matrix3x2 transform)
         {
@@ -138,19 +105,8 @@ namespace CommitteeOfZero.Nitro.Graphics
         public void Dispose()
         {
             _screenshotBitmap.Dispose();
-            _transitionEffect.Dispose();
-        }
-
-        private sealed class TransitionState
-        {
-            public TransitionState(Bitmap1 srcDeviceBitmap)
-            {
-                SrcDeviceBitmap = srcDeviceBitmap;
-                InputsSet = false;
-            }
-
-            public Bitmap1 SrcDeviceBitmap { get; }
-            public bool InputsSet { get; set; }
+            _floodEffect.Dispose();
+            _fadeMaskEffect.Dispose();
         }
     }
 }

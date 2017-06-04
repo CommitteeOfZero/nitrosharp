@@ -40,7 +40,6 @@ namespace CommitteeOfZero.Nitro.Foundation
                     (system as EntityProcessingSystem)?.RefreshLocalEntityList(_updatedEntities, _removedEntities);
                 }
             }
-
             _entities.FlushRemovedComponents();
             _entities.FlushRemovedEntities();
 

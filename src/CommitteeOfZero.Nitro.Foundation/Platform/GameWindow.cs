@@ -3,22 +3,24 @@ using OpenTK;
 using OpenTK.Graphics;
 using CommitteeOfZero.Nitro.Foundation.Input;
 using System;
-using System.Drawing;
 
 namespace CommitteeOfZero.Nitro.Foundation.Platform
 {
     public partial class GameWindow : Window
     {
         private NativeWindow _nativeWindow;
+        private readonly int _desiredWidth, _desiredHeight;
 
         public GameWindow() : this("Sample Text", 800, 600, WindowState.Normal)
         {
         }
 
-        public GameWindow(string title, int width, int height, WindowState state)
+        public GameWindow(string title, int desiredWidth, int desiredHeight, WindowState state)
         {
+            _desiredWidth = desiredWidth;
+            _desiredHeight = desiredHeight;
             var graphicsMode = new GraphicsMode(32, 24, 0, 8);
-            _nativeWindow = new NativeWindow(width, height, title, GameWindowFlags.Default, graphicsMode, DisplayDevice.Default);
+            _nativeWindow = new NativeWindow(desiredWidth, desiredHeight, title, GameWindowFlags.Default, graphicsMode, DisplayDevice.Default);
 
             _nativeWindow.Resize += OnWindowResized;
             _nativeWindow.Closing += OnWindowClosing;
@@ -48,6 +50,8 @@ namespace CommitteeOfZero.Nitro.Foundation.Platform
         public override event EventHandler Closed;
         public override event EventHandler GotFocus;
         public override event EventHandler LostFocus;
+
+        public override System.Numerics.Vector2 ScaleFactor => new System.Numerics.Vector2((float)_nativeWindow.Width / _desiredWidth, (float)_nativeWindow.Height / _desiredHeight);
 
         public override string Title
         {

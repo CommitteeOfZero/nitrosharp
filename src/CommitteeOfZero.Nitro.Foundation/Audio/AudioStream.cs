@@ -7,6 +7,21 @@ namespace CommitteeOfZero.Nitro.Foundation.Audio
     {
         protected AudioStream(Stream fileStream)
         {
+            if (fileStream == null)
+            {
+                throw new ArgumentNullException(nameof(fileStream));
+            }
+
+            if (!fileStream.CanRead)
+            {
+                throw new ArgumentException(nameof(fileStream), "The stream must be readable.");
+            }
+
+            if (!fileStream.CanSeek)
+            {
+                throw new ArgumentException(nameof(fileStream), "The stream must be seekable");
+            }
+
             FileStream = fileStream;
         }
 
@@ -20,8 +35,6 @@ namespace CommitteeOfZero.Nitro.Foundation.Audio
         public int TargetChannelCount { get; set; }
 
         public TimeSpan Duration { get; protected set; }
-        //public abstract TimeSpan Position { get; }
-
         public bool Looping { get; private set; }
         public TimeSpan LoopStart { get; private set; }
         public TimeSpan LoopEnd { get; private set; }

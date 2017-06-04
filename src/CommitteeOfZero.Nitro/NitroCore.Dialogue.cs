@@ -4,7 +4,7 @@ using CommitteeOfZero.Nitro.Foundation;
 using System.Threading.Tasks;
 using CommitteeOfZero.Nitro.Audio;
 using CommitteeOfZero.Nitro.Graphics;
-using CommitteeOfZero.Nitro.Foundation.Content;
+using CommitteeOfZero.Nitro.Foundation.Audio;
 
 namespace CommitteeOfZero.Nitro
 {
@@ -13,8 +13,9 @@ namespace CommitteeOfZero.Nitro
         private const float TextRightMargin = 120;
 
         private Paragraph _currentParagraph;
+        private DialogueLine _currentDialogueLine;
+
         public Entity TextEntity { get; private set; }
-        private Entity _voiceEntity;
 
         public override void CreateDialogueBox(string entityName, int priority, NsCoordinate x, NsCoordinate y, int width, int height)
         {
@@ -43,6 +44,7 @@ namespace CommitteeOfZero.Nitro
         {
             if (_entities.TryGet(_currentParagraph.AssociatedBox, out var dialogueBox))
             {
+                _currentDialogueLine = dialogueLine;
                 var bounds = dialogueBox.Transform.Bounds;
                 bounds = new System.Drawing.SizeF(bounds.Width - TextRightMargin, bounds.Height);
 
@@ -54,18 +56,17 @@ namespace CommitteeOfZero.Nitro
 
                 if (dialogueLine.Voice != null)
                 {
-                    VoiceAction(dialogueLine.Voice);
+                    Voice(dialogueLine.Voice);
                 }
             }
         }
 
-        private void VoiceAction(Voice voice)
+        private void Voice(Voice voice)
         {
-            if (voice.Action == Dialogue.VoiceAction.Play)
+            if (voice.Action == VoiceAction.Play)
             {
-                _voiceEntity?.Destroy();
-                var sound = new SoundComponent("voice/" + voice.FileName, AudioKind.Voice);
-                _voiceEntity = _entities.Create(voice.FileName).WithComponent(sound);
+                var sound = new SoundComponent(_content.Get<AudioStream>("voice/" + voice.FileName), AudioKind.Voice);
+                _entities.Create(voice.FileName, replace: true).WithComponent(sound);
             }
             else
             {

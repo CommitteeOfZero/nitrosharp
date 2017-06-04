@@ -4,6 +4,7 @@ using SharpDX.Direct2D1;
 using SharpDX.Direct3D;
 using SharpDX.Direct3D11;
 using System;
+using System.Runtime.InteropServices;
 
 namespace CommitteeOfZero.Nitro.Foundation.Graphics
 {
@@ -34,11 +35,13 @@ namespace CommitteeOfZero.Nitro.Foundation.Graphics
         public SharpDX.Direct2D1.DeviceContext DeviceContext { get; private set; }
         public SolidColorBrush ColorBrush { get; private set; }
 
+        public Window Window => _window;
+        public Size2F CurrentDpi => D2DFactory.DesktopDpi;
+
         private void Initialize()
         {
-            //SharpDX.Configuration.EnableReleaseOnFinalizer = true;
 #if DEBUG
-            SharpDX.Configuration.EnableObjectTracking = true;
+            //SharpDX.Configuration.EnableObjectTracking = true;
 #endif
             CreateDeviceIndependentResources();
             CreateDeviceResources();
@@ -72,6 +75,7 @@ namespace CommitteeOfZero.Nitro.Foundation.Graphics
             _dxgiDevice = _d3dDevice.QueryInterface<SharpDX.DXGI.Device2>();
             _d2dDevice = new SharpDX.Direct2D1.Device(D2DFactory, _dxgiDevice);
             DeviceContext = new SharpDX.Direct2D1.DeviceContext(_d2dDevice, new DeviceContextOptions());
+            DeviceContext.DotsPerInch = new Size2F(CurrentDpi.Width, CurrentDpi.Height);
 
             ColorBrush = new SolidColorBrush(DeviceContext, Color.CornflowerBlue);
         }
@@ -80,8 +84,8 @@ namespace CommitteeOfZero.Nitro.Foundation.Graphics
         {
             var swapChainDesc = new SharpDX.DXGI.SwapChainDescription1()
             {
-                Width = 0,
-                Height = 0,
+                Width = 0,//(int)(1280 * Window.ScaleFactor.X),
+                Height = 0,//(int)(720 * Window.ScaleFactor.Y),
                 Format = SharpDX.DXGI.Format.B8G8R8A8_UNorm,
                 BufferCount = 2,
                 Usage = SharpDX.DXGI.Usage.BackBuffer | SharpDX.DXGI.Usage.RenderTargetOutput,
@@ -98,7 +102,7 @@ namespace CommitteeOfZero.Nitro.Foundation.Graphics
             using (var backbuffer = SharpDX.DXGI.Surface.FromSwapChain(SwapChain, 0))
             {
                 var pixelFormat = new SharpDX.Direct2D1.PixelFormat(SharpDX.DXGI.Format.B8G8R8A8_UNorm, SharpDX.Direct2D1.AlphaMode.Premultiplied);
-                var bitmapProperties = new BitmapProperties1(pixelFormat, 0, 0, BitmapOptions.Target | BitmapOptions.CannotDraw);
+                var bitmapProperties = new BitmapProperties1(pixelFormat, CurrentDpi.Width, CurrentDpi.Height, BitmapOptions.Target | BitmapOptions.CannotDraw);
                 _backBufferBitmap = new SharpDX.Direct2D1.Bitmap1(DeviceContext, backbuffer, bitmapProperties);
                 DeviceContext.Target = _backBufferBitmap;
             }

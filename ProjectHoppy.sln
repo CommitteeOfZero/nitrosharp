@@ -1,15 +1,15 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.26430.6
+VisualStudioVersion = 15.0.26510.0
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CommitteeOfZero.NsScript", "src\CommitteeOfZero.NsScript\CommitteeOfZero.NsScript.csproj", "{D141E5DC-81DB-4352-8BAE-E3772BDC23DE}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CommitteeOfZero.NsScript", "src\CommitteeOfZero.NsScript\CommitteeOfZero.NsScript.csproj", "{D141E5DC-81DB-4352-8BAE-E3772BDC23DE}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CommitteeOfZero.NsScript.Tests", "src\CommitteeOfZero.NsScript.Tests\CommitteeOfZero.NsScript.Tests.csproj", "{EC39394D-3A99-4EBB-83F3-9D800A8D4BCC}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CommitteeOfZero.NsScript.Tests", "src\CommitteeOfZero.NsScript.Tests\CommitteeOfZero.NsScript.Tests.csproj", "{EC39394D-3A99-4EBB-83F3-9D800A8D4BCC}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CommitteeOfZero.Nitro", "src\CommitteeOfZero.Nitro\CommitteeOfZero.Nitro.csproj", "{D5D100EF-CB4E-4DE2-B20F-D5D85091DD52}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CommitteeOfZero.Nitro", "src\CommitteeOfZero.Nitro\CommitteeOfZero.Nitro.csproj", "{D5D100EF-CB4E-4DE2-B20F-D5D85091DD52}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CommitteeOfZero.Nitro.Foundation", "src\CommitteeOfZero.Nitro.Foundation\CommitteeOfZero.Nitro.Foundation.csproj", "{6E5187F9-61C7-4CDC-BCA2-4379A20B0E6C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CommitteeOfZero.Nitro.Foundation", "src\CommitteeOfZero.Nitro.Foundation\CommitteeOfZero.Nitro.Foundation.csproj", "{6E5187F9-61C7-4CDC-BCA2-4379A20B0E6C}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CowsHead.NetFx", "src\CowsHead.NetFx\CowsHead.NetFx.csproj", "{8236EDEA-E0E1-4AC8-A99A-69DA61848CBB}"
 EndProject

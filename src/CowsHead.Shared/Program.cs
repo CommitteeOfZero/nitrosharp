@@ -6,6 +6,8 @@ namespace CowsHead
     {
         public static void Main(string[] args)
         {
+            FFmpegLibraries.Locate();
+
             var config = ConfigurationReader.Read("Game.json");
             var game = new NitroGame(config);
             game.Run();
