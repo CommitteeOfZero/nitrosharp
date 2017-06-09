@@ -1,6 +1,6 @@
 ﻿{
-  "activeProfile": "Demo2",
-  "graphics.vsync": false,
+  "activeProfile": "Demo1",
+  "graphics.vsync": true,
 
   "profiles": {
     "CH": {
@@ -23,7 +23,7 @@
       "window.title": "COWS;HEAD NOAH",
       "window.width": 1280,
       "window.height": 720,
-      "startupScript": "ch01_022y_★優愛編_インターミッション０３Ａ.nss",
+      "startupScript": "ch01_006r_★梨深編_インターミッション０１Ｂ.nss",
       "debug.contentRoot": "S:/ChaosContent/Noah"
     },
 

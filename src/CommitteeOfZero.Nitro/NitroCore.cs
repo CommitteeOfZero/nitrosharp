@@ -78,6 +78,7 @@ namespace CommitteeOfZero.Nitro
                     break;
 
                 case NsEntityAction.ResetText:
+                    TextEntity.Destroy();
                     break;
 
                 case NsEntityAction.Hide:
@@ -89,18 +90,7 @@ namespace CommitteeOfZero.Nitro
                     break;
 
                 case NsEntityAction.Dispose:
-                    if (entity.HasComponent<Visual>())
-                    {
-                        _entities.Remove(entity);
-                    }
-                    //else
-                    //{
-                    //    var sound = entity.GetComponent<SoundComponent>();
-                    //    if (sound != null)
-                    //    {
-                    //        sound.RemoveOncePlayed = true;
-                    //    }
-                    //}
+                    entity.Destroy();
                     break;
             }
         }

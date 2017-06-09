@@ -12,7 +12,7 @@ namespace CommitteeOfZero.NsScript
         {
             Code,
             ParameterList,
-            DialogueBlock
+            Paragraph
         }
 
         private static readonly Encoding s_defaultEncoding;
@@ -57,15 +57,17 @@ namespace CommitteeOfZero.NsScript
 
         public SyntaxToken Lex()
         {
-            if (CurrentLocation == Location.DialogueBlock)
+            string leadingTrivia = ScanSyntaxTrivia(isTrailing: false);
+
+            if (CurrentLocation == Location.Paragraph)
             {
                 if (PeekChar() != '{' && !IsParagraphEndTag())
                 {
-                    return LexPXmlToken();
+                    return LexPXmlToken(leadingTrivia);
                 }
             }
 
-            var token = LexSyntaxToken();
+            var token = LexSyntaxToken(leadingTrivia);
             switch (token.Kind)
             {
                 case SyntaxTokenKind.OpenBraceToken:
@@ -88,7 +90,7 @@ namespace CommitteeOfZero.NsScript
                     break;
 
                 case SyntaxTokenKind.ParagraphStartTag:
-                    _nestingStack.Push(Location.DialogueBlock);
+                    _nestingStack.Push(Location.Paragraph);
                     break;
 
                 case SyntaxTokenKind.ParagraphEndTag:
@@ -99,10 +101,8 @@ namespace CommitteeOfZero.NsScript
             return token;
         }
 
-        private SyntaxToken LexSyntaxToken()
+        private SyntaxToken LexSyntaxToken(string leadingTrivia)
         {
-            string leadingTrivia = ScanSyntaxTrivia(isTrailing: false);
-
             SyntaxTokenKind kind = SyntaxTokenKind.None;
             string text = null;
             object value = null;
@@ -409,7 +409,7 @@ namespace CommitteeOfZero.NsScript
             return new SyntaxToken(kind, leadingTrivia, text, trailingTrivia, value);
         }
 
-        private SyntaxToken LexPXmlToken()
+        private SyntaxToken LexPXmlToken(string leadingTrivia)
         {
             SyntaxTokenKind kind = SyntaxTokenKind.None;
             string trailingTrivia = string.Empty;
@@ -425,16 +425,9 @@ namespace CommitteeOfZero.NsScript
                     scanTrailingTrivia = true;
                     break;
 
-                case '\r':
-                case '\n':
-                    kind = SyntaxTokenKind.PXmlLineSeparator;
-                    ScanEndOfLineSequence();
-                    break;
-
-
                 default:
                     kind = SyntaxTokenKind.PXmlString;
-                    ScanPXmlNode();
+                    ScanPXmlString();
                     break;
             }
 
@@ -444,10 +437,10 @@ namespace CommitteeOfZero.NsScript
                 trailingTrivia = ScanSyntaxTrivia(isTrailing: true);
             }
 
-            return new SyntaxToken(kind, string.Empty, text, trailingTrivia);
+            return new SyntaxToken(kind, leadingTrivia, text, trailingTrivia);
         }
 
-        private void ScanPXmlNode()
+        private void ScanPXmlString()
         {
             char c;
             while (!IsParagraphEndTag() && (c = PeekChar()) != '{' && c != EofCharacter)
