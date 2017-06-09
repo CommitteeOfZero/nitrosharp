@@ -10,6 +10,7 @@ using CommitteeOfZero.Nitro.Audio;
 using System.IO;
 using CommitteeOfZero.Nitro.Foundation.Animation;
 using CommitteeOfZero.Nitro.Foundation.Graphics;
+using Microsoft.Extensions.Logging;
 
 namespace CommitteeOfZero.Nitro
 {
@@ -22,8 +23,8 @@ namespace CommitteeOfZero.Nitro
         private NitroCore _nitroCore;
         private RenderSystem _renderSystem;
 
-        //private ILogger _interpreterLog;
-        //private ILogger _entityLog;
+        private ILogger _interpreterLog;
+        private ILogger _entityLog;
 
         public NitroGame(NitroConfiguration configuration)
         {
@@ -90,21 +91,21 @@ namespace CommitteeOfZero.Nitro
 
         private void OnEnteredFunction(object sender, Function function)
         {
-            //_interpreterLog.LogCritical($"Entered function {function.Name.SimplifiedName}");
+            _interpreterLog.LogCritical($"Entered function {function.Name.SimplifiedName}");
         }
 
         private void OnBuiltInCallDispatched(object sender, BuiltInFunctionCall call)
         {
             if (call.CallingThreadId == _nitroCore.MainThread.Id)
             {
-                //_interpreterLog.LogInformation($"Built-in call: {call.ToString()}");
+                _interpreterLog.LogInformation($"Built-in call: {call.ToString()}");
             }
         }
 
         private void SetupLogging()
         {
-            //var loggerFactory = new LoggerFactory().AddConsole();
-            //_interpreterLog = loggerFactory.CreateLogger("Interpreter");
+            var loggerFactory = new LoggerFactory().AddConsole();
+            _interpreterLog = loggerFactory.CreateLogger("Interpreter");
             //_entityLog = loggerFactory.CreateLogger("Entity System");
 
             //Entities.EntityRemoved += (o, e) => _entityLog.LogInformation($"Removed entity '{e.Name}'");

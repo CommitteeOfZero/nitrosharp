@@ -56,7 +56,19 @@ namespace CommitteeOfZero.Nitro.Foundation
         }
 
         public bool Exists(string name) => _allEntities.ContainsKey(name);
-        public bool TryGet(string name, out Entity entity) => TryGetCore(name, out entity);
+        public bool TryGet(string name, out Entity entity)
+        {
+            bool exists = _allEntities.TryGetValue(name, out entity);
+            if (!exists)
+            {
+                if (_aliases.TryGetValue(name, out string actualName))
+                {
+                    return TryGet(actualName, out entity);
+                }
+            }
+
+            return exists;
+        }
 
         public Entity Get(string name)
         {
@@ -73,20 +85,6 @@ namespace CommitteeOfZero.Nitro.Foundation
             _aliases[alias] = entityName;
         }
 
-        private bool TryGetCore(string name, out Entity entity)
-        {
-            bool exists = _allEntities.TryGetValue(name, out entity);
-            if (!exists)
-            {
-                if (_aliases.TryGetValue(name, out string actualName))
-                {
-                    return TryGetCore(actualName, out entity);
-                }
-            }
-
-            return exists;
-        }
-
         /// <summary>
         /// Schedules the specified <see cref="Entity"/> to be removed on the next update.
         /// </summary>
@@ -101,6 +99,7 @@ namespace CommitteeOfZero.Nitro.Foundation
         {
             if (_allEntities.TryGetValue(entityName, out var entity))
             {
+                entity.IsScheduledForRemoval = true;
                 _entitiesToRemove.Add(entity);
                 EntityRemovalScheduled?.Invoke(this, entity);
             }

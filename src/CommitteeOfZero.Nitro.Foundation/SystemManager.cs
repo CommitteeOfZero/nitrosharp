@@ -52,15 +52,18 @@ namespace CommitteeOfZero.Nitro.Foundation
             }
         }
 
-        private void OnPreviewEntityUpdated(object sender, Entity e)
+        private void OnPreviewEntityUpdated(object sender, Entity entity)
         {
-            _updatedEntities.Add(e);
+            if (!_removedEntities.Contains(entity))
+            {
+                _updatedEntities.Add(entity);
+            }
         }
 
-        private void OnPreviewEntityRemoved(object sender, Entity e)
+        private void OnPreviewEntityRemoved(object sender, Entity entity)
         {
-            _removedEntities.Add(e);
-            _updatedEntities.Remove(e);
+            _removedEntities.Add(entity);
+            _updatedEntities.Remove(entity);
         }
 
         public void Dispose()

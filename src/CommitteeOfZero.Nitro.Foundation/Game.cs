@@ -6,7 +6,9 @@ using CommitteeOfZero.Nitro.Foundation.Platform;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 
 namespace CommitteeOfZero.Nitro.Foundation

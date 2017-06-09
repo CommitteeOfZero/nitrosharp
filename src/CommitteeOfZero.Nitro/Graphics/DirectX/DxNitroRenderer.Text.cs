@@ -2,7 +2,7 @@
 
 namespace CommitteeOfZero.Nitro.Graphics
 {
-    public sealed partial class DxCanvas
+    public sealed partial class DxNitroRenderer
     {
         private TextLayout _textLayout;
         private TextRenderer _customTextRenderer;
@@ -14,7 +14,7 @@ namespace CommitteeOfZero.Nitro.Graphics
         private void CreateTextResources()
         {
             _customTextRenderer = new CustomTextRenderer(_rc.DeviceContext, _rc.ColorBrush);
-            _textFormat = new TextFormat(_rc.DWriteFactory, "Segoe UI", 30);
+            _textFormat = new TextFormat(_rc.DWriteFactory, "Segoe UI WP", FontWeight.Normal, FontStyle.Normal, 30);
 
             _visibleRegion.context = new TextDrawingContext { OpacityOverride = 1.0f };
             _animatedRegion.context = new TextDrawingContext();

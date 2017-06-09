@@ -20,9 +20,9 @@ namespace CommitteeOfZero.Nitro.Graphics
         public Visual Source { get; set; }
         public AssetRef<TextureAsset> Mask { get; set; }
 
-        public override void Render(ICanvas canvas)
+        public override void Render(INitroRenderer renderer)
         {
-            canvas.DrawTransition(this);
+            renderer.DrawTransition(this);
         }
 
         public override void OnRemoved()

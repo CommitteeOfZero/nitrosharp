@@ -73,7 +73,7 @@ namespace CommitteeOfZero.Nitro.Foundation.Platform
 
         public override WindowState WindowState
         {
-            get { return OtkToMoeWindowState(_nativeWindow.WindowState); }
+            get { return OtkToNitroWindowState(_nativeWindow.WindowState, _nativeWindow.WindowBorder); }
             set { SetWindowState(value); }
         }
 
@@ -91,7 +91,7 @@ namespace CommitteeOfZero.Nitro.Foundation.Platform
         }
 
 #if NETSTANDARD1_4
-        public override System.Drawing.Rectangle Bounds => OtkToMoeRectangle(_nativeWindow.Bounds);
+        public override System.Drawing.Rectangle Bounds => OtkToNitroRectangle(_nativeWindow.Bounds);
 #else
         public override System.Drawing.Rectangle Bounds => _nativeWindow.Bounds;
 #endif
@@ -126,15 +126,15 @@ namespace CommitteeOfZero.Nitro.Foundation.Platform
         }
 
 #if NETSTANDARD1_4
-        private static System.Drawing.Rectangle OtkToMoeRectangle(OpenTK.Rectangle rect)
+        private static System.Drawing.Rectangle OtkToNitroRectangle(OpenTK.Rectangle rect)
         {
             return new System.Drawing.Rectangle(rect.X, rect.Y, rect.Width, rect.Height);
         }
 #endif
 
-        private static WindowState OtkToMoeWindowState(OpenTK.WindowState otkWindowState)
+        private static WindowState OtkToNitroWindowState(OpenTK.WindowState state, WindowBorder border)
         {
-            switch (otkWindowState)
+            switch (state)
             {
                 case OpenTK.WindowState.Minimized:
                     return WindowState.Minimized;
@@ -143,15 +143,16 @@ namespace CommitteeOfZero.Nitro.Foundation.Platform
                 case OpenTK.WindowState.Fullscreen:
                     return WindowState.FullScreen;
 
+
                 case OpenTK.WindowState.Normal:
                 default:
-                    return WindowState.Normal;
+                    return border == WindowBorder.Hidden ? WindowState.BorderlessFullScreen : WindowState.Normal;
             }
         }
 
-        private static OpenTK.WindowState MoeToOtkWindowState(WindowState mlWindowState)
+        private OpenTK.WindowState NitroToOtkWindowState(WindowState state)
         {
-            switch (mlWindowState)
+            switch (state)
             {
                 case WindowState.FullScreen:
                     return OpenTK.WindowState.Fullscreen;
@@ -165,6 +166,41 @@ namespace CommitteeOfZero.Nitro.Foundation.Platform
             }
         }
 
+        private void SetCenteredFullScreenWindow(System.Drawing.Point position)
+        {
+            int x = position.X;
+            int actualX = 0;
+            System.Drawing.Size size = default(System.Drawing.Size);
+            DisplayIndex index = DisplayIndex.Default;
+            while (x >= 0)
+            {
+                var display = DisplayDevice.GetDisplay(index);
+                x -= display.Width;
+                if (x > 0)
+                {
+                    actualX += display.Width;
+                }
+                else
+                {
+                    size = new System.Drawing.Size(display.Width, display.Height);
+                }
+
+                index += 1;
+            }
+
+            if (size == default(System.Drawing.Size))
+            {
+                throw new InvalidOperationException("SetCenteredFullScreen failed. Couldn't determine size.");
+            }
+
+            var bounds = _nativeWindow.Bounds;
+            bounds.X = actualX;
+            bounds.Y = 0;
+            bounds.Width = size.Width;
+            bounds.Height = size.Height;
+            _nativeWindow.Bounds = bounds;
+        }
+
         private void SetWindowState(WindowState state)
         {
             switch (state)
@@ -172,11 +208,22 @@ namespace CommitteeOfZero.Nitro.Foundation.Platform
                 case WindowState.Normal:
                 case WindowState.Minimized:
                 case WindowState.Maximized:
-                    _nativeWindow.WindowBorder = WindowBorder.Resizable;
+                    _nativeWindow.WindowBorder = WindowBorder.Fixed;
+                    break;
+
+                case WindowState.BorderlessFullScreen:
+                    _nativeWindow.WindowBorder = WindowBorder.Hidden;
+                    if (_nativeWindow.WindowState != OpenTK.WindowState.Normal)
+                    {
+                        _nativeWindow.WindowState = OpenTK.WindowState.Normal;
+                    }
+
+                    var point = new System.Drawing.Point(_nativeWindow.X, _nativeWindow.Y);
+                    SetCenteredFullScreenWindow(point);
                     break;
             }
 
-            _nativeWindow.WindowState = MoeToOtkWindowState(state);
+            _nativeWindow.WindowState = NitroToOtkWindowState(state);
         }
     }
 }

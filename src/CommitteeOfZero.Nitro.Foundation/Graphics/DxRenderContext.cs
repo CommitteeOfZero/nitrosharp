@@ -4,7 +4,6 @@ using SharpDX.Direct2D1;
 using SharpDX.Direct3D;
 using SharpDX.Direct3D11;
 using System;
-using System.Runtime.InteropServices;
 
 namespace CommitteeOfZero.Nitro.Foundation.Graphics
 {
@@ -37,6 +36,7 @@ namespace CommitteeOfZero.Nitro.Foundation.Graphics
 
         public Window Window => _window;
         public Size2F CurrentDpi => D2DFactory.DesktopDpi;
+        public Size2F BackBufferSize => _backBufferBitmap.Size;
 
         private void Initialize()
         {
@@ -74,8 +74,10 @@ namespace CommitteeOfZero.Nitro.Foundation.Graphics
 
             _dxgiDevice = _d3dDevice.QueryInterface<SharpDX.DXGI.Device2>();
             _d2dDevice = new SharpDX.Direct2D1.Device(D2DFactory, _dxgiDevice);
-            DeviceContext = new SharpDX.Direct2D1.DeviceContext(_d2dDevice, new DeviceContextOptions());
+            DeviceContext = new SharpDX.Direct2D1.DeviceContext(_d2dDevice, DeviceContextOptions.None);
             DeviceContext.DotsPerInch = new Size2F(CurrentDpi.Width, CurrentDpi.Height);
+
+            DeviceContext.AntialiasMode = AntialiasMode.PerPrimitive;
 
             ColorBrush = new SolidColorBrush(DeviceContext, Color.CornflowerBlue);
         }
@@ -91,7 +93,7 @@ namespace CommitteeOfZero.Nitro.Foundation.Graphics
                 Usage = SharpDX.DXGI.Usage.BackBuffer | SharpDX.DXGI.Usage.RenderTargetOutput,
                 SwapEffect = SharpDX.DXGI.SwapEffect.FlipSequential,
                 SampleDescription = new SharpDX.DXGI.SampleDescription(1, 0),
-                Scaling = SharpDX.DXGI.Scaling.Stretch
+                Scaling = SharpDX.DXGI.Scaling.None
             };
 
             using (var adapter = _dxgiDevice.Adapter)
@@ -107,7 +109,7 @@ namespace CommitteeOfZero.Nitro.Foundation.Graphics
                 DeviceContext.Target = _backBufferBitmap;
             }
 
-            DeviceContext.TextAntialiasMode = SharpDX.Direct2D1.TextAntialiasMode.Grayscale;
+            DeviceContext.TextAntialiasMode = SharpDX.Direct2D1.TextAntialiasMode.Cleartype;
         }
 
         public DxDrawingSession NewDrawingSession(RgbaValueF clearColor)

@@ -28,14 +28,14 @@ namespace CommitteeOfZero.Nitro.Graphics
         public TextRange AnimatedRegion { get; set; }
         public float AnimatedOpacity { get; set; }
 
-        public override void Render(ICanvas canvas)
+        public override void Render(INitroRenderer renderer)
         {
-            canvas.DrawText(this);
+            renderer.DrawText(this);
         }
 
-        public override void Free(ICanvas canvas)
+        public override void Free(INitroRenderer renderer)
         {
-            canvas.Free(this);
+            renderer.Free(this);
         }
 
         public override SizeF Measure() => LayoutBounds;

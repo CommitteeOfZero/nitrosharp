@@ -4,7 +4,6 @@ using CommitteeOfZero.Nitro.Foundation;
 using CommitteeOfZero.Nitro.Foundation.Animation;
 using System;
 using System.Numerics;
-using System.Linq;
 using CommitteeOfZero.Nitro.Foundation.Graphics;
 
 namespace CommitteeOfZero.Nitro
@@ -116,9 +115,14 @@ namespace CommitteeOfZero.Nitro
             initialOpacity = initialOpacity.Rebase(1.0f);
             finalOpacity = finalOpacity.Rebase(1.0f);
 
-            foreach (var entity in _entities.Query(sourceEntityName).Take(1))
+            foreach (var entity in _entities.Query(sourceEntityName))
             {
                 SetupTransition(entity, duration, initialOpacity, finalOpacity, feather, maskFileName);
+            }
+
+            if (duration > TimeSpan.Zero && wait)
+            {
+                CurrentThread.Suspend(duration);
             }
         }
 

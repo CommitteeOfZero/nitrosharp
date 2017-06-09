@@ -29,6 +29,7 @@ namespace CommitteeOfZero.Nitro.Foundation
         public string Name { get; }
         public TimeSpan CreationTime { get; }
         public Transform Transform { get; }
+        public bool IsScheduledForRemoval { get; internal set; }
 
         public Dictionary<string, object> AdditionalProperties
         {

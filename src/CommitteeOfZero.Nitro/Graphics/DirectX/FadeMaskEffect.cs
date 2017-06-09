@@ -64,10 +64,14 @@ namespace CommitteeOfZero.Nitro.Graphics
             base.Dispose(disposing);
         }
 
+        private RawRectangle _maskSize;
+
         public RawRectangle MapInputRectanglesToOutputRectangle(RawRectangle[] inputRects, RawRectangle[] inputOpaqueSubRects, out RawRectangle outputOpaqueSubRect)
         {
+            _maskSize = inputRects[1];
             outputOpaqueSubRect = default(Rectangle);
-            return inputRects[0];
+
+            return new RawRectangle(_maskSize.Left, _maskSize.Top, _maskSize.Right, _maskSize.Bottom + 120);
         }
 
         public RawRectangle MapInvalidRect(int inputIndex, RawRectangle invalidInputRect)
@@ -78,7 +82,7 @@ namespace CommitteeOfZero.Nitro.Graphics
         public void MapOutputRectangleToInputRectangles(RawRectangle outputRect, RawRectangle[] inputRects)
         {
             inputRects[0] = outputRect;
-            inputRects[1] = new RawRectangle(0, 0, outputRect.Right - outputRect.Left, outputRect.Bottom - outputRect.Top);
+            inputRects[1] = _maskSize;
         }
 
         public void SetDrawInformation(DrawInformation drawInfo)

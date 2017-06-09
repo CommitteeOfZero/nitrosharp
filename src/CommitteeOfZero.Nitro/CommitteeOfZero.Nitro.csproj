@@ -3,19 +3,15 @@
   <PropertyGroup>
     <TargetFramework>netstandard1.4</TargetFramework>
   </PropertyGroup>
-
-  <ItemGroup>
-    <None Include="Graphics\DirectX\DxCanvas.Text.cs" />
-    <None Include="NitroCore.Effects.cs" />
-    <None Include="NitroCore.Graphics.cs" />
-  </ItemGroup>
-
+  
   <ItemGroup>
     <ProjectReference Include="..\CommitteeOfZero.Nitro.Foundation\CommitteeOfZero.Nitro.Foundation.csproj" />
     <ProjectReference Include="..\CommitteeOfZero.NsScript\CommitteeOfZero.NsScript.csproj" />
   </ItemGroup>
   
   <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="1.1.2" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="1.1.2" />
     <PackageReference Include="System.ValueTuple" Version="4.3.1" />
   </ItemGroup>
 </Project>

@@ -2,14 +2,14 @@
 {
     public class Screenshot : Visual
     {
-        public void Take(ICanvas canvas)
+        public void Take(INitroRenderer renderer)
         {
-            canvas.CaptureScreen();
+            renderer.CaptureScreen();
         }
 
-        public override void Render(ICanvas canvas)
+        public override void Render(INitroRenderer renderer)
         {
-            canvas.DrawScreenshot(this);
+            renderer.DrawScreenshot(this);
         }
     }
 }

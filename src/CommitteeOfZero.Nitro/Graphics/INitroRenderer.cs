@@ -3,7 +3,7 @@ using System.Numerics;
 
 namespace CommitteeOfZero.Nitro.Graphics
 {
-    public interface ICanvas : IDisposable
+    public interface INitroRenderer : IDisposable
     {
         void SetTransform(Matrix3x2 transform);
 

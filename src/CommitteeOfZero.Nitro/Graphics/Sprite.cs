@@ -17,9 +17,9 @@ namespace CommitteeOfZero.Nitro.Graphics
         public AssetRef<TextureAsset> Source { get; set; }
         public RectangleF? SourceRectangle { get; set; }
 
-        public override void Render(ICanvas canvas)
+        public override void Render(INitroRenderer renderer)
         {
-            canvas.DrawSprite(this);
+            renderer.DrawSprite(this);
         }
 
         public override SizeF Measure()
@@ -32,10 +32,6 @@ namespace CommitteeOfZero.Nitro.Graphics
 
             return new SizeF(deviceTexture.Width, deviceTexture.Height);
 
-        }
-
-        public override void Free(ICanvas canvas)
-        {
         }
 
         public override void OnRemoved()

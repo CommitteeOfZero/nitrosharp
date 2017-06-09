@@ -26,9 +26,9 @@ namespace CommitteeOfZero.Nitro.Graphics
             return Size;
         }
 
-        public override void Render(ICanvas canvas)
+        public override void Render(INitroRenderer renderer)
         {
-            canvas.DrawRectangle(this);
+            renderer.DrawRectangle(this);
         }
     }
 }

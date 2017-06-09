@@ -37,8 +37,8 @@ namespace CommitteeOfZero.Nitro.Graphics
        
         public int Priority { get; set; }
 
-        public abstract void Render(ICanvas canvas);
-        public virtual void Free(ICanvas canvas)
+        public abstract void Render(INitroRenderer nitroRenderer);
+        public virtual void Free(INitroRenderer nitroRenderer)
         {
         }
     }

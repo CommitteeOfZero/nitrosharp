@@ -1,8 +1,3 @@
-// Copyright (c) Microsoft Corporation. All rights reserved.
-//
-// Licensed under the MIT License. See LICENSE.txt in the project root for license information.
-// Contains modifications by @SomeAnonDev.
-
 #define D2D_INPUT_COUNT 2
 #define D2D_INPUT0_SIMPLE
 #define D2D_INPUT1_SIMPLE
@@ -10,7 +5,7 @@
 #include "d2d1effecthelpers.hlsli"
 
 float opacity;
-float feather = 0.1;
+float feather;
 
 D2D_PS_ENTRY(main)
 {

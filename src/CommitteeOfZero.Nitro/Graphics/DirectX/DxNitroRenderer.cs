@@ -6,17 +6,19 @@ using SharpDX.Direct2D1.Effects;
 
 namespace CommitteeOfZero.Nitro.Graphics
 {
-    public sealed partial class DxCanvas : ICanvas
+    public sealed partial class DxNitroRenderer : INitroRenderer
     {
         private DxRenderContext _rc;
+        private readonly System.Drawing.Size _designResolution;
 
         private Bitmap1 _screenshotBitmap;
         private Flood _floodEffect;
         private Effect<FadeMaskEffect> _fadeMaskEffect;
 
-        public DxCanvas(DxRenderContext renderContext)
+        public DxNitroRenderer(DxRenderContext renderContext, System.Drawing.Size designResolution)
         {
             _rc = renderContext;
+            _designResolution = designResolution;
 
             _rc.D2DFactory.RegisterEffect<FadeMaskEffect>();
             _floodEffect = new Flood(_rc.DeviceContext);
@@ -28,8 +30,6 @@ namespace CommitteeOfZero.Nitro.Graphics
 
             CreateTextResources();
         }
-
-        public Matrix3x2 Transform { get; set; }
 
         public void CaptureScreen()
         {
@@ -47,6 +47,9 @@ namespace CommitteeOfZero.Nitro.Graphics
 
         public void DrawScreenshot(Screenshot screenshot)
         {
+            float scale = _designResolution.Width / _rc.DeviceContext.Size.Width;
+            _rc.DeviceContext.Transform = SharpDX.Matrix3x2.Scaling(scale) * _rc.DeviceContext.Transform;
+
             var dst = new SharpDX.RectangleF(0, 0, _screenshotBitmap.Size.Width, _screenshotBitmap.Size.Height);
             _rc.DeviceContext.DrawBitmap(_screenshotBitmap, dst, screenshot.Opacity, BitmapInterpolationMode.Linear);
         }
@@ -58,24 +61,22 @@ namespace CommitteeOfZero.Nitro.Graphics
             if (sprite.SourceRectangle == null)
             {
                 var dst = new SharpDX.RectangleF(0, 0, deviceTexture.Width, deviceTexture.Height);
-                target.DrawBitmap(deviceTexture, dst, sprite.Opacity, BitmapInterpolationMode.Linear);
+                target.DrawBitmap(deviceTexture, dst, sprite.Opacity, InterpolationMode.Linear, null, null);
             }
             else
             {
                 var drawingRect = sprite.SourceRectangle.Value;
                 var srcRect = new SharpDX.RectangleF(drawingRect.X, drawingRect.Y, drawingRect.Width, drawingRect.Height);
                 var dst = new SharpDX.RectangleF(0, 0, sprite.Measure().Width, sprite.Measure().Height);
-                target.DrawBitmap(deviceTexture, dst, sprite.Opacity, InterpolationMode.Linear, srcRect, null);
+                target.DrawBitmap(deviceTexture, dst, sprite.Opacity, InterpolationMode.NearestNeighbor, srcRect, null);
             }
         }
 
         public void DrawTransition(FadeTransition transition)
         {
-            DrawTransition2(transition);
-        }
+            var transform = _rc.DeviceContext.Transform;
+            _rc.DeviceContext.Transform = SharpDX.Matrix3x2.Scaling(_rc.CurrentDpi.Width / 96.0f) * transform;
 
-        public void DrawTransition2(FadeTransition transition)
-        {
             SetTransitionEffectInputs(transition);
             _fadeMaskEffect.SetValue(0, transition.Opacity);
             _rc.DeviceContext.DrawImage(_fadeMaskEffect);
@@ -86,15 +87,15 @@ namespace CommitteeOfZero.Nitro.Graphics
             if (transition.TransitionSource is FadeTransition.SolidColorSource colorSource)
             {
                 _floodEffect.Color = colorSource.Color;
-                _fadeMaskEffect.SetInputEffect(0, _floodEffect, false);
+                _fadeMaskEffect.SetInputEffect(0, _floodEffect, true);
             }
             else
             {
                 var imageSource = (FadeTransition.ImageSource)transition.TransitionSource;
-                _fadeMaskEffect.SetInput(0, imageSource.Source.Asset, false);
+                _fadeMaskEffect.SetInput(0, imageSource.Source.Asset, true);
             }
 
-            _fadeMaskEffect.SetInput(1, transition.Mask.Asset, false);
+            _fadeMaskEffect.SetInput(1, transition.Mask.Asset, true);
         }
 
         public void SetTransform(Matrix3x2 transform)

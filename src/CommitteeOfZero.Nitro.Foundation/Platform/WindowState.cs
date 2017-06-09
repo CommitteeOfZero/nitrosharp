@@ -4,6 +4,7 @@
     {
         Normal,
         FullScreen,
+        BorderlessFullScreen,
         Maximized,
         Minimized,
     }

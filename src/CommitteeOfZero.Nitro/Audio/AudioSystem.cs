@@ -15,7 +15,6 @@ namespace CommitteeOfZero.Nitro.Audio
 
         private readonly AudioEngine _audioEngine;
         private uint _defaultBufferSize;
-        private readonly ContentManager _content;
 
         private readonly AudioSource _voiceAudioSource;
         private Dictionary<SoundComponent, AudioSource> _audioSources;

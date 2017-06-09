@@ -59,7 +59,7 @@ namespace CommitteeOfZero.NsScript
         {
             if (CurrentLocation == Location.DialogueBlock)
             {
-                if (PeekChar() != '{' && !IsDialogueBlockEndTag())
+                if (PeekChar() != '{' && !IsParagraphEndTag())
                 {
                     return LexPXmlToken();
                 }
@@ -421,7 +421,7 @@ namespace CommitteeOfZero.NsScript
             {
                 case '[':
                     kind = SyntaxTokenKind.ParagraphIdentifier;
-                    ScanDialogueBlockIdentifier();
+                    ScanParagraphIdentifier();
                     scanTrailingTrivia = true;
                     break;
 
@@ -450,7 +450,7 @@ namespace CommitteeOfZero.NsScript
         private void ScanPXmlNode()
         {
             char c;
-            while (!IsDialogueBlockEndTag() && (c = PeekChar()) != '{' && c != EofCharacter)
+            while (!IsParagraphEndTag() && (c = PeekChar()) != '{' && c != EofCharacter)
             {
                 int newlineSequenceLength = 0;
                 while (SyntaxFacts.IsNewLine(PeekChar(newlineSequenceLength)))
@@ -466,7 +466,7 @@ namespace CommitteeOfZero.NsScript
             }
         }
 
-        private void ScanDialogueBlockIdentifier()
+        private void ScanParagraphIdentifier()
         {
             AdvanceChar();
 
@@ -617,7 +617,7 @@ namespace CommitteeOfZero.NsScript
             return result;
         }
 
-        private bool IsDialogueBlockEndTag()
+        private bool IsParagraphEndTag()
         {
             for (int i = 0; i < ParagraphEndTag.Length; i++)
             {

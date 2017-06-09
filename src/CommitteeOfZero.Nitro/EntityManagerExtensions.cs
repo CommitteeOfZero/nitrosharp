@@ -1,5 +1,6 @@
 ﻿using CommitteeOfZero.Nitro.Foundation;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace CommitteeOfZero.Nitro
 {
@@ -19,6 +20,11 @@ namespace CommitteeOfZero.Nitro
             {
                 if (entityManager.TryGet(query, out var result))
                 {
+                    if (result.IsScheduledForRemoval)
+                    {
+                        return Enumerable.Empty<Entity>();
+                    }
+
                     s_oneElementArray[0] = result;
                     return s_oneElementArray;
                 }
@@ -49,7 +55,7 @@ namespace CommitteeOfZero.Nitro
                     }
                 }
 
-                if (matches)
+                if (matches && !pair.Value.IsScheduledForRemoval)
                 {
                     yield return pair.Value;
                 }
