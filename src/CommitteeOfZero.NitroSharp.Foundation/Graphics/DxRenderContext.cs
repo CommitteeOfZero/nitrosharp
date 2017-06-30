@@ -17,7 +17,6 @@ namespace CommitteeOfZero.NitroSharp.Foundation.Graphics
         private SharpDX.Direct2D1.Device _d2dDevice;
         private SharpDX.Direct3D11.Device1 _d3dDevice;
         private SharpDX.DXGI.Device2 _dxgiDevice;
-        private SharpDX.Direct2D1.Bitmap1 _backBufferBitmap;
 
         internal SharpDX.DXGI.SwapChain1 SwapChain;
 
@@ -33,11 +32,13 @@ namespace CommitteeOfZero.NitroSharp.Foundation.Graphics
         public SharpDX.WIC.ImagingFactory WicFactory { get; private set; }
 
         public SharpDX.Direct2D1.DeviceContext DeviceContext { get; private set; }
+        public SharpDX.Direct2D1.Bitmap1 BackBufferBitmap { get; private set; }
+        public PixelFormat PixelFormat { get; private set; }
         public SolidColorBrush ColorBrush { get; private set; }
 
         public Window Window => _window;
         public Size2F CurrentDpi => D2DFactory.DesktopDpi;
-        public Size2F BackBufferSize => _backBufferBitmap.Size;
+        public Size2F BackBufferSize => BackBufferBitmap.Size;
 
         private void Initialize()
         {
@@ -68,7 +69,7 @@ namespace CommitteeOfZero.NitroSharp.Foundation.Graphics
                 SharpDX.Direct3D.FeatureLevel.Level_10_0
             };
 
-            using (var defaultDevice = new SharpDX.Direct3D11.Device(DriverType.Hardware, DeviceCreationFlags.BgraSupport | DeviceCreationFlags.Debug, featureLevels))
+            using (var defaultDevice = new SharpDX.Direct3D11.Device(DriverType.Hardware, DeviceCreationFlags.BgraSupport, featureLevels))
             {
                 _d3dDevice = defaultDevice.QueryInterface<SharpDX.Direct3D11.Device1>();
             }
@@ -102,12 +103,12 @@ namespace CommitteeOfZero.NitroSharp.Foundation.Graphics
                 SwapChain = new SharpDX.DXGI.SwapChain1(dxgiFactory, _d3dDevice, _window.Handle, ref swapChainDesc);
             }
 
-            var pixelFormat = new SharpDX.Direct2D1.PixelFormat(SharpDX.DXGI.Format.B8G8R8A8_UNorm, SharpDX.Direct2D1.AlphaMode.Premultiplied);
-            var bitmapProperties = new BitmapProperties1(pixelFormat, CurrentDpi.Width, CurrentDpi.Height, BitmapOptions.Target | BitmapOptions.CannotDraw);
+            PixelFormat = new SharpDX.Direct2D1.PixelFormat(SharpDX.DXGI.Format.B8G8R8A8_UNorm, SharpDX.Direct2D1.AlphaMode.Premultiplied);
+            var bitmapProperties = new BitmapProperties1(PixelFormat, CurrentDpi.Width, CurrentDpi.Height, BitmapOptions.Target | BitmapOptions.CannotDraw);
             using (var backbuffer = SharpDX.DXGI.Surface.FromSwapChain(SwapChain, 0))
             {
-                _backBufferBitmap = new SharpDX.Direct2D1.Bitmap1(DeviceContext, backbuffer, bitmapProperties);
-                DeviceContext.Target = _backBufferBitmap;
+                BackBufferBitmap = new SharpDX.Direct2D1.Bitmap1(DeviceContext, backbuffer, bitmapProperties);
+                DeviceContext.Target = BackBufferBitmap;
             }
 
             DeviceContext.TextAntialiasMode = SharpDX.Direct2D1.TextAntialiasMode.Cleartype;

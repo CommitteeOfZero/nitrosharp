@@ -25,7 +25,7 @@ namespace CommitteeOfZero.NitroSharp
 
         public override void LoadImage(string entityName, string fileName)
         {
-            var sprite = new Sprite(_content.Get<TextureAsset>(fileName), null, 1.0f, 0);
+            var sprite = new Sprite(_content.Get<Texture2D>(fileName), null, 1.0f, 0);
             _entities.Create(entityName, replace: true).WithComponent(sprite);
         }
 
@@ -82,7 +82,7 @@ namespace CommitteeOfZero.NitroSharp
                 }
             }
 
-            var texture = new Sprite(_content.Get<TextureAsset>(source), srcRect, 1.0f, priority);
+            var texture = new Sprite(_content.Get<Texture2D>(source), srcRect, 1.0f, priority);
             _entities.Create(entityName, replace: true)
                 .WithComponent(texture)
                 .WithParent(parentEntity)

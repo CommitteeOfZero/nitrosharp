@@ -52,7 +52,7 @@ namespace CommitteeOfZero.NitroSharp
 
             var textureLoader = new WicTextureLoader(RenderContext);
             var audioLoader = new FFmpegAudioLoader();
-            content.RegisterContentLoader(typeof(TextureAsset), textureLoader);
+            content.RegisterContentLoader(typeof(Texture2D), textureLoader);
             content.RegisterContentLoader(typeof(AudioStream), audioLoader);
 
             _nitroCore.SetContent(content);

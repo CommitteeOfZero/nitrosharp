@@ -3,13 +3,13 @@ using OpenTK;
 using OpenTK.Graphics;
 using CommitteeOfZero.NitroSharp.Foundation.Input;
 using System;
+using System.Drawing;
 
 namespace CommitteeOfZero.NitroSharp.Foundation.Platform
 {
     public partial class GameWindow : Window
     {
         private NativeWindow _nativeWindow;
-        private readonly int _desiredWidth, _desiredHeight;
 
         public GameWindow() : this("Sample Text", 800, 600, WindowState.Normal)
         {
@@ -17,8 +17,7 @@ namespace CommitteeOfZero.NitroSharp.Foundation.Platform
 
         public GameWindow(string title, int desiredWidth, int desiredHeight, WindowState state)
         {
-            _desiredWidth = desiredWidth;
-            _desiredHeight = desiredHeight;
+            DesiredSize = new System.Drawing.Size(desiredWidth, desiredHeight);
             var graphicsMode = new GraphicsMode(32, 24, 0, 8);
             _nativeWindow = new NativeWindow(desiredWidth, desiredHeight, title, GameWindowFlags.Default, graphicsMode, DisplayDevice.Default);
 
@@ -33,6 +32,58 @@ namespace CommitteeOfZero.NitroSharp.Foundation.Platform
             IsVisible = true;
         }
 
+        public override System.Drawing.Size DesiredSize { get; }
+        public override System.Numerics.Vector2 ScaleFactor
+        {
+            get
+            {
+                return new System.Numerics.Vector2((float)_nativeWindow.Width / DesiredSize.Width, (float)_nativeWindow.Height / DesiredSize.Height);
+            }
+        }
+
+        public override string Title
+        {
+            get =>_nativeWindow.Title;
+            set => _nativeWindow.Title = value;
+        }
+
+        public override int Width
+        {
+            get => _nativeWindow.Width;
+            set => _nativeWindow.Width = value;
+        }
+
+        public override int Height
+        {
+            get => _nativeWindow.Height;
+            set => _nativeWindow.Height = value;
+        }
+
+        public override WindowState WindowState
+        {
+            get => OtkToNitroWindowState(_nativeWindow.WindowState, _nativeWindow.WindowBorder);
+            set => SetWindowState(value);
+        }
+
+        public override bool Exists => _nativeWindow.Exists;
+        public override bool IsVisible
+        {
+            get => _nativeWindow.Visible;
+            set => _nativeWindow.Visible = value;
+        }
+
+        public override bool IsCursorVisible
+        {
+            get => _nativeWindow.CursorVisible;
+            set => _nativeWindow.CursorVisible = value;
+        }
+
+        public override event EventHandler Resized;
+        public override event EventHandler Closing;
+        public override event EventHandler Closed;
+        public override event EventHandler GotFocus;
+        public override event EventHandler LostFocus;
+
         private void OnWindowFocusedChanged(object sender, EventArgs e)
         {
             if (_nativeWindow.Focused)
@@ -43,51 +94,6 @@ namespace CommitteeOfZero.NitroSharp.Foundation.Platform
             {
                 LostFocus?.Invoke(this, EventArgs.Empty);
             }
-        }
-
-        public override event EventHandler Resized;
-        public override event EventHandler Closing;
-        public override event EventHandler Closed;
-        public override event EventHandler GotFocus;
-        public override event EventHandler LostFocus;
-
-        public override System.Numerics.Vector2 ScaleFactor => new System.Numerics.Vector2((float)_nativeWindow.Width / _desiredWidth, (float)_nativeWindow.Height / _desiredHeight);
-
-        public override string Title
-        {
-            get { return _nativeWindow.Title; }
-            set { _nativeWindow.Title = value; }
-        }
-
-        public override int Width
-        {
-            get { return _nativeWindow.Width; }
-            set { _nativeWindow.Width = value; }
-        }
-
-        public override int Height
-        {
-            get { return _nativeWindow.Height; }
-            set { _nativeWindow.Height = value; }
-        }
-
-        public override WindowState WindowState
-        {
-            get { return OtkToNitroWindowState(_nativeWindow.WindowState, _nativeWindow.WindowBorder); }
-            set { SetWindowState(value); }
-        }
-
-        public override bool Exists => _nativeWindow.Exists;
-        public override bool IsVisible
-        {
-            get { return _nativeWindow.Visible; }
-            set { _nativeWindow.Visible = value; }
-        }
-
-        public override bool IsCursorVisible
-        {
-            get { return _nativeWindow.CursorVisible; }
-            set { _nativeWindow.CursorVisible = value; }
         }
 
 #if NETSTANDARD1_4

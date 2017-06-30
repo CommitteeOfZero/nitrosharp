@@ -4,22 +4,23 @@ using CommitteeOfZero.NitroSharp.Foundation;
 using CommitteeOfZero.NitroSharp.Foundation.Graphics;
 using System;
 using System.Numerics;
-using SharpDX.Direct2D1;
 
 namespace CommitteeOfZero.NitroSharp.Graphics
 {
     public sealed class RenderSystem : EntityProcessingSystem, IDisposable
     {
         private INitroRenderer _renderer;
-
-        private System.Drawing.Size DesignResolution => new System.Drawing.Size(RenderContext.Window.Width, RenderContext.Window.Height);
+        private Texture2D _secondaryRenderTarget;
+        private Queue<TextVisual> _textVisuals;
 
         public RenderSystem(DxRenderContext renderContext)
         {
             RenderContext = renderContext;
+            _textVisuals = new Queue<TextVisual>();
         }
 
         public DxRenderContext RenderContext { get; }
+        private System.Drawing.Size DesignResolution => RenderContext.Window.DesiredSize;
 
         protected override void DeclareInterests(ISet<Type> interests)
         {
@@ -40,30 +41,23 @@ namespace CommitteeOfZero.NitroSharp.Graphics
 
         public override void Update(float deltaMilliseconds)
         {
-            using (RenderContext.NewDrawingSession(RgbaValueF.Black))
+            Vector2 scaleFactor = RenderContext.Window.ScaleFactor;
+
+            _renderer.Target = _secondaryRenderTarget;
+            using (RenderContext.NewDrawingSession(RgbaValueF.Black, present: true))
             {
                 base.Update(deltaMilliseconds);
+
+                _renderer.Target = _renderer.PrimaryRenderTarget;
+                _renderer.SetTransform(Matrix3x2.CreateScale(scaleFactor));
+                _renderer.Draw(_secondaryRenderTarget);
+
+                while (_textVisuals.Count > 0)
+                {
+                    var text = _textVisuals.Dequeue();
+                    RenderItem(text, scaleFactor);
+                }
             }
-
-            //var bmp = RenderContext.DeviceContext.Target;
-            //_shit = bmp;
-            //RenderContext.DeviceContext.Target = _defaultTarget;
-            //using (RenderContext.NewDrawingSession(RgbaValueF.Black))
-            //{
-            //    RenderContext.DeviceContext.Transform = SharpDX.Matrix3x2.Scaling(1.5f, 1.5f);
-            //    RenderContext.DeviceContext.DrawImage(bmp);
-
-            //    if (_text != null)
-            //    {
-            //        var transform = _text.Entity.Transform.GetWorldMatrix(new System.Drawing.SizeF(1280, 720));
-            //        transform *= Matrix3x2.CreateScale(RenderContext.BackBufferSize.Width / 1280.0f, RenderContext.BackBufferSize.Height / 720.0f);
-
-            //        _renderer.SetTransform(transform);
-            //        _text.Render(_renderer);
-            //    }
-            //}
-
-            //_text = null;
         }
 
         public override IEnumerable<Entity> SortEntities(IEnumerable<Entity> entities)
@@ -76,19 +70,32 @@ namespace CommitteeOfZero.NitroSharp.Graphics
             var visual = entity.GetComponent<Visual>();
             if (visual.IsEnabled)
             {
-                var transform = entity.Transform.GetWorldMatrix(DesignResolution);
-                _renderer.SetTransform(transform);
-                visual.Render(_renderer);
+                if (visual is TextVisual text)
+                {
+                    _textVisuals.Enqueue(text);
+                    return;
+                }
+
+                RenderItem(visual, Vector2.One);
             }
+        }
+
+        private void RenderItem(Visual visual, Vector2 scale)
+        {
+            var transform = visual.Entity.Transform.GetWorldMatrix(DesignResolution) * Matrix3x2.CreateScale(scale);
+            _renderer.SetTransform(transform);
+            visual.Render(_renderer);
         }
 
         public void LoadCommonResources()
         {
             _renderer = new DxNitroRenderer(RenderContext, DesignResolution);
+            _secondaryRenderTarget = _renderer.CreateRenderTarget(DesignResolution);
         }
 
         public void Dispose()
         {
+            _secondaryRenderTarget.Dispose();
             _renderer.Dispose();
         }
     }

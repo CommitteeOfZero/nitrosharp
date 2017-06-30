@@ -7,6 +7,7 @@ namespace CommitteeOfZero.NitroSharp.Foundation.Platform
     public abstract class Window
     {
         public abstract string Title { get; set; }
+        public abstract Size DesiredSize { get; }
         public abstract int Width { get; set; }
         public abstract int Height { get; set; }
         public abstract WindowState WindowState { get; set; }

@@ -133,10 +133,10 @@ namespace CommitteeOfZero.NitroSharp
             if (visual != null)
             {
                 var transitionSource = visual is Sprite sprite ?
-                    (FadeTransition.IPixelSource)new FadeTransition.ImageSource(_content.Get<TextureAsset>(sprite.Source.Id))
+                    (FadeTransition.IPixelSource)new FadeTransition.ImageSource(_content.Get<Texture2D>(sprite.Source.Id))
                     : new FadeTransition.SolidColorSource(visual.Color);
 
-                var transition = new FadeTransition(transitionSource, _content.Get<TextureAsset>(maskFileName));
+                var transition = new FadeTransition(transitionSource, _content.Get<Texture2D>(maskFileName));
                 transition.Priority = visual.Priority;
                 Action<Component, float> propertySetter = (c, v) => (c as FadeTransition).Opacity = v;
                 var animation = new FloatAnimation(transition, propertySetter, initialOpacity, finalOpacity, duration);
@@ -145,7 +145,7 @@ namespace CommitteeOfZero.NitroSharp
                 {
                     if (visual is Sprite originalSprite)
                     {
-                        originalSprite.Source = _content.Get<TextureAsset>(originalSprite.Source.Id);
+                        originalSprite.Source = _content.Get<Texture2D>(originalSprite.Source.Id);
                     }
 
                     entity.RemoveComponent(transition);

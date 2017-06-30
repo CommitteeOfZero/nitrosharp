@@ -32,7 +32,7 @@ namespace CommitteeOfZero.NitroSharp.Foundation.Content
                     };
 
                     var bitmap = Bitmap1.FromWicBitmap(_rc.DeviceContext, converter, props);
-                    return new TextureAsset(bitmap);
+                    return new DxTexture2D(bitmap);
                 }
             }
         }

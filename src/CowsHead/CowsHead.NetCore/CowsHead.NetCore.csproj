@@ -11,7 +11,7 @@
   </ItemGroup>
   
   <ItemGroup>
-    <ProjectReference Include="..\CommitteeOfZero.Nitro\CommitteeOfZero.NitroSharp.csproj" />
+    <ProjectReference Include="..\..\CommitteeOfZero.NitroSharp\CommitteeOfZero.NitroSharp.csproj" />
   </ItemGroup>
 
   <Import Project="..\CowsHead.Shared\CowsHead.Shared.projitems" Label="Shared" />

@@ -10,7 +10,7 @@ namespace CommitteeOfZero.NitroSharp.Graphics
         {
         }
 
-        public FadeTransition(IPixelSource source, AssetRef<TextureAsset> mask)
+        public FadeTransition(IPixelSource source, AssetRef<Texture2D> mask)
         {
             TransitionSource = source;
             Mask = mask;
@@ -18,7 +18,7 @@ namespace CommitteeOfZero.NitroSharp.Graphics
 
         public IPixelSource TransitionSource { get; set; }
         public Visual Source { get; set; }
-        public AssetRef<TextureAsset> Mask { get; set; }
+        public AssetRef<Texture2D> Mask { get; set; }
 
         public override void Render(INitroRenderer renderer)
         {
@@ -36,12 +36,12 @@ namespace CommitteeOfZero.NitroSharp.Graphics
 
         public struct ImageSource : IPixelSource
         {
-            public ImageSource(AssetRef<TextureAsset> source)
+            public ImageSource(AssetRef<Texture2D> source)
             {
                 Source = source;
             }
 
-            public AssetRef<TextureAsset> Source { get; }
+            public AssetRef<Texture2D> Source { get; }
         }
 
         public struct SolidColorSource : IPixelSource
