@@ -2,7 +2,6 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <!--<OutputPath>$(SolutionDir)\bin\$(Configuration)\</OutputPath>-->
     <TargetFramework>netcoreapp2.0</TargetFramework>
   </PropertyGroup>
   
@@ -11,9 +10,8 @@
   </ItemGroup>
   
   <ItemGroup>
-    <ProjectReference Include="..\..\CommitteeOfZero.NitroSharp\CommitteeOfZero.NitroSharp.csproj" />
+    <ProjectReference Include="..\..\NitroSharp.Engine\NitroSharp.Engine.csproj" />
   </ItemGroup>
 
   <Import Project="..\CowsHead.Shared\CowsHead.Shared.projitems" Label="Shared" />
-
 </Project>

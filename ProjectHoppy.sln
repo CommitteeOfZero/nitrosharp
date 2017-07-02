@@ -3,13 +3,13 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.26621.2
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CommitteeOfZero.NsScript", "src\CommitteeOfZero.NsScript\CommitteeOfZero.NsScript.csproj", "{D141E5DC-81DB-4352-8BAE-E3772BDC23DE}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NitroSharp.NsScript", "src\NitroSharp.NsScript\NitroSharp.NsScript.csproj", "{D141E5DC-81DB-4352-8BAE-E3772BDC23DE}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CommitteeOfZero.NsScript.Tests", "src\CommitteeOfZero.NsScript.Tests\CommitteeOfZero.NsScript.Tests.csproj", "{EC39394D-3A99-4EBB-83F3-9D800A8D4BCC}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NitroSharp.NsScript.Tests", "src\NitroSharp.NsScript.Tests\NitroSharp.NsScript.Tests.csproj", "{EC39394D-3A99-4EBB-83F3-9D800A8D4BCC}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CommitteeOfZero.NitroSharp", "src\CommitteeOfZero.NitroSharp\CommitteeOfZero.NitroSharp.csproj", "{D5D100EF-CB4E-4DE2-B20F-D5D85091DD52}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NitroSharp.Engine", "src\NitroSharp.Engine\NitroSharp.Engine.csproj", "{D5D100EF-CB4E-4DE2-B20F-D5D85091DD52}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CommitteeOfZero.NitroSharp.Foundation", "src\CommitteeOfZero.NitroSharp.Foundation\CommitteeOfZero.NitroSharp.Foundation.csproj", "{6E5187F9-61C7-4CDC-BCA2-4379A20B0E6C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NitroSharp.Foundation", "src\NitroSharp.Foundation\NitroSharp.Foundation.csproj", "{6E5187F9-61C7-4CDC-BCA2-4379A20B0E6C}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CowsHead.NetFx", "src\CowsHead\CowsHead.NetFx\CowsHead.NetFx.csproj", "{8236EDEA-E0E1-4AC8-A99A-69DA61848CBB}"
 EndProject
@@ -18,6 +18,8 @@ EndProject
 Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "CowsHead.Shared", "src\CowsHead\CowsHead.Shared\CowsHead.Shared.shproj", "{3DF08AD5-767D-42F4-BABA-C5BDB1A15A32}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CowsHead.NetCore", "src\CowsHead\CowsHead.NetCore\CowsHead.NetCore.csproj", "{E922F862-2B81-4DE0-B2BF-77738FF5D49E}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Game", "src\Game\Game.csproj", "{0F0CD41B-9421-4136-8A19-AC4F617A4FB7}"
 EndProject
 Global
 	GlobalSection(SharedMSBuildProjectFiles) = preSolution
@@ -131,6 +133,22 @@ Global
 		{E922F862-2B81-4DE0-B2BF-77738FF5D49E}.Release|x64.Build.0 = Release|Any CPU
 		{E922F862-2B81-4DE0-B2BF-77738FF5D49E}.Release|x86.ActiveCfg = Release|Any CPU
 		{E922F862-2B81-4DE0-B2BF-77738FF5D49E}.Release|x86.Build.0 = Release|Any CPU
+		{0F0CD41B-9421-4136-8A19-AC4F617A4FB7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0F0CD41B-9421-4136-8A19-AC4F617A4FB7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0F0CD41B-9421-4136-8A19-AC4F617A4FB7}.Debug|ARM.ActiveCfg = Debug|Any CPU
+		{0F0CD41B-9421-4136-8A19-AC4F617A4FB7}.Debug|ARM.Build.0 = Debug|Any CPU
+		{0F0CD41B-9421-4136-8A19-AC4F617A4FB7}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{0F0CD41B-9421-4136-8A19-AC4F617A4FB7}.Debug|x64.Build.0 = Debug|Any CPU
+		{0F0CD41B-9421-4136-8A19-AC4F617A4FB7}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{0F0CD41B-9421-4136-8A19-AC4F617A4FB7}.Debug|x86.Build.0 = Debug|Any CPU
+		{0F0CD41B-9421-4136-8A19-AC4F617A4FB7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0F0CD41B-9421-4136-8A19-AC4F617A4FB7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0F0CD41B-9421-4136-8A19-AC4F617A4FB7}.Release|ARM.ActiveCfg = Release|Any CPU
+		{0F0CD41B-9421-4136-8A19-AC4F617A4FB7}.Release|ARM.Build.0 = Release|Any CPU
+		{0F0CD41B-9421-4136-8A19-AC4F617A4FB7}.Release|x64.ActiveCfg = Release|Any CPU
+		{0F0CD41B-9421-4136-8A19-AC4F617A4FB7}.Release|x64.Build.0 = Release|Any CPU
+		{0F0CD41B-9421-4136-8A19-AC4F617A4FB7}.Release|x86.ActiveCfg = Release|Any CPU
+		{0F0CD41B-9421-4136-8A19-AC4F617A4FB7}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
