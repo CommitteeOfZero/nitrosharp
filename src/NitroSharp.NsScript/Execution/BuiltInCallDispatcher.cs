@@ -44,8 +44,14 @@ namespace NitroSharp.NsScript.Execution
                 ["RemainTime"] = RemainTime,
                 ["ImageHorizon"] = ImageHorizon,
                 ["Random"] = Random,
-                ["SoundAmplitude"] = SoundAmplitude
+                ["SoundAmplitude"] = SoundAmplitude,
+                ["Platform"] = Platform
             };
+        }
+
+        private void Platform(ArgumentStack obj)
+        {
+            Result = new ConstantValue(0, isDelta: false);
         }
 
         public void DispatchBuiltInCall(BuiltInFunctionCall functionCall)

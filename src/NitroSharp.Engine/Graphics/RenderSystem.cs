@@ -23,7 +23,7 @@ namespace NitroSharp.Graphics
 
         public DxRenderContext RenderContext { get; }
         private System.Drawing.Size DesignResolution => RenderContext.Window.DesiredSize;
-        private Size ActualResolution => new Size(RenderContext.Window.Width, RenderContext.Window.Height);
+        private SizeF ActualResolution => _renderer.BackBuffer.Size;
 
         protected override void DeclareInterests(ISet<Type> interests)
         {
@@ -47,7 +47,7 @@ namespace NitroSharp.Graphics
 
         public override void Update(float deltaMilliseconds)
         {
-            Vector2 scaleFactor = RenderContext.Window.ScaleFactor;
+            Vector2 scaleFactor = new Vector2(ActualResolution.Width / DesignResolution.Width, ActualResolution.Height / DesignResolution.Height);
 
             _renderer.Target = _secondaryRenderTarget;
             using (RenderContext.NewDrawingSession(RgbaValueF.Black, present: true))
@@ -102,8 +102,16 @@ namespace NitroSharp.Graphics
 
         public void LoadCommonResources()
         {
-            _renderer = new DxNitroRenderer(RenderContext, DesignResolution);
+            _renderer = new DxNitroRenderer(RenderContext, DesignResolution, new[] { "Fonts" });
             _secondaryRenderTarget = _renderer.CreateRenderTarget(DesignResolution);
+            _screen = _renderer.CreateRenderTarget(ActualResolution);
+
+            _renderer.BackBufferResized += OnBackBufferResized;
+        }
+
+        private void OnBackBufferResized(object sender, EventArgs e)
+        {
+            _screen.Dispose();
             _screen = _renderer.CreateRenderTarget(ActualResolution);
         }
 

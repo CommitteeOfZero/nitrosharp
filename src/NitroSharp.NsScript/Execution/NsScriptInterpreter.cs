@@ -81,7 +81,7 @@ namespace NitroSharp.NsScript.Execution
         public event EventHandler<Function> EnteredFunction;
         public event EventHandler<BuiltInFunctionCall> BuiltInCallScheduled;
 
-        public void CreateThread(string name, Module module, IJumpTarget entryPoint)
+        public void CreateThread(string name, Module module, IJumpTarget entryPoint, bool start = true)
         {
             //uint id = _nextThreadId++;
             var thread = new ThreadContext(name, this, module, entryPoint, Globals);
@@ -92,15 +92,20 @@ namespace NitroSharp.NsScript.Execution
             {
                 _builtinsImpl.MainThread = thread;
             }
+
+            if (!start)
+            {
+                thread.Suspend();
+            }
         }
 
-        public void CreateThread(string name, Module module, string functionName)
+        public void CreateThread(string name, Module module, string functionName, bool start = true)
         {
-            CreateThread(name, module, module.GetFunction(functionName));
+            CreateThread(name, module, module.GetFunction(functionName), start);
         }
 
-        public void CreateThread(string name, Module module) => CreateThread(name, module, module.MainChapter);
-        public void CreateThread(string name, string moduleName) => CreateThread(name, Session.GetModule(moduleName));
+        public void CreateThread(string name, Module module, bool start = true) => CreateThread(name, module, module.MainChapter, start);
+        public void CreateThread(string name, string moduleName, bool start = true) => CreateThread(name, Session.GetModule(moduleName), start);
 
         public TimeSpan Run(TimeSpan timeQuota)
         {

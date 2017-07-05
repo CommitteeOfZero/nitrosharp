@@ -4,7 +4,6 @@ using SharpDX.Direct2D1;
 using SharpDX.Direct3D;
 using SharpDX.Direct3D11;
 using System;
-using SharpDX.DXGI;
 
 namespace NitroSharp.Foundation.Graphics
 {
@@ -20,6 +19,7 @@ namespace NitroSharp.Foundation.Graphics
 
         private SharpDX.DXGI.Surface _dxgiBackBuffer;
         internal SharpDX.DXGI.SwapChain1 SwapChain;
+        private SharpDX.DXGI.Format _displayFormat;
 
         public DxRenderContext(Window window, bool enableVSync)
         {
@@ -39,7 +39,8 @@ namespace NitroSharp.Foundation.Graphics
 
         public Window Window => _window;
         public Size2F CurrentDpi => D2DFactory.DesktopDpi;
-        public Size2F BackBufferSize => BackBufferBitmap.Size;
+
+        public event EventHandler SwapChainResized;
 
         private void Initialize()
         {
@@ -51,6 +52,16 @@ namespace NitroSharp.Foundation.Graphics
             CreateSizeDependentResources();
 
             _session = new DxDrawingSession(this, _vsyncEnabled);
+            _window.Resized += OnWindowResized;
+        }
+
+        private void OnWindowResized(object sender, EventArgs e)
+        {
+            ReleaseBackBuffer();
+            SwapChain.ResizeBuffers(2, Window.Width, Window.Height, _displayFormat, SharpDX.DXGI.SwapChainFlags.None);
+            CreateBackBufferBitmap();
+
+            SwapChainResized?.Invoke(this, EventArgs.Empty);
         }
 
         private void CreateDeviceIndependentResources()
@@ -86,16 +97,19 @@ namespace NitroSharp.Foundation.Graphics
 
         private void CreateSizeDependentResources()
         {
+            PixelFormat = new SharpDX.Direct2D1.PixelFormat(SharpDX.DXGI.Format.B8G8R8A8_UNorm, SharpDX.Direct2D1.AlphaMode.Premultiplied);
+            _displayFormat = SharpDX.DXGI.Format.B8G8R8A8_UNorm;
+
             var swapChainDesc = new SharpDX.DXGI.SwapChainDescription1()
             {
                 Width = 0,
                 Height = 0,
-                Format = SharpDX.DXGI.Format.B8G8R8A8_UNorm,
+                Format = _displayFormat,
                 BufferCount = 2,
                 Usage = SharpDX.DXGI.Usage.BackBuffer | SharpDX.DXGI.Usage.RenderTargetOutput,
                 SwapEffect = SharpDX.DXGI.SwapEffect.FlipSequential,
                 SampleDescription = new SharpDX.DXGI.SampleDescription(1, 0),
-                Scaling = SharpDX.DXGI.Scaling.None
+                Scaling = SharpDX.DXGI.Scaling.Stretch
             };
 
             using (var adapter = _dxgiDevice.Adapter)
@@ -104,13 +118,26 @@ namespace NitroSharp.Foundation.Graphics
                 SwapChain = new SharpDX.DXGI.SwapChain1(dxgiFactory, _d3dDevice, _window.Handle, ref swapChainDesc);
             }
 
-            PixelFormat = new SharpDX.Direct2D1.PixelFormat(SharpDX.DXGI.Format.B8G8R8A8_UNorm, SharpDX.Direct2D1.AlphaMode.Premultiplied);
-            var bitmapProperties = new BitmapProperties1(PixelFormat, CurrentDpi.Width, CurrentDpi.Height, BitmapOptions.Target | BitmapOptions.CannotDraw);
-            _dxgiBackBuffer = SharpDX.DXGI.Surface.FromSwapChain(SwapChain, 0);
-            BackBufferBitmap = new SharpDX.Direct2D1.Bitmap1(DeviceContext, _dxgiBackBuffer, bitmapProperties);
-            DeviceContext.Target = BackBufferBitmap;
+            CreateBackBufferBitmap();
 
+            DeviceContext.Target = BackBufferBitmap;
             DeviceContext.TextAntialiasMode = SharpDX.Direct2D1.TextAntialiasMode.Cleartype;
+        }
+
+        private void CreateBackBufferBitmap()
+        {
+            _dxgiBackBuffer = SharpDX.DXGI.Surface.FromSwapChain(SwapChain, 0);
+            var bitmapProperties = new BitmapProperties1(PixelFormat, CurrentDpi.Width, CurrentDpi.Height, BitmapOptions.Target | BitmapOptions.CannotDraw);
+            BackBufferBitmap = new SharpDX.Direct2D1.Bitmap1(DeviceContext, _dxgiBackBuffer, bitmapProperties);
+
+            DeviceContext.Target = BackBufferBitmap;
+        }
+
+        private void ReleaseBackBuffer()
+        {
+            DeviceContext.Target = null;
+            BackBufferBitmap.Dispose();
+            _dxgiBackBuffer.Dispose();
         }
 
         public DxDrawingSession NewDrawingSession(RgbaValueF clearColor, bool present = true)
@@ -121,17 +148,19 @@ namespace NitroSharp.Foundation.Graphics
 
         public void Dispose()
         {
-            ColorBrush.Dispose();
+            ReleaseBackBuffer();
             SwapChain.Dispose();
-            BackBufferBitmap.Dispose();
-            _dxgiBackBuffer.Dispose();
-            D2DFactory.Dispose();
-            DWriteFactory.Dispose();
-            WicFactory.Dispose();
 
+            ColorBrush.Dispose();
             DeviceContext.Dispose();
+
             _d2dDevice.Dispose();
+            _dxgiDevice.Dispose();
             _d3dDevice.Dispose();
+
+            WicFactory.Dispose();
+            DWriteFactory.Dispose();
+            D2DFactory.Dispose();
         }
     }
 }

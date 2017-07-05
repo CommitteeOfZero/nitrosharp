@@ -11,6 +11,7 @@ using System.IO;
 using NitroSharp.Foundation.Animation;
 using NitroSharp.Foundation.Graphics;
 using Microsoft.Extensions.Logging;
+using System.Linq;
 
 namespace NitroSharp
 {
@@ -121,6 +122,11 @@ namespace NitroSharp
             MainLoopTaskScheduler.FlushQueuedTasks();
             _nssInterpreter.Run(TimeSpan.MaxValue);
             Systems.Update(deltaMilliseconds);
+
+            if (!_nssInterpreter.Threads.Any())
+            {
+                Exit();
+            }
         }
     }
 }

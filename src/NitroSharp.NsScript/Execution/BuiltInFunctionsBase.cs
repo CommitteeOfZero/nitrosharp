@@ -140,7 +140,7 @@ namespace NitroSharp.NsScript.Execution
 
         public virtual void CreateThread(string name, string target)
         {
-            Interpreter.CreateThread(name, CurrentThread.CurrentModule, target);
+            Interpreter.CreateThread(name, CurrentThread.CurrentModule, target, start: false);
         }
 
         public virtual void Zoom(string entityName, TimeSpan duration, NsRational scaleX, NsRational scaleY, NsEasingFunction easingFunction, bool wait)

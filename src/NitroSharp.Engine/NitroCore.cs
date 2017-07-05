@@ -15,6 +15,8 @@ namespace NitroSharp
 
         private readonly NitroGame _game;
 
+        public bool WaitingForInput { get; set; }
+
         public NitroCore(Game game, NitroConfiguration configuration, EntityManager entities)
         {
             _game = game as NitroGame;
@@ -53,11 +55,20 @@ namespace NitroSharp
         public override void WaitForInput()
         {
             CurrentThread.Suspend();
+            WaitingForInput = true;
         }
 
         public override void WaitForInput(TimeSpan timeout)
         {
             CurrentThread.Suspend(timeout);
+            WaitingForInput = true;
+        }
+
+        public override void CreateThread(string name, string target)
+        {
+            bool startImmediately = _entities.Query(name + "*").Any();
+            Interpreter.CreateThread(name, CurrentThread.CurrentModule, target, startImmediately);
+            _entities.Create(name, replace: true);
         }
 
         public override void Request(string entityName, NsEntityAction action)
@@ -94,6 +105,20 @@ namespace NitroSharp
 
                 case NsEntityAction.Dispose:
                     //entity.Destroy();
+                    break;
+
+                case NsEntityAction.Start:
+                    if (Interpreter.TryGetThread(entity.Name, out var thread))
+                    {
+                        thread.Resume();
+                    }
+                    break;
+
+                case NsEntityAction.Stop:
+                    if (Interpreter.TryGetThread(entity.Name, out thread))
+                    {
+                        thread.Terminate();
+                    }
                     break;
             }
         }

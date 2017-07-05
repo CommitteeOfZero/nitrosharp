@@ -27,15 +27,18 @@ namespace NitroSharp
         {
             float adjustedOpacity = opacity.Rebase(1.0f);
             var visual = entity.GetComponent<Visual>();
-            if (duration > TimeSpan.Zero)
+            if (visual != null)
             {
-                Action<Component, float> propertySetter = (c, v) => (c as Visual).Opacity = v;
-                var animation = new FloatAnimation(visual, propertySetter, visual.Opacity, adjustedOpacity, duration);
-                entity.AddComponent(animation);
-            }
-            else
-            {
-                visual.Opacity = adjustedOpacity;
+                if (duration > TimeSpan.Zero)
+                {
+                    Action<Component, float> propertySetter = (c, v) => (c as Visual).Opacity = v;
+                    var animation = new FloatAnimation(visual, propertySetter, visual.Opacity, adjustedOpacity, duration);
+                    entity.AddComponent(animation);
+                }
+                else
+                {
+                    visual.Opacity = adjustedOpacity;
+                }
             }
         }
 

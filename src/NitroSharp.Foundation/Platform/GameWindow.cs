@@ -142,9 +142,6 @@ namespace NitroSharp.Foundation.Platform
         {
             return new System.Drawing.Rectangle(rect.X, rect.Y, rect.Width, rect.Height);
         }
-
-        //private static OpenTK.Size OtkToNitroSize(System.Drawing.Size size) => new Size(size.Width, size.Height);
-        //private static System.Drawing.Size OtkToNitroSize(OpenTK.Size size) => new System.Drawing.Size(size.Width, size.Height);
 #endif
 
         private static WindowState OtkToNitroWindowState(OpenTK.WindowState state, WindowBorder border)
@@ -221,7 +218,7 @@ namespace NitroSharp.Foundation.Platform
             switch (state)
             {
                 case WindowState.Normal:
-                    _nativeWindow.WindowBorder = WindowBorder.Resizable;
+                    _nativeWindow.WindowBorder = WindowBorder.Fixed;
                     _nativeWindow.WindowState = OpenTK.WindowState.Normal;
                     if (_previousSize != default(System.Drawing.Size))
                     {

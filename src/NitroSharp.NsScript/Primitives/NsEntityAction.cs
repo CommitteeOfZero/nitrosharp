@@ -8,6 +8,8 @@
         Dispose,
         ResetText,
         Play,
-        Other
+        Other,
+        Start,
+        Stop
     }
 }

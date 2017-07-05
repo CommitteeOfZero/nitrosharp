@@ -20,11 +20,17 @@ namespace NitroSharp.Foundation.Graphics
 
         public Bitmap1 D2DBitmap { get; }
         public override SizeF Size => new SizeF(D2DBitmap.Size.Width, D2DBitmap.Size.Height);
+        public override SizeF PixelSize => new SizeF(D2DBitmap.PixelSize.Width, D2DBitmap.PixelSize.Height);
 
         public override void CopyFrom(Texture2D source)
         {
             var sourceBitmap = (source as DxTexture2D).D2DBitmap;
             D2DBitmap.CopyFromBitmap(sourceBitmap);
+        }
+
+        public override void Resize(SizeF newSizeInDip)
+        {
+
         }
 
         public override void Dispose()

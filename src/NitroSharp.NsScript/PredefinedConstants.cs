@@ -121,6 +121,10 @@ namespace NitroSharp.NsScript
                     return NsEntityAction.ResetText;
                 case "HIDEABLE":
                     return NsEntityAction.Hide;
+                case "START":
+                    return NsEntityAction.Start;
+                case "STOP":
+                    return NsEntityAction.Stop;
 
                 default:
                     return NsEntityAction.Other;

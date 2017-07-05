@@ -303,7 +303,7 @@ namespace NitroSharp.Foundation.Audio
 
         public override void Dispose()
         {
-            //_context.Dispose();
+            _context.Dispose();
             base.Dispose();
         }
 

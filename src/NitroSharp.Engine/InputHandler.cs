@@ -22,9 +22,11 @@ namespace NitroSharp
         {
             if (ShouldAdvance() && !TrySkipAnimation())
             {
-                if (_nitroCore.Interpreter.Status != InterpreterStatus.Suspended && _nitroCore.MainThread.SleepTimeout == TimeSpan.MaxValue)
+                if (_nitroCore.Interpreter.Status != InterpreterStatus.Suspended
+                    && (_nitroCore.MainThread.SleepTimeout == TimeSpan.MaxValue || _nitroCore.WaitingForInput))
                 {
                     _nitroCore.MainThread.Resume();
+                    _nitroCore.WaitingForInput = false;
                 }
             }
 
@@ -33,15 +35,10 @@ namespace NitroSharp
                 _window.ToggleBorderlessFullscreen();
             }
 
-            if (Keyboard.IsKeyDownThisFrame(Key.R))
-            {
-                Console.WriteLine(SharpDX.Diagnostics.ObjectTracker.ReportActiveObjects());
-            }
-
-            if (Keyboard.IsKeyDown(Key.ControlLeft))
-            {
-                _nitroCore.MainThread.Resume();
-            }
+            //if (Keyboard.IsKeyDownThisFrame(Key.R))
+            //{
+            //    Console.WriteLine(SharpDX.Diagnostics.ObjectTracker.ReportActiveObjects());
+            //}
         }
 
         private bool TrySkipAnimation()

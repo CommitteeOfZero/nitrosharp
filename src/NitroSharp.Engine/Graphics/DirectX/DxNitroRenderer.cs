@@ -4,6 +4,8 @@ using SharpDX.Mathematics.Interop;
 using System.Numerics;
 using SharpDX.Direct2D1.Effects;
 using System.Drawing;
+using System;
+using System.Collections.Generic;
 
 namespace NitroSharp.Graphics
 {
@@ -26,9 +28,11 @@ namespace NitroSharp.Graphics
             }
         }
 
-        public Texture2D BackBuffer { get; }
+        public event EventHandler BackBufferResized;
 
-        public DxNitroRenderer(DxRenderContext renderContext, System.Drawing.Size designResolution)
+        public Texture2D BackBuffer { get; private set; }
+
+        public DxNitroRenderer(DxRenderContext renderContext, System.Drawing.Size designResolution, IEnumerable<string> userFontLocations)
         {
             _rc = renderContext;
             _designResolution = designResolution;
@@ -37,8 +41,15 @@ namespace NitroSharp.Graphics
             _floodEffect = new Flood(_rc.DeviceContext);
             _fadeMaskEffect = new Effect<FadeMaskEffect>(_rc.DeviceContext);
 
-            BackBuffer = new DxTexture2D(_rc.BackBufferBitmap, null);
-            CreateTextResources();
+            BackBuffer = new DxTexture2D(_rc.BackBufferBitmap);
+            renderContext.SwapChainResized += OnSwapChainResized;
+            CreateTextResources(userFontLocations);
+        }
+
+        private void OnSwapChainResized(object sender, System.EventArgs e)
+        {
+            BackBuffer = new DxTexture2D(_rc.BackBufferBitmap);
+            BackBufferResized?.Invoke(this, EventArgs.Empty);
         }
 
         public Texture2D CreateRenderTarget(SizeF sizeInDip)
@@ -139,6 +150,11 @@ namespace NitroSharp.Graphics
 
         public void Dispose()
         {
+            _rc.DWriteFactory.UnregisterFontCollectionLoader(_userFontLoader);
+            _rc.DWriteFactory.UnregisterFontFileLoader(_userFontLoader);
+
+            _userFontCollection.Dispose();
+            _userFontLoader.Dispose();
             _floodEffect.Dispose();
             _fadeMaskEffect.Dispose();
         }

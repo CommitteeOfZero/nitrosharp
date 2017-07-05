@@ -7,6 +7,8 @@ namespace NitroSharp.Graphics
 {
     public interface INitroRenderer : IDisposable
     {
+        event EventHandler BackBufferResized;
+
         Texture2D Target { get; set; }
         Texture2D BackBuffer { get; }
 

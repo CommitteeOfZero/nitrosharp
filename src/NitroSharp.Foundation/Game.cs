@@ -107,6 +107,8 @@ namespace NitroSharp.Foundation
             Systems.Update(deltaMilliseconds);
         }
 
+        public void Exit() => _running = false;
+
         public virtual void Shutdown()
         {
             Systems.Dispose();
@@ -117,7 +119,7 @@ namespace NitroSharp.Foundation
 
         private void InitializeGraphicsAndSound()
         {
-            Window = new GameWindow(_parameters.WindowTitle, _parameters.WindowWidth, _parameters.WindowHeight, WindowState.BorderlessFullScreen);
+            Window = new GameWindow(_parameters.WindowTitle, _parameters.WindowWidth, _parameters.WindowHeight, WindowState.Normal);
             RenderContext = new DxRenderContext(Window, _parameters.EnableVSync);
             AudioEngine = new XAudio2AudioEngine(16, 44100, 2);
             Content = CreateContentManager();
