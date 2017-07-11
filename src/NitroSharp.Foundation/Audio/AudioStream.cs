@@ -44,7 +44,7 @@ namespace NitroSharp.Foundation.Audio
 
         public void SetLoop()
         {
-            SetLoop(TimeSpan.Zero, Duration);
+            SetLoop(TimeSpan.Zero, TimeSpan.MaxValue);
         }
 
         public virtual void SetLoop(TimeSpan loopStart, TimeSpan loopEnd)

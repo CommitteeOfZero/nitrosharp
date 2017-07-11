@@ -11,8 +11,6 @@ namespace NitroSharp.Foundation.Audio
         private const uint AVError_Eof = 0xdfb9b0bb;
         private const int AVError_EAgain = -11;
 
-        private static AVRational s_msTimeBase;
-
         private const int IOBufferSize = 4096;
         private byte[] _managedIOBuffer;
         private avio_alloc_context_read_packet ReadFunc;
@@ -34,8 +32,9 @@ namespace NitroSharp.Foundation.Audio
         {
             ffmpeg.av_register_all();
             ffmpeg.avcodec_register_all();
-            s_msTimeBase = new AVRational { num = 1, den = 1000 };
         }
+
+        private static AVRational MsTimeBase => new AVRational { num = 1, den = 1000 };
 
         public FFmpegAudioStream(Stream fileStream) : base(fileStream)
         {
@@ -51,7 +50,7 @@ namespace NitroSharp.Foundation.Audio
             WriteFunc = IOWritePacket;
             SeekFunc = IOSeek;
 
-            _managedIOBuffer = new byte[IOBufferSize];
+            _managedIOBuffer = new byte[IOBufferSize + ffmpeg.AV_INPUT_BUFFER_PADDING_SIZE];
             var ioBuffer = (byte*)ffmpeg.av_malloc(IOBufferSize);
             var ioContext = ffmpeg.avio_alloc_context(ioBuffer, IOBufferSize, 0, null, ReadFunc, WriteFunc, SeekFunc);
 
@@ -84,7 +83,7 @@ namespace NitroSharp.Foundation.Audio
             OriginalSampleRate = pCodecContext->sample_rate;
             OriginalChannelCount = pCodecContext->channels;
 
-            Duration = TimeSpan.FromSeconds(pFormatContext->duration / ffmpeg.AV_TIME_BASE);
+            Duration = TimeSpan.FromSeconds(pFormatContext->duration / (double)ffmpeg.AV_TIME_BASE);
         }
 
         internal override void OnAttachedToSource()
@@ -132,35 +131,41 @@ namespace NitroSharp.Foundation.Audio
                             return false;
                         }
                     }
-
-                    ReadFrame();
-                    _seeking = false;
                 }
-                else if (Looping)
+
+                bool reachedEof = false;
+                if (!_seeking)
                 {
-                    // If LoopEnd is in this frame, we need to read only a certain part of it,
-                    // and then set the position to LoopStart.
-                    if (Timestamp_IsInCurrentFrame(_loopEndInStreamUnits))
+                    uint ret = ReadFrame();
+                    reachedEof = ret == AVError_Eof;
+                    if (!Looping && reachedEof)
+                    {
+                        return false;
+                    }
+                }
+
+                if (!reachedEof)
+                {
+                    unsafe
+                    {
+                        int written = WriteToBuffer(_context.CurrentFrame, buffer, _context.CurrentFrame->nb_samples);
+                        buffer.AdvancePosition(written);
+                        _maxFrameSize = Math.Max(_maxFrameSize, written);
+                    }
+                }
+
+                if (Looping)
+                {
+                    if (reachedEof || Timestamp_IsInCurrentFrame(_loopEndInStreamUnits))
                     {
                         Seek(LoopStart);
                         continue;
                     }
                 }
 
-                if (ReadFrame() == AVError_Eof)
-                {
-                    return false;
-                }
-
-                unsafe
-                {
-                    int written = WriteToBuffer(_context.CurrentFrame, buffer, _context.CurrentFrame->nb_samples);
-                    buffer.AdvancePosition(written);
-                    _maxFrameSize = Math.Max(_maxFrameSize, written);
-                }
-
+                _seeking = false;
                 // TODO: potential buffer overflow, nya.
-            } while (buffer.FreeSpace >= _maxFrameSize);
+                } while (buffer.FreeSpace >= _maxFrameSize);
 
             return true;
         }
@@ -177,7 +182,8 @@ namespace NitroSharp.Foundation.Audio
                 if ((readResult = (uint)ffmpeg.av_read_frame(_context.FormatContext, packet)) != 0)
                 {
                     ffmpeg.av_packet_unref(packet);
-                    return readResult == AVError_Eof || readResult == 0xfffffffb ? AVError_Eof : throw DecodingFailed("av_read_frame() returned a non-zero value.");
+                    return readResult == AVError_Eof || readResult == 0xfffffffb ? AVError_Eof
+                        : throw DecodingFailed("av_read_frame() returned a non-zero value.");
                 }
                 try
                 {
@@ -191,7 +197,6 @@ namespace NitroSharp.Foundation.Audio
                 finally
                 {
                     ffmpeg.av_packet_unref(packet);
-                    
                 }
             } while (receiveResult == AVError_EAgain);
 
@@ -223,9 +228,7 @@ namespace NitroSharp.Foundation.Audio
 
         private unsafe void Seek(long streamTimestamp)
         {
-            bool backward = streamTimestamp < _context.CurrentFrame->best_effort_timestamp;
-
-            ffmpeg.av_seek_frame(_context.FormatContext, 0, streamTimestamp, backward ? ffmpeg.AVSEEK_FLAG_BACKWARD : 0);
+            ffmpeg.av_seek_frame(_context.FormatContext, 0, streamTimestamp, ffmpeg.AVSEEK_FLAG_BACKWARD);
             ffmpeg.avcodec_flush_buffers(_context.CodecContext);
 
             _seeking = true;
@@ -247,13 +250,13 @@ namespace NitroSharp.Foundation.Audio
             }
 
             long nextFramePos = PositionInStreamUnits + FrameDurationInStreamUnits;
-            return streamTimestamp >= PositionInStreamUnits && nextFramePos >= streamTimestamp;
+            return streamTimestamp >= PositionInStreamUnits && nextFramePos > streamTimestamp;
         }
 
         private unsafe TimeSpan StreamToBclTimestamp(long streamTimestamp)
         {
             var streamTimeBase = _context.Stream->time_base;
-            long ms = ffmpeg.av_rescale_q(streamTimestamp, streamTimeBase, s_msTimeBase);
+            long ms = ffmpeg.av_rescale_q(streamTimestamp, streamTimeBase, MsTimeBase);
             return TimeSpan.FromMilliseconds(ms);
         }
 
@@ -261,7 +264,7 @@ namespace NitroSharp.Foundation.Audio
         {
             var streamTimeBase = _context.Stream->time_base;
             long msRounded = (long)Math.Round(timeSpan.TotalMilliseconds);
-            return ffmpeg.av_rescale_q(msRounded, s_msTimeBase, streamTimeBase);
+            return ffmpeg.av_rescale_q(msRounded, MsTimeBase, streamTimeBase);
         }
 
         private unsafe long NbSamplesToStreamTime(int nbSamples)
@@ -294,7 +297,8 @@ namespace NitroSharp.Foundation.Audio
         {
             Debug.Assert(FileStream.CanRead);
 
-            int result = FileStream.Read(_managedIOBuffer, 0, buf_size);
+            int count = Math.Min(buf_size, IOBufferSize);
+            int result = FileStream.Read(_managedIOBuffer, 0, count);
             Marshal.Copy(_managedIOBuffer, 0, (IntPtr)buf, result);
             return result;
         }
