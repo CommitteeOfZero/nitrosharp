@@ -1,13 +1,13 @@
 ﻿{
-  "activeProfile": "Test",
+  "activeProfile": "Staking",
   "graphics.vsync": true,
 
   "profiles": {
-    "Demo": {
+    "Staking": {
       "window.title": "COWS;HEAD NOAH",
       "window.width": 1280,
       "window.height": 720,
-      "startupScript": "bootmenu.nss",
+      "startupScript": "boot-staking.nss",
       "debug.contentRoot": "S:/ChaosContent/Noah"
     },
 

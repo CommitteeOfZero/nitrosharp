@@ -207,11 +207,12 @@ namespace NitroSharp.Foundation.Audio
             if (OriginalSampleRate != TargetSampleRate)
             {
                 long delay = ffmpeg.swr_get_delay(_context.ResamplerContext, OriginalSampleRate);
-                outSampleCount = (int)ffmpeg.av_rescale_rnd(inputSampleCount, TargetSampleRate, OriginalSampleRate, AVRounding.AV_ROUND_DOWN);
+                outSampleCount = (int)ffmpeg.av_rescale_rnd(inputSampleCount + delay, TargetSampleRate, OriginalSampleRate, AVRounding.AV_ROUND_UP);
             }
 
-            ffmpeg.swr_convert(_context.ResamplerContext, &pBuf, outSampleCount, frame->extended_data, inputSampleCount);
-            return _targetBytesPerSample * outSampleCount * TargetChannelCount;
+            int actualSampleCount = ffmpeg.swr_convert(_context.ResamplerContext, &pBuf, outSampleCount, frame->extended_data, inputSampleCount);
+            int written = ffmpeg.av_samples_get_buffer_size(null, TargetChannelCount, actualSampleCount, _targetSampleFormat, 1);
+            return written < 0 ? 0 : written;
         }
 
         public override void Seek(TimeSpan timeCode)
