@@ -54,6 +54,7 @@ namespace NitroSharp.Audio
                 audioSource.Stop();
             }
 
+            stream.Seek(TimeSpan.Zero);
             audioSource.SetStream(stream);
             if (sound.Kind != AudioKind.Voice)
             {

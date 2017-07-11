@@ -35,24 +35,33 @@ namespace NitroSharp
 
         public override void DisplayDialogue(string pxmlString)
         {
-            MainThread.Suspend();
             var line = DialogueParser.Parse(pxmlString);
             DisplayDialogueCore(line);
         }
 
         private void DisplayDialogueCore(DialogueLine dialogueLine)
         {
+            if (string.IsNullOrEmpty(_currentDialogueLine?.Text) && _currentDialogueLine?.Voice != null)
+            {
+                dialogueLine.Voice = _currentDialogueLine.Voice;
+            }
+
             if (_entities.TryGet(_currentParagraph.AssociatedBox, out var dialogueBox))
             {
                 _currentDialogueLine = dialogueLine;
                 var bounds = dialogueBox.Transform.Bounds;
                 bounds = new System.Drawing.SizeF(bounds.Width - TextRightMargin, bounds.Height);
 
-                var textVisual = new TextVisual(dialogueLine.Text, bounds, RgbaValueF.White, int.MaxValue);
-                TextEntity = _entities.Create(_currentParagraph.Identifier, replace: true)
-                    .WithParent(dialogueBox)
-                    .WithComponent(textVisual)
-                    .WithComponent(new SmoothTextAnimation());
+                if (!string.IsNullOrEmpty(dialogueLine.Text))
+                {
+                    var textVisual = new TextVisual(dialogueLine.Text, bounds, RgbaValueF.White, int.MaxValue);
+                    TextEntity = _entities.Create(_currentParagraph.Identifier, replace: true)
+                        .WithParent(dialogueBox)
+                        .WithComponent(textVisual)
+                        .WithComponent(new SmoothTextAnimation());
+
+                    MainThread.Suspend();
+                }
 
                 if (dialogueLine.Voice != null)
                 {

@@ -236,7 +236,7 @@ namespace NitroSharp.NsScript
             switch (value.Type)
             {
                 case NsType.Boolean:
-                    return (bool)value.RawValue;
+                    return !(bool)value.RawValue;
 
                 case NsType.Integer:
                     return (int)value.RawValue == 0;

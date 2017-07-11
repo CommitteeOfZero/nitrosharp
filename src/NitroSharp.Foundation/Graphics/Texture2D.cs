@@ -5,6 +5,7 @@ namespace NitroSharp.Foundation.Graphics
 {
     public abstract class Texture2D : IDisposable
     {
+        public abstract bool HasAlphaChannel { get; }
         public abstract SizeF Size { get; }
         public abstract SizeF PixelSize { get; }
 

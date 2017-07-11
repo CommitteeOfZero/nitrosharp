@@ -68,6 +68,8 @@ namespace NitroSharp.Foundation.Content
 
         private object Load(AssetId assetId, Type contentType)
         {
+            Debug.WriteLine("DEP: " + assetId.Value);
+
             var stream = OpenStream(assetId);
             {
                 return Load(stream, assetId, contentType);

@@ -31,7 +31,7 @@ namespace NitroSharp.Foundation
         }
 
         public abstract void Process(Entity entity, float deltaMilliseconds);
-        public void ProcessAll(IEnumerable<Entity> entities, float deltaMilliseconds)
+        public virtual void ProcessAll(IEnumerable<Entity> entities, float deltaMilliseconds)
         {
             foreach (var item in SortEntities(entities))
             {

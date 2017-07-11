@@ -261,19 +261,31 @@ namespace NitroSharp.NsScript
             }
 
             var identifier = EatToken(SyntaxTokenKind.ParagraphIdentifier);
-            var statements = ImmutableArray.CreateBuilder<Statement>();
+            var blocks = ImmutableArray.CreateBuilder<Statement>();
             while (CurrentToken.Kind != SyntaxTokenKind.ParagraphEndTag)
             {
-                var statement = ParseStatement();
-                if (statement != null)
+                if (CurrentToken.Kind == SyntaxTokenKind.PXmlLineSeparator)
                 {
-                    statements.Add(statement);
+                    EatToken();
                 }
+
+                var statements = ImmutableArray.CreateBuilder<Statement>();
+                while (CurrentToken.Kind != SyntaxTokenKind.PXmlLineSeparator && CurrentToken.Kind != SyntaxTokenKind.ParagraphEndTag)
+                {
+                    var statement = ParseStatement();
+                    if (statement != null)
+                    {
+                        statements.Add(statement);
+                    }
+                }
+
+                var block = StatementFactory.Block(statements.ToImmutable());
+                blocks.Add(block);
             }
 
             EatToken(SyntaxTokenKind.ParagraphEndTag);
             string identifierString = TrimParagraphIdentifier(identifier.Text);
-            return StatementFactory.Paragraph(identifierString, associatedBox, statements.ToImmutable());
+            return StatementFactory.Paragraph(identifierString, associatedBox, blocks.ToImmutable());
         }
 
         private static string TrimParagraphIdentifier(string identifier)

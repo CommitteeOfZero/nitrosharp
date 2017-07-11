@@ -1,29 +1,13 @@
 ﻿{
-  "activeProfile": "Demo1",
+  "activeProfile": "Test",
   "graphics.vsync": true,
 
   "profiles": {
-    "CH": {
-      "window.title": "COWS;HEAD",
-      "window.width": 800,
-      "window.height": 600,
-      "startupScript": "ch01_007_円山町殺人現場.nss",
-      "debug.contentRoot": "S:/ChaosContent/CH"
-    },
-
-    "Demo1": {
+    "Demo": {
       "window.title": "COWS;HEAD NOAH",
       "window.width": 1280,
       "window.height": 720,
-      "startupScript": "boot.nss",
-      "debug.contentRoot": "S:/ChaosContent/Demo1"
-    },
-
-    "Demo2": {
-      "window.title": "COWS;HEAD NOAH",
-      "window.width": 1280,
-      "window.height": 720,
-      "startupScript": "ch01_006r_★梨深編_インターミッション０１Ｂ.nss",
+      "startupScript": "bootmenu.nss",
       "debug.contentRoot": "S:/ChaosContent/Noah"
     },
 
@@ -32,7 +16,7 @@
       "window.width": 1280,
       "window.height": 720,
       "startupScript": "test.nss",
-      "debug.contentRoot": "S:/ChaosContent/Demo1"
+      "debug.contentRoot": "S:/ChaosContent/Noah"
     },
 
     "TestCH": {

@@ -2,6 +2,7 @@
 using NitroSharp.Foundation.Content;
 using NitroSharp.Foundation.Graphics;
 using System;
+using System.Drawing;
 
 namespace NitroSharp.Graphics
 {
@@ -29,6 +30,11 @@ namespace NitroSharp.Graphics
         {
             Mask.Dispose();
             TransitionSource.Dispose();
+        }
+
+        public override SizeF Measure()
+        {
+            return Mask.Asset.Size;
         }
 
         public override void Free(INitroRenderer nitroRenderer)

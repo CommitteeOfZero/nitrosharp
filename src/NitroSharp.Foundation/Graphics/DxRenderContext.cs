@@ -121,7 +121,7 @@ namespace NitroSharp.Foundation.Graphics
             CreateBackBufferBitmap();
 
             DeviceContext.Target = BackBufferBitmap;
-            DeviceContext.TextAntialiasMode = SharpDX.Direct2D1.TextAntialiasMode.Cleartype;
+            DeviceContext.TextAntialiasMode = SharpDX.Direct2D1.TextAntialiasMode.Grayscale;
         }
 
         private void CreateBackBufferBitmap()

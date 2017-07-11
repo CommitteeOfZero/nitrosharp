@@ -10,6 +10,11 @@
 
         QuadraticEaseOut,
         CubicEaseOut,
-        QuarticEaseOut
+        QuarticEaseOut,
+
+        SineEaseIn,
+        SineEaseOut,
+        SineEaseInOut,
+        SineEaseOutIn
     }
 }

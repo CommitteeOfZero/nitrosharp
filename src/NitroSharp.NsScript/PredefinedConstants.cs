@@ -100,6 +100,15 @@ namespace NitroSharp.NsScript
                 case "DXL3":
                     return NsEasingFunction.QuarticEaseOut;
 
+                case "AXLAUTO":
+                    return NsEasingFunction.SineEaseIn;
+                case "DXLAUTO":
+                    return NsEasingFunction.SineEaseOut;
+                case "AXLDXL":
+                    return NsEasingFunction.SineEaseInOut;
+                case "DXLAXL":
+                    return NsEasingFunction.SineEaseOutIn;
+
                 default:
                     throw IllegalValue(nameof(functionName));
             }

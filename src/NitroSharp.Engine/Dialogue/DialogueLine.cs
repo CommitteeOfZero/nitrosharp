@@ -9,6 +9,6 @@
         }
 
         public string Text { get; }
-        public Voice Voice { get; }
+        public Voice Voice { get; set; }
     }
 }

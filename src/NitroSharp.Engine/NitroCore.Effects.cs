@@ -64,7 +64,8 @@ namespace NitroSharp
             if (duration > TimeSpan.Zero)
             {
                 void PropertySetter(Component c, Vector2 v) => (c as Transform).Margin = v;
-                var animation = new Vector2Animation(entity.Transform, PropertySetter, entity.Transform.Margin, destination, duration);
+                var fn = (TimingFunction)easingFunction;
+                var animation = new Vector2Animation(entity.Transform, PropertySetter, entity.Transform.Margin, destination, duration, fn);
                 entity.AddComponent(animation);
             }
             else

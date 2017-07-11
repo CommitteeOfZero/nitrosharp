@@ -55,11 +55,11 @@ namespace CowsHead
                     configuration.EnableVSync = property.Value.Value<bool>();
                     break;
 
-#if DEBUG
+//#if DEBUG
                 case "debug.contentRoot":
                     configuration.ContentRoot = property.Value.Value<string>();
                     break;
-#endif
+//#endif
             }
         }
     }

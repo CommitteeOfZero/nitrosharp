@@ -15,6 +15,8 @@ namespace NitroSharp.Graphics
         private Texture2D _screen;
         private Queue<TextVisual> _textVisuals;
 
+        private bool _upscaling = false;
+
         public RenderSystem(DxRenderContext renderContext)
         {
             RenderContext = renderContext;
@@ -68,7 +70,22 @@ namespace NitroSharp.Graphics
 
         public override IEnumerable<Entity> SortEntities(IEnumerable<Entity> entities)
         {
-            return entities.OrderBy(x => x.GetComponent<Visual>().Priority).ThenBy(x => x.CreationTime);
+            return SortByPriority(entities).Reverse();
+        }
+
+        private IEnumerable<Entity> SortByPriority(IEnumerable<Entity> entities)
+        {
+            foreach (var entity in entities.OrderByDescending(x => x.GetComponent<Visual>().Priority).ThenByDescending(x => x.CreationTime))
+            {
+                yield return entity;
+
+                //var visual = entity.GetComponent<Visual>();
+                //bool topmost = visual.Measure().Width >= DesignResolution.Width && visual.Measure().Height >= DesignResolution.Height && visual.Opacity == 1.0f;
+                //if (topmost)
+                //{
+                //    break;
+                //}
+            }
         }
 
         public override void Process(Entity entity, float deltaMilliseconds)
@@ -79,7 +96,7 @@ namespace NitroSharp.Graphics
                 if (visual is TextVisual text)
                 {
                     _textVisuals.Enqueue(text);
-                    return;
+                   return;
                 }
 
                 RenderItem(visual, Vector2.One);

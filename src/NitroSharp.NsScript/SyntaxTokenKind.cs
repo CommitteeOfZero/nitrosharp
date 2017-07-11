@@ -64,6 +64,7 @@
         ParagraphEndTag,
         ParagraphIdentifier,
         PXmlString,
+        PXmlLineSeparator,
 
         EndOfFileToken
     }

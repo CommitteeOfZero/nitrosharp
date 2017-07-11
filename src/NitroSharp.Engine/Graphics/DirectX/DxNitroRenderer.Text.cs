@@ -62,6 +62,7 @@ namespace NitroSharp.Graphics
 
             _animatedRegion.context.OpacityOverride = text.AnimatedOpacity;
             _textLayout.Draw(_customTextRenderer, 0, 0);
+            //_rc.DeviceContext.DrawTextLayout(Vector2.Zero, _textLayout, _rc.ColorBrush);
         }
 
         public void Free(TextVisual textVisual)

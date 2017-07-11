@@ -57,17 +57,16 @@ namespace NitroSharp.NsScript
 
         public SyntaxToken Lex()
         {
-            string leadingTrivia = ScanSyntaxTrivia(isTrailing: false);
-
+            
             if (CurrentLocation == Location.Paragraph)
             {
                 if (PeekChar() != '{' && !IsParagraphEndTag())
                 {
-                    return LexPXmlToken(leadingTrivia);
+                    return LexPXmlToken();
                 }
             }
 
-            var token = LexSyntaxToken(leadingTrivia);
+            var token = LexSyntaxToken();
             switch (token.Kind)
             {
                 case SyntaxTokenKind.OpenBraceToken:
@@ -101,8 +100,10 @@ namespace NitroSharp.NsScript
             return token;
         }
 
-        private SyntaxToken LexSyntaxToken(string leadingTrivia)
+        private SyntaxToken LexSyntaxToken()
         {
+            string leadingTrivia = ScanSyntaxTrivia(isTrailing: false);
+
             SyntaxTokenKind kind = SyntaxTokenKind.None;
             string text = null;
             object value = null;
@@ -409,7 +410,7 @@ namespace NitroSharp.NsScript
             return new SyntaxToken(kind, leadingTrivia, text, trailingTrivia, value);
         }
 
-        private SyntaxToken LexPXmlToken(string leadingTrivia)
+        private SyntaxToken LexPXmlToken()
         {
             SyntaxTokenKind kind = SyntaxTokenKind.None;
             string trailingTrivia = string.Empty;
@@ -425,6 +426,12 @@ namespace NitroSharp.NsScript
                     scanTrailingTrivia = true;
                     break;
 
+                case '\r':
+                case '\n':
+                    kind = SyntaxTokenKind.PXmlLineSeparator;
+                    ScanEndOfLineSequence();
+                    break;
+
                 default:
                     kind = SyntaxTokenKind.PXmlString;
                     ScanPXmlString();
@@ -437,7 +444,7 @@ namespace NitroSharp.NsScript
                 trailingTrivia = ScanSyntaxTrivia(isTrailing: true);
             }
 
-            return new SyntaxToken(kind, leadingTrivia, text, trailingTrivia);
+            return new SyntaxToken(kind, string.Empty, text, trailingTrivia);
         }
 
         private void ScanPXmlString()

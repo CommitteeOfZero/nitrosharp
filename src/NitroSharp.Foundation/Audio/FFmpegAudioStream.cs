@@ -222,7 +222,9 @@ namespace NitroSharp.Foundation.Audio
 
         private unsafe void Seek(long streamTimestamp)
         {
-            ffmpeg.av_seek_frame(_context.FormatContext, 0, streamTimestamp, ffmpeg.AVSEEK_FLAG_BACKWARD);
+            bool backward = streamTimestamp < _context.CurrentFrame->best_effort_timestamp;
+
+            ffmpeg.av_seek_frame(_context.FormatContext, 0, streamTimestamp, backward ? ffmpeg.AVSEEK_FLAG_BACKWARD : 0);
             ffmpeg.avcodec_flush_buffers(_context.CodecContext);
 
             _seeking = true;

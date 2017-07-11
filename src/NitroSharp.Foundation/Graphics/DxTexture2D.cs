@@ -19,6 +19,7 @@ namespace NitroSharp.Foundation.Graphics
         }
 
         public Bitmap1 D2DBitmap { get; }
+        public override bool HasAlphaChannel => D2DBitmap.PixelFormat.AlphaMode != AlphaMode.Ignore;
         public override SizeF Size => new SizeF(D2DBitmap.Size.Width, D2DBitmap.Size.Height);
         public override SizeF PixelSize => new SizeF(D2DBitmap.PixelSize.Width, D2DBitmap.PixelSize.Height);
 

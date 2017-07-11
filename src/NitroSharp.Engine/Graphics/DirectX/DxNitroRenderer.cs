@@ -11,6 +11,8 @@ namespace NitroSharp.Graphics
 {
     public sealed partial class DxNitroRenderer : INitroRenderer
     {
+        private readonly InterpolationMode DefInterpolationMode = InterpolationMode.Cubic;
+
         private DxRenderContext _rc;
         private readonly System.Drawing.Size _designResolution;
 
@@ -65,14 +67,14 @@ namespace NitroSharp.Graphics
         {
             var dxTexture = texture as DxTexture2D;
             var dst = new SharpDX.RectangleF(0, 0, texture.Size.Width, texture.Size.Height);
-            _rc.DeviceContext.DrawBitmap(dxTexture.D2DBitmap, dst, 1.0f, InterpolationMode.Cubic, null, null);
+            _rc.DeviceContext.DrawBitmap(dxTexture.D2DBitmap, dst, 1.0f, DefInterpolationMode, null, null);
         }
 
         public void Draw(Texture2D texture, RectangleF destinationRectangle)
         {
             var dxTexture = texture as DxTexture2D;
             var dst = new SharpDX.RectangleF(destinationRectangle.X, destinationRectangle.Y, destinationRectangle.Width, destinationRectangle.Height);
-            _rc.DeviceContext.DrawBitmap(dxTexture.D2DBitmap, dst, 1.0f, InterpolationMode.Cubic, null, null);
+            _rc.DeviceContext.DrawBitmap(dxTexture.D2DBitmap, dst, 1.0f, DefInterpolationMode, null, null);
         }
 
         public void DrawRectangle(RectangleVisual rectangle)
@@ -91,14 +93,14 @@ namespace NitroSharp.Graphics
             if (sprite.SourceRectangle == null)
             {
                 var dst = new SharpDX.RectangleF(0, 0, dxTexture.Size.Width, dxTexture.Size.Height);
-                target.DrawBitmap(dxTexture.D2DBitmap, dst, sprite.Opacity, InterpolationMode.Cubic, null, null);
+                target.DrawBitmap(dxTexture.D2DBitmap, dst, sprite.Opacity, DefInterpolationMode, null, null);
             }
             else
             {
                 var drawingRect = sprite.SourceRectangle.Value;
                 var srcRect = new SharpDX.RectangleF(drawingRect.X, drawingRect.Y, drawingRect.Width, drawingRect.Height);
                 var dst = new SharpDX.RectangleF(0, 0, sprite.Measure().Width, sprite.Measure().Height);
-                target.DrawBitmap(dxTexture.D2DBitmap, dst, sprite.Opacity, InterpolationMode.Cubic, srcRect, null);
+                target.DrawBitmap(dxTexture.D2DBitmap, dst, sprite.Opacity, DefInterpolationMode, srcRect, null);
             }
         }
 
