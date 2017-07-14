@@ -48,9 +48,8 @@ namespace NitroSharp.NsScript.Execution
 
         public NsAudioKind PopAudioKind()
         {
-            string value = Pop().As<string>();
-            bool soundEffect = value.Equals("SE", StringComparison.OrdinalIgnoreCase);
-            return soundEffect ? NsAudioKind.SoundEffect : NsAudioKind.BackgroundMusic;
+            string audioKindString = PopString();
+            return PredefinedConstants.AudioKind(audioKindString);
         }
 
         public TimeSpan PopTimeSpan()

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Threading;
 
 namespace NitroSharp.Foundation.Audio
 {
@@ -40,7 +41,7 @@ namespace NitroSharp.Foundation.Audio
         public TimeSpan LoopEnd { get; private set; }
 
         public abstract void Seek(TimeSpan timeCode);
-        public abstract bool Read(AudioBuffer buffer);
+        public abstract bool Read(AudioBuffer buffer, CancellationToken cancellationToken);
 
         public void SetLoop()
         {

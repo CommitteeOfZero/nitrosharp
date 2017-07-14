@@ -139,5 +139,23 @@ namespace NitroSharp.NsScript
                     return NsEntityAction.Other;
             }
         }
+
+        public static NsAudioKind AudioKind(string audioKindString)
+        {
+            switch (audioKindString.ToUpperInvariant())
+            {
+                case "BGM":
+                    return NsAudioKind.BackgroundMusic;
+
+                case "SE":
+                    return NsAudioKind.SoundEffect;
+
+                case "VOICE":
+                    return NsAudioKind.Voice;
+
+                default:
+                    throw IllegalValue(nameof(audioKindString));
+            }
+        }
     }
 }

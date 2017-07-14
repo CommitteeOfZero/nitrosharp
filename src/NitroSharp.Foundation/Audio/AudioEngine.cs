@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace NitroSharp.Foundation.Audio
 {
@@ -29,10 +31,7 @@ namespace NitroSharp.Foundation.Audio
 
         public void StopAllVoices()
         {
-            foreach (var voice in _audioSources)
-            {
-                voice.Stop();
-            }
+            Task.WhenAll(_audioSources.Select(x => x.StopAsync())).Wait();
         }
 
         public virtual void Dispose()

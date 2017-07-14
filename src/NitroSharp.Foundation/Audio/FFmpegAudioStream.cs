@@ -3,6 +3,7 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Threading;
 
 namespace NitroSharp.Foundation.Audio
 {
@@ -18,6 +19,7 @@ namespace NitroSharp.Foundation.Audio
         private avio_alloc_context_write_packet WriteFunc;
 
         private Context _context;
+        private bool _isDisposed;
         private AVSampleFormat _targetSampleFormat;
         private int _targetBytesPerSample;
         private int _maxFrameSize;
@@ -115,10 +117,12 @@ namespace NitroSharp.Foundation.Audio
             return channelCount == 2 ? ffmpeg.AV_CH_LAYOUT_STEREO : ffmpeg.AV_CH_LAYOUT_MONO;
         }
 
-        public override bool Read(AudioBuffer buffer)
+        public override bool Read(AudioBuffer buffer, CancellationToken cancellationToken)
         {
+            ThrowIfDisposed();
             do
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 if (_seeking)
                 {
                     // av_seek_frame isn't always precise enough.
@@ -222,6 +226,7 @@ namespace NitroSharp.Foundation.Audio
 
         public override void Seek(TimeSpan timeCode)
         {
+            ThrowIfDisposed();
             long timestamp = BclToStreamTimestamp(timeCode);
             Seek(timestamp);
         }
@@ -237,6 +242,7 @@ namespace NitroSharp.Foundation.Audio
 
         public override void SetLoop(TimeSpan loopStart, TimeSpan loopEnd)
         {
+            ThrowIfDisposed();
             base.SetLoop(loopStart, loopEnd);
             _loopStartInStreamUntis = BclToStreamTimestamp(loopStart);
             _loopEndInStreamUnits = BclToStreamTimestamp(loopEnd);
@@ -312,6 +318,15 @@ namespace NitroSharp.Foundation.Audio
         {
             _context.Dispose();
             base.Dispose();
+            _isDisposed = true;
+        }
+
+        private void ThrowIfDisposed()
+        {
+            if (_isDisposed)
+            {
+                throw new ObjectDisposedException(nameof(FFmpegAudioStream));
+            }
         }
 
         private static void ThrowIfNotZero(int result)

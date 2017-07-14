@@ -1,6 +1,5 @@
 ﻿using NitroSharp.Foundation;
 using NitroSharp.Foundation.Audio;
-using NitroSharp.Foundation.Content;
 using System.Collections.Generic;
 using System;
 using System.Runtime.InteropServices;
@@ -9,23 +8,17 @@ namespace NitroSharp.Audio
 {
     public sealed class AudioSystem : EntityProcessingSystem, IDisposable
     {
-        public static int Amplitude { get; set; }
-
         private static uint VoiceBufferSize = 4400;
 
         private readonly AudioEngine _audioEngine;
         private uint _defaultBufferSize;
 
-        private readonly AudioSource _voiceAudioSource;
         private Dictionary<SoundComponent, AudioSource> _audioSources;
         private Queue<AudioSource> _freeAudioSources;
 
         public AudioSystem(AudioEngine audioEngine)
         {
             _audioEngine = audioEngine;
-
-            _voiceAudioSource = _audioEngine.ResourceFactory.CreateAudioSource(VoiceBufferSize);
-            _voiceAudioSource.PreviewBufferSent += _voiceAudioSource_PreviewBufferSent;
             _audioSources = new Dictionary<SoundComponent, AudioSource>();
             _freeAudioSources = new Queue<AudioSource>();
 
@@ -40,37 +33,45 @@ namespace NitroSharp.Audio
         public override void OnRelevantEntityAdded(Entity entity)
         {
             var sound = entity.GetComponent<SoundComponent>();
-
-            //string path = sound.AudioFile.Id;
-            //if (!_content.Exists(path))
-            //{
-            //    path += ".ogg";
-            //}
-
             var stream = sound.Source.Asset;
             var audioSource = GetFreeAudioSource(sound.Kind);
             if (sound.Kind == AudioKind.Voice)
             {
                 audioSource.Stop();
+                audioSource.PreviewBufferSent += (_, args) => CalculateAmplitude(sound, args);
             }
 
             stream.Seek(TimeSpan.Zero);
             audioSource.SetStream(stream);
-            if (sound.Kind != AudioKind.Voice)
-            {
-                _audioSources[sound] = audioSource;
-            }
+            _audioSources[sound] = audioSource;
         }
 
-        private void _voiceAudioSource_PreviewBufferSent(object sender, AudioBuffer e)
+        public override void Process(Entity entity, float deltaMilliseconds)
         {
-            short firstSample = Marshal.ReadInt16(e.StartPointer, 0);
-            short secondSample = Marshal.ReadInt16(e.StartPointer, e.Position / 4);
-            short thirdSample = Marshal.ReadInt16(e.StartPointer, e.Position / 4 + e.Position / 2);
-            short fourthSample = Marshal.ReadInt16(e.StartPointer, e.Position - 2);
+            var sound = entity.GetComponent<SoundComponent>();
+            var audioSource = GetAssociatedSource(sound);
+            audioSource.Volume = GetVolumeMultiplier(sound) * sound.Volume;
 
-            double amplitude = (Math.Abs(firstSample) + Math.Abs(secondSample) + Math.Abs(thirdSample) + Math.Abs(fourthSample)) / 4.0f;
-            Amplitude = (int)Math.Round(amplitude);
+            if (sound.Volume > 0 && !audioSource.IsPlaying)
+            {
+                audioSource.Play();
+            }
+            else if (sound.Volume == 0 && audioSource.IsPlaying)
+            {
+                audioSource.Stop();
+            }
+
+            if (sound.Looping && !audioSource.CurrentStream.Looping)
+            {
+                if (sound.LoopEnd.TotalSeconds > 0)
+                {
+                    audioSource.CurrentStream.SetLoop(sound.LoopStart, sound.LoopEnd);
+                }
+                else
+                {
+                    audioSource.CurrentStream.SetLoop();
+                }
+            }
         }
 
         public override void OnRelevantEntityRemoved(Entity entity)
@@ -89,50 +90,29 @@ namespace NitroSharp.Audio
                 _audioSources.Remove(sound);
                 _freeAudioSources.Enqueue(audioSource);
             }
+
+            sound.Source.Dispose();
         }
 
-        private AudioSource GetAssociatedSource(SoundComponent sound)
-        {
-            return sound.Kind == AudioKind.Voice ? _voiceAudioSource : _audioSources[sound];
-        }
-
+        private AudioSource GetAssociatedSource(SoundComponent sound) => _audioSources[sound];
         private AudioSource GetFreeAudioSource(AudioKind audioKind)
         {
-            if (audioKind == AudioKind.Voice)
-            {
-                return _voiceAudioSource;
-            }
-
+            uint bufferSize = audioKind == AudioKind.Voice ? VoiceBufferSize : _defaultBufferSize;
             return _freeAudioSources.Count > 0 ? _freeAudioSources.Dequeue()
-                : _audioEngine.ResourceFactory.CreateAudioSource(_defaultBufferSize);
+                : _audioEngine.ResourceFactory.CreateAudioSource(bufferSize);
         }
 
-        public override void Process(Entity entity, float deltaMilliseconds)
+        private void CalculateAmplitude(SoundComponent sound, AudioBuffer buffer)
         {
-            var sound = entity.GetComponent<SoundComponent>();
-            var audioSource = GetAssociatedSource(sound);
-            audioSource.Volume = GetVolumeMultiplier(sound) * sound.Volume;
+            short firstSample = Marshal.ReadInt16(buffer.StartPointer, 0);
+            short secondSample = Marshal.ReadInt16(buffer.StartPointer, buffer.Position / 4);
+            short thirdSample = Marshal.ReadInt16(buffer.StartPointer, buffer.Position / 4 + buffer.Position / 2);
+            short fourthSample = Marshal.ReadInt16(buffer.StartPointer, buffer.Position - 2);
 
-            if (sound.Volume > 0 && audioSource.Status != AudioSourceStatus.Playing)
-            {
-                audioSource.Play();
-            }
-            else if (sound.Volume == 0 && audioSource.Status == AudioSourceStatus.Playing)
-            {
-                audioSource.Stop();
-            }
+            double amplitude = (Math.Abs(firstSample) + Math.Abs(secondSample)
+                + Math.Abs(thirdSample) + Math.Abs(fourthSample)) / 4.0f;
 
-            if (sound.Looping && !audioSource.CurrentStream.Looping)
-            {
-                if (sound.LoopEnd.TotalSeconds > 0)
-                {
-                    audioSource.CurrentStream.SetLoop(sound.LoopStart, sound.LoopEnd);
-                }
-                else
-                {
-                    audioSource.CurrentStream.SetLoop();
-                }
-            }
+            sound.Amplitude = (int)amplitude;
         }
 
         private static float GetVolumeMultiplier(SoundComponent sound)

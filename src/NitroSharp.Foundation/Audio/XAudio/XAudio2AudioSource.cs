@@ -16,10 +16,11 @@ namespace NitroSharp.Foundation.Audio.XAudio
         {
             _engine = engine;
             var waveFormat = new WaveFormat(engine.SampleRate, engine.BitDepth, engine.ChannelCount);
-            _sourceVoice = new SourceVoice(engine.Device, waveFormat);
+            _sourceVoice = new SourceVoice(engine.Device, waveFormat, VoiceFlags.NoSampleRateConversion);
             _sourceVoice.BufferEnd += RaiseBufferEnd;
         }
 
+        public override int BuffersQueued => _sourceVoice.State.BuffersQueued;
         public override event EventHandler<AudioBuffer> BufferEnd;
 
         private void RaiseBufferEnd(IntPtr context)
@@ -56,12 +57,13 @@ namespace NitroSharp.Foundation.Audio.XAudio
             _sourceVoice.FlushSourceBuffers();
         }
 
-        internal override void AcceptBuffer(AudioBuffer buffer)
+        internal override void AcceptBuffer(AudioBuffer buffer, bool isLastBuffer)
         {
-            base.AcceptBuffer(buffer);
+            base.AcceptBuffer(buffer, isLastBuffer);
 
             var dataPointer = new DataPointer(buffer.StartPointer, buffer.Position);
             var xaudio2Buffer = new SharpDX.XAudio2.AudioBuffer(dataPointer);
+            xaudio2Buffer.Flags = isLastBuffer ? BufferFlags.EndOfStream : BufferFlags.None;
             xaudio2Buffer.Context = (IntPtr)buffer.Id;
 
             _sourceVoice.SubmitSourceBuffer(xaudio2Buffer, null);
@@ -69,7 +71,8 @@ namespace NitroSharp.Foundation.Audio.XAudio
 
         public override void Dispose()
         {
-            Stop();
+            StopAsync();
+            _sourceVoice.DestroyVoice();
             _sourceVoice.Dispose();
         }
     }

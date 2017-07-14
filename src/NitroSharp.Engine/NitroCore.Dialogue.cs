@@ -1,7 +1,6 @@
 ﻿using NitroSharp.Dialogue;
 using NitroSharp.NsScript;
 using NitroSharp.Foundation;
-using System.Threading.Tasks;
 using NitroSharp.Audio;
 using NitroSharp.Graphics;
 using NitroSharp.Foundation.Audio;

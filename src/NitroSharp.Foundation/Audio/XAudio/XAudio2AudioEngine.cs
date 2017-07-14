@@ -10,7 +10,7 @@ namespace NitroSharp.Foundation.Audio.XAudio
             : base(bitDepth, sampleRate, channelCount)
         {
             Device = new XAudio2(XAudio2Flags.None, ProcessorSpecifier.DefaultProcessor);
-            _masteringVoice = new MasteringVoice(Device);
+            _masteringVoice = new MasteringVoice(Device, channelCount, sampleRate);
             ResourceFactory = new XAudio2ResourceFactory(this);
         }
 

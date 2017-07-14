@@ -3,6 +3,7 @@
     public enum NsAudioKind
     {
         BackgroundMusic,
-        SoundEffect
+        SoundEffect,
+        Voice
     }
 }

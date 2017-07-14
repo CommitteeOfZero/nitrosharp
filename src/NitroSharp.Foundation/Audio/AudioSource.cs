@@ -13,34 +13,47 @@ namespace NitroSharp.Foundation.Audio
 
         private AudioStream _audioStream;
         private CancellationTokenSource _cts;
+        private Task _playTask;
+        private SemaphoreSlim _endOfStreamSignal;
+
+        private volatile bool _isPlaying;
 
         public AudioSource(AudioEngine audioEngine, uint bufferSize)
         {
             _engineBase = audioEngine;
-            _bufferPool = new AudioBufferPool(2, (int)bufferSize);
+            _bufferPool = new AudioBufferPool(3, (int)bufferSize);
             _buffers = new Dictionary<int, AudioBuffer>();
+            _endOfStreamSignal = new SemaphoreSlim(1);
 
-            Status = AudioSourceStatus.Idle;
             BufferEnd += OnBufferEnd;
-
             audioEngine.RegisterAudioSource(this);
         }
 
         private void OnBufferEnd(object sender, AudioBuffer buffer)
         {
             _bufferPool.Release(buffer);
+            if (BuffersQueued == 0)
+            {
+                _endOfStreamSignal.Release();
+            }
         }
 
-        public AudioSourceStatus Status { get; private set; }
+        public bool IsPlaying
+        {
+            get => _isPlaying;
+            set => _isPlaying = value;
+        }
+
         public AudioStream CurrentStream => _audioStream;
         public abstract float Volume { get; set; }
+        public abstract int BuffersQueued { get; }
 
         public event EventHandler<AudioBuffer> PreviewBufferSent;
         public abstract event EventHandler<AudioBuffer> BufferEnd;
 
         public void SetStream(AudioStream stream)
         {
-            if (Status == AudioSourceStatus.Playing)
+            if (IsPlaying)
             {
                 throw new InvalidOperationException();
             }
@@ -53,59 +66,91 @@ namespace NitroSharp.Foundation.Audio
             _audioStream = stream;
         }
 
-        public async void Play()
+        public Task Play()
         {
-            if (Status == AudioSourceStatus.Playing)
+            if (IsPlaying)
             {
-                return;
+                return Task.FromResult(0);
             }
+
             if (CurrentStream == null)
             {
                 throw new InvalidOperationException("Audio stream not set.");
             }
 
+            _playTask = PlayCore();
+            return _playTask;
+        }
+
+        private async Task PlayCore()
+        {
+            IsPlaying = true;
             _cts = new CancellationTokenSource();
             StartAcceptingBuffers();
-            Status = AudioSourceStatus.Playing;
             while (!_cts.IsCancellationRequested)
             {
-                AudioBuffer buffer = null;
-                try
-                {
-                    buffer = await _bufferPool.TakeAsync(_cts.Token).ConfigureAwait(false);
-                }
-                catch (TaskCanceledException)
-                {
-                    return;
-                }
-
+                AudioBuffer buffer = await _bufferPool.TakeAsync(_cts.Token).ConfigureAwait(false);
                 buffer.ResetPosition();
-                bool eof = !_audioStream.Read(buffer);
 
-                PreviewBufferSent?.Invoke(this, buffer);
+                bool reachedEof = !_audioStream.Read(buffer, _cts.Token);
+                if (buffer.Position > 0)
+                {
+                    PreviewBufferSent?.Invoke(this, buffer);
+                    AcceptBuffer(buffer, isLastBuffer: reachedEof);
+                }
 
-                AcceptBuffer(buffer);
-                if (eof)
+                if (reachedEof)
                 {
                     break;
                 }
             }
+
+            await _endOfStreamSignal.WaitAsync(_cts.Token).ConfigureAwait(false);
+            IsPlaying = false;
         }
 
         public void Pause() => PauseCore();
+        public async Task StopAsync()
+        {
+            PauseCore();
+            FlushBuffers();
+            if (_playTask != null)
+            {
+                try
+                {
+                    await _playTask.ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                }
+            }
+        }
         public void Stop()
         {
             PauseCore();
             FlushBuffers();
+
+            if (_playTask == null || _playTask.IsCompleted || _playTask.IsCanceled)
+            {
+                return;
+            }
+
+            try
+            {
+                _playTask.Wait();
+            }
+            catch (AggregateException e) when (e.InnerException is OperationCanceledException)
+            {
+            }
         }
 
         private void PauseCore()
         {
-            if (Status == AudioSourceStatus.Playing)
+            if (IsPlaying)
             {
-                StopAcceptingBuffers();
                 _cts?.Cancel();
-                Status = AudioSourceStatus.Idle;
+                StopAcceptingBuffers();
+                IsPlaying = false;
             }
         }
 
@@ -113,7 +158,7 @@ namespace NitroSharp.Foundation.Audio
         internal abstract void StopAcceptingBuffers();
         internal abstract void FlushBuffers();
 
-        internal virtual void AcceptBuffer(AudioBuffer buffer)
+        internal virtual void AcceptBuffer(AudioBuffer buffer, bool isLastBuffer)
         {
             _buffers[buffer.Id] = buffer;
         }

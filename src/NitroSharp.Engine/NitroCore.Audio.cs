@@ -13,7 +13,10 @@ namespace NitroSharp
         {
             if (_currentDialogueLine?.Voice?.CharacterName == characterName)
             {
-                return AudioSystem.Amplitude;
+                if (_entities.TryGet(_currentDialogueLine.Voice.FileName, out var voiceEntity))
+                {
+                    return voiceEntity.GetComponent<SoundComponent>().Amplitude;
+                }
             }
 
             return 0;
