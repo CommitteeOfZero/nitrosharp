@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -58,6 +59,12 @@ namespace NitroSharp.Foundation.Audio
                 throw new InvalidOperationException();
             }
 
+            if (stream == null)
+            {
+                _audioStream = null;
+                return;
+            }
+
             stream.TargetBitDepth = _engineBase.BitDepth;
             stream.TargetChannelCount = _engineBase.ChannelCount;
             stream.TargetSampleRate = _engineBase.SampleRate;
@@ -86,24 +93,28 @@ namespace NitroSharp.Foundation.Audio
         {
             IsPlaying = true;
             _cts = new CancellationTokenSource();
-            StartAcceptingBuffers();
-            while (!_cts.IsCancellationRequested)
-            {
-                AudioBuffer buffer = await _bufferPool.TakeAsync(_cts.Token).ConfigureAwait(false);
-                buffer.ResetPosition();
 
-                bool reachedEof = !_audioStream.Read(buffer, _cts.Token);
-                if (buffer.Position > 0)
+            //await Task.Factory.StartNew(async (state) =>
+            //{
+                StartAcceptingBuffers();
+                while (!_cts.IsCancellationRequested)
                 {
-                    PreviewBufferSent?.Invoke(this, buffer);
-                    AcceptBuffer(buffer, isLastBuffer: reachedEof);
-                }
+                    AudioBuffer buffer = await _bufferPool.TakeAsync(_cts.Token).ConfigureAwait(false);
+                    buffer.ResetPosition();
 
-                if (reachedEof)
-                {
-                    break;
+                    bool reachedEof = !_audioStream.Read(buffer, _cts.Token);
+                    if (buffer.Position > 0)
+                    {
+                        PreviewBufferSent?.Invoke(this, buffer);
+                        AcceptBuffer(buffer, isLastBuffer: reachedEof);
+                    }
+
+                    if (reachedEof)
+                    {
+                        break;
+                    }
                 }
-            }
+            //}//, _cts, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default).ConfigureAwait(false);
 
             await _endOfStreamSignal.WaitAsync(_cts.Token).ConfigureAwait(false);
             IsPlaying = false;
@@ -123,6 +134,14 @@ namespace NitroSharp.Foundation.Audio
                 catch (OperationCanceledException)
                 {
                 }
+                catch (ObjectDisposedException)
+                {
+                    Debugger.Break();
+                }
+                finally
+                {
+                    _playTask = null;
+                }
             }
         }
         public void Stop()
@@ -141,6 +160,10 @@ namespace NitroSharp.Foundation.Audio
             }
             catch (AggregateException e) when (e.InnerException is OperationCanceledException)
             {
+            }
+            finally
+            {
+                _playTask = null;
             }
         }
 

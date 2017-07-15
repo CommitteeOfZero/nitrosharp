@@ -1,38 +1,27 @@
 ﻿{
-  "activeProfile": "Prologue",
+  "activeProfile": "Staking",
   "graphics.vsync": true,
+  "window.title": "COWS;HEAD NOAH",
+  "window.width": 1280,
+  "window.height": 720,
+  "debug.contentRoot": "S:/ChaosContent/Noah",
 
   "profiles": {
     "Staking": {
-      "window.title": "COWS;HEAD NOAH",
-      "window.width": 1280,
-      "window.height": 720,
-      "startupScript": "boot-staking.nss",
-      "debug.contentRoot": "S:/ChaosContent/Noah"
+      "startupScript": "boot-staking.nss"
     },
 
     "Phantasm": {
-      "window.title": "COWS;HEAD NOAH",
-      "window.width": 1280,
-      "window.height": 720,
-      "startupScript": "boot-phantasm.nss",
-      "debug.contentRoot": "S:/ChaosContent/Noah"
+      "startupScript": "boot-phantasm.nss"
     },
 
     "Prologue": {
-      "window.title": "COWS;HEAD NOAH",
-      "window.width": 1280,
-      "window.height": 720,
-      "startupScript": "boot-prologue.nss",
-      "debug.contentRoot": "S:/ChaosContent/Noah"
+      "startupScript": "boot-prologue.nss"
     },
 
     "Test": {
       "window.title": "COWS;HEAD NOAH [test]",
-      "window.width": 1280,
-      "window.height": 720,
-      "startupScript": "test.nss",
-      "debug.contentRoot": "S:/ChaosContent/Noah"
+      "startupScript": "test.nss"
     },
 
     "TestCH": {

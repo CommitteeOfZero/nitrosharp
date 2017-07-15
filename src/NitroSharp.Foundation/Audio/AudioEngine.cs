@@ -29,7 +29,7 @@ namespace NitroSharp.Foundation.Audio
 
         public ResourceFactory ResourceFactory { get; protected set; }
 
-        public void StopAllVoices()
+        public void StopAllSources()
         {
             Task.WhenAll(_audioSources.Select(x => x.StopAsync())).Wait();
         }

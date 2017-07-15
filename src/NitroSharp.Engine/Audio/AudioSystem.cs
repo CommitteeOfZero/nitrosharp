@@ -3,6 +3,8 @@ using NitroSharp.Foundation.Audio;
 using System.Collections.Generic;
 using System;
 using System.Runtime.InteropServices;
+using System.Linq;
+using System.Diagnostics;
 
 namespace NitroSharp.Audio
 {
@@ -33,11 +35,15 @@ namespace NitroSharp.Audio
         public override void OnRelevantEntityAdded(Entity entity)
         {
             var sound = entity.GetComponent<SoundComponent>();
+            if (sound.Kind == AudioKind.Voice)
+            {
+                RemoveActiveVoices();
+            }
+
             var stream = sound.Source.Asset;
             var audioSource = GetFreeAudioSource(sound.Kind);
             if (sound.Kind == AudioKind.Voice)
             {
-                audioSource.Stop();
                 audioSource.PreviewBufferSent += (_, args) => CalculateAmplitude(sound, args);
             }
 
@@ -84,6 +90,7 @@ namespace NitroSharp.Audio
         {
             var audioSource = GetAssociatedSource(sound);
             audioSource.Stop();
+            audioSource.SetStream(null);
 
             if (sound.Kind != AudioKind.Voice)
             {
@@ -92,6 +99,15 @@ namespace NitroSharp.Audio
             }
 
             sound.Source.Dispose();
+        }
+
+        private void RemoveActiveVoices()
+        {
+            var voices = _audioSources.Where(x => x.Key.Kind == AudioKind.Voice && x.Key.Volume > 0).Select(x => x.Key);
+            foreach (var voice in voices)
+            {
+                voice.Entity.Destroy();
+            }
         }
 
         private AudioSource GetAssociatedSource(SoundComponent sound) => _audioSources[sound];
@@ -131,7 +147,7 @@ namespace NitroSharp.Audio
 
         public void Dispose()
         {
-            _audioEngine.StopAllVoices();
+            _audioEngine.StopAllSources();
         }
     }
 }
