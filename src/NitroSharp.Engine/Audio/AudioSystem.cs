@@ -78,6 +78,8 @@ namespace NitroSharp.Audio
                     audioSource.CurrentStream.SetLoop();
                 }
             }
+
+            sound.Elapsed = audioSource.PlaybackPosition;
         }
 
         public override void OnRelevantEntityRemoved(Entity entity)
@@ -120,13 +122,13 @@ namespace NitroSharp.Audio
 
         private void CalculateAmplitude(SoundComponent sound, AudioBuffer buffer)
         {
-            short firstSample = Marshal.ReadInt16(buffer.StartPointer, 0);
-            short secondSample = Marshal.ReadInt16(buffer.StartPointer, buffer.Position / 4);
-            short thirdSample = Marshal.ReadInt16(buffer.StartPointer, buffer.Position / 4 + buffer.Position / 2);
-            short fourthSample = Marshal.ReadInt16(buffer.StartPointer, buffer.Position - 2);
+            int firstSample = Marshal.ReadInt16(buffer.StartPointer, 0);
+            int secondSample = Marshal.ReadInt16(buffer.StartPointer, buffer.Position / 4);
+            int thirdSample = Marshal.ReadInt16(buffer.StartPointer, buffer.Position / 4 + buffer.Position / 2);
+            int fourthSample = Marshal.ReadInt16(buffer.StartPointer, buffer.Position - 2);
 
             double amplitude = (Math.Abs(firstSample) + Math.Abs(secondSample)
-                + Math.Abs(thirdSample) + Math.Abs(fourthSample)) / 4.0f;
+                + Math.Abs(thirdSample) + Math.Abs(fourthSample)) / 4.0d;
 
             sound.Amplitude = (int)amplitude;
         }

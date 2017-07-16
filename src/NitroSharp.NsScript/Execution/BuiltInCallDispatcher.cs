@@ -325,8 +325,8 @@ namespace NitroSharp.NsScript.Execution
         private void RemainTime(ArgumentStack args)
         {
             string entityName = PreprocessEntityName(args.PopString());
-
-            Result = ConstantValue.Zero;
+            int msTime = _builtinsImpl.GetTimeRemaining(entityName);
+            Result = new ConstantValue(msTime, isDelta: false);
         }
 
         private void SoundAmplitude(ArgumentStack args)

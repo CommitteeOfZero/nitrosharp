@@ -18,11 +18,12 @@ namespace NitroSharp.Audio
         public AssetRef<AudioStream> Source { get; }
         public AudioKind Kind { get; }
 
+        public TimeSpan Elapsed { get; internal set; }
         public float Volume { get; set; }
         public TimeSpan LoopStart { get; private set; }
         public TimeSpan LoopEnd { get; private set; }
         public bool Looping { get; set; }
-        public int Amplitude { get; set; }
+        public int Amplitude { get; internal set; }
 
         public void SetLoop(TimeSpan loopStart, TimeSpan loopEnd)
         {

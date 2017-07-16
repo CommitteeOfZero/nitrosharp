@@ -21,6 +21,11 @@ namespace NitroSharp.Foundation.Audio.XAudio
         }
 
         public override int BuffersQueued => _sourceVoice.State.BuffersQueued;
+        public override TimeSpan PlaybackPosition
+        {
+            get => TimeSpan.FromSeconds((double) _sourceVoice.State.SamplesPlayed / CurrentStream.TargetSampleRate);
+        }
+
         public override event EventHandler<AudioBuffer> BufferEnd;
 
         private void RaiseBufferEnd(IntPtr context)
@@ -71,7 +76,7 @@ namespace NitroSharp.Foundation.Audio.XAudio
 
         public override void Dispose()
         {
-            StopAsync();
+            Stop(wait: false);
             _sourceVoice.DestroyVoice();
             _sourceVoice.Dispose();
         }

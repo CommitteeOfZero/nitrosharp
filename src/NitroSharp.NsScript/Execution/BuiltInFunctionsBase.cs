@@ -172,5 +172,14 @@ namespace NitroSharp.NsScript.Execution
         {
             return _randomGen.Next(max);
         }
+
+        /// <summary>
+        /// Original name: RemainTime.
+        /// </summary>
+        /// <param name="soundEntityName"></param>
+        public virtual int GetTimeRemaining(string soundEntityName)
+        {
+            return 0;
+        }
     }
 }

@@ -47,6 +47,7 @@ namespace NitroSharp.Foundation.Audio
 
         public AudioStream CurrentStream => _audioStream;
         public abstract float Volume { get; set; }
+        public abstract TimeSpan PlaybackPosition { get; }
         public abstract int BuffersQueued { get; }
 
         public event EventHandler<AudioBuffer> PreviewBufferSent;
@@ -144,12 +145,12 @@ namespace NitroSharp.Foundation.Audio
                 }
             }
         }
-        public void Stop()
+        public void Stop(bool wait = true)
         {
             PauseCore();
             FlushBuffers();
 
-            if (_playTask == null || _playTask.IsCompleted || _playTask.IsCanceled)
+            if (!wait || (_playTask == null || _playTask.IsCompleted || _playTask.IsCanceled))
             {
                 return;
             }

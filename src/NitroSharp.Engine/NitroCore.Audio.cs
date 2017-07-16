@@ -79,5 +79,17 @@ namespace NitroSharp
             sound.SetLoop(loopStart, loopEnd);
             sound.Looping = true;
         }
+
+        public override int GetTimeRemaining(string soundEntityName)
+        {
+            if (_entities.TryGet(soundEntityName, out var entity))
+            {
+                var sound = entity.GetComponent<SoundComponent>();
+                var duration = sound.Source.Asset.Duration;
+                return (int)(duration.TotalMilliseconds - sound.Elapsed.TotalMilliseconds);
+            }
+
+            return 0;
+        }
     }
 }
