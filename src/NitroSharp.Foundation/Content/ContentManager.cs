@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 
 namespace NitroSharp.Foundation.Content
 {
@@ -42,6 +43,11 @@ namespace NitroSharp.Foundation.Content
             }
         }
 
+        public virtual IEnumerable<AssetId> Search(string searchPattern)
+        {
+            return Directory.EnumerateFiles(RootDirectory, searchPattern).Select(x => new AssetId(x));
+        }
+
         public AssetRef<T> Get<T>(AssetId assetId)
         {
             if (_loadedAssets.TryGetValue(assetId, out var cachedItem))
@@ -56,6 +62,20 @@ namespace NitroSharp.Foundation.Content
             return new AssetRef<T>(assetId, this);
         }
 
+        public bool TryGet<T>(AssetId assetId, out AssetRef<T> asset)
+        {
+            try
+            {
+                asset = Get<T>(assetId);
+                return true;
+            }
+            catch (FileNotFoundException)
+            {
+                asset = null;
+                return false;
+            }
+        }
+
         internal T InternalGetCached<T>(AssetId assetId) => (T)_loadedAssets[assetId].asset;
 
         public void RegisterContentLoader(Type t, ContentLoader loader)
@@ -68,12 +88,8 @@ namespace NitroSharp.Foundation.Content
 
         private object Load(AssetId assetId, Type contentType)
         {
-            Debug.WriteLine("DEP: " + assetId.Value);
-
             var stream = OpenStream(assetId);
-            {
-                return Load(stream, assetId, contentType);
-            }
+            return Load(stream, assetId, contentType);
         }
 
         private object Load(Stream stream, AssetId assetId, Type contentType)

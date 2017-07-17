@@ -4,6 +4,8 @@ using NitroSharp.Foundation;
 using NitroSharp.Foundation.Animation;
 using System;
 using NitroSharp.Foundation.Audio;
+using System.IO;
+using System.Linq;
 
 namespace NitroSharp
 {
@@ -24,7 +26,15 @@ namespace NitroSharp
 
         public override void LoadAudio(string entityName, NsAudioKind kind, string fileName)
         {
-            var sound = new SoundComponent(_content.Get<AudioStream>(fileName), (AudioKind)kind);
+            if (!_content.TryGet<AudioStream>(fileName, out var audioStream))
+            {
+                string nameWithoutExtension = fileName.Replace(Path.GetExtension(fileName), string.Empty);
+                string searchPattern = nameWithoutExtension + "*.";
+                var assetId = _content.Search(searchPattern).First();
+                audioStream = _content.Get<AudioStream>(assetId);
+            }
+
+            var sound = new SoundComponent(audioStream, (AudioKind)kind);
             _entities.Create(entityName, replace: true).WithComponent(sound);
         }
 

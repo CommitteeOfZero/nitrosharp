@@ -1,5 +1,5 @@
 ﻿{
-  "activeProfile": "Prologue",
+  "activeProfile": "Test",
   "graphics.vsync": true,
   "window.title": "COWS;HEAD NOAH",
   "window.width": 1280,
@@ -17,6 +17,10 @@
 
     "Prologue": {
       "startupScript": "boot-prologue.nss"
+    },
+
+    "Ch5": {
+      "startupScript": "boot-ch5.nss"
     },
 
     "Test": {
