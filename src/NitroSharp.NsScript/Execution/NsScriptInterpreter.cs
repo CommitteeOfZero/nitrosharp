@@ -381,11 +381,10 @@ namespace NitroSharp.NsScript.Execution
 
                     case OperationCategory.Assignment:
                         var targetVariable = currentFrame.EvaluationStack.Pop() as Variable;
-                        var value = _exprReducer.ReduceExpression(currentFrame.EvaluationStack.Pop());
+                        ConstantValue operandReduced = _exprReducer.ReduceExpression(currentFrame.EvaluationStack.Pop());
 
-                        string targetName = targetVariable.Name.SimplifiedName;
-                        _currentThread.CurrentFrame.Globals[targetName] = value;
-                        currentFrame.EvaluationStack.Push(value);
+                        var newValue = AssignVariable(targetVariable, operation, operandReduced);
+                        currentFrame.EvaluationStack.Push(newValue);
                         break;
                 }
             }
@@ -394,6 +393,37 @@ namespace NitroSharp.NsScript.Execution
             Debug.Assert(currentFrame.EvaluationStack.Count == 0, "Evaluation stack should be empty.");
             currentFrame.CurrentExpression = null;
             return true;
+        }
+
+        private ConstantValue AssignVariable(Variable variable, OperationKind assignmentOp, ConstantValue operand)
+        {
+            var globals = _currentThread.CurrentFrame.Globals;
+            string name = variable.Name.SimplifiedName;
+            switch (assignmentOp)
+            {
+                case OperationKind.SimpleAssignment:
+                default:
+                    globals[name] = operand;
+                    break;
+
+                case OperationKind.AddAssignment:
+                    globals[name] += operand;
+                    break;
+
+                case OperationKind.SubtractAssignment:
+                    globals[name] -= operand;
+                    break;
+
+                case OperationKind.MultiplyAssignment:
+                    globals[name] *= operand;
+                    break;
+
+                case OperationKind.DivideAssignment:
+                    globals[name] /= operand;
+                    break;
+            }
+
+            return globals[name];
         }
 
         private void PrepareFunctionCall(FunctionCall functionCall)

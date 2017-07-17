@@ -6,7 +6,8 @@ namespace NitroSharp.NsScript
     {
         public static readonly ConstantValue True = new ConstantValue(true);
         public static readonly ConstantValue False = new ConstantValue(false);
-        public static readonly ConstantValue Zero = new ConstantValue(0);
+        public static readonly ConstantValue Zero = new ConstantValue(0, isDelta: false);
+        public static readonly ConstantValue One = new ConstantValue(1, isDelta: false);
         public static readonly ConstantValue Null = new ConstantValue(null);
 
         public ConstantValue(object value, bool? isDelta = null)

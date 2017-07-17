@@ -5,6 +5,7 @@ using System;
 using System.Runtime.InteropServices;
 using System.Linq;
 using System.Diagnostics;
+using System.Threading;
 
 namespace NitroSharp.Audio
 {
@@ -35,18 +36,8 @@ namespace NitroSharp.Audio
         public override void OnRelevantEntityAdded(Entity entity)
         {
             var sound = entity.GetComponent<SoundComponent>();
-            if (sound.Kind == AudioKind.Voice)
-            {
-                RemoveActiveVoices();
-            }
-
             var stream = sound.Source.Asset;
             var audioSource = GetFreeAudioSource(sound.Kind);
-            if (sound.Kind == AudioKind.Voice)
-            {
-                audioSource.PreviewBufferSent += (_, args) => CalculateAmplitude(sound, args);
-            }
-
             stream.Seek(TimeSpan.Zero);
             audioSource.SetStream(stream);
             _audioSources[sound] = audioSource;
@@ -103,25 +94,30 @@ namespace NitroSharp.Audio
             sound.Source.Dispose();
         }
 
-        private void RemoveActiveVoices()
-        {
-            var voices = _audioSources.Where(x => x.Key.Kind == AudioKind.Voice && x.Key.Volume > 0).Select(x => x.Key);
-            foreach (var voice in voices)
-            {
-                voice.Entity.Destroy();
-            }
-        }
-
         private AudioSource GetAssociatedSource(SoundComponent sound) => _audioSources[sound];
         private AudioSource GetFreeAudioSource(AudioKind audioKind)
         {
             uint bufferSize = audioKind == AudioKind.Voice ? VoiceBufferSize : _defaultBufferSize;
-            return _freeAudioSources.Count > 0 ? _freeAudioSources.Dequeue()
-                : _audioEngine.ResourceFactory.CreateAudioSource(bufferSize);
+            if (_freeAudioSources.Count > 0)
+            {
+                return _freeAudioSources.Dequeue();
+            }
+            else
+            {
+                var source = _audioEngine.ResourceFactory.CreateAudioSource(bufferSize);
+                if (audioKind == AudioKind.Voice)
+                {
+                    source.PreviewBufferSent += (sender, args) => CalculateAmplitude(sender as AudioSource, args);
+                }
+
+                return source;
+            }
         }
 
-        private void CalculateAmplitude(SoundComponent sound, AudioBuffer buffer)
+        private void CalculateAmplitude(AudioSource source, AudioBuffer buffer)
         {
+            var sound = _audioSources.First(x => x.Value == source).Key;
+
             int firstSample = Marshal.ReadInt16(buffer.StartPointer, 0);
             int secondSample = Marshal.ReadInt16(buffer.StartPointer, buffer.Position / 4);
             int thirdSample = Marshal.ReadInt16(buffer.StartPointer, buffer.Position / 4 + buffer.Position / 2);
@@ -130,7 +126,7 @@ namespace NitroSharp.Audio
             double amplitude = (Math.Abs(firstSample) + Math.Abs(secondSample)
                 + Math.Abs(thirdSample) + Math.Abs(fourthSample)) / 4.0d;
 
-            sound.Amplitude = (int)amplitude;
+            Interlocked.Exchange(ref sound.Amplitude, (int)amplitude);
         }
 
         private static float GetVolumeMultiplier(SoundComponent sound)

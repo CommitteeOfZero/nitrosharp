@@ -23,7 +23,7 @@ namespace NitroSharp.Audio
         public TimeSpan LoopStart { get; private set; }
         public TimeSpan LoopEnd { get; private set; }
         public bool Looping { get; set; }
-        public int Amplitude { get; internal set; }
+        public volatile int Amplitude;
 
         public void SetLoop(TimeSpan loopStart, TimeSpan loopEnd)
         {

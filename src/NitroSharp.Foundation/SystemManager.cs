@@ -33,24 +33,18 @@ namespace NitroSharp.Foundation
 
         public void Update(float deltaMilliseconds)
         {
-            while (_updatedEntities.Count > 0 || _removedEntities.Count > 0)
+            if (_updatedEntities.Count > 0 || _removedEntities.Count > 0)
             {
-                var updated = _updatedEntities.ToArray();
-                var removed = _removedEntities.ToArray();
-
-                _updatedEntities.Clear();
-                _removedEntities.Clear();
-
                 foreach (var system in _systems)
                 {
-                    (system as EntityProcessingSystem)?.RefreshLocalEntityList(updated, removed);
+                    (system as EntityProcessingSystem)?.RefreshLocalEntityList(_updatedEntities, _removedEntities);
                 }
             }
             _entities.FlushRemovedComponents();
             _entities.FlushRemovedEntities();
 
-            //_updatedEntities.Clear();
-            //_removedEntities.Clear();
+            _updatedEntities.Clear();
+            _removedEntities.Clear();
 
             foreach (var system in _systems)
             {

@@ -10,6 +10,7 @@ namespace NitroSharp
     public sealed partial class NitroCore
     {
         private const float TextRightMargin = 150;
+        private const string VoiceEntityName = "__VOICE";
 
         private Paragraph _currentParagraph;
         private DialogueLine _currentDialogueLine;
@@ -72,11 +73,11 @@ namespace NitroSharp
             if (voice.Action == VoiceAction.Play)
             {
                 var sound = new SoundComponent(_content.Get<AudioStream>("voice/" + voice.FileName), AudioKind.Voice);
-                _entities.Create(voice.FileName, replace: true).WithComponent(sound);
+                _entities.Create(VoiceEntityName, replace: true).WithComponent(sound);
             }
             else
             {
-                _entities.Remove(voice.FileName);
+                //_entities.Remove(voice.FileName);
             }
         }
     }
