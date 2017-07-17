@@ -39,14 +39,21 @@ namespace NitroSharp.NsScript.Execution
                 ["SetLoop"] = SetLoop,
                 ["SetLoopPoint"] = SetLoopPoint,
                 ["DrawTransition"] = DrawTransition,
-                ["DisplayDialogue"] = DisplayDialogue,
 
                 ["RemainTime"] = RemainTime,
                 ["ImageHorizon"] = ImageHorizon,
                 ["Random"] = Random,
                 ["SoundAmplitude"] = SoundAmplitude,
-                ["Platform"] = Platform
+                ["Platform"] = Platform,
+
+                ["DisplayDialogue"] = DisplayDialogue,
+                ["HandlePXmlLineSeparator"] = HandlePXmlLineSeparator
             };
+        }
+
+        private void HandlePXmlLineSeparator(ArgumentStack obj)
+        {
+            _builtinsImpl.HandlePXmlLineSeparator();
         }
 
         private void Platform(ArgumentStack obj)

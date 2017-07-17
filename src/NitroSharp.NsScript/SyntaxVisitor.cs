@@ -120,11 +120,6 @@ namespace NitroSharp.NsScript
             DefaultVisitNode(selectStatement);
         }
 
-        public virtual void VisitPXmlString(PXmlString pxmlString)
-        {
-            DefaultVisitNode(pxmlString);
-        }
-
         public void VisitScene(Scene scene)
         {
             throw new NotImplementedException();
@@ -145,9 +140,19 @@ namespace NitroSharp.NsScript
             DefaultVisitNode(callSceneStatement);
         }
 
+        public virtual void VisitPXmlString(PXmlString pxmlString)
+        {
+            DefaultVisitNode(pxmlString);
+        }
+
         public virtual void VisitParagraph(Paragraph paragraph)
         {
             DefaultVisitNode(paragraph);
+        }
+
+        public virtual void VisitPXmlLineSeparator(PXmlLineSeparator pxmlLineSeparator)
+        {
+            DefaultVisitNode(pxmlLineSeparator);
         }
     }
 
@@ -283,11 +288,6 @@ namespace NitroSharp.NsScript
             return DefaultVisitNode(callChapterStatement);
         }
 
-        public virtual TResult VisitParagraph(Paragraph paragraph)
-        {
-            return DefaultVisitNode(paragraph);
-        }
-
         public virtual TResult VisitScene(Scene scene)
         {
             return DefaultVisitNode(scene);
@@ -296,6 +296,16 @@ namespace NitroSharp.NsScript
         public virtual TResult VisitPXmlString(PXmlString pxmlString)
         {
             return DefaultVisitNode(pxmlString);
+        }
+
+        public virtual TResult VisitParagraph(Paragraph paragraph)
+        {
+            return DefaultVisitNode(paragraph);
+        }
+
+        public virtual TResult VisitPXmlLineSeparator(PXmlLineSeparator pxmlLineSeparator)
+        {
+            return DefaultVisitNode(pxmlLineSeparator);
         }
     }
 }

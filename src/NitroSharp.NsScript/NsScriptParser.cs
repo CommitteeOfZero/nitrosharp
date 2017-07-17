@@ -241,61 +241,14 @@ namespace NitroSharp.NsScript
                 case SyntaxTokenKind.PXmlString:
                     return StatementFactory.PXmlString(EatToken().Text);
 
+                case SyntaxTokenKind.PXmlLineSeparator:
+                    EatToken();
+                    return StatementFactory.PXmlLineSeparator();
+
                 default:
                     EatToken();
                     return null;
             }
-        }
-
-        private Paragraph ParseParagraph()
-        {
-            var startTag = EatToken(SyntaxTokenKind.ParagraphStartTag);
-            string associatedBox = ExtractBoxName(startTag.Text);
-
-            string ExtractBoxName(string text)
-            {
-                int idxStart = 5;
-                int idxEnd = text.Length - 1;
-
-                return text.Substring(idxStart, idxEnd - idxStart);
-            }
-
-            var identifier = EatToken(SyntaxTokenKind.ParagraphIdentifier);
-            var blocks = ImmutableArray.CreateBuilder<Statement>();
-            while (CurrentToken.Kind != SyntaxTokenKind.ParagraphEndTag)
-            {
-                if (CurrentToken.Kind == SyntaxTokenKind.PXmlLineSeparator)
-                {
-                    EatToken();
-                }
-
-                var statements = ImmutableArray.CreateBuilder<Statement>();
-                while (CurrentToken.Kind != SyntaxTokenKind.PXmlLineSeparator && CurrentToken.Kind != SyntaxTokenKind.ParagraphEndTag)
-                {
-                    var statement = ParseStatement();
-                    if (statement != null)
-                    {
-                        statements.Add(statement);
-                    }
-                }
-
-                var block = StatementFactory.Block(statements.ToImmutable());
-                blocks.Add(block);
-            }
-
-            EatToken(SyntaxTokenKind.ParagraphEndTag);
-            string identifierString = TrimParagraphIdentifier(identifier.Text);
-            return StatementFactory.Paragraph(identifierString, associatedBox, blocks.ToImmutable());
-        }
-
-        private static string TrimParagraphIdentifier(string identifier)
-        {
-            if (identifier.Length > 2 && identifier[0] == '[' && identifier[identifier.Length - 1] == ']')
-            {
-                return identifier.Substring(1, identifier.Length - 2);
-            }
-
-            return identifier;
         }
 
         private ExpressionStatement ParseExpressionStatement()
@@ -694,6 +647,40 @@ namespace NitroSharp.NsScript
             var sceneName = ParseIdentifier();
             EatStatementTerminator();
             return StatementFactory.CallScene(sceneName);
+        }
+
+        private Paragraph ParseParagraph()
+        {
+            string ExtractBoxName(string text)
+            {
+                int idxStart = 5;
+                int idxEnd = text.Length - 1;
+
+                return text.Substring(idxStart, idxEnd - idxStart);
+            }
+
+            string TrimParagraphIdentifier(string s)
+            {
+                return s.Length > 2 && s[0] == '[' && s[s.Length - 1] == ']' ? s.Substring(1, s.Length - 2) : s;
+            }
+
+            var startTag = EatToken(SyntaxTokenKind.ParagraphStartTag);
+            string associatedBox = ExtractBoxName(startTag.Text);
+
+            var identifier = EatToken(SyntaxTokenKind.ParagraphIdentifier);
+            var statements = ImmutableArray.CreateBuilder<Statement>();
+            while (CurrentToken.Kind != SyntaxTokenKind.ParagraphEndTag)
+            {
+                var statement = ParseStatement();
+                if (statement != null)
+                {
+                    statements.Add(statement);
+                }
+            }
+
+            EatToken(SyntaxTokenKind.ParagraphEndTag);
+            string identifierString = TrimParagraphIdentifier(identifier.Text);
+            return StatementFactory.Paragraph(identifierString, associatedBox, statements.ToImmutable());
         }
 
         private static NssParseException UnexpectedToken(string scriptName, string token)

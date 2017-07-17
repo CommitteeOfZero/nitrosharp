@@ -5,19 +5,18 @@
         ConstantValue,
         Identifier,
         Literal,
+        DeltaExpression,
         UnaryExpression,
         BinaryExpression,
         AssignmentExpression,
 
         Chapter,
-
         Block,
         IfStatement,
         WhileStatement,
         FunctionCall,
         ExpressionStatement,
-        Function,
-        Paragraph,
+        Function, 
         Variable,
         NamedConstant,
         Parameter,
@@ -29,7 +28,9 @@
         CallChapterStatement,
         Scene,
         BreakStatement,
+        
+        Paragraph,
         PXmlString,
-        DeltaExpression
+        PXmlLineSeparator
     }
 }

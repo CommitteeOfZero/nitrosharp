@@ -51,32 +51,7 @@ namespace NitroSharp.NsScript
             new Paragraph(blockIdentifier, boxName, statements);
 
         public static PXmlString PXmlString(string text) => new PXmlString(text);
-    }
-
-    public sealed class Paragraph : Statement, IBlock
-    {
-        internal Paragraph(string identifier, string associatedBox, ImmutableArray<Statement> statements)
-        {
-            Identifier = identifier;
-            AssociatedBox = associatedBox;
-            Statements = statements;
-        }
-
-        public string Identifier { get; }
-        public string AssociatedBox { get; }
-        public ImmutableArray<Statement> Statements { get; }
-
-        public override SyntaxNodeKind Kind => SyntaxNodeKind.Paragraph;
-
-        public override void Accept(SyntaxVisitor visitor)
-        {
-            visitor.VisitParagraph(this);
-        }
-
-        public override TResult Accept<TResult>(SyntaxVisitor<TResult> visitor)
-        {
-            return visitor.VisitParagraph(this);
-        }
+        public static PXmlLineSeparator PXmlLineSeparator() => new PXmlLineSeparator();
     }
 
     public sealed class PXmlString : Statement
@@ -380,6 +355,47 @@ namespace NitroSharp.NsScript
         public override TResult Accept<TResult>(SyntaxVisitor<TResult> visitor)
         {
             return visitor.VisitCallSceneStatement(this);
+        }
+    }
+
+    public sealed class Paragraph : Statement, IBlock
+    {
+        internal Paragraph(string identifier, string associatedBox, ImmutableArray<Statement> statements)
+        {
+            Identifier = identifier;
+            AssociatedBox = associatedBox;
+            Statements = statements;
+        }
+
+        public string Identifier { get; }
+        public string AssociatedBox { get; }
+        public ImmutableArray<Statement> Statements { get; }
+
+        public override SyntaxNodeKind Kind => SyntaxNodeKind.Paragraph;
+
+        public override void Accept(SyntaxVisitor visitor)
+        {
+            visitor.VisitParagraph(this);
+        }
+
+        public override TResult Accept<TResult>(SyntaxVisitor<TResult> visitor)
+        {
+            return visitor.VisitParagraph(this);
+        }
+    }
+
+    public sealed class PXmlLineSeparator : Statement
+    {
+        public override SyntaxNodeKind Kind => SyntaxNodeKind.PXmlLineSeparator;
+
+        public override void Accept(SyntaxVisitor visitor)
+        {
+            visitor.VisitPXmlLineSeparator(this);
+        }
+
+        public override TResult Accept<TResult>(SyntaxVisitor<TResult> visitor)
+        {
+            return visitor.VisitPXmlLineSeparator(this);
         }
     }
 }

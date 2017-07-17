@@ -58,8 +58,6 @@ namespace NitroSharp
                         .WithParent(dialogueBox)
                         .WithComponent(textVisual)
                         .WithComponent(new SmoothTextAnimation());
-
-                    MainThread.Suspend();
                 }
 
                 if (dialogueLine.Voice != null)

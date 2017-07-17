@@ -181,5 +181,10 @@ namespace NitroSharp.NsScript.Execution
         {
             return 0;
         }
+
+        public virtual void HandlePXmlLineSeparator()
+        {
+            WaitForInput();
+        }
     }
 }

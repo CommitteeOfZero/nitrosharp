@@ -235,6 +235,10 @@ namespace NitroSharp.NsScript.Execution
                 case SyntaxNodeKind.PXmlString:
                     HandlePXmlString(node as PXmlString);
                     break;
+
+                case SyntaxNodeKind.PXmlLineSeparator:
+                    HandlePXmlLineSeparator();
+                    break;
             }
         }
 
@@ -315,6 +319,11 @@ namespace NitroSharp.NsScript.Execution
         {
             var arg = new ConstantValue(pxmlString.Text);
             ScheduleBuiltInCall("DisplayDialogue", new ArgumentStack(ImmutableArray.Create(arg)));
+        }
+
+        private void HandlePXmlLineSeparator()
+        {
+            ScheduleBuiltInCall(nameof(HandlePXmlLineSeparator), new ArgumentStack(Enumerable.Empty<ConstantValue>()));
         }
 
         private ConstantValue EvaluateTrivial(Expression expression)
