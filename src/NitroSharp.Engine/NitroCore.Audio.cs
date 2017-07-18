@@ -28,9 +28,10 @@ namespace NitroSharp
         {
             if (!_content.TryGet<AudioStream>(fileName, out var audioStream))
             {
-                string nameWithoutExtension = fileName.Replace(Path.GetExtension(fileName), string.Empty);
+                string directory = Path.GetDirectoryName(fileName);
+                string nameWithoutExtension = Path.GetFileNameWithoutExtension(fileName);
                 string searchPattern = nameWithoutExtension + "*.";
-                var assetId = _content.Search(searchPattern).First();
+                var assetId = _content.Search(directory, searchPattern).First();
                 audioStream = _content.Get<AudioStream>(assetId);
             }
 

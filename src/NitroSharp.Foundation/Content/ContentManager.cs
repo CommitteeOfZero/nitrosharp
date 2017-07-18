@@ -43,9 +43,10 @@ namespace NitroSharp.Foundation.Content
             }
         }
 
-        public virtual IEnumerable<AssetId> Search(string searchPattern)
+        public virtual IEnumerable<AssetId> Search(string relativePath, string searchPattern)
         {
-            return Directory.EnumerateFiles(RootDirectory, searchPattern).Select(x => new AssetId(x));
+            string path = Path.Combine(RootDirectory, relativePath);
+            return Directory.EnumerateFiles(path, searchPattern).Select(x => new AssetId(x));
         }
 
         public AssetRef<T> Get<T>(AssetId assetId)

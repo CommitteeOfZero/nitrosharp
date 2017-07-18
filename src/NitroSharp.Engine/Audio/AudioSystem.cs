@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System;
 using System.Runtime.InteropServices;
 using System.Linq;
-using System.Diagnostics;
 using System.Threading;
 
 namespace NitroSharp.Audio
