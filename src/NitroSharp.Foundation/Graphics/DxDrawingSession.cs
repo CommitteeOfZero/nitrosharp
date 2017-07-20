@@ -1,4 +1,5 @@
-﻿using System;
+﻿using SharpDX.Direct2D1;
+using System;
 
 namespace NitroSharp.Foundation.Graphics
 {
@@ -26,7 +27,10 @@ namespace NitroSharp.Foundation.Graphics
             _rc.DeviceContext.EndDraw();
             if (_presentOnDispose)
             {
+                var mt = _rc.D2DFactory.QueryInterface<Multithread>();
+                mt.Enter();
                 _rc.SwapChain.Present(_vsync ? 1 : 0, SharpDX.DXGI.PresentFlags.None);
+                mt.Leave();
             }
         }
     }

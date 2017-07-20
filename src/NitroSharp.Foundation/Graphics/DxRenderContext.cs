@@ -66,7 +66,7 @@ namespace NitroSharp.Foundation.Graphics
 
         private void CreateDeviceIndependentResources()
         {
-            D2DFactory = new SharpDX.Direct2D1.Factory1();
+            D2DFactory = new SharpDX.Direct2D1.Factory1(FactoryType.MultiThreaded);
             DWriteFactory = new SharpDX.DirectWrite.Factory1();
             WicFactory = new SharpDX.WIC.ImagingFactory();
         }

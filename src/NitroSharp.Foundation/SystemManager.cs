@@ -31,7 +31,7 @@ namespace NitroSharp.Foundation
             _systems.Add(system);
         }
 
-        public void Update(float deltaMilliseconds)
+        public void RefreshEntityLists()
         {
             if (_updatedEntities.Count > 0 || _removedEntities.Count > 0)
             {
@@ -40,12 +40,16 @@ namespace NitroSharp.Foundation
                     (system as EntityProcessingSystem)?.RefreshLocalEntityList(_updatedEntities, _removedEntities);
                 }
             }
+
             _entities.FlushRemovedComponents();
             _entities.FlushRemovedEntities();
 
             _updatedEntities.Clear();
             _removedEntities.Clear();
+        }
 
+        public void Update(float deltaMilliseconds)
+        {
             foreach (var system in _systems)
             {
                 system.Update(deltaMilliseconds);

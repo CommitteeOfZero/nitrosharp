@@ -12,6 +12,8 @@ using NitroSharp.Foundation.Animation;
 using NitroSharp.Foundation.Graphics;
 using Microsoft.Extensions.Logging;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace NitroSharp
 {
@@ -27,11 +29,15 @@ namespace NitroSharp
         private ILogger _interpreterLog;
         private ILogger _entityLog;
 
+        private SemaphoreSlim _nextFrameSignal;
+
         public NitroGame(NitroConfiguration configuration)
         {
             _configuration = configuration;
             _nssFolder = Path.Combine(configuration.ContentRoot, "nss");
             SetupLogging();
+
+            _nextFrameSignal = new SemaphoreSlim(1);
         }
 
         protected override void SetParameters(GameParameters parameters)
@@ -83,6 +89,8 @@ namespace NitroSharp
             _nssInterpreter.EnteredFunction += OnEnteredFunction;
 
             _nssInterpreter.CreateThread("__MAIN", _configuration.StartupScript);
+
+            Task.Factory.StartNew(InterpreterProc, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default);
         }
 
         private Stream LocateScript(string path)
@@ -120,12 +128,31 @@ namespace NitroSharp
         public override void Update(float deltaMilliseconds)
         {
             MainLoopTaskScheduler.FlushQueuedTasks();
-            _nssInterpreter.Run(TimeSpan.MaxValue);
+
+            if (_frameReady)
+            {
+                Systems.RefreshEntityLists();
+                _frameReady = false;
+                _nextFrameSignal.Release();
+            }
+
             Systems.Update(deltaMilliseconds);
 
             if (!_nssInterpreter.Threads.Any())
             {
                 Exit();
+            }
+        }
+
+        private volatile bool _frameReady;
+
+        private async Task InterpreterProc()
+        {
+            while (true)
+            {
+                await _nextFrameSignal.WaitAsync().ConfigureAwait(false);
+                _nssInterpreter.Run(TimeSpan.MaxValue);
+                _frameReady = true;
             }
         }
     }

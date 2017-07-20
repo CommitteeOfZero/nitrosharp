@@ -91,7 +91,7 @@ namespace NitroSharp.Foundation
                 prevFrameTicks = currentFrameTicks;
 
                 Window.ProcessEvents();
-                Debug.WriteLine(deltaMilliseconds);
+                if (deltaMilliseconds > 18) Console.WriteLine(deltaMilliseconds);
                 Update(deltaMilliseconds);
             }
 
