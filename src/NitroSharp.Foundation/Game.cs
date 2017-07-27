@@ -60,6 +60,8 @@ namespace NitroSharp.Foundation
 
         public void Run()
         {
+            _running = true;
+            _gameTimer.Start();
             _parameters = new GameParameters();
             SetParameters(_parameters);
 
@@ -68,18 +70,14 @@ namespace NitroSharp.Foundation
 
             var startup = Task.WhenAll(startupTasks.Select(x => Task.Run(x)));
             InitializeGraphicsAndSound();
-            var postInit = OnInitialized();
 
-            Task.WhenAll(startup, postInit).Wait();
-
+            startup.Wait();
+            OnInitialized().Wait();
             RunMainLoop();
         }
 
         public void RunMainLoop()
         {
-            _running = true;
-            _gameTimer.Start();
-
             float prevFrameTicks = 0.0f;
             while (_running && Window.Exists)
             {

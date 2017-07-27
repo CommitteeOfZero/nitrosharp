@@ -163,7 +163,7 @@ namespace NitroSharp
 
         private async Task RunInterpreterLoop()
         {
-            while (Running && !ShutdownCancellation.IsCancellationRequested)
+            while (Running)
             {
                 await _prepareNextFrameSignal.WaitAsync(ShutdownCancellation.Token).ConfigureAwait(false);
                 _nssInterpreter.Run(TimeSpan.MaxValue);
