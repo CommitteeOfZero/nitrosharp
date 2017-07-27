@@ -21,10 +21,7 @@ namespace NitroSharp.Graphics
         public float Width => Size.Width;
         public float Height => Size.Height;
 
-        public override SizeF Measure()
-        {
-            return Size;
-        }
+        public override SizeF Measure() => Size;
 
         public override void Render(INitroRenderer renderer)
         {

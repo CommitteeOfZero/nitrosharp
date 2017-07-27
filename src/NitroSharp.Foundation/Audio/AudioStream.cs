@@ -6,7 +6,7 @@ namespace NitroSharp.Foundation.Audio
 {
     public abstract class AudioStream : IDisposable
     {
-        protected AudioStream(Stream fileStream)
+        protected AudioStream(Stream fileStream, int targetBitDepth, int targetSampleRate, int targetChannelCount)
         {
             if (fileStream == null)
             {
@@ -24,6 +24,9 @@ namespace NitroSharp.Foundation.Audio
             }
 
             FileStream = fileStream;
+            TargetBitDepth = targetBitDepth;
+            TargetSampleRate = targetSampleRate;
+            TargetChannelCount = targetChannelCount;
         }
 
         public Stream FileStream { get; }
@@ -31,9 +34,9 @@ namespace NitroSharp.Foundation.Audio
         public int OriginalSampleRate { get; protected set; }
         public int OriginalChannelCount { get; protected set; }
 
-        public int TargetBitDepth { get; set; }
-        public int TargetSampleRate { get; set; }
-        public int TargetChannelCount { get; set; }
+        public int TargetBitDepth { get; }
+        public int TargetSampleRate { get; }
+        public int TargetChannelCount { get; }
 
         public TimeSpan Duration { get; protected set; }
         public bool Looping { get; private set; }
@@ -53,10 +56,6 @@ namespace NitroSharp.Foundation.Audio
             Looping = true;
             LoopStart = loopStart;
             LoopEnd = loopEnd;
-        }
-
-        internal virtual void OnAttachedToSource()
-        {
         }
 
         public virtual void Dispose()

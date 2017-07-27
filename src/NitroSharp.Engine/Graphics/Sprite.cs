@@ -7,11 +7,17 @@ namespace NitroSharp.Graphics
 {
     public class Sprite : Visual
     {
+        private readonly SizeF _size;
+
         public Sprite(AssetRef<Texture2D> source, RectangleF? sourceRectangle, float opacity, int priority)
             : base(RgbaValueF.White, opacity, priority)
         {
             Source = source;
             SourceRectangle = sourceRectangle;
+
+            var deviceTexture = source.Asset;
+            _size = sourceRectangle == null ? deviceTexture.Size
+                : new SizeF(SourceRectangle.Value.Width, SourceRectangle.Value.Height);
         }
 
         public AssetRef<Texture2D> Source { get; set; }
@@ -22,17 +28,7 @@ namespace NitroSharp.Graphics
             renderer.DrawSprite(this);
         }
 
-        public override SizeF Measure()
-        {
-            var deviceTexture = Source.Asset;
-            if (SourceRectangle != null)
-            {
-                return new SizeF(SourceRectangle.Value.Width, SourceRectangle.Value.Height);
-            }
-
-            return deviceTexture.Size;
-
-        }
+        public override SizeF Measure() => _size;
 
         public override void OnRemoved()
         {

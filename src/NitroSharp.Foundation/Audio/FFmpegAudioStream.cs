@@ -38,7 +38,8 @@ namespace NitroSharp.Foundation.Audio
 
         private static AVRational MsTimeBase => new AVRational { num = 1, den = 1000 };
 
-        public FFmpegAudioStream(Stream fileStream) : base(fileStream)
+        public FFmpegAudioStream(Stream fileStream, int targetBitDepth, int targetSampleRate, int targetChannelCount)
+            : base(fileStream, targetBitDepth, targetSampleRate, targetChannelCount)
         {
             OpenStream();
         }
@@ -72,6 +73,11 @@ namespace NitroSharp.Foundation.Audio
             ffmpeg.av_init_packet(packet);
             AVFrame* frame = ffmpeg.av_frame_alloc();
 
+            OriginalBitDepth = ffmpeg.av_get_bytes_per_sample(pCodecContext->sample_fmt) * 8;
+            OriginalSampleRate = pCodecContext->sample_rate;
+            OriginalChannelCount = pCodecContext->channels;
+            Duration = TimeSpan.FromSeconds(pFormatContext->duration / (double)ffmpeg.AV_TIME_BASE);
+
             _context = new Context
             {
                 Packet = packet,
@@ -81,34 +87,26 @@ namespace NitroSharp.Foundation.Audio
                 Stream = pFormatContext->streams[0]
             };
 
-            OriginalBitDepth = ffmpeg.av_get_bytes_per_sample(pCodecContext->sample_fmt) * 8;
-            OriginalSampleRate = pCodecContext->sample_rate;
-            OriginalChannelCount = pCodecContext->channels;
-
-            Duration = TimeSpan.FromSeconds(pFormatContext->duration / (double)ffmpeg.AV_TIME_BASE);
-        }
-
-        internal override void OnAttachedToSource()
-        {
             SetupResampler();
         }
 
-        public unsafe void SetupResampler()
+        private unsafe void SetupResampler()
         {
             _targetSampleFormat = BitDepthToSampleFormat(TargetBitDepth);
             _targetBytesPerSample = ffmpeg.av_get_bytes_per_sample(_targetSampleFormat);
 
             SwrContext* pSwrContext = ffmpeg.swr_alloc();
             ffmpeg.av_opt_set_int(pSwrContext, "in_channel_count", OriginalChannelCount, 0);
-            ffmpeg.av_opt_set_int(pSwrContext, "out_channel_count", TargetChannelCount, 0);
             ffmpeg.av_opt_set_int(pSwrContext, "in_channel_layout", (long)_context.CodecContext->channel_layout, 0);
-            ffmpeg.av_opt_set_int(pSwrContext, "out_channel_layout", ChannelCountToLayout(TargetChannelCount), 0);
             ffmpeg.av_opt_set_int(pSwrContext, "in_sample_rate", OriginalSampleRate, 0);
-            ffmpeg.av_opt_set_int(pSwrContext, "out_sample_rate", TargetSampleRate, 0);
             ffmpeg.av_opt_set_sample_fmt(pSwrContext, "in_sample_fmt", _context.CodecContext->sample_fmt, 0);
-            ffmpeg.av_opt_set_sample_fmt(pSwrContext, "out_sample_fmt", _targetSampleFormat, 0);
-            ffmpeg.swr_init(pSwrContext);
 
+            ffmpeg.av_opt_set_int(pSwrContext, "out_channel_count", TargetChannelCount, 0);
+            ffmpeg.av_opt_set_int(pSwrContext, "out_channel_layout", ChannelCountToLayout(TargetChannelCount), 0);
+            ffmpeg.av_opt_set_int(pSwrContext, "out_sample_rate", TargetSampleRate, 0);
+            ffmpeg.av_opt_set_sample_fmt(pSwrContext, "out_sample_fmt", _targetSampleFormat, 0);
+           
+            ffmpeg.swr_init(pSwrContext);
             _context.ResamplerContext = pSwrContext;
         }
 

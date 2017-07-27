@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace NitroSharp.Foundation
@@ -15,15 +16,15 @@ namespace NitroSharp.Foundation
     {
         private volatile bool _running;
         private readonly Stopwatch _gameTimer;
-
         private GameParameters _parameters;
 
-        public Game()
+        protected Game()
         {
             _gameTimer = new Stopwatch();
             Entities = new EntityManager(_gameTimer);
             Systems = new SystemManager(Entities);
             MainLoopTaskScheduler = new MainLoopTaskScheduler(Environment.CurrentManagedThreadId);
+            ShutdownCancellation = new CancellationTokenSource();
         }
 
         public DxRenderContext RenderContext { get; private set; }
@@ -33,6 +34,8 @@ namespace NitroSharp.Foundation
         public EntityManager Entities { get; }
         public SystemManager Systems { get; }
 
+        protected bool Running => _running;
+        protected CancellationTokenSource ShutdownCancellation { get; }
         public MainLoopTaskScheduler MainLoopTaskScheduler { get; }
 
         protected virtual void SetParameters(GameParameters parameters)
@@ -65,12 +68,14 @@ namespace NitroSharp.Foundation
 
             var startup = Task.WhenAll(startupTasks.Select(x => Task.Run(x)));
             InitializeGraphicsAndSound();
-            startup.Wait();
+            var postInit = OnInitialized();
 
-            EnterLoop();
+            Task.WhenAll(startup, postInit).Wait();
+
+            RunMainLoop();
         }
 
-        public void EnterLoop()
+        public void RunMainLoop()
         {
             _running = true;
             _gameTimer.Start();
@@ -81,26 +86,21 @@ namespace NitroSharp.Foundation
                 long currentFrameTicks = _gameTimer.ElapsedTicks;
                 float deltaMilliseconds = (currentFrameTicks - prevFrameTicks) / Stopwatch.Frequency * 1000.0f;
 
-                //while (deltaMilliseconds < 1000.0f / 60.0f)
-                //{
-                //    Thread.Sleep(0);
-                //    currentFrameTicks = _gameTimer.ElapsedTicks;
-                //    deltaMilliseconds = (currentFrameTicks - prevFrameTicks) / Stopwatch.Frequency * 1000.0f;
-                //}
+                while (deltaMilliseconds < 1000.0f / 60.0f)
+                {
+                    Thread.Sleep(0);
+                    currentFrameTicks = _gameTimer.ElapsedTicks;
+                    deltaMilliseconds = (currentFrameTicks - prevFrameTicks) / Stopwatch.Frequency * 1000.0f;
+                }
 
                 prevFrameTicks = currentFrameTicks;
-
-                Window.ProcessEvents();
-                if (deltaMilliseconds > 18) Console.WriteLine(deltaMilliseconds);
                 Update(deltaMilliseconds);
             }
 
             Shutdown();
         }
 
-        public virtual void LoadCommonResources()
-        {
-        }
+        public virtual Task OnInitialized() => Task.FromResult(0);
 
         public virtual void Update(float deltaMilliseconds)
         {
@@ -108,7 +108,11 @@ namespace NitroSharp.Foundation
             Systems.Update(deltaMilliseconds);
         }
 
-        public void Exit() => _running = false;
+        public void Exit()
+        {
+            _running = false;
+            ShutdownCancellation.Cancel();
+        }
 
         public virtual void Shutdown()
         {
@@ -120,11 +124,10 @@ namespace NitroSharp.Foundation
 
         private void InitializeGraphicsAndSound()
         {
-            Window = new GameWindow(_parameters.WindowTitle, _parameters.WindowWidth, _parameters.WindowHeight, WindowState.Normal);
-            RenderContext = new DxRenderContext(Window, _parameters.EnableVSync);
+            Window = new DedicatedThreadWindow(_parameters.WindowTitle, _parameters.WindowWidth, _parameters.WindowHeight, WindowState.Normal);
+            RenderContext = new DxRenderContext(Window, multithreaded: true, enableVSync: _parameters.EnableVSync);
             AudioEngine = new XAudio2AudioEngine(16, 44100, 2);
             Content = CreateContentManager();
-            Window.ProcessEvents();
 
             var userSystems = new List<GameSystem>();
             RegisterSystems(userSystems);
@@ -132,8 +135,6 @@ namespace NitroSharp.Foundation
             {
                 Systems.Add(system);
             }
-
-            LoadCommonResources();
         }
     }
 }

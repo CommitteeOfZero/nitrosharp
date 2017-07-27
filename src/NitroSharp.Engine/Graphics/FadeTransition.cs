@@ -8,6 +8,8 @@ namespace NitroSharp.Graphics
 {
     public class FadeTransition : Visual
     {
+        private readonly SizeF _size;
+
         public FadeTransition()
         {
         }
@@ -16,6 +18,7 @@ namespace NitroSharp.Graphics
         {
             TransitionSource = source;
             Mask = mask;
+            _size = mask.Asset.Size;
         }
 
         public IPixelSource TransitionSource { get; set; }
@@ -32,10 +35,7 @@ namespace NitroSharp.Graphics
             TransitionSource.Dispose();
         }
 
-        public override SizeF Measure()
-        {
-            return Mask.Asset.Size;
-        }
+        public override SizeF Measure() => _size;
 
         public override void Free(INitroRenderer nitroRenderer)
         {

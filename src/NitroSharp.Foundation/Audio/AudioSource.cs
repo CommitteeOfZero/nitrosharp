@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -24,7 +23,7 @@ namespace NitroSharp.Foundation.Audio
             _engineBase = audioEngine;
             _bufferPool = new AudioBufferPool(3, (int)bufferSize);
             _buffers = new Dictionary<int, AudioBuffer>();
-            _endOfStreamSignal = new SemaphoreSlim(1);
+            _endOfStreamSignal = new SemaphoreSlim(initialCount: 0, maxCount: 1);
 
             BufferEnd += OnBufferEnd;
             audioEngine.RegisterAudioSource(this);
@@ -33,7 +32,7 @@ namespace NitroSharp.Foundation.Audio
         private void OnBufferEnd(object sender, AudioBuffer buffer)
         {
             _bufferPool.Release(buffer);
-            if (BuffersQueued == 0)
+            if (BuffersQueued == 0 && buffer.IsLastBuffer)
             {
                 _endOfStreamSignal.Release();
             }
@@ -66,11 +65,6 @@ namespace NitroSharp.Foundation.Audio
                 return;
             }
 
-            stream.TargetBitDepth = _engineBase.BitDepth;
-            stream.TargetChannelCount = _engineBase.ChannelCount;
-            stream.TargetSampleRate = _engineBase.SampleRate;
-
-            stream.OnAttachedToSource();
             _audioStream = stream;
         }
 
@@ -95,19 +89,27 @@ namespace NitroSharp.Foundation.Audio
             IsPlaying = true;
             _cts = new CancellationTokenSource();
 
-            //await Task.Factory.StartNew(async (state) =>
-            //{
+            if (_endOfStreamSignal.CurrentCount != 0)
+            {
+                _endOfStreamSignal.Wait();
+            }
+
+            await Task.Factory.StartNew(async (object state) =>
+            {
+                var cts = (CancellationTokenSource)state;
+                //var cts = _cts;
                 StartAcceptingBuffers();
-                while (!_cts.IsCancellationRequested)
+                while (!cts.IsCancellationRequested)
                 {
-                    AudioBuffer buffer = await _bufferPool.TakeAsync(_cts.Token).ConfigureAwait(false);
+                    AudioBuffer buffer = await _bufferPool.TakeAsync(cts.Token).ConfigureAwait(false);
                     buffer.ResetPosition();
 
-                    bool reachedEof = !_audioStream.Read(buffer, _cts.Token);
+                    bool reachedEof = !_audioStream.Read(buffer, cts.Token);
                     if (buffer.Position > 0)
                     {
+                        buffer.IsLastBuffer = reachedEof;
                         PreviewBufferSent?.Invoke(this, buffer);
-                        AcceptBuffer(buffer, isLastBuffer: reachedEof);
+                        AcceptBuffer(buffer);
                     }
 
                     if (reachedEof)
@@ -115,7 +117,7 @@ namespace NitroSharp.Foundation.Audio
                         break;
                     }
                 }
-            //}//, _cts, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default).ConfigureAwait(false);
+            }, _cts, CancellationToken.None, TaskCreationOptions.None, TaskScheduler.Default);
 
             await _endOfStreamSignal.WaitAsync(_cts.Token).ConfigureAwait(false);
             IsPlaying = false;
@@ -135,16 +137,13 @@ namespace NitroSharp.Foundation.Audio
                 catch (OperationCanceledException)
                 {
                 }
-                catch (ObjectDisposedException)
-                {
-                    Debugger.Break();
-                }
                 finally
                 {
                     _playTask = null;
                 }
             }
         }
+
         public void Stop(bool wait = true)
         {
             PauseCore();
@@ -182,7 +181,7 @@ namespace NitroSharp.Foundation.Audio
         internal abstract void StopAcceptingBuffers();
         internal abstract void FlushBuffers();
 
-        internal virtual void AcceptBuffer(AudioBuffer buffer, bool isLastBuffer)
+        internal virtual void AcceptBuffer(AudioBuffer buffer)
         {
             _buffers[buffer.Id] = buffer;
         }

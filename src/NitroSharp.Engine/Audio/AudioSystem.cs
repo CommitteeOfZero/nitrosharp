@@ -42,6 +42,17 @@ namespace NitroSharp.Audio
             _audioSources[sound] = audioSource;
         }
 
+        public void PreallocateResources()
+        {
+            GetFreeAudioSource(AudioKind.BackgroundMusic);
+
+            for (int i = 0; i < 3; i++)
+            {
+                GetFreeAudioSource(AudioKind.Voice);
+                GetFreeAudioSource(AudioKind.SoundEffect);
+            }
+        }
+
         public override void Process(Entity entity, float deltaMilliseconds)
         {
             var sound = entity.GetComponent<SoundComponent>();
@@ -54,7 +65,7 @@ namespace NitroSharp.Audio
             }
             else if (sound.Volume == 0 && audioSource.IsPlaying)
             {
-                audioSource.Stop();
+                audioSource.StopAsync().Forget();
             }
 
             if (sound.Looping && !audioSource.CurrentStream.Looping)

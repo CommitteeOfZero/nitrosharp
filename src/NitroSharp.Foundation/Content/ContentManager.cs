@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 
@@ -157,8 +156,6 @@ namespace NitroSharp.Foundation.Content
                 {
                     (cachedItem.asset as IDisposable)?.Dispose();
                     _loadedAssets.Remove(assetId);
-
-                    Debug.WriteLine(assetId + " disposed");
                 }
             }
         }

@@ -1,63 +1,55 @@
-﻿#if !WINDOWS_UWP
+﻿// Based on code from the Veldrid open source library
+// https://github.com/mellinoe/veldrid
+
 using OpenTK;
 using OpenTK.Graphics;
-using NitroSharp.Foundation.Input;
+using OpenTK.Input;
 using System;
+using System.Runtime.InteropServices;
+
+#if NETSTANDARD1_4
+using OtkPoint = OpenTK.Point;
+using OtkSize = OpenTK.Size;
+#else
+using OtkPoint = System.Drawing.Point;
+using OtkSize = System.Drawing.Size;
+#endif
 
 namespace NitroSharp.Foundation.Platform
 {
-    public partial class GameWindow : Window
+    public abstract class GameWindowBase : Window
     {
-        private NativeWindow _nativeWindow;
+        protected NativeWindow _nativeWindow;
         private System.Drawing.Size _previousSize;
         private System.Drawing.Point _previousPosition;
+        private bool[] _mouseDown = new bool[13];
+        protected InputSnapshot _currentSnapshot = new InputSnapshot();
 
-        public GameWindow() : this("Sample Text", 800, 600, WindowState.Normal)
+        public override event EventHandler Resized;
+        public override event EventHandler Closing;
+        public override event EventHandler Closed;
+        public override event EventHandler GotFocus;
+        public override event EventHandler LostFocus;
+
+        protected GameWindowBase() : this("Sample Text", 800, 600, WindowState.Normal)
         {
         }
 
-        public GameWindow(string title, int desiredWidth, int desiredHeight, WindowState state)
+        protected GameWindowBase(string title, int desiredWidth, int desiredHeight, WindowState state)
         {
-            DesiredSize = new System.Drawing.Size(desiredWidth, desiredHeight);
-            var graphicsMode = new GraphicsMode(32, 24, 0, 8);
-            _nativeWindow = new NativeWindow(desiredWidth, desiredHeight, title, GameWindowFlags.Default, graphicsMode, DisplayDevice.Default);
-
-            _nativeWindow.Resize += OnWindowResized;
-            _nativeWindow.Closing += OnWindowClosing;
-            _nativeWindow.Closed += OnWindowClosed;
-            _nativeWindow.FocusedChanged += OnWindowFocusedChanged;
-
-            SubsribeToInputEvents();
-
-            WindowState = state;
-            IsVisible = true;
-        }
-
-        public override System.Drawing.Size DesiredSize { get; }
-        public override System.Numerics.Vector2 ScaleFactor
-        {
-            get
-            {
-                return new System.Numerics.Vector2((float)_nativeWindow.Width / DesiredSize.Width, (float)_nativeWindow.Height / DesiredSize.Height);
-            }
+            Create(title, desiredWidth, desiredHeight, state);
         }
 
         public override string Title
         {
-            get =>_nativeWindow.Title;
+            get => _nativeWindow.Title;
             set => _nativeWindow.Title = value;
         }
 
-        public override int Width
+        public override System.Drawing.Size Size
         {
-            get => _nativeWindow.Width;
-            set => _nativeWindow.Width = value;
-        }
-
-        public override int Height
-        {
-            get => _nativeWindow.Height;
-            set => _nativeWindow.Height = value;
+            get => new System.Drawing.Size(_nativeWindow.Width, _nativeWindow.Height);
+            set => _nativeWindow.Size = new OtkSize(value.Width, value.Height);
         }
 
         public override WindowState WindowState
@@ -79,11 +71,68 @@ namespace NitroSharp.Foundation.Platform
             set => _nativeWindow.CursorVisible = value;
         }
 
-        public override event EventHandler Resized;
-        public override event EventHandler Closing;
-        public override event EventHandler Closed;
-        public override event EventHandler GotFocus;
-        public override event EventHandler LostFocus;
+#if NETSTANDARD1_4
+        public override System.Drawing.Rectangle Bounds => OtkToNitroRectangle(_nativeWindow.Bounds);
+#else
+        public override System.Drawing.Rectangle Bounds => _nativeWindow.Bounds;
+#endif
+
+        internal override IntPtr Handle => _nativeWindow.WindowInfo.Handle;
+
+        protected virtual void Create(string title, int desiredWidth, int desiredHeight, WindowState state)
+        {
+            var graphicsMode = new GraphicsMode(32, 24, 0, 8);
+            _nativeWindow = new NativeWindow(desiredWidth, desiredHeight, title, GameWindowFlags.Default, graphicsMode, DisplayDevice.Default);
+
+            _nativeWindow.Resize += OnWindowResized;
+            _nativeWindow.Closing += OnWindowClosing;
+            _nativeWindow.Closed += OnWindowClosed;
+            _nativeWindow.FocusedChanged += OnWindowFocusedChanged;
+
+            _nativeWindow.KeyDown += OnKeyDown;
+            _nativeWindow.KeyUp += OnKeyUp;
+            _nativeWindow.MouseDown += OnMouseDown;
+            _nativeWindow.MouseUp += OnMouseUp;
+
+            WindowState = state;
+            IsVisible = true;
+        }
+
+        protected abstract InputSnapshot GetAvailableSnapshot();
+
+        public override InputSnapshot GetInputSnapshot()
+        {
+            var snapshot = GetAvailableSnapshot();
+            if (_nativeWindow.Exists)
+            {
+                MouseState cursorState = Mouse.GetCursorState();
+                if (!RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                {
+                    var windowPoint = _nativeWindow.PointToClient(new OtkPoint(cursorState.X, cursorState.Y));
+                    snapshot.MousePosition = new System.Numerics.Vector2(
+                        windowPoint.X,
+                        windowPoint.Y); // ScaleFactor;
+                }
+                else
+                {
+                    snapshot.MousePosition = new System.Numerics.Vector2(
+                        cursorState.X,
+                        cursorState.Y); // ScaleFactor;
+                }
+            }
+            _mouseDown.CopyTo(snapshot.MouseDown, 0);
+            return snapshot;
+        }
+
+        public override void ToggleBorderlessFullscreen()
+        {
+            WindowState = WindowState != WindowState.BorderlessFullScreen ? WindowState.BorderlessFullScreen : WindowState.Normal;
+        }
+
+        public override void Close()
+        {
+            _nativeWindow.Close();
+        }
 
         private void OnWindowFocusedChanged(object sender, EventArgs e)
         {
@@ -97,29 +146,45 @@ namespace NitroSharp.Foundation.Platform
             }
         }
 
-#if NETSTANDARD1_4
-        public override System.Drawing.Rectangle Bounds => OtkToNitroRectangle(_nativeWindow.Bounds);
-#else
-        public override System.Drawing.Rectangle Bounds => _nativeWindow.Bounds;
-#endif
-
-        internal override IntPtr Handle => _nativeWindow.WindowInfo.Handle;
-
-        public override void ToggleBorderlessFullscreen()
+        private void OnKeyDown(object sender, KeyboardKeyEventArgs e)
         {
-            WindowState = WindowState != WindowState.BorderlessFullScreen ? WindowState.BorderlessFullScreen : WindowState.Normal;
+            _currentSnapshot.KeyEventsList.Add(new KeyEvent((Key)e.Key, true, ConvertModifiers(e.Modifiers)));
         }
 
-        public override void ProcessEvents()
+        private void OnKeyUp(object sender, KeyboardKeyEventArgs e)
         {
-            Mouse.NewlyPressedButtons.Clear();
-            Keyboard.NewlyPressedKeys.Clear();
-            _nativeWindow.ProcessEvents();
+            _currentSnapshot.KeyEventsList.Add(new KeyEvent((Key)e.Key, false, ConvertModifiers(e.Modifiers)));
         }
 
-        public override void Close()
+        private void OnMouseDown(object sender, MouseButtonEventArgs e)
         {
-            _nativeWindow.Close();
+            _mouseDown[(int)e.Button] = true;
+            _currentSnapshot.MouseEventsList.Add(new MouseEvent((MouseButton)e.Button, true));
+        }
+
+        private void OnMouseUp(object sender, MouseButtonEventArgs e)
+        {
+            _mouseDown[(int)e.Button] = false;
+            _currentSnapshot.MouseEventsList.Add(new MouseEvent((MouseButton)e.Button, false));
+        }
+
+        private ModifierKeys ConvertModifiers(KeyModifiers modifiers)
+        {
+            ModifierKeys modifierKeys = ModifierKeys.None;
+            if ((modifiers & KeyModifiers.Alt) == KeyModifiers.Alt)
+            {
+                modifierKeys |= ModifierKeys.Alt;
+            }
+            if ((modifiers & KeyModifiers.Control) == KeyModifiers.Control)
+            {
+                modifierKeys |= ModifierKeys.Control;
+            }
+            if ((modifiers & KeyModifiers.Shift) == KeyModifiers.Shift)
+            {
+                modifierKeys |= ModifierKeys.Shift;
+            }
+
+            return modifierKeys;
         }
 
         private void OnWindowResized(object sender, EventArgs e)
@@ -222,12 +287,7 @@ namespace NitroSharp.Foundation.Platform
                     _nativeWindow.WindowState = OpenTK.WindowState.Normal;
                     if (_previousSize != default(System.Drawing.Size))
                     {
-#if NETSTANDARD1_4
-                        _nativeWindow.ClientSize = new OpenTK.Size(_previousSize.Width, _previousSize.Height);
-#else
-
-                        _nativeWindow.ClientSize = new System.Drawing.Size(_previousSize.Width, _previousSize.Height);
-#endif
+                        _nativeWindow.ClientSize = new OtkSize(_previousSize.Width, _previousSize.Height);
                     }
                     if (_previousPosition != default(System.Drawing.Point))
                     {
@@ -263,4 +323,3 @@ namespace NitroSharp.Foundation.Platform
         }
     }
 }
-#endif

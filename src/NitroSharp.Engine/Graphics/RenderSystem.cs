@@ -10,21 +10,25 @@ namespace NitroSharp.Graphics
 {
     public sealed class RenderSystem : EntityProcessingSystem, IDisposable
     {
+        private readonly NitroConfiguration _config;
         internal INitroRenderer _renderer;
         private Texture2D _secondaryRenderTarget;
         private Texture2D _screen;
         private Queue<TextVisual> _textVisuals;
 
         private bool _upscaling = false;
+        private Vector2 _scaleFactor;
 
-        public RenderSystem(DxRenderContext renderContext)
+        public RenderSystem(DxRenderContext renderContext, NitroConfiguration configuration)
         {
             RenderContext = renderContext;
+            _config = configuration;
             _textVisuals = new Queue<TextVisual>();
         }
 
         public DxRenderContext RenderContext { get; }
-        private System.Drawing.Size DesignResolution => RenderContext.Window.DesiredSize;
+
+        private System.Drawing.Size DesignResolution => new Size(_config.WindowWidth, _config.WindowHeight);
         private SizeF ActualResolution => _renderer.BackBuffer.Size;
 
         protected override void DeclareInterests(ISet<Type> interests)
@@ -49,28 +53,37 @@ namespace NitroSharp.Graphics
 
         public override void Update(float deltaMilliseconds)
         {
-            Vector2 scaleFactor = new Vector2(ActualResolution.Width / DesignResolution.Width, ActualResolution.Height / DesignResolution.Height);
-
-            _renderer.Target = _secondaryRenderTarget;
-            using (RenderContext.NewDrawingSession(RgbaValueF.Black, present: true))
+            _scaleFactor = new Vector2(ActualResolution.Width / DesignResolution.Width, ActualResolution.Height / DesignResolution.Height);
+            if (_scaleFactor == Vector2.One)
             {
-                base.Update(deltaMilliseconds);
-
-                _renderer.Target = _renderer.BackBuffer;
-                _renderer.SetTransform(Matrix3x2.CreateScale(scaleFactor));
-                _renderer.Draw(_secondaryRenderTarget);
-
-                while (_textVisuals.Count > 0)
+                using (RenderContext.NewDrawingSession(RgbaValueF.Black, present: false))
                 {
-                    var text = _textVisuals.Dequeue();
-                    RenderItem(text, scaleFactor);
+                    base.Update(deltaMilliseconds);
+                }
+            }
+            else
+            {
+                _renderer.Target = _secondaryRenderTarget;
+                using (RenderContext.NewDrawingSession(RgbaValueF.Black, present: false))
+                {
+                    base.Update(deltaMilliseconds);
+
+                    _renderer.Target = _renderer.BackBuffer;
+                    _renderer.SetTransform(Matrix3x2.CreateScale(_scaleFactor));
+                    _renderer.Draw(_secondaryRenderTarget);
+
+                    while (_textVisuals.Count > 0)
+                    {
+                        var text = _textVisuals.Dequeue();
+                        RenderItem(text, _scaleFactor);
+                    }
                 }
             }
         }
 
         public override IEnumerable<Entity> SortEntities(IEnumerable<Entity> entities)
         {
-            return SortByPriority(entities).Reverse();
+            return entities.OrderBy(x => ((Visual)x.Visual).Priority).ThenBy(x => x.CreationTime);
         }
 
         private IEnumerable<Entity> SortByPriority(IEnumerable<Entity> entities)
@@ -96,7 +109,8 @@ namespace NitroSharp.Graphics
                 if (visual is TextVisual text)
                 {
                     _textVisuals.Enqueue(text);
-                   return;
+                    if (_scaleFactor != Vector2.One) return;
+                   //return;
                 }
 
                 RenderItem(visual, Vector2.One);
@@ -117,7 +131,7 @@ namespace NitroSharp.Graphics
             visual.Render(_renderer);
         }
 
-        public void LoadCommonResources()
+        public void PreallocateResources()
         {
             _renderer = new DxNitroRenderer(RenderContext, DesignResolution, new[] { "Fonts" });
             _secondaryRenderTarget = _renderer.CreateRenderTarget(DesignResolution);

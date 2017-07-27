@@ -23,6 +23,8 @@ namespace NitroSharp.Foundation.Audio
 
         public int FreeSpace => Capacity - Position;
 
+        internal bool IsLastBuffer { get; set; }
+
         public void AdvancePosition(int offset)
         {
             if (Position + offset <= Capacity)

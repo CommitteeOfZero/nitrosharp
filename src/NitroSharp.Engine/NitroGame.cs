@@ -11,9 +11,9 @@ using System.IO;
 using NitroSharp.Foundation.Animation;
 using NitroSharp.Foundation.Graphics;
 using Microsoft.Extensions.Logging;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Linq;
 
 namespace NitroSharp
 {
@@ -22,22 +22,24 @@ namespace NitroSharp
         private readonly NitroConfiguration _configuration;
         private readonly string _nssFolder;
 
+        private AudioSystem _audioSystem;
+        internal RenderSystem _renderSystem;
+        private InputHandler _inputHandler;
+
         private NsScriptInterpreter _nssInterpreter;
         private NitroCore _nitroCore;
-        internal RenderSystem _renderSystem;
+        private Task _interpreterProc;
+        private SemaphoreSlim _prepareNextFrameSignal = new SemaphoreSlim(initialCount: 1, maxCount: 1);
+        private volatile bool _nextFrameReady = false;
 
         private ILogger _interpreterLog;
         private ILogger _entityLog;
-
-        private SemaphoreSlim _nextFrameSignal;
 
         public NitroGame(NitroConfiguration configuration)
         {
             _configuration = configuration;
             _nssFolder = Path.Combine(configuration.ContentRoot, "nss");
             SetupLogging();
-
-            _nextFrameSignal = new SemaphoreSlim(1);
         }
 
         protected override void SetParameters(GameParameters parameters)
@@ -50,7 +52,7 @@ namespace NitroSharp
 
         protected override void RegisterStartupTasks(IList<Action> tasks)
         {
-            tasks.Add(() => RunStartupScript());
+            tasks.Add(() => LoadStartupScript());
         }
 
         protected override ContentManager CreateContentManager()
@@ -58,7 +60,7 @@ namespace NitroSharp
             var content = new ContentManager(_configuration.ContentRoot);
 
             var textureLoader = new WicTextureLoader(RenderContext);
-            var audioLoader = new FFmpegAudioLoader();
+            var audioLoader = new FFmpegAudioLoader(AudioEngine);
             content.RegisterContentLoader(typeof(Texture2D), textureLoader);
             content.RegisterContentLoader(typeof(AudioStream), audioLoader);
 
@@ -68,20 +70,19 @@ namespace NitroSharp
 
         protected override void RegisterSystems(IList<GameSystem> systems)
         {
-            var inputHandler = new InputHandler(Window, _nitroCore);
-            systems.Add(inputHandler);
+            _inputHandler = new InputHandler(Window, _nitroCore);
 
             var animationSystem = new AnimationSystem();
             systems.Add(animationSystem);
 
-            var audioSystem = new AudioSystem(AudioEngine);
-            systems.Add(audioSystem);
+            _audioSystem = new AudioSystem(AudioEngine);
+            systems.Add(_audioSystem);
 
-            _renderSystem = new RenderSystem(RenderContext);
+            _renderSystem = new RenderSystem(RenderContext, _configuration);
             systems.Add(_renderSystem);
         }
 
-        private void RunStartupScript()
+        private void LoadStartupScript()
         {
             _nitroCore = new NitroCore(this, _configuration, Entities);
             _nssInterpreter = new NsScriptInterpreter(_nitroCore, LocateScript);
@@ -89,8 +90,6 @@ namespace NitroSharp
             _nssInterpreter.EnteredFunction += OnEnteredFunction;
 
             _nssInterpreter.CreateThread("__MAIN", _configuration.StartupScript);
-
-            Task.Factory.StartNew(InterpreterProc, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default);
         }
 
         private Stream LocateScript(string path)
@@ -100,14 +99,14 @@ namespace NitroSharp
 
         private void OnEnteredFunction(object sender, Function function)
         {
-            _interpreterLog.LogCritical($"Entered function {function.Name.SimplifiedName}");
+            //_interpreterLog.LogCritical($"Entered function {function.Name.SimplifiedName}");
         }
 
         private void OnBuiltInCallDispatched(object sender, BuiltInFunctionCall call)
         {
             if (call.CallingThread == _nitroCore.MainThread)
             {
-                _interpreterLog.LogInformation($"Built-in call: {call.ToString()}");
+                //_interpreterLog.LogInformation($"Built-in call: {call.ToString()}");
             }
         }
 
@@ -120,39 +119,56 @@ namespace NitroSharp
             //Entities.EntityRemoved += (o, e) => _entityLog.LogInformation($"Removed entity '{e.Name}'");
         }
 
-        public override void LoadCommonResources()
+        public override async Task OnInitialized()
         {
-            _renderSystem.LoadCommonResources();
+            var t1 = Task.Run(() => _renderSystem.PreallocateResources());
+            var t2 = Task.Run(() => _audioSystem.PreallocateResources());
+            await Task.WhenAll(t1, t2);
+
+            Systems.RefreshEntityLists();
+            Systems.Update(0);
+
+            _interpreterProc = Task.Factory.StartNew(InterpreterLoop, CancellationToken.None,
+                TaskCreationOptions.LongRunning, TaskScheduler.Default);
         }
 
         public override void Update(float deltaMilliseconds)
         {
-            MainLoopTaskScheduler.FlushQueuedTasks();
-
-            if (_frameReady)
+            if (_nextFrameReady)
             {
                 Systems.RefreshEntityLists();
-                _frameReady = false;
-                _nextFrameSignal.Release();
+                _inputHandler.Update(deltaMilliseconds);
+
+                if (!_nssInterpreter.Threads.Any())
+                {
+                    Exit();
+                }
+
+                _nextFrameReady = false;
+                _prepareNextFrameSignal.Release();
             }
-
-            Systems.Update(deltaMilliseconds);
-
-            if (!_nssInterpreter.Threads.Any())
+            else if (_interpreterProc.IsFaulted)
             {
-                Exit();
+                throw _interpreterProc.Exception.InnerException;
             }
+
+            var enumerator = Systems.All.GetEnumerator();
+            while (enumerator.MoveNext())
+            {
+                var system = enumerator.Current;
+                system.Update(deltaMilliseconds);
+            }
+
+            RenderContext.Present();
         }
 
-        private volatile bool _frameReady;
-
-        private async Task InterpreterProc()
+        private async Task InterpreterLoop()
         {
-            while (true)
+            while (Running && !ShutdownCancellation.IsCancellationRequested)
             {
-                await _nextFrameSignal.WaitAsync().ConfigureAwait(false);
+                await _prepareNextFrameSignal.WaitAsync(ShutdownCancellation.Token).ConfigureAwait(false);
                 _nssInterpreter.Run(TimeSpan.MaxValue);
-                _frameReady = true;
+                _nextFrameReady = true;
             }
         }
     }

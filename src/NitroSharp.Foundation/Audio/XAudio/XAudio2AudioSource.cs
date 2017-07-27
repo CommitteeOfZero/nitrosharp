@@ -62,13 +62,13 @@ namespace NitroSharp.Foundation.Audio.XAudio
             _sourceVoice.FlushSourceBuffers();
         }
 
-        internal override void AcceptBuffer(AudioBuffer buffer, bool isLastBuffer)
+        internal override void AcceptBuffer(AudioBuffer buffer)
         {
-            base.AcceptBuffer(buffer, isLastBuffer);
+            base.AcceptBuffer(buffer);
 
             var dataPointer = new DataPointer(buffer.StartPointer, buffer.Position);
             var xaudio2Buffer = new SharpDX.XAudio2.AudioBuffer(dataPointer);
-            xaudio2Buffer.Flags = isLastBuffer ? BufferFlags.EndOfStream : BufferFlags.None;
+            xaudio2Buffer.Flags = buffer.IsLastBuffer ? BufferFlags.EndOfStream : BufferFlags.None;
             xaudio2Buffer.Context = (IntPtr)buffer.Id;
 
             _sourceVoice.SubmitSourceBuffer(xaudio2Buffer, null);

@@ -1,6 +1,6 @@
 ﻿{
   "activeProfile": "Phantasm",
-  "graphics.vsync": true,
+  "graphics.vsync": false,
   "window.title": "COWS;HEAD NOAH",
   "window.width": 1280,
   "window.height": 720,

@@ -7,27 +7,32 @@ using System;
 
 namespace NitroSharp.Foundation.Graphics
 {
-    public class DxRenderContext : IDisposable
+    public sealed class DxRenderContext : IDisposable
     {
         private readonly Window _window;
         private readonly bool _vsyncEnabled;
         private DxDrawingSession _session;
 
         private SharpDX.Direct2D1.Device _d2dDevice;
+        private SharpDX.Direct2D1.Multithread _d2dLock;
         private SharpDX.Direct3D11.Device1 _d3dDevice;
         private SharpDX.DXGI.Device2 _dxgiDevice;
 
         private SharpDX.DXGI.Surface _dxgiBackBuffer;
         internal SharpDX.DXGI.SwapChain1 SwapChain;
         private SharpDX.DXGI.Format _displayFormat;
+        private volatile bool _needsResizing;
+        private System.Drawing.Size _previousWindowSize;
 
-        public DxRenderContext(Window window, bool enableVSync)
+        public DxRenderContext(Window window, bool multithreaded, bool enableVSync)
         {
             _window = window;
+            IsMultithreaded = multithreaded;
             _vsyncEnabled = enableVSync;
             Initialize();
         }
 
+        public bool IsMultithreaded { get; }
         public SharpDX.Direct2D1.Factory1 D2DFactory { get; private set; }
         public SharpDX.DirectWrite.Factory1 DWriteFactory { get; private set; }
         public SharpDX.WIC.ImagingFactory WicFactory { get; private set; }
@@ -52,21 +57,28 @@ namespace NitroSharp.Foundation.Graphics
             CreateSizeDependentResources();
 
             _session = new DxDrawingSession(this, _vsyncEnabled);
+            _previousWindowSize = _window.Size;
             _window.Resized += OnWindowResized;
         }
 
         private void OnWindowResized(object sender, EventArgs e)
         {
-            ReleaseBackBuffer();
-            SwapChain.ResizeBuffers(2, Window.Width, Window.Height, _displayFormat, SharpDX.DXGI.SwapChainFlags.None);
-            CreateBackBufferBitmap();
-
-            SwapChainResized?.Invoke(this, EventArgs.Empty);
+            if (_window.Size != System.Drawing.Size.Empty && _window.Size != _previousWindowSize)
+            {
+                _needsResizing = true;
+                _previousWindowSize = _window.Size;
+            }
         }
 
         private void CreateDeviceIndependentResources()
         {
-            D2DFactory = new SharpDX.Direct2D1.Factory1(FactoryType.MultiThreaded);
+            var factoryType = IsMultithreaded ? FactoryType.MultiThreaded : FactoryType.SingleThreaded;
+            D2DFactory = new SharpDX.Direct2D1.Factory1(factoryType);
+            if (IsMultithreaded)
+            {
+                _d2dLock = D2DFactory.QueryInterface<SharpDX.Direct2D1.Multithread>();
+            }
+
             DWriteFactory = new SharpDX.DirectWrite.Factory1();
             WicFactory = new SharpDX.WIC.ImagingFactory();
         }
@@ -140,10 +152,39 @@ namespace NitroSharp.Foundation.Graphics
             _dxgiBackBuffer.Dispose();
         }
 
+        private void ResizeBuffers()
+        {
+            ReleaseBackBuffer();
+            SwapChain.ResizeBuffers(2, Window.Size.Width, Window.Size.Height, _displayFormat, SharpDX.DXGI.SwapChainFlags.None);
+            CreateBackBufferBitmap();
+
+            SwapChainResized?.Invoke(this, EventArgs.Empty);
+        }
+
         public DxDrawingSession NewDrawingSession(RgbaValueF clearColor, bool present = true)
         {
+            if (_needsResizing)
+            {
+                ResizeBuffers();
+                _needsResizing = false;
+            }
+
             _session.Reset(clearColor, present);
             return _session;
+        }
+
+        public void Present()
+        {
+            if (!IsMultithreaded)
+            {
+                SwapChain.Present(_vsyncEnabled ? 1 : 0, SharpDX.DXGI.PresentFlags.None);
+            }
+            else
+            {
+                _d2dLock.Enter();
+                SwapChain.Present(_vsyncEnabled ? 1 : 0, SharpDX.DXGI.PresentFlags.None);
+                _d2dLock.Leave();
+            }
         }
 
         public void Dispose()

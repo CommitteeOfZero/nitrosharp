@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.26621.2
+VisualStudioVersion = 15.0.26711.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NitroSharp.NsScript", "src\NitroSharp.NsScript\NitroSharp.NsScript.csproj", "{D141E5DC-81DB-4352-8BAE-E3772BDC23DE}"
 EndProject
@@ -20,6 +20,9 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CowsHead.NetCore", "src\CowsHead\CowsHead.NetCore\CowsHead.NetCore.csproj", "{E922F862-2B81-4DE0-B2BF-77738FF5D49E}"
 EndProject
 Global
+	GlobalSection(Performance) = preSolution
+		HasPerformanceSessions = true
+	EndGlobalSection
 	GlobalSection(SharedMSBuildProjectFiles) = preSolution
 		src\CowsHead\CowsHead.Shared\CowsHead.Shared.projitems*{3df08ad5-767d-42f4-baba-c5bdb1a15a32}*SharedItemsImports = 13
 		src\CowsHead\CowsHead.Shared\CowsHead.Shared.projitems*{8236edea-e0e1-4ac8-a99a-69da61848cbb}*SharedItemsImports = 4

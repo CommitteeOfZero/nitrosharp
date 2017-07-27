@@ -11,7 +11,7 @@ namespace NitroSharp.Graphics
 {
     public sealed partial class DxNitroRenderer : INitroRenderer
     {
-        private readonly InterpolationMode DefInterpolationMode = InterpolationMode.Cubic;
+        private readonly InterpolationMode DefInterpolationMode = InterpolationMode.Linear;
 
         private DxRenderContext _rc;
         private readonly System.Drawing.Size _designResolution;

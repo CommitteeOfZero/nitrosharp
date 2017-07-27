@@ -1,18 +1,17 @@
 ﻿using NitroSharp.Graphics;
 using NitroSharp.NsScript.Execution;
 using NitroSharp.Foundation;
-using NitroSharp.Foundation.Input;
 using System;
 using NitroSharp.Foundation.Platform;
 
 namespace NitroSharp
 {
-    public sealed class InputHandler : GameSystem
+    public sealed class InputHandler : InputSystemBase
     {
         private readonly Window _window;
         private readonly NitroCore _nitroCore;
 
-        public InputHandler(Window window, NitroCore nitroCore)
+        public InputHandler(Window window, NitroCore nitroCore) : base(window)
         {
             _window = window;
             _nitroCore = nitroCore;
@@ -20,6 +19,8 @@ namespace NitroSharp
 
         public override void Update(float deltaMilliseconds)
         {
+            base.Update(deltaMilliseconds);
+
             if (ShouldAdvance() && !TrySkipAnimation())
             {
                 if (_nitroCore.Interpreter.Status != InterpreterStatus.Suspended
@@ -30,7 +31,7 @@ namespace NitroSharp
                 }
             }
 
-            if (Keyboard.IsKeyDownThisFrame(Key.F))
+            if (IsKeyDownThisFrame(Key.F))
             {
                 _window.ToggleBorderlessFullscreen();
             }
@@ -59,10 +60,10 @@ namespace NitroSharp
             return false;
         }
 
-        private static bool ShouldAdvance()
+        private bool ShouldAdvance()
         {
-            return Mouse.IsButtonDownThisFrame(MouseButton.Left) || Keyboard.IsKeyDownThisFrame(Key.Space)
-                || Keyboard.IsKeyDownThisFrame(Key.Enter) || Keyboard.IsKeyDownThisFrame(Key.KeypadEnter);
+            return IsMouseButtonDownThisFrame(MouseButton.Left) || IsKeyDownThisFrame(Key.Space)
+                || IsKeyDownThisFrame(Key.Enter) || IsKeyDownThisFrame(Key.KeypadEnter);
         }
     }
 }

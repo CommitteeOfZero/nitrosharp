@@ -1,4 +1,5 @@
-﻿using System;
+﻿using NitroSharp.Foundation.Graphics;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -10,6 +11,7 @@ namespace NitroSharp.Foundation
         private readonly EntityManager _manager;
         private readonly Dictionary<Type, IList<Component>> _components;
         private Dictionary<string, object> _additionalProperties;
+        private readonly object _componentsAccess = new object();
 
         internal Entity(EntityManager manager, ulong id, string name, TimeSpan creationTime)
         {
@@ -29,6 +31,7 @@ namespace NitroSharp.Foundation
         public string Name { get; }
         public TimeSpan CreationTime { get; }
         public Transform Transform { get; }
+        public VisualBase Visual { get; private set; }
         public bool IsScheduledForRemoval { get; internal set; }
 
         public Dictionary<string, object> AdditionalProperties
@@ -60,15 +63,24 @@ namespace NitroSharp.Foundation
 
         public void AddComponent<T>(T component) where T : Component
         {
-            var type = typeof(T);
-            if (!_components.TryGetValue(type, out var collection))
+            lock (_componentsAccess)
             {
-                collection = new List<Component>();
-                _components.Add(type, collection);
+                var type = typeof(T);
+                if (!_components.TryGetValue(type, out var collection))
+                {
+                    collection = new List<Component>();
+                    _components.Add(type, collection);
+                }
+
+                collection.Add(component);
+                component.AttachToEntity(this);
             }
 
-            collection.Add(component);
-            component.AttachToEntity(this);
+            if ((Component)component is VisualBase visual)
+            {
+                Visual = visual;
+            }
+
             _manager.InternalComponentAdded(this);
         }
 
@@ -84,14 +96,17 @@ namespace NitroSharp.Foundation
             }
             else
             {
-                foreach (var pair in _components)
+                lock (_componentsAccess)
                 {
-                    if (type.GetTypeInfo().IsAssignableFrom(pair.Key.GetTypeInfo()))
+                    foreach (var pair in _components)
                     {
-                        collection = pair.Value;
-                        if (collection?.Count > 0)
+                        if (type.GetTypeInfo().IsAssignableFrom(pair.Key.GetTypeInfo()))
                         {
-                            return collection[0];
+                            collection = pair.Value;
+                            if (collection?.Count > 0)
+                            {
+                                return collection[0];
+                            }
                         }
                     }
                 }
@@ -102,24 +117,27 @@ namespace NitroSharp.Foundation
 
         public IEnumerable<T> GetComponents<T>() where T : Component
         {
-            var type = typeof(T);
-            if (_components.TryGetValue(type, out var collection))
+            lock (_componentsAccess)
             {
-                foreach (var component in collection)
+                var type = typeof(T);
+                if (_components.TryGetValue(type, out var collection))
                 {
-                    yield return (T)component;
-                }
-            }
-            else
-            {
-                foreach (var pair in _components.ToArray())
-                {
-                    if (type.GetTypeInfo().IsAssignableFrom(pair.Key.GetTypeInfo()))
+                    foreach (var component in collection)
                     {
-                        collection = pair.Value;
-                        foreach (var component in collection.ToArray())
+                        yield return (T)component;
+                    }
+                }
+                else
+                {
+                    foreach (var pair in _components.ToArray())
+                    {
+                        if (type.GetTypeInfo().IsAssignableFrom(pair.Key.GetTypeInfo()))
                         {
-                            yield return (T)component;
+                            collection = pair.Value;
+                            foreach (var component in collection.ToArray())
+                            {
+                                yield return (T)component;
+                            }
                         }
                     }
                 }
@@ -128,23 +146,26 @@ namespace NitroSharp.Foundation
 
         public IEnumerable<Component> GetComponents(Type type)
         {
-            if (_components.TryGetValue(type, out var collection))
+            lock (_componentsAccess)
             {
-                foreach (var component in collection)
+                if (_components.TryGetValue(type, out var collection))
                 {
-                    yield return component;
-                }
-            }
-            else
-            {
-                foreach (var pair in _components.ToArray())
-                {
-                    if (type.GetTypeInfo().IsAssignableFrom(pair.Key.GetTypeInfo()))
+                    foreach (var component in collection)
                     {
-                        collection = pair.Value;
-                        foreach (var component in collection.ToArray())
+                        yield return component;
+                    }
+                }
+                else
+                {
+                    foreach (var pair in _components.ToArray())
+                    {
+                        if (type.GetTypeInfo().IsAssignableFrom(pair.Key.GetTypeInfo()))
                         {
-                            yield return component;
+                            collection = pair.Value;
+                            foreach (var component in collection.ToArray())
+                            {
+                                yield return component;
+                            }
                         }
                     }
                 }

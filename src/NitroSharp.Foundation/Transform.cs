@@ -1,5 +1,4 @@
-﻿using NitroSharp.Foundation.Graphics;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using System.Numerics;
@@ -35,7 +34,7 @@ namespace NitroSharp.Foundation
         {
             get
             {
-                var visual = Entity.GetComponent<VisualBase>();
+                var visual = Entity.Visual;
                 return visual == null ? SizeF.Empty : visual.Measure();
             }
         }

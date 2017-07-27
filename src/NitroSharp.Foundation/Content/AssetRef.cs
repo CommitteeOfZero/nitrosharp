@@ -6,12 +6,14 @@ namespace NitroSharp.Foundation.Content
     {
         private readonly ContentManager _contentManager;
         private bool _alive;
+        private T _asset;
 
         public AssetRef(AssetId id, ContentManager contentManager)
         {
             Id = id;
             _contentManager = contentManager;
             _alive = true;
+            _asset = default(T);
         }
 
         public AssetId Id { get; }
@@ -19,8 +21,17 @@ namespace NitroSharp.Foundation.Content
         {
             get
             {
-                return _alive ? _contentManager.InternalGetCached<T>(Id)
-                    : throw new InvalidOperationException($"Attempted to use an asset reference that has been released. AssetId: {Id}.");
+                if (!_alive)
+                {
+                    throw new InvalidOperationException($"Attempted to use an asset reference that has been released. AssetId: {Id}.");
+                }
+
+                if (_asset == null)
+                {
+                    _asset = _contentManager.InternalGetCached<T>(Id);
+                }
+
+                return _asset;
             }
         }
 

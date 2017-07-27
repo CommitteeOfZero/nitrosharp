@@ -1,7 +1,6 @@
 ﻿using NitroSharp;
-using System;
 using System.IO;
-using System.Linq;
+using System.Reflection;
 
 namespace CowsHead
 {
@@ -10,9 +9,8 @@ namespace CowsHead
         public static void Main(string[] args)
         {
 #if NETCOREAPP2_0
-            var currentDirInfo = new DirectoryInfo(Directory.GetCurrentDirectory());
-            var gameRootDir = currentDirInfo.EnumerateFiles("game.json", SearchOption.AllDirectories).First().Directory;
-            Directory.SetCurrentDirectory(gameRootDir.FullName);
+            string gameRootDir = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location);
+            Directory.SetCurrentDirectory(gameRootDir);
 #endif
             FFmpegLibraries.Locate();
 
