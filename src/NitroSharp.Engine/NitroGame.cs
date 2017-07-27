@@ -128,8 +128,7 @@ namespace NitroSharp
             Systems.RefreshEntityLists();
             Systems.Update(0);
 
-            _interpreterProc = Task.Factory.StartNew(InterpreterLoop, CancellationToken.None,
-                TaskCreationOptions.LongRunning, TaskScheduler.Default);
+            _interpreterProc = Task.Run(() => RunInterpreterLoop());
         }
 
         public override void Update(float deltaMilliseconds)
@@ -162,7 +161,7 @@ namespace NitroSharp
             RenderContext.Present();
         }
 
-        private async Task InterpreterLoop()
+        private async Task RunInterpreterLoop()
         {
             while (Running && !ShutdownCancellation.IsCancellationRequested)
             {

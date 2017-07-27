@@ -81,6 +81,7 @@ namespace NitroSharp.Foundation.Audio
             }
 
             _playTask = PlayCore();
+            _playTask.ContinueWith(t => IsPlaying = false, TaskContinuationOptions.OnlyOnFaulted);
             return _playTask;
         }
 
@@ -94,17 +95,15 @@ namespace NitroSharp.Foundation.Audio
                 _endOfStreamSignal.Wait();
             }
 
-            await Task.Factory.StartNew(async (object state) =>
+            await Task.Run(async () =>
             {
-                var cts = (CancellationTokenSource)state;
-                //var cts = _cts;
                 StartAcceptingBuffers();
-                while (!cts.IsCancellationRequested)
+                while (!_cts.IsCancellationRequested)
                 {
-                    AudioBuffer buffer = await _bufferPool.TakeAsync(cts.Token).ConfigureAwait(false);
+                    AudioBuffer buffer = await _bufferPool.TakeAsync(_cts.Token).ConfigureAwait(false);
                     buffer.ResetPosition();
 
-                    bool reachedEof = !_audioStream.Read(buffer, cts.Token);
+                    bool reachedEof = !_audioStream.Read(buffer, _cts.Token);
                     if (buffer.Position > 0)
                     {
                         buffer.IsLastBuffer = reachedEof;
@@ -117,7 +116,9 @@ namespace NitroSharp.Foundation.Audio
                         break;
                     }
                 }
-            }, _cts, CancellationToken.None, TaskCreationOptions.None, TaskScheduler.Default);
+
+                _cts.Token.ThrowIfCancellationRequested();
+            }).ConfigureAwait(false);
 
             await _endOfStreamSignal.WaitAsync(_cts.Token).ConfigureAwait(false);
             IsPlaying = false;
