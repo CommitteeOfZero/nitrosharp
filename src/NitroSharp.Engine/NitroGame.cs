@@ -128,6 +128,7 @@ namespace NitroSharp
             catch (OperationCanceledException)
             {
             }
+#if RELEASE
             catch (Exception e)
             {
                 _log.Fatal(e, string.Empty);
@@ -136,6 +137,7 @@ namespace NitroSharp
                 MessageBox.Show(Window.Handle, message, isError: true);
                 Exit();
             }
+#endif
         }
 
         private void UpdateCore(float deltaMilliseconds)
