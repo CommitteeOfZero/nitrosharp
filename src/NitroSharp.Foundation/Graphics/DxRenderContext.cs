@@ -100,7 +100,8 @@ namespace NitroSharp.Foundation.Graphics
 
             _dxgiDevice = _d3dDevice.QueryInterface<SharpDX.DXGI.Device2>();
             _d2dDevice = new SharpDX.Direct2D1.Device(D2DFactory, _dxgiDevice);
-            DeviceContext = new SharpDX.Direct2D1.DeviceContext(_d2dDevice, DeviceContextOptions.None);
+            var contextOptions = IsMultithreaded ? DeviceContextOptions.EnableMultithreadedOptimizations : DeviceContextOptions.None;
+            DeviceContext = new SharpDX.Direct2D1.DeviceContext(_d2dDevice, contextOptions);
             DeviceContext.DotsPerInch = new Size2F(CurrentDpi.Width, CurrentDpi.Height);
 
             DeviceContext.AntialiasMode = AntialiasMode.PerPrimitive;

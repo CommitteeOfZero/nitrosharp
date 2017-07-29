@@ -86,7 +86,6 @@ namespace NitroSharp.Foundation
 
                 while (deltaMilliseconds < 1000.0f / 60.0f)
                 {
-                    Thread.Sleep(0);
                     currentFrameTicks = _gameTimer.ElapsedTicks;
                     deltaMilliseconds = (currentFrameTicks - prevFrameTicks) / Stopwatch.Frequency * 1000.0f;
                 }

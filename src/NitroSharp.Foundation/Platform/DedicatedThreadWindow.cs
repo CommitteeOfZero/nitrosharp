@@ -1,6 +1,7 @@
 ﻿// Based on code from the Veldrid open source library
 // https://github.com/mellinoe/veldrid
 
+using System;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
@@ -55,6 +56,7 @@ namespace NitroSharp.Foundation.Platform
             double previousPollTimeMs = 0;
             var sw = Stopwatch.StartNew();
 
+            int pollingInterval = (int)Math.Round(PollIntervalInMs);
             while (_nativeWindow.Exists)
             {
                 if (_shouldClose)
@@ -62,17 +64,8 @@ namespace NitroSharp.Foundation.Platform
                     _nativeWindow.Close();
                 }
 
-                double currentTimeMs = sw.ElapsedTicks * (1000.0d / Stopwatch.Frequency);
-                if (currentTimeMs - previousPollTimeMs < PollIntervalInMs)
-                {
-                    Thread.Sleep(0);
-                }
-                else
-                {
-                    previousPollTimeMs = currentTimeMs;
-                    //_nativeWindow.CursorVisible = _isCursorVisible;
-                    _nativeWindow.ProcessEvents();
-                }
+                Thread.Sleep(pollingInterval);
+                _nativeWindow.ProcessEvents();
             }
         }
 

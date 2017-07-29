@@ -77,7 +77,7 @@ namespace NitroSharp.Foundation.Platform
         public override System.Drawing.Rectangle Bounds => _nativeWindow.Bounds;
 #endif
 
-        internal override IntPtr Handle => _nativeWindow.WindowInfo.Handle;
+        public override IntPtr Handle => _nativeWindow.WindowInfo.Handle;
 
         protected virtual void Create(string title, int desiredWidth, int desiredHeight, WindowState state)
         {

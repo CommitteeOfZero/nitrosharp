@@ -39,7 +39,6 @@ namespace NitroSharp.Foundation
             }
         }
 
-
         public virtual void OnRelevantEntityAdded(Entity entity)
         {
         }
@@ -48,7 +47,7 @@ namespace NitroSharp.Foundation
         {
         }
 
-        internal void RefreshLocalEntityList(IEnumerable<Entity> updatedEntities, IEnumerable<Entity> removedEntities)
+        internal void ProcessEntityUpdates(IEnumerable<Entity> updatedEntities, IEnumerable<Entity> removedEntities)
         {
             foreach (var removed in removedEntities)
             {

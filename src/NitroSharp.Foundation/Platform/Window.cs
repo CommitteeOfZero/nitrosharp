@@ -12,7 +12,7 @@ namespace NitroSharp.Foundation.Platform
         public abstract bool IsVisible { get; set; }
         public abstract bool IsCursorVisible { get; set; }
         public abstract Rectangle Bounds { get; }
-        internal abstract IntPtr Handle { get; }
+        public abstract IntPtr Handle { get; }
 
         public abstract InputSnapshot GetInputSnapshot();
         public abstract void ToggleBorderlessFullscreen();

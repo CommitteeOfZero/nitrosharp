@@ -35,6 +35,10 @@ namespace CowsHead
         {
             switch (property.Name)
             {
+                case "productName":
+                    configuration.ProductName = property.Value.Value<string>();
+                    break;
+
                 case "window.width":
                     configuration.WindowWidth = property.Value.Value<int>();
                     break;
@@ -55,11 +59,14 @@ namespace CowsHead
                     configuration.EnableVSync = property.Value.Value<bool>();
                     break;
 
-//#if DEBUG
+                case "dev.contentRoot":
                 case "debug.contentRoot":
                     configuration.ContentRoot = property.Value.Value<string>();
                     break;
-//#endif
+
+                case "dev.enableDiagnostics":
+                    configuration.EnableDiagnostics = property.Value.Value<bool>();
+                    break;
             }
         }
     }

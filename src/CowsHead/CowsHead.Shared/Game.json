@@ -1,10 +1,12 @@
 ﻿{
+  "productName": "COWSHEAD_NOAH",
   "activeProfile": "Prologue",
   "graphics.vsync": false,
   "window.title": "COWS;HEAD NOAH",
   "window.width": 1280,
   "window.height": 720,
   "debug.contentRoot": "S:/ChaosContent/Noah",
+  "dev.enableDiagnostics": true,
 
   "profiles": {
     "Staking": {

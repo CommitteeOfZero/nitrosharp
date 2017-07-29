@@ -10,10 +10,15 @@ using NitroSharp.Audio;
 using System.IO;
 using NitroSharp.Foundation.Animation;
 using NitroSharp.Foundation.Graphics;
-using Microsoft.Extensions.Logging;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Linq;
+using System.Diagnostics;
+using System.Text;
+using NitroSharp.Foundation.Platform;
+using Serilog;
+using Serilog.Events;
+using Serilog.Configuration;
 
 namespace NitroSharp
 {
@@ -29,11 +34,14 @@ namespace NitroSharp
         private NsScriptInterpreter _nssInterpreter;
         private NitroCore _nitroCore;
         private Task _interpreterProc;
-        private SemaphoreSlim _prepareNextFrameSignal = new SemaphoreSlim(initialCount: 1, maxCount: 1);
-        private volatile bool _nextFrameReady = false;
+        private SemaphoreSlim _calculateNextStateSignal = new SemaphoreSlim(initialCount: 1, maxCount: 1);
+        private volatile bool _nextStateReady = false;
 
-        private ILogger _interpreterLog;
-        private ILogger _entityLog;
+        private ILogger _log;
+        private string _logPath;
+
+        private Stopwatch _perfCounter = new Stopwatch();
+        private PerfStats _perfStats;
 
         public NitroGame(NitroConfiguration configuration)
         {
@@ -80,6 +88,8 @@ namespace NitroSharp
 
             _renderSystem = new RenderSystem(RenderContext, _configuration);
             systems.Add(_renderSystem);
+
+            _perfStats = new PerfStats(systems.Count);
         }
 
         private void LoadStartupScript()
@@ -97,35 +107,13 @@ namespace NitroSharp
             return File.OpenRead(Path.Combine(_nssFolder, path.Replace("nss/", string.Empty)));
         }
 
-        private void OnEnteredFunction(object sender, Function function)
-        {
-            //_interpreterLog.LogCritical($"Entered function {function.Name.SimplifiedName}");
-        }
-
-        private void OnBuiltInCallDispatched(object sender, BuiltInFunctionCall call)
-        {
-            if (call.CallingThread == _nitroCore.MainThread)
-            {
-                //_interpreterLog.LogInformation($"Built-in call: {call.ToString()}");
-            }
-        }
-
-        private void SetupLogging()
-        {
-            var loggerFactory = new LoggerFactory().AddConsole();
-            _interpreterLog = loggerFactory.CreateLogger("Interpreter");
-            //_entityLog = loggerFactory.CreateLogger("Entity System");
-
-            //Entities.EntityRemoved += (o, e) => _entityLog.LogInformation($"Removed entity '{e.Name}'");
-        }
-
         public override async Task OnInitialized()
         {
             var t1 = Task.Run(() => _renderSystem.PreallocateResources());
             var t2 = Task.Run(() => _audioSystem.PreallocateResources());
             await Task.WhenAll(t1, t2);
 
-            Systems.RefreshEntityLists();
+            Systems.ProcessEntityUpdates();
             Systems.Update(0);
 
             _interpreterProc = Task.Run(() => RunInterpreterLoop());
@@ -133,9 +121,32 @@ namespace NitroSharp
 
         public override void Update(float deltaMilliseconds)
         {
-            if (_nextFrameReady)
+            try
             {
-                Systems.RefreshEntityLists();
+                UpdateCore(deltaMilliseconds);
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception e)
+            {
+                _log.Fatal(e, string.Empty);
+
+                string message = $"An error has occurred:\n{e.Message}\n\nYou can get more information by examining the file '{_logPath}'.";
+                MessageBox.Show(Window.Handle, message, isError: true);
+                Exit();
+            }
+        }
+
+        private void UpdateCore(float deltaMilliseconds)
+        {
+            double elapsed = 0.0d;
+            _perfStats.Clear();
+            _perfCounter.Restart();
+
+            if (_nextStateReady)
+            {
+                Systems.ProcessEntityUpdates();
                 _inputHandler.Update(deltaMilliseconds);
 
                 if (!_nssInterpreter.Threads.Any())
@@ -143,8 +154,12 @@ namespace NitroSharp
                     Exit();
                 }
 
-                _nextFrameReady = false;
-                _prepareNextFrameSignal.Release();
+                _nextStateReady = false;
+                _calculateNextStateSignal.Release();
+
+                elapsed = _perfCounter.Elapsed.TotalMilliseconds;
+                _perfStats.ProcessingEntityUpdates = elapsed - _perfStats.Total;
+                _perfStats.Total = elapsed;
             }
             else if (_interpreterProc.IsFaulted)
             {
@@ -152,22 +167,146 @@ namespace NitroSharp
             }
 
             var enumerator = Systems.All.GetEnumerator();
+            int i = 0;
             while (enumerator.MoveNext())
             {
                 var system = enumerator.Current;
                 system.Update(deltaMilliseconds);
+
+                elapsed = _perfCounter.Elapsed.TotalMilliseconds;
+                _perfStats.SystemUpdateTimes[i] = elapsed - _perfStats.Total;
+                _perfStats.Total = elapsed;
+                i++;
             }
 
             RenderContext.Present();
+
+            _perfCounter.Stop();
+            elapsed = _perfCounter.Elapsed.TotalMilliseconds;
+            _perfStats.FlipTime = elapsed - _perfStats.Total;
+            _perfStats.Total = elapsed;
+
+            if (_configuration.EnableDiagnostics && _perfStats.Total > 17)
+            {
+                LogPerfStats();
+            }
         }
 
         private async Task RunInterpreterLoop()
         {
             while (Running)
             {
-                await _prepareNextFrameSignal.WaitAsync(ShutdownCancellation.Token).ConfigureAwait(false);
+                await _calculateNextStateSignal.WaitAsync(ShutdownCancellation.Token);
                 _nssInterpreter.Run(TimeSpan.MaxValue);
-                _nextFrameReady = true;
+                _nextStateReady = true;
+            }
+        }
+
+        private void SetupLogging()
+        {
+            string logFileName = $"log_{DateTime.Now.ToString(@"yyyymmdd_HHmm_ss")}.txt";
+            _logPath = Path.Combine(Path.GetTempPath(), _configuration.ProductName, logFileName);
+
+            var fileMinLevel = _configuration.EnableDiagnostics ? LogEventLevel.Debug : LogEventLevel.Error;
+            var flushInterval = TimeSpan.FromSeconds(2);
+
+            var loggerFactory = new LoggerConfiguration()
+                .MinimumLevel.Debug()
+                .WriteTo.Async(x => x.File(_logPath, fileMinLevel, buffered: true, flushToDiskInterval: flushInterval))
+                .WriteTo.ColoredConsole(LogEventLevel.Debug);
+
+            _log = loggerFactory.CreateLogger();
+
+            //var loggerFactory = new LoggerFactory()
+            //    .AddDebug(minLevel: LogLevel.Debug)
+            //    .AddFile(_logPath, minimumLevel: _configuration.EnableDiagnostics ? LogLevel.Debug : LogLevel.Error);
+
+            //_globalEvents = loggerFactory.CreateLogger("Global");
+            //_interpreterEvents = loggerFactory.CreateLogger("NsScript");
+            //_perfEvents = loggerFactory.CreateLogger("Performance");
+            //_entitySystemEvents = loggerFactory.CreateLogger("EntitySystem");
+
+            //Entities.EntityRemoved += (o, e) => _entityLog.LogInformation($"Removed entity '{e.Name}'");
+        }
+
+        private void OnEnteredFunction(object sender, Function function)
+        {
+            _log.Debug("Entered function " + function.Name.SimplifiedName);
+        }
+
+        private void OnBuiltInCallDispatched(object sender, BuiltInFunctionCall call)
+        {
+            if (call.CallingThread == _nitroCore.MainThread)
+            {
+                _log.Debug("Built-in call: " + call.ToString());
+            }
+        }
+
+        public override void Shutdown()
+        {
+            base.Shutdown();
+        }
+
+        private void LogPerfStats()
+        {
+            double animationSystemTime = _perfStats.SystemUpdateTimes[0];
+            double audioSystemTime = _perfStats.SystemUpdateTimes[1];
+            double renderSystemTime = _perfStats.SystemUpdateTimes[2];
+
+            const int decimals = 3;
+            var warning = new StringBuilder("Update took longer than expected.");
+            warning.AppendLine();
+            warning.Append("\tTotal: ");
+            warning.Append(Math.Round(_perfStats.Total, decimals));
+            warning.Append("ms");
+            warning.AppendLine();
+
+            warning.Append("\tProcessing entity updates: ");
+            warning.Append(Math.Round(_perfStats.ProcessingEntityUpdates, decimals));
+            warning.Append("ms");
+            warning.AppendLine();
+
+            warning.Append("\tAnimationSystem time: ");
+            warning.Append(Math.Round(animationSystemTime, decimals));
+            warning.Append("ms");
+            warning.AppendLine();
+
+            warning.Append("\tAudioSystem time: ");
+            warning.Append(Math.Round(audioSystemTime, decimals));
+            warning.Append("ms");
+            warning.AppendLine();
+
+            warning.Append("\tRenderSystem time: ");
+            warning.Append(Math.Round(renderSystemTime, decimals));
+            warning.Append("ms");
+            warning.AppendLine();
+
+            warning.Append("\tFlip time: ");
+            warning.Append(Math.Round(_perfStats.FlipTime, decimals));
+            warning.Append("ms");
+            warning.AppendLine();
+
+            _log.Warning(warning.ToString());
+        }
+
+        private sealed class PerfStats
+        {
+            public PerfStats(int systemCount)
+            {
+                SystemUpdateTimes = new double[systemCount];
+            }
+
+            public double Total;
+            public double ProcessingEntityUpdates;
+            public double FlipTime;
+            public double[] SystemUpdateTimes;
+
+            public void Clear()
+            {
+                Total = 0;
+                ProcessingEntityUpdates = 0;
+
+                // Don't really need to reset the other fields.
             }
         }
     }

@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace NitroSharp.Foundation
 {
-    public class SystemManager : IDisposable
+    public sealed class SystemManager : IDisposable
     {
         private readonly List<GameSystem> _systems;
         private readonly EntityManager _entities;
@@ -31,13 +31,13 @@ namespace NitroSharp.Foundation
             _systems.Add(system);
         }
 
-        public void RefreshEntityLists()
+        public void ProcessEntityUpdates()
         {
             if (_updatedEntities.Count > 0 || _removedEntities.Count > 0)
             {
                 foreach (var system in _systems)
                 {
-                    (system as EntityProcessingSystem)?.RefreshLocalEntityList(_updatedEntities, _removedEntities);
+                    (system as EntityProcessingSystem)?.ProcessEntityUpdates(_updatedEntities, _removedEntities);
                 }
             }
 
