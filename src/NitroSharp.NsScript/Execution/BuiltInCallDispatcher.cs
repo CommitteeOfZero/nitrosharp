@@ -42,6 +42,7 @@ namespace NitroSharp.NsScript.Execution
 
                 ["RemainTime"] = RemainTime,
                 ["ImageHorizon"] = ImageHorizon,
+                ["ImageVertical"] = ImageVertical,
                 ["Random"] = Random,
                 ["SoundAmplitude"] = SoundAmplitude,
                 ["Platform"] = Platform,
@@ -327,6 +328,13 @@ namespace NitroSharp.NsScript.Execution
             string entityName = PreprocessEntityName(args.PopString());
             int width = _builtinsImpl.GetTextureWidth(entityName);
             Result = new ConstantValue(width, isDelta: false);
+        }
+
+        private void ImageVertical(ArgumentStack args)
+        {
+            string entityName = PreprocessEntityName(args.PopString());
+            int height = _builtinsImpl.GetTextureHeight(entityName);
+            Result = new ConstantValue(height, isDelta: false);
         }
 
         private void RemainTime(ArgumentStack args)

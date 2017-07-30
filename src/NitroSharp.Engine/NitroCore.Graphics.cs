@@ -94,6 +94,11 @@ namespace NitroSharp
             return _entities.TryGet(entityName, out var entity) ? (int)entity.Transform.Bounds.Width : 0;
         }
 
+        public override int GetTextureHeight(string entityName)
+        {
+            return _entities.TryGet(entityName, out var entity) ? (int)entity.Transform.Bounds.Height : 0;
+        }
+
         internal static void SetPosition(Transform transform, NsCoordinate x, NsCoordinate y)
         {
             transform.SetMarginX(x.Origin == NsCoordinateOrigin.CurrentValue ? transform.Margin.X + x.Value : x.Value);

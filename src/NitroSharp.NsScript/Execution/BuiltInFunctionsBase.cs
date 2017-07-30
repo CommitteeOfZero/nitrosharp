@@ -23,6 +23,11 @@ namespace NitroSharp.NsScript.Execution
             OnParagraphEntered(paragraph);
         }
 
+        public virtual int GetTextureHeight(string entityName)
+        {
+            return 0;
+        }
+
         public virtual int GetTextureWidth(string fileName)
         {
             return 0;

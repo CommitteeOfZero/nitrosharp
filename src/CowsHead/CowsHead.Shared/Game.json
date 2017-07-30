@@ -1,6 +1,6 @@
 ﻿{
   "productName": "COWSHEAD_NOAH",
-  "activeProfile": "Prologue",
+  "activeProfile": "Chat",
   "graphics.vsync": false,
   "window.title": "COWS;HEAD NOAH",
   "window.width": 1280,
@@ -23,6 +23,10 @@
 
     "Ch5": {
       "startupScript": "boot-ch5.nss"
+    },
+
+    "Chat": {
+      "startupScript": "boot-chat.nss"
     },
 
     "Test": {
