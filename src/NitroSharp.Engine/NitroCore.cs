@@ -17,11 +17,10 @@ namespace NitroSharp
 
         public bool WaitingForInput { get; set; }
 
-        public NitroCore(Game game, NitroConfiguration configuration, EntityManager entities)
+        public NitroCore(Game game, EntityManager entities)
         {
             _game = game as NitroGame;
             _entities = entities;
-            _viewport = new System.Drawing.Size(configuration.WindowWidth, configuration.WindowHeight);
         }
 
         public void SetContent(ContentManager content) => _content = content;
@@ -92,7 +91,7 @@ namespace NitroSharp
                     break;
 
                 case NsEntityAction.ResetText:
-                    TextEntity.Destroy();
+                    TextEntity?.Destroy();
                     break;
 
                 case NsEntityAction.Hide:

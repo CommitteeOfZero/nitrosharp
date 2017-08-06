@@ -9,8 +9,8 @@ namespace NitroSharp.NsScript.Execution
     {
         private const string NssExtension = ".nss";
         private readonly Func<string, Stream> _scriptLocator;
-        private Dictionary<string, NsSyntaxTree> _syntaxTrees;
-        private Dictionary<string, Module> _loadedModules;
+        private readonly Dictionary<string, NsSyntaxTree> _syntaxTrees;
+        private readonly Dictionary<string, Module> _loadedModules;
 
         public NsScriptSession(Func<string, Stream> scriptLocator)
         {

@@ -148,16 +148,16 @@ namespace NitroSharp.Graphics
 
         private sealed class UserFontFileEnumerator : CallbackBase, FontFileEnumerator
         {
-            private Factory _factory;
-            private FontFileLoader _loader;
-            private DataStream keyStream;
+            private readonly Factory _factory;
+            private readonly FontFileLoader _loader;
+            private readonly DataStream _keyStream;
             private FontFile _currentFontFile;
 
             public UserFontFileEnumerator(Factory factory, FontFileLoader loader, DataPointer key)
             {
                 _factory = factory;
                 _loader = loader;
-                keyStream = new DataStream(key.Pointer, key.Size, canRead: true, canWrite: false);
+                _keyStream = new DataStream(key.Pointer, key.Size, canRead: true, canWrite: false);
             }
 
             public FontFile CurrentFontFile
@@ -171,12 +171,12 @@ namespace NitroSharp.Graphics
 
             public bool MoveNext()
             {
-                bool moveNext = keyStream.RemainingLength != 0;
+                bool moveNext = _keyStream.RemainingLength != 0;
                 if (moveNext)
                 {
                     _currentFontFile?.Dispose();
-                    _currentFontFile = new FontFile(_factory, keyStream.PositionPointer, 4, _loader);
-                    keyStream.Position += 4;
+                    _currentFontFile = new FontFile(_factory, _keyStream.PositionPointer, 4, _loader);
+                    _keyStream.Position += 4;
                 }
 
                 return moveNext;

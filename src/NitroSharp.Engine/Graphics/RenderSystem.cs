@@ -14,7 +14,7 @@ namespace NitroSharp.Graphics
         internal INitroRenderer _renderer;
         private Texture2D _secondaryRenderTarget;
         private Texture2D _screen;
-        private Queue<TextVisual> _textVisuals;
+        private readonly Queue<TextVisual> _textVisuals;
 
         private bool _upscaling = false;
         private Vector2 _scaleFactor;

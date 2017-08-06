@@ -46,10 +46,16 @@ namespace NitroSharp.NsScript.Execution
                 ["Random"] = Random,
                 ["SoundAmplitude"] = SoundAmplitude,
                 ["Platform"] = Platform,
+                ["ModuleFileName"] = ModuleFileName,
 
                 ["DisplayDialogue"] = DisplayDialogue,
                 ["HandlePXmlLineSeparator"] = HandlePXmlLineSeparator
             };
+        }
+
+        private void ModuleFileName(ArgumentStack obj)
+        {
+            Result = ConstantValue.Create("sy01_01cafe_fuminori.nss");
         }
 
         private void HandlePXmlLineSeparator(ArgumentStack obj)
@@ -59,7 +65,7 @@ namespace NitroSharp.NsScript.Execution
 
         private void Platform(ArgumentStack obj)
         {
-            Result = new ConstantValue(0, isDelta: false);
+            Result = ConstantValue.Zero;
         }
 
         public void DispatchBuiltInCall(BuiltInFunctionCall functionCall)
@@ -327,21 +333,21 @@ namespace NitroSharp.NsScript.Execution
         {
             string entityName = PreprocessEntityName(args.PopString());
             int width = _builtinsImpl.GetTextureWidth(entityName);
-            Result = new ConstantValue(width, isDelta: false);
+            Result = ConstantValue.Create(width);
         }
 
         private void ImageVertical(ArgumentStack args)
         {
             string entityName = PreprocessEntityName(args.PopString());
             int height = _builtinsImpl.GetTextureHeight(entityName);
-            Result = new ConstantValue(height, isDelta: false);
+            Result = ConstantValue.Create(height);
         }
 
         private void RemainTime(ArgumentStack args)
         {
             string entityName = PreprocessEntityName(args.PopString());
             int msTime = _builtinsImpl.GetTimeRemaining(entityName);
-            Result = new ConstantValue(msTime, isDelta: false);
+            Result = ConstantValue.Create(msTime);
         }
 
         private void SoundAmplitude(ArgumentStack args)
@@ -350,7 +356,7 @@ namespace NitroSharp.NsScript.Execution
             string characterName = args.PopString();
 
             int amplitude = _builtinsImpl.GetSoundAmplitude(characterName);
-            Result = new ConstantValue(amplitude, isDelta: false);
+            Result = ConstantValue.Create(amplitude);
         }
 
         private void Random(ArgumentStack args)
@@ -358,7 +364,7 @@ namespace NitroSharp.NsScript.Execution
             int max = args.PopInt();
 
             int n = _builtinsImpl.GenerateRandomNumber(max);
-            Result = new ConstantValue(n, isDelta: false);
+            Result = ConstantValue.Create(n);
         }
     }
 }

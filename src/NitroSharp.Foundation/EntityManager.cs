@@ -12,7 +12,7 @@ namespace NitroSharp.Foundation
         private ulong _nextId;
         private readonly Stopwatch _gameTimer;
 
-        private Dictionary<string, string> _aliases;
+        private readonly Dictionary<string, string> _aliases;
 
         public EntityManager(Stopwatch gameTimer)
         {
@@ -94,7 +94,6 @@ namespace NitroSharp.Foundation
         /// <summary>
         /// Schedules the specified <see cref="Entity"/> to be removed on the next update.
         /// </summary>
-        /// <param name="entity"></param>
         public void Remove(string entityName)
         {
             if (_allEntities.TryGetValue(entityName, out var entity))

@@ -7,7 +7,7 @@ namespace NitroSharp.NsScript.PXml
 {
     public class PXmlWriter : PXmlSyntaxVisitor
     {
-        private TextWriter _textWriter;
+        private readonly TextWriter _textWriter;
 
         public PXmlWriter()
         {

@@ -17,7 +17,7 @@ namespace NitroSharp.Foundation.Platform
 
         public System.Numerics.Vector2 MousePosition { get; set; }
 
-        private bool[] _mouseDown = new bool[13];
+        private readonly bool[] _mouseDown = new bool[13];
         public bool[] MouseDown => _mouseDown;
 
         public bool IsMouseDown(MouseButton button)

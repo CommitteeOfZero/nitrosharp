@@ -7,14 +7,13 @@ namespace NitroSharp.Foundation.Audio.XAudio
 {
     public sealed class XAudio2AudioSource : AudioSource
     {
-        private readonly XAudio2AudioEngine _engine;
-        private SourceVoice _sourceVoice;
+        private readonly SourceVoice _sourceVoice;
         private float _volume;
 
         internal XAudio2AudioSource(XAudio2AudioEngine engine, uint bufferSize)
             : base(engine, bufferSize)
         {
-            _engine = engine;
+ 
             var waveFormat = new WaveFormat(engine.SampleRate, engine.BitDepth, engine.ChannelCount);
             _sourceVoice = new SourceVoice(engine.Device, waveFormat, VoiceFlags.NoSampleRateConversion);
             _sourceVoice.BufferEnd += RaiseBufferEnd;

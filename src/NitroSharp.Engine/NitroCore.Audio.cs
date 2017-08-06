@@ -17,7 +17,8 @@ namespace NitroSharp
             {
                 if (_entities.TryGet(VoiceEntityName, out var voiceEntity))
                 {
-                    return voiceEntity.GetComponent<SoundComponent>().Amplitude;
+                    var soundComponent = voiceEntity.GetComponent<SoundComponent>();
+                    return soundComponent.IsPlaying ? soundComponent.Amplitude : 0;
                 }
             }
 
@@ -30,7 +31,7 @@ namespace NitroSharp
             {
                 string directory = Path.GetDirectoryName(fileName);
                 string nameWithoutExtension = Path.GetFileNameWithoutExtension(fileName);
-                string searchPattern = nameWithoutExtension + "*.";
+                string searchPattern = nameWithoutExtension + "*";
                 var assetId = _content.Search(directory, searchPattern).First();
                 audioStream = _content.Get<AudioStream>(assetId);
             }

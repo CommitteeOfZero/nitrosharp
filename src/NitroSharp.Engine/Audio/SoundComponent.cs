@@ -18,6 +18,7 @@ namespace NitroSharp.Audio
         public AssetRef<AudioStream> Source { get; }
         public AudioKind Kind { get; }
 
+        public bool IsPlaying { get; internal set; }
         public TimeSpan Elapsed { get; internal set; }
         public float Volume { get; set; }
         public TimeSpan LoopStart { get; private set; }

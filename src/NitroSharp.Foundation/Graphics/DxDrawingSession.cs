@@ -5,13 +5,11 @@ namespace NitroSharp.Foundation.Graphics
     public class DxDrawingSession : IDisposable
     {
         private readonly DxRenderContext _rc;
-        private readonly bool _vsync;
         private bool _presentOnDispose;
 
-        internal DxDrawingSession(DxRenderContext renderContext, bool vsync)
+        internal DxDrawingSession(DxRenderContext renderContext)
         {
             _rc = renderContext;
-            _vsync = vsync;
         }
 
         internal void Reset(RgbaValueF clearColor, bool present)

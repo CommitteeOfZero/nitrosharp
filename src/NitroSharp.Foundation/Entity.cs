@@ -185,7 +185,6 @@ namespace NitroSharp.Foundation
         /// <summary>
         /// Schedules this <see cref="Entity"/> to be removed on the next update.
         /// </summary>
-        /// <param name="entity"></param>
         public void Destroy()
         {
             _manager.Remove(this);

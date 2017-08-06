@@ -120,10 +120,10 @@ namespace NitroSharp.NsScript
             }
         }
 
-        public static bool IsPrefixUnaryOperator(SyntaxTokenKind tokenKind) => TryGetPrefixUnaryOperationKind(tokenKind, out var kind);
-        public static bool IsPostfixUnaryOperator(SyntaxTokenKind tokenKind) => TryGetPostfixUnaryOperationKind(tokenKind, out var kind);
-        public static bool IsBinaryOperator(SyntaxTokenKind tokenKind) => TryGetBinaryOperationKind(tokenKind, out var kind);
-        public static bool IsAssignmentOperator(SyntaxTokenKind tokenKind) => TryGetAssignmentOperationKind(tokenKind, out var kind);
+        public static bool IsPrefixUnaryOperator(SyntaxTokenKind tokenKind) => TryGetPrefixUnaryOperationKind(tokenKind, out var _);
+        public static bool IsPostfixUnaryOperator(SyntaxTokenKind tokenKind) => TryGetPostfixUnaryOperationKind(tokenKind, out var _);
+        public static bool IsBinaryOperator(SyntaxTokenKind tokenKind) => TryGetBinaryOperationKind(tokenKind, out var _);
+        public static bool IsAssignmentOperator(SyntaxTokenKind tokenKind) => TryGetAssignmentOperationKind(tokenKind, out var _);
 
         public static OperationKind GetPrefixUnaryOperationKind(SyntaxTokenKind operatorTokenKind)
         {

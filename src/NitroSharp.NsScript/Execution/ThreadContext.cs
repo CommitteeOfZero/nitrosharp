@@ -8,6 +8,7 @@ namespace NitroSharp.NsScript.Execution
     {
         private readonly NsScriptInterpreter _interpreter;
         private readonly VariableTable _globals;
+        // TODO: why is it internal?
         internal readonly Stack<Frame> _frameStack;
 
         internal ThreadContext(string name, NsScriptInterpreter interpreter, Module module, IJumpTarget target, VariableTable globals)

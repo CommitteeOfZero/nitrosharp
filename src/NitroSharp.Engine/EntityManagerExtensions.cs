@@ -6,7 +6,7 @@ namespace NitroSharp
 {
     public static class EntityManagerExtensions
     {
-        private static Entity[] s_oneElementArray = new Entity[1];
+        private static readonly Entity[] s_oneElementArray = new Entity[1];
 
         private static bool IsWildcardQuery(string s) => s[s.Length - 1] == '*';
 

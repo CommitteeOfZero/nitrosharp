@@ -7,20 +7,18 @@ namespace NitroSharp.Foundation.Audio
 {
     public abstract class AudioSource : IDisposable
     {
-        private readonly AudioEngine _engineBase;
         private readonly AudioBufferPool _bufferPool;
         protected readonly Dictionary<int, AudioBuffer> _buffers;
 
         private AudioStream _audioStream;
         private CancellationTokenSource _cts;
         private Task _playTask;
-        private SemaphoreSlim _endOfStreamSignal;
+        private readonly SemaphoreSlim _endOfStreamSignal;
 
         private volatile bool _isPlaying;
 
         public AudioSource(AudioEngine audioEngine, uint bufferSize)
         {
-            _engineBase = audioEngine;
             _bufferPool = new AudioBufferPool(3, (int)bufferSize);
             _buffers = new Dictionary<int, AudioBuffer>();
             _endOfStreamSignal = new SemaphoreSlim(initialCount: 0, maxCount: 1);

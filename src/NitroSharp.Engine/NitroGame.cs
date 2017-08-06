@@ -28,19 +28,20 @@ namespace NitroSharp
         private readonly string _nssFolder;
 
         private AudioSystem _audioSystem;
+        // TODO: should be private.
         internal RenderSystem _renderSystem;
         private InputHandler _inputHandler;
 
         private NsScriptInterpreter _nssInterpreter;
         private NitroCore _nitroCore;
         private Task _interpreterProc;
-        private SemaphoreSlim _calculateNextStateSignal = new SemaphoreSlim(initialCount: 1, maxCount: 1);
+        private readonly SemaphoreSlim _calculateNextStateSignal = new SemaphoreSlim(initialCount: 1, maxCount: 1);
         private volatile bool _nextStateReady = false;
 
         private ILogger _log;
         private string _logPath;
 
-        private Stopwatch _perfCounter = new Stopwatch();
+        private readonly Stopwatch _perfCounter = new Stopwatch();
         private PerfStats _perfStats;
 
         public NitroGame(NitroConfiguration configuration)
@@ -94,7 +95,7 @@ namespace NitroSharp
 
         private void LoadStartupScript()
         {
-            _nitroCore = new NitroCore(this, _configuration, Entities);
+            _nitroCore = new NitroCore(this, Entities);
             _nssInterpreter = new NsScriptInterpreter(_nitroCore, LocateScript);
             _nssInterpreter.BuiltInCallScheduled += OnBuiltInCallDispatched;
             _nssInterpreter.EnteredFunction += OnEnteredFunction;
@@ -244,11 +245,6 @@ namespace NitroSharp
             }
         }
 
-        public override void Shutdown()
-        {
-            base.Shutdown();
-        }
-
         private void LogPerfStats()
         {
             double animationSystemTime = _perfStats.SystemUpdateTimes[0];
@@ -301,7 +297,7 @@ namespace NitroSharp
             public double Total;
             public double ProcessingEntityUpdates;
             public double FlipTime;
-            public double[] SystemUpdateTimes;
+            public readonly double[] SystemUpdateTimes;
 
             public void Clear()
             {

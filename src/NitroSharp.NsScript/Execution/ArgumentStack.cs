@@ -17,10 +17,10 @@ namespace NitroSharp.NsScript.Execution
         public NsCoordinate PopCoordinate()
         {
             var value = Pop();
-            if (value.Type == NsType.Integer)
+            if (value.Type == NsBuiltInType.Integer)
             {
                 int i = value.As<int>();
-                var origin = value.IsDelta.Value ? NsCoordinateOrigin.CurrentValue : NsCoordinateOrigin.Zero;
+                var origin = value.IsDeltaIntegerValue ? NsCoordinateOrigin.CurrentValue : NsCoordinateOrigin.Zero;
                 return new NsCoordinate(i, origin, 0.0f);
             }
             else
@@ -32,7 +32,7 @@ namespace NitroSharp.NsScript.Execution
         public NsColor PopColor()
         {
             var value = Pop();
-            if (value.Type == NsType.String)
+            if (value.Type == NsBuiltInType.String)
             {
                 return NsColor.FromString(value.As<string>());
             }

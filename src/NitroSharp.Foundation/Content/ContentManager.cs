@@ -44,7 +44,7 @@ namespace NitroSharp.Foundation.Content
 
         public virtual IEnumerable<AssetId> Search(string relativePath, string searchPattern)
         {
-            string path = Path.Combine(RootDirectory, relativePath);
+            string path = Path.Combine(RootDirectory.Replace('/', '\\'), relativePath);
             return Directory.EnumerateFiles(path, searchPattern).Select(x => new AssetId(x));
         }
 

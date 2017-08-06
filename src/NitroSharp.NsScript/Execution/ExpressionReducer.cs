@@ -15,14 +15,14 @@ namespace NitroSharp.NsScript.Execution
                 case Literal literal:
                     return literal.Value;
                 case DeltaExpression deltaExpr:
-                    return new ConstantValue(ReduceExpression(deltaExpr.Expression).RawValue, isDelta: true);
+                    return ConstantValue.Create(ReduceExpression(deltaExpr.Expression).RawValue, isDeltaIntegerValue: true);
                 case Variable variable:
                     string name = variable.Name.SimplifiedName;
                     return CurrentFrame.Globals[name];
                 case ParameterReference parameterRef:
                     return CurrentFrame.Arguments[parameterRef.ParameterName.SimplifiedName];
                 case NamedConstant namedConstant:
-                    return new ConstantValue(namedConstant.Name.FullName);
+                    return ConstantValue.Create(namedConstant.Name.FullName);
 
                 case UnaryExpression unaryExpr:
                     return ApplyUnaryOperation(ReduceExpression(unaryExpr.Operand), unaryExpr.OperationKind);
@@ -85,6 +85,7 @@ namespace NitroSharp.NsScript.Execution
             string variableName = string.Empty;
             if (operand.Kind == SyntaxNodeKind.Variable)
             {
+                // TODO: possible null reference.
                 variableName = (operand as Variable).Name.FullName;
                 oldValue = CurrentFrame.Globals[variableName];
             }

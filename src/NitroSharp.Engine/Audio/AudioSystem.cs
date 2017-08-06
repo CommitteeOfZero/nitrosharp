@@ -10,13 +10,13 @@ namespace NitroSharp.Audio
 {
     public sealed class AudioSystem : EntityProcessingSystem, IDisposable
     {
-        private static uint VoiceBufferSize = 4400;
+        private static readonly uint VoiceBufferSize = 4400;
 
         private readonly AudioEngine _audioEngine;
-        private uint _defaultBufferSize;
+        private readonly uint _defaultBufferSize;
 
-        private Dictionary<SoundComponent, AudioSource> _audioSources;
-        private Queue<AudioSource> _freeAudioSources;
+        private readonly Dictionary<SoundComponent, AudioSource> _audioSources;
+        private readonly Queue<AudioSource> _freeAudioSources;
 
         public AudioSystem(AudioEngine audioEngine)
         {
@@ -58,14 +58,17 @@ namespace NitroSharp.Audio
             var sound = entity.GetComponent<SoundComponent>();
             var audioSource = GetAssociatedSource(sound);
             audioSource.Volume = GetVolumeMultiplier(sound) * sound.Volume;
+            sound.IsPlaying = audioSource.IsPlaying;
 
             if (sound.Volume > 0 && !audioSource.IsPlaying)
             {
                 audioSource.Play();
+                sound.IsPlaying = true;
             }
             else if (sound.Volume == 0 && audioSource.IsPlaying)
             {
                 audioSource.StopAsync().Forget();
+                sound.IsPlaying = false;
             }
 
             if (sound.Looping && !audioSource.CurrentStream.Looping)

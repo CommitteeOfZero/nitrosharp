@@ -74,7 +74,7 @@ namespace NitroSharp.NsScript.Tests
         [Fact]
         public void LexJapaneseIdentifier()
         {
-            string identifier = "#ev100_06_1_６人祈る_a";
+            string identifier = "ev100_06_1_６人祈る_a";
             var token = LexToken(identifier);
 
             Assert.Equal(SyntaxTokenKind.IdentifierToken, token.Kind);
@@ -89,6 +89,16 @@ namespace NitroSharp.NsScript.Tests
 
             Assert.Equal(SyntaxTokenKind.IdentifierToken, token.Kind);
             Assert.Equal(identifier, token.Text);
+        }
+
+        [Fact]
+        public void LexIdentifieWithDot()
+        {
+            string text = "foo.bar";
+            var token = LexToken(text);
+
+            Assert.Equal(SyntaxTokenKind.IdentifierToken, token.Kind);
+            Assert.Equal(text, token.Text);
         }
 
         [Fact]
@@ -140,10 +150,60 @@ namespace NitroSharp.NsScript.Tests
             Assert.Equal(text, token.Text);
         }
 
-        private SyntaxToken LexToken(string text)
+        [Fact]
+        public void LexParagraphStartTag()
+        {
+            string text = "<PRE>";
+            var token = LexToken(text);
+
+            Assert.Equal(SyntaxTokenKind.ParagraphStartTag, token.Kind);
+            Assert.Equal(text, token.Text);
+        }
+
+        [Fact]
+        public void LexParagraphEndTag()
+        {
+            string text = "</PRE>";
+            var token = LexToken(text, NsScriptLexer.Context.Paragraph);
+
+            Assert.Equal(SyntaxTokenKind.ParagraphEndTag, token.Kind);
+            Assert.Equal(text, token.Text);
+        }
+
+        [Fact]
+        public void LexSimplePXmlString()
+        {
+            string text = "sample text";
+            var token = LexToken(text, NsScriptLexer.Context.Paragraph);
+
+            Assert.Equal(SyntaxTokenKind.PXmlString, token.Kind);
+            Assert.Equal(text, token.Text);
+        }
+
+        [Fact]
+        public void LexPXmlLineSeparator()
+        {
+            string text = "\r\n";
+            var token = LexToken(text, NsScriptLexer.Context.Paragraph);
+
+            Assert.Equal(SyntaxTokenKind.PXmlLineSeparator, token.Kind);
+            Assert.Equal(text, token.Text);
+        }
+
+        [Fact]
+        public void LexPXmlStringWithVerbatimText()
+        {
+            string text = "<PRE>scene</PRE>";
+            var token = LexToken(text, NsScriptLexer.Context.Paragraph);
+
+            Assert.Equal(SyntaxTokenKind.PXmlString, token.Kind);
+            Assert.Equal(text, token.Text);
+        }
+
+        private SyntaxToken LexToken(string text, NsScriptLexer.Context context = NsScriptLexer.Context.Code)
         {
             SyntaxToken result = null;
-            foreach (var token in NsScript.ParseTokens(text))
+            foreach (var token in NsScript.ParseTokens(text, context))
             {
                 if (result == null)
                 {

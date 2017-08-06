@@ -56,7 +56,7 @@ namespace NitroSharp.Foundation.Graphics
             CreateDeviceResources();
             CreateSizeDependentResources();
 
-            _session = new DxDrawingSession(this, _vsyncEnabled);
+            _session = new DxDrawingSession(this);
             _previousWindowSize = _window.Size;
             _window.Resized += OnWindowResized;
         }

@@ -1,66 +1,47 @@
-﻿using System;
-using System.IO;
-using System.Text;
-using System.Globalization;
+﻿using System.Globalization;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 
 namespace NitroSharp.NsScript
 {
-    internal sealed class NsScriptLexer : TextScanner
+    public sealed class NsScriptLexer : TextScanner
     {
-        private enum Location
+        public enum Context
         {
             Code,
             ParameterList,
             Paragraph
         }
 
-        private static readonly Encoding s_defaultEncoding;
-        private const string ParagraphEndTag = "</PRE>";
+        private const string PRE_StartTag = "<pre>";
+        private const string PRE_EndTag = "</pre>";
 
-        static NsScriptLexer()
+        private readonly Context _initialContext;
+        private readonly Stack<Context> _nestingStack = new Stack<Context>();
+
+        public NsScriptLexer(string sourceText, Context initialContext = Context.Code) : base(sourceText)
         {
-            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-            s_defaultEncoding = Encoding.GetEncoding("shift-jis");
+            _initialContext = initialContext;
+            _nestingStack.Push(initialContext);
         }
 
-        private Stack<Location> _nestingStack = new Stack<Location>();
-
-        public NsScriptLexer(string sourceText) : base(sourceText)
-        {
-            _nestingStack.Push(Location.Code);
-        }
-
-        public NsScriptLexer(string fileName, Stream stream)
+        public NsScriptLexer(string sourceText, string fileName, Context initialContext = Context.Code)
+            : this(sourceText, initialContext)
         {
             FileName = fileName;
-            if (stream == null)
-            {
-                throw new ArgumentNullException(nameof(stream));
-            }
-
-            if (!stream.CanRead)
-            {
-                throw new ArgumentException("Stream must support Read operation.");
-            }
-
-            using (var reader = new StreamReader(stream, s_defaultEncoding, true, 4096, leaveOpen: true))
-            {
-                SourceText = reader.ReadToEnd();
-            }
-
-            _nestingStack.Push(Location.Code);
         }
 
         public string FileName { get; }
-        private Location CurrentLocation => _nestingStack.Peek();
+        private Context CurrentContext
+        {
+            get => PeekChar() != EofCharacter ? _nestingStack.Peek() : _initialContext;
+        }
 
         public SyntaxToken Lex()
         {
-            
-            if (CurrentLocation == Location.Paragraph)
+            if (CurrentContext == Context.Paragraph)
             {
-                if (PeekChar() != '{' && !IsParagraphEndTag())
+                if (PeekChar() != '{' && !Is_PRE_EndTag())
                 {
                     return LexPXmlToken();
                 }
@@ -70,7 +51,7 @@ namespace NitroSharp.NsScript
             switch (token.Kind)
             {
                 case SyntaxTokenKind.OpenBraceToken:
-                    _nestingStack.Push(Location.Code);
+                    _nestingStack.Push(Context.Code);
                     break;
 
                 case SyntaxTokenKind.CloseBraceToken:
@@ -78,18 +59,18 @@ namespace NitroSharp.NsScript
                     break;
 
                 case SyntaxTokenKind.FunctionKeyword:
-                    _nestingStack.Push(Location.ParameterList);
+                    _nestingStack.Push(Context.ParameterList);
                     break;
 
                 case SyntaxTokenKind.CloseParenToken:
-                    if (CurrentLocation == Location.ParameterList)
+                    if (CurrentContext == Context.ParameterList)
                     {
                         _nestingStack.Pop();
                     }
                     break;
 
                 case SyntaxTokenKind.ParagraphStartTag:
-                    _nestingStack.Push(Location.Paragraph);
+                    _nestingStack.Push(Context.Paragraph);
                     break;
 
                 case SyntaxTokenKind.ParagraphEndTag:
@@ -113,7 +94,7 @@ namespace NitroSharp.NsScript
             switch (character)
             {
                 case '"':
-                    if (CurrentLocation != Location.ParameterList && PeekChar(1) != '$')
+                    if (CurrentContext != Context.ParameterList && PeekChar(1) != '$')
                     {
                         ScanStringLiteral();
                         kind = SyntaxTokenKind.StringLiteralToken;
@@ -183,28 +164,28 @@ namespace NitroSharp.NsScript
 
                 case '<':
                     char nextChar = PeekChar(1);
-                    if (nextChar == '=')
+                    switch (nextChar)
                     {
-                        AdvanceChar(2);
-                        kind = SyntaxTokenKind.LessThanEqualsToken;
-                    }
+                        case '=':
+                            AdvanceChar(2);
+                            kind = SyntaxTokenKind.LessThanEqualsToken;
+                            break;
 
-                    // If the next character after '<' is a latin letter, it's most likely an XML tag.
-                    // I've yet to find an exception to that.
-                    else if (SyntaxFacts.IsLatinLetter(nextChar))
-                    {
-                        kind = SyntaxTokenKind.ParagraphStartTag;
-                        ScanPXmlTag();
-                    }
-                    else if (nextChar == '/')
-                    {
-                        kind = SyntaxTokenKind.ParagraphEndTag;
-                        ScanPXmlTag();
-                    }
-                    else
-                    {
-                        AdvanceChar();
-                        kind = SyntaxTokenKind.LessThanToken;
+                        case 'p':
+                        case 'P':
+                            ScanParagraphStartTag();
+                            kind = SyntaxTokenKind.ParagraphStartTag;
+                            break;
+
+                        case '/':
+                            AdvanceChar(PRE_EndTag.Length);
+                            kind = SyntaxTokenKind.ParagraphEndTag;
+                            break;
+
+                        default:
+                            AdvanceChar();
+                            kind = SyntaxTokenKind.LessThanToken;
+                            break;
                     }
                     break;
 
@@ -250,7 +231,7 @@ namespace NitroSharp.NsScript
 
                 case '=':
                     AdvanceChar();
-                    if ((character = PeekChar()) == '=')
+                    if ((PeekChar()) == '=')
                     {
                         AdvanceChar();
                         kind = SyntaxTokenKind.EqualsEqualsToken;
@@ -432,6 +413,10 @@ namespace NitroSharp.NsScript
                     ScanEndOfLineSequence();
                     break;
 
+                case EofCharacter:
+                    kind = SyntaxTokenKind.EndOfFileToken;
+                    break;
+
                 default:
                     kind = SyntaxTokenKind.PXmlString;
                     ScanPXmlString();
@@ -447,38 +432,6 @@ namespace NitroSharp.NsScript
             return new SyntaxToken(kind, string.Empty, text, trailingTrivia);
         }
 
-        private void ScanPXmlString()
-        {
-            char c;
-            while (!IsParagraphEndTag() && (c = PeekChar()) != '{' && c != EofCharacter)
-            {
-                int newlineSequenceLength = 0;
-                while (SyntaxFacts.IsNewLine(PeekChar(newlineSequenceLength)))
-                {
-                    newlineSequenceLength++;
-                    if (newlineSequenceLength >= 4)
-                    {
-                        return;
-                    }
-                }
-
-                AdvanceChar();
-            }
-        }
-
-        private void ScanParagraphIdentifier()
-        {
-            AdvanceChar();
-
-            char c;
-            while ((c = PeekChar()) != ']' && c != EofCharacter)
-            {
-                AdvanceChar();
-            }
-
-            AdvanceChar();
-        }
-
         private void ScanIdentifier()
         {
             char character = PeekChar();
@@ -488,7 +441,7 @@ namespace NitroSharp.NsScript
                 case '@':
                     AdvanceChar();
                     // @->
-                    if ((character = PeekChar()) == '-' && PeekChar(1) == '>')
+                    if (PeekChar() == '-' && PeekChar(1) == '>')
                     {
                         AdvanceChar(2);
                     }
@@ -614,14 +567,23 @@ namespace NitroSharp.NsScript
                 result = false;
             }
 
+            // TODO: expression is always false.
             return result;
         }
 
-        private bool IsParagraphEndTag()
+        private bool Is_PRE_StartTag() => Match("<pre");
+        private bool Is_PRE_EndTag() => Match("</pre>");
+
+        /// <summary>
+        /// Returns true if the lookahead characters compose the specified string.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private bool Match(string s)
         {
-            for (int i = 0; i < ParagraphEndTag.Length; i++)
+            for (int i = 0; i < s.Length; i++)
             {
-                if (PeekChar(i) != ParagraphEndTag[i])
+                char c;
+                if ((c = PeekChar(i)) != s[i] && c != char.ToUpperInvariant(s[i]) || c == EofCharacter)
                 {
                     return false;
                 }
@@ -630,10 +592,65 @@ namespace NitroSharp.NsScript
             return true;
         }
 
-        private void ScanPXmlTag()
+        private void ScanPXmlString()
+        {
+            int preNestingLevel = 0;
+
+            char c;
+            while ((c = PeekChar()) != '{' && c != EofCharacter)
+            {
+                if (c == '<')
+                {
+                    if (Is_PRE_StartTag())
+                    {
+                        preNestingLevel++;
+                        AdvanceChar(5);
+                        continue;
+                    }
+                    else if (Is_PRE_EndTag())
+                    {
+                        if (preNestingLevel == 0)
+                        {
+                            break;
+                        }
+
+                        preNestingLevel--;
+                        AdvanceChar(6);
+                        continue;
+                    }
+                }
+
+                int newlineSequenceLength = 0;
+                while (SyntaxFacts.IsNewLine(PeekChar(newlineSequenceLength)))
+                {
+                    newlineSequenceLength++;
+                    if (newlineSequenceLength >= 4)
+                    {
+                        return;
+                    }
+                }
+
+                AdvanceChar();
+            }
+        }
+
+        private void ScanParagraphStartTag()
         {
             char c;
             while ((c = PeekChar()) != '>' && c != EofCharacter)
+            {
+                AdvanceChar();
+            }
+
+            AdvanceChar();
+        }
+
+        private void ScanParagraphIdentifier()
+        {
+            AdvanceChar();
+
+            char c;
+            while ((c = PeekChar()) != ']' && c != EofCharacter)
             {
                 AdvanceChar();
             }

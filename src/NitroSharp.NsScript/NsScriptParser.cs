@@ -65,10 +65,9 @@ namespace NitroSharp.NsScript
 
         private IEnumerable<SyntaxToken> PreLex()
         {
-            SyntaxToken token = null;
             while (true)
             {
-                token = _lexer.Lex();
+                SyntaxToken token = _lexer.Lex();
                 yield return token;
 
                 if (token.Kind == SyntaxTokenKind.EndOfFileToken)
@@ -391,7 +390,7 @@ namespace NitroSharp.NsScript
                 case SyntaxTokenKind.NumericLiteralToken:
                 case SyntaxTokenKind.StringLiteralToken:
                     bool isDeltaExpr = CurrentToken.Text[0] == '@';
-                    var literal = ExpressionFactory.Literal(CurrentToken.Text, new ConstantValue(CurrentToken.Value, isDeltaExpr));
+                    var literal = ExpressionFactory.Literal(CurrentToken.Text, ConstantValue.Create(CurrentToken.Value, isDeltaExpr));
                     EatToken();
                     return literal;
 
@@ -461,6 +460,7 @@ namespace NitroSharp.NsScript
             return ExpressionFactory.Identifier(fullName, simplifiedName, sigil);
         }
 
+        // TODO: never used.
         private bool IsFunctionCall()
         {
             Debug.Assert(CurrentToken.Kind == SyntaxTokenKind.IdentifierToken || CurrentToken.Kind == SyntaxTokenKind.StringLiteralToken);

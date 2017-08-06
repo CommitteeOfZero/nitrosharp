@@ -6,7 +6,7 @@ namespace NitroSharp.Foundation.Platform
     public abstract class MessageBox
     {
         // TODO: implement for all platforms.
-        private static MessageBox s_impl = new WindowsMessageBox();
+        private static readonly MessageBox s_impl = new WindowsMessageBox();
 
         public static void Show(IntPtr windowHandle, string text, bool isError = false)
         {

@@ -22,7 +22,7 @@ namespace NitroSharp.Foundation.Platform
         protected NativeWindow _nativeWindow;
         private System.Drawing.Size _previousSize;
         private System.Drawing.Point _previousPosition;
-        private bool[] _mouseDown = new bool[13];
+        private readonly bool[] _mouseDown = new bool[13];
         protected InputSnapshot _currentSnapshot = new InputSnapshot();
 
         public override event EventHandler Resized;

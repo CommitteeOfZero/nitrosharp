@@ -13,11 +13,11 @@ namespace NitroSharp.Graphics
     {
         private readonly InterpolationMode DefInterpolationMode = InterpolationMode.Linear;
 
-        private DxRenderContext _rc;
+        private readonly DxRenderContext _rc;
         private readonly System.Drawing.Size _designResolution;
 
-        private Flood _floodEffect;
-        private Effect<FadeMaskEffect> _fadeMaskEffect;
+        private readonly Flood _floodEffect;
+        private readonly Effect<FadeMaskEffect> _fadeMaskEffect;
 
         private Texture2D _renderTarget;
         public Texture2D Target
@@ -119,8 +119,8 @@ namespace NitroSharp.Graphics
             var inputone = _fadeMaskEffect.GetInput(0);
             var inputtwo = _fadeMaskEffect.GetInput(1);
 
-            inputone.Dispose();
-            inputtwo.Dispose();
+            inputone?.Dispose();
+            inputtwo?.Dispose();
 
             _fadeMaskEffect.SetInput(0, null, true);
             _fadeMaskEffect.SetInput(1, null, true);

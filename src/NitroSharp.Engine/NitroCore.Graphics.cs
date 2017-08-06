@@ -10,15 +10,13 @@ namespace NitroSharp
 {
     public sealed partial class NitroCore
     {
-        private System.Drawing.Size _viewport;
-
         public override void AddRectangle(string entityName, int priority,
             NsCoordinate x, NsCoordinate y, int width, int height, NsColor color)
         {
             var rgba = new RgbaValueF(color.R / 255.0f, color.G / 255.0f, color.B / 255.0f, 1.0f);
             var rect = new Graphics.RectangleVisual(width, height, rgba, 1.0f, priority);
 
-            var entity = _entities.Create(entityName, replace: true)
+            _entities.Create(entityName, replace: true)
                 .WithComponent(rect)
                 .WithPosition(x, y);
         }

@@ -31,7 +31,6 @@ namespace NitroSharp.NsScript.Execution
         private readonly Queue<ThreadContext> _threadsToResume;
 
         private readonly Stopwatch _timer;
-        private uint _nextThreadId;
 
         public NsScriptInterpreter(BuiltInFunctionsBase builtinFunctions, Func<string, Stream> scriptLocator)
         {
@@ -55,9 +54,9 @@ namespace NitroSharp.NsScript.Execution
             Status = InterpreterStatus.Idle;
             _timer = Stopwatch.StartNew();
 
-            Globals["YuaVoice"] = new ConstantValue(false);
-            Globals["Pretextnumber"] = new ConstantValue("xxx");
-            Globals["SYSTEM_play_speed"] = new ConstantValue(3, isDelta: false);
+            Globals["YuaVoice"] = ConstantValue.False;
+            Globals["Pretextnumber"] = ConstantValue.Create("xxx");
+            Globals["SYSTEM_play_speed"] = ConstantValue.Create(3);
         }
 
         public VariableTable Globals { get; }
@@ -302,22 +301,22 @@ namespace NitroSharp.NsScript.Execution
         private void HandleParagraph(Paragraph paragraph)
         {
             var currentFrame = _currentThread.CurrentFrame;
-            currentFrame.Globals["SYSTEM_present_preprocess"] = new ConstantValue(paragraph.AssociatedBox);
-            currentFrame.Globals["SYSTEM_present_text"] = new ConstantValue(paragraph.Identifier);
+            currentFrame.Globals["SYSTEM_present_preprocess"] = ConstantValue.Create(paragraph.AssociatedBox);
+            currentFrame.Globals["SYSTEM_present_text"] = ConstantValue.Create(paragraph.Identifier);
 
-            currentFrame.Globals["boxtype"] = new ConstantValue(paragraph.AssociatedBox);
-            currentFrame.Globals["textnumber"] = new ConstantValue(paragraph.Identifier);
+            currentFrame.Globals["boxtype"] = ConstantValue.Create(paragraph.AssociatedBox);
+            currentFrame.Globals["textnumber"] = ConstantValue.Create(paragraph.Identifier);
 
-            currentFrame.Globals["Pretextnumber"] = new ConstantValue("xxx");
+            currentFrame.Globals["Pretextnumber"] = ConstantValue.Create("xxx");
 
-            currentFrame.Globals["YuaVoice"] = new ConstantValue(false);
+            currentFrame.Globals["YuaVoice"] = ConstantValue.False;
 
             _builtinsImpl.NotifyParagraphEntered(paragraph);
         }
 
         private void HandlePXmlString(PXmlString pxmlString)
         {
-            var arg = new ConstantValue(pxmlString.Text);
+            var arg = ConstantValue.Create(pxmlString.Text);
             ScheduleBuiltInCall("DisplayDialogue", new ArgumentStack(ImmutableArray.Create(arg)));
         }
 
@@ -364,7 +363,6 @@ namespace NitroSharp.NsScript.Execution
                     case OperationCategory.Unary:
                         operand = currentFrame.EvaluationStack.Pop();
                         var intermediateResult = _exprReducer.ApplyUnaryOperation(operand, operation);
-
                         currentFrame.EvaluationStack.Push(intermediateResult);
                         break;
 
@@ -375,7 +373,6 @@ namespace NitroSharp.NsScript.Execution
                         var leftReduced = _exprReducer.ReduceExpression(leftOperand);
                         var rightReduced = _exprReducer.ReduceExpression(rightOperand);
                         intermediateResult = _exprReducer.ApplyBinaryOperation(leftReduced, operation, rightReduced);
-
                         currentFrame.EvaluationStack.Push(intermediateResult);
                         break;
 

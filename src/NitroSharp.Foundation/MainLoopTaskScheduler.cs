@@ -8,7 +8,7 @@ namespace NitroSharp.Foundation
     public class MainLoopTaskScheduler : TaskScheduler
     {
         private readonly int _mainThreadId;
-        private BlockingCollection<Task> _tasks = new BlockingCollection<Task>();
+        private readonly BlockingCollection<Task> _tasks = new BlockingCollection<Task>();
 
         public MainLoopTaskScheduler(int mainThreadId)
         {

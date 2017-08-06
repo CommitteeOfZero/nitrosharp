@@ -1,6 +1,6 @@
 ﻿{
   "productName": "COWSHEAD_NOAH",
-  "activeProfile": "Chat",
+  "activeProfile": "Phantasm",
   "graphics.vsync": false,
   "window.title": "COWS;HEAD NOAH",
   "window.width": 1280,
@@ -25,6 +25,10 @@
       "startupScript": "boot-ch5.nss"
     },
 
+    "Kozupee": {
+      "startupScript": "boot-kozupee.nss"
+    },
+
     "Chat": {
       "startupScript": "boot-chat.nss"
     },
@@ -40,6 +44,14 @@
       "window.height": 600,
       "startupScript": "test.nss",
       "debug.contentRoot": "S:/ChaosContent/CH"
+    },
+
+    "Saya": {
+      "window.title": "Saya no Uta",
+      "window.width": 800,
+      "window.height": 600,
+      "startupScript": "boot.nss",
+      "debug.contentRoot": "S:/ChaosContent/Saya"
     }
   }
 }
