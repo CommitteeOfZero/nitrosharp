@@ -20,6 +20,7 @@ namespace NitroSharp.NsScript
         public static readonly ConstantValue One = new ConstantValueInteger(1, isDeltaValue: false);
         public static readonly ConstantValue DeltaOne = new ConstantValueInteger(1, isDeltaValue: true);
         public static readonly ConstantValue EmptyString = new ConstantValueString(string.Empty);
+        public static readonly ConstantValue AtSymbol = new ConstantValueString("@");
         public static readonly ConstantValue Null = new ConstantValueNull();
 
         public static ConstantValue Create(int value, bool isDeltaValue)
@@ -39,12 +40,20 @@ namespace NitroSharp.NsScript
 
         public static ConstantValue Create(string value)
         {
-            if (value == null)
+           switch (value)
             {
-                return Null;
-            }
+                case null:
+                    return Null;
 
-            return value == string.Empty ? EmptyString : new ConstantValueString(value);
+                case "":
+                    return EmptyString;
+
+                case "@":
+                    return AtSymbol;
+
+                default:
+                    return new ConstantValueString(value);
+            }
         }
 
         public static ConstantValue Create(bool value) => value ? True : False;
@@ -70,6 +79,9 @@ namespace NitroSharp.NsScript
 
                 case "":
                     return EmptyString;
+
+                case "@":
+                    return AtSymbol;
 
                 case int i:
                     return new ConstantValueInteger(i, isDeltaIntegerValue);
@@ -431,11 +443,11 @@ namespace NitroSharp.NsScript
                         return this;
 
                     case NsBuiltInType.String:
-                        return ConstantValue.Create(IntegerValue.ToString());
+                        return Create(IntegerValue.ToString());
 
                     case NsBuiltInType.Boolean:
                         Debug.Assert(IntegerValue == 0 || IntegerValue == 1);
-                        return ConstantValue.Create(IntegerValue == 1);
+                        return Create(IntegerValue == 1);
 
                     default:
                         throw InvalidConversion(Type, targetType);
@@ -448,7 +460,7 @@ namespace NitroSharp.NsScript
                 {
                     case ConstantValueInteger i:
                         bool isDelta = IsDeltaIntegerValue || i.IsDeltaIntegerValue;
-                        return ConstantValue.Create(IntegerValue + i.IntegerValue, isDelta);
+                        return Create(IntegerValue + i.IntegerValue, isDelta);
 
                     case ConstantValueString s:
                         if (RepresentsNumber(s.StringValue) || ReferenceEquals(s, EmptyString))
@@ -574,13 +586,13 @@ namespace NitroSharp.NsScript
 
             public override ConstantValue Add(ConstantValue valueToAdd)
             {
-                if (StringValue == "@")
+                if (StringValue == "@" && valueToAdd.Type == NsBuiltInType.Integer)
                 {
                     return ConvertTo(NsBuiltInType.Integer).Add(valueToAdd);
                 }
 
                 valueToAdd = valueToAdd.ConvertTo(NsBuiltInType.String);
-                return ConstantValue.Create(StringValue + valueToAdd.StringValue);
+                return Create(StringValue + valueToAdd.StringValue);
             }
         }
 

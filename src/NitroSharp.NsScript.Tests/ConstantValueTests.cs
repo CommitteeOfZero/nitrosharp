@@ -41,6 +41,12 @@ namespace NitroSharp.NsScript.Tests
         }
 
         [Fact]
+        public void CreateAtSymbolReturnsSameInstance()
+        {
+            Assert.True(ReferenceEquals(ConstantValue.Create("@"), ConstantValue.AtSymbol));
+        }
+
+        [Fact]
         public void CreateTrueReturnsSameInstance()
         {
             Assert.True(ReferenceEquals(ConstantValue.Create(true), ConstantValue.True));
@@ -76,7 +82,7 @@ namespace NitroSharp.NsScript.Tests
             var str1 = ConstantValue.Create("test");
             var str2 = ConstantValue.Create("TEST");
 
-            Assert.NotEqual(str1, str2);
+            Assert.NotEqual(str2, str1);
         }
 
         [Fact]
@@ -85,25 +91,25 @@ namespace NitroSharp.NsScript.Tests
             var integer = ConstantValue.Create(42);
             var stringRepresentation = ConstantValue.Create("42");
 
-            Assert.NotEqual(integer, stringRepresentation);
+            Assert.NotEqual(stringRepresentation, integer);
         }
 
         [Fact]
         public void ZeroEqualsFalse()
         {
-            Assert.Equal(ConstantValue.Zero, ConstantValue.False);
+            Assert.Equal(ConstantValue.False, ConstantValue.Zero);
         }
 
         [Fact]
         public void ZeroNotEqualsTrue()
         {
-            Assert.NotEqual(ConstantValue.Zero, ConstantValue.True);
+            Assert.NotEqual(ConstantValue.True, ConstantValue.Zero);
         }
 
         [Fact]
         public void NonZeroNotEqualsFalse()
         {
-            Assert.NotEqual(ConstantValue.Create(42), ConstantValue.False);
+            Assert.NotEqual(ConstantValue.False, ConstantValue.Create(42));
         }
 
         [Fact]
@@ -140,46 +146,58 @@ namespace NitroSharp.NsScript.Tests
         public void TestAdditionOnIntegers()
         {
             var result = ConstantValue.One + ConstantValue.One;
-            Assert.Equal(result, ConstantValue.Create(2));
+            Assert.Equal(ConstantValue.Create(2), result);
         }
 
         [Fact]
         public void TestAdditionOnStrings()
         {
             var result = ConstantValue.Create("foo") + ConstantValue.Create("bar");
-            Assert.Equal(result, ConstantValue.Create("foobar"));
+            Assert.Equal(ConstantValue.Create("foobar"), result);
         }
 
         [Fact]
         public void TestAdditionOnBool()
         {
             var result = ConstantValue.True + ConstantValue.True;
-            Assert.Equal(result, ConstantValue.Create(2));
+            Assert.Equal(ConstantValue.Create(2), result);
         }
 
         [Fact]
         public void TestAdditionOnIntegerAndEmptyString()
         {
             var integer = ConstantValue.Create(42);
-            Assert.Equal(integer + ConstantValue.EmptyString, integer);
+            var result = integer + ConstantValue.EmptyString;
+            Assert.Equal(integer, result);
         }
 
         [Fact]
         public void TestAdditionOnIntegerAndStringRepresentation()
         {
             var integer = ConstantValue.Create(42);
-            var str = ConstantValue.Create("5");
-
-            Assert.Equal(integer + str, integer);
+            var result = integer + ConstantValue.Create("5");
+            Assert.Equal(integer, result);
         }
 
         [Fact]
         public void TestAdditionOnIntegerAndString()
         {
-            var integer = ConstantValue.Create(42);
-            var str = ConstantValue.Create("foo");
+            var result = ConstantValue.Create(42) + ConstantValue.Create("foo");
+            Assert.Equal(ConstantValue.Create("42foo"), result);
+        }
 
-            Assert.Equal(integer + str, ConstantValue.Create("42foo"));
+        [Fact]
+        public void TestAdditionOnAtSymbolAndString()
+        {
+            var result = ConstantValue.Create("@") + ConstantValue.Create("foo");
+            Assert.Equal(ConstantValue.Create("@foo"), result);
+        }
+
+        [Fact]
+        public void TestAdditionOnAtSymbolAndInteger()
+        {
+            var result = ConstantValue.Create("@") + ConstantValue.Create(42);
+            Assert.Equal(ConstantValue.Create(42, isDeltaIntegerValue: true), result);
         }
     }
 }
