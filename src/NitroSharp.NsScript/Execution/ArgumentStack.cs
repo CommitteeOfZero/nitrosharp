@@ -40,7 +40,7 @@ namespace NitroSharp.NsScript.Execution
             return NsColor.FromRgb(value.As<int>());
         }
 
-        public NsEntityAction PopNssAction()
+        public NsEntityAction PopEntityAction()
         {
             string actionName = PopString();
             return PredefinedConstants.EntityAction(actionName);

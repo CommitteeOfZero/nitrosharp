@@ -32,4 +32,24 @@
         MultiplyAssignment,
         DivideAssignment
     }
+
+    public enum OperationCategory
+    {
+        None,
+        Unary,
+        Binary,
+        Assignment
+    }
+
+    public enum OperationPrecedence : uint
+    {
+        Expression = 0,
+        Assignment,
+        Logical,
+        Equality,
+        Relational,
+        Additive,
+        Multiplicative,
+        Unary
+    }
 }

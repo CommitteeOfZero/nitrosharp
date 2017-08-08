@@ -2,29 +2,29 @@
 
 namespace NitroSharp.NsScript
 {
-    public sealed class NssParseException : Exception
+    public sealed class NsParseException : Exception
     {
-        public NssParseException()
+        public NsParseException()
         {
         }
 
-        public NssParseException(string message)
+        public NsParseException(string message)
             : base(message)
         {
         }
 
-        public NssParseException(string message, Exception innerException)
+        public NsParseException(string message, Exception innerException)
             : base(message, innerException)
         {
         }
 
-        public NssParseException(string message, string scriptName, Exception innerException)
+        public NsParseException(string message, string scriptName, Exception innerException)
             : base(message, innerException)
         {
             ScriptName = scriptName;
         }
 
-        public NssParseException(string message, string scriptName)
+        public NsParseException(string message, string scriptName)
             : base(message)
         {
             ScriptName = scriptName;
@@ -33,29 +33,29 @@ namespace NitroSharp.NsScript
         public string ScriptName { get; }
     }
 
-    public sealed class NssRuntimeErrorException : Exception
+    public sealed class NsRuntimeErrorException : Exception
     {
-        public NssRuntimeErrorException()
+        public NsRuntimeErrorException()
         {
         }
 
-        public NssRuntimeErrorException(string message)
+        public NsRuntimeErrorException(string message)
             : base(message)
         {
         }
 
-        public NssRuntimeErrorException(string message, Exception innerException)
+        public NsRuntimeErrorException(string message, Exception innerException)
             : base(message, innerException)
         {
         }
 
-        public NssRuntimeErrorException(string message, string faultyModule, Exception innerException)
+        public NsRuntimeErrorException(string message, string faultyModule, Exception innerException)
             : base(message, innerException)
         {
             FaultyModule = faultyModule;
         }
 
-        public NssRuntimeErrorException(string message, string faultyModule)
+        public NsRuntimeErrorException(string message, string faultyModule)
             : base(message)
         {
             FaultyModule = faultyModule;

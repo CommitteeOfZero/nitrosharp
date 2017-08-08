@@ -123,7 +123,7 @@ namespace NitroSharp.NsScript.Execution
         private void Request(ArgumentStack args)
         {
             string entityName = PreprocessEntityName(args.PopString());
-            NsEntityAction action = args.PopNssAction();
+            NsEntityAction action = args.PopEntityAction();
 
             _builtinsImpl.Request(entityName, action);
         }

@@ -683,9 +683,9 @@ namespace NitroSharp.NsScript
             return StatementFactory.Paragraph(identifierString, associatedBox, statements.ToImmutable());
         }
 
-        private static NssParseException UnexpectedToken(string scriptName, string token)
+        private static NsParseException UnexpectedToken(string scriptName, string token)
         {
-            return new NssParseException($"Parsing '{scriptName}' failed: unexpected token '{token}'");
+            return new NsParseException($"Parsing '{scriptName}' failed: unexpected token '{token}'");
         }
     }
 }

@@ -420,11 +420,6 @@ namespace NitroSharp.NsScript
             return visitor.VisitConstantValue(this);
         }
 
-        private static Exception EqualityNotDefined(NsBuiltInType type1, NsBuiltInType type2)
-        {
-            return new InvalidOperationException($"Equality is not defined for the types '{type1}' and '{type2}'");
-        }
-
         private static Exception InvalidConversion(NsBuiltInType from, NsBuiltInType to)
         {
             throw new InvalidOperationException($"Conversion from type '{from}' to '{to}' is not valid.");
@@ -497,6 +492,7 @@ namespace NitroSharp.NsScript
                     case NsBuiltInType.String:
                         return BooleanValue ? Create("1") : Create("0");
 
+                    case NsBuiltInType.Null:
                     default:
                         throw InvalidConversion(Type, targetType);
                 }

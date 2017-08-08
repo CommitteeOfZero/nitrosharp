@@ -16,26 +16,13 @@ namespace NitroSharp.NsScript.Execution
 
         public ConstantValue this[string key]
         {
-            get
-            {
-                return Get(key);
-            }
-
-            set
-            {
-                _underlyingDictionary[key] = value;
-            }
+            get => Get(key);
+            set => _underlyingDictionary[key] = value;
         }
 
         private ConstantValue Get(string key)
         {
-            ConstantValue value;
-            if (TryGetValue(key, out value))
-            {
-                return value;
-            }
-
-            return ConstantValue.Null;
+            return TryGetValue(key, out var result) ? result : ConstantValue.Null;
         }
 
         public int Count => _underlyingDictionary.Count;
