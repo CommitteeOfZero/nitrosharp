@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Diagnostics;
 
 namespace NitroSharp.NsScript
 {
@@ -13,6 +12,8 @@ namespace NitroSharp.NsScript
 
     public abstract class ConstantValue : Expression, IEquatable<ConstantValue>
     {
+        private const string UseNullConstError = "ConstantValue.Null should be used instead of 'null'.";
+
         public static readonly ConstantValue True = new ConstantValueBoolean(true);
         public static readonly ConstantValue False = new ConstantValueBoolean(false);
         public static readonly ConstantValue Zero = new ConstantValueInteger(0, isDeltaValue: false);
@@ -43,7 +44,7 @@ namespace NitroSharp.NsScript
            switch (value)
             {
                 case null:
-                    return Null;
+                    return ConstantValue.Null;
 
                 case "":
                     return EmptyString;
@@ -69,7 +70,7 @@ namespace NitroSharp.NsScript
                     return isDeltaIntegerValue ? DeltaOne : One;
 
                 case null:
-                    return Null;
+                    return ConstantValue.Null;
 
                 case true:
                     return True;
@@ -109,7 +110,7 @@ namespace NitroSharp.NsScript
 
                 case NsBuiltInType.Null:
                 default:
-                    return Null;
+                    return ConstantValue.Null;
             }
         }
 
@@ -123,123 +124,191 @@ namespace NitroSharp.NsScript
         public override SyntaxNodeKind Kind => SyntaxNodeKind.ConstantValue;
 
         public abstract ConstantValue ConvertTo(NsBuiltInType targetType);
-        public abstract ConstantValue Add(ConstantValue valueToAdd);
 
-        public TResult As<TResult>()
+        protected virtual bool EqualsImpl(ConstantValue other)
         {
-            if (Type == NsBuiltInType.Integer && typeof(TResult) == typeof(bool))
+            return ReferenceEquals(this, other);
+        }
+
+        public bool Equals(ConstantValue other)
+        {
+            return EqualsStatic(this, other);
+        }
+
+        private static bool EqualsStatic(ConstantValue left, ConstantValue right)
+        {
+            if (ReferenceEquals(left, right))
             {
-                object b = (int)RawValue > 0;
-                return (TResult)b;
+                return true;
             }
 
-            return Type == NsBuiltInType.Null ? default(TResult) : (TResult)RawValue;
-        }
-
-        public abstract bool Equals(ConstantValue other);
-
-        public static ConstantValue operator ==(ConstantValue a, ConstantValue b)
-        {
-            if (ReferenceEquals(a, b))
+            if (ReferenceEquals(left, null) || ReferenceEquals(right, null))
             {
-                return True;
+                return false;
             }
 
-            if (ReferenceEquals(a, null) || ReferenceEquals(b, null))
+            // If just one of the two values is null, convert it to the other value's type.
+            if (left.Type == NsBuiltInType.Null)
             {
-                return False;
+                return left.ConvertTo(right.Type).EqualsImpl(right);
+            }
+            else if (right.Type == NsBuiltInType.Null)
+            {
+                return left.EqualsImpl(right.ConvertTo(left.Type));
             }
 
-            return Create(a.Equals(b));
-        }
-
-        public static ConstantValue operator !=(ConstantValue a, ConstantValue b)
-        {
-            if (ReferenceEquals(a, b))
+            // If one of the values is a string and the other one is an integer, both should be converted to the integer type.
+            if (left.Type == NsBuiltInType.String ^ right.Type == NsBuiltInType.String
+                && left.Type == NsBuiltInType.Integer ^ right.Type == NsBuiltInType.Integer)
             {
-                return False;
+                return left.ConvertTo(NsBuiltInType.Integer).EqualsImpl(right.ConvertTo(NsBuiltInType.Integer));
             }
 
-            if (ReferenceEquals(a, null) || ReferenceEquals(b, null))
+            return left.ConvertTo(left.Type).EqualsImpl(right.ConvertTo(left.Type))
+                || left.ConvertTo(right.Type).EqualsImpl(right.ConvertTo(right.Type));
+        }
+
+        private static ConstantValue OpAdditionStatic(ConstantValue left, ConstantValue right)
+        {
+            // null + null
+            if (left == ConstantValue.Null && right == ConstantValue.Null)
             {
-                return True;
+                return Zero;
             }
 
-            return Create(!a.Equals(b));
+            // int + int / bool + bool
+            if (left.Type != NsBuiltInType.String && right.Type != NsBuiltInType.String)
+            {
+                return Create(left.ConvertTo(NsBuiltInType.Integer).IntegerValue
+                    + right.ConvertTo(NsBuiltInType.Integer).IntegerValue);
+            }
+
+            // string + string
+            if (left.Type == NsBuiltInType.String && right.Type == NsBuiltInType.String)
+            {
+                return Create(left.ConvertTo(NsBuiltInType.String).StringValue
+                    + right.ConvertTo(NsBuiltInType.String).StringValue);
+            }
+
+            // Special case #1: the left value is "@" and the right value in an integer.
+            // Results in a so-called 'delta' integer value.
+            if (ReferenceEquals(left, AtSymbol) && right.Type == NsBuiltInType.Integer)
+            {
+                return Create(right.IntegerValue, isDeltaIntegerValue: true);
+            }
+
+            // Worst scenario: one of the values is a string and the other one is not.
+            ConstantValue stringValue, nonStringValue;
+            if (left.Type == NsBuiltInType.String)
+            {
+                stringValue = left;
+                nonStringValue = right;
+            }
+            else
+            {
+                stringValue = right;
+                nonStringValue = left;
+            }
+
+            // int + ""
+            if (stringValue == EmptyString)
+            {
+                return nonStringValue.ConvertTo(NsBuiltInType.Integer);
+            }
+
+            bool RepresentsNumber(ConstantValue v) => int.TryParse(v.StringValue, out _);
+            if (RepresentsNumber(stringValue))
+            {
+                // Special case #2: The string value represents a number, and the other value is likely an integer.
+                // So we have an expression like this: 42 + "3".
+                // According to the rules of the language, the "3" in this case should be converted to an integer.
+                // Spoiler: this conversion always results in a zero.
+                // So we can just return the nonStringValue (that would be 42 in the example below).
+
+                return nonStringValue.ConvertTo(NsBuiltInType.Integer);
+            }
+
+            // Now, if stringValue is just an arbitrary string, the result of the operation should also be a string.
+            return Create(left.ConvertTo(NsBuiltInType.String).StringValue
+                + right.ConvertTo(NsBuiltInType.String).StringValue);
         }
 
-        public static ConstantValue operator <(ConstantValue a, ConstantValue b)
+        public static ConstantValue operator ==(ConstantValue left, ConstantValue right)
         {
-            ThrowIfNullReference(a, b);
-            return Create(a.ConvertTo(NsBuiltInType.Integer).IntegerValue < b.ConvertTo(NsBuiltInType.Integer).IntegerValue);
+            return Create(EqualsStatic(left, right));
         }
 
-        public static ConstantValue operator <=(ConstantValue a, ConstantValue b)
+        public static ConstantValue operator !=(ConstantValue left, ConstantValue right)
         {
-            ThrowIfNullReference(a, b);
-            return Create(a.ConvertTo(NsBuiltInType.Integer).IntegerValue <= b.ConvertTo(NsBuiltInType.Integer).IntegerValue);
+            return Create(!EqualsStatic(left, right));
         }
 
-        public static ConstantValue operator >(ConstantValue a, ConstantValue b)
+        public static ConstantValue operator <(ConstantValue left, ConstantValue right)
         {
-            ThrowIfNullReference(a, b);
-            return Create(a.ConvertTo(NsBuiltInType.Integer).IntegerValue > b.ConvertTo(NsBuiltInType.Integer).IntegerValue);
+            ThrowIfNullReference(left, right);
+            return Create(left.ConvertTo(NsBuiltInType.Integer).IntegerValue < right.ConvertTo(NsBuiltInType.Integer).IntegerValue);
         }
 
-        public static ConstantValue operator >=(ConstantValue a, ConstantValue b)
+        public static ConstantValue operator <=(ConstantValue left, ConstantValue right)
         {
-            ThrowIfNullReference(a, b);
-            return Create(a.ConvertTo(NsBuiltInType.Integer).IntegerValue >= b.ConvertTo(NsBuiltInType.Integer).IntegerValue);
+            return left < right || left == right;
         }
 
-        public static ConstantValue operator +(ConstantValue a, ConstantValue b)
+        public static ConstantValue operator >(ConstantValue left, ConstantValue right)
         {
-            ThrowIfNullReference(a, b);
-            return a.Add(b);
+            ThrowIfNullReference(left, right);
+            return Create(left.ConvertTo(NsBuiltInType.Integer).IntegerValue > right.ConvertTo(NsBuiltInType.Integer).IntegerValue);
         }
 
-        public static ConstantValue operator -(ConstantValue a, ConstantValue b)
+        public static ConstantValue operator >=(ConstantValue left, ConstantValue right)
         {
-            ThrowIfNullReference(a, b);
+            return left > right || left == right;
+        }
 
-            a = a.ConvertTo(NsBuiltInType.Integer);
-            b = b.ConvertTo(NsBuiltInType.Integer);
-            int value = a.IntegerValue - b.IntegerValue;
-            bool isDelta = a.IsDeltaIntegerValue || b.IsDeltaIntegerValue;
+        public static ConstantValue operator +(ConstantValue left, ConstantValue right)
+        {
+            ThrowIfNullReference(left, right);
+            return OpAdditionStatic(left, right);
+        }
+
+        public static ConstantValue operator -(ConstantValue left, ConstantValue right)
+        {
+            ThrowIfNullReference(left, right);
+
+            left = left.ConvertTo(NsBuiltInType.Integer);
+            right = right.ConvertTo(NsBuiltInType.Integer);
+            int value = left.IntegerValue - right.IntegerValue;
+            bool isDelta = left.IsDeltaIntegerValue || right.IsDeltaIntegerValue;
             return new ConstantValueInteger(value, isDelta);
         }
 
-        public static ConstantValue operator *(ConstantValue a, ConstantValue b)
+        public static ConstantValue operator *(ConstantValue left, ConstantValue right)
         {
-            ThrowIfNullReference(a, b);
+            ThrowIfNullReference(left, right);
 
-            a = a.ConvertTo(NsBuiltInType.Integer);
-            b = b.ConvertTo(NsBuiltInType.Integer);
-            int value = a.IntegerValue * b.IntegerValue;
-            bool isDelta = a.IsDeltaIntegerValue || b.IsDeltaIntegerValue;
-            return new ConstantValueInteger(value, isDelta);
+            left = left.ConvertTo(NsBuiltInType.Integer);
+            right = right.ConvertTo(NsBuiltInType.Integer);
+            int value = left.IntegerValue * right.IntegerValue;
+            bool isDelta = left.IsDeltaIntegerValue || right.IsDeltaIntegerValue;
+            return Create(value, isDelta);
         }
 
-        public static ConstantValue operator /(ConstantValue a, ConstantValue b)
+        public static ConstantValue operator /(ConstantValue left, ConstantValue right)
         {
-            ThrowIfNullReference(a, b);
+            ThrowIfNullReference(left, right);
 
-            a = a.ConvertTo(NsBuiltInType.Integer);
-            b = b.ConvertTo(NsBuiltInType.Integer);
-            int value = a.IntegerValue / b.IntegerValue;
-            bool isDelta = a.IsDeltaIntegerValue || b.IsDeltaIntegerValue;
-            return new ConstantValueInteger(value, isDelta);
+            left = left.ConvertTo(NsBuiltInType.Integer);
+            right = right.ConvertTo(NsBuiltInType.Integer);
+            int value = left.IntegerValue / right.IntegerValue;
+            bool isDelta = left.IsDeltaIntegerValue || right.IsDeltaIntegerValue;
+            return Create(value, isDelta);
         }
 
         public static ConstantValue operator !(ConstantValue value)
         {
             ThrowIfNullReference(value);
-            if (value.Type == NsBuiltInType.String)
-            {
-                ThrowInvalidUnary("!", value);
-            }
-
-            return Create(!Convert.ToBoolean(value.RawValue));
+            value = value.ConvertTo(NsBuiltInType.Boolean);
+            return Create(!value.BooleanValue);
         }
 
         public static ConstantValue operator +(ConstantValue value)
@@ -252,79 +321,62 @@ namespace NitroSharp.NsScript
         {
             ThrowIfNullReference(value);
             value = value.ConvertTo(NsBuiltInType.Integer);
-            return new ConstantValueInteger(-value.IntegerValue, value.IsDeltaIntegerValue);
+            return Create(-value.IntegerValue, value.IsDeltaIntegerValue);
         }
 
         public static ConstantValue operator++(ConstantValue value)
         {
             ThrowIfNullReference(value);
             value = value.ConvertTo(NsBuiltInType.Integer);
-            return new ConstantValueInteger(value.IntegerValue + 1, value.IsDeltaIntegerValue);
+            return Create(value.IntegerValue + 1, value.IsDeltaIntegerValue);
         }
 
         public static ConstantValue operator --(ConstantValue value)
         {
             ThrowIfNullReference(value);
             value = value.ConvertTo(NsBuiltInType.Integer);
-            return new ConstantValueInteger(value.IntegerValue - 1, value.IsDeltaIntegerValue);
+            return Create(value.IntegerValue - 1, value.IsDeltaIntegerValue);
         }
 
         public static bool operator true(ConstantValue value)
         {
             ThrowIfNullReference(value);
-            switch (value.Type)
-            {
-                case NsBuiltInType.Boolean:
-                    return (bool)value.RawValue;
-
-                case NsBuiltInType.Integer:
-                    return (int)value.RawValue > 0;
-
-                case NsBuiltInType.String:
-                default:
-                    ThrowInvalidUnary("true", value);
-                    return false;
-            }
+            return value.ConvertTo(NsBuiltInType.Boolean).BooleanValue;
         }
 
         public static bool operator false(ConstantValue value)
         {
             ThrowIfNullReference(value);
-            switch (value.Type)
-            {
-                case NsBuiltInType.Boolean:
-                    return !(bool)value.RawValue;
-
-                case NsBuiltInType.Integer:
-                    return (int)value.RawValue == 0;
-
-                case NsBuiltInType.String:
-                default:
-                    ThrowInvalidUnary("false", value);
-                    return false;
-            }
+            return !value.ConvertTo(NsBuiltInType.Boolean).BooleanValue;
         }
 
-        public static ConstantValue operator |(ConstantValue a, ConstantValue b)
+        public static ConstantValue operator |(ConstantValue left, ConstantValue right)
         {
-            ThrowIfNullReference(a, b);
-            if (a.Type != NsBuiltInType.Boolean || b.Type != NsBuiltInType.Boolean)
-            {
-                ThrowInvalidBinary("|", a, b);
-            }
+            ThrowIfNullReference(left, right);
 
-            return Create((bool)a.RawValue | (bool)b.RawValue);
+            left = left.ConvertTo(NsBuiltInType.Boolean);
+            right = right.ConvertTo(NsBuiltInType.Boolean);
+            return Create(left.BooleanValue | right.BooleanValue);
         }
 
-        public static ConstantValue operator &(ConstantValue a, ConstantValue b)
+        public static ConstantValue operator &(ConstantValue left, ConstantValue right)
         {
-            ThrowIfNullReference(a, b);
-            if (a.Type != NsBuiltInType.Boolean || b.Type != NsBuiltInType.Boolean)
+            ThrowIfNullReference(left, right);
+
+            left = left.ConvertTo(NsBuiltInType.Boolean);
+            right = right.ConvertTo(NsBuiltInType.Boolean);
+            return Create(left.BooleanValue & right.BooleanValue);
+        }
+
+        public TResult As<TResult>()
+        {
+            if (Type == NsBuiltInType.Integer && typeof(TResult) == typeof(bool))
             {
-                ThrowInvalidBinary("&", a, b);
+                object b = (int)RawValue > 0;
+                return (TResult)b;
             }
 
-            return Create((bool)a.RawValue & (bool)b.RawValue);
+            return Type == NsBuiltInType.Null ? default(TResult) : (TResult)RawValue;
         }
 
         public override bool Equals(object obj)
@@ -341,7 +393,7 @@ namespace NitroSharp.NsScript
         {
             if (ReferenceEquals(value, null))
             {
-                throw new InvalidOperationException("ConstantValue.Null should be used instead of 'null'.");
+                throw new InvalidOperationException(UseNullConstError);
             }
         }
 
@@ -349,20 +401,8 @@ namespace NitroSharp.NsScript
         {
             if (ReferenceEquals(a, null) || ReferenceEquals(b, null))
             {
-                throw new InvalidOperationException("ConstantValue.Null should be used instead of 'null'.");
+                throw new InvalidOperationException(UseNullConstError);
             }
-        }
-
-        public static void ThrowInvalidUnary(string op, ConstantValue value)
-        {
-            string errorMessage = $"Operator '{op}' cannot be applied to an operand of type '{value.Type}'.";
-            throw new InvalidOperationException(errorMessage);
-        }
-
-        private static void ThrowInvalidBinary(string op, ConstantValue a, ConstantValue b)
-        {
-            string errorMessage = $"Operator '{op}' cannot be applied to operands of type '{a.Type}' and '{b.Type}'.";
-            throw new InvalidOperationException(errorMessage);
         }
 
         public override string ToString()
@@ -403,36 +443,9 @@ namespace NitroSharp.NsScript
             public override int IntegerValue { get; }
             public override bool IsDeltaIntegerValue { get; }
 
-            public override bool Equals(ConstantValue other)
+            protected override bool EqualsImpl(ConstantValue other)
             {
-                if (ReferenceEquals(other, null))
-                {
-                    return false;
-                }
-                if (ReferenceEquals(this, other))
-                {
-                    return true;
-                }
-
-                switch (other)
-                {
-                    case ConstantValueInteger i:
-                        return IntegerValue == i.IntegerValue && IsDeltaIntegerValue == i.IsDeltaIntegerValue;
-
-                    case ConstantValueBoolean b:
-                        // Ints greater than 1 are neither equal to true nor equal to false.
-                        return IntegerValue == 0 && b.BooleanValue == false || IntegerValue == 1 && b.BooleanValue == true;
-
-                    case ConstantValueString _:
-                        // An integer and a string can never be equal.
-                        return false;
-
-                    case ConstantValueNull @null:
-                        return @null.Equals(this);
-
-                    default:
-                        throw EqualityNotDefined(Type, other.Type);
-                }
+                return IntegerValue == other.IntegerValue && IsDeltaIntegerValue == other.IsDeltaIntegerValue;
             }
 
             public override ConstantValue ConvertTo(NsBuiltInType targetType)
@@ -446,35 +459,12 @@ namespace NitroSharp.NsScript
                         return Create(IntegerValue.ToString());
 
                     case NsBuiltInType.Boolean:
-                        Debug.Assert(IntegerValue == 0 || IntegerValue == 1);
-                        return Create(IntegerValue == 1);
+                        return Create(IntegerValue > 0);
 
+                    case NsBuiltInType.Null:
                     default:
                         throw InvalidConversion(Type, targetType);
                 }
-            }
-
-            public override ConstantValue Add(ConstantValue valueToAdd)
-            {
-                switch (valueToAdd)
-                {
-                    case ConstantValueInteger i:
-                        bool isDelta = IsDeltaIntegerValue || i.IsDeltaIntegerValue;
-                        return Create(IntegerValue + i.IntegerValue, isDelta);
-
-                    case ConstantValueString s:
-                        if (RepresentsNumber(s.StringValue) || ReferenceEquals(s, EmptyString))
-                        {
-                            return Add(s.ConvertTo(NsBuiltInType.Integer));
-                        }
-
-                        return ConvertTo(NsBuiltInType.String).Add(s);
-
-                    default:
-                        return Add(valueToAdd.ConvertTo(NsBuiltInType.Integer));
-                }
-
-                bool RepresentsNumber(string s) => int.TryParse(s, out _);
             }
         }
 
@@ -489,44 +479,27 @@ namespace NitroSharp.NsScript
             public override object RawValue => BooleanValue;
             public override bool BooleanValue { get; }
 
-            public override bool Equals(ConstantValue other)
+            protected override bool EqualsImpl(ConstantValue other)
             {
-                if (ReferenceEquals(other, null))
-                {
-                    return false;
-                }
-                if (ReferenceEquals(this, other))
-                {
-                    return true;
-                }
-
-                switch (other)
-                {
-                    case ConstantValueBoolean b:
-                        return BooleanValue == b.BooleanValue;
-
-                    case ConstantValueInteger i:
-                        return i.Equals(this);
-
-                    case ConstantValueString s:
-                        return false;
-
-                    case ConstantValueNull @null:
-                        return @null.Equals(this);
-
-                    default:
-                        throw EqualityNotDefined(Type, other.Type);
-                }
+                return BooleanValue == other.BooleanValue;
             }
 
             public override ConstantValue ConvertTo(NsBuiltInType targetType)
             {
-                throw new NotImplementedException();
-            }
+                switch (targetType)
+                {
+                    case NsBuiltInType.Boolean:
+                        return this;
 
-            public override ConstantValue Add(ConstantValue valueToAdd)
-            {
-                return ConvertTo(NsBuiltInType.Integer).Add(valueToAdd.ConvertTo(NsBuiltInType.Integer));
+                    case NsBuiltInType.Integer:
+                        return BooleanValue ? One : Zero;
+
+                    case NsBuiltInType.String:
+                        return BooleanValue ? Create("1") : Create("0");
+
+                    default:
+                        throw InvalidConversion(Type, targetType);
+                }
             }
         }
 
@@ -541,32 +514,9 @@ namespace NitroSharp.NsScript
             public override object RawValue => StringValue;
             public override string StringValue { get; }
 
-            public override bool Equals(ConstantValue other)
+            protected override bool EqualsImpl(ConstantValue other)
             {
-                if (ReferenceEquals(other, null))
-                {
-                    return false;
-                }
-                if (ReferenceEquals(this, other))
-                {
-                    return true;
-                }
-
-                switch (other)
-                {
-                    case ConstantValueString s:
-                        return StringValue == s.StringValue;
-
-                    case ConstantValueInteger _:
-                    case ConstantValueBoolean _:
-                        return false;
-
-                    case ConstantValueNull @null:
-                        return @null.Equals(this);
-
-                    default:
-                        throw EqualityNotDefined(Type, other.Type);
-                }
+                return StringValue.Equals(other.StringValue, StringComparison.Ordinal);
             }
 
             public override ConstantValue ConvertTo(NsBuiltInType targetType)
@@ -579,20 +529,13 @@ namespace NitroSharp.NsScript
                     case NsBuiltInType.Integer:
                         return StringValue == "@" ? DeltaZero : Zero;
 
+                    case NsBuiltInType.Boolean:
+                        return False;
+
+                    case NsBuiltInType.Null:
                     default:
                         throw InvalidConversion(Type, targetType);
                 }
-            }
-
-            public override ConstantValue Add(ConstantValue valueToAdd)
-            {
-                if (StringValue == "@" && valueToAdd.Type == NsBuiltInType.Integer)
-                {
-                    return ConvertTo(NsBuiltInType.Integer).Add(valueToAdd);
-                }
-
-                valueToAdd = valueToAdd.ConvertTo(NsBuiltInType.String);
-                return Create(StringValue + valueToAdd.StringValue);
             }
         }
 
@@ -604,21 +547,6 @@ namespace NitroSharp.NsScript
             public override ConstantValue ConvertTo(NsBuiltInType targetType)
             {
                 return Default(targetType);
-            }
-
-            public override ConstantValue Add(ConstantValue valueToAdd)
-            {
-                return valueToAdd.Add(this);
-            }
-
-            public override bool Equals(ConstantValue other)
-            {
-                if (other is ConstantValueString s)
-                {
-                    return s.StringValue.Equals("null", StringComparison.OrdinalIgnoreCase);
-                }
-
-                return ReferenceEquals(other, Default(other.Type));
             }
         }
     }

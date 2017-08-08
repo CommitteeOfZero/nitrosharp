@@ -54,8 +54,6 @@ namespace NitroSharp.NsScript.Execution
             Status = InterpreterStatus.Idle;
             _timer = Stopwatch.StartNew();
 
-            Globals["YuaVoice"] = ConstantValue.False;
-            Globals["Pretextnumber"] = ConstantValue.Create("xxx");
             Globals["SYSTEM_play_speed"] = ConstantValue.Create(3);
         }
 
@@ -82,7 +80,6 @@ namespace NitroSharp.NsScript.Execution
 
         public void CreateThread(string name, Module module, IJumpTarget entryPoint, bool start = true)
         {
-            //uint id = _nextThreadId++;
             var thread = new ThreadContext(name, this, module, entryPoint, Globals);
             _threads[name] = thread;
             _activeThreads.Add(thread);
@@ -306,10 +303,6 @@ namespace NitroSharp.NsScript.Execution
 
             currentFrame.Globals["boxtype"] = ConstantValue.Create(paragraph.AssociatedBox);
             currentFrame.Globals["textnumber"] = ConstantValue.Create(paragraph.Identifier);
-
-            currentFrame.Globals["Pretextnumber"] = ConstantValue.Create("xxx");
-
-            currentFrame.Globals["YuaVoice"] = ConstantValue.False;
 
             _builtinsImpl.NotifyParagraphEntered(paragraph);
         }

@@ -1,6 +1,6 @@
 ﻿{
   "productName": "COWSHEAD_NOAH",
-  "activeProfile": "Phantasm",
+  "activeProfile": "Ch171",
   "graphics.vsync": false,
   "window.title": "COWS;HEAD NOAH",
   "window.width": 1280,
@@ -11,6 +11,10 @@
   "profiles": {
     "Staking": {
       "startupScript": "boot-staking.nss"
+    },
+
+    "Ch171": {
+      "startupScript": "boot-ch171.nss"
     },
 
     "Phantasm": {
