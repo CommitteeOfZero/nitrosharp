@@ -1,7 +1,7 @@
 ﻿using System.IO;
 using System.Runtime.InteropServices;
 
-namespace NitroSharp
+namespace NitroSharp.Foundation
 {
     internal static class FFmpegLibraries
     {

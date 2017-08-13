@@ -49,8 +49,6 @@ namespace NitroSharp
             _configuration = configuration;
             _nssFolder = Path.Combine(configuration.ContentRoot, "nss");
             SetupLogging();
-
-            FFmpegLibraries.Locate();
         }
 
         protected override void SetParameters(GameParameters parameters)

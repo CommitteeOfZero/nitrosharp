@@ -20,6 +20,8 @@ namespace NitroSharp.Foundation
 
         protected Game()
         {
+            FFmpegLibraries.Locate();
+
             _gameTimer = new Stopwatch();
             Entities = new EntityManager(_gameTimer);
             Systems = new SystemManager(Entities);

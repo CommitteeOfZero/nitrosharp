@@ -1,13 +1,13 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>netstandard2.0;net46</TargetFrameworks>
+    <TargetFrameworks>netstandard2.0;net461</TargetFrameworks>
     <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <PropertyGroup>
     <DefineConstants Condition="'$(TargetFramework)' == 'netstandard2.0'">NETSTANDARD</DefineConstants>
-    <DefineConstants Condition="'$(TargetFramework)' == 'net46'">NETFX</DefineConstants>
+    <DefineConstants Condition="'$(TargetFramework)' == 'net461'">NETFX</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>
@@ -27,6 +27,10 @@
     <PackageReference Include="SharpDX.Direct3D11" Version="4.0.1" />
     <PackageReference Include="SharpDX.Mathematics" Version="4.0.1" />
     <PackageReference Include="SharpDX.XAudio2" Version="4.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="FFmpeg\**" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

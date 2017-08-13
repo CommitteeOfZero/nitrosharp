@@ -235,7 +235,5 @@ _Pvt_Extensions
 # FAKE - F# Make
 .fake/
 
-Content.zip
-/multithreading.diagsession
-/.idea/.idea.ProjectHoppy/.idea
-/.idea/.idea.ProjectHoppy
+/.idea/
+/.vscode/

@@ -6,9 +6,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Content Include="FFmpeg\**" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="Fonts\**" CopyToOutputDirectory="PreserveNewest" />
-    <Content Include="Shaders\**" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Shaders\**" Exclude="CompileShaders.cmd" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
   
   <ItemGroup>
