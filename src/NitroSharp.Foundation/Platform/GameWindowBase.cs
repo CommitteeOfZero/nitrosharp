@@ -7,7 +7,7 @@ using OpenTK.Input;
 using System;
 using System.Runtime.InteropServices;
 
-#if NETSTANDARD1_4
+#if NETSTANDARD
 using OtkPoint = OpenTK.Point;
 using OtkSize = OpenTK.Size;
 #else
@@ -71,7 +71,7 @@ namespace NitroSharp.Foundation.Platform
             set => _nativeWindow.CursorVisible = value;
         }
 
-#if NETSTANDARD1_4
+#if NETSTANDARD
         public override System.Drawing.Rectangle Bounds => OtkToNitroRectangle(_nativeWindow.Bounds);
 #else
         public override System.Drawing.Rectangle Bounds => _nativeWindow.Bounds;
@@ -202,7 +202,7 @@ namespace NitroSharp.Foundation.Platform
             Closed?.Invoke(this, e);
         }
 
-#if NETSTANDARD1_4
+#if NETSTANDARD
         private static System.Drawing.Rectangle OtkToNitroRectangle(OpenTK.Rectangle rect)
         {
             return new System.Drawing.Rectangle(rect.X, rect.Y, rect.Width, rect.Height);
@@ -308,7 +308,7 @@ namespace NitroSharp.Foundation.Platform
                         _nativeWindow.WindowState = OpenTK.WindowState.Normal;
                     }
 
-#if NETSTANDARD1_4
+#if NETSTANDARD
                     _previousSize = new System.Drawing.Size(_nativeWindow.Size.Width, _nativeWindow.Size.Height);
 #else
                     _previousSize = _nativeWindow.Size;

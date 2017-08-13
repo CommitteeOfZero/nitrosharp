@@ -1,7 +1,7 @@
 ﻿using System.IO;
 using System.Runtime.InteropServices;
 
-namespace CowsHead
+namespace NitroSharp
 {
     internal static class FFmpegLibraries
     {
@@ -23,7 +23,7 @@ namespace CowsHead
             }
         }
 
-        [DllImport("kernel32", SetLastError = true)]
+        [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Unicode)]
         private static extern bool SetDllDirectory(string lpPathName);
     }
 }

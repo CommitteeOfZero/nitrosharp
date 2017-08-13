@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>netcoreapp2.0;net461</TargetFrameworks>
+    <OutputType>Exe</OutputType>
+    <ApplicationIcon>hoppygirl_fA5_icon.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net461'">
+    <OutputType Condition="'$(Configuration)' == 'Release'">WinExe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="Game.json" CopyToOutputDirector="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Nitrosharp.Launcher\NitroSharp.Launcher.csproj" />
+  </ItemGroup>
+
+</Project>

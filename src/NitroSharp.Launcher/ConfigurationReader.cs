@@ -1,9 +1,8 @@
-﻿using NitroSharp;
-using Newtonsoft.Json.Linq;
+﻿using Newtonsoft.Json.Linq;
 using System.IO;
 using System.Text;
 
-namespace CowsHead
+namespace NitroSharp.Launcher
 {
     public static class ConfigurationReader
     {

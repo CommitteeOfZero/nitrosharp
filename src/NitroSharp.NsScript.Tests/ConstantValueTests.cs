@@ -155,18 +155,6 @@ namespace NitroSharp.NsScript.Tests
             Assert.NotEqual(str2, str1);
         }
 
-        //[Fact]
-        //public void NullEqualsNullLiteral()
-        //{
-        //    Assert.Equal(ConstantValue.Null, ConstantValue.Create("null"));
-        //}
-
-        //[Fact]
-        //public void EmptyStringEqualsNullLiteral()
-        //{
-        //    Assert.Equal(ConstantValue.Create("null"), ConstantValue.EmptyString);
-        //}
-
         [Fact]
         public void CompareIntegerToItsStringRepresentation()
         {
