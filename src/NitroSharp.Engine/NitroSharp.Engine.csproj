@@ -7,7 +7,7 @@
 
   <ItemGroup>
     <Content Include="Fonts\**" CopyToOutputDirectory="PreserveNewest" />
-    <Content Include="Shaders\**" Exclude="CompileShaders.cmd" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Shaders\**" Exclude="Shaders\CompileShaders.cmd" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
   
   <ItemGroup>
@@ -15,7 +15,6 @@
     <PackageReference Include="Serilog.Sinks.ColoredConsole" Version="3.0.1" />
     <PackageReference Include="Serilog.Sinks.File" Version="3.2.0" />
     <PackageReference Include="Serilog.Sinks.Async" Version="1.1.0" />
-    <PackageReference Include="System.ValueTuple" Version="4.4.0" />
   </ItemGroup>
   
   <ItemGroup>
