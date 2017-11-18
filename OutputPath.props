@@ -1,0 +1,17 @@
+<Project>
+  <PropertyGroup>
+    <OutputPath>$(RepoRootDirectory)\bin\$(Configuration)\</OutputPath>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(OutputType)' == 'Exe' OR '$(OutputType)' == 'WinExe'">
+    <OutputPath>$(OutputPath)Games\$(MSBuildProjectName)\</OutputPath>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(OutputType)' == 'Library' AND $(MSBuildProjectName.Contains('Tests'))">
+    <OutputPath>$(OutputPath)UnitTests\$(MSBuildProjectName)\</OutputPath>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(OutputType)' == 'Library' AND !$(MSBuildProjectName.Contains('Tests'))">
+    <OutputPath>$(OutputPath)Libraries\$(MSBuildProjectName)\</OutputPath>
+  </PropertyGroup>
+</Project>

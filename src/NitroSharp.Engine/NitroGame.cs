@@ -15,10 +15,8 @@ using System.Threading.Tasks;
 using System.Linq;
 using System.Diagnostics;
 using System.Text;
-using NitroSharp.Foundation.Platform;
 using Serilog;
 using Serilog.Events;
-using Serilog.Configuration;
 
 namespace NitroSharp
 {
@@ -189,7 +187,7 @@ namespace NitroSharp
             _perfStats.FlipTime = elapsed - _perfStats.Total;
             _perfStats.Total = elapsed;
 
-            if (_configuration.EnableDiagnostics && _perfStats.Total > 17)
+            if (_configuration.EnableDiagnostics && _perfStats.Total > 20)
             {
                 LogPerfStats();
             }
@@ -219,15 +217,6 @@ namespace NitroSharp
                 .WriteTo.ColoredConsole(LogEventLevel.Debug);
 
             _log = loggerFactory.CreateLogger();
-
-            //var loggerFactory = new LoggerFactory()
-            //    .AddDebug(minLevel: LogLevel.Debug)
-            //    .AddFile(_logPath, minimumLevel: _configuration.EnableDiagnostics ? LogLevel.Debug : LogLevel.Error);
-
-            //_globalEvents = loggerFactory.CreateLogger("Global");
-            //_interpreterEvents = loggerFactory.CreateLogger("NsScript");
-            //_perfEvents = loggerFactory.CreateLogger("Performance");
-            //_entitySystemEvents = loggerFactory.CreateLogger("EntitySystem");
 
             //Entities.EntityRemoved += (o, e) => _entityLog.LogInformation($"Removed entity '{e.Name}'");
         }

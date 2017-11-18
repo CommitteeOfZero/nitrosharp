@@ -5,6 +5,8 @@
     <RootNamespace>NitroSharp</RootNamespace>
   </PropertyGroup>
 
+  <Import Project="..\..\OutputPath.props" />
+
   <ItemGroup>
     <Content Include="Fonts\**" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="Shaders\**" Exclude="Shaders\CompileShaders.cmd" CopyToOutputDirectory="PreserveNewest" />

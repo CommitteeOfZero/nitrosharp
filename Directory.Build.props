@@ -1,0 +1,9 @@
+<Project>
+  <PropertyGroup>
+    <RepoRootDirectory>$(MSBuildThisFileDirectory)</RepoRootDirectory>
+    <BaseIntermediateOutputPath>$(RepoRootDirectory)bin\obj\$(MSBuildProjectName)\</BaseIntermediateOutputPath>
+    <Authors>SomeAnonDev</Authors>
+    <Company>Committee of Zero</Company>
+    <PackageVersion>0.1</PackageVersion>
+  </PropertyGroup>
+</Project>
