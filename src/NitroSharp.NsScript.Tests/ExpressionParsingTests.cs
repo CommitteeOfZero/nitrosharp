@@ -1,4 +1,5 @@
-﻿using Xunit;
+﻿using NitroSharp.NsScript.Syntax;
+using Xunit;
 
 namespace NitroSharp.NsScript.Tests
 {
@@ -7,14 +8,14 @@ namespace NitroSharp.NsScript.Tests
         [Fact]
         public void ParseFunctionCall()
         {
-            string text = "WaitKey(10000);";
-            var call = NsScript.ParseExpression(text) as FunctionCall;
+            string text = "WaitKey(10000)";
+            var call = Parsing.ParseExpression(text) as FunctionCall;
             Assert.NotNull(call);
             Assert.Equal(SyntaxNodeKind.FunctionCall, call.Kind);
-            Assert.Equal("WaitKey", call.TargetFunctionName.FullName);
-            Assert.Equal(call.TargetFunctionName.FullName, call.TargetFunctionName.SimplifiedName);
-            Assert.Equal(SigilKind.None, call.TargetFunctionName.Sigil);
-            Assert.Equal(1, call.Arguments.Length);
+            Assert.Equal("WaitKey", call.Target.OriginalName);
+            Assert.Equal(call.Target.OriginalName, call.Target.Value);
+            Assert.Equal(SigilKind.None, call.Target.Sigil);
+            Assert.Single(call.Arguments);
 
             Assert.Equal(text, call.ToString());
         }
@@ -23,7 +24,7 @@ namespace NitroSharp.NsScript.Tests
         public void ParseDeltaExpression()
         {
             string text = "@100";
-            var deltaExpr = NsScript.ParseExpression(text) as DeltaExpression;
+            var deltaExpr = Parsing.ParseExpression(text) as DeltaExpression;
 
             Assert.NotNull(deltaExpr);
             Assert.Equal(SyntaxNodeKind.DeltaExpression, deltaExpr.Kind);
@@ -35,12 +36,12 @@ namespace NitroSharp.NsScript.Tests
         public void ParseNumericLiteralExpression()
         {
             string literal = "42";
-            var expr = NsScript.ParseExpression(literal) as Literal;
+            var expr = Parsing.ParseExpression(literal) as Literal;
 
             Assert.NotNull(expr);
             Assert.Equal(SyntaxNodeKind.Literal, expr.Kind);
             Assert.Equal(literal, expr.Text);
-            Assert.Equal(42, expr.Value.RawValue);
+            Assert.Equal(42.0d, expr.Value.DoubleValue);
             Assert.Equal(literal, expr.ToString());
         }
 
@@ -48,259 +49,204 @@ namespace NitroSharp.NsScript.Tests
         public void ParseStringLiteralExpression()
         {
             string literal = "\"stuff\"";
-            var expr = NsScript.ParseExpression(literal) as Literal;
+            var expr = Parsing.ParseExpression(literal) as Literal;
 
             Assert.NotNull(expr);
             Assert.Equal(SyntaxNodeKind.Literal, expr.Kind);
             Assert.Equal(literal, expr.Text);
-            Assert.Equal("stuff", expr.Value.RawValue);
+            Assert.Equal("stuff", expr.Value.StringValue);
             Assert.Equal(literal, expr.ToString());
         }
 
         [Fact]
-        public void ParseNamedConstant()
+        public void ParseIdentifierWithoutSigil()
         {
-            string text = "center";
-            var constant = NsScript.ParseExpression(text) as NamedConstant;
+            string text = "foo";
+            var identifier = Parsing.ParseExpression(text) as Identifier;
 
-            Assert.NotNull(constant);
-            Assert.Equal(SyntaxNodeKind.NamedConstant, constant.Kind);
-            Assert.Equal(text, constant.Name.FullName);
-            Assert.Equal(text, constant.ToString());
+            Assert.NotNull(identifier);
+            Assert.Equal(text, identifier.OriginalName);
+            Assert.Equal(text, identifier.Value);
+            Assert.Equal(SigilKind.None, identifier.Sigil);
+            Assert.Equal(text, identifier.ToString());
         }
 
         [Fact]
-        public void ParseVariableWithDollarSigil()
+        public void ParseIdentifierWithDollarSigil()
         {
-            string text = "$testVar";
-            var variable = NsScript.ParseExpression(text) as Variable;
+            string text = "$foo";
+            var identifier = Parsing.ParseExpression(text) as Identifier;
 
-            Assert.NotNull(variable);
-            Assert.Equal(SyntaxNodeKind.Variable, variable.Kind);
-            Assert.Equal(text, variable.Name.FullName);
-            Assert.Equal("testVar", variable.Name.SimplifiedName);
-            Assert.Equal(SigilKind.Dollar, variable.Name.Sigil);
-            Assert.Equal(text, variable.ToString());
+            Assert.NotNull(identifier);
+            Assert.Equal(text, identifier.OriginalName);
+            Assert.Equal("foo", identifier.Value);
+            Assert.Equal(SigilKind.Dollar, identifier.Sigil);
+            Assert.True(identifier.IsVariable);
+            Assert.False(identifier.IsQuouted);
+            Assert.Equal(text, identifier.ToString());
         }
 
         [Fact]
-        public void ParseVariableWithHashSigil()
+        public void ParseIdentifierWithHashSigil()
         {
-            string text = "#testVar";
-            var variable = NsScript.ParseExpression(text) as Variable;
+            string text = "#foo";
+            var identifier = Parsing.ParseExpression(text) as Identifier;
 
-            Assert.NotNull(variable);
-            Assert.Equal(SyntaxNodeKind.Variable, variable.Kind);
-            Assert.Equal(text, variable.Name.FullName);
-            Assert.Equal("testVar", variable.Name.SimplifiedName);
-            Assert.Equal(SigilKind.Hash, variable.Name.Sigil);
-            Assert.Equal(text, variable.ToString());
+            Assert.NotNull(identifier);
+            Assert.Equal(text, identifier.OriginalName);
+            Assert.Equal("foo", identifier.Value);
+            Assert.Equal(SigilKind.Hash, identifier.Sigil);
+            Assert.True(identifier.IsVariable);
+            Assert.False(identifier.IsQuouted);
+            Assert.Equal(text, identifier.ToString());
         }
 
         [Fact]
-        public void ParseVariableInQuotes()
+        public void ParseQuotedIdentifierWithoutSigil()
         {
-            string text = "\"$testVar\"";
-            var variable = NsScript.ParseExpression(text) as Variable;
+            // Normally, "foo" would be considered a string literal.
+            // However, if there's a string parameter named "foo" in the current scope,
+            // every instance of "foo" in this scope is treated as an identifier.
 
-            Assert.NotNull(variable);
-            Assert.Equal(SyntaxNodeKind.Variable, variable.Kind);
-            Assert.Equal(text, variable.Name.FullName);
-            Assert.Equal("testVar", variable.Name.SimplifiedName);
-            Assert.Equal(SigilKind.Dollar, variable.Name.Sigil);
-            Assert.Equal(text, variable.ToString());
+            string text = "function Test(\"foo\") { SomeMethod(\"foo\"); }";
+            var root = Parsing.ParseScript(text);
+            var function = (Function)root.Members[0];
+
+            var invocation = (function.Body.Statements[0] as ExpressionStatement)?.Expression as FunctionCall;
+            Assert.NotNull(invocation);
+            var arg = invocation.Arguments[0] as Identifier;
+            Assert.NotNull(arg);
+            Assert.Equal("\"foo\"", arg.OriginalName);
+            Assert.Equal("foo", arg.Value);
+            Assert.Equal(SigilKind.None, arg.Sigil);
+            Assert.True(arg.IsQuouted);
+        }
+
+        [Fact]
+        public void ParseQuotedIdentifierWithSigil()
+        {
+            string text = "\"$foo\"";
+            var identifier = Parsing.ParseExpression(text) as Identifier;
+
+            Assert.NotNull(identifier);
+            Assert.Equal(text, identifier.OriginalName);
+            Assert.Equal("foo", identifier.Value);
+            Assert.Equal(SigilKind.Dollar, identifier.Sigil);
+            Assert.True(identifier.IsVariable);
+            Assert.True(identifier.IsQuouted);
+            Assert.Equal(text, identifier.ToString());
+        }
+
+        [Fact]
+        public void ParseQuotedUppercaseNullKeyword()
+        {
+            string text = "\"NULL\"";
+            var expr = Parsing.ParseExpression(text) as Literal;
+
+            Assert.NotNull(expr);
+            Assert.Equal("null", expr.Text);
+            // Assert.Null(expr.Value);
         }
 
         [Fact]
         public void ParseUnaryOperators()
         {
-            TestUnary(OperationKind.LogicalNegation);
-            TestUnary(OperationKind.PostfixDecrement);
-            TestUnary(OperationKind.PostfixIncrement);
-            TestUnary(OperationKind.UnaryMinus);
-            TestUnary(OperationKind.UnaryPlus);
+            TestUnary(UnaryOperatorKind.Not);
+            TestUnary(UnaryOperatorKind.PostfixDecrement);
+            TestUnary(UnaryOperatorKind.PostfixIncrement);
+            TestUnary(UnaryOperatorKind.Minus);
+            TestUnary(UnaryOperatorKind.Plus);
         }
 
         [Fact]
         public void ParseBinaryOperators()
         {
-            TestBinary(OperationKind.Addition);
-            TestBinary(OperationKind.Division);
-            TestBinary(OperationKind.Equal);
-            TestBinary(OperationKind.GreaterThan);
-            TestBinary(OperationKind.GreaterThanOrEqual);
-            TestBinary(OperationKind.LessThan);
-            TestBinary(OperationKind.LessThanOrEqual);
-            TestBinary(OperationKind.LogicalAnd);
-            TestBinary(OperationKind.LogicalOr);
-            TestBinary(OperationKind.Multiplication);
-            TestBinary(OperationKind.NotEqual);
-            TestBinary(OperationKind.Subtraction);
+            TestBinary(BinaryOperatorKind.Add);
+            TestBinary(BinaryOperatorKind.Divide);
+            TestBinary(BinaryOperatorKind.Equals);
+            TestBinary(BinaryOperatorKind.GreaterThan);
+            TestBinary(BinaryOperatorKind.GreaterThanOrEqual);
+            TestBinary(BinaryOperatorKind.LessThan);
+            TestBinary(BinaryOperatorKind.LessThanOrEqual);
+            TestBinary(BinaryOperatorKind.And);
+            TestBinary(BinaryOperatorKind.Or);
+            TestBinary(BinaryOperatorKind.Multiply);
+            TestBinary(BinaryOperatorKind.NotEquals);
+            TestBinary(BinaryOperatorKind.Subtract);
+            TestBinary(BinaryOperatorKind.Remainder);
         }
 
         [Fact]
         public void ParseAssignmentOperators()
         {
-            TestAssignment(OperationKind.AddAssignment);
-            TestAssignment(OperationKind.DivideAssignment);
-            TestAssignment(OperationKind.MultiplyAssignment);
-            TestAssignment(OperationKind.SimpleAssignment);
-            TestAssignment(OperationKind.SubtractAssignment);
+            TestAssignment(AssignmentOperatorKind.AddAssign);
+            TestAssignment(AssignmentOperatorKind.DivideAssign);
+            TestAssignment(AssignmentOperatorKind.MultiplyAssign);
+            TestAssignment(AssignmentOperatorKind.Assign);
+            TestAssignment(AssignmentOperatorKind.SubtractAssign);
         }
 
-        private void TestUnary(OperationKind kind)
+        private void TestUnary(UnaryOperatorKind kind)
         {
             string text;
-            if (OperationInfo.IsPrefixUnary(kind))
+            if (OperatorInfo.IsPrefixUnary(kind))
             {
-                text = OperationInfo.GetText(kind) + "$a";
+                text = OperatorInfo.GetText(kind) + "$a";
             }
             else
             {
-                text = "$a" + OperationInfo.GetText(kind);
+                text = "$a" + OperatorInfo.GetText(kind);
             }
 
-            var expr = NsScript.ParseExpression(text) as UnaryExpression;
+            var expr = Parsing.ParseExpression(text) as UnaryExpression;
 
             Assert.NotNull(expr);
             Assert.Equal(SyntaxNodeKind.UnaryExpression, expr.Kind);
-            Assert.Equal(kind, expr.OperationKind);
+            Assert.Equal(kind, expr.OperatorKind);
 
-            var operand = expr.Operand as Variable;
+            var operand = expr.Operand as Identifier;
             Assert.NotNull(operand);
-            Assert.Equal("$a", operand.Name.FullName);
+            Assert.Equal("$a", operand.OriginalName);
 
             Assert.Equal(text, expr.ToString());
         }
 
-        private void TestBinary(OperationKind kind)
+        private void TestBinary(BinaryOperatorKind kind)
         {
-            string text = "$a " + OperationInfo.GetText(kind) + " $b";
-            var expr = NsScript.ParseExpression(text) as BinaryExpression;
+            string text = "$a " + OperatorInfo.GetText(kind) + " $b";
+            var expr = Parsing.ParseExpression(text) as BinaryExpression;
 
             Assert.NotNull(expr);
             Assert.Equal(SyntaxNodeKind.BinaryExpression, expr.Kind);
-            Assert.Equal(kind, expr.OperationKind);
+            Assert.Equal(kind, expr.OperatorKind);
 
-            var left = expr.Left as Variable;
+            var left = expr.Left as Identifier;
             Assert.NotNull(left);
-            Assert.Equal("$a", left.Name.FullName);
+            Assert.Equal("$a", left.OriginalName);
 
-            var right = expr.Right as Variable;
+            var right = expr.Right as Identifier;
             Assert.NotNull(right);
-            Assert.Equal("$b", right.Name.FullName);
+            Assert.Equal("$b", right.OriginalName);
 
             Assert.Equal(text, expr.ToString());
         }
 
-        private void TestAssignment(OperationKind kind)
+        private void TestAssignment(AssignmentOperatorKind kind)
         {
-            string text = "$a " + OperationInfo.GetText(kind) + " 42";
-            var expr = NsScript.ParseExpression(text) as AssignmentExpression;
+            string text = "$a " + OperatorInfo.GetText(kind) + " 42";
+            var expr = Parsing.ParseExpression(text) as AssignmentExpression;
 
             Assert.NotNull(expr);
             Assert.Equal(SyntaxNodeKind.AssignmentExpression, expr.Kind);
-            Assert.Equal(kind, expr.OperationKind);
+            Assert.Equal(kind, expr.OperatorKind);
 
-            var target = expr.Target as Variable;
+            var target = expr.Target as Identifier;
             Assert.NotNull(target);
-            Assert.Equal("$a", target.Name.FullName);
+            Assert.Equal("$a", target.OriginalName);
 
             var value = expr.Value as Literal;
             Assert.NotNull(value);
-            Assert.Equal(42, value.Value.RawValue);
-        }
-
-        [Fact]
-        public void TestVariableReference()
-        {
-            string text = "SomeMethod($a);";
-            var invocation = NsScript.ParseExpression(text) as FunctionCall;
-
-            var arg = invocation.Arguments[0] as Variable;
-            Assert.NotNull(arg);
-            Assert.Equal(SyntaxNodeKind.Variable, arg.Kind);
-        }
-
-        [Fact]
-        public void TestIntParameterReference()
-        {
-            string text = "function Test(intParam) { SomeFunction(intParam); }";
-            var root = NsScript.ParseScript(text);
-            var function = root.Functions[0];
-
-            var invocation = (function.Body.Statements[0] as ExpressionStatement)?.Expression as FunctionCall;
-            Assert.NotNull(invocation);
-
-            var arg = invocation.Arguments[0] as ParameterReference;
-            Assert.NotNull(arg);
-            Assert.Equal(SyntaxNodeKind.Parameter, arg.Kind);
-            Assert.Equal("intParam", arg.ParameterName.FullName);
-            Assert.Equal(arg.ParameterName.FullName, arg.ParameterName.SimplifiedName);
-            Assert.Equal(SigilKind.None, arg.ParameterName.Sigil);
-        }
-
-        [Fact]
-        public void TestIntParameterReferenceWithSigil()
-        {
-            TestIntParameterReferenceWithSigilImpl("$intParam", "intParam", SigilKind.Dollar);
-            TestIntParameterReferenceWithSigilImpl("#intParam", "intParam", SigilKind.Hash);
-        }
-
-        private void TestIntParameterReferenceWithSigilImpl(string fullName, string simplifiedName, SigilKind sigil)
-        {
-            string text = $"function Test({fullName}) {{ SomeFunction({fullName}); }}";
-            var root = NsScript.ParseScript(text);
-            var function = root.Functions[0];
-
-            var invocation = (function.Body.Statements[0] as ExpressionStatement)?.Expression as FunctionCall;
-            Assert.NotNull(invocation);
-            var arg = invocation.Arguments[0] as ParameterReference;
-            Assert.NotNull(arg);
-            Assert.Equal(SyntaxNodeKind.Parameter, arg.Kind);
-            Assert.Equal(fullName, arg.ParameterName.FullName);
-            Assert.Equal(simplifiedName, arg.ParameterName.SimplifiedName);
-            Assert.Equal(sigil, arg.ParameterName.Sigil);
-        }
-
-        [Fact]
-        public void TestStringParameterReference()
-        {
-            string text = "function Test(\"stringParam\") { SomeMethod(\"stringParam\"); }";
-            var root = NsScript.ParseScript(text);
-            var function = root.Functions[0];
-
-            var invocation = (function.Body.Statements[0] as ExpressionStatement)?.Expression as FunctionCall;
-            Assert.NotNull(invocation);
-            var arg = invocation.Arguments[0] as ParameterReference;
-            Assert.NotNull(arg);
-            Assert.Equal(SyntaxNodeKind.Parameter, arg.Kind);
-            Assert.Equal("\"stringParam\"", arg.ParameterName.FullName);
-            Assert.Equal("stringParam", arg.ParameterName.SimplifiedName);
-            Assert.Equal(SigilKind.None, arg.ParameterName.Sigil);
-        }
-
-        [Fact]
-        public void TestStringParameterReferenceWithSigil()
-        {
-            TestStringParameterReferenceWithSigilImpl("\"$stringParam\"", "stringParam", SigilKind.Dollar);
-            TestStringParameterReferenceWithSigilImpl("\"#stringParam\"", "stringParam", SigilKind.Hash);
-        }
-
-        private void TestStringParameterReferenceWithSigilImpl(string fullName, string simplifiedName, SigilKind sigil)
-        {
-            string text = $"function Test({fullName}) {{ SomeMethod({fullName}); }}";
-            var root = NsScript.ParseScript(text);
-            var function = root.Functions[0];
-
-            var invocation = (function.Body.Statements[0] as ExpressionStatement)?.Expression as FunctionCall;
-            Assert.NotNull(invocation);
-            var arg = invocation.Arguments[0] as ParameterReference;
-            Assert.NotNull(arg);
-            Assert.Equal(SyntaxNodeKind.Parameter, arg.Kind);
-            Assert.Equal(fullName, arg.ParameterName.FullName);
-            Assert.Equal(simplifiedName, arg.ParameterName.SimplifiedName);
-            Assert.Equal(sigil, arg.ParameterName.Sigil);
+            Assert.Equal(42.0d, value.Value.DoubleValue);
         }
     }
 }

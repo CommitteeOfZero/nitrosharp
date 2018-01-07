@@ -1,4 +1,5 @@
-﻿using NitroSharp.NsScript.PXml;
+﻿using NitroSharp.NsScript;
+using NitroSharp.NsScript.Syntax.PXml;
 using System.Text;
 
 namespace NitroSharp.Dialogue
@@ -9,7 +10,7 @@ namespace NitroSharp.Dialogue
 
         public static DialogueLine Parse(string pxmlString)
         {
-            var root = PXmlTree.ParseString(pxmlString);
+            var root = Parsing.ParsePXmlString(pxmlString);
             return s_treeFlattener.Flatten(root);
         }
 

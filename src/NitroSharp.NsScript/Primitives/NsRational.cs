@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace NitroSharp.NsScript
+﻿namespace NitroSharp.NsScript
 {
     public struct NsRational
     {

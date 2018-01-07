@@ -1,5 +1,4 @@
 ﻿using NitroSharp.Graphics;
-using NitroSharp.NsScript.Execution;
 using NitroSharp.Foundation;
 using System;
 using NitroSharp.Foundation.Platform;
@@ -23,10 +22,10 @@ namespace NitroSharp
 
             if (ShouldAdvance() && !TrySkipAnimation())
             {
-                if (_nitroCore.Interpreter.Status != InterpreterStatus.Suspended
-                    && (_nitroCore.MainThread.SleepTimeout == TimeSpan.MaxValue || _nitroCore.WaitingForInput))
+                if (
+                    (_nitroCore.MainThread.SleepTimeout == TimeSpan.MaxValue || _nitroCore.WaitingForInput))
                 {
-                    _nitroCore.MainThread.Resume();
+                    _nitroCore.Interpreter.ResumeThread(_nitroCore.MainThread);
                     _nitroCore.WaitingForInput = false;
                 }
             }

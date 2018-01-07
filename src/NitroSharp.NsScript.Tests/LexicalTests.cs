@@ -1,4 +1,5 @@
-﻿using Xunit;
+﻿using NitroSharp.NsScript.Syntax;
+using Xunit;
 
 namespace NitroSharp.NsScript.Tests
 {
@@ -23,13 +24,61 @@ namespace NitroSharp.NsScript.Tests
         }
 
         [Fact]
+        public void LexUppercaseNullKeyword()
+        {
+            LexNullKeyword("NULL");
+        }
+
+        [Fact]
+        public void LexQuotedNullKeyword()
+        {
+            LexNullKeyword("\"null\"");
+        }
+
+        private void LexNullKeyword(string text)
+        {
+            var token = LexToken(text);
+
+            Assert.Equal(SyntaxTokenKind.NullKeyword, token.Kind);
+            Assert.Null(token.Value);
+        }
+
+        [Fact]
+        public void LexTrueKeyword()
+        {
+            var token = LexToken("true");
+
+            Assert.Equal(SyntaxTokenKind.TrueKeyword, token.Kind);
+            Assert.True((bool)token.Value);
+        }
+
+        [Fact]
+        public void LexFalseKeyword()
+        {
+            var token = LexToken("false");
+
+            Assert.Equal(SyntaxTokenKind.FalseKeyword, token.Kind);
+            Assert.False((bool)token.Value);
+        }
+
+        [Fact]
         public void LexNumericLiteral()
         {
             string text = "42";
             var token = LexToken(text);
 
             Assert.Equal(SyntaxTokenKind.NumericLiteralToken, token.Kind);
-            Assert.Equal(42, token.Value);
+            Assert.Equal(42.0d, token.Value);
+        }
+
+        [Fact]
+        public void LexFloatNumericLiteral()
+        {
+            string text = "4.2";
+            var token = LexToken(text);
+
+            Assert.Equal(SyntaxTokenKind.NumericLiteralToken, token.Kind);
+            Assert.Equal(4.2d, token.Value);
         }
 
         [Fact]
@@ -141,19 +190,9 @@ namespace NitroSharp.NsScript.Tests
         }
 
         [Fact]
-        public void LexIncludeDirective()
-        {
-            string text = "#include \"test.nss\"";
-            var token = LexToken(text);
-
-            Assert.Equal(SyntaxTokenKind.IncludeDirective, token.Kind);
-            Assert.Equal(text, token.Text);
-        }
-
-        [Fact]
         public void LexParagraphStartTag()
         {
-            string text = "<PRE>";
+            string text = "<PRE box69>";
             var token = LexToken(text);
 
             Assert.Equal(SyntaxTokenKind.ParagraphStartTag, token.Kind);
@@ -164,7 +203,7 @@ namespace NitroSharp.NsScript.Tests
         public void LexParagraphEndTag()
         {
             string text = "</PRE>";
-            var token = LexToken(text, NsScriptLexer.Context.Paragraph);
+            var token = LexToken(text, LexingMode.Paragraph);
 
             Assert.Equal(SyntaxTokenKind.ParagraphEndTag, token.Kind);
             Assert.Equal(text, token.Text);
@@ -174,7 +213,7 @@ namespace NitroSharp.NsScript.Tests
         public void LexSimplePXmlString()
         {
             string text = "sample text";
-            var token = LexToken(text, NsScriptLexer.Context.Paragraph);
+            var token = LexToken(text, LexingMode.Paragraph);
 
             Assert.Equal(SyntaxTokenKind.PXmlString, token.Kind);
             Assert.Equal(text, token.Text);
@@ -184,7 +223,7 @@ namespace NitroSharp.NsScript.Tests
         public void LexPXmlLineSeparator()
         {
             string text = "\r\n";
-            var token = LexToken(text, NsScriptLexer.Context.Paragraph);
+            var token = LexToken(text, LexingMode.Paragraph);
 
             Assert.Equal(SyntaxTokenKind.PXmlLineSeparator, token.Kind);
             Assert.Equal(text, token.Text);
@@ -194,16 +233,16 @@ namespace NitroSharp.NsScript.Tests
         public void LexPXmlStringWithVerbatimText()
         {
             string text = "<PRE>scene</PRE>";
-            var token = LexToken(text, NsScriptLexer.Context.Paragraph);
+            var token = LexToken(text, LexingMode.Paragraph);
 
             Assert.Equal(SyntaxTokenKind.PXmlString, token.Kind);
             Assert.Equal(text, token.Text);
         }
 
-        private SyntaxToken LexToken(string text, NsScriptLexer.Context context = NsScriptLexer.Context.Code)
+        private SyntaxToken LexToken(string text, LexingMode mode = LexingMode.Normal)
         {
             SyntaxToken result = null;
-            foreach (var token in NsScript.ParseTokens(text, context))
+            foreach (var token in Parsing.ParseTokens(text, mode))
             {
                 if (result == null)
                 {

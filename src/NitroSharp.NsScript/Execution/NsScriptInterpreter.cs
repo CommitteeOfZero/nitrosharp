@@ -1,161 +1,99 @@
-﻿using System;
+﻿using NitroSharp.NsScript.Symbols;
+using NitroSharp.NsScript.Syntax;
+using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
+using System.Threading;
 
 namespace NitroSharp.NsScript.Execution
 {
-    public enum InterpreterStatus
+    public sealed class NsScriptInterpreter
     {
-        Active,
-        Suspended,
-        Idle
-    }
+        private enum ThreadAction
+        {
+            Create,
+            Terminate,
+            Suspend,
+            Resume
+        }
 
-    public class NsScriptInterpreter
-    {
-        private readonly ExpressionFlattener _exprFlattener;
-        private readonly ExpressionReducer _exprReducer;
+        private readonly SourceFileManager _sourceFileManager;
+        private readonly EngineImplementationBase _engineImplementation;
+        private readonly ExpressionEvaluator _expressionEvaluator;
 
-        private readonly BuiltInFunctionsBase _builtinsImpl;
-        private readonly BuiltInCallDispatcher _builtInCallDispatcher;
-        private readonly Queue<BuiltInFunctionCall> _pendingBuiltInCalls;
-
-        private ThreadContext _currentThread;
         private readonly Dictionary<string, ThreadContext> _threads;
+        private readonly ConcurrentQueue<(ThreadContext thread, ThreadAction action, TimeSpan)> _pendingThreadActions;
         private readonly HashSet<ThreadContext> _activeThreads;
-        private readonly HashSet<ThreadContext> _suspendedThreads;
-        private readonly Queue<ThreadContext> _idleThreads;
-        private readonly Queue<ThreadContext> _threadsToResume;
-
+        private ThreadContext _currentThread;
+        private SourceFileReference _currentModule;
         private readonly Stopwatch _timer;
 
-        public NsScriptInterpreter(BuiltInFunctionsBase builtinFunctions, Func<string, Stream> scriptLocator)
+        public NsScriptInterpreter(Func<SourceFileReference, Stream> sourceFileLocator, EngineImplementationBase engineImplementation)
         {
-            _exprFlattener = new ExpressionFlattener();
-            _exprReducer = new ExpressionReducer();
-
-            builtinFunctions.SetInterpreter(this);
-            _builtinsImpl = builtinFunctions;
-            _builtInCallDispatcher = new BuiltInCallDispatcher(_builtinsImpl);
-            _pendingBuiltInCalls = new Queue<BuiltInFunctionCall>();
+            _sourceFileManager = new SourceFileManager(sourceFileLocator);
+            engineImplementation.SetInterpreter(this);
+            _engineImplementation = engineImplementation;
 
             _threads = new Dictionary<string, ThreadContext>();
             _activeThreads = new HashSet<ThreadContext>();
-            _suspendedThreads = new HashSet<ThreadContext>();
-            _idleThreads = new Queue<ThreadContext>();
-            _threadsToResume = new Queue<ThreadContext>();
+            _pendingThreadActions = new ConcurrentQueue<(ThreadContext thread, ThreadAction action, TimeSpan)>();
 
-            Session = new NsScriptSession(scriptLocator);
-            Globals = new VariableTable();
+            Globals = new MemorySpace();
+            _expressionEvaluator = new ExpressionEvaluator(Globals, _engineImplementation);
 
-            Status = InterpreterStatus.Idle;
             _timer = Stopwatch.StartNew();
-
-            Globals["SYSTEM_play_speed"] = ConstantValue.Create(3);
         }
 
-        public VariableTable Globals { get; }
-        public NsScriptSession Session { get; }
+        private Frame CurrentFrame => _currentThread.CurrentFrame;
+
+        public MemorySpace Globals { get; }
         public IEnumerable<ThreadContext> Threads => _threads.Values;
-        public InterpreterStatus Status { get; private set; }
 
-        public ThreadContext CurrentThread
+        public bool TryGetThread(string name, out ThreadContext thread) => _threads.TryGetValue(name, out thread);
+        public void CreateThread(string name, string symbolName, bool start = true) => CreateThread(name, _currentModule, symbolName, start);
+        public void CreateThread(string name, SourceFileReference moduleName, string symbolName, bool start = true)
         {
-            get
+            _currentModule = moduleName;
+            Debug.WriteLine($"Creating thread '{symbolName}'");
+            var sourceSymbol = _sourceFileManager.Resolve(moduleName);
+            var member = sourceSymbol.LookupMember(symbolName);
+            var thread = new ThreadContext(name, member);
+
+            if (_threads.Count == 0)
             {
-                //if (Status == InterpreterStatus.Idle)
-                //{
-                //    throw new InvalidOperationException("The interpreter is not running.");
-                //}
-
-                return _currentThread;
+                _engineImplementation.MainThread = thread;
             }
-        }
-
-        public event EventHandler<Function> EnteredFunction;
-        public event EventHandler<BuiltInFunctionCall> BuiltInCallScheduled;
-
-        public void CreateThread(string name, Module module, IJumpTarget entryPoint, bool start = true)
-        {
-            var thread = new ThreadContext(name, this, module, entryPoint, Globals);
-            _threads[name] = thread;
-            _activeThreads.Add(thread);
-
-            if (_threads.Count == 1)
-            {
-                _builtinsImpl.MainThread = thread;
-            }
-
             if (!start)
             {
-                thread.Suspend();
+                CommitSuspendThread(thread);
             }
+
+            _pendingThreadActions.Enqueue((thread, ThreadAction.Create, TimeSpan.Zero));
         }
 
-        public void CreateThread(string name, Module module, string functionName, bool start = true)
+        public void Run(CancellationToken cancellationToken)
         {
-            CreateThread(name, module, module.GetFunction(functionName), start);
-        }
-
-        public void CreateThread(string name, Module module, bool start = true) => CreateThread(name, module, module.MainChapter, start);
-        public void CreateThread(string name, string moduleName, bool start = true) => CreateThread(name, Session.GetModule(moduleName), start);
-
-        public TimeSpan Run(TimeSpan timeQuota)
-        {
-            if (Status == InterpreterStatus.Suspended)
+            var time = _timer.Elapsed;
+            while (_threads.Count > 0 || _pendingThreadActions.Count > 0)
             {
-                return TimeSpan.Zero;
-            }
-
-            if (_suspendedThreads.Count > 0)
-            {
-                ProcessSuspendedThreads();
-            }
-
-            if (_activeThreads.Count == 0)
-            {
-                return TimeSpan.Zero;
-            }
-
-            var startTime = _timer.Elapsed;
-            while (_threads.Count > 0)
-            {
-                while (_pendingBuiltInCalls.Count > 0)
+                ProcessPendingThreadActions();
+                foreach (var thread in _threads.Values)
                 {
-                    if (IsApproachingQuota(_timer.Elapsed - startTime, timeQuota))
+                    cancellationToken.ThrowIfCancellationRequested();
+                    if (thread.IsSuspended)
                     {
-                        goto exit;
-                    }
-
-                    var call = _pendingBuiltInCalls.Dequeue();
-                    DispatchBuiltInCall(call);
-
-                    if (Status == InterpreterStatus.Suspended)
-                    {
-                        goto exit;
-                    }
-                }
-
-                while (_idleThreads.Count > 0)
-                {
-                    var thread = _idleThreads.Dequeue();
-                    _activeThreads.Remove(thread);
-                    _threads.Remove(thread.Name);
-                }
-
-                if (_activeThreads.Count == 0)
-                {
-                    break;
-                }
-
-                foreach (var thread in _activeThreads)
-                {
-                    if (IsApproachingQuota(_timer.Elapsed - startTime, timeQuota))
-                    {
-                        goto exit;
+                        var delta = time - thread.SuspensionTime;
+                        if (delta >= thread.SleepTimeout)
+                        {
+                            CommitResumeThread(thread);
+                        }
+                        else
+                        {
+                            continue;
+                        }
                     }
 
                     _currentThread = thread;
@@ -163,382 +101,272 @@ namespace NitroSharp.NsScript.Execution
 
                     if (thread.DoneExecuting)
                     {
-                        _idleThreads.Enqueue(thread);
+                        TerminateThread(thread);
                     }
                 }
-            }
 
-            exit:
-            return _timer.Elapsed - startTime;
-        }
-
-        private void DispatchBuiltInCall(BuiltInFunctionCall call)
-        {
-            BuiltInCallScheduled?.Invoke(this, call);
-
-            var currentThread = call.CallingThread;
-            _builtinsImpl.CurrentThread = currentThread;
-            _builtInCallDispatcher.DispatchBuiltInCall(call);
-            if (_builtInCallDispatcher.Result != null)
-            {
-                var result = _builtInCallDispatcher.Result;
-                currentThread.CurrentFrame.EvaluationStack.Push(result);
+                if (_activeThreads.Count == 0)
+                {
+                    return;
+                }
             }
         }
 
         private void Tick()
         {
-            Frame prevFrame = _currentThread.CurrentFrame;
-            if (_currentThread.CurrentNode == null)
-            {
-                _currentThread.Advance();
-            }
-            ExecuteNode(_currentThread.CurrentNode);
-            if (prevFrame == _currentThread.CurrentFrame && prevFrame.OperationStack.Count == 0)
-            {
-                _currentThread.Advance();
-            }
+            ExecuteStatement(_currentThread.PC);
         }
 
-        private void ExecuteNode(SyntaxNode node)
+        private ConstantValue Evaluate(Expression expression) => Evaluate(expression, CurrentFrame.Arguments);
+        private ConstantValue Evaluate(Expression expression, MemorySpace locals)
         {
-            switch (node.Kind)
+            return _expressionEvaluator.Evaluate(expression, locals);
+        }
+
+        private void Advance()
+        {
+            _currentThread.Advance();
+        }
+
+        internal void PushContinuation(ImmutableArray<Statement> statements, bool advance = false)
+        {
+            CurrentFrame.ContinueWith(statements, advance);
+        }
+
+        internal void PushContinuation(Statement statement, bool advance = false)
+        {
+            CurrentFrame.ContinueWith(statement, advance);
+        }
+
+        private void ExecuteStatement(Statement statement)
+        {
+            switch (statement.Kind)
             {
                 case SyntaxNodeKind.Block:
-                    HandleBlock(node as Block);
+                    var block = (Block)statement;
+                    PushContinuation(block.Statements, advance: true);
                     break;
 
                 case SyntaxNodeKind.ExpressionStatement:
-                    HandleExpressionStatement(node as ExpressionStatement);
+                    ExpressionStatement((ExpressionStatement)statement);
+                    break;
+
+                case SyntaxNodeKind.CallChapterStatement:
+                    CallChapter((CallChapterStatement)statement);
                     break;
 
                 case SyntaxNodeKind.IfStatement:
-                    HandleIf(node as IfStatement);
+                    If((IfStatement)statement);
                     break;
 
                 case SyntaxNodeKind.WhileStatement:
-                    HandleWhile(node as WhileStatement);
+                    While((WhileStatement)statement);
+                    break;
+
+                case SyntaxNodeKind.BreakStatement:
+                    CurrentFrame.Break();
                     break;
 
                 case SyntaxNodeKind.ReturnStatement:
-                    HandleReturn();
+                    _currentThread.PopFrame();
                     break;
 
                 case SyntaxNodeKind.Paragraph:
-                    HandleParagraph(node as Paragraph);
+                    VisitParagraph((Paragraph)statement);
                     break;
 
                 case SyntaxNodeKind.PXmlString:
-                    HandlePXmlString(node as PXmlString);
+                    var node = (PXmlString)statement;
+                    _engineImplementation.CurrentThread = _currentThread;
+                    _engineImplementation.DisplayDialogue(node.Text);
+                    Advance();
                     break;
 
                 case SyntaxNodeKind.PXmlLineSeparator:
-                    HandlePXmlLineSeparator();
+                    _engineImplementation.CurrentThread = _currentThread;
+                    _engineImplementation.WaitForInput();
+                    Advance();
                     break;
-            }
-        }
 
-        private void HandleBlock(Block block)
-        {
-            var frame = CurrentThread.CurrentFrame;
-            _currentThread.PushContinuation(frame.Function, block.Statements);
-        }
-
-        private void HandleExpressionStatement(ExpressionStatement expressionStatement)
-        {
-            var expr = expressionStatement.Expression;
-
-            // Fast path for simple function calls.
-            if (expr is FunctionCall fc)
-            {
-                PrepareFunctionCall(fc);
-                return;
-            }
-
-            Eval(expr, out var _);
-        }
-
-        private void HandleIf(IfStatement ifStatement)
-        {
-            if (Eval(ifStatement.Condition, out var condition))
-            {
-                var frame = CurrentThread.CurrentFrame;
-                if (condition == ConstantValue.True)
-                {
-                    _currentThread.PushContinuation(frame.Function, ifStatement.IfTrueStatement);
-                }
-                else if (ifStatement.IfFalseStatement != null)
-                {
-                    _currentThread.PushContinuation(frame.Function, ifStatement.IfFalseStatement);
-                }
-            }
-        }
-
-        private void HandleWhile(WhileStatement whileStatement)
-        {
-            if (Eval(whileStatement.Condition, out var condition))
-            {
-                if (condition.RawValue is 1)
-                {
-                    var frame = CurrentThread.CurrentFrame;
-                    _currentThread.PushContinuation(frame.Function, whileStatement.Body, advance: false);
-                }
-            }
-        }
-
-        private void HandleReturn()
-        {
-            var function = CurrentThread.CurrentFrame.Function;
-            while (CurrentThread.CurrentFrame.Function == function)
-            {
-                CurrentThread._frameStack.Pop();
-            }
-        }
-
-        private void HandleParagraph(Paragraph paragraph)
-        {
-            var currentFrame = _currentThread.CurrentFrame;
-            currentFrame.Globals["SYSTEM_present_preprocess"] = ConstantValue.Create(paragraph.AssociatedBox);
-            currentFrame.Globals["SYSTEM_present_text"] = ConstantValue.Create(paragraph.Identifier);
-
-            currentFrame.Globals["boxtype"] = ConstantValue.Create(paragraph.AssociatedBox);
-            currentFrame.Globals["textnumber"] = ConstantValue.Create(paragraph.Identifier);
-
-            _builtinsImpl.NotifyParagraphEntered(paragraph);
-        }
-
-        private void HandlePXmlString(PXmlString pxmlString)
-        {
-            var arg = ConstantValue.Create(pxmlString.Text);
-            ScheduleBuiltInCall("DisplayDialogue", new ArgumentStack(ImmutableArray.Create(arg)));
-        }
-
-        private void HandlePXmlLineSeparator()
-        {
-            ScheduleBuiltInCall(nameof(HandlePXmlLineSeparator), new ArgumentStack(Enumerable.Empty<ConstantValue>()));
-        }
-
-        private ConstantValue EvaluateTrivial(Expression expression)
-        {
-            _exprReducer.CurrentFrame = _currentThread.CurrentFrame;
-            return _exprReducer.ReduceExpression(expression);
-        }
-
-        private bool Eval(Expression expression, out ConstantValue result)
-        {
-            var currentFrame = _currentThread.CurrentFrame;
-            if (currentFrame.CurrentExpression != expression)
-            {
-                _exprFlattener.Flatten(expression, currentFrame.OperandStack, currentFrame.OperationStack);
-                currentFrame.CurrentExpression = expression;
-            }
-
-            _exprReducer.CurrentFrame = _currentThread.CurrentFrame;
-            while (currentFrame.OperationStack.Count > 0)
-            {
-                var operation = currentFrame.OperationStack.Pop();
-                var opCategory = OperationInfo.GetCategory(operation);
-                switch (opCategory)
-                {
-                    case OperationCategory.None:
-                        var operand = currentFrame.OperandStack.Pop();
-
-                        if (operand is FunctionCall call)
-                        {
-                            PrepareFunctionCall(call);
-                            result = default(ConstantValue);
-                            return false;
-                        }
-
-                        currentFrame.EvaluationStack.Push(operand);
-                        continue;
-
-                    case OperationCategory.Unary:
-                        operand = currentFrame.EvaluationStack.Pop();
-                        var intermediateResult = _exprReducer.ApplyUnaryOperation(operand, operation);
-                        currentFrame.EvaluationStack.Push(intermediateResult);
-                        break;
-
-                    case OperationCategory.Binary:
-                        var leftOperand = currentFrame.EvaluationStack.Pop();
-                        var rightOperand = currentFrame.EvaluationStack.Pop();
-
-                        var leftReduced = _exprReducer.ReduceExpression(leftOperand);
-                        var rightReduced = _exprReducer.ReduceExpression(rightOperand);
-                        intermediateResult = _exprReducer.ApplyBinaryOperation(leftReduced, operation, rightReduced);
-                        currentFrame.EvaluationStack.Push(intermediateResult);
-                        break;
-
-                    case OperationCategory.Assignment:
-                        var targetVariable = currentFrame.EvaluationStack.Pop() as Variable;
-                        ConstantValue operandReduced = _exprReducer.ReduceExpression(currentFrame.EvaluationStack.Pop());
-
-                        var newValue = AssignVariable(targetVariable, operation, operandReduced);
-                        currentFrame.EvaluationStack.Push(newValue);
-                        break;
-                }
-            }
-
-            result = _exprReducer.ReduceExpression(currentFrame.EvaluationStack.Pop());
-            Debug.Assert(currentFrame.EvaluationStack.Count == 0, "Evaluation stack should be empty.");
-            currentFrame.CurrentExpression = null;
-            return true;
-        }
-
-        private ConstantValue AssignVariable(Variable variable, OperationKind assignmentOp, ConstantValue operand)
-        {
-            var globals = _currentThread.CurrentFrame.Globals;
-            string name = variable.Name.SimplifiedName;
-            switch (assignmentOp)
-            {
-                case OperationKind.SimpleAssignment:
                 default:
-                    globals[name] = operand;
-                    break;
-
-                case OperationKind.AddAssignment:
-                    globals[name] += operand;
-                    break;
-
-                case OperationKind.SubtractAssignment:
-                    globals[name] -= operand;
-                    break;
-
-                case OperationKind.MultiplyAssignment:
-                    globals[name] *= operand;
-                    break;
-
-                case OperationKind.DivideAssignment:
-                    globals[name] /= operand;
+                    Advance();
                     break;
             }
-
-            return globals[name];
         }
 
-        private void PrepareFunctionCall(FunctionCall functionCall)
+        private void CallChapter(CallChapterStatement statement)
         {
-            string name = functionCall.TargetFunctionName.SimplifiedName;
-            if (!_currentThread.CurrentModule.TryGetFunction(name, out Function target))
+            var module = _sourceFileManager.Resolve(statement.ModuleName.Value);
+            var target = (ChapterSymbol)module.LookupMember("main");
+            var stackFrame = new Frame(target);
+
+            CurrentFrame.Advance();
+            _currentThread.PushFrame(stackFrame);
+        }
+
+        private void ExpressionStatement(ExpressionStatement expressionStatement)
+        {
+            if (expressionStatement.Expression is FunctionCall functionCall
+                && functionCall.Target.Symbol is FunctionSymbol target)
             {
-                ScheduleBuiltInCall(functionCall);
+                PrepareFunctionCall(functionCall, target);
                 return;
             }
 
-            var arguments = new VariableTable();
-            for (int i = 0; i < target.Parameters.Length; i++)
+            _engineImplementation.CurrentThread = _currentThread;
+            var locals = CurrentFrame.Arguments;
+            Advance();
+            Evaluate(expressionStatement.Expression, locals);
+        }
+
+        private void PrepareFunctionCall(FunctionCall functionCall, FunctionSymbol target)
+        {
+            var stackFrame = new Frame(target);
+
+            Debug.WriteLine($"Entering function '{target.Name}'");
+
+            var declaration = (Function)target.Declaration;
+            var parameters = declaration.Parameters;
+            var arguments = functionCall.Arguments;
+
+            for (int i = 0; i < parameters.Length; i++)
             {
-                ParameterReference param = target.Parameters[i];
-                ConstantValue arg = EvaluateTrivial(functionCall.Arguments[i]);
-                arguments[param.ParameterName.SimplifiedName] = arg;
-            }
+                var parameter = parameters[i];
+                bool argSpecified = i < arguments.Length;
 
-            _currentThread.PushContinuation(target, target.Body, arguments);
-            EnteredFunction?.Invoke(this, target);
-        }
+                ConstantValue value = argSpecified ? Evaluate(functionCall.Arguments[i]) : ConstantValue.Null;
+                stackFrame.SetArgument(parameter.Name.Value, value);
 
-        private void ScheduleBuiltInCall(FunctionCall functionCall)
-        {
-            string name = functionCall.TargetFunctionName.SimplifiedName;
-            var args = new ArgumentStack(functionCall.Arguments.Select(EvaluateTrivial).Reverse());
-            ScheduleBuiltInCall(name, args);
-        }
-
-        private void ScheduleBuiltInCall(string functionName, ArgumentStack arguments)
-        {
-            _pendingBuiltInCalls.Enqueue(new BuiltInFunctionCall(functionName, arguments, _currentThread));
-        }
-
-        private void ProcessSuspendedThreads()
-        {
-            var time = _timer.Elapsed;
-            foreach (var suspendedThread in _suspendedThreads)
-            {
-                var delta = time - suspendedThread.SuspensionTime;
-                if (delta > suspendedThread.SleepTimeout)
+                if (parameter.Name.Sigil == SigilKind.Dollar)
                 {
-                    _threadsToResume.Enqueue(suspendedThread);
+                    Globals.Set(parameter.Name.Value, value);
                 }
             }
 
-            while (_threadsToResume.Count > 0)
+            CurrentFrame.Advance();
+            _currentThread.PushFrame(stackFrame);
+        }
+
+        private void If(IfStatement ifStatement)
+        {
+            var condition = Evaluate(ifStatement.Condition);
+            if (condition)
             {
-                ResumeThread(_threadsToResume.Dequeue());
+                PushContinuation(ifStatement.IfTrueStatement, advance: true);
+            }
+            else if (ifStatement.IfFalseStatement != null)
+            {
+                PushContinuation(ifStatement.IfFalseStatement, advance: true);
+            }
+            else
+            {
+                Advance();
             }
         }
 
-        private static bool IsApproachingQuota(TimeSpan elapsedTime, TimeSpan timeQuota)
+        private void While(WhileStatement whileStatement)
         {
-            if (elapsedTime >= timeQuota)
+            if (Evaluate(whileStatement.Condition))
             {
-                return true;
+                PushContinuation(whileStatement.Body);
             }
-
-            return (timeQuota - elapsedTime).TotalMilliseconds <= 2.0f;
+            else
+            {
+                Advance();
+            }
         }
 
-        public void Suspend()
+        private void VisitParagraph(Paragraph paragraph)
         {
-            Status = InterpreterStatus.Suspended;
+            Globals.Set("SYSTEM_present_preprocess", ConstantValue.Create(paragraph.AssociatedBox));
+            Globals.Set("SYSTEM_present_text", ConstantValue.Create(paragraph.Identifier));
+
+            _engineImplementation.NotifyParagraphEntered(paragraph);
+            Advance();
         }
 
-        public void Resume()
+        private void ProcessPendingThreadActions()
         {
-            Status = InterpreterStatus.Active;
+            while (_pendingThreadActions.TryDequeue(out var tuple))
+            {
+                (ThreadContext thread, ThreadAction action, TimeSpan suspensionTimeout) = tuple;
+                switch (tuple.action)
+                {
+                    case ThreadAction.Create:
+                        _threads[thread.Name] = thread;
+                        if (!thread.IsSuspended)
+                        {
+                            _activeThreads.Add(thread);
+                        }
+                        break;
+
+                    case ThreadAction.Terminate:
+                        CommitTerminateThread(thread);
+                        break;
+
+                    case ThreadAction.Suspend:
+                        CommitSuspendThread(thread, suspensionTimeout);
+                        break;
+
+                    case ThreadAction.Resume:
+                        CommitResumeThread(thread);
+                        break;
+                }
+
+            }
         }
 
-        public void SuspendThread(ThreadContext thread, TimeSpan timeout)
-        {
-            SuspendThreadCore(thread, timeout);
-        }
-
-        public bool TryGetThread(string name, out ThreadContext thread) => _threads.TryGetValue(name, out thread);
-
-        public void SuspendThread(ThreadContext thread)
-        {
-            SuspendThread(thread, TimeSpan.MaxValue);
-        }
-
-        internal void SuspendThreadCore(ThreadContext thread, TimeSpan timeout)
-        {
-            thread.SuspensionTime = _timer.Elapsed;
-            thread.SleepTimeout = timeout;
-            thread.Suspended = true;
-
-            _activeThreads.Remove(thread);
-            _suspendedThreads.Add(thread);
-        }
- 
         public void ResumeThread(ThreadContext thread)
         {
-            ResumeThreadCore(thread);
+            _pendingThreadActions.Enqueue((thread, ThreadAction.Resume, TimeSpan.Zero));
         }
 
-        //public void ResumeThread(uint threadId)
-        //{
-        //    if (threadId >= _threads.Count)
-        //    {
-        //        throw new ArgumentOutOfRangeException($"There is no thread with ID {threadId}.");
-        //    }
-
-        //    var thread = _threads[(int)threadId];
-        //    ResumeThreadCore(thread);
-        //}
-
-        internal void ResumeThreadCore(ThreadContext thread)
+        public void SuspendThread(ThreadContext thread) => SuspendThread(thread, TimeSpan.MaxValue);
+        public void SuspendThread(ThreadContext thread, TimeSpan timeout)
         {
-            thread.Suspended = false;
-            thread.SuspensionTime = TimeSpan.Zero;
-            thread.SleepTimeout = TimeSpan.Zero;
-            _activeThreads.Add(thread);
-            _suspendedThreads.Remove(thread);
+            _pendingThreadActions.Enqueue((thread, ThreadAction.Suspend, timeout));
         }
 
         public void TerminateThread(ThreadContext thread)
         {
+            _pendingThreadActions.Enqueue((thread, ThreadAction.Terminate, TimeSpan.Zero));
+        }
+
+
+        private void CommitSuspendThread(ThreadContext thread) => CommitSuspendThread(thread, TimeSpan.MaxValue);
+        private void CommitSuspendThread(ThreadContext thread, TimeSpan timeout)
+        {
+            thread.SuspensionTime = _timer.Elapsed;
+            thread.SleepTimeout = timeout;
+            thread.IsSuspended = true;
+
             _activeThreads.Remove(thread);
-            _suspendedThreads.Remove(thread);
+            Debug.WriteLine($"Suspending {thread.Name} ({thread.EntryPoint.Name})");
+        }
+
+        private void CommitResumeThread(ThreadContext thread)
+        {
+            if (_threads.ContainsKey(thread.Name))
+            {
+                thread.IsSuspended = false;
+                thread.SuspensionTime = TimeSpan.Zero;
+                thread.SleepTimeout = TimeSpan.Zero;
+
+                _activeThreads.Add(thread);
+                Debug.WriteLine($"Resuming {thread.Name} ({thread.EntryPoint.Name})");
+            }
+            else
+            {
+                Debug.WriteLine("Resuming a dead thread");
+            }
+        }
+
+        private void CommitTerminateThread(ThreadContext thread)
+        {
             _threads.Remove(thread.Name);
+            _activeThreads.Remove(thread);
+
+            Debug.WriteLine($"Terminating {thread.Name} ({thread.EntryPoint.Name})");
         }
     }
 }

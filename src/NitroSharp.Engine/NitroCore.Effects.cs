@@ -19,7 +19,7 @@ namespace NitroSharp
 
             if (duration > TimeSpan.Zero && wait)
             {
-                CurrentThread.Suspend(duration);
+                Interpreter.SuspendThread(CurrentThread, duration);
             }
         }
 
@@ -51,7 +51,7 @@ namespace NitroSharp
 
             if (duration > TimeSpan.Zero && wait)
             {
-                CurrentThread.Suspend(duration);
+                Interpreter.SuspendThread(CurrentThread, duration);
             }
         }
 
@@ -83,7 +83,7 @@ namespace NitroSharp
 
             if (duration > TimeSpan.Zero && wait)
             {
-                CurrentThread.Suspend(duration);
+                Interpreter.SuspendThread(CurrentThread, duration);
             }
         }
 
@@ -126,7 +126,7 @@ namespace NitroSharp
 
             if (duration > TimeSpan.Zero && wait)
             {
-                CurrentThread.Suspend(duration);
+                Interpreter.SuspendThread(CurrentThread, duration);
             }
         }
 

@@ -1,4 +1,4 @@
-﻿using NitroSharp.NsScript.PXml;
+﻿using NitroSharp.NsScript.Syntax.PXml;
 using Xunit;
 
 namespace NitroSharp.NsScript.Tests
@@ -9,7 +9,7 @@ namespace NitroSharp.NsScript.Tests
         public void ParseVoiceElement()
         {
             string text = "<voice name=\"sample_name\" class=\"sample_class\" src=\"sample_voice\">";
-            var content = PXmlTree.ParseString(text);
+            var content = Parsing.ParsePXmlString(text);
             var voice = content.Children[0] as VoiceElement;
             Assert.NotNull(content);
 
@@ -22,7 +22,7 @@ namespace NitroSharp.NsScript.Tests
         public void ParseFontElementWithSimpleContent()
         {
             string text = "<FONT incolor=\"WHITE\" outcolor=\"BLACK\">Sample Text</FONT>";
-            var content = PXmlTree.ParseString(text);
+            var content = Parsing.ParsePXmlString(text);
 
             var fontElement = content.Children[0] as ColorElement;
             Assert.NotNull(fontElement);
@@ -36,7 +36,7 @@ namespace NitroSharp.NsScript.Tests
         public void ParseElementWithMixedContent()
         {
             string text = "<FONT incolor=\"white\" outcolor=\"black\">Sample Text <RUBY text=\"sample_ruby_text\">sample_ruby_base</RUBY></FONT>";
-            var content = PXmlTree.ParseString(text);
+            var content = Parsing.ParsePXmlString(text);
 
             var fontElement = content.Children[0] as ColorElement;
             Assert.NotNull(fontElement);

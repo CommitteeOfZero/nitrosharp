@@ -1,31 +1,115 @@
-﻿using System.Collections.Generic;
+﻿using NitroSharp.NsScript.Symbols;
+using NitroSharp.NsScript.Syntax;
+using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 
 namespace NitroSharp.NsScript.Execution
 {
-    public sealed class Frame
+    internal sealed class Frame
     {
-        public Frame(IJumpTarget function, ImmutableArray<Statement> statements, VariableTable globals)
-        {
-            Function = function;
-            Statements = statements;
-            Globals = globals;
-            Arguments = new VariableTable();
+        private readonly Stack<Continuation> _continuations;
 
-            OperandStack = new Stack<Expression>();
-            OperationStack = new Stack<OperationKind>();
-            EvaluationStack = new Stack<Expression>();
+        public Frame(InvocableSymbol symbol)
+        {
+            Symbol = symbol;
+            Arguments = MemorySpace.Empty;
+
+            _continuations = new Stack<Continuation>();
+            ContinueWith(symbol.Declaration, false);
         }
 
-        public IJumpTarget Function { get; }
-        public ImmutableArray<Statement> Statements { get; }
-        public int Position { get; set; }
-        public VariableTable Globals { get; }
-        public VariableTable Arguments { get; set; }
+        public InvocableSymbol Symbol { get; }
+        public MemorySpace Arguments { get; private set; }
+        public Statement CurrentStatement => LastContinuation.CurrentStatement;
+        public Continuation LastContinuation => _continuations.Peek();
+        public bool IsEmpty => _continuations.Count == 0;
 
-        public Expression CurrentExpression { get; internal set; }
-        public Stack<Expression> OperandStack { get; }
-        public Stack<OperationKind> OperationStack { get; }
-        public Stack<Expression> EvaluationStack { get; }
+        public void SetArgument(string name, ConstantValue value)
+        {
+            if (ReferenceEquals(Arguments, MemorySpace.Empty))
+            {
+                Arguments = new MemorySpace();
+            }
+
+            Arguments.Set(name, value);
+        }
+
+        public bool Advance()
+        {
+            if (IsEmpty)
+            {
+                return false;
+            }
+            if (LastContinuation.Advance())
+            {
+                return true;
+            }
+
+            Continuation c;
+            do
+            {
+                c = _continuations.Pop();
+            } while (c.IsAtEnd && !IsEmpty);
+
+            return !IsEmpty;
+        }
+
+        public void Break()
+        {
+            _continuations.Pop();
+        }
+
+        public void ContinueWith(ImmutableArray<Statement> statements, bool advance)
+        {
+            if (advance)
+            {
+                Advance();
+            }
+
+            ContinueWith(statements);
+        }
+
+        public void ContinueWith(ImmutableArray<Statement> statements)
+        {
+            _continuations.Push(new Continuation(statements));
+        }
+
+        public void ContinueWith(SyntaxNode node, bool advance)
+        {
+            if (advance)
+            {
+                Advance();
+            }
+
+            switch (node.Kind)
+            {
+                case SyntaxNodeKind.Function:
+                case SyntaxNodeKind.Scene:
+                case SyntaxNodeKind.Chapter:
+                    var member = (MemberDeclaration)node;
+                    ContinueWith(member.Body.Statements);
+                    break;
+
+                case SyntaxNodeKind.Block:
+                    var block = (Block)node;
+                    if (block.Statements.Length > 0)
+                    {
+                        ContinueWith(block.Statements);
+                    }
+                    break;
+
+                case SyntaxNodeKind.Paragraph:
+                    var paragraph = (Paragraph)node;
+                    ContinueWith(paragraph.Statements);
+                    break;
+
+                default:
+                    var statement = node as Statement;
+                    if (statement == null) throw new InvalidOperationException();
+                    ContinueWith(ImmutableArray.Create(statement));
+                    break;
+            }
+        }
     }
 }

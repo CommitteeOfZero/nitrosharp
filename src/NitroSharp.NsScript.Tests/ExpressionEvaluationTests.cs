@@ -1,40 +1,51 @@
-﻿using System.Collections.Generic;
+﻿using NitroSharp.NsScript.Execution;
+using NitroSharp.NsScript.Symbols;
 using Xunit;
 
 namespace NitroSharp.NsScript.Tests
 {
     public class ExpressionEvaluationTests
     {
-        //[Fact]
-        //public void TestBinaryExpressionEvaluation()
-        //{
-        //    var env = new Dictionary<string, object>();
-        //    env["$a"] = 5;
-        //    env["$b"] = 3;
-        //    env["#flagA"] = true;
-        //    env["#flagB"] = false;
+        private readonly MemorySpace _locals = new MemorySpace();
+        private readonly Binder _binder = new Binder();
 
-        //    TestBinaryExpressionEvaluationImpl(env, "$a + $b", 8);
-        //    TestBinaryExpressionEvaluationImpl(env, "$a - $b", 2);
-        //    TestBinaryExpressionEvaluationImpl(env, "$a * $b", 15);
-        //    TestBinaryExpressionEvaluationImpl(env, "$a / $b", 1);
-        //    TestBinaryExpressionEvaluationImpl(env, "$a == $b", false);
-        //    TestBinaryExpressionEvaluationImpl(env, "$a != $b", true);
-        //    TestBinaryExpressionEvaluationImpl(env, "$a < $b", false);
-        //    TestBinaryExpressionEvaluationImpl(env, "$a <= $b", false);
-        //    TestBinaryExpressionEvaluationImpl(env, "$a > $b", true);
-        //    TestBinaryExpressionEvaluationImpl(env, "$a >= $b", true);
-        //    TestBinaryExpressionEvaluationImpl(env, "#flagA == #flagB", false);
-        //    TestBinaryExpressionEvaluationImpl(env, "#flagA != #flagB", true);
-        //    TestBinaryExpressionEvaluationImpl(env, "#flagA && #flagB", false);
-        //    TestBinaryExpressionEvaluationImpl(env, "#flagA || #flagB", true);
-        //}
+        [Fact]
+        public void EvaluateBinary()
+        {
+            var globals = new MemorySpace();
+            globals.Set("a", ConstantValue.Create(10));
+            globals.Set("b", ConstantValue.Create(5));
+            globals.Set("flagA", ConstantValue.True);
+            globals.Set("flagB", ConstantValue.False);
 
-        //private void TestBinaryExpressionEvaluationImpl(Dictionary<string, object> env, string expr, object expectedResult)
-        //{
-        //    var parsedExpr = NSScript.ParseExpression(expr);
-        //    object result = new EvaluatingVisitor(env).Evaluate(parsedExpr);
-        //    Assert.Equal(expectedResult, result);
-        //}
+            var evaluator = new ExpressionEvaluator(globals, new BuiltIns());
+
+            Test(evaluator, "$a + $b", ConstantValue.Create(15));
+            Test(evaluator, "$a - $b", ConstantValue.Create(5));
+            Test(evaluator, "$a * $b", ConstantValue.Create(50));
+            Test(evaluator, "$a / $b", ConstantValue.Create(2));
+            Test(evaluator, "$a == $b", ConstantValue.False);
+            Test(evaluator, "$a != $b", ConstantValue.True);
+            Test(evaluator, "$a < $b", ConstantValue.False);
+            Test(evaluator, "$a <= $b", ConstantValue.False);
+            Test(evaluator, "$a > $b", ConstantValue.True);
+            Test(evaluator, "$a >= $b", ConstantValue.True);
+            Test(evaluator, "#flagA == #flagB", ConstantValue.False);
+            Test(evaluator, "#flagA != #flagB", ConstantValue.True);
+            Test(evaluator, "#flagA && #flagB", ConstantValue.False);
+            Test(evaluator, "#flagA || #flagB", ConstantValue.True);
+
+            Test(evaluator, "10 % 3", ConstantValue.Create(1));
+        }
+
+        private void Test(ExpressionEvaluator evaluator, string expression, ConstantValue expectedResult)
+        {
+            var expr = Parsing.ParseExpression(expression);
+            _binder.Visit(expr);
+            ConstantValue result = evaluator.Evaluate(expr, _locals);
+            Assert.Equal(expectedResult, result);
+        }
+
+        private sealed class BuiltIns : EngineImplementationBase { }
     }
 }

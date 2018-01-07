@@ -4,6 +4,7 @@ using NitroSharp.Foundation;
 using NitroSharp.Audio;
 using NitroSharp.Graphics;
 using NitroSharp.Foundation.Audio;
+using NitroSharp.NsScript.Syntax;
 
 namespace NitroSharp
 {
@@ -22,7 +23,7 @@ namespace NitroSharp
             var box = new RectangleVisual(width, height, RgbaValueF.White, 0.0f, 0);
             box.IsEnabled = false;
 
-            _entities.Create(entityName)
+            _entities.Create(entityName, replace: true)
                 .WithComponent(box)
                 .WithPosition(x, y);
         }

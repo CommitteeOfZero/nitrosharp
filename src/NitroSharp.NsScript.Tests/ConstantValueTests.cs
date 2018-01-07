@@ -7,7 +7,7 @@ namespace NitroSharp.NsScript.Tests
         [Fact]
         public void CreateValue_Zero_ReturnsSameInstance()
         {
-            Assert.True(ReferenceEquals(ConstantValue.Create(0), ConstantValue.Zero));
+            Assert.True(ReferenceEquals(ConstantValue.Create(0.0d), ConstantValue.Zero));
         }
 
         [Fact]
@@ -19,13 +19,13 @@ namespace NitroSharp.NsScript.Tests
         [Fact]
         public void CreateValue_DeltaZero_ReturnsSameInstance()
         {
-            Assert.True(ReferenceEquals(ConstantValue.Create(0, isDeltaIntegerValue: true), ConstantValue.DeltaZero));
+            Assert.True(ReferenceEquals(ConstantValue.Create(0, isDeltaValue: true), ConstantValue.DeltaZero));
         }
 
         [Fact]
         public void CreateValue_DeltaOne_ReturnsSameInstance()
         {
-            Assert.True(ReferenceEquals(ConstantValue.Create(1, isDeltaIntegerValue: true), ConstantValue.DeltaOne));
+            Assert.True(ReferenceEquals(ConstantValue.Create(1, isDeltaValue: true), ConstantValue.DeltaOne));
         }
 
         [Fact]
@@ -61,71 +61,71 @@ namespace NitroSharp.NsScript.Tests
         [Fact]
         public void TestDefaultValues()
         {
-            Assert.Equal(ConstantValue.Null, ConstantValue.Default(NsBuiltInType.Null));
-            Assert.Equal(ConstantValue.Zero, ConstantValue.Default(NsBuiltInType.Integer));
-            Assert.Equal(ConstantValue.False, ConstantValue.Default(NsBuiltInType.Boolean));
-            Assert.Equal(ConstantValue.EmptyString, ConstantValue.Default(NsBuiltInType.String));
+            Assert.Equal(ConstantValue.Null, ConstantValue.Default(BuiltInType.Null));
+            Assert.Equal(ConstantValue.Zero, ConstantValue.Default(BuiltInType.Double));
+            Assert.Equal(ConstantValue.False, ConstantValue.Default(BuiltInType.Boolean));
+            Assert.Equal(ConstantValue.EmptyString, ConstantValue.Default(BuiltInType.String));
         }
 
         [Fact]
         public void TestConversionsToSameType()
         {
-            Assert.Equal(ConstantValue.Null, ConstantValue.Null.ConvertTo(NsBuiltInType.Null));
-            Assert.Equal(ConstantValue.Create(42), ConstantValue.Create(42).ConvertTo(NsBuiltInType.Integer));
-            Assert.Equal(ConstantValue.Create("foo"), ConstantValue.Create("foo").ConvertTo(NsBuiltInType.String));
-            Assert.Equal(ConstantValue.True, ConstantValue.True.ConvertTo(NsBuiltInType.Boolean));
-            Assert.Equal(ConstantValue.False, ConstantValue.False.ConvertTo(NsBuiltInType.Boolean));
+            Assert.Equal(ConstantValue.Null, ConstantValue.Null.ConvertTo(BuiltInType.Null));
+            Assert.Equal(ConstantValue.Create(42), ConstantValue.Create(42).ConvertTo(BuiltInType.Double));
+            Assert.Equal(ConstantValue.Create("foo"), ConstantValue.Create("foo").ConvertTo(BuiltInType.String));
+            Assert.Equal(ConstantValue.True, ConstantValue.True.ConvertTo(BuiltInType.Boolean));
+            Assert.Equal(ConstantValue.False, ConstantValue.False.ConvertTo(BuiltInType.Boolean));
         }
 
         [Fact]
         public void TestIntToStringConversion()
         {
             var integer = ConstantValue.Create(42);
-            Assert.Equal(ConstantValue.Create("42"), integer.ConvertTo(NsBuiltInType.String));
+            Assert.Equal(ConstantValue.Create("42"), integer.ConvertTo(BuiltInType.String));
         }
 
         [Fact]
         public void TestIntToBoolConversion()
         {
-            Assert.Equal(ConstantValue.False, ConstantValue.Zero.ConvertTo(NsBuiltInType.Boolean));
-            Assert.Equal(ConstantValue.True, ConstantValue.One.ConvertTo(NsBuiltInType.Boolean));
-            Assert.Equal(ConstantValue.True, ConstantValue.Create(42).ConvertTo(NsBuiltInType.Boolean));
+            Assert.Equal(ConstantValue.False, ConstantValue.Zero.ConvertTo(BuiltInType.Boolean));
+            Assert.Equal(ConstantValue.True, ConstantValue.One.ConvertTo(BuiltInType.Boolean));
+            Assert.Equal(ConstantValue.True, ConstantValue.Create(42).ConvertTo(BuiltInType.Boolean));
         }
 
         [Fact]
         public void TestStringToIntConversion()
         {
-            Assert.Equal(ConstantValue.Zero, ConstantValue.Create("foo").ConvertTo(NsBuiltInType.Integer));
-            Assert.Equal(ConstantValue.DeltaZero, ConstantValue.AtSymbol.ConvertTo(NsBuiltInType.Integer));
+            Assert.Equal(ConstantValue.Zero, ConstantValue.Create("foo").ConvertTo(BuiltInType.Double));
+            Assert.Equal(ConstantValue.DeltaZero, ConstantValue.AtSymbol.ConvertTo(BuiltInType.Double));
         }
 
         [Fact]
         public void TestStringToBoolConversion()
         {
-            Assert.Equal(ConstantValue.False, ConstantValue.Create("foo").ConvertTo(NsBuiltInType.Boolean));
+            Assert.Equal(ConstantValue.False, ConstantValue.Create("foo").ConvertTo(BuiltInType.Boolean));
         }
 
         [Fact]
         public void TestBoolToIntConversion()
         {
-            Assert.Equal(ConstantValue.Zero, ConstantValue.False.ConvertTo(NsBuiltInType.Integer));
-            Assert.Equal(ConstantValue.One, ConstantValue.True.ConvertTo(NsBuiltInType.Integer));
+            Assert.Equal(ConstantValue.Zero, ConstantValue.False.ConvertTo(BuiltInType.Double));
+            Assert.Equal(ConstantValue.One, ConstantValue.True.ConvertTo(BuiltInType.Double));
         }
 
         [Fact]
         public void TestBoolToStringConversion()
         {
-            Assert.Equal(ConstantValue.Create("0"), ConstantValue.False.ConvertTo(NsBuiltInType.String));
-            Assert.Equal(ConstantValue.Create("1"), ConstantValue.True.ConvertTo(NsBuiltInType.String));
+            Assert.Equal(ConstantValue.Create("0"), ConstantValue.False.ConvertTo(BuiltInType.String));
+            Assert.Equal(ConstantValue.Create("1"), ConstantValue.True.ConvertTo(BuiltInType.String));
         }
 
         [Fact]
         public void TestNullConversions()
         {
-            Assert.Equal(ConstantValue.Default(NsBuiltInType.Null), ConstantValue.Null.ConvertTo(NsBuiltInType.Null));
-            Assert.Equal(ConstantValue.Default(NsBuiltInType.Integer), ConstantValue.Null.ConvertTo(NsBuiltInType.Integer));
-            Assert.Equal(ConstantValue.Default(NsBuiltInType.Boolean), ConstantValue.Null.ConvertTo(NsBuiltInType.Boolean));
-            Assert.Equal(ConstantValue.Default(NsBuiltInType.String), ConstantValue.Null.ConvertTo(NsBuiltInType.String));
+            Assert.Equal(ConstantValue.Default(BuiltInType.Null), ConstantValue.Null.ConvertTo(BuiltInType.Null));
+            Assert.Equal(ConstantValue.Default(BuiltInType.Double), ConstantValue.Null.ConvertTo(BuiltInType.Double));
+            Assert.Equal(ConstantValue.Default(BuiltInType.Boolean), ConstantValue.Null.ConvertTo(BuiltInType.Boolean));
+            Assert.Equal(ConstantValue.Default(BuiltInType.String), ConstantValue.Null.ConvertTo(BuiltInType.String));
         }
 
         [Fact]
@@ -227,7 +227,7 @@ namespace NitroSharp.NsScript.Tests
         public void TestAdditionOnAtSymbolAndInteger()
         {
             var result = ConstantValue.Create("@") + ConstantValue.Create(42);
-            Assert.Equal(ConstantValue.Create(42, isDeltaIntegerValue: true), result);
+            Assert.Equal(ConstantValue.Create((object)42, isDeltaValue: true), result);
         }
 
         [Fact]
@@ -235,6 +235,22 @@ namespace NitroSharp.NsScript.Tests
         {
             var result = ConstantValue.True + ConstantValue.Create("foo");
             Assert.Equal(ConstantValue.Create("1foo"), result);
+        }
+
+        [Fact]
+        public void CreateEnumValueConstant()
+        {
+            var constant = ConstantValue.Create(BuiltInEnumValue.Axl1);
+            Assert.Equal(BuiltInType.EnumValue, constant.Type);
+            Assert.Equal(BuiltInEnumValue.Axl1, constant.EnumValue);
+        }
+
+        [Fact]
+        public void TestEnumValueToStringConversion()
+        {
+            var enumValue = ConstantValue.Create(BuiltInEnumValue.Axl1);
+            var converted = enumValue.ConvertTo(BuiltInType.String);
+            Assert.Equal("Axl1", converted.StringValue);
         }
     }
 }
