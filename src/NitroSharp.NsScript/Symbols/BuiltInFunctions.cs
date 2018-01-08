@@ -37,8 +37,10 @@ namespace NitroSharp.NsScript.Symbols
             Declare("SetLoop", SetLoop);
             Declare("SetLoopPoint", SetLoopPoint);
             Declare("DrawTransition", DrawTransition);
-            Declare("RemainTime", RemainTime);
 
+            Declare("DurationTime", DurationTime);
+            Declare("PassageTime", PassageTime);
+            Declare("RemainTime", RemainTime);
             Declare("ImageHorizon", ImageHorizon);
             Declare("ImageVertical", ImageVertical);
             Declare("Random", Random);
@@ -96,6 +98,20 @@ namespace NitroSharp.NsScript.Symbols
             string entityName = EntityName(PopString(args));
             int height = implementation.GetTextureHeight(entityName);
             return ConstantValue.Create(height);
+        }
+
+        private static ConstantValue DurationTime(IEngineImplementation implementation, Stack<ConstantValue> args)
+        {
+            string entityName = EntityName(PopString(args));
+            int msTime = implementation.GetSoundDuration(entityName);
+            return ConstantValue.Create(msTime);
+        }
+
+        private static ConstantValue PassageTime(IEngineImplementation implementation, Stack<ConstantValue> args)
+        {
+            string entityName = EntityName(PopString(args));
+            int msTime = implementation.GetTimeElapsed(entityName);
+            return ConstantValue.Create(msTime);
         }
 
         private static ConstantValue RemainTime(IEngineImplementation implementation, Stack<ConstantValue> args)

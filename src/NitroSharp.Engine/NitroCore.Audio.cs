@@ -92,6 +92,28 @@ namespace NitroSharp
             sound.Looping = true;
         }
 
+        public override int GetSoundDuration(string entityName)
+        {
+            if (_entities.TryGet(entityName, out var entity))
+            {
+                var sound = entity.GetComponent<SoundComponent>();
+                return (int)sound.Source.Asset.Duration.TotalMilliseconds;
+            }
+
+            return 0;
+        }
+
+        public override int GetTimeElapsed(string entityName)
+        {
+            if (_entities.TryGet(entityName, out var entity))
+            {
+                var sound = entity.GetComponent<SoundComponent>();
+                return (int)sound.Elapsed.TotalMilliseconds;
+            }
+
+            return 0;
+        }
+
         public override int GetTimeRemaining(string soundEntityName)
         {
             if (_entities.TryGet(soundEntityName, out var entity))

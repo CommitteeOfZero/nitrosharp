@@ -45,11 +45,9 @@ namespace NitroSharp.NsScript.Execution
         public virtual int GetTextureHeight(string entityName) => throw new NotImplementedException();
         public virtual int GetTextureWidth(string entityName) => throw new NotImplementedException();
 
-        /// <summary>
-        /// Original name: RemainTime.
-        /// </summary>
-        /// <param name="soundEntityName"></param>
+        public virtual int GetSoundDuration(string entityName) => throw new NotImplementedException();
         public virtual int GetTimeRemaining(string soundEntityName) => throw new NotImplementedException();
+        public virtual int GetTimeElapsed(string entityName) => throw new NotImplementedException();
 
         public virtual void SetAlias(string entityName, string alias)
         {

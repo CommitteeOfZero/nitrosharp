@@ -12,10 +12,19 @@ namespace NitroSharp.NsScript
         int GetTextureHeight(string entityName);
         int GetTextureWidth(string entityName);
 
+
+        /// <summary>
+        /// Original name: DurationTime.
+        /// </summary>
+        int GetSoundDuration(string entityName);
+
+        /// <summary>
+        /// Original name: PassageTime.
+        /// </summary>
+        int GetTimeElapsed(string entityName);
+
         /// <summary>
         /// Original name: RemainTime.
-        /// </summary>
-        /// <param name="soundEntityName"></param>
         int GetTimeRemaining(string soundEntityName);
 
         void SetAlias(string entityName, string alias);
