@@ -46,12 +46,7 @@ namespace NitroSharp.NsScript.Syntax.PXml
             StartScanning();
 
             char peek = PeekChar();
-            if (peek == '<')
-            {
-                return ParseElement();
-            }
-
-            return ParsePlainText();
+            return peek == '<' ? ParseElement() : ParsePlainText();
         }
 
         private PXmlNode ParseElement()
@@ -121,14 +116,22 @@ namespace NitroSharp.NsScript.Syntax.PXml
         private PXmlText ParsePlainText()
         {
             StartScanning();
+            var sb = new StringBuilder();
 
             char c;
             while ((c = PeekChar()) != '<' && c != EofCharacter)
             {
+                if (c == '/' && PeekChar() == '/')
+                {
+                    sb.Append(GetCurrentLexeme());
+                    ScanToEndOfLine();
+                    StartScanning();
+                }
+
                 AdvanceChar();
             }
 
-            var sb = new StringBuilder(GetCurrentLexeme());
+            sb.Append(GetCurrentLexeme());
             sb.Replace("&.", ".");
             sb.Replace("&,", ",");
 

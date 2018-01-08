@@ -1,4 +1,5 @@
 ﻿using NitroSharp.NsScript.Syntax.PXml;
+using System.Linq;
 using Xunit;
 
 namespace NitroSharp.NsScript.Tests
@@ -51,6 +52,17 @@ namespace NitroSharp.NsScript.Tests
 
             Assert.Equal("sample_ruby_text", rubyElement.RubyText);
             Assert.NotNull(rubyElement.RubyBase);
+        }
+
+        [Fact]
+        public void ParseMultilineTextWithCommentInTheMiddle()
+        {
+            string text = "foo//this is a comment\r\nbar";
+            var content = Parsing.ParsePXmlString(text);
+
+            var textElement = content.Children.SingleOrDefault() as PXmlText;
+            Assert.NotNull(textElement);
+            Assert.Equal("foo\r\nbar", textElement.Text);
         }
     }
 }
