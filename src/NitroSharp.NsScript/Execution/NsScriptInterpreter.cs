@@ -28,7 +28,6 @@ namespace NitroSharp.NsScript.Execution
         private readonly ConcurrentQueue<(ThreadContext thread, ThreadAction action, TimeSpan)> _pendingThreadActions;
         private readonly HashSet<ThreadContext> _activeThreads;
         private ThreadContext _currentThread;
-        private SourceFileReference _currentModule;
         private readonly Stopwatch _timer;
 
         public NsScriptInterpreter(Func<SourceFileReference, Stream> sourceFileLocator, EngineImplementationBase engineImplementation)
@@ -53,14 +52,22 @@ namespace NitroSharp.NsScript.Execution
         public IEnumerable<ThreadContext> Threads => _threads.Values;
 
         public bool TryGetThread(string name, out ThreadContext thread) => _threads.TryGetValue(name, out thread);
-        public void CreateThread(string name, string symbolName, bool start = true) => CreateThread(name, _currentModule, symbolName, start);
+        public void CreateThread(string name, string symbolName, bool start = true)
+        {
+            CreateThread(name, CurrentFrame.Module, symbolName, start);
+        }
+
         public void CreateThread(string name, SourceFileReference moduleName, string symbolName, bool start = true)
         {
-            _currentModule = moduleName;
+            var module = _sourceFileManager.Resolve(moduleName);
+            CreateThread(name, module, symbolName, start);
+        }
+
+        public void CreateThread(string name, MergedSourceFileSymbol module, string symbolName, bool start = true)
+        {
             Debug.WriteLine($"Creating thread '{symbolName}'");
-            var sourceSymbol = _sourceFileManager.Resolve(moduleName);
-            var member = sourceSymbol.LookupMember(symbolName);
-            var thread = new ThreadContext(name, member);
+            var member = module.LookupMember(symbolName);
+            var thread = new ThreadContext(name, module, member);
 
             if (_threads.Count == 0)
             {
@@ -198,7 +205,7 @@ namespace NitroSharp.NsScript.Execution
         {
             var module = _sourceFileManager.Resolve(statement.ModuleName.Value);
             var target = (ChapterSymbol)module.LookupMember("main");
-            var stackFrame = new Frame(target);
+            var stackFrame = new Frame(module, target);
 
             CurrentFrame.Advance();
             _currentThread.PushFrame(stackFrame);
@@ -221,7 +228,7 @@ namespace NitroSharp.NsScript.Execution
 
         private void PrepareFunctionCall(FunctionCall functionCall, FunctionSymbol target)
         {
-            var stackFrame = new Frame(target);
+            var stackFrame = new Frame(CurrentFrame.Module, target);
 
             Debug.WriteLine($"Entering function '{target.Name}'");
 

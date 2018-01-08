@@ -9,16 +9,17 @@ namespace NitroSharp.NsScript.Execution
     {
         private readonly Stack<Frame> _callstack;
 
-        internal ThreadContext(string name, InvocableSymbol entryPoint)
+        internal ThreadContext(string name, MergedSourceFileSymbol module, InvocableSymbol entryPoint)
         {
             Name = name;
             EntryPoint = entryPoint;
             _callstack = new Stack<Frame>();
-            _callstack.Push(new Frame(entryPoint));
+            _callstack.Push(new Frame(module, entryPoint));
         }
 
         public string Name { get; }
         public InvocableSymbol EntryPoint { get; }
+
         internal Frame CurrentFrame => _callstack.Peek();
         internal Statement PC => CurrentFrame.CurrentStatement;
 

@@ -10,8 +10,9 @@ namespace NitroSharp.NsScript.Execution
     {
         private readonly Stack<Continuation> _continuations;
 
-        public Frame(InvocableSymbol symbol)
+        public Frame(MergedSourceFileSymbol module, InvocableSymbol symbol)
         {
+            Module = module;
             Symbol = symbol;
             Arguments = MemorySpace.Empty;
 
@@ -19,6 +20,7 @@ namespace NitroSharp.NsScript.Execution
             ContinueWith(symbol.Declaration, false);
         }
 
+        public MergedSourceFileSymbol Module { get; }
         public InvocableSymbol Symbol { get; }
         public MemorySpace Arguments { get; private set; }
         public Statement CurrentStatement => LastContinuation.CurrentStatement;

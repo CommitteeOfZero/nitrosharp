@@ -4,21 +4,21 @@ namespace NitroSharp.NsScript.Symbols
 {
     public sealed class MergedSourceFileSymbol : Symbol
     {
-        internal MergedSourceFileSymbol(SourceFileSymbol sourceFile, ImmutableArray<SourceFileSymbol> dependencies)
+        internal MergedSourceFileSymbol(SourceFileSymbol symbol, ImmutableArray<SourceFileSymbol> dependencies)
         {
-            SourceFile = sourceFile;
+            Symbol = symbol;
             Dependencies = dependencies;
         }
 
         public override SymbolKind Kind => SymbolKind.MergedSourceFile;
 
-        public SourceFileSymbol SourceFile { get; }
+        public SourceFileSymbol Symbol { get; }
         public ImmutableArray<SourceFileSymbol> Dependencies { get; }
 
         public FunctionSymbol LookupFunction(string name) => LookupMember(name) as FunctionSymbol;
         public InvocableSymbol LookupMember(string name)
         {
-            if (SourceFile.TryLookupMember(name, out var symbol))
+            if (Symbol.TryLookupMember(name, out var symbol))
             {
                 return symbol;
             }
