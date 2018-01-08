@@ -453,6 +453,9 @@ namespace NitroSharp.NsScript.Symbols
                 case BuiltInType.Double:
                     return NsColor.FromRgb((int)value.DoubleValue);
 
+                case BuiltInType.EnumValue:
+                    return NsColor.FromEnumValue(value.EnumValue);
+
                 default:
                     throw new InvalidOperationException();
             }
