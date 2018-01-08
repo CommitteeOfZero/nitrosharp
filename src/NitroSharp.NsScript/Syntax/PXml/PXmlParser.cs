@@ -31,7 +31,10 @@ namespace NitroSharp.NsScript.Syntax.PXml
                 }
 
                 var node = ParseNode();
-                children.Add(node);
+                if (node != null)
+                {
+                    children.Add(node);
+                }
             }
 
             return new PXmlContent(children.ToImmutable());
@@ -73,6 +76,11 @@ namespace NitroSharp.NsScript.Syntax.PXml
                 case "voice":
                     node = ParseVoiceElement(startTag);
                     break;
+
+                // TODO: actually figure out what <k> and <?> do.
+                case "k":
+                case "?":
+                    return null;
 
                 default:
                     throw new NotImplementedException($"PXml tag '{startTag.Name}' is not yet supported.");
