@@ -89,6 +89,11 @@ namespace NitroSharp.NsScript.Symbols
             Visit(assignmentExpression.Target);
         }
 
+        public override void VisitDeltaExpression(DeltaExpression deltaExpression)
+        {
+            Visit(deltaExpression.Expression);
+        }
+
         public override void VisitFunctionCall(FunctionCall functionCall)
         {
             string targetName = functionCall.Target.Value;
