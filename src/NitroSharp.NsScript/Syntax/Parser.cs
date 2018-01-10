@@ -460,12 +460,7 @@ namespace NitroSharp.NsScript.Syntax
             {
                 case SyntaxTokenKind.NumericLiteralToken:
                 case SyntaxTokenKind.StringLiteralToken:
-                    bool isDeltaExpr = CurrentToken.Text[0] == '@';
-                    if (isDeltaExpr)
-                    {
-                        Debugger.Break();
-                    }
-                    var literal = new Literal(CurrentToken.Text, ConstantValue.Create(CurrentToken.Value, isDeltaExpr));
+                    var literal = new Literal(CurrentToken.Text, ConstantValue.Create(CurrentToken.Value));
                     EatToken();
                     return literal;
 

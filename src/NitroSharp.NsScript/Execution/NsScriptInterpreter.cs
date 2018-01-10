@@ -195,10 +195,19 @@ namespace NitroSharp.NsScript.Execution
                     Advance();
                     break;
 
+                case SyntaxNodeKind.SelectStatement:
+                    Select((SelectStatement)statement);
+                    break;
+
                 default:
                     Advance();
                     break;
             }
+        }
+
+        private void Select(SelectStatement selectStatement)
+        {
+            PushContinuation(selectStatement.Body, advance: true);
         }
 
         private void CallChapter(CallChapterStatement statement)

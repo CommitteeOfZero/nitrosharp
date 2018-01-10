@@ -152,7 +152,7 @@ namespace NitroSharp.NsScript.Syntax
                         ScanIdentifier(ref info);
                         info.Kind = SyntaxTokenKind.IdentifierToken;
                     }
-                    else if (next == '+' || next == '-' || SyntaxFacts.IsDecDigit(next))
+                    else if (next == '+' || next == '-' || SyntaxFacts.IsDecDigit(next) || SyntaxFacts.IsSigil(next))
                     {
                         AdvanceChar();
                         info.Kind = SyntaxTokenKind.AtToken;
@@ -468,11 +468,6 @@ namespace NitroSharp.NsScript.Syntax
                     {
                         AdvanceChar(2);
                         tokenInfo.SigilKind = SigilKind.Arrow;
-                    }
-                    else if (PeekChar() == '$')
-                    {
-                        AdvanceChar();
-                        tokenInfo.SigilKind = SigilKind.AtDollar;
                     }
                     break;
 

@@ -6,7 +6,6 @@
         Dollar,
         Hash,
         At,
-        AtDollar,
         Arrow
     }
 }

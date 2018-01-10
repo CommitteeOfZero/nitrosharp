@@ -57,6 +57,11 @@ namespace NitroSharp.NsScript.Symbols
             Visit(ifStatement.IfFalseStatement);
         }
 
+        public override void VisitSelectStatement(SelectStatement selectStatement)
+        {
+            Visit(selectStatement.Body);
+        }
+
         public override void VisitSelectSection(SelectSection selectSection)
         {
             Visit(selectSection.Body);
