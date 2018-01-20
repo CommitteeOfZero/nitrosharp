@@ -1,6 +1,4 @@
-﻿using NitroSharp.NsScript.Uitls;
-
-namespace NitroSharp.NsScript
+﻿namespace NitroSharp.NsScript
 {
     internal static class EnumConversions
     {

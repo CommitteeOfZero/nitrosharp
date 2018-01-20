@@ -1,17 +1,34 @@
 ﻿using System.Collections.Generic;
+using System.Collections.Immutable;
 
 namespace NitroSharp.NsScript.Syntax
 {
     public abstract class SyntaxVisitor
     {
-        public virtual void Visit(SyntaxNode node)
+        protected void Visit(SyntaxNode node)
         {
             node?.Accept(this);
         }
 
-        protected virtual void DefaultVisitNode(SyntaxNode node) { }
+        private void DefaultVisitNode(SyntaxNode node) { }
 
-        public void VisitArray(IEnumerable<SyntaxNode> list)
+        protected void VisitArray(ImmutableArray<Statement> list)
+        {
+            foreach (var node in list)
+            {
+                Visit(node);
+            }
+        }
+
+        protected void VisitArray(ImmutableArray<Expression> list)
+        {
+            foreach (var node in list)
+            {
+                Visit(node);
+            }
+        }
+
+        protected void VisitArray(ImmutableArray<MemberDeclaration> list)
         {
             foreach (var node in list)
             {
@@ -109,7 +126,7 @@ namespace NitroSharp.NsScript.Syntax
             DefaultVisitNode(selectStatement);
         }
 
-        public void VisitScene(Scene scene)
+        public virtual void VisitScene(Scene scene)
         {
             DefaultVisitNode(scene);
         }
@@ -134,9 +151,9 @@ namespace NitroSharp.NsScript.Syntax
             DefaultVisitNode(pxmlString);
         }
 
-        public virtual void VisitParagraph(Paragraph paragraph)
+        public virtual void VisitDialogueBlock(DialogueBlock dialogueBlock)
         {
-            DefaultVisitNode(paragraph);
+            DefaultVisitNode(dialogueBlock);
         }
 
         public virtual void VisitPXmlLineSeparator(PXmlLineSeparator pxmlLineSeparator)

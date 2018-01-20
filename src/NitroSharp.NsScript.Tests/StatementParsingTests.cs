@@ -101,7 +101,7 @@ case option:{}
 
             Assert.NotNull(statement);
             Assert.Equal(SyntaxNodeKind.CallChapterStatement, statement.Kind);
-            Assert.Equal("@->testchapter", statement.ModuleName.OriginalName);
+            Assert.Equal("@->testchapter", statement.Module.OriginalName);
         }
 
         [Fact]

@@ -34,9 +34,9 @@ namespace NitroSharp.NsScript.Symbols
             _currentFunction = null;
         }
 
-        public override void VisitParagraph(Paragraph paragraph)
+        public override void VisitDialogueBlock(DialogueBlock paragraph)
         {
-            VisitArray(paragraph.Statements);
+            Visit(paragraph.Body);
         }
 
         public override void VisitBlock(Block block)
@@ -96,7 +96,7 @@ namespace NitroSharp.NsScript.Symbols
 
         public override void VisitFunctionCall(FunctionCall functionCall)
         {
-            string targetName = functionCall.Target.Value;
+            string targetName = functionCall.Target.Name;
             var functionSymbol = BuiltInFunctions.Symbols.Lookup(targetName);
             if (functionSymbol != null)
             {
@@ -113,20 +113,20 @@ namespace NitroSharp.NsScript.Symbols
 
         public override void VisitIdentifier(Identifier identifier)
         {
-            if (_currentFunction != null && _currentFunction.TryLookupParameter(identifier.Value, out var parameter))
+            if (_currentFunction != null && _currentFunction.TryLookupParameter(identifier.Name, out var parameter))
             {
                 identifier.Symbol = parameter;
                 return;
             }
 
-            if (identifier.IsVariable)
+            if (identifier.IsGlobalVariable)
             {
                 identifier.Symbol = GlobalVariableSymbol.Instance;
                 return;
             }
             else
             {
-                identifier.Symbol = EnumValueSymbols.Symbols.Lookup(identifier.Value);
+                identifier.Symbol = EnumValueSymbols.Symbols.Lookup(identifier.Name);
             }
         }
     }

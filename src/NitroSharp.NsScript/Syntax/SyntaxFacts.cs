@@ -1,5 +1,4 @@
-﻿using NitroSharp.NsScript.Uitls;
-using System.Globalization;
+﻿using System.Globalization;
 
 namespace NitroSharp.NsScript.Syntax
 {
@@ -125,20 +124,13 @@ namespace NitroSharp.NsScript.Syntax
             }
         }
 
-        public static bool IsPrefixUnaryOperator(SyntaxTokenKind tokenKind) => TryGetPrefixUnaryOperatorKind(tokenKind, out var _);
-        public static bool IsPostfixUnaryOperator(SyntaxTokenKind tokenKind) => TryGetPostfixUnaryOperatorKind(tokenKind, out var _);
+        public static bool IsUnaryOperator(SyntaxTokenKind tokenKind) => TryGetUnaryOperatorKind(tokenKind, out var _);
         public static bool IsBinaryOperator(SyntaxTokenKind tokenKind) => TryGetBinaryOperatorKind(tokenKind, out var _);
         public static bool IsAssignmentOperator(SyntaxTokenKind tokenKind) => TryGetAssignmentOperatorKind(tokenKind, out var _);
 
-        public static UnaryOperatorKind GetPrefixUnaryOperatorKind(SyntaxTokenKind operatorTokenKind)
+        public static UnaryOperatorKind GetUnaryOperatorKind(SyntaxTokenKind operatorTokenKind)
         {
-            bool success = TryGetPrefixUnaryOperatorKind(operatorTokenKind, out var kind);
-            return success ? kind : throw ExceptionUtils.UnexpectedValue(nameof(operatorTokenKind));
-        }
-
-        public static UnaryOperatorKind GetPostfixUnaryOperatorKind(SyntaxTokenKind operatorTokenKind)
-        {
-            bool success = TryGetPostfixUnaryOperatorKind(operatorTokenKind, out var kind);
+            bool success = TryGetUnaryOperatorKind(operatorTokenKind, out var kind);
             return success ? kind : throw ExceptionUtils.UnexpectedValue(nameof(operatorTokenKind));
         }
 
@@ -154,7 +146,7 @@ namespace NitroSharp.NsScript.Syntax
             return success ? kind : throw ExceptionUtils.UnexpectedValue(nameof(operatorTokenKind));
         }
 
-        public static bool TryGetPrefixUnaryOperatorKind(SyntaxTokenKind operatorTokenKind, out UnaryOperatorKind kind)
+        public static bool TryGetUnaryOperatorKind(SyntaxTokenKind operatorTokenKind, out UnaryOperatorKind kind)
         {
             switch (operatorTokenKind)
             {
@@ -166,25 +158,6 @@ namespace NitroSharp.NsScript.Syntax
                     break;
                 case SyntaxTokenKind.MinusToken:
                     kind = UnaryOperatorKind.Minus;
-                    break;
-
-                default:
-                    kind = default(UnaryOperatorKind);
-                    return false;
-            }
-
-            return true;
-        }
-
-        public static bool TryGetPostfixUnaryOperatorKind(SyntaxTokenKind operatorTokenKind, out UnaryOperatorKind kind)
-        {
-            switch (operatorTokenKind)
-            {
-                case SyntaxTokenKind.PlusPlusToken:
-                    kind = UnaryOperatorKind.PostfixIncrement;
-                    break;
-                case SyntaxTokenKind.MinusMinusToken:
-                    kind = UnaryOperatorKind.PostfixDecrement;
                     break;
 
                 default:
@@ -265,6 +238,12 @@ namespace NitroSharp.NsScript.Syntax
                     break;
                 case SyntaxTokenKind.SlashEqualsToken:
                     kind = AssignmentOperatorKind.DivideAssign;
+                    break;
+                case SyntaxTokenKind.PlusPlusToken:
+                    kind = AssignmentOperatorKind.Increment;
+                    break;
+                case SyntaxTokenKind.MinusMinusToken:
+                    kind = AssignmentOperatorKind.Decrement;
                     break;
 
                 default:

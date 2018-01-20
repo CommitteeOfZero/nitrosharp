@@ -177,10 +177,10 @@ namespace NitroSharp.NsScript.Syntax
     {
         internal CallChapterStatement(Identifier chapterName)
         {
-            ModuleName = chapterName;
+            Module = chapterName;
         }
 
-        public Identifier ModuleName { get; }
+        public Identifier Module { get; }
         public override SyntaxNodeKind Kind => SyntaxNodeKind.CallChapterStatement;
 
         public override void Accept(SyntaxVisitor visitor)
@@ -212,35 +212,6 @@ namespace NitroSharp.NsScript.Syntax
         public override TResult Accept<TResult>(SyntaxVisitor<TResult> visitor)
         {
             return visitor.VisitCallSceneStatement(this);
-        }
-    }
-
-    /// <summary>
-    /// Also known as a &lt;PRE&gt; element.
-    /// </summary>
-    public sealed class Paragraph : Statement
-    {
-        internal Paragraph(string identifier, string associatedBox, ImmutableArray<Statement> statements)
-        {
-            Identifier = identifier;
-            AssociatedBox = associatedBox;
-            Statements = statements;
-        }
-
-        public string Identifier { get; }
-        public string AssociatedBox { get; }
-        public ImmutableArray<Statement> Statements { get; }
-
-        public override SyntaxNodeKind Kind => SyntaxNodeKind.Paragraph;
-
-        public override void Accept(SyntaxVisitor visitor)
-        {
-            visitor.VisitParagraph(this);
-        }
-
-        public override TResult Accept<TResult>(SyntaxVisitor<TResult> visitor)
-        {
-            return visitor.VisitParagraph(this);
         }
     }
 

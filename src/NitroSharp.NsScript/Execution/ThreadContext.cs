@@ -1,5 +1,4 @@
 ﻿using NitroSharp.NsScript.Symbols;
-using NitroSharp.NsScript.Syntax;
 using System;
 using System.Collections.Generic;
 
@@ -13,6 +12,7 @@ namespace NitroSharp.NsScript.Execution
         {
             Name = name;
             EntryPoint = entryPoint;
+            Stack = new Stack<ConstantValue>();
             _callstack = new Stack<Frame>();
             _callstack.Push(new Frame(module, entryPoint));
         }
@@ -20,14 +20,13 @@ namespace NitroSharp.NsScript.Execution
         public string Name { get; }
         public InvocableSymbol EntryPoint { get; }
 
-        internal Frame CurrentFrame => _callstack.Peek();
-        internal Statement PC => CurrentFrame.CurrentStatement;
-
         public bool IsSuspended { get; internal set; }
         public TimeSpan SleepTimeout { get; internal set; }
         public TimeSpan SuspensionTime { get; internal set; }
 
         public bool DoneExecuting => _callstack.Count == 0;
+        internal Frame CurrentFrame => _callstack.Peek();
+        internal Stack<ConstantValue> Stack { get; }
 
         internal void PopFrame() => _callstack.Pop();
         internal void PushFrame(Frame frame)
@@ -35,22 +34,9 @@ namespace NitroSharp.NsScript.Execution
             _callstack.Push(frame);
         }
 
-        internal bool Advance()
+        public void Call(InvocableSymbol symbol)
         {
-            if (!DoneExecuting)
-            {
-                if (!CurrentFrame.IsEmpty && CurrentFrame.Advance())
-                {
-                    return true;
-                }
-
-                while (!DoneExecuting && CurrentFrame.IsEmpty)
-                {
-                    _callstack.Pop();
-                }
-            }
-
-            return !DoneExecuting;
+            PushFrame(new Frame(CurrentFrame.Module, symbol));
         }
     }
 }

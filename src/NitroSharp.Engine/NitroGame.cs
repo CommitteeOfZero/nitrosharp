@@ -226,7 +226,7 @@ namespace NitroSharp
 
         private void OnEnteredFunction(object sender, Function function)
         {
-            _log.Debug("Entered function " + function.Name.Value);
+            _log.Debug("Entered function " + function.Identifier.Name);
         }
 
         //private void OnBuiltInCallDispatched(object sender, BuiltInFunctionCall call)

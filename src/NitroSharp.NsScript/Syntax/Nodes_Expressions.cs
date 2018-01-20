@@ -38,17 +38,17 @@ namespace NitroSharp.NsScript.Syntax
         internal Identifier(string originalName, string name, SigilKind sigil)
         {
             OriginalName = originalName;
-            Value = name;
+            Name = name;
             Sigil = sigil;
         }
 
+        public string Name { get; }
         public string OriginalName { get; }
-        public string Value { get; }
         public SigilKind Sigil { get; }
 
         public override SyntaxNodeKind Kind => SyntaxNodeKind.Identifier;
 
-        public bool IsVariable => Sigil != SigilKind.None;
+        public bool IsGlobalVariable => Sigil != SigilKind.None;
         public bool IsQuouted => OriginalName[0] == '"';
 
         public override void Accept(SyntaxVisitor visitor)
@@ -114,14 +114,14 @@ namespace NitroSharp.NsScript.Syntax
 
     public sealed class AssignmentExpression : Expression
     {
-        internal AssignmentExpression(Expression target, AssignmentOperatorKind operatorKind, Expression value)
+        internal AssignmentExpression(Identifier target, AssignmentOperatorKind operatorKind, Expression value)
         {
             Target = target;
             OperatorKind = operatorKind;
             Value = value;
         }
 
-        public Expression Target { get; }
+        public Identifier Target { get; }
         public AssignmentOperatorKind OperatorKind { get; }
         public Expression Value { get; }
 

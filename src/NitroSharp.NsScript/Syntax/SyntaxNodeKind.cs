@@ -28,7 +28,7 @@
         AssignmentExpression,
         DeltaExpression,
         
-        Paragraph,
+        DialogueBlock,
         PXmlString,
         PXmlLineSeparator
     }

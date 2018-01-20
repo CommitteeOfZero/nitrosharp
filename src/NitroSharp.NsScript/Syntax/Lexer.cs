@@ -38,7 +38,7 @@ namespace NitroSharp.NsScript.Syntax
 
         public SyntaxToken Lex()
         {
-            if (CurrentMode == LexingMode.Paragraph)
+            if (CurrentMode == LexingMode.DialogueBlock)
             {
                 if (PeekChar() != '{' && !Is_PRE_EndTag())
                 {
@@ -68,11 +68,11 @@ namespace NitroSharp.NsScript.Syntax
                     }
                     break;
 
-                case SyntaxTokenKind.ParagraphStartTag:
-                    _lexingModeStack.Push(LexingMode.Paragraph);
+                case SyntaxTokenKind.DialogueBlockStartTag:
+                    _lexingModeStack.Push(LexingMode.DialogueBlock);
                     break;
 
-                case SyntaxTokenKind.ParagraphEndTag:
+                case SyntaxTokenKind.DialogueBlockEndTag:
                     _lexingModeStack.Pop();
                     break;
             }
@@ -175,13 +175,13 @@ namespace NitroSharp.NsScript.Syntax
 
                         case 'p':
                         case 'P':
-                            ScanParagraphStartTag(ref info);
-                            info.Kind = SyntaxTokenKind.ParagraphStartTag;
+                            ScanDialogueBlockStartTag(ref info);
+                            info.Kind = SyntaxTokenKind.DialogueBlockStartTag;
                             break;
 
                         case '/':
                             AdvanceChar(PRE_EndTag.Length);
-                            info.Kind = SyntaxTokenKind.ParagraphEndTag;
+                            info.Kind = SyntaxTokenKind.DialogueBlockEndTag;
                             info.Text = "</PRE>";
                             break;
 
@@ -401,8 +401,8 @@ namespace NitroSharp.NsScript.Syntax
                 case SyntaxTokenKind.NumericLiteralToken:
                     return SyntaxToken.Literal(tokenInfo.Text, span, tokenInfo.DoubleValue);
 
-                case SyntaxTokenKind.ParagraphStartTag:
-                case SyntaxTokenKind.ParagraphEndTag:
+                case SyntaxTokenKind.DialogueBlockStartTag:
+                case SyntaxTokenKind.DialogueBlockEndTag:
                     return SyntaxToken.WithValue(tokenInfo.Kind, tokenInfo.Text, span, tokenInfo.StringValue);
 
                 default:
@@ -420,8 +420,8 @@ namespace NitroSharp.NsScript.Syntax
             switch (character)
             {
                 case '[':
-                    kind = SyntaxTokenKind.ParagraphIdentifier;
-                    ScanParagraphIdentifier();
+                    kind = SyntaxTokenKind.DialogueBlockIdentifier;
+                    ScanDialogueBlockIdentifier();
                     scanTrailingTrivia = true;
                     break;
 
@@ -681,7 +681,7 @@ namespace NitroSharp.NsScript.Syntax
             }
         }
 
-        private void ScanParagraphStartTag(ref TokenInfo tokenInfo)
+        private void ScanDialogueBlockStartTag(ref TokenInfo tokenInfo)
         {
             char c;
             while ((c = PeekChar()) != '>' && c != EofCharacter)
@@ -694,7 +694,7 @@ namespace NitroSharp.NsScript.Syntax
             tokenInfo.StringValue = tokenInfo.Text.Substring(5, tokenInfo.Text.Length - 6);
         }
 
-        private void ScanParagraphIdentifier()
+        private void ScanDialogueBlockIdentifier()
         {
             AdvanceChar();
 

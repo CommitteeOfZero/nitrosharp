@@ -13,7 +13,7 @@ namespace NitroSharp.NsScript.Tests
             Assert.NotNull(call);
             Assert.Equal(SyntaxNodeKind.FunctionCall, call.Kind);
             Assert.Equal("WaitKey", call.Target.OriginalName);
-            Assert.Equal(call.Target.OriginalName, call.Target.Value);
+            Assert.Equal(call.Target.OriginalName, call.Target.Name);
             Assert.Equal(SigilKind.None, call.Target.Sigil);
             Assert.Single(call.Arguments);
 
@@ -66,7 +66,7 @@ namespace NitroSharp.NsScript.Tests
 
             Assert.NotNull(identifier);
             Assert.Equal(text, identifier.OriginalName);
-            Assert.Equal(text, identifier.Value);
+            Assert.Equal(text, identifier.Name);
             Assert.Equal(SigilKind.None, identifier.Sigil);
             Assert.Equal(text, identifier.ToString());
         }
@@ -79,9 +79,9 @@ namespace NitroSharp.NsScript.Tests
 
             Assert.NotNull(identifier);
             Assert.Equal(text, identifier.OriginalName);
-            Assert.Equal("foo", identifier.Value);
+            Assert.Equal("foo", identifier.Name);
             Assert.Equal(SigilKind.Dollar, identifier.Sigil);
-            Assert.True(identifier.IsVariable);
+            Assert.True(identifier.IsGlobalVariable);
             Assert.False(identifier.IsQuouted);
             Assert.Equal(text, identifier.ToString());
         }
@@ -94,9 +94,9 @@ namespace NitroSharp.NsScript.Tests
 
             Assert.NotNull(identifier);
             Assert.Equal(text, identifier.OriginalName);
-            Assert.Equal("foo", identifier.Value);
+            Assert.Equal("foo", identifier.Name);
             Assert.Equal(SigilKind.Hash, identifier.Sigil);
-            Assert.True(identifier.IsVariable);
+            Assert.True(identifier.IsGlobalVariable);
             Assert.False(identifier.IsQuouted);
             Assert.Equal(text, identifier.ToString());
         }
@@ -117,7 +117,7 @@ namespace NitroSharp.NsScript.Tests
             var arg = invocation.Arguments[0] as Identifier;
             Assert.NotNull(arg);
             Assert.Equal("\"foo\"", arg.OriginalName);
-            Assert.Equal("foo", arg.Value);
+            Assert.Equal("foo", arg.Name);
             Assert.Equal(SigilKind.None, arg.Sigil);
             Assert.True(arg.IsQuouted);
         }
@@ -130,9 +130,9 @@ namespace NitroSharp.NsScript.Tests
 
             Assert.NotNull(identifier);
             Assert.Equal(text, identifier.OriginalName);
-            Assert.Equal("foo", identifier.Value);
+            Assert.Equal("foo", identifier.Name);
             Assert.Equal(SigilKind.Dollar, identifier.Sigil);
-            Assert.True(identifier.IsVariable);
+            Assert.True(identifier.IsGlobalVariable);
             Assert.True(identifier.IsQuouted);
             Assert.Equal(text, identifier.ToString());
         }
@@ -152,8 +152,6 @@ namespace NitroSharp.NsScript.Tests
         public void ParseUnaryOperators()
         {
             TestUnary(UnaryOperatorKind.Not);
-            TestUnary(UnaryOperatorKind.PostfixDecrement);
-            TestUnary(UnaryOperatorKind.PostfixIncrement);
             TestUnary(UnaryOperatorKind.Minus);
             TestUnary(UnaryOperatorKind.Plus);
         }
@@ -184,20 +182,13 @@ namespace NitroSharp.NsScript.Tests
             TestAssignment(AssignmentOperatorKind.MultiplyAssign);
             TestAssignment(AssignmentOperatorKind.Assign);
             TestAssignment(AssignmentOperatorKind.SubtractAssign);
+            TestAssignment(AssignmentOperatorKind.Increment);
+            TestAssignment(AssignmentOperatorKind.Decrement);
         }
 
         private void TestUnary(UnaryOperatorKind kind)
         {
-            string text;
-            if (OperatorInfo.IsPrefixUnary(kind))
-            {
-                text = OperatorInfo.GetText(kind) + "$a";
-            }
-            else
-            {
-                text = "$a" + OperatorInfo.GetText(kind);
-            }
-
+            string text = OperatorInfo.GetText(kind) + "$a";
             var expr = Parsing.ParseExpression(text) as UnaryExpression;
 
             Assert.NotNull(expr);

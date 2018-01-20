@@ -1,5 +1,6 @@
 ﻿using NitroSharp.NsScript.Syntax;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 
 namespace NitroSharp.NsScript.Symbols
 {
@@ -20,9 +21,12 @@ namespace NitroSharp.NsScript.Symbols
         public override NamedSymbol Visit(SyntaxNode node)
         {
             var symbol = base.Visit(node);
-            if (node.Kind != SyntaxNodeKind.SourceFile)
+            if (symbol != null)
             {
-                CurrentScope.Declare(symbol);
+                if (node.Kind != SyntaxNodeKind.SourceFile)
+                {
+                    CurrentScope.Declare(symbol);
+                }
             }
 
             node.Symbol = symbol;
@@ -40,26 +44,43 @@ namespace NitroSharp.NsScript.Symbols
 
         public override NamedSymbol VisitChapter(Chapter chapter)
         {
-            return new ChapterSymbol(chapter.Name.Value, chapter);
+            return new ChapterSymbol(chapter.Identifier.Name, chapter);
         }
 
         public override NamedSymbol VisitScene(Scene scene)
         {
-            return new SceneSymbol(scene.Name.Value, scene);
+            return new SceneSymbol(scene.Identifier.Name, scene);
         }
 
         public override NamedSymbol VisitFunction(Function function)
         {
-            var parameters = BeginScope(empty: function.Parameters.IsEmpty);
+            var locals = BeginScope(empty: false);
             VisitArray(function.Parameters);
+            VisitLocalDeclarations(function.Body);
             EndScope();
 
-            return new FunctionSymbol(function.Name.Value, function, parameters);
+            return new FunctionSymbol(function.Identifier.Name, function, locals);
+        }
+
+        private void VisitLocalDeclarations(Block block)
+        {
+            foreach (var stmt in block.Statements)
+            {
+                if (stmt is Declaration)
+                {
+                    Visit(stmt);
+                }
+            }
         }
 
         public override NamedSymbol VisitParameter(Parameter parameter)
         {
-            return new ParameterSymbol(parameter.Name.Value, parameter);
+            return new ParameterSymbol(parameter.Identifier.Name, parameter);
+        }
+
+        public override NamedSymbol VisitDialogueBlock(DialogueBlock dialogueBlock)
+        {
+            return new DialogueBlockSymbol(dialogueBlock.Identifier.Name, dialogueBlock);
         }
     }
 }

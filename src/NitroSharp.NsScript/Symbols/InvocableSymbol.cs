@@ -1,4 +1,5 @@
-﻿using NitroSharp.NsScript.Syntax;
+﻿using NitroSharp.NsScript.IR;
+using NitroSharp.NsScript.Syntax;
 
 namespace NitroSharp.NsScript.Symbols
 {
@@ -7,5 +8,7 @@ namespace NitroSharp.NsScript.Symbols
         protected InvocableSymbol(string name, MemberDeclaration declaration) : base(name, declaration)
         {
         }
+
+        public InstructionBlock LinearRepresentation { get; internal set; }
     }
 }

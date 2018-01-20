@@ -1,12 +1,10 @@
-﻿namespace NitroSharp.NsScript.Syntax
+﻿namespace NitroSharp.NsScript
 {
     public enum UnaryOperatorKind
     {
         Not,
         Plus,
-        Minus,
-        PostfixIncrement,
-        PostfixDecrement
+        Minus
     }
 
     public enum BinaryOperatorKind
@@ -32,6 +30,8 @@
         AddAssign,
         SubtractAssign,
         MultiplyAssign,
-        DivideAssign
+        DivideAssign,
+        Increment,
+        Decrement
     }
 }

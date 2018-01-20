@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace NitroSharp.NsScript.Uitls
+namespace NitroSharp.NsScript
 {
     internal static class ExceptionUtils
     {

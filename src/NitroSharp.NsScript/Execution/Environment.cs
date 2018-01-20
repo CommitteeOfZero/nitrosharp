@@ -3,13 +3,13 @@ using System.Diagnostics;
 
 namespace NitroSharp.NsScript.Execution
 {
-    public sealed class MemorySpace
+    public sealed class Environment
     {
-        public static readonly MemorySpace Empty = new MemorySpace();
+        public static readonly Environment Empty = new Environment();
 
         private readonly Dictionary<string, ConstantValue> _map;
 
-        public MemorySpace()
+        public Environment()
         {
             _map = new Dictionary<string, ConstantValue>();
         }
@@ -27,7 +27,7 @@ namespace NitroSharp.NsScript.Execution
         public bool TryGetValue(string identifier, out ConstantValue value) => _map.TryGetValue(identifier, out value);
         public bool Contains(string identifier) => _map.ContainsKey(identifier);
 
-        public void Set(string identifier, ConstantValue value)
+        internal void Set(string identifier, ConstantValue value)
         {
             Debug.Assert(!ReferenceEquals(value, null));
             _map[identifier] = value;

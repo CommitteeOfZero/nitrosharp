@@ -13,7 +13,7 @@ namespace NitroSharp.NsScript.Tests
 
             Assert.NotNull(chapter);
             Assert.Equal(SyntaxNodeKind.Chapter, chapter.Kind);
-            Assert.Equal("main", chapter.Name.OriginalName);
+            Assert.Equal("main", chapter.Identifier.OriginalName);
 
             string toStringResult = Helpers.RemoveNewLineCharacters(chapter.ToString());
             Assert.Equal(text, toStringResult);
@@ -27,7 +27,7 @@ namespace NitroSharp.NsScript.Tests
 
             Assert.NotNull(scene);
             Assert.Equal(SyntaxNodeKind.Scene, scene.Kind);
-            Assert.Equal("TestScene", scene.Name.OriginalName);
+            Assert.Equal("TestScene", scene.Identifier.OriginalName);
         }
 
         [Fact]
@@ -38,7 +38,7 @@ namespace NitroSharp.NsScript.Tests
 
             Assert.NotNull(function);
             Assert.Equal(SyntaxNodeKind.Function, function.Kind);
-            Assert.Equal("Test", function.Name.OriginalName);
+            Assert.Equal("Test", function.Identifier.OriginalName);
             Assert.Empty(function.Parameters);
 
             string toStringResult = Helpers.RemoveNewLineCharacters(function.ToString());
@@ -55,9 +55,9 @@ namespace NitroSharp.NsScript.Tests
             Assert.Single(function.Parameters);
             var p = function.Parameters[0];
             Assert.Equal(SyntaxNodeKind.Parameter, p.Kind);
-            Assert.Equal("intParam", p.Name.OriginalName);
-            Assert.Equal(p.Name.OriginalName, p.Name.Value);
-            Assert.Equal(SigilKind.None, p.Name.Sigil);
+            Assert.Equal("intParam", p.Identifier.OriginalName);
+            Assert.Equal(p.Identifier.OriginalName, p.Identifier.Name);
+            Assert.Equal(SigilKind.None, p.Identifier.Sigil);
 
             string toStringResult = Helpers.RemoveNewLineCharacters(function.ToString());
             Assert.Equal(text, toStringResult);
@@ -73,9 +73,9 @@ namespace NitroSharp.NsScript.Tests
             Assert.Single(function.Parameters);
             var p = function.Parameters[0];
             Assert.Equal(SyntaxNodeKind.Parameter, p.Kind);
-            Assert.Equal("\"stringParam\"", p.Name.OriginalName);
-            Assert.Equal("stringParam", p.Name.Value);
-            Assert.Equal(SigilKind.None, p.Name.Sigil);
+            Assert.Equal("\"stringParam\"", p.Identifier.OriginalName);
+            Assert.Equal("stringParam", p.Identifier.Name);
+            Assert.Equal(SigilKind.None, p.Identifier.Sigil);
 
             string toStringResult = Helpers.RemoveNewLineCharacters(function.ToString());
             Assert.Equal(text, toStringResult);
@@ -97,9 +97,9 @@ namespace NitroSharp.NsScript.Tests
             Assert.Single(function.Parameters);
             var p = function.Parameters[0];
             Assert.Equal(SyntaxNodeKind.Parameter, p.Kind);
-            Assert.Equal(fullName, p.Name.OriginalName);
-            Assert.Equal(simplifiedName, p.Name.Value);
-            Assert.Equal(sigil, p.Name.Sigil);
+            Assert.Equal(fullName, p.Identifier.OriginalName);
+            Assert.Equal(simplifiedName, p.Identifier.Name);
+            Assert.Equal(sigil, p.Identifier.Sigil);
 
             string toStringResult = Helpers.RemoveNewLineCharacters(function.ToString());
             Assert.Equal(text, toStringResult);

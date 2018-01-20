@@ -195,7 +195,7 @@ namespace NitroSharp.NsScript.Tests
             string text = "<PRE box69>";
             var token = LexToken(text);
 
-            Assert.Equal(SyntaxTokenKind.ParagraphStartTag, token.Kind);
+            Assert.Equal(SyntaxTokenKind.DialogueBlockStartTag, token.Kind);
             Assert.Equal(text, token.Text);
         }
 
@@ -203,9 +203,9 @@ namespace NitroSharp.NsScript.Tests
         public void LexParagraphEndTag()
         {
             string text = "</PRE>";
-            var token = LexToken(text, LexingMode.Paragraph);
+            var token = LexToken(text, LexingMode.DialogueBlock);
 
-            Assert.Equal(SyntaxTokenKind.ParagraphEndTag, token.Kind);
+            Assert.Equal(SyntaxTokenKind.DialogueBlockEndTag, token.Kind);
             Assert.Equal(text, token.Text);
         }
 
@@ -213,7 +213,7 @@ namespace NitroSharp.NsScript.Tests
         public void LexSimplePXmlString()
         {
             string text = "sample text";
-            var token = LexToken(text, LexingMode.Paragraph);
+            var token = LexToken(text, LexingMode.DialogueBlock);
 
             Assert.Equal(SyntaxTokenKind.PXmlString, token.Kind);
             Assert.Equal(text, token.Text);
@@ -223,7 +223,7 @@ namespace NitroSharp.NsScript.Tests
         public void LexPXmlLineSeparator()
         {
             string text = "\r\n";
-            var token = LexToken(text, LexingMode.Paragraph);
+            var token = LexToken(text, LexingMode.DialogueBlock);
 
             Assert.Equal(SyntaxTokenKind.PXmlLineSeparator, token.Kind);
             Assert.Equal(text, token.Text);
@@ -233,7 +233,7 @@ namespace NitroSharp.NsScript.Tests
         public void LexPXmlStringWithVerbatimText()
         {
             string text = "<PRE>scene</PRE>";
-            var token = LexToken(text, LexingMode.Paragraph);
+            var token = LexToken(text, LexingMode.DialogueBlock);
 
             Assert.Equal(SyntaxTokenKind.PXmlString, token.Kind);
             Assert.Equal(text, token.Text);

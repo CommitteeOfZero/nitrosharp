@@ -1,36 +1,7 @@
-﻿using NitroSharp.NsScript.Uitls;
-
-namespace NitroSharp.NsScript.Syntax
+﻿namespace NitroSharp.NsScript
 {
     public static class OperatorInfo
     {
-        public static bool IsPrefixUnary(UnaryOperatorKind operatorKind)
-        {
-            switch (operatorKind)
-            {
-                case UnaryOperatorKind.Not:
-                case UnaryOperatorKind.Minus:
-                case UnaryOperatorKind.Plus:
-                    return true;
-
-                default:
-                    return false;
-            }
-        }
-
-        public static bool IsPostfixUnary(UnaryOperatorKind operatorKind)
-        {
-            switch (operatorKind)
-            {
-                case UnaryOperatorKind.PostfixDecrement:
-                case UnaryOperatorKind.PostfixIncrement:
-                    return true;
-
-                default:
-                    return false;
-            }
-        }
-
         public static string GetText(BinaryOperatorKind operatorKind)
         {
             switch (operatorKind)
@@ -81,6 +52,10 @@ namespace NitroSharp.NsScript.Syntax
                     return "*=";
                 case AssignmentOperatorKind.DivideAssign:
                     return "/=";
+                case AssignmentOperatorKind.Increment:
+                    return "++";
+                case AssignmentOperatorKind.Decrement:
+                    return "--";
 
                 default:
                     throw ExceptionUtils.UnexpectedValue(nameof(operatorKind));
@@ -97,10 +72,6 @@ namespace NitroSharp.NsScript.Syntax
                     return "+";
                 case UnaryOperatorKind.Minus:
                     return "-";
-                case UnaryOperatorKind.PostfixIncrement:
-                    return "++";
-                case UnaryOperatorKind.PostfixDecrement:
-                    return "--";
 
                 default:
                     throw ExceptionUtils.UnexpectedValue(nameof(operatorKind));

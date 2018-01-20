@@ -4,7 +4,7 @@ namespace NitroSharp.NsScript.Symbols
 {
     public sealed class MergedSourceFileSymbol : Symbol
     {
-        internal MergedSourceFileSymbol(SourceFileSymbol symbol, ImmutableArray<SourceFileSymbol> dependencies)
+        public MergedSourceFileSymbol(SourceFileSymbol symbol, ImmutableArray<SourceFileSymbol> dependencies)
         {
             Symbol = symbol;
             Dependencies = dependencies;

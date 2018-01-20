@@ -3,14 +3,14 @@ using System.Collections.Immutable;
 
 namespace NitroSharp.NsScript.Syntax
 {
-    public abstract class Declaration : SyntaxNode
+    public abstract class Declaration : Statement
     {
         protected Declaration(Identifier name)
         {
-            Name = name;
+            Identifier = name;
         }
 
-        public Identifier Name { get; }
+        public Identifier Identifier { get; }
     }
 
     public abstract class MemberDeclaration : Declaration
@@ -100,6 +100,30 @@ namespace NitroSharp.NsScript.Syntax
         public override TResult Accept<TResult>(SyntaxVisitor<TResult> visitor)
         {
             return visitor.VisitParameter(this);
+        }
+    }
+
+    /// <summary>
+    /// Also known as a &lt;PRE&gt; element.
+    /// </summary>
+    public sealed class DialogueBlock : MemberDeclaration
+    {
+        internal DialogueBlock(Identifier name, string associatedBox, Block body) : base(name, body)
+        {
+            AssociatedBox = associatedBox;
+        }
+
+        public string AssociatedBox { get; }
+        public override SyntaxNodeKind Kind => SyntaxNodeKind.DialogueBlock;
+
+        public override void Accept(SyntaxVisitor visitor)
+        {
+            visitor.VisitDialogueBlock(this);
+        }
+
+        public override TResult Accept<TResult>(SyntaxVisitor<TResult> visitor)
+        {
+            return visitor.VisitDialogueBlock(this);
         }
     }
 }

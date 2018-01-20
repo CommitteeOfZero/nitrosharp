@@ -10,6 +10,7 @@
         Function,
         Parameter,
         GlobalVariable,
-        EnumValue
+        EnumValue,
+        DialogueBlock
     }
 }

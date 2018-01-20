@@ -4,6 +4,6 @@
     {
         Normal,
         ParameterList,
-        Paragraph
+        DialogueBlock
     }
 }

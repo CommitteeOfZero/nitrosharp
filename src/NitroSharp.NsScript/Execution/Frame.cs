@@ -1,117 +1,57 @@
-﻿using NitroSharp.NsScript.Symbols;
-using NitroSharp.NsScript.Syntax;
+﻿using NitroSharp.NsScript.IR;
+using NitroSharp.NsScript.Symbols;
 using System;
-using System.Collections.Generic;
-using System.Collections.Immutable;
 
 namespace NitroSharp.NsScript.Execution
 {
     internal sealed class Frame
     {
-        private readonly Stack<Continuation> _continuations;
+        private readonly InstructionBlock _instructions;
+        private int _pc;
 
         public Frame(MergedSourceFileSymbol module, InvocableSymbol symbol)
         {
             Module = module;
             Symbol = symbol;
-            Arguments = MemorySpace.Empty;
-
-            _continuations = new Stack<Continuation>();
-            ContinueWith(symbol.Declaration, false);
+            Arguments = Environment.Empty;
+            _instructions = symbol.LinearRepresentation;
         }
 
         public MergedSourceFileSymbol Module { get; }
         public InvocableSymbol Symbol { get; }
-        public MemorySpace Arguments { get; private set; }
-        public Statement CurrentStatement => LastContinuation.CurrentStatement;
-        public Continuation LastContinuation => _continuations.Peek();
-        public bool IsEmpty => _continuations.Count == 0;
+        public Environment Arguments { get; private set; }
 
-        public void SetArgument(string name, ConstantValue value)
+        public ref Instruction FetchInstruction() => ref _instructions.FetchInstruction(_pc);
+
+        public void Jump(int targetInstructionIndex)
         {
-            if (ReferenceEquals(Arguments, MemorySpace.Empty))
+            if (targetInstructionIndex < 0 || targetInstructionIndex >= _instructions.Length)
             {
-                Arguments = new MemorySpace();
+                throw new ArgumentOutOfRangeException(nameof(targetInstructionIndex));
             }
 
-            Arguments.Set(name, value);
+            _pc = targetInstructionIndex;
         }
 
         public bool Advance()
         {
-            if (IsEmpty)
+            if (_pc >= _instructions.Length)
             {
                 return false;
             }
-            if (LastContinuation.Advance())
-            {
-                return true;
-            }
 
-            Continuation c;
-            do
-            {
-                c = _continuations.Pop();
-            } while (c.IsAtEnd && !IsEmpty);
-
-            return !IsEmpty;
+            _pc++;
+            return true;
         }
 
-        public void Break()
+        public void SetArgument(string name, ConstantValue value)
         {
-            _continuations.Pop();
-        }
-
-        public void ContinueWith(ImmutableArray<Statement> statements, bool advance)
-        {
-            if (advance)
+            if (ReferenceEquals(Arguments, Environment.Empty))
             {
-                Advance();
+                Arguments = new Environment();
             }
 
-            ContinueWith(statements);
-        }
-
-        public void ContinueWith(ImmutableArray<Statement> statements)
-        {
-            _continuations.Push(new Continuation(statements));
-        }
-
-        public void ContinueWith(SyntaxNode node, bool advance)
-        {
-            if (advance)
-            {
-                Advance();
-            }
-
-            switch (node.Kind)
-            {
-                case SyntaxNodeKind.Function:
-                case SyntaxNodeKind.Scene:
-                case SyntaxNodeKind.Chapter:
-                    var member = (MemberDeclaration)node;
-                    ContinueWith(member.Body.Statements);
-                    break;
-
-                case SyntaxNodeKind.Block:
-                    var block = (Block)node;
-                    if (block.Statements.Length > 0)
-                    {
-                        ContinueWith(block.Statements);
-                    }
-                    break;
-
-                case SyntaxNodeKind.Paragraph:
-                    var paragraph = (Paragraph)node;
-                    ContinueWith(paragraph.Statements);
-                    break;
-
-                default:
-                    var statement = node as Statement;
-                    if (statement == null) throw new InvalidOperationException();
-                    ContinueWith(ImmutableArray.Create(statement));
-                    break;
-            }
+            Arguments.Set(name, value);
         }
     }
 }

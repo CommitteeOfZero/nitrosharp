@@ -63,9 +63,9 @@
         BreakKeyword,
         ReturnKeyword,
 
-        ParagraphStartTag,
-        ParagraphEndTag,
-        ParagraphIdentifier,
+        DialogueBlockStartTag,
+        DialogueBlockEndTag,
+        DialogueBlockIdentifier,
         PXmlString,
         PXmlLineSeparator,
 

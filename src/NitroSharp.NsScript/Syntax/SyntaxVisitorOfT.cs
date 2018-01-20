@@ -134,9 +134,9 @@ namespace NitroSharp.NsScript.Syntax
             return DefaultVisitNode(pxmlString);
         }
 
-        public virtual TResult VisitParagraph(Paragraph paragraph)
+        public virtual TResult VisitDialogueBlock(DialogueBlock dialogueBlock)
         {
-            return DefaultVisitNode(paragraph);
+            return DefaultVisitNode(dialogueBlock);
         }
 
         public virtual TResult VisitPXmlLineSeparator(PXmlLineSeparator pxmlLineSeparator)

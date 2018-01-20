@@ -5,6 +5,7 @@ using NitroSharp.Audio;
 using NitroSharp.Graphics;
 using NitroSharp.Foundation.Audio;
 using NitroSharp.NsScript.Syntax;
+using NitroSharp.NsScript.Symbols;
 
 namespace NitroSharp
 {
@@ -13,7 +14,7 @@ namespace NitroSharp
         private const float TextRightMargin = 150;
         private const string VoiceEntityName = "__VOICE";
 
-        private Paragraph _currentParagraph;
+        private DialogueBlockSymbol _currentParagraph;
         private DialogueLine _currentDialogueLine;
 
         public Entity TextEntity { get; private set; }
@@ -28,9 +29,9 @@ namespace NitroSharp
                 .WithPosition(x, y);
         }
 
-        protected override void OnParagraphEntered(Paragraph paragraph)
+        protected override void OnDialogueBlockEntered(DialogueBlockSymbol dialogueBlock)
         {
-            _currentParagraph = paragraph;
+            _currentParagraph = dialogueBlock;
             TextEntity?.Destroy();
         }
 

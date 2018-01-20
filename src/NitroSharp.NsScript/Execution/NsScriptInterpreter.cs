@@ -1,16 +1,16 @@
-﻿using NitroSharp.NsScript.Symbols;
-using NitroSharp.NsScript.Syntax;
+﻿using NitroSharp.NsScript.IR;
+using NitroSharp.NsScript.Symbols;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Threading;
 
 namespace NitroSharp.NsScript.Execution
 {
-    public sealed class NsScriptInterpreter
+    public class NsScriptInterpreter
     {
         private enum ThreadAction
         {
@@ -21,16 +21,17 @@ namespace NitroSharp.NsScript.Execution
         }
 
         private readonly SourceFileManager _sourceFileManager;
-        private readonly EngineImplementationBase _engineImplementation;
-        private readonly ExpressionEvaluator _expressionEvaluator;
+        private readonly EngineImplementation _engineImplementation;
 
         private readonly Dictionary<string, ThreadContext> _threads;
         private readonly ConcurrentQueue<(ThreadContext thread, ThreadAction action, TimeSpan)> _pendingThreadActions;
         private readonly HashSet<ThreadContext> _activeThreads;
-        private ThreadContext _currentThread;
+        
+        private readonly Environment _globals;
         private readonly Stopwatch _timer;
+        private readonly IRBuilder _irBuilder;
 
-        public NsScriptInterpreter(Func<SourceFileReference, Stream> sourceFileLocator, EngineImplementationBase engineImplementation)
+        public NsScriptInterpreter(Func<SourceFileReference, Stream> sourceFileLocator, EngineImplementation engineImplementation)
         {
             _sourceFileManager = new SourceFileManager(sourceFileLocator);
             engineImplementation.SetInterpreter(this);
@@ -40,16 +41,28 @@ namespace NitroSharp.NsScript.Execution
             _activeThreads = new HashSet<ThreadContext>();
             _pendingThreadActions = new ConcurrentQueue<(ThreadContext thread, ThreadAction action, TimeSpan)>();
 
-            Globals = new MemorySpace();
-            _expressionEvaluator = new ExpressionEvaluator(Globals, _engineImplementation);
-
+            _globals = new Environment();
             _timer = Stopwatch.StartNew();
+            _irBuilder = new IRBuilder();
         }
-
-        private Frame CurrentFrame => _currentThread.CurrentFrame;
-
-        public MemorySpace Globals { get; }
+        
         public IEnumerable<ThreadContext> Threads => _threads.Values;
+        internal ThreadContext CurrentThread;
+        private Frame CurrentFrame => CurrentThread.CurrentFrame;
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private ConstantValue PopValue() => CurrentThread.Stack.Pop();
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void PushValue(ConstantValue value) => CurrentThread.Stack.Push(value);
+        
+        private void EnsureHasLinearRepresentation(InvocableSymbol invocable)
+        {
+            if (invocable.LinearRepresentation == null)
+            {
+                invocable.LinearRepresentation = _irBuilder.Build(invocable);
+            }
+        }
 
         public bool TryGetThread(string name, out ThreadContext thread) => _threads.TryGetValue(name, out thread);
         public void CreateThread(string name, string symbolName, bool start = true)
@@ -63,12 +76,13 @@ namespace NitroSharp.NsScript.Execution
             CreateThread(name, module, symbolName, start);
         }
 
-        public void CreateThread(string name, MergedSourceFileSymbol module, string symbolName, bool start = true)
+        private void CreateThread(string name, MergedSourceFileSymbol module, string symbolName, bool start = true)
         {
             Debug.WriteLine($"Creating thread '{symbolName}'");
             var member = module.LookupMember(symbolName);
-            var thread = new ThreadContext(name, module, member);
+            EnsureHasLinearRepresentation(member);
 
+            var thread = new ThreadContext(name, module, member);
             if (_threads.Count == 0)
             {
                 _engineImplementation.MainThread = thread;
@@ -83,15 +97,20 @@ namespace NitroSharp.NsScript.Execution
 
         public void Run(CancellationToken cancellationToken)
         {
-            var time = _timer.Elapsed;
             while (_threads.Count > 0 || _pendingThreadActions.Count > 0)
             {
                 ProcessPendingThreadActions();
+                var time = TimeSpan.MaxValue;
                 foreach (var thread in _threads.Values)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    if (thread.IsSuspended)
+                    if (thread.IsSuspended && !thread.SuspensionTime.Equals(TimeSpan.MaxValue))
                     {
+                        if (time == TimeSpan.MaxValue)
+                        {
+                            time = _timer.Elapsed;
+                        }
+                        
                         var delta = time - thread.SuspensionTime;
                         if (delta >= thread.SleepTimeout)
                         {
@@ -103,7 +122,7 @@ namespace NitroSharp.NsScript.Execution
                         }
                     }
 
-                    _currentThread = thread;
+                    CurrentThread = thread;
                     Tick();
 
                     if (thread.DoneExecuting)
@@ -121,184 +140,243 @@ namespace NitroSharp.NsScript.Execution
 
         private void Tick()
         {
-            ExecuteStatement(_currentThread.PC);
-        }
-
-        private ConstantValue Evaluate(Expression expression) => Evaluate(expression, CurrentFrame.Arguments);
-        private ConstantValue Evaluate(Expression expression, MemorySpace locals)
-        {
-            return _expressionEvaluator.Evaluate(expression, locals);
-        }
-
-        private void Advance()
-        {
-            _currentThread.Advance();
-        }
-
-        internal void PushContinuation(ImmutableArray<Statement> statements, bool advance = false)
-        {
-            CurrentFrame.ContinueWith(statements, advance);
-        }
-
-        internal void PushContinuation(Statement statement, bool advance = false)
-        {
-            CurrentFrame.ContinueWith(statement, advance);
-        }
-
-        private void ExecuteStatement(Statement statement)
-        {
-            switch (statement.Kind)
+            while (true)
             {
-                case SyntaxNodeKind.Block:
-                    var block = (Block)statement;
-                    PushContinuation(block.Statements, advance: true);
-                    break;
-
-                case SyntaxNodeKind.ExpressionStatement:
-                    ExpressionStatement((ExpressionStatement)statement);
-                    break;
-
-                case SyntaxNodeKind.CallChapterStatement:
-                    CallChapter((CallChapterStatement)statement);
-                    break;
-
-                case SyntaxNodeKind.IfStatement:
-                    If((IfStatement)statement);
-                    break;
-
-                case SyntaxNodeKind.WhileStatement:
-                    While((WhileStatement)statement);
-                    break;
-
-                case SyntaxNodeKind.BreakStatement:
-                    CurrentFrame.Break();
-                    break;
-
-                case SyntaxNodeKind.ReturnStatement:
-                    _currentThread.PopFrame();
-                    break;
-
-                case SyntaxNodeKind.Paragraph:
-                    VisitParagraph((Paragraph)statement);
-                    break;
-
-                case SyntaxNodeKind.PXmlString:
-                    var node = (PXmlString)statement;
-                    _engineImplementation.CurrentThread = _currentThread;
-                    _engineImplementation.DisplayDialogue(node.Text);
-                    Advance();
-                    break;
-
-                case SyntaxNodeKind.PXmlLineSeparator:
-                    _engineImplementation.CurrentThread = _currentThread;
-                    _engineImplementation.WaitForInput();
-                    Advance();
-                    break;
-
-                case SyntaxNodeKind.SelectStatement:
-                    Select((SelectStatement)statement);
-                    break;
-
-                default:
-                    Advance();
-                    break;
-            }
-        }
-
-        private void Select(SelectStatement selectStatement)
-        {
-            PushContinuation(selectStatement.Body, advance: true);
-        }
-
-        private void CallChapter(CallChapterStatement statement)
-        {
-            var module = _sourceFileManager.Resolve(statement.ModuleName.Value);
-            var target = (ChapterSymbol)module.LookupMember("main");
-            var stackFrame = new Frame(module, target);
-
-            CurrentFrame.Advance();
-            _currentThread.PushFrame(stackFrame);
-        }
-
-        private void ExpressionStatement(ExpressionStatement expressionStatement)
-        {
-            if (expressionStatement.Expression is FunctionCall functionCall
-                && functionCall.Target.Symbol is FunctionSymbol target)
-            {
-                PrepareFunctionCall(functionCall, target);
-                return;
-            }
-
-            _engineImplementation.CurrentThread = _currentThread;
-            var locals = CurrentFrame.Arguments;
-            Advance();
-            Evaluate(expressionStatement.Expression, locals);
-        }
-
-        private void PrepareFunctionCall(FunctionCall functionCall, FunctionSymbol target)
-        {
-            var stackFrame = new Frame(CurrentFrame.Module, target);
-
-            Debug.WriteLine($"Entering function '{target.Name}'");
-
-            var declaration = (Function)target.Declaration;
-            var parameters = declaration.Parameters;
-            var arguments = functionCall.Arguments;
-
-            for (int i = 0; i < parameters.Length; i++)
-            {
-                var parameter = parameters[i];
-                bool argSpecified = i < arguments.Length;
-
-                ConstantValue value = argSpecified ? Evaluate(functionCall.Arguments[i]) : ConstantValue.Null;
-                stackFrame.SetArgument(parameter.Name.Value, value);
-
-                if (parameter.Name.Sigil == SigilKind.Dollar)
+                var frame = CurrentFrame;
+                ref var instruction = ref frame.FetchInstruction();
+                bool advance = Execute(ref instruction);
+                if (advance)
                 {
-                    Globals.Set(parameter.Name.Value, value);
+                    frame.Advance();
+                }
+
+                if (CanAffectThreadState(instruction.Opcode))
+                {
+                    break;
+                }
+            }
+        }
+
+        private static bool CanAffectThreadState(Opcode opcode)
+        {
+            switch (opcode)
+            {
+                case Opcode.Call:
+                case Opcode.CallFar:
+                case Opcode.Say:
+                case Opcode.WaitForInput:
+                    return true;
+                    
+                default:
+                    return false;
+            }
+        }
+
+        private bool Execute(ref Instruction instruction)
+        {            
+            switch (instruction.Opcode)
+            {
+                case Opcode.PushValue:
+                    PushValue(ref instruction);
+                    break;
+
+                case Opcode.PushGlobal:
+                    PushGlobal(ref instruction);
+                    break;
+
+                case Opcode.PushLocal:
+                    PushLocal(ref instruction);
+                    break;
+
+                case Opcode.ApplyBinary:
+                    ApplyBinary(ref instruction);
+                    break;
+
+                case Opcode.ApplyUnary:
+                    ApplyUnary(ref instruction);
+                    break;
+
+                case Opcode.AssignGlobal:
+                    Assign(ref instruction, _globals);
+                    break;
+
+                case Opcode.AssignLocal:
+                    Assign(ref instruction, CurrentFrame.Arguments);
+                    break;
+
+                case Opcode.ConvertToDelta:
+                    ConvertToDelta();
+                    break;
+
+                case Opcode.SetDialogueBlock:
+                    SetDialogueBlock(ref instruction);
+                    break;
+
+                case Opcode.Say:
+                    Say(ref instruction);
+                    break;
+
+                case Opcode.WaitForInput:
+                    WaitForInput();
+                    break;
+                    
+                case Opcode.Call:
+                    Call(ref instruction);
+                    break;
+
+                case Opcode.Jump:
+                    Jump(ref instruction);
+                    return false;
+
+                case Opcode.JumpIfEquals:
+                    return !JumpIfEquals(ref instruction);
+
+                case Opcode.Return:
+                    CurrentThread.PopFrame();
+                    return false;
+            }
+
+            return true;
+        }
+
+        private void PushValue(ref Instruction instruction)
+        {
+            var value = (ConstantValue)instruction.Operand1;
+            PushValue(value);
+        }
+        
+        private void PushGlobal(ref Instruction instruction)
+        {
+            var name = (string)instruction.Operand1;
+            PushValue(_globals.Get(name));
+        }
+        
+        private void PushLocal(ref Instruction instruction)
+        {
+            var name = (string)instruction.Operand1;
+            var value = CurrentFrame.Arguments.Get(name);
+            PushValue(value);
+        }
+        
+        private void ApplyBinary(ref Instruction instruction)
+        {
+            var op = (BinaryOperatorKind)instruction.Operand1;
+            var left = PopValue();
+            var right = PopValue();
+            var result = Operator.ApplyBinary(left, op, right);
+
+            PushValue(result);
+        }
+        
+        private void ApplyUnary(ref Instruction instruction)
+        {
+            var op = (UnaryOperatorKind)instruction.Operand1;
+            var operand = PopValue();
+            var result = Operator.ApplyUnary(operand, op);
+
+            PushValue(result);
+        }
+
+        private void Assign(ref Instruction instruction, Environment env)
+        {
+            var name = (string)instruction.Operand1;
+            var op = (AssignmentOperatorKind)instruction.Operand2;
+            var value = PopValue();
+
+            var result = Operator.Assign(env, name, value, op);
+            env.Set(name, result);
+        }
+        
+        private void ConvertToDelta()
+        {
+            var delta = ConstantValue.Create(PopValue().DoubleValue, isDeltaValue: true);
+            PushValue(delta);
+        }
+        
+        private void SetDialogueBlock(ref Instruction instruction)
+        {
+            var block = (DialogueBlockSymbol)instruction.Operand1;
+            EnsureHasLinearRepresentation(block);
+
+            _globals.Set("SYSTEM_present_preprocess", ConstantValue.Create(block.AssociatedBox));
+            _globals.Set("SYSTEM_present_text", ConstantValue.Create(block.Identifier));
+
+            _engineImplementation.NotifyDialogueBlockEntered(block);
+        }
+        
+        private void Say(ref Instruction instruction)
+        {
+            var text = (string)instruction.Operand1;
+            _engineImplementation.DisplayDialogue(text);
+        }
+        
+        private void WaitForInput()
+        {
+            _engineImplementation.WaitForInput();
+        }
+        
+        private bool JumpIfEquals(ref Instruction instruction)
+        {
+            var value = (ConstantValue)instruction.Operand1;
+            int targetInstrIndex = (int)instruction.Operand2;
+            bool branchTaken = (PopValue() == value).BooleanValue;
+            if (branchTaken)
+            {
+                CurrentFrame.Jump(targetInstrIndex);
+            }
+
+            return branchTaken;
+        }
+
+        private void Jump(ref Instruction instruction)
+        {
+            int targetInstrIndex = (int)instruction.Operand1;
+            CurrentFrame.Jump(targetInstrIndex);
+        }
+        
+        private void Call(ref Instruction instruction)
+        {
+            var target = (Symbol)instruction.Operand1;
+            switch (target)
+            {
+                case FunctionSymbol function:
+                    CallFunction(function);
+                    break;
+
+                case BuiltInFunctionSymbol builtInFunction:
+                    CallBuiltInFunction(builtInFunction);
+                    break;
+
+                case null:
+                    break;
+            }
+        }
+
+        private void CallFunction(FunctionSymbol function)
+        {
+            EnsureHasLinearRepresentation(function);
+
+            var stackFrame = new Frame(CurrentFrame.Module, function);
+            var declaration = (Syntax.Function)function.Declaration;
+            var parameters = declaration.Parameters;
+            foreach (var parameter in parameters)
+            {
+                var argument = PopValue();
+                stackFrame.SetArgument(parameter.Identifier.Name, argument);
+
+                if (parameter.Identifier.IsGlobalVariable)
+                {
+                    _globals.Set(parameter.Identifier.Name, argument);
                 }
             }
 
-            CurrentFrame.Advance();
-            _currentThread.PushFrame(stackFrame);
+            CurrentThread.PushFrame(stackFrame);
         }
-
-        private void If(IfStatement ifStatement)
+        
+        private void CallBuiltInFunction(BuiltInFunctionSymbol function)
         {
-            var condition = Evaluate(ifStatement.Condition);
-            if (condition)
-            {
-                PushContinuation(ifStatement.IfTrueStatement, advance: true);
-            }
-            else if (ifStatement.IfFalseStatement != null)
-            {
-                PushContinuation(ifStatement.IfFalseStatement, advance: true);
-            }
-            else
-            {
-                Advance();
-            }
-        }
-
-        private void While(WhileStatement whileStatement)
-        {
-            if (Evaluate(whileStatement.Condition))
-            {
-                PushContinuation(whileStatement.Body);
-            }
-            else
-            {
-                Advance();
-            }
-        }
-
-        private void VisitParagraph(Paragraph paragraph)
-        {
-            Globals.Set("SYSTEM_present_preprocess", ConstantValue.Create(paragraph.AssociatedBox));
-            Globals.Set("SYSTEM_present_text", ConstantValue.Create(paragraph.Identifier));
-
-            _engineImplementation.NotifyParagraphEntered(paragraph);
-            Advance();
+            var returnValue = function.Implementation.Invoke(_engineImplementation, CurrentThread.Stack);
+            PushValue(returnValue);
         }
 
         private void ProcessPendingThreadActions()
@@ -306,7 +384,7 @@ namespace NitroSharp.NsScript.Execution
             while (_pendingThreadActions.TryDequeue(out var tuple))
             {
                 (ThreadContext thread, ThreadAction action, TimeSpan suspensionTimeout) = tuple;
-                switch (tuple.action)
+                switch (action)
                 {
                     case ThreadAction.Create:
                         _threads[thread.Name] = thread;
@@ -362,19 +440,14 @@ namespace NitroSharp.NsScript.Execution
 
         private void CommitResumeThread(ThreadContext thread)
         {
-            if (_threads.ContainsKey(thread.Name))
-            {
-                thread.IsSuspended = false;
-                thread.SuspensionTime = TimeSpan.Zero;
-                thread.SleepTimeout = TimeSpan.Zero;
+            Debug.Assert(_threads.ContainsKey(thread.Name), "Attempt to resume a thread that's already been terminated.");
+            
+            thread.IsSuspended = false;
+            thread.SuspensionTime = TimeSpan.Zero;
+            thread.SleepTimeout = TimeSpan.Zero;
 
-                _activeThreads.Add(thread);
-                Debug.WriteLine($"Resuming {thread.Name} ({thread.EntryPoint.Name})");
-            }
-            else
-            {
-                Debug.WriteLine("Resuming a dead thread");
-            }
+            _activeThreads.Add(thread);
+            Debug.WriteLine($"Resuming {thread.Name} ({thread.EntryPoint.Name})");
         }
 
         private void CommitTerminateThread(ThreadContext thread)

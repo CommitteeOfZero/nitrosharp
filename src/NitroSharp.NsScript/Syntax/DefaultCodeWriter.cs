@@ -13,7 +13,7 @@ namespace NitroSharp.NsScript.Syntax
         {
             Write(SyntaxFacts.GetText(SyntaxTokenKind.ChapterKeyword));
             WriteSpace();
-            Visit(chapter.Name);
+            Visit(chapter.Identifier);
             Visit(chapter.Body);
         }
 
@@ -21,7 +21,7 @@ namespace NitroSharp.NsScript.Syntax
         {
             Write(SyntaxFacts.GetText(SyntaxTokenKind.FunctionKeyword));
             WriteSpace();
-            Visit(function.Name);
+            Visit(function.Identifier);
             Write("(");
 
             var parameters = function.Parameters;
@@ -80,23 +80,13 @@ namespace NitroSharp.NsScript.Syntax
 
         public override void VisitParameter(Parameter parameter)
         {
-            Visit(parameter.Name);
+            Visit(parameter.Identifier);
         }
 
         public override void VisitUnaryExpression(UnaryExpression unaryExpression)
         {
-            var operatorKind = unaryExpression.OperatorKind;
-            if (OperatorInfo.IsPrefixUnary(operatorKind))
-            {
-                Write(OperatorInfo.GetText(operatorKind));
-            }
-
+            Write(OperatorInfo.GetText(unaryExpression.OperatorKind));
             Visit(unaryExpression.Operand);
-
-            if (OperatorInfo.IsPostfixUnary(operatorKind))
-            {
-                Write(OperatorInfo.GetText(operatorKind));
-            }
         }
 
         public override void VisitBinaryExpression(BinaryExpression binaryExpression)
@@ -209,7 +199,7 @@ namespace NitroSharp.NsScript.Syntax
             }
         }
 
-        public override void VisitParagraph(Paragraph dialogueBlock)
+        public override void VisitDialogueBlock(DialogueBlock dialogueBlock)
         {
             Write($"<PRE {dialogueBlock.AssociatedBox}>");
             WriteLine();

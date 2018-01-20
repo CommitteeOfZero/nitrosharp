@@ -8,7 +8,7 @@ using NitroSharp.NsScript.Execution;
 
 namespace NitroSharp
 {
-    public sealed partial class NitroCore : EngineImplementationBase
+    public sealed partial class NitroCore : EngineImplementation
     {
         private ContentManager _content;
         private readonly EntityManager _entities;

@@ -48,16 +48,22 @@ namespace NitroSharp.NsScript.Symbols
             Declare("Platform", Platform);
             Declare("ModuleFileName", ModuleFileName);
             Declare("String", String);
+            Declare("Time", Time);
+        }
+
+        private static ConstantValue Time(EngineImplementationBase arg1, Stack<ConstantValue> arg2)
+        {
+            return ConstantValue.Zero;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static void Declare(string functionName, Func<IEngineImplementation, Stack<ConstantValue>, ConstantValue> implementation)
+        private static void Declare(string functionName, Func<EngineImplementationBase, Stack<ConstantValue>, ConstantValue> implementation)
         {
             var symbol = new BuiltInFunctionSymbol(functionName, implementation);
             Symbols.Declare(symbol);
         }
 
-        private static ConstantValue String(IEngineImplementation implementation, Stack<ConstantValue> args)
+        private static ConstantValue String(EngineImplementationBase implementation, Stack<ConstantValue> args)
         {
             string format = PopString(args);
 
@@ -76,52 +82,52 @@ namespace NitroSharp.NsScript.Symbols
         static extern int swprintf([In, Out]StringBuilder buffer, String fmt, int arg1);
 
 
-        private static ConstantValue ModuleFileName(IEngineImplementation implementation, Stack<ConstantValue> args)
+        private static ConstantValue ModuleFileName(EngineImplementationBase implementation, Stack<ConstantValue> args)
         {
             return ConstantValue.Create(implementation.GetCurrentModuleName());
         }
 
-        private static ConstantValue Platform(IEngineImplementation implementation, Stack<ConstantValue> args)
+        private static ConstantValue Platform(EngineImplementationBase implementation, Stack<ConstantValue> args)
         {
             return ConstantValue.Create(implementation.GetPlatformId());
         }
 
-        private static ConstantValue ImageHorizon(IEngineImplementation implementation, Stack<ConstantValue> args)
+        private static ConstantValue ImageHorizon(EngineImplementationBase implementation, Stack<ConstantValue> args)
         {
             string entityName = EntityName(PopString(args));
             int width = implementation.GetTextureWidth(entityName);
             return ConstantValue.Create(width);
         }
 
-        private static ConstantValue ImageVertical(IEngineImplementation implementation, Stack<ConstantValue> args)
+        private static ConstantValue ImageVertical(EngineImplementationBase implementation, Stack<ConstantValue> args)
         {
             string entityName = EntityName(PopString(args));
             int height = implementation.GetTextureHeight(entityName);
             return ConstantValue.Create(height);
         }
 
-        private static ConstantValue DurationTime(IEngineImplementation implementation, Stack<ConstantValue> args)
+        private static ConstantValue DurationTime(EngineImplementationBase implementation, Stack<ConstantValue> args)
         {
             string entityName = EntityName(PopString(args));
             int msTime = implementation.GetSoundDuration(entityName);
             return ConstantValue.Create(msTime);
         }
 
-        private static ConstantValue PassageTime(IEngineImplementation implementation, Stack<ConstantValue> args)
+        private static ConstantValue PassageTime(EngineImplementationBase implementation, Stack<ConstantValue> args)
         {
             string entityName = EntityName(PopString(args));
             int msTime = implementation.GetTimeElapsed(entityName);
             return ConstantValue.Create(msTime);
         }
 
-        private static ConstantValue RemainTime(IEngineImplementation implementation, Stack<ConstantValue> args)
+        private static ConstantValue RemainTime(EngineImplementationBase implementation, Stack<ConstantValue> args)
         {
             string entityName = EntityName(PopString(args));
             int msTime = implementation.GetTimeRemaining(entityName);
             return ConstantValue.Create(msTime);
         }
 
-        private static ConstantValue SoundAmplitude(IEngineImplementation implementation, Stack<ConstantValue> args)
+        private static ConstantValue SoundAmplitude(EngineImplementationBase implementation, Stack<ConstantValue> args)
         {
             string unk = PopString(args);
             string characterName = PopString(args);
@@ -130,21 +136,21 @@ namespace NitroSharp.NsScript.Symbols
             return ConstantValue.Create(amplitude);
         }
 
-        private static ConstantValue Random(IEngineImplementation implementation, Stack<ConstantValue> args)
+        private static ConstantValue Random(EngineImplementationBase implementation, Stack<ConstantValue> args)
         {
             int max = PopDouble(args);
             int n = implementation.GenerateRandomNumber(max);
             return ConstantValue.Create(n);
         }
 
-        private static ConstantValue Wait(IEngineImplementation implementation, Stack<ConstantValue> args)
+        private static ConstantValue Wait(EngineImplementationBase implementation, Stack<ConstantValue> args)
         {
             TimeSpan delay = PopTimeSpan(args, allowNull: true);
             implementation.Delay(delay);
             return ConstantValue.Null;
         }
 
-        private static ConstantValue WaitKey(IEngineImplementation implementation, Stack<ConstantValue> args)
+        private static ConstantValue WaitKey(EngineImplementationBase implementation, Stack<ConstantValue> args)
         {
             if (args.Count > 0)
             {
@@ -159,7 +165,7 @@ namespace NitroSharp.NsScript.Symbols
             return ConstantValue.Null;
         }
 
-        private static ConstantValue SetAlias(IEngineImplementation implementation, Stack<ConstantValue> args)
+        private static ConstantValue SetAlias(EngineImplementationBase implementation, Stack<ConstantValue> args)
         {
             string entityName = EntityName(PopString(args));
             string alias = EntityName(PopString(args));
@@ -168,7 +174,7 @@ namespace NitroSharp.NsScript.Symbols
             return ConstantValue.Null;
         }
 
-        private static ConstantValue CreateProcess(IEngineImplementation implementation, Stack<ConstantValue> args)
+        private static ConstantValue CreateProcess(EngineImplementationBase implementation, Stack<ConstantValue> args)
         {
             string name = PopString(args);
             args.Pop();
@@ -180,7 +186,7 @@ namespace NitroSharp.NsScript.Symbols
             return ConstantValue.Null;
         }
 
-        private static ConstantValue Request(IEngineImplementation implementation, Stack<ConstantValue> args)
+        private static ConstantValue Request(EngineImplementationBase implementation, Stack<ConstantValue> args)
         {
             string entityName = EntityName(PopString(args));
             NsEntityAction action = EnumConversions.ToEntityAction(PopEnumValue(args));
@@ -189,14 +195,14 @@ namespace NitroSharp.NsScript.Symbols
             return ConstantValue.Null;
         }
 
-        private static ConstantValue Delete(IEngineImplementation implementation, Stack<ConstantValue> args)
+        private static ConstantValue Delete(EngineImplementationBase implementation, Stack<ConstantValue> args)
         {
             string entityName = EntityName(PopString(args));
             implementation.RemoveEntity(entityName);
             return ConstantValue.Null;
         }
 
-        private static ConstantValue LoadImage(IEngineImplementation implementation, Stack<ConstantValue> args)
+        private static ConstantValue LoadImage(EngineImplementationBase implementation, Stack<ConstantValue> args)
         {
             string entityName = EntityName(PopString(args));
             string fileName = PopString(args);
@@ -205,7 +211,7 @@ namespace NitroSharp.NsScript.Symbols
             return ConstantValue.Null;
         }
 
-        private static ConstantValue CreateTexture(IEngineImplementation implementation, Stack<ConstantValue> args)
+        private static ConstantValue CreateTexture(EngineImplementationBase implementation, Stack<ConstantValue> args)
         {
             string entityName = EntityName(PopString(args));
             int priority = PopDouble(args);
@@ -217,7 +223,7 @@ namespace NitroSharp.NsScript.Symbols
             return ConstantValue.Null;
         }
 
-        private static ConstantValue CreateClipTexture(IEngineImplementation implementation, Stack<ConstantValue> args)
+        private static ConstantValue CreateClipTexture(EngineImplementationBase implementation, Stack<ConstantValue> args)
         {
             string entityName = EntityName(PopString(args));
             int priority = PopDouble(args);
@@ -233,7 +239,7 @@ namespace NitroSharp.NsScript.Symbols
             return ConstantValue.Null;
         }
 
-        private static ConstantValue CreateSound(IEngineImplementation implementation, Stack<ConstantValue> args)
+        private static ConstantValue CreateSound(EngineImplementationBase implementation, Stack<ConstantValue> args)
         {
             string entityName = EntityName(PopString(args));
             NsAudioKind kind = EnumConversions.ToAudioKind(PopEnumValue(args));
@@ -242,7 +248,7 @@ namespace NitroSharp.NsScript.Symbols
             return ConstantValue.Null;
         }
 
-        private static ConstantValue CreateColor(IEngineImplementation implementation, Stack<ConstantValue> args)
+        private static ConstantValue CreateColor(EngineImplementationBase implementation, Stack<ConstantValue> args)
         {
             string entityName = EntityName(PopString(args));
             int priority = PopDouble(args);
@@ -256,7 +262,7 @@ namespace NitroSharp.NsScript.Symbols
             return ConstantValue.Null;
         }
 
-        private static ConstantValue SetVolume(IEngineImplementation implementation, Stack<ConstantValue> args)
+        private static ConstantValue SetVolume(EngineImplementationBase implementation, Stack<ConstantValue> args)
         {
             string entityName = EntityName(PopString(args));
             TimeSpan duration = PopTimeSpan(args);
@@ -266,7 +272,7 @@ namespace NitroSharp.NsScript.Symbols
             return ConstantValue.Null;
         }
 
-        private static ConstantValue Fade(IEngineImplementation implementation, Stack<ConstantValue> args)
+        private static ConstantValue Fade(EngineImplementationBase implementation, Stack<ConstantValue> args)
         {
             string entityName = EntityName(PopString(args));
             TimeSpan duration = PopTimeSpan(args);
@@ -280,7 +286,7 @@ namespace NitroSharp.NsScript.Symbols
             return ConstantValue.Null;
         }
 
-        private static ConstantValue Move(IEngineImplementation implementation, Stack<ConstantValue> args)
+        private static ConstantValue Move(EngineImplementationBase implementation, Stack<ConstantValue> args)
         {
             string entityName = EntityName(PopString(args));
             TimeSpan duration = PopTimeSpan(args);
@@ -293,7 +299,7 @@ namespace NitroSharp.NsScript.Symbols
             return ConstantValue.Null;
         }
 
-        private static ConstantValue Zoom(IEngineImplementation implementation, Stack<ConstantValue> args)
+        private static ConstantValue Zoom(EngineImplementationBase implementation, Stack<ConstantValue> args)
         {
             string entityName = EntityName(PopString(args));
             TimeSpan duration = PopTimeSpan(args);
@@ -306,7 +312,7 @@ namespace NitroSharp.NsScript.Symbols
             return ConstantValue.Null;
         }
 
-        private static ConstantValue CreateWindow(IEngineImplementation implementation, Stack<ConstantValue> args)
+        private static ConstantValue CreateWindow(EngineImplementationBase implementation, Stack<ConstantValue> args)
         {
             string entityName = EntityName(PopString(args));
             int priority = PopDouble(args);
@@ -319,7 +325,7 @@ namespace NitroSharp.NsScript.Symbols
             return ConstantValue.Null;
         }
 
-        private static ConstantValue WaitText(IEngineImplementation implementation, Stack<ConstantValue> args)
+        private static ConstantValue WaitText(EngineImplementationBase implementation, Stack<ConstantValue> args)
         {
             string entityName = EntityName(PopString(args));
             TimeSpan time = PopTimeSpan(args, allowNull: true);
@@ -328,11 +334,11 @@ namespace NitroSharp.NsScript.Symbols
             return ConstantValue.Null;
         }
 
-        private static ConstantValue LoadText(IEngineImplementation implementation, Stack<ConstantValue> args)
+        private static ConstantValue LoadText(EngineImplementationBase implementation, Stack<ConstantValue> args)
         {
             string unk = PopString(args, allowNull: true);
-            string boxName = PopString(args);
-            string someStr = PopString(args);
+            var boxName = PopArgument(args);
+            var someStr = PopArgument(args);
 
             int maxWidth = PopDouble(args);
             int maxHeight = PopDouble(args);
@@ -341,7 +347,7 @@ namespace NitroSharp.NsScript.Symbols
             return ConstantValue.Null;
         }
 
-        private static ConstantValue SetLoop(IEngineImplementation implementation, Stack<ConstantValue> args)
+        private static ConstantValue SetLoop(EngineImplementationBase implementation, Stack<ConstantValue> args)
         {
             string entityName = EntityName(PopString(args));
             bool looping = PopBoolean(args);
@@ -350,7 +356,7 @@ namespace NitroSharp.NsScript.Symbols
             return ConstantValue.Null;
         }
 
-        private static ConstantValue SetLoopPoint(IEngineImplementation implementation, Stack<ConstantValue> args)
+        private static ConstantValue SetLoopPoint(EngineImplementationBase implementation, Stack<ConstantValue> args)
         {
             string entityName = EntityName(PopString(args));
             TimeSpan loopStart = PopTimeSpan(args);
@@ -360,7 +366,7 @@ namespace NitroSharp.NsScript.Symbols
             return ConstantValue.Null;
         }
 
-        private static ConstantValue DrawTransition(IEngineImplementation implementation, Stack<ConstantValue> args)
+        private static ConstantValue DrawTransition(EngineImplementationBase implementation, Stack<ConstantValue> args)
         {
             string entityName = EntityName(PopString(args));
             TimeSpan duration = PopTimeSpan(args);
@@ -502,7 +508,7 @@ namespace NitroSharp.NsScript.Symbols
             }
         }
 
-        private static ConstantValue SetFont(IEngineImplementation implementation, Stack<ConstantValue> args)
+        private static ConstantValue SetFont(EngineImplementationBase implementation, Stack<ConstantValue> args)
         {
             string fontName = PopString(args);
             int size = PopDouble(args);

@@ -1,5 +1,4 @@
 ﻿using NitroSharp.NsScript.Text;
-using NitroSharp.NsScript.Uitls;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -158,7 +157,7 @@ namespace NitroSharp.NsScript.Syntax
 
             foreach (var param in parameters)
             {
-                _currentParameterList[param.Name.Value] = param;
+                _currentParameterList[param.Identifier.Name] = param;
             }
 
             var body = ParseBlock();
@@ -258,8 +257,8 @@ namespace NitroSharp.NsScript.Syntax
                 case SyntaxTokenKind.CallSceneKeyword:
                     return ParseSceneCall();
 
-                case SyntaxTokenKind.ParagraphStartTag:
-                    return ParseParagraph();
+                case SyntaxTokenKind.DialogueBlockStartTag:
+                    return ParseDialogueBlock();
 
                 case SyntaxTokenKind.PXmlString:
                     return new PXmlString(EatToken().Text);
@@ -285,11 +284,6 @@ namespace NitroSharp.NsScript.Syntax
         {
             return ParseSubExpression(Precedence.Expression);
         }
-
-        private bool IsExpectedPrefixUnaryOperator() => SyntaxFacts.IsPrefixUnaryOperator(CurrentToken.Kind);
-        private bool IsExpectedPostfixUnaryOperator() => SyntaxFacts.IsPostfixUnaryOperator(CurrentToken.Kind);
-        private bool IsExpectedBinaryOperator() => SyntaxFacts.IsBinaryOperator(CurrentToken.Kind);
-        private bool IsExpectedAssignmentOperator() => SyntaxFacts.IsAssignmentOperator(CurrentToken.Kind);
 
         private enum Precedence
         {
@@ -335,22 +329,18 @@ namespace NitroSharp.NsScript.Syntax
             }
         }
 
-        private static Precedence GetPrecedence(UnaryOperatorKind operatorKind) => Precedence.Unary;
-        private static Precedence GetPrecedence(AssignmentOperatorKind operatorKind) => Precedence.Assignment;
-
         private Expression ParseSubExpression(Precedence minPrecedence)
         {
             Expression leftOperand;
             Precedence newPrecedence;
 
             var tk = CurrentToken.Kind;
-            if (IsExpectedPrefixUnaryOperator())
+            if (SyntaxFacts.TryGetUnaryOperatorKind(tk, out var unaryOperator))
             {
-                var operatorKind = SyntaxFacts.GetPrefixUnaryOperatorKind(tk);
                 EatToken();
-                newPrecedence = GetPrecedence(operatorKind);
+                newPrecedence = Precedence.Unary;
                 var operand = ParseSubExpression(newPrecedence);
-                leftOperand = new UnaryExpression(operand, operatorKind);
+                leftOperand = new UnaryExpression(operand, unaryOperator);
             }
             else
             {
@@ -377,7 +367,7 @@ namespace NitroSharp.NsScript.Syntax
                     break;
                 }
 
-                newPrecedence = binary ? GetPrecedence(binOpKind) : GetPrecedence(assignOpKind);
+                newPrecedence = binary ? GetPrecedence(binOpKind) : Precedence.Assignment;
                 if (newPrecedence < minPrecedence)
                 {
                     break;
@@ -386,7 +376,7 @@ namespace NitroSharp.NsScript.Syntax
                 EatToken();
                 var rightOperand = ParseSubExpression(newPrecedence);
                 leftOperand = binary ? (Expression)new BinaryExpression(leftOperand, binOpKind, rightOperand) :
-                    new AssignmentExpression(leftOperand, assignOpKind, rightOperand);
+                    new AssignmentExpression((Identifier)leftOperand, assignOpKind, rightOperand);
             }
 
             return leftOperand;
@@ -397,23 +387,10 @@ namespace NitroSharp.NsScript.Syntax
             switch (CurrentToken.Kind)
             {
                 case SyntaxTokenKind.IdentifierToken:
-                    if (IsFunctionCall())
-                    {
-                        return ParseFunctionCall();
-                    }
-
-                    var id = ParseIdentifier();
-                    return ParsePostfixExpression(id);
+                    return IsFunctionCall() ? (Expression)ParseFunctionCall() : ParseIdentifier();
 
                 case SyntaxTokenKind.StringLiteralToken:
-                    if (IsParameter())
-                    {
-                        return ParseIdentifier();
-                    }
-                    else
-                    {
-                        return ParseLiteral();
-                    }
+                    return IsParameter() ? (Expression)ParseIdentifier() : ParseLiteral();
 
                 case SyntaxTokenKind.NumericLiteralToken:
                 case SyntaxTokenKind.NullKeyword:
@@ -440,18 +417,6 @@ namespace NitroSharp.NsScript.Syntax
             EatToken(SyntaxTokenKind.AtToken);
             var expr = ParseSubExpression(precedence);
             return new DeltaExpression(expr);
-        }
-
-        private Expression ParsePostfixExpression(Expression expr)
-        {
-            if (IsExpectedPostfixUnaryOperator())
-            {
-                var operatorKind = SyntaxFacts.GetPostfixUnaryOperatorKind(CurrentToken.Kind);
-                EatToken();
-                return new UnaryExpression(expr, operatorKind);
-            }
-
-            return expr;
         }
 
         private Literal ParseLiteral()
@@ -654,19 +619,19 @@ namespace NitroSharp.NsScript.Syntax
             return new CallSceneStatement(sceneName);
         }
 
-        private Paragraph ParseParagraph()
+        private DialogueBlock ParseDialogueBlock()
         {
-            string TrimParagraphIdentifier(string s)
+            string TrimDialogueBlockIdentifier(string s)
             {
                 return s.Length > 2 && s[0] == '[' && s[s.Length - 1] == ']' ? s.Substring(1, s.Length - 2) : s;
             }
 
-            var startTag = EatToken(SyntaxTokenKind.ParagraphStartTag);
+            var startTag = EatToken(SyntaxTokenKind.DialogueBlockStartTag);
             string associatedBox = (string)startTag.Value;
 
-            var identifier = EatToken(SyntaxTokenKind.ParagraphIdentifier);
+            var identifier = EatToken(SyntaxTokenKind.DialogueBlockIdentifier);
             var statements = ImmutableArray.CreateBuilder<Statement>();
-            while (CurrentToken.Kind != SyntaxTokenKind.ParagraphEndTag)
+            while (CurrentToken.Kind != SyntaxTokenKind.DialogueBlockEndTag)
             {
                 var statement = ParseStatement();
                 if (statement != null)
@@ -675,9 +640,10 @@ namespace NitroSharp.NsScript.Syntax
                 }
             }
 
-            EatToken(SyntaxTokenKind.ParagraphEndTag);
-            string identifierString = TrimParagraphIdentifier(identifier.Text);
-            return new Paragraph(identifierString, associatedBox, statements.ToImmutable());
+            EatToken(SyntaxTokenKind.DialogueBlockEndTag);
+            string identifierString = TrimDialogueBlockIdentifier(identifier.Text);
+            var name = new Identifier(identifierString, identifierString, SigilKind.None);
+            return new DialogueBlock(name, associatedBox, new Block(statements.ToImmutable()));
         }
 
         private static NsParseException UnexpectedToken(string scriptName, string token)
