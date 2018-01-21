@@ -348,6 +348,7 @@ namespace NitroSharp.NsScript.Execution
                     break;
 
                 case null:
+                    PushValue(ConstantValue.Null);
                     break;
             }
         }
@@ -376,7 +377,10 @@ namespace NitroSharp.NsScript.Execution
         private void CallBuiltInFunction(BuiltInFunctionSymbol function)
         {
             var returnValue = function.Implementation.Invoke(_engineImplementation, CurrentThread.Stack);
-            PushValue(returnValue);
+            if (!ReferenceEquals(returnValue, null))
+            {
+                PushValue(returnValue);
+            }
         }
 
         private void ProcessPendingThreadActions()

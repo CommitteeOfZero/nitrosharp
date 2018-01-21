@@ -61,6 +61,8 @@
         Smoothing,
         AddRender,
         Enter,
-        Pause
+        Pause,
+        SCREEN,
+        Video
     }
 }

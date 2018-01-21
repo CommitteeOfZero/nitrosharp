@@ -189,6 +189,10 @@ namespace NitroSharp.NsScript.IR
                             break;
                     }
                 }
+                else if (!identifier.IsGlobalVariable) // likely an unknown enum value
+                {
+                    _instructions.Add(Instructions.PushValue(ConstantValue.Create(identifier.Name), identifier));
+                }
             }
 
             public override void VisitUnaryExpression(UnaryExpression unaryExpression)
