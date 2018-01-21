@@ -374,7 +374,10 @@ namespace NitroSharp.NsScript.Syntax
                 }
 
                 EatToken();
-                var rightOperand = ParseSubExpression(newPrecedence);
+
+                bool hasRightOperand = assignOpKind != AssignmentOperatorKind.Increment && assignOpKind != AssignmentOperatorKind.Decrement;
+                Expression rightOperand = hasRightOperand ? ParseSubExpression(newPrecedence) : leftOperand;
+                
                 leftOperand = binary ? (Expression)new BinaryExpression(leftOperand, binOpKind, rightOperand) :
                     new AssignmentExpression((Identifier)leftOperand, assignOpKind, rightOperand);
             }

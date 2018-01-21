@@ -182,8 +182,28 @@ namespace NitroSharp.NsScript.Tests
             TestAssignment(AssignmentOperatorKind.MultiplyAssign);
             TestAssignment(AssignmentOperatorKind.Assign);
             TestAssignment(AssignmentOperatorKind.SubtractAssign);
-            TestAssignment(AssignmentOperatorKind.Increment);
-            TestAssignment(AssignmentOperatorKind.Decrement);
+        }
+
+        [Fact]
+        public void ParseIncrement()
+        {
+            string text = "$a++";
+            var expr = Parsing.ParseExpression(text) as AssignmentExpression;
+            Assert.NotNull(expr);
+            Assert.Equal(AssignmentOperatorKind.Increment, expr.OperatorKind);
+            Assert.Equal(expr.Target, expr.Value);
+            Assert.Equal(text, expr.ToString());
+        }
+        
+        [Fact]
+        public void ParseDecrement()
+        {
+            string text = "$a--";
+            var expr = Parsing.ParseExpression(text) as AssignmentExpression;
+            Assert.NotNull(expr);
+            Assert.Equal(AssignmentOperatorKind.Decrement, expr.OperatorKind);
+            Assert.Equal(expr.Target, expr.Value);
+            Assert.Equal(text, expr.ToString());
         }
 
         private void TestUnary(UnaryOperatorKind kind)

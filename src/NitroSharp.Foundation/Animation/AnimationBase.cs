@@ -10,23 +10,17 @@ namespace NitroSharp.Foundation.Animation
         {
         }
 
-        protected AnimationBase(TimeSpan duration)
-            : this(duration, TimingFunction.Linear)
-        {
-        }
-
-        protected AnimationBase(TimeSpan duration, TimingFunction timingFunction)
+        protected AnimationBase(TimeSpan duration, TimingFunction timingFunction = TimingFunction.Linear)
         {
             Duration = duration;
             TimingFunction = timingFunction;
         }
 
         public TimeSpan Duration { get; protected set; }
-        public TimingFunction TimingFunction { get; protected set; }
+        public TimingFunction TimingFunction { get; }
         public float Progress => SharpDX.MathUtil.Clamp(_elapsed / (float)Duration.TotalMilliseconds, 0.0f, 1.0f);
         public bool Started { get; private set; }
-
-        protected bool LastFrame => Progress == 1.0f;
+        public bool HasCompleted => Progress == 1.0f;
 
         public event EventHandler Completed;
 

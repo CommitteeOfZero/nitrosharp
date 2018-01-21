@@ -3,25 +3,19 @@ using System.Numerics;
 
 namespace NitroSharp.Foundation.Animation
 {
-    public sealed class Vector2Animation : AnimationBase
+    public class Vector2Animation : AnimationBase
     {
-        public Vector2Animation(Component targetComponent, Action<Component, Vector2> propertySetter,
-            Vector2 initialValue, Vector2 finalValue, TimeSpan duration, TimingFunction timingFunction)
+        public Vector2Animation(Component transform, Action<Component, Vector2> propertySetter, Vector2 initialValue,
+            Vector2 finalValue, TimeSpan duration, TimingFunction timingFunction = TimingFunction.Linear)
             : base(duration, timingFunction)
         {
-            TargetComponent = targetComponent;
+            Transform = transform;
             PropertySetter = propertySetter;
             InitialValue = initialValue;
             FinalValue = finalValue;
         }
 
-        public Vector2Animation(Component targetComponent, Action<Component, Vector2> propertySetter,
-            Vector2 initialValue, Vector2 finalValue, TimeSpan duration)
-            : this(targetComponent, propertySetter, initialValue, finalValue, duration, TimingFunction.Linear)
-        {
-        }
-
-        public Component TargetComponent { get; }
+        public Component Transform { get; }
         public Action<Component, Vector2> PropertySetter { get; }
 
         public Vector2 InitialValue { get; }
@@ -33,9 +27,9 @@ namespace NitroSharp.Foundation.Animation
 
             Vector2 change = FinalValue - InitialValue;
             Vector2 newValue = InitialValue + change * CalculateFactor(Progress, TimingFunction);
-            PropertySetter(TargetComponent, newValue);
+            PropertySetter(Transform, newValue);
 
-            if (LastFrame)
+            if (HasCompleted)
             {
                 RaiseCompleted();
             }

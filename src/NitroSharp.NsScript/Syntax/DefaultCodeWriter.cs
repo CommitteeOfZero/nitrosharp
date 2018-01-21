@@ -100,11 +100,22 @@ namespace NitroSharp.NsScript.Syntax
 
         public override void VisitAssignmentExpression(AssignmentExpression assignmentExpression)
         {
+            var op = assignmentExpression.OperatorKind;
+            bool hasTwoOperands = op != AssignmentOperatorKind.Increment && op != AssignmentOperatorKind.Decrement;
+            
             Visit(assignmentExpression.Target);
-            WriteSpace();
+            if (hasTwoOperands)
+            {
+                WriteSpace();
+            }
+
             Write(OperatorInfo.GetText(assignmentExpression.OperatorKind));
-            WriteSpace();
-            Visit(assignmentExpression.Value);
+
+            if (hasTwoOperands)
+            {
+                WriteSpace();
+                Visit(assignmentExpression.Value);
+            }
         }
 
         public override void VisitFunctionCall(FunctionCall functionCall)

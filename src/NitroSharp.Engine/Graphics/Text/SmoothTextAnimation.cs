@@ -47,7 +47,7 @@ namespace NitroSharp.Graphics
                 _elapsed2 = _elapsed2 % GlyphTime;
             }
 
-            if (!LastFrame)
+            if (!HasCompleted)
             {
                 _textVisual.AnimatedOpacity = SharpDX.MathUtil.Clamp(_elapsed2 / GlyphTime, 0.0f, 1.0f);
                 _textVisual.AnimatedRegion = new TextRange(idxCurrentGlyph, 1);

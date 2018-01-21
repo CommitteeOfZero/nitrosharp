@@ -70,7 +70,7 @@ namespace NitroSharp.NsScript.Symbols
             var list = new List<int>();
             while (args.Count > 0)
             {
-                list.Add((int)PopDouble(args, allowNull: false, allowTypeConversions: true));
+                list.Add((int)PopDouble(args, allowNull: false, allowTypeConversion: true));
             }
 
             var builder = new StringBuilder();
@@ -152,7 +152,7 @@ namespace NitroSharp.NsScript.Symbols
 
         private static ConstantValue WaitKey(EngineImplementationBase implementation, Stack<ConstantValue> args)
         {
-            if (args.Count > 0)
+            if (args.Count > 0 && args.Peek().Type == BuiltInType.Double)
             {
                 TimeSpan timeout = PopTimeSpan(args);
                 implementation.WaitForInput(timeout);
@@ -277,12 +277,11 @@ namespace NitroSharp.NsScript.Symbols
             string entityName = EntityName(PopString(args));
             TimeSpan duration = PopTimeSpan(args);
             var opacity = new NsRational(PopDouble(args), NssMaxOpacity);
+            var easingFunction = PopEasingFunction(args);
+            double delayArg = PopDouble(args, allowNull: false, allowTypeConversion: true);
+            TimeSpan delay = delayArg == 1.0d ? duration : TimeSpan.FromMilliseconds(delayArg);
 
-            // Unknown. Usually null.
-            args.Pop();
-
-            double wait = PopDouble(args, allowNull: true, allowTypeConversions: true);
-            implementation.Fade(entityName, duration, opacity, wait != 0.0d);
+            implementation.Fade(entityName, duration, opacity, easingFunction, delay);
             return ConstantValue.Null;
         }
 
@@ -292,10 +291,11 @@ namespace NitroSharp.NsScript.Symbols
             TimeSpan duration = PopTimeSpan(args);
             NsCoordinate x = PopCoordinate(args);
             NsCoordinate y = PopCoordinate(args);
-            NsEasingFunction easingFunction = EnumConversions.ToEasingFunction(PopEnumValue(args));
-            double wait = PopDouble(args, allowNull: true, allowTypeConversions: true);
+            var easingFunction = PopEasingFunction(args);
+            double delayArg = PopDouble(args, allowNull: false, allowTypeConversion: true);
+            TimeSpan delay = delayArg == 1.0d ? duration : TimeSpan.FromMilliseconds(delayArg);
 
-            implementation.Move(entityName, duration, x, y, easingFunction, wait != 0.0d);
+            implementation.Move(entityName, duration, x, y, easingFunction, delay);
             return ConstantValue.Null;
         }
 
@@ -305,10 +305,11 @@ namespace NitroSharp.NsScript.Symbols
             TimeSpan duration = PopTimeSpan(args);
             var scaleX = new NsRational(PopDouble(args), 1000);
             var scaleY = new NsRational(PopDouble(args), 1000);
-            NsEasingFunction easingFunction = EnumConversions.ToEasingFunction(PopEnumValue(args));
-            bool wait = PopBoolean(args);
+            var easingFunction = PopEasingFunction(args);
+            double delayArg = PopDouble(args, allowNull: false, allowTypeConversion: true);
+            TimeSpan delay = delayArg == 1.0d ? duration : TimeSpan.FromMilliseconds(delayArg);
 
-            implementation.Zoom(entityName, duration, scaleX, scaleY, easingFunction, wait);
+            implementation.Zoom(entityName, duration, scaleX, scaleY, easingFunction, delay);
             return ConstantValue.Null;
         }
 
@@ -373,13 +374,12 @@ namespace NitroSharp.NsScript.Symbols
             var initialOpacity = new NsRational(PopDouble(args), NssMaxOpacity);
             var finalOpacity = new NsRational(PopDouble(args), NssMaxOpacity);
             var feather = new NsRational(PopDouble(args), 100);
-
-            var unk = args.Pop();
-
+            var easingFunction = PopEasingFunction(args);
             string fileName = PopString(args);
-            double wait = args.Pop().ConvertTo(BuiltInType.Double).DoubleValue;
+            double delayArg = PopDouble(args, allowNull: false, allowTypeConversion: true);
+            TimeSpan delay = delayArg == 1.0d ? duration : TimeSpan.FromMilliseconds(delayArg);
 
-            implementation.DrawTransition(entityName, duration, initialOpacity, finalOpacity, feather, fileName, wait != 0.0d);
+            implementation.DrawTransition(entityName, duration, initialOpacity, finalOpacity, feather, easingFunction, fileName, delay);
             return ConstantValue.Null;
         }
 
@@ -398,7 +398,7 @@ namespace NitroSharp.NsScript.Symbols
             return args.Pop();
         }
 
-        private static string PopString(Stack<ConstantValue> args, bool allowNull = false, bool allowTypeConversions = false)
+        private static string PopString(Stack<ConstantValue> args, bool allowNull = false, bool allowTypeConversion = false)
         {
             var value = PopArgument(args);
             switch (value.Type)
@@ -410,11 +410,11 @@ namespace NitroSharp.NsScript.Symbols
                     return allowNull ? string.Empty : throw new InvalidOperationException();
 
                 default:
-                    return allowTypeConversions ? value.ConvertTo(BuiltInType.String).StringValue : throw new InvalidOperationException();
+                    return allowTypeConversion ? value.ConvertTo(BuiltInType.String).StringValue : throw new InvalidOperationException();
             }
         }
 
-        private static int PopDouble(Stack<ConstantValue> args, bool allowNull = false, bool allowTypeConversions = false)
+        private static int PopDouble(Stack<ConstantValue> args, bool allowNull = false, bool allowTypeConversion = false)
         {
             var value = PopArgument(args);
             switch (value.Type)
@@ -426,11 +426,11 @@ namespace NitroSharp.NsScript.Symbols
                     return allowNull ? 0 : throw new InvalidOperationException();
 
                 default:
-                    return allowTypeConversions ? (int)value.ConvertTo(BuiltInType.Double).DoubleValue : throw new InvalidOperationException();
+                    return allowTypeConversion ? (int)value.ConvertTo(BuiltInType.Double).DoubleValue : throw new InvalidOperationException();
             }
         }
 
-        private static bool PopBoolean(Stack<ConstantValue> args, bool allowNull = false, bool allowTypeConversions = false)
+        private static bool PopBoolean(Stack<ConstantValue> args, bool allowNull = false, bool allowTypeConversion = false)
         {
             var value = PopArgument(args);
             switch (value.Type)
@@ -442,7 +442,7 @@ namespace NitroSharp.NsScript.Symbols
                     return allowNull ? false : throw new InvalidOperationException();
 
                 default:
-                    return allowTypeConversions ? value.ConvertTo(BuiltInType.Boolean).BooleanValue : throw new InvalidOperationException();
+                    return allowTypeConversion ? value.ConvertTo(BuiltInType.Boolean).BooleanValue : throw new InvalidOperationException();
             }
         }
 
@@ -481,6 +481,11 @@ namespace NitroSharp.NsScript.Symbols
                 default:
                     throw new InvalidOperationException();
             }
+        }
+
+        private static NsEasingFunction PopEasingFunction(Stack<ConstantValue> args)
+        {
+            return EnumConversions.ToEasingFunction(PopEnumValue(args));
         }
 
         private static TimeSpan PopTimeSpan(Stack<ConstantValue> args, bool allowNull = false)
