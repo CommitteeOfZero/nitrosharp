@@ -278,7 +278,7 @@ namespace NitroSharp.NsScript.Symbols
             TimeSpan duration = PopTimeSpan(args);
             var opacity = new NsRational(PopDouble(args), NssMaxOpacity);
             var easingFunction = PopEasingFunction(args);
-            double delayArg = PopDouble(args, allowNull: false, allowTypeConversion: true);
+            double delayArg = PopDouble(args, allowNull: true, allowTypeConversion: true);
             TimeSpan delay = delayArg == 1.0d ? duration : TimeSpan.FromMilliseconds(delayArg);
 
             implementation.Fade(entityName, duration, opacity, easingFunction, delay);
@@ -292,7 +292,7 @@ namespace NitroSharp.NsScript.Symbols
             NsCoordinate x = PopCoordinate(args);
             NsCoordinate y = PopCoordinate(args);
             var easingFunction = PopEasingFunction(args);
-            double delayArg = PopDouble(args, allowNull: false, allowTypeConversion: true);
+            double delayArg = PopDouble(args, allowNull: true, allowTypeConversion: true);
             TimeSpan delay = delayArg == 1.0d ? duration : TimeSpan.FromMilliseconds(delayArg);
 
             implementation.Move(entityName, duration, x, y, easingFunction, delay);
@@ -306,7 +306,7 @@ namespace NitroSharp.NsScript.Symbols
             var scaleX = new NsRational(PopDouble(args), 1000);
             var scaleY = new NsRational(PopDouble(args), 1000);
             var easingFunction = PopEasingFunction(args);
-            double delayArg = PopDouble(args, allowNull: false, allowTypeConversion: true);
+            double delayArg = PopDouble(args, allowNull: true, allowTypeConversion: true);
             TimeSpan delay = delayArg == 1.0d ? duration : TimeSpan.FromMilliseconds(delayArg);
 
             implementation.Zoom(entityName, duration, scaleX, scaleY, easingFunction, delay);
@@ -376,7 +376,7 @@ namespace NitroSharp.NsScript.Symbols
             var feather = new NsRational(PopDouble(args), 100);
             var easingFunction = PopEasingFunction(args);
             string fileName = PopString(args);
-            double delayArg = PopDouble(args, allowNull: false, allowTypeConversion: true);
+            double delayArg = PopDouble(args, allowNull: true, allowTypeConversion: true);
             TimeSpan delay = delayArg == 1.0d ? duration : TimeSpan.FromMilliseconds(delayArg);
 
             implementation.DrawTransition(entityName, duration, initialOpacity, finalOpacity, feather, easingFunction, fileName, delay);
