@@ -365,6 +365,7 @@ namespace NitroSharp.NsScript.Execution
             var chapter = module.LookupMember("main") as ChapterSymbol;
             if (chapter != null)
             {
+                EnsureHasLinearRepresentation(chapter);
                 var frame = new Frame(module, chapter);
                 CurrentThread.PushFrame(frame);
             }

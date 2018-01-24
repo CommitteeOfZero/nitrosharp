@@ -30,7 +30,8 @@ namespace NitroSharp.NsScript.IR
         public static Instruction WaitForInput(PXmlLineSeparator syntax) => new Instruction(Opcode.WaitForInput, syntax);
 
         public static Instruction Call(Symbol symbol, FunctionCall syntax) => new Instruction(Opcode.Call, symbol, syntax);
-        public static Instruction CallChapter(string moduleName, CallChapterStatement syntax) => new Instruction(Opcode.CallChapter, syntax);
+        public static Instruction CallChapter(string moduleName, CallChapterStatement syntax)
+            => new Instruction(Opcode.CallChapter, moduleName, syntax);
 
         public static Instruction Nop() => new Instruction(Opcode.Nop, null);
         public static Instruction Jump(int targetInstructionIndex) => new Instruction(Opcode.Jump, targetInstructionIndex, null);
