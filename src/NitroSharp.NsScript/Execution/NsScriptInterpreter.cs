@@ -162,9 +162,10 @@ namespace NitroSharp.NsScript.Execution
             switch (opcode)
             {
                 case Opcode.Call:
-                case Opcode.CallFar:
+                case Opcode.CallChapter:
                 case Opcode.Say:
                 case Opcode.WaitForInput:
+                case Opcode.Return:
                     return true;
                     
                 default:
@@ -222,6 +223,10 @@ namespace NitroSharp.NsScript.Execution
                     
                 case Opcode.Call:
                     Call(ref instruction);
+                    break;
+
+                case Opcode.CallChapter:
+                    CallChapter(ref instruction);
                     break;
 
                 case Opcode.Jump:
@@ -350,6 +355,18 @@ namespace NitroSharp.NsScript.Execution
                 case null:
                     PushValue(ConstantValue.Null);
                     break;
+            }
+        }
+
+        private void CallChapter(ref Instruction instruction)
+        {
+            string moduleName = (string)instruction.Operand1;
+            var module = _sourceFileManager.Resolve(moduleName);
+            var chapter = module.LookupMember("main") as ChapterSymbol;
+            if (chapter != null)
+            {
+                var frame = new Frame(module, chapter);
+                CurrentThread.PushFrame(frame);
             }
         }
 
