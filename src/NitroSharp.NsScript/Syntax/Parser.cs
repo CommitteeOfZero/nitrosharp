@@ -427,10 +427,12 @@ namespace NitroSharp.NsScript.Syntax
             switch (CurrentToken.Kind)
             {
                 case SyntaxTokenKind.NumericLiteralToken:
+                    var token = (SyntaxTokenWithDoubleValue)EatToken();
+                    return new Literal(token.Text, ConstantValue.Create(token.DoubleValue));
+
                 case SyntaxTokenKind.StringLiteralToken:
-                    var literal = new Literal(CurrentToken.Text, ConstantValue.Create(CurrentToken.Value));
-                    EatToken();
-                    return literal;
+                    var tk = (SyntaxTokenWithStringValue)EatToken();
+                    return new Literal(tk.Text, ConstantValue.Create(tk.StringValue));
 
                 case SyntaxTokenKind.NullKeyword:
                     EatToken();

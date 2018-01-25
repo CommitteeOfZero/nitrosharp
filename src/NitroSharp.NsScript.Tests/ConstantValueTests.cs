@@ -68,7 +68,7 @@ namespace NitroSharp.NsScript.Tests
         }
 
         [Fact]
-        public void TestConversionsToSameType()
+        public void TestConversionToSameType()
         {
             Assert.Equal(ConstantValue.Null, ConstantValue.Null.ConvertTo(BuiltInType.Null));
             Assert.Equal(ConstantValue.Create(42), ConstantValue.Create(42).ConvertTo(BuiltInType.Double));
@@ -78,14 +78,14 @@ namespace NitroSharp.NsScript.Tests
         }
 
         [Fact]
-        public void TestIntToStringConversion()
+        public void TestNumberToStringConversion()
         {
             var integer = ConstantValue.Create(42);
             Assert.Equal(ConstantValue.Create("42"), integer.ConvertTo(BuiltInType.String));
         }
 
         [Fact]
-        public void TestIntToBoolConversion()
+        public void TestNumberToBoolConversion()
         {
             Assert.Equal(ConstantValue.False, ConstantValue.Zero.ConvertTo(BuiltInType.Boolean));
             Assert.Equal(ConstantValue.True, ConstantValue.One.ConvertTo(BuiltInType.Boolean));
@@ -93,7 +93,7 @@ namespace NitroSharp.NsScript.Tests
         }
 
         [Fact]
-        public void TestStringToIntConversion()
+        public void TestStringToNumberConversion()
         {
             Assert.Equal(ConstantValue.Zero, ConstantValue.Create("foo").ConvertTo(BuiltInType.Double));
             Assert.Equal(ConstantValue.DeltaZero, ConstantValue.AtSymbol.ConvertTo(BuiltInType.Double));
@@ -106,7 +106,7 @@ namespace NitroSharp.NsScript.Tests
         }
 
         [Fact]
-        public void TestBoolToIntConversion()
+        public void TestBoolToNumberConversion()
         {
             Assert.Equal(ConstantValue.Zero, ConstantValue.False.ConvertTo(BuiltInType.Double));
             Assert.Equal(ConstantValue.One, ConstantValue.True.ConvertTo(BuiltInType.Double));
@@ -117,6 +117,14 @@ namespace NitroSharp.NsScript.Tests
         {
             Assert.Equal(ConstantValue.Create("0"), ConstantValue.False.ConvertTo(BuiltInType.String));
             Assert.Equal(ConstantValue.Create("1"), ConstantValue.True.ConvertTo(BuiltInType.String));
+        }
+        
+        [Fact]
+        public void TestEnumValueToStringConversion()
+        {
+            var enumValue = ConstantValue.Create(BuiltInEnumValue.Axl1);
+            var converted = enumValue.ConvertTo(BuiltInType.String);
+            Assert.Equal("Axl1", converted.StringValue);
         }
 
         [Fact]
@@ -129,7 +137,7 @@ namespace NitroSharp.NsScript.Tests
         }
 
         [Fact]
-        public void CompareEqualIntegers()
+        public void CompareEqualNumbers()
         {
             var int1 = ConstantValue.Create(42);
             var int2 = ConstantValue.Create(42);
@@ -147,7 +155,7 @@ namespace NitroSharp.NsScript.Tests
         }
 
         [Fact]
-        public void TestCaseSensivity()
+        public void StringComparsionIsCaseSensitive()
         {
             var str1 = ConstantValue.Create("test");
             var str2 = ConstantValue.Create("TEST");
@@ -156,12 +164,42 @@ namespace NitroSharp.NsScript.Tests
         }
 
         [Fact]
-        public void CompareIntegerToItsStringRepresentation()
+        public void NumberNotEqualsItsStringRepresentation()
         {
             var integer = ConstantValue.Create(42);
             var stringRepresentation = ConstantValue.Create("42");
 
             Assert.NotEqual(stringRepresentation, integer);
+        }
+
+        [Fact]
+        public void EmptyStringEqualsZero()
+        {
+            Assert.Equal(ConstantValue.Zero, ConstantValue.EmptyString);
+            Assert.Equal(ConstantValue.EmptyString, ConstantValue.Zero);
+        }
+
+        [Fact]
+        public void EmptyStringEqualsFalse()
+        {
+            Assert.Equal(ConstantValue.False, ConstantValue.EmptyString);
+            Assert.Equal(ConstantValue.EmptyString, ConstantValue.False);
+        }
+
+        [Fact]
+        public void NonEmptyStringNotEqualsZero()
+        {
+            var str = ConstantValue.Create("foo");
+            Assert.NotEqual(ConstantValue.Zero, str);
+        }
+
+        [Fact]
+        public void EnumValueEqualsItsStringRepresentation()
+        {
+            var enumValue = ConstantValue.Create(BuiltInEnumValue.Center);
+            var str = ConstantValue.Create("center");
+            
+            Assert.Equal(str, enumValue);
         }
 
         [Fact]
@@ -227,7 +265,7 @@ namespace NitroSharp.NsScript.Tests
         public void TestAdditionOnAtSymbolAndInteger()
         {
             var result = ConstantValue.Create("@") + ConstantValue.Create(42);
-            Assert.Equal(ConstantValue.Create((object)42, isDeltaValue: true), result);
+            Assert.Equal(ConstantValue.Create(42, isDeltaValue: true), result);
         }
 
         [Fact]
@@ -235,22 +273,6 @@ namespace NitroSharp.NsScript.Tests
         {
             var result = ConstantValue.True + ConstantValue.Create("foo");
             Assert.Equal(ConstantValue.Create("1foo"), result);
-        }
-
-        [Fact]
-        public void CreateEnumValueConstant()
-        {
-            var constant = ConstantValue.Create(BuiltInEnumValue.Axl1);
-            Assert.Equal(BuiltInType.EnumValue, constant.Type);
-            Assert.Equal(BuiltInEnumValue.Axl1, constant.EnumValue);
-        }
-
-        [Fact]
-        public void TestEnumValueToStringConversion()
-        {
-            var enumValue = ConstantValue.Create(BuiltInEnumValue.Axl1);
-            var converted = enumValue.ConvertTo(BuiltInType.String);
-            Assert.Equal("Axl1", converted.StringValue);
         }
     }
 }

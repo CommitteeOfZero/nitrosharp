@@ -59,34 +59,30 @@ namespace NitroSharp.NsScript.Syntax
 
     internal class SyntaxTokenWithStringValue : SyntaxToken
     {
-        protected readonly string _text;
-        protected readonly string _value;
-
         internal SyntaxTokenWithStringValue(SyntaxTokenKind kind, string text, TextSpan textSpan, string value)
             : base(kind, textSpan)
         {
-            _text = text;
-            _value = value;
+            Text = text;
+            StringValue = value;
         }
 
-        public override string Text => _text;
-        public override object Value => _value;
+        public override string Text { get; }
+        public string StringValue { get; }
+        public override object Value => StringValue;
     }
 
     internal sealed class SyntaxTokenWithDoubleValue : SyntaxToken
     {
-        private readonly string _text;
-        private readonly double _value;
-
         internal SyntaxTokenWithDoubleValue(string text, TextSpan textSpan, double value)
             : base(SyntaxTokenKind.NumericLiteralToken, textSpan)
         {
-            _text = text;
-            _value = value;
+            Text = text;
+            DoubleValue = value;
         }
 
-        public override string Text => _text;
-        public override object Value => _value;
+        public override string Text { get; }
+        public double DoubleValue { get; }
+        public override object Value => DoubleValue;
     }
 
     internal sealed class IdentifierToken : SyntaxTokenWithStringValue
@@ -97,7 +93,7 @@ namespace NitroSharp.NsScript.Syntax
             SigilCharacter = sigilCharacter;
         }
 
-        public string NameWithoutSigil => _value;
+        public string NameWithoutSigil => StringValue;
         public SigilKind SigilCharacter { get; }
     }
 }

@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Globalization;
 
 namespace NitroSharp.NsScript
 {
@@ -17,8 +19,9 @@ namespace NitroSharp.NsScript
         public static readonly ConstantValue AtSymbol = new ConstantValueString("@");
         public static readonly ConstantValue Null = new ConstantValueNull();
 
+
         public static ConstantValue Create(double value) => Create(value, false);
-        public static ConstantValue Create(double value, bool isDeltaValue = false)
+        public static ConstantValue Create(double value, bool isDeltaValue)
         {
             switch (value)
             {
@@ -53,48 +56,6 @@ namespace NitroSharp.NsScript
         public static ConstantValue Create(bool value) => value ? True : False;
         public static ConstantValue Create(BuiltInEnumValue value) => new EnumValueConstant(value);
 
-        public static ConstantValue Create(object value, bool isDeltaValue = false)
-        {
-            switch (value)
-            {
-                case 0:
-                    return isDeltaValue ? DeltaZero : Zero;
-
-                case 1:
-                    return isDeltaValue ? DeltaOne : One;
-
-                case null:
-                    return ConstantValue.Null;
-
-                case true:
-                    return True;
-
-                case false:
-                    return False;
-
-                case "":
-                    return EmptyString;
-
-                case "@":
-                    return AtSymbol;
-
-                case int i:
-                    return new ConstantValueDouble(i, isDeltaValue);
-
-                case Double f:
-                    return new ConstantValueDouble(f, isDeltaValue);
-
-                case string s:
-                    return new ConstantValueString(s);
-
-                case BuiltInEnumValue enumValue:
-                    return new EnumValueConstant(enumValue);
-
-                default:
-                    throw new ArgumentException("Illegal value.", nameof(value));
-            }
-        }
-
         public static ConstantValue Default(BuiltInType type)
         {
             switch (type)
@@ -114,6 +75,18 @@ namespace NitroSharp.NsScript
             }
         }
 
+        private static bool IsNull(ConstantValue value)
+        {
+            Debug.Assert(!ReferenceEquals(value, null));
+            return ReferenceEquals(value, Null);
+        }
+
+        private static bool IsDefault(ConstantValue value)
+        {
+            Debug.Assert(!ReferenceEquals(value, null));
+            return ReferenceEquals(value, Default(value.Type));
+        }
+
         public abstract BuiltInType Type { get; }
         public virtual double DoubleValue => throw new InvalidOperationException();
         public virtual string StringValue => throw new InvalidOperationException();
@@ -121,21 +94,13 @@ namespace NitroSharp.NsScript
         public virtual bool IsDeltaValue => throw new InvalidOperationException();
         public virtual BuiltInEnumValue EnumValue => throw new InvalidOperationException();
 
-        bool TryConvertTo(BuiltInType targetType, out ConstantValue result)
+        protected abstract bool TryConvertTo(BuiltInType targetType, out ConstantValue result);
+        public ConstantValue ConvertTo(BuiltInType targetType)
         {
-            try
-            {
-                result = ConvertTo(targetType);
-                return true;
-            }
-            catch (InvalidOperationException)
-            {
-                result = Null;
-                return false;
-            }
+            return TryConvertTo(targetType, out var result)
+                ? result
+                : throw InvalidConversion(Type, targetType);
         }
-
-        public abstract ConstantValue ConvertTo(BuiltInType targetType);
 
         protected abstract int GetHashCodeImpl();
         protected virtual bool EqualsImpl(ConstantValue other)
@@ -149,31 +114,40 @@ namespace NitroSharp.NsScript
 
         private static bool AreEqual(ConstantValue left, ConstantValue right)
         {
-            if (ReferenceEquals(left, right))
+            Debug.Assert(!ReferenceEquals(left, null));
+            Debug.Assert(!ReferenceEquals(right, null));
+
+            if (ReferenceEquals(left, right) || IsDefault(left) && IsDefault(right))
             {
                 return true;
             }
 
-            if (ReferenceEquals(left, null) || ReferenceEquals(right, null))
+            // A string is never equal to a number.
+            if (left.Type == BuiltInType.String ^ right.Type == BuiltInType.String
+                && left.Type == BuiltInType.Double ^ right.Type == BuiltInType.Double)
             {
                 return false;
             }
 
-            // If just one of the two values is null, convert it to the other value's type.
+            // If just one of the two values is Null, convert it to the other value's type.
             if (left.Type == BuiltInType.Null)
             {
                 return left.ConvertTo(right.Type).EqualsImpl(right);
             }
-            else if (right.Type == BuiltInType.Null)
+            if (right.Type == BuiltInType.Null)
             {
                 return left.EqualsImpl(right.ConvertTo(left.Type));
             }
 
-            // If one of the values is a string and the other one is a double, both should be converted to double.
-            if (left.Type == BuiltInType.String ^ right.Type == BuiltInType.String
-                && left.Type == BuiltInType.Double ^ right.Type == BuiltInType.Double)
+            // One of the values is an enum value and the other one is a string.
+            // Convert the enum value to string and compare the two strings in a non-case sensitive manner.
+            // Note: normally string comparsion *is* case sensitive, which is why this special case even exists.
+            if (left.Type == BuiltInType.EnumValue ^ right.Type == BuiltInType.EnumValue
+                && left.Type == BuiltInType.String ^ right.Type == BuiltInType.String)
             {
-                return left.ConvertTo(BuiltInType.Double).EqualsImpl(right.ConvertTo(BuiltInType.Double));
+                string l = left.ConvertTo(BuiltInType.String).StringValue;
+                string r = right.ConvertTo(BuiltInType.String).StringValue;
+                return l.Equals(r, StringComparison.OrdinalIgnoreCase);
             }
 
             bool equal = false;
@@ -189,10 +163,10 @@ namespace NitroSharp.NsScript
             return equal;
         }
 
-        private static ConstantValue OpAdditionStatic(ConstantValue left, ConstantValue right)
+        private static ConstantValue Add(ConstantValue left, ConstantValue right)
         {
             // null + null
-            if (left == ConstantValue.Null && right == ConstantValue.Null)
+            if (IsNull(left) && IsNull(right))
             {
                 return Zero;
             }
@@ -215,7 +189,7 @@ namespace NitroSharp.NsScript
             // Results in a so-called 'delta' value.
             if (ReferenceEquals(left, AtSymbol) && right.Type == BuiltInType.Double)
             {
-                return Create((object)right.DoubleValue, isDeltaValue: true);
+                return Create(right.DoubleValue, isDeltaValue: true);
             }
 
             // Worst scenario: one of the values is a string and the other one is either a double or a bool.
@@ -237,16 +211,13 @@ namespace NitroSharp.NsScript
                 return nonStringValue;
             }
 
-            bool RepresentsNumber(ConstantValue v) => int.TryParse(v.StringValue, out _);
+            bool RepresentsNumber(ConstantValue v) => double.TryParse(v.StringValue, NumberStyles.AllowDecimalPoint, null, out _);
             if (RepresentsNumber(stringValue))
             {
-                // Special case #2: The string value represents a number (and the ohter value is most likely a double).
+                // Special case #2: The string value represents a number (and the other value is most likely a double).
                 // So we have an expression like this: 42 + "3".
-                // According to the rules of the language, the "3" in this case should be converted to a numeric value.
-                // Spoiler: this conversion always results in a zero.
-                // So we can just return the nonStringValue (that would be 42 in the example above).
-
-                return nonStringValue.ConvertTo(BuiltInType.Double);
+                // The string value is simply ignored in such cases, so we can just return the nonStringValue.
+                return nonStringValue;
             }
 
             // Now, if stringValue is just an arbitrary string, the result of the operation should also be a string.
@@ -289,7 +260,7 @@ namespace NitroSharp.NsScript
         public static ConstantValue operator +(ConstantValue left, ConstantValue right)
         {
             ThrowIfNullReference(left, right);
-            return OpAdditionStatic(left, right);
+            return Add(left, right);
         }
 
         public static ConstantValue operator -(ConstantValue left, ConstantValue right)
@@ -438,22 +409,26 @@ namespace NitroSharp.NsScript
                 return DoubleValue == other.DoubleValue && IsDeltaValue == other.IsDeltaValue;
             }
 
-            public override ConstantValue ConvertTo(BuiltInType targetType)
+            protected override bool TryConvertTo(BuiltInType targetType, out ConstantValue result)
             {
                 switch (targetType)
                 {
                     case BuiltInType.Double:
-                        return this;
+                        result = this;
+                        return true;
 
                     case BuiltInType.String:
                         int i = (int)DoubleValue;
-                        return Create(i.ToString());
+                        result = Create(i.ToString());
+                        return true;
 
                     case BuiltInType.Boolean:
-                        return Create(DoubleValue > 0);
+                        result = Create(DoubleValue > 0);
+                        return true;
 
                     default:
-                        throw InvalidConversion(Type, targetType);
+                        result = null;
+                        return false;
                 }
             }
 
@@ -477,7 +452,6 @@ namespace NitroSharp.NsScript
             }
 
             public override BuiltInType Type => BuiltInType.Boolean;
-            //public override object RawValue => BooleanValue;
             public override bool BooleanValue { get; }
 
             protected override bool EqualsImpl(ConstantValue other)
@@ -485,21 +459,25 @@ namespace NitroSharp.NsScript
                 return BooleanValue == other.BooleanValue;
             }
 
-            public override ConstantValue ConvertTo(BuiltInType targetType)
+            protected override bool TryConvertTo(BuiltInType targetType, out ConstantValue result)
             {
                 switch (targetType)
                 {
                     case BuiltInType.Boolean:
-                        return this;
+                        result = this;
+                        return true;
 
                     case BuiltInType.Double:
-                        return BooleanValue ? One : Zero;
+                        result =  BooleanValue ? One : Zero;
+                        return true;
 
                     case BuiltInType.String:
-                        return BooleanValue ? Create("1") : Create("0");
+                        result = BooleanValue ? Create("1") : Create("0");
+                        return true;
 
                     default:
-                        throw InvalidConversion(Type, targetType);
+                        result = null;
+                        return false;
                 }
             }
 
@@ -526,22 +504,37 @@ namespace NitroSharp.NsScript
                 return StringValue.Equals(other.StringValue, StringComparison.Ordinal);
             }
 
-            public override ConstantValue ConvertTo(BuiltInType targetType)
+            protected override bool TryConvertTo(BuiltInType targetType, out ConstantValue result)
             {
                 switch (targetType)
                 {
                     case BuiltInType.String:
-                        return this;
+                        result = this;
+                        return true;
 
                     case BuiltInType.Double:
-                        return StringValue == "@" ? DeltaZero : Zero;
+                        result =  ConvertToNumber();
+                        return true;
 
                     case BuiltInType.Boolean:
-                        return False;
+                        result = False;
+                        return true;
 
                     default:
-                        throw InvalidConversion(Type, targetType);
+                        result = null;
+                        return false;
                 }
+            }
+
+            private ConstantValue ConvertToNumber()
+            {
+                if (StringValue == "@")
+                {
+                    return DeltaZero;
+                }
+
+                bool success = double.TryParse(StringValue, NumberStyles.AllowDecimalPoint, null, out double result);
+                return success ? Create(result) : Zero;
             }
 
             protected override int GetHashCodeImpl()
@@ -567,18 +560,21 @@ namespace NitroSharp.NsScript
                 return EnumValue == other.EnumValue;
             }
 
-            public override ConstantValue ConvertTo(BuiltInType targetType)
+            protected override bool TryConvertTo(BuiltInType targetType, out ConstantValue result)
             {
                 switch (targetType)
                 {
                     case BuiltInType.EnumValue:
-                        return this;
+                        result = this;
+                        return true;
 
                     case BuiltInType.String:
-                        return Create(EnumValue.ToString());
+                        result = Create(EnumValue.ToString());
+                        return true;
 
                     default:
-                        throw InvalidConversion(Type, targetType);
+                        result = null;
+                        return false;
                 }
             }
 
@@ -600,9 +596,10 @@ namespace NitroSharp.NsScript
             public override string StringValue => string.Empty;
             public override double DoubleValue => 0.0d;
 
-            public override ConstantValue ConvertTo(BuiltInType targetType)
+            protected override bool TryConvertTo(BuiltInType targetType, out ConstantValue result)
             {
-                return Default(targetType);
+                result = Default(targetType);
+                return true;
             }
 
             protected override int GetHashCodeImpl() => 0;
