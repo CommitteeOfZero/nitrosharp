@@ -1,6 +1,5 @@
 ﻿using NitroSharp.NsScript.Syntax;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 
 namespace NitroSharp.NsScript.Symbols
 {
@@ -56,13 +55,13 @@ namespace NitroSharp.NsScript.Symbols
         {
             var locals = BeginScope(empty: false);
             VisitArray(function.Parameters);
-            VisitLocalDeclarations(function.Body);
+            Visit(function.Body);
             EndScope();
 
             return new FunctionSymbol(function.Identifier.Name, function, locals);
         }
 
-        private void VisitLocalDeclarations(Block block)
+        public override NamedSymbol VisitBlock(Block block)
         {
             foreach (var stmt in block.Statements)
             {
@@ -70,7 +69,18 @@ namespace NitroSharp.NsScript.Symbols
                 {
                     Visit(stmt);
                 }
+                // The body of an if statement can contain dialogue blocks.
+                else if (stmt is IfStatement ifStatement)
+                {
+                    Visit(ifStatement.IfTrueStatement);
+                    if (ifStatement.IfFalseStatement != null)
+                    {
+                        Visit(ifStatement.IfFalseStatement);
+                    }
+                }
             }
+
+            return null;
         }
 
         public override NamedSymbol VisitParameter(Parameter parameter)
