@@ -6,38 +6,38 @@ namespace NitroSharp.NsScript.IR
 {
     public static class Instructions
     {
-        public static Instruction PushValue(ConstantValue value, SyntaxNode syntax) => new Instruction(Opcode.PushValue, value, syntax);
-        public static Instruction PushGlobal(string name, Identifier syntax) => new Instruction(Opcode.PushGlobal, name, syntax);
-        public static Instruction PushLocal(string name, Identifier syntax) => new Instruction(Opcode.PushLocal, name, syntax);
-        public static Instruction ConvertToDelta(DeltaExpression syntax) => new Instruction(Opcode.ConvertToDelta, syntax);
+        public static Instruction PushValue(ConstantValue value) => new Instruction(Opcode.PushValue, value);
+        public static Instruction PushGlobal(string name) => new Instruction(Opcode.PushGlobal, name);
+        public static Instruction PushLocal(string name) => new Instruction(Opcode.PushLocal, name);
+        public static Instruction ConvertToDelta() => new Instruction(Opcode.ConvertToDelta);
 
-        public static Instruction AssignParameter(string name, AssignmentOperatorKind operatorKind, AssignmentExpression synax)
-            => new Instruction(Opcode.AssignLocal, name, operatorKind, synax);
+        public static Instruction AssignParameter(string name, AssignmentOperatorKind operatorKind)
+            => new Instruction(Opcode.AssignLocal, name, operatorKind);
 
-        public static Instruction AssignGlobal(string name, AssignmentOperatorKind assignOperator, AssignmentExpression syntax)
-            => new Instruction(Opcode.AssignGlobal, name, assignOperator, syntax);
+        public static Instruction AssignGlobal(string name, AssignmentOperatorKind assignOperator)
+            => new Instruction(Opcode.AssignGlobal, name, assignOperator);
 
-        public static Instruction ApplyUnary(UnaryOperatorKind unaryOperator, UnaryExpression syntax)
-            => new Instruction(Opcode.ApplyUnary, unaryOperator, syntax);
+        public static Instruction ApplyUnary(UnaryOperatorKind unaryOperator)
+            => new Instruction(Opcode.ApplyUnary, unaryOperator);
 
-        public static Instruction ApplyBinary(BinaryOperatorKind operatorKind, BinaryExpression syntax)
-            => new Instruction(Opcode.ApplyBinary, operatorKind, syntax);
+        public static Instruction ApplyBinary(BinaryOperatorKind operatorKind)
+            => new Instruction(Opcode.ApplyBinary, operatorKind);
 
         public static Instruction SetDialogueBlock(DialogueBlockSymbol dialogueBlock)
-            => new Instruction(Opcode.SetDialogueBlock, dialogueBlock, null);
+            => new Instruction(Opcode.SetDialogueBlock, dialogueBlock);
 
-        public static Instruction Say(string text, PXmlString syntax) => new Instruction(Opcode.Say, text, syntax);
-        public static Instruction WaitForInput(PXmlLineSeparator syntax) => new Instruction(Opcode.WaitForInput, syntax);
+        public static Instruction Say(string text, PXmlString syntax) => new Instruction(Opcode.Say, text);
+        public static Instruction WaitForInput(PXmlLineSeparator syntax) => new Instruction(Opcode.WaitForInput);
 
-        public static Instruction Call(Symbol symbol, FunctionCall syntax) => new Instruction(Opcode.Call, symbol, syntax);
-        public static Instruction CallChapter(string moduleName, CallChapterStatement syntax)
-            => new Instruction(Opcode.CallChapter, moduleName, syntax);
+        public static Instruction Call(Symbol symbol) => new Instruction(Opcode.Call, symbol);
+        public static Instruction CallFar(SourceFileReference module, string symbolName)
+            => new Instruction(Opcode.CallFar, module, symbolName);
 
-        public static Instruction Nop() => new Instruction(Opcode.Nop, null);
-        public static Instruction Jump(int targetInstructionIndex) => new Instruction(Opcode.Jump, targetInstructionIndex, null);
+        public static Instruction Nop() => new Instruction(Opcode.Nop);
+        public static Instruction Jump(int targetInstructionIndex) => new Instruction(Opcode.Jump, targetInstructionIndex);
         public static Instruction JumpIfEquals(ConstantValue value, int targetInstructionIndex)
-            => new Instruction(Opcode.JumpIfEquals, value, targetInstructionIndex, null);
+            => new Instruction(Opcode.JumpIfEquals, value, targetInstructionIndex);
 
-        public static Instruction Return() => new Instruction(Opcode.Return, null);
+        public static Instruction Return() => new Instruction(Opcode.Return);
     }
 }

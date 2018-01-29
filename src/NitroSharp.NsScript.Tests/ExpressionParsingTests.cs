@@ -12,8 +12,7 @@ namespace NitroSharp.NsScript.Tests
             var call = Parsing.ParseExpression(text) as FunctionCall;
             Assert.NotNull(call);
             Assert.Equal(SyntaxNodeKind.FunctionCall, call.Kind);
-            Assert.Equal("WaitKey", call.Target.OriginalName);
-            Assert.Equal(call.Target.OriginalName, call.Target.Name);
+            Assert.Equal("WaitKey", call.Target.Name);
             Assert.Equal(SigilKind.None, call.Target.Sigil);
             Assert.Single(call.Arguments);
 
@@ -65,7 +64,6 @@ namespace NitroSharp.NsScript.Tests
             var identifier = Parsing.ParseExpression(text) as Identifier;
 
             Assert.NotNull(identifier);
-            Assert.Equal(text, identifier.OriginalName);
             Assert.Equal(text, identifier.Name);
             Assert.Equal(SigilKind.None, identifier.Sigil);
             Assert.Equal(text, identifier.ToString());
@@ -78,11 +76,10 @@ namespace NitroSharp.NsScript.Tests
             var identifier = Parsing.ParseExpression(text) as Identifier;
 
             Assert.NotNull(identifier);
-            Assert.Equal(text, identifier.OriginalName);
             Assert.Equal("foo", identifier.Name);
             Assert.Equal(SigilKind.Dollar, identifier.Sigil);
-            Assert.True(identifier.IsGlobalVariable);
-            Assert.False(identifier.IsQuouted);
+            Assert.True(identifier.HasSigil);
+            Assert.False(identifier.IsQuoted);
             Assert.Equal(text, identifier.ToString());
         }
 
@@ -93,11 +90,10 @@ namespace NitroSharp.NsScript.Tests
             var identifier = Parsing.ParseExpression(text) as Identifier;
 
             Assert.NotNull(identifier);
-            Assert.Equal(text, identifier.OriginalName);
             Assert.Equal("foo", identifier.Name);
             Assert.Equal(SigilKind.Hash, identifier.Sigil);
-            Assert.True(identifier.IsGlobalVariable);
-            Assert.False(identifier.IsQuouted);
+            Assert.True(identifier.HasSigil);
+            Assert.False(identifier.IsQuoted);
             Assert.Equal(text, identifier.ToString());
         }
 
@@ -116,10 +112,9 @@ namespace NitroSharp.NsScript.Tests
             Assert.NotNull(invocation);
             var arg = invocation.Arguments[0] as Identifier;
             Assert.NotNull(arg);
-            Assert.Equal("\"foo\"", arg.OriginalName);
             Assert.Equal("foo", arg.Name);
             Assert.Equal(SigilKind.None, arg.Sigil);
-            Assert.True(arg.IsQuouted);
+            Assert.True(arg.IsQuoted);
         }
 
         [Fact]
@@ -129,11 +124,10 @@ namespace NitroSharp.NsScript.Tests
             var identifier = Parsing.ParseExpression(text) as Identifier;
 
             Assert.NotNull(identifier);
-            Assert.Equal(text, identifier.OriginalName);
             Assert.Equal("foo", identifier.Name);
             Assert.Equal(SigilKind.Dollar, identifier.Sigil);
-            Assert.True(identifier.IsGlobalVariable);
-            Assert.True(identifier.IsQuouted);
+            Assert.True(identifier.HasSigil);
+            Assert.True(identifier.IsQuoted);
             Assert.Equal(text, identifier.ToString());
         }
 
@@ -145,7 +139,6 @@ namespace NitroSharp.NsScript.Tests
 
             Assert.NotNull(expr);
             Assert.Equal("null", expr.Text);
-            // Assert.Null(expr.Value);
         }
 
         [Fact]
@@ -217,7 +210,7 @@ namespace NitroSharp.NsScript.Tests
 
             var operand = expr.Operand as Identifier;
             Assert.NotNull(operand);
-            Assert.Equal("$a", operand.OriginalName);
+            Assert.Equal("a", operand.Name);
 
             Assert.Equal(text, expr.ToString());
         }
@@ -233,11 +226,11 @@ namespace NitroSharp.NsScript.Tests
 
             var left = expr.Left as Identifier;
             Assert.NotNull(left);
-            Assert.Equal("$a", left.OriginalName);
+            Assert.Equal("a", left.Name);
 
             var right = expr.Right as Identifier;
             Assert.NotNull(right);
-            Assert.Equal("$b", right.OriginalName);
+            Assert.Equal("b", right.Name);
 
             Assert.Equal(text, expr.ToString());
         }
@@ -251,13 +244,14 @@ namespace NitroSharp.NsScript.Tests
             Assert.Equal(SyntaxNodeKind.AssignmentExpression, expr.Kind);
             Assert.Equal(kind, expr.OperatorKind);
 
-            var target = expr.Target as Identifier;
+            var target = expr.Target;
             Assert.NotNull(target);
-            Assert.Equal("$a", target.OriginalName);
+            Assert.Equal("a", target.Name);
 
             var value = expr.Value as Literal;
             Assert.NotNull(value);
             Assert.Equal(42.0d, value.Value.DoubleValue);
+            Assert.Equal(text, expr.ToString());
         }
     }
 }

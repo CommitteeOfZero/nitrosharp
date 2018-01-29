@@ -131,14 +131,19 @@ namespace NitroSharp.NsScript.IR
                     }
                 }
 
-                _instructions.Add(Instructions.Call(functionCall.Target.Symbol, functionCall));
+                _instructions.Add(Instructions.Call(functionCall.Target.Symbol));
             }
 
             public override void VisitCallChapterStatement(CallChapterStatement syntax)
             {
-                _instructions.Add(Instructions.CallChapter(syntax.Module.Name, syntax));
+                _instructions.Add(Instructions.CallFar(syntax.Target, "main"));
             }
-            
+
+            public override void VisitCallSceneStatement(CallSceneStatement syntax)
+            {
+                _instructions.Add(Instructions.CallFar(syntax.TargetFile, syntax.Scene.Name));
+            }
+
             public override void VisitExpressionStatement(ExpressionStatement expressionStatement)
             {
                 Visit(expressionStatement.Expression);
@@ -151,11 +156,11 @@ namespace NitroSharp.NsScript.IR
                 switch (target.Symbol.Kind)
                 {
                     case SymbolKind.GlobalVariable:
-                        _instructions.Add(Instructions.AssignGlobal(target.Name, expression.OperatorKind, expression));
+                        _instructions.Add(Instructions.AssignGlobal(target.Name, expression.OperatorKind));
                         break;
                         
                     case SymbolKind.Parameter:
-                        _instructions.Add(Instructions.AssignParameter(target.Name, expression.OperatorKind, expression));
+                        _instructions.Add(Instructions.AssignParameter(target.Name, expression.OperatorKind));
                         break;
                 }
             }
@@ -165,7 +170,7 @@ namespace NitroSharp.NsScript.IR
                 Visit(binaryExpression.Right);
                 Visit(binaryExpression.Left);
 
-                _instructions.Add(Instructions.ApplyBinary(binaryExpression.OperatorKind, binaryExpression));
+                _instructions.Add(Instructions.ApplyBinary(binaryExpression.OperatorKind));
             }
 
             public override void VisitIdentifier(Identifier identifier)
@@ -176,40 +181,40 @@ namespace NitroSharp.NsScript.IR
                     switch (symbol.Kind)
                     {
                         case SymbolKind.GlobalVariable:
-                            _instructions.Add(Instructions.PushGlobal(identifier.Name, identifier));
+                            _instructions.Add(Instructions.PushGlobal(identifier.Name));
                             break;
 
                         case SymbolKind.Parameter:
-                            _instructions.Add(Instructions.PushLocal(identifier.Name, identifier));
+                            _instructions.Add(Instructions.PushLocal(identifier.Name));
                             break;
 
                         case SymbolKind.EnumValue:
                             var enumValue = (BuiltInEnumValueSymbol)symbol;
-                            _instructions.Add(Instructions.PushValue(enumValue.Value, identifier));
+                            _instructions.Add(Instructions.PushValue(enumValue.Value));
                             break;
                     }
                 }
-                else if (!identifier.IsGlobalVariable) // likely an unknown enum value
+                else if (!identifier.HasSigil) // likely an unknown enum value
                 {
-                    _instructions.Add(Instructions.PushValue(ConstantValue.Create(identifier.Name), identifier));
+                    _instructions.Add(Instructions.PushValue(ConstantValue.Create(identifier.Name)));
                 }
             }
 
             public override void VisitUnaryExpression(UnaryExpression unaryExpression)
             {
                 Visit(unaryExpression.Operand);
-                _instructions.Add(Instructions.ApplyUnary(unaryExpression.OperatorKind, unaryExpression));
+                _instructions.Add(Instructions.ApplyUnary(unaryExpression.OperatorKind));
             }
 
             public override void VisitLiteral(Literal literal)
             {
-                _instructions.Add(Instructions.PushValue(literal.Value, literal));
+                _instructions.Add(Instructions.PushValue(literal.Value));
             }
 
             public override void VisitDeltaExpression(DeltaExpression deltaExpression)
             {
                 Visit(deltaExpression.Expression);
-                _instructions.Add(Instructions.ConvertToDelta(deltaExpression));
+                _instructions.Add(Instructions.ConvertToDelta());
             }
 
             public override void VisitDialogueBlock(DialogueBlock dialogueBlock)

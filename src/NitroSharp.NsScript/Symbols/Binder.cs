@@ -119,10 +119,9 @@ namespace NitroSharp.NsScript.Symbols
                 return;
             }
 
-            if (identifier.IsGlobalVariable)
+            if (identifier.HasSigil)
             {
                 identifier.Symbol = GlobalVariableSymbol.Instance;
-                return;
             }
             else
             {

@@ -35,21 +35,20 @@ namespace NitroSharp.NsScript.Syntax
 
     public sealed class Identifier : Expression
     {
-        internal Identifier(string originalName, string name, SigilKind sigil)
+        internal Identifier(string name, SigilKind sigil = SigilKind.None, bool isQuoted = false)
         {
-            OriginalName = originalName;
             Name = name;
             Sigil = sigil;
+            IsQuoted = isQuoted;
         }
 
         public string Name { get; }
-        public string OriginalName { get; }
         public SigilKind Sigil { get; }
+        public bool IsQuoted { get; }
+        
+        public bool HasSigil => Sigil != SigilKind.None;
 
         public override SyntaxNodeKind Kind => SyntaxNodeKind.Identifier;
-
-        public bool IsGlobalVariable => Sigil != SigilKind.None;
-        public bool IsQuouted => OriginalName[0] == '"';
 
         public override void Accept(SyntaxVisitor visitor)
         {

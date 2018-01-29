@@ -75,7 +75,18 @@ namespace NitroSharp.NsScript.Syntax
 
         public override void VisitIdentifier(Identifier identifier)
         {
-            Write(identifier.OriginalName);
+            if (identifier.IsQuoted)
+            {
+                Write("\"");
+            }
+            
+            Write(SyntaxFacts.GetText(identifier.Sigil));
+            Write(identifier.Name);
+            
+            if (identifier.IsQuoted)
+            {
+                Write("\"");
+            }
         }
 
         public override void VisitParameter(Parameter parameter)

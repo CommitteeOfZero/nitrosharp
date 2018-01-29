@@ -79,8 +79,23 @@ case option:{}
             var firstSection = body.Statements[0] as SelectSection;
             Assert.NotNull(firstSection);
             Assert.Equal(SyntaxNodeKind.SelectSection, firstSection.Kind);
-            Assert.Equal("option", firstSection.Label.OriginalName);
+            Assert.Equal("option", firstSection.Label.Name);
             Assert.NotNull(firstSection.Body);
+        }
+
+        [Fact]
+        public void ParseSelectSectionWithSlashesInName()
+        {
+            string text = @"
+select
+{
+case goo/foo/bar:{}
+}";
+            var selectStatement = Parsing.ParseStatement(text) as SelectStatement;
+            Assert.NotNull(selectStatement);
+            var section = selectStatement.Body.Statements[0] as SelectSection;
+            Assert.NotNull(section);
+            Assert.Equal("goo/foo/bar", section.Label.Name);
         }
 
         [Fact]
@@ -96,23 +111,35 @@ case option:{}
         [Fact]
         public void ParseCallChapterStatement()
         {
-            string text = "call_chapter @->testchapter;";
+            string text = "call_chapter nss/foo.nss;";
             var statement = Parsing.ParseStatement(text) as CallChapterStatement;
 
             Assert.NotNull(statement);
             Assert.Equal(SyntaxNodeKind.CallChapterStatement, statement.Kind);
-            Assert.Equal("@->testchapter", statement.Module.OriginalName);
+            Assert.Equal("nss/foo.nss", statement.Target);
         }
 
         [Fact]
         public void ParseCallSceneStatement()
         {
-            string text = "call_scene @->testscene;";
+            string text = "call_scene @->foo;";
             var statement = Parsing.ParseStatement(text) as CallSceneStatement;
 
             Assert.NotNull(statement);
             Assert.Equal(SyntaxNodeKind.CallSceneStatement, statement.Kind);
-            Assert.Equal("@->testscene", statement.SceneName.OriginalName);
+            Assert.Equal("foo", statement.Scene.Name);
+        }
+
+        [Fact]
+        public void ParseCallSceneStatementWithFilePath()
+        {
+            string text = "call_scene nss/foo.nss->bar;";
+            var statement = Parsing.ParseStatement(text) as CallSceneStatement;
+
+            Assert.NotNull(statement);
+            Assert.Equal(SyntaxNodeKind.CallSceneStatement, statement.Kind);
+            Assert.Equal("nss/foo.nss", statement.TargetFile);
+            Assert.Equal("bar", statement.Scene.Name);
         }
     }
 }

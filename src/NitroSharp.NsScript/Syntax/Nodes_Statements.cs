@@ -175,12 +175,12 @@ namespace NitroSharp.NsScript.Syntax
 
     public sealed class CallChapterStatement : Statement
     {
-        internal CallChapterStatement(Identifier chapterName)
+        internal CallChapterStatement(SourceFileReference target)
         {
-            Module = chapterName;
+            Target = target;
         }
 
-        public Identifier Module { get; }
+        public SourceFileReference Target { get; }
         public override SyntaxNodeKind Kind => SyntaxNodeKind.CallChapterStatement;
 
         public override void Accept(SyntaxVisitor visitor)
@@ -196,12 +196,14 @@ namespace NitroSharp.NsScript.Syntax
 
     public sealed class CallSceneStatement : Statement
     {
-        internal CallSceneStatement(Identifier sceneName)
+        internal CallSceneStatement(SourceFileReference targetFile, Identifier scene)
         {
-            SceneName = sceneName;
+            TargetFile = targetFile;
+            Scene = scene;
         }
 
-        public Identifier SceneName { get; }
+        public SourceFileReference TargetFile { get; }
+        public Identifier Scene { get; }
         public override SyntaxNodeKind Kind => SyntaxNodeKind.CallSceneStatement;
 
         public override void Accept(SyntaxVisitor visitor)

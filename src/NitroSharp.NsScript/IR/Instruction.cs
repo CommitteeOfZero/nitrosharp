@@ -1,33 +1,27 @@
-﻿using NitroSharp.NsScript.Syntax;
-
-namespace NitroSharp.NsScript.IR
+﻿namespace NitroSharp.NsScript.IR
 {
     public struct Instruction
     {
-        internal Instruction(Opcode opcode, SyntaxNode syntax)
+        internal Instruction(Opcode opcode)
         {
             Opcode = opcode;
             Operand1 = Operand2 = null;
-            Syntax = syntax;
         }
 
-        internal Instruction(Opcode opcode, object operand, SyntaxNode syntax)
+        internal Instruction(Opcode opcode, object operand)
         {
             Opcode = opcode;
             Operand1 = operand;
             Operand2 = null;
-            Syntax = syntax;
         }
 
-        internal Instruction(Opcode opcode, object operand1, object operand2, SyntaxNode syntax)
+        internal Instruction(Opcode opcode, object operand1, object operand2)
         {
             Opcode = opcode;
             Operand1 = operand1;
             Operand2 = operand2;
-            Syntax = syntax;
         }
 
-        public SyntaxNode Syntax { get; }
         public Opcode Opcode { get; }
         public object Operand1 { get; }
         public object Operand2 { get; }

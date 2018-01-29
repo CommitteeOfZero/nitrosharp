@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
+using System.Text;
 
 namespace NitroSharp.NsScript.Syntax
 {
@@ -30,12 +31,34 @@ namespace NitroSharp.NsScript.Syntax
         public SourceFile ParseScript()
         {
             var fileReferences = ImmutableArray.CreateBuilder<SourceFileReference>();
-            while (CurrentToken.Kind == SyntaxTokenKind.HashToken && PeekToken(1).Kind == SyntaxTokenKind.IncludeKeyword)
+            while (true)
             {
-                EatToken();
-                EatToken();
-                var filePath = EatToken(SyntaxTokenKind.StringLiteralToken);
-                fileReferences.Add(new SourceFileReference((string)filePath.Value));
+                bool exit = false;
+                switch (CurrentToken.Kind)
+                {
+                    case SyntaxTokenKind.HashToken:
+                    case SyntaxTokenKind.IncludeKeyword:
+                        EatToken();
+                        break;
+
+                    case SyntaxTokenKind.StringLiteralToken:
+                        var filePath = EatToken(SyntaxTokenKind.StringLiteralToken);
+                        fileReferences.Add(new SourceFileReference((string)filePath.Value));
+                        break;
+
+                    case SyntaxTokenKind.SemicolonToken:
+                        EatToken();
+                        break;
+
+                    default:
+                        exit = true;
+                        break;
+                }
+
+                if (exit)
+                {
+                    break;
+                }
             }
 
             var members = ImmutableArray.CreateBuilder<MemberDeclaration>();
@@ -55,7 +78,7 @@ namespace NitroSharp.NsScript.Syntax
                 }
             }
 
-            return new SourceFile(SourceText.FileName, members.ToImmutable(), fileReferences.ToImmutable());
+            return new SourceFile(SourceText.FilePath, members.ToImmutable(), fileReferences.ToImmutable());
         }
 
         public MemberDeclaration ParseMemberDeclaration()
@@ -110,7 +133,7 @@ namespace NitroSharp.NsScript.Syntax
         {
             if (CurrentToken.Kind != expectedKind)
             {
-                throw UnexpectedToken(SourceText.FileName, CurrentToken.Text);
+                throw UnexpectedToken(SourceText.FilePath, CurrentToken.Text);
             }
 
             return _tokens[_tokenOffset++];
@@ -183,7 +206,7 @@ namespace NitroSharp.NsScript.Syntax
                         break;
 
                     default:
-                        throw UnexpectedToken(SourceText.FileName, CurrentToken.Text);
+                        throw UnexpectedToken(SourceText.FilePath, CurrentToken.Text);
                 }
             }
 
@@ -252,10 +275,10 @@ namespace NitroSharp.NsScript.Syntax
                     return ParseSelectSection();
 
                 case SyntaxTokenKind.CallChapterKeyword:
-                    return ParseChapterCall();
+                    return ParseCallChapterStatement();
 
                 case SyntaxTokenKind.CallSceneKeyword:
-                    return ParseSceneCall();
+                    return ParseCallSceneStatement();
 
                 case SyntaxTokenKind.DialogueBlockStartTag:
                     return ParseDialogueBlock();
@@ -411,7 +434,7 @@ namespace NitroSharp.NsScript.Syntax
                     return ParseDeltaExpression(precedence);
 
                 default:
-                    throw UnexpectedToken(SourceText.FileName, CurrentToken.Text);
+                    throw UnexpectedToken(SourceText.FilePath, CurrentToken.Text);
             }
         }
 
@@ -431,8 +454,8 @@ namespace NitroSharp.NsScript.Syntax
                     return new Literal(token.Text, ConstantValue.Create(token.DoubleValue));
 
                 case SyntaxTokenKind.StringLiteralToken:
-                    var tk = (SyntaxTokenWithStringValue)EatToken();
-                    return new Literal(tk.Text, ConstantValue.Create(tk.StringValue));
+                    var tk = EatToken();
+                    return new Literal(tk.Text, ConstantValue.Create(tk.Text));
 
                 case SyntaxTokenKind.NullKeyword:
                     EatToken();
@@ -447,7 +470,7 @@ namespace NitroSharp.NsScript.Syntax
                     return Literal.False;
 
                 default:
-                    throw UnexpectedToken(SourceText.FileName, CurrentToken.Text);
+                    throw UnexpectedToken(SourceText.FilePath, CurrentToken.Text);
             }
         }
 
@@ -459,10 +482,10 @@ namespace NitroSharp.NsScript.Syntax
             if (token.Kind == SyntaxTokenKind.IdentifierToken)
             {
                 var idToken = (IdentifierToken)token;
-                return new Identifier(idToken.Text, idToken.NameWithoutSigil, idToken.SigilCharacter);
+                return new Identifier(idToken.Text, idToken.Sigil, idToken.IsQuoted);
             }
 
-            return new Identifier(token.Text, (string)token.Value, SigilKind.None);
+            return new Identifier(token.Text, SigilKind.None, isQuoted: true);
         }
 
         private bool IsFunctionCall()
@@ -484,16 +507,6 @@ namespace NitroSharp.NsScript.Syntax
                 default:
                     return false;
             }
-        }
-
-        private bool IsVariable()
-        {
-            if (CurrentToken.Kind != SyntaxTokenKind.IdentifierToken)
-            {
-                return false;
-            }
-
-            return SyntaxFacts.IsSigil(CurrentToken.Text[0]) || (CurrentToken.Text[0] == '"' && CurrentToken.Text[1] == '$');
         }
 
         private FunctionCall ParseFunctionCall()
@@ -599,29 +612,72 @@ namespace NitroSharp.NsScript.Syntax
         private SelectSection ParseSelectSection()
         {
             EatToken(SyntaxTokenKind.CaseKeyword);
-            var label = ParseIdentifier();
+            string labelName = ConsumeTextUntil(tk => tk == SyntaxTokenKind.OpenBraceToken || tk == SyntaxTokenKind.ColonToken);
             if (CurrentToken.Kind == SyntaxTokenKind.ColonToken)
             {
                 EatToken();
             }
+
             var body = ParseBlock();
-            return new SelectSection(label, body);
+            return new SelectSection(new Identifier(labelName), body);
         }
 
-        private CallChapterStatement ParseChapterCall()
+        private CallChapterStatement ParseCallChapterStatement()
         {
             EatToken(SyntaxTokenKind.CallChapterKeyword);
-            var chapterName = ParseIdentifier();
+            string filePath = ConsumeTextUntil(tk => tk == SyntaxTokenKind.SemicolonToken);
             EatStatementTerminator();
-            return new CallChapterStatement(chapterName);
+            return new CallChapterStatement(filePath);
         }
 
-        private CallSceneStatement ParseSceneCall()
+        private CallSceneStatement ParseCallSceneStatement()
         {
             EatToken(SyntaxTokenKind.CallSceneKeyword);
-            var sceneName = ParseIdentifier();
+            (SourceFileReference file, Identifier scene) = ParseSymbolPath();
             EatStatementTerminator();
-            return new CallSceneStatement(sceneName);
+            return new CallSceneStatement(file, scene);
+        }
+
+        // Parses call_scene specific symbol path syntax.
+        // call_scene can be followed by either '@->{localSymbolName}' (e.g. '@->SelectStoryModeA')
+        // or '{path}->{symbolName}' (e.g. 'nss/extra_gallery.nss->extra_gallery_main').
+        private (SourceFileReference file, Identifier symbol) ParseSymbolPath()
+        {
+            if (CurrentToken.Kind == SyntaxTokenKind.AtArrowToken)
+            {
+                EatToken();
+            }
+            
+            string filePath = null, symbolName = string.Empty;
+            string part = ConsumeTextUntil(tk => tk == SyntaxTokenKind.SemicolonToken || tk == SyntaxTokenKind.ArrowToken);
+            if (CurrentToken.Kind == SyntaxTokenKind.ArrowToken)
+            {
+                EatToken();
+                filePath = part;
+                symbolName = ConsumeTextUntil(tk => tk == SyntaxTokenKind.SemicolonToken);
+            }
+            else
+            {
+                symbolName = part;
+            }
+
+            SourceFileReference file = filePath ?? SourceText.FilePath;
+            var symbol = new Identifier(symbolName);
+            return (file, symbol);
+        }
+
+        // Consumes tokens until the specified condition is met. 
+        // Returns the concatenation of their .Text values.
+        private string ConsumeTextUntil(Func<SyntaxTokenKind, bool> condition)
+        {
+            string s = string.Empty;
+            SyntaxTokenKind tk;
+            while ((tk = CurrentToken.Kind) != SyntaxTokenKind.EndOfFileToken && !condition(tk))
+            {
+                s += EatToken().Text;
+            }
+
+            return s;
         }
 
         private DialogueBlock ParseDialogueBlock()
@@ -647,7 +703,7 @@ namespace NitroSharp.NsScript.Syntax
 
             EatToken(SyntaxTokenKind.DialogueBlockEndTag);
             string identifierString = TrimDialogueBlockIdentifier(identifier.Text);
-            var name = new Identifier(identifierString, identifierString, SigilKind.None);
+            var name = new Identifier(identifierString);
             return new DialogueBlock(name, associatedBox, new Block(statements.ToImmutable()));
         }
 

@@ -1,4 +1,5 @@
-﻿using System.Globalization;
+﻿using System.Diagnostics;
+using System.Globalization;
 
 namespace NitroSharp.NsScript.Syntax
 {
@@ -16,32 +17,14 @@ namespace NitroSharp.NsScript.Syntax
 
         public static bool IsWhitespace(char c)
         {
-            // SPACE
-            // CHARACTER TABULATION (U+0009)
-            // LINE TABULATION (U+000B)
-            // FORM FEED (U+000C)
-            // Any other character with Unicode class Zs
-
             return c == ' '
                 || c == '\t'
-                || c == '\v'
-                || c == '\f'
-                || c == '\u001A'
                 || (c > 255 && CharUnicodeInfo.GetUnicodeCategory(c) == UnicodeCategory.SpaceSeparator);
         }
 
         public static bool IsNewLine(char c)
         {
-            // CR, LF
-            // NEXT LINE (U+0085)
-            // LINE SEPARATOR (U+2028)
-            // PARAGRAPH SEPARATOR (U+2029)
-
-            return c == '\r'
-                || c == '\n'
-                || c == '\u0085'
-                || c == '\u2028'
-                || c == '\u2029';
+            return c == '\r' || c == '\n';
         }
 
         public static bool IsSigil(char c)
@@ -111,6 +94,7 @@ namespace NitroSharp.NsScript.Syntax
                 case '+':
                 case '-':
                 case '*':
+                case '/':
                 case '<':
                 case '>':
                 case '%':
@@ -122,28 +106,6 @@ namespace NitroSharp.NsScript.Syntax
                 default:
                     return true;
             }
-        }
-
-        public static bool IsUnaryOperator(SyntaxTokenKind tokenKind) => TryGetUnaryOperatorKind(tokenKind, out var _);
-        public static bool IsBinaryOperator(SyntaxTokenKind tokenKind) => TryGetBinaryOperatorKind(tokenKind, out var _);
-        public static bool IsAssignmentOperator(SyntaxTokenKind tokenKind) => TryGetAssignmentOperatorKind(tokenKind, out var _);
-
-        public static UnaryOperatorKind GetUnaryOperatorKind(SyntaxTokenKind operatorTokenKind)
-        {
-            bool success = TryGetUnaryOperatorKind(operatorTokenKind, out var kind);
-            return success ? kind : throw ExceptionUtils.UnexpectedValue(nameof(operatorTokenKind));
-        }
-
-        public static BinaryOperatorKind GetBinaryOperatorKind(SyntaxTokenKind operatorTokenKind)
-        {
-            bool success = TryGetBinaryOperatorKind(operatorTokenKind, out var kind);
-            return success ? kind : throw ExceptionUtils.UnexpectedValue(nameof(operatorTokenKind));
-        }
-
-        public static AssignmentOperatorKind GetAssignmentOperatorKind(SyntaxTokenKind operatorTokenKind)
-        {
-            bool success = TryGetAssignmentOperatorKind(operatorTokenKind, out var kind);
-            return success ? kind : throw ExceptionUtils.UnexpectedValue(nameof(operatorTokenKind));
         }
 
         public static bool TryGetUnaryOperatorKind(SyntaxTokenKind operatorTokenKind, out UnaryOperatorKind kind)
@@ -258,6 +220,8 @@ namespace NitroSharp.NsScript.Syntax
         {
             switch (kind)
             {
+                case SyntaxTokenKind.HashToken:
+                    return "#";
                 case SyntaxTokenKind.ExclamationToken:
                     return "!";
                 case SyntaxTokenKind.AmpersandToken:
@@ -294,6 +258,10 @@ namespace NitroSharp.NsScript.Syntax
                     return "/";
                 case SyntaxTokenKind.PercentToken:
                     return "%";
+                case SyntaxTokenKind.ArrowToken:
+                    return "->";
+                case SyntaxTokenKind.AtArrowToken:
+                    return "@->";
 
                 // compound
                 case SyntaxTokenKind.BarBarToken:
@@ -352,6 +320,24 @@ namespace NitroSharp.NsScript.Syntax
                 case SyntaxTokenKind.BreakKeyword:
                     return "break";
 
+                case SyntaxTokenKind.None:
+                    return string.Empty;
+
+                default:
+                    Debug.Assert(false, "This should never happen.");
+                    return string.Empty;
+            }
+        }
+
+        public static string GetText(SigilKind sigil)
+        {
+            switch (sigil)
+            {
+                case SigilKind.Dollar:
+                    return "$";
+                case SigilKind.Hash:
+                    return "#";
+                
                 default:
                     return string.Empty;
             }

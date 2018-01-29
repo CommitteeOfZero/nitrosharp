@@ -162,7 +162,7 @@ namespace NitroSharp.NsScript.Execution
             switch (opcode)
             {
                 case Opcode.Call:
-                case Opcode.CallChapter:
+                case Opcode.CallFar:
                 case Opcode.Say:
                 case Opcode.WaitForInput:
                 case Opcode.Return:
@@ -225,8 +225,8 @@ namespace NitroSharp.NsScript.Execution
                     Call(ref instruction);
                     break;
 
-                case Opcode.CallChapter:
-                    CallChapter(ref instruction);
+                case Opcode.CallFar:
+                    CallFar(ref instruction);
                     break;
 
                 case Opcode.Jump:
@@ -358,15 +358,16 @@ namespace NitroSharp.NsScript.Execution
             }
         }
 
-        private void CallChapter(ref Instruction instruction)
+        private void CallFar(ref Instruction instruction)
         {
             string moduleName = (string)instruction.Operand1;
+            string symbolName = (string)instruction.Operand2;
             var module = _sourceFileManager.Resolve(moduleName);
-            var chapter = module.LookupMember("main") as ChapterSymbol;
-            if (chapter != null)
+            var symbol = module.LookupMember(symbolName);
+            if (symbol != null)
             {
-                EnsureHasLinearRepresentation(chapter);
-                var frame = new Frame(module, chapter);
+                EnsureHasLinearRepresentation(symbol);
+                var frame = new Frame(module, symbol);
                 CurrentThread.PushFrame(frame);
             }
         }
@@ -383,7 +384,7 @@ namespace NitroSharp.NsScript.Execution
                 var argument = PopValue();
                 stackFrame.SetArgument(parameter.Identifier.Name, argument);
 
-                if (parameter.Identifier.IsGlobalVariable)
+                if (parameter.Identifier.HasSigil)
                 {
                     _globals.Set(parameter.Identifier.Name, argument);
                 }

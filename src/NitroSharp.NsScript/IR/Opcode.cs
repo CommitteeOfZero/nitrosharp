@@ -13,7 +13,7 @@
         AssignLocal,
 
         Call,
-        CallChapter,
+        CallFar,
 
         SetDialogueBlock,
         Say,

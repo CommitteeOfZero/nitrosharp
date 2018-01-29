@@ -112,28 +112,9 @@ namespace NitroSharp.NsScript.Tests
         }
 
         [Fact]
-        public void LexArrowPrefixedIdentifier()
-        {
-            string text = "@->test";
-            var token = LexToken(text);
-            Assert.Equal(SyntaxTokenKind.IdentifierToken, token.Kind);
-            Assert.Equal(text, token.Text);
-        }
-
-        [Fact]
         public void LexJapaneseIdentifier()
         {
             string identifier = "ev100_06_1_６人祈る_a";
-            var token = LexToken(identifier);
-
-            Assert.Equal(SyntaxTokenKind.IdentifierToken, token.Kind);
-            Assert.Equal(identifier, token.Text);
-        }
-
-        [Fact]
-        public void LexIdentifierWithSlash()
-        {
-            string identifier = "nss/sys_load.nss";
             var token = LexToken(identifier);
 
             Assert.Equal(SyntaxTokenKind.IdentifierToken, token.Kind);
@@ -236,6 +217,26 @@ namespace NitroSharp.NsScript.Tests
             var token = LexToken(text, LexingMode.DialogueBlock);
 
             Assert.Equal(SyntaxTokenKind.PXmlString, token.Kind);
+            Assert.Equal(text, token.Text);
+        }
+
+        [Fact]
+        public void LexArrowToken()
+        {
+            string text = "->";
+            var token = LexToken(text);
+
+            Assert.Equal(SyntaxTokenKind.ArrowToken, token.Kind);
+            Assert.Equal(text, token.Text);
+        }
+
+        [Fact]
+        public void LexAtArrowToken()
+        {
+            string text = "@->";
+            var token = LexToken(text);
+
+            Assert.Equal(SyntaxTokenKind.AtArrowToken, token.Kind);
             Assert.Equal(text, token.Text);
         }
 

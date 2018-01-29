@@ -9,21 +9,21 @@ namespace NitroSharp.NsScript.Text
     {
         private static readonly Encoding s_defaultEncoding = CodePagesEncodingProvider.Instance.GetEncoding("shift-jis");
 
-        private SourceText(string text, string fileName)
+        private SourceText(string text, string filePath)
         {
             Source = text ?? throw new ArgumentNullException(nameof(text));
-            FileName = fileName;
+            FilePath = filePath;
             Lines = GetLines();
         }
 
         public string Source { get; }
-        public string FileName { get; }
+        public string FilePath { get; }
         public char this[int index] => Source[index];
         public int Length => Source.Length;
         public ImmutableArray<TextLine> Lines { get; }
 
         public static SourceText From(string text) => new SourceText(text, string.Empty);
-        public static SourceText From(Stream stream, string fileName, Encoding encoding = null)
+        public static SourceText From(Stream stream, string filePath, Encoding encoding = null)
         {
             if (stream == null)
             {
@@ -36,7 +36,7 @@ namespace NitroSharp.NsScript.Text
 
             encoding = encoding ?? s_defaultEncoding;
             string text = ReadStream(stream, encoding);
-            return new SourceText(text, fileName);
+            return new SourceText(text, filePath);
         }
 
         public TextLine GetLineFromPosition(int position)

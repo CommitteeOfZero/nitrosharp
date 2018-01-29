@@ -1,6 +1,5 @@
 ﻿using System.Globalization;
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
 using NitroSharp.NsScript.Text;
 
 namespace NitroSharp.NsScript.Syntax
@@ -14,6 +13,7 @@ namespace NitroSharp.NsScript.Syntax
             public string StringValue;
             public double DoubleValue;
             public SigilKind SigilKind;
+            public bool IsQuoted;
         }
 
         private const string PRE_StartTag = "<pre>";
@@ -54,7 +54,10 @@ namespace NitroSharp.NsScript.Syntax
                     break;
 
                 case SyntaxTokenKind.CloseBraceToken:
-                    _lexingModeStack.Pop();
+                    if (_lexingModeStack.Count > 0)
+                    {
+                        _lexingModeStack.Pop();
+                    }
                     break;
 
                 case SyntaxTokenKind.FunctionKeyword:
@@ -73,7 +76,10 @@ namespace NitroSharp.NsScript.Syntax
                     break;
 
                 case SyntaxTokenKind.DialogueBlockEndTag:
-                    _lexingModeStack.Pop();
+                    if (_lexingModeStack.Count > 0)
+                    {
+                        _lexingModeStack.Pop();
+                    }
                     break;
             }
 
@@ -149,8 +155,8 @@ namespace NitroSharp.NsScript.Syntax
                     char next = PeekChar(1);
                     if (PeekChar(1) == '-' && PeekChar(2) == '>')
                     {
-                        ScanIdentifier(ref info);
-                        info.Kind = SyntaxTokenKind.IdentifierToken;
+                        AdvanceChar(3);
+                        info.Kind = SyntaxTokenKind.AtArrowToken;
                     }
                     else if (next == '+' || next == '-' || SyntaxFacts.IsDecDigit(next) || SyntaxFacts.IsSigil(next))
                     {
@@ -275,6 +281,11 @@ namespace NitroSharp.NsScript.Syntax
                         AdvanceChar();
                         info.Kind = SyntaxTokenKind.MinusMinusToken;
                     }
+                    else if (character == '>')
+                    {
+                        AdvanceChar();
+                        info.Kind = SyntaxTokenKind.ArrowToken;
+                    }
                     else
                     {
                         info.Kind = SyntaxTokenKind.MinusToken;
@@ -393,10 +404,10 @@ namespace NitroSharp.NsScript.Syntax
             switch (tokenInfo.Kind)
             {
                 case SyntaxTokenKind.IdentifierToken:
-                    return SyntaxToken.Identifier(tokenInfo.Text, span, tokenInfo.StringValue, tokenInfo.SigilKind);
+                    return SyntaxToken.Identifier(tokenInfo.Text, span, tokenInfo.SigilKind, tokenInfo.IsQuoted);
 
                 case SyntaxTokenKind.StringLiteralToken:
-                    return SyntaxToken.Literal(tokenInfo.Text, span, tokenInfo.StringValue);
+                    return SyntaxToken.Literal(tokenInfo.Text, span);
 
                 case SyntaxTokenKind.NumericLiteralToken:
                     return SyntaxToken.Literal(tokenInfo.Text, span, tokenInfo.DoubleValue);
@@ -461,16 +472,6 @@ namespace NitroSharp.NsScript.Syntax
 
             switch (PeekChar())
             {
-                case '@':
-                    AdvanceChar();
-                    // @->
-                    if (PeekChar() == '-' && PeekChar(1) == '>')
-                    {
-                        AdvanceChar(2);
-                        tokenInfo.SigilKind = SigilKind.Arrow;
-                    }
-                    break;
-
                 case '$':
                     AdvanceChar();
                     tokenInfo.SigilKind = SigilKind.Dollar;
@@ -482,28 +483,22 @@ namespace NitroSharp.NsScript.Syntax
                     break;
             }
 
-            int idxValueStart = CurrentLexemeLength;
+            StartScanning();
+            
             char c;
             while (SyntaxFacts.IsIdentifierPartCharacter((c = PeekChar())) && c != EofCharacter)
             {
                 AdvanceChar();
             }
-
-            int idxValueEnd = CurrentLexemeLength - idxValueStart;
+            
+            tokenInfo.Text = GetCurrentLexeme();
+            tokenInfo.IsQuoted = isQuoted;
             if (isQuoted)
             {
                 EatChar('"');
             }
 
-            var text = GetCurrentLexeme();
-            if (text.Length == 0)
-            {
-                return false;
-            }
-
-            tokenInfo.Text = GetCurrentLexeme();
-            tokenInfo.StringValue = tokenInfo.Text.Substring(idxValueStart, idxValueEnd);
-            return true;
+            return tokenInfo.Text.Length > 0;
         }
 
         private void ScanBadToken()
@@ -516,17 +511,16 @@ namespace NitroSharp.NsScript.Syntax
 
         private void ScanStringLiteral(ref TokenInfo tokenInfo)
         {
-            AdvanceChar();
+            EatChar('"');
+            StartScanning();
             char c;
             while ((c = PeekChar()) != '"' && c != EofCharacter)
             {
                 AdvanceChar();
             }
 
-            AdvanceChar();
-
             tokenInfo.Text = GetCurrentLexeme();
-            tokenInfo.StringValue = tokenInfo.Text.Substring(1, tokenInfo.Text.Length - 2);
+            EatChar('"');
         }
 
         private void ScanNumericLiteral(ref TokenInfo tokenInfo)
@@ -609,35 +603,6 @@ namespace NitroSharp.NsScript.Syntax
 
         private bool Is_PRE_StartTag() => Match("<pre");
         private bool Is_PRE_EndTag() => Match("</pre>");
-
-        /// <summary>
-        /// Returns true if the lookahead characters compose the specified string.
-        /// </summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private bool Match(string s)
-        {
-            for (int i = 0; i < s.Length; i++)
-            {
-                char c;
-                if ((c = PeekChar(i)) != s[i] && c != char.ToUpperInvariant(s[i]) || c == EofCharacter)
-                {
-                    return false;
-                }
-            }
-
-            return true;
-        }
-
-        private bool AdvanceIfMatches(string s)
-        {
-            if (Match(s))
-            {
-                AdvanceChar(s.Length);
-                return true;
-            }
-
-            return false;
-        }
 
         private void ScanPXmlString()
         {
@@ -749,8 +714,6 @@ namespace NitroSharp.NsScript.Syntax
                             trivia = false;
                         }
                         break;
-
-
 
                     case '>':
                         character = PeekChar(1);

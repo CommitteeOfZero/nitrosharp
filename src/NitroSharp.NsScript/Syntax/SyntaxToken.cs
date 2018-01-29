@@ -9,14 +9,14 @@ namespace NitroSharp.NsScript.Syntax
             return new SyntaxTokenWithStringValue(kind, text, span, value);
         }
 
-        internal static SyntaxToken Identifier(string text, TextSpan span, string nameWithoutSigil, SigilKind sigilCharacter)
+        internal static SyntaxToken Identifier(string text, TextSpan span, SigilKind sigil, bool isQuoted)
         {
-            return new IdentifierToken(text, span, nameWithoutSigil, sigilCharacter);
+            return new IdentifierToken(text, span, sigil, isQuoted);
         }
 
-        internal static SyntaxToken Literal(string text, TextSpan span, string value)
+        internal static SyntaxToken Literal(string text, TextSpan span)
         {
-            return WithValue(SyntaxTokenKind.StringLiteralToken, text, span, value);
+            return new SyntaxTokenWithText(SyntaxTokenKind.StringLiteralToken, text, span);
         }
 
         internal static SyntaxToken Literal(string text, TextSpan span, double value)
@@ -57,43 +57,50 @@ namespace NitroSharp.NsScript.Syntax
         }
     }
 
-    internal class SyntaxTokenWithStringValue : SyntaxToken
+    internal class SyntaxTokenWithText : SyntaxToken
     {
-        internal SyntaxTokenWithStringValue(SyntaxTokenKind kind, string text, TextSpan textSpan, string value)
-            : base(kind, textSpan)
+        internal SyntaxTokenWithText(SyntaxTokenKind kind, string text, TextSpan span) : base(kind, span)
         {
             Text = text;
-            StringValue = value;
         }
 
         public override string Text { get; }
+    }
+
+    internal sealed class SyntaxTokenWithStringValue : SyntaxTokenWithText
+    {
+        internal SyntaxTokenWithStringValue(SyntaxTokenKind kind, string text, TextSpan textSpan, string value)
+            : base(kind, text, textSpan)
+        {
+            StringValue = value;
+        }
+
         public string StringValue { get; }
         public override object Value => StringValue;
     }
 
-    internal sealed class SyntaxTokenWithDoubleValue : SyntaxToken
+    internal sealed class SyntaxTokenWithDoubleValue : SyntaxTokenWithText
     {
         internal SyntaxTokenWithDoubleValue(string text, TextSpan textSpan, double value)
-            : base(SyntaxTokenKind.NumericLiteralToken, textSpan)
+            : base(SyntaxTokenKind.NumericLiteralToken, text, textSpan)
         {
-            Text = text;
             DoubleValue = value;
         }
 
-        public override string Text { get; }
         public double DoubleValue { get; }
         public override object Value => DoubleValue;
     }
 
-    internal sealed class IdentifierToken : SyntaxTokenWithStringValue
+    internal sealed class IdentifierToken : SyntaxTokenWithText
     {
-        internal IdentifierToken(string text, TextSpan textSpan, string nameWithoutSigil, SigilKind sigilCharacter)
-            : base(SyntaxTokenKind.IdentifierToken, text, textSpan, nameWithoutSigil)
+        internal IdentifierToken(string text, TextSpan textSpan, SigilKind sigil, bool isQuoted)
+            : base(SyntaxTokenKind.IdentifierToken, text, textSpan)
         {
-            SigilCharacter = sigilCharacter;
+            Sigil = sigil;
+            IsQuoted = isQuoted;
         }
 
-        public string NameWithoutSigil => StringValue;
-        public SigilKind SigilCharacter { get; }
+        public bool IsQuoted { get; }
+        public SigilKind Sigil { get; }
     }
 }

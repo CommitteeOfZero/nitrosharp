@@ -1,11 +1,9 @@
 ﻿namespace NitroSharp.NsScript.Syntax
 {
-    public enum SigilKind
+    public enum SigilKind : byte
     {
         None,
         Dollar,
-        Hash,
-        At,
-        Arrow
+        Hash
     }
 }

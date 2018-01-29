@@ -30,6 +30,8 @@
         AtToken,
         HashToken,
         PercentToken,
+        ArrowToken,
+        AtArrowToken,
 
         // Compound punctuation
         EqualsEqualsToken,
