@@ -39,7 +39,7 @@ namespace NitroSharp.NsScript.Tests
 
             Assert.NotNull(expr);
             Assert.Equal(SyntaxNodeKind.Literal, expr.Kind);
-            Assert.Equal(literal, expr.Text);
+            Assert.Equal(literal, expr.StringValue);
             Assert.Equal(42.0d, expr.Value.DoubleValue);
             Assert.Equal(literal, expr.ToString());
         }
@@ -52,7 +52,6 @@ namespace NitroSharp.NsScript.Tests
 
             Assert.NotNull(expr);
             Assert.Equal(SyntaxNodeKind.Literal, expr.Kind);
-            Assert.Equal(literal, expr.Text);
             Assert.Equal("stuff", expr.Value.StringValue);
             Assert.Equal(literal, expr.ToString());
         }
@@ -138,7 +137,7 @@ namespace NitroSharp.NsScript.Tests
             var expr = Parsing.ParseExpression(text) as Literal;
 
             Assert.NotNull(expr);
-            Assert.Equal("null", expr.Text);
+            Assert.Equal("null", expr.StringValue);
         }
 
         [Fact]

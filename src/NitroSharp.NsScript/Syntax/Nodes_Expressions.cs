@@ -12,14 +12,15 @@ namespace NitroSharp.NsScript.Syntax
         internal static readonly Literal True = new Literal("true", ConstantValue.True);
         internal static readonly Literal False = new Literal("false", ConstantValue.False);
 
-        internal Literal(string text, ConstantValue value)
+        internal Literal(string stringValue, ConstantValue value)
         {
-            Text = text;
+            StringValue = stringValue;
             Value = value;
         }
 
         public ConstantValue Value { get; }
-        public string Text { get; }
+        public string StringValue { get; }
+        
         public override SyntaxNodeKind Kind => SyntaxNodeKind.Literal;
 
         public override void Accept(SyntaxVisitor visitor)

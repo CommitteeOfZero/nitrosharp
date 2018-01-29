@@ -4,9 +4,9 @@ namespace NitroSharp.NsScript.Syntax
 {
     public class SyntaxToken
     {
-        internal static SyntaxToken WithValue(SyntaxTokenKind kind, string text, TextSpan span, string value)
+        internal static SyntaxToken WithTextAndValue(SyntaxTokenKind kind, string text, TextSpan span, string value)
         {
-            return new SyntaxTokenWithStringValue(kind, text, span, value);
+            return new SyntaxTokenWithTextAndValue(kind, text, span, value);
         }
 
         internal static SyntaxToken Identifier(string text, TextSpan span, SigilKind sigil, bool isQuoted)
@@ -14,14 +14,14 @@ namespace NitroSharp.NsScript.Syntax
             return new IdentifierToken(text, span, sigil, isQuoted);
         }
 
-        internal static SyntaxToken Literal(string text, TextSpan span)
+        internal static SyntaxToken Literal(string value, TextSpan span)
         {
-            return new SyntaxTokenWithText(SyntaxTokenKind.StringLiteralToken, text, span);
+            return new StringLiteralToken(value, span);
         }
 
         internal static SyntaxToken Literal(string text, TextSpan span, double value)
         {
-            return new SyntaxTokenWithDoubleValue(text, span, value);
+            return new NumericLiteralToken(text, span, value);
         }
 
         internal SyntaxToken(SyntaxTokenKind kind, TextSpan span)
@@ -67,10 +67,10 @@ namespace NitroSharp.NsScript.Syntax
         public override string Text { get; }
     }
 
-    internal sealed class SyntaxTokenWithStringValue : SyntaxTokenWithText
+    internal class SyntaxTokenWithStringValue : SyntaxToken
     {
-        internal SyntaxTokenWithStringValue(SyntaxTokenKind kind, string text, TextSpan textSpan, string value)
-            : base(kind, text, textSpan)
+        internal SyntaxTokenWithStringValue(SyntaxTokenKind kind, string value, TextSpan textSpan)
+            : base(kind, textSpan)
         {
             StringValue = value;
         }
@@ -79,9 +79,27 @@ namespace NitroSharp.NsScript.Syntax
         public override object Value => StringValue;
     }
 
-    internal sealed class SyntaxTokenWithDoubleValue : SyntaxTokenWithText
+    internal sealed class SyntaxTokenWithTextAndValue : SyntaxTokenWithStringValue
     {
-        internal SyntaxTokenWithDoubleValue(string text, TextSpan textSpan, double value)
+        internal SyntaxTokenWithTextAndValue(SyntaxTokenKind kind, string text, TextSpan textSpan, string value)
+            : base(kind, value, textSpan)
+        {
+            Text = text;
+        }
+
+        public override string Text { get; }
+    }
+    
+    internal sealed class StringLiteralToken : SyntaxTokenWithStringValue
+    {
+        internal StringLiteralToken(string value, TextSpan span) : base(SyntaxTokenKind.StringLiteralToken, value, span) { }
+
+        public override string Text => "\"" + StringValue + "\"";
+    }
+
+    internal sealed class NumericLiteralToken : SyntaxTokenWithText
+    {
+        internal NumericLiteralToken(string text, TextSpan textSpan, double value)
             : base(SyntaxTokenKind.NumericLiteralToken, text, textSpan)
         {
             DoubleValue = value;
@@ -91,10 +109,10 @@ namespace NitroSharp.NsScript.Syntax
         public override object Value => DoubleValue;
     }
 
-    internal sealed class IdentifierToken : SyntaxTokenWithText
+    internal sealed class IdentifierToken : SyntaxTokenWithStringValue
     {
-        internal IdentifierToken(string text, TextSpan textSpan, SigilKind sigil, bool isQuoted)
-            : base(SyntaxTokenKind.IdentifierToken, text, textSpan)
+        internal IdentifierToken(string name, TextSpan textSpan, SigilKind sigil, bool isQuoted)
+            : base(SyntaxTokenKind.IdentifierToken, name, textSpan)
         {
             Sigil = sigil;
             IsQuoted = isQuoted;
@@ -102,5 +120,19 @@ namespace NitroSharp.NsScript.Syntax
 
         public bool IsQuoted { get; }
         public SigilKind Sigil { get; }
+
+        public override string Text
+        {
+            get
+            {
+                string s = SyntaxFacts.GetText(Sigil) + StringValue;
+                if (IsQuoted)
+                {
+                    s = "\"" + s + "\"";
+                }
+
+                return s;
+            }
+        }
     }
 }

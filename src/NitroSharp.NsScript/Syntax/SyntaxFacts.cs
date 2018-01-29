@@ -29,16 +29,7 @@ namespace NitroSharp.NsScript.Syntax
 
         public static bool IsSigil(char c)
         {
-            switch (c)
-            {
-                case '$':
-                case '#':
-                case '@':
-                    return true;
-
-                default:
-                    return false;
-            }
+            return c == '$' || c == '#';
         }
 
         public static SyntaxTokenKind GetKeywordKind(string keyword)

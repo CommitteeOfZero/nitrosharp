@@ -70,7 +70,13 @@ namespace NitroSharp.NsScript.Syntax
 
         public override void VisitLiteral(Literal literal)
         {
-            Write(literal.Text);
+            string s = literal.StringValue;
+            if (literal.Value.Type == BuiltInType.String)
+            {
+                s = "\"" + s + "\"";
+            }
+
+            Write(s);
         }
 
         public override void VisitIdentifier(Identifier identifier)

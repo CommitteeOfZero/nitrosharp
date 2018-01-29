@@ -197,6 +197,7 @@ namespace NitroSharp.NsScript.Syntax
                 switch (CurrentToken.Kind)
                 {
                     case SyntaxTokenKind.IdentifierToken:
+                    case SyntaxTokenKind.StringLiteralToken:
                         var p = new Parameter(ParseIdentifier());
                         parameters.Add(p);
                         break;
@@ -450,12 +451,12 @@ namespace NitroSharp.NsScript.Syntax
             switch (CurrentToken.Kind)
             {
                 case SyntaxTokenKind.NumericLiteralToken:
-                    var token = (SyntaxTokenWithDoubleValue)EatToken();
+                    var token = (NumericLiteralToken)EatToken();
                     return new Literal(token.Text, ConstantValue.Create(token.DoubleValue));
 
                 case SyntaxTokenKind.StringLiteralToken:
-                    var tk = EatToken();
-                    return new Literal(tk.Text, ConstantValue.Create(tk.Text));
+                    var tk = (StringLiteralToken)EatToken();
+                    return new Literal(tk.StringValue, ConstantValue.Create(tk.StringValue));
 
                 case SyntaxTokenKind.NullKeyword:
                     EatToken();
@@ -482,10 +483,11 @@ namespace NitroSharp.NsScript.Syntax
             if (token.Kind == SyntaxTokenKind.IdentifierToken)
             {
                 var idToken = (IdentifierToken)token;
-                return new Identifier(idToken.Text, idToken.Sigil, idToken.IsQuoted);
+                return new Identifier(idToken.StringValue, idToken.Sigil, idToken.IsQuoted);
             }
 
-            return new Identifier(token.Text, SigilKind.None, isQuoted: true);
+            var literal = (StringLiteralToken)token;
+            return new Identifier(literal.StringValue, SigilKind.None, isQuoted: true);
         }
 
         private bool IsFunctionCall()

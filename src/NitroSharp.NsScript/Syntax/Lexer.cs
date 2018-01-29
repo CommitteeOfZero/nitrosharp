@@ -60,17 +60,6 @@ namespace NitroSharp.NsScript.Syntax
                     }
                     break;
 
-                case SyntaxTokenKind.FunctionKeyword:
-                    _lexingModeStack.Push(LexingMode.ParameterList);
-                    break;
-
-                case SyntaxTokenKind.CloseParenToken:
-                    if (CurrentMode == LexingMode.ParameterList)
-                    {
-                        _lexingModeStack.Pop();
-                    }
-                    break;
-
                 case SyntaxTokenKind.DialogueBlockStartTag:
                     _lexingModeStack.Push(LexingMode.DialogueBlock);
                     break;
@@ -97,7 +86,7 @@ namespace NitroSharp.NsScript.Syntax
             switch (character)
             {
                 case '"':
-                    if (CurrentMode != LexingMode.ParameterList && PeekChar(1) != '$')
+                    if (PeekChar(1) != '$')
                     {
                         ScanStringLiteral(ref info);
                         // Could actually be a quoted keyword (e.g "null")
@@ -107,7 +96,7 @@ namespace NitroSharp.NsScript.Syntax
                             info.Kind = SyntaxTokenKind.StringLiteralToken;
                         }
                     }
-                    else
+                    else // it's a quoted identifier
                     {
                         ScanIdentifier(ref info);
                         info.Kind = SyntaxTokenKind.IdentifierToken;
@@ -379,7 +368,7 @@ namespace NitroSharp.NsScript.Syntax
                     bool success = ScanIdentifier(ref info);
                     if (success)
                     {
-                        info.Kind = SyntaxFacts.GetKeywordKind(info.Text);
+                        info.Kind = SyntaxFacts.GetKeywordKind(info.StringValue);
                         if (info.Kind == SyntaxTokenKind.None)
                         {
                             info.Kind = SyntaxTokenKind.IdentifierToken;
@@ -404,17 +393,17 @@ namespace NitroSharp.NsScript.Syntax
             switch (tokenInfo.Kind)
             {
                 case SyntaxTokenKind.IdentifierToken:
-                    return SyntaxToken.Identifier(tokenInfo.Text, span, tokenInfo.SigilKind, tokenInfo.IsQuoted);
+                    return SyntaxToken.Identifier(tokenInfo.StringValue, span, tokenInfo.SigilKind, tokenInfo.IsQuoted);
 
                 case SyntaxTokenKind.StringLiteralToken:
-                    return SyntaxToken.Literal(tokenInfo.Text, span);
+                    return SyntaxToken.Literal(tokenInfo.StringValue, span);
 
                 case SyntaxTokenKind.NumericLiteralToken:
                     return SyntaxToken.Literal(tokenInfo.Text, span, tokenInfo.DoubleValue);
 
                 case SyntaxTokenKind.DialogueBlockStartTag:
                 case SyntaxTokenKind.DialogueBlockEndTag:
-                    return SyntaxToken.WithValue(tokenInfo.Kind, tokenInfo.Text, span, tokenInfo.StringValue);
+                    return SyntaxToken.WithTextAndValue(tokenInfo.Kind, tokenInfo.Text, span, tokenInfo.StringValue);
 
                 default:
                     return new SyntaxToken(tokenInfo.Kind, span);
@@ -458,7 +447,7 @@ namespace NitroSharp.NsScript.Syntax
                 SkipSyntaxTrivia(isTrailing: true);
             }
 
-            return SyntaxToken.WithValue(kind, text, GetCurrentLexemeSpan(), text);
+            return SyntaxToken.WithTextAndValue(kind, text, GetCurrentLexemeSpan(), text);
         }
 
         private bool ScanIdentifier(ref TokenInfo tokenInfo)
@@ -491,14 +480,14 @@ namespace NitroSharp.NsScript.Syntax
                 AdvanceChar();
             }
             
-            tokenInfo.Text = GetCurrentLexeme();
+            tokenInfo.StringValue = GetCurrentLexeme();
             tokenInfo.IsQuoted = isQuoted;
             if (isQuoted)
             {
                 EatChar('"');
             }
 
-            return tokenInfo.Text.Length > 0;
+            return tokenInfo.StringValue.Length > 0;
         }
 
         private void ScanBadToken()
@@ -519,7 +508,7 @@ namespace NitroSharp.NsScript.Syntax
                 AdvanceChar();
             }
 
-            tokenInfo.Text = GetCurrentLexeme();
+            tokenInfo.StringValue = GetCurrentLexeme();
             EatChar('"');
         }
 
