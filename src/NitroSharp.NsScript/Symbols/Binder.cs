@@ -34,6 +34,11 @@ namespace NitroSharp.NsScript.Symbols
             _currentFunction = null;
         }
 
+        public override void VisitScene(Scene scene)
+        {
+            Visit(scene.Body);
+        }
+
         public override void VisitDialogueBlock(DialogueBlock paragraph)
         {
             Visit(paragraph.Body);
