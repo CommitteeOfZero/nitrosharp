@@ -633,7 +633,7 @@ namespace NitroSharp.NsScript.Syntax
         private CallSceneStatement ParseCallSceneStatement()
         {
             EatToken(SyntaxTokenKind.CallSceneKeyword);
-            (SourceFileReference file, Identifier scene) = ParseSymbolPath();
+            (SourceFileReference file, string scene) = ParseSymbolPath();
             EatStatementTerminator();
             return new CallSceneStatement(file, scene);
         }
@@ -641,7 +641,7 @@ namespace NitroSharp.NsScript.Syntax
         // Parses call_scene specific symbol path syntax.
         // call_scene can be followed by either '@->{localSymbolName}' (e.g. '@->SelectStoryModeA')
         // or '{path}->{symbolName}' (e.g. 'nss/extra_gallery.nss->extra_gallery_main').
-        private (SourceFileReference file, Identifier symbol) ParseSymbolPath()
+        private (string filePath, string symbolName) ParseSymbolPath()
         {
             if (CurrentToken.Kind == SyntaxTokenKind.AtArrowToken)
             {
@@ -661,9 +661,8 @@ namespace NitroSharp.NsScript.Syntax
                 symbolName = part;
             }
 
-            SourceFileReference file = filePath ?? SourceText.FilePath;
-            var symbol = new Identifier(symbolName);
-            return (file, symbol);
+            filePath = filePath ?? SourceText.FilePath;
+            return (filePath, symbolName);
         }
 
         // Consumes tokens until the specified condition is met. 

@@ -127,7 +127,7 @@ case goo/foo/bar:{}
 
             Assert.NotNull(statement);
             Assert.Equal(SyntaxNodeKind.CallSceneStatement, statement.Kind);
-            Assert.Equal("foo", statement.Scene.Name);
+            Assert.Equal("foo", statement.SceneName);
         }
 
         [Fact]
@@ -139,7 +139,7 @@ case goo/foo/bar:{}
             Assert.NotNull(statement);
             Assert.Equal(SyntaxNodeKind.CallSceneStatement, statement.Kind);
             Assert.Equal("nss/foo.nss", statement.TargetFile);
-            Assert.Equal("bar", statement.Scene.Name);
+            Assert.Equal("bar", statement.SceneName);
         }
     }
 }

@@ -360,9 +360,9 @@ namespace NitroSharp.NsScript.Execution
 
         private void CallFar(ref Instruction instruction)
         {
-            string moduleName = (string)instruction.Operand1;
+            var moduleRef = (SourceFileReference)instruction.Operand1;
             string symbolName = (string)instruction.Operand2;
-            var module = _sourceFileManager.Resolve(moduleName);
+            var module = _sourceFileManager.Resolve(moduleRef);
             var symbol = module.LookupMember(symbolName);
             if (symbol != null)
             {

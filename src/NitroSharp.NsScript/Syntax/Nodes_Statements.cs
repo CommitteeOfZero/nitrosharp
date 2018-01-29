@@ -196,14 +196,14 @@ namespace NitroSharp.NsScript.Syntax
 
     public sealed class CallSceneStatement : Statement
     {
-        internal CallSceneStatement(SourceFileReference targetFile, Identifier scene)
+        internal CallSceneStatement(SourceFileReference targetFile, string sceneName)
         {
             TargetFile = targetFile;
-            Scene = scene;
+            SceneName = sceneName;
         }
 
         public SourceFileReference TargetFile { get; }
-        public Identifier Scene { get; }
+        public string SceneName { get; }
         public override SyntaxNodeKind Kind => SyntaxNodeKind.CallSceneStatement;
 
         public override void Accept(SyntaxVisitor visitor)

@@ -141,7 +141,7 @@ namespace NitroSharp.NsScript.IR
 
             public override void VisitCallSceneStatement(CallSceneStatement syntax)
             {
-                _instructions.Add(Instructions.CallFar(syntax.TargetFile, syntax.Scene.Name));
+                _instructions.Add(Instructions.CallFar(syntax.TargetFile, syntax.SceneName));
             }
 
             public override void VisitExpressionStatement(ExpressionStatement expressionStatement)
