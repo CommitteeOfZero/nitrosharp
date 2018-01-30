@@ -414,7 +414,7 @@ namespace NitroSharp.NsScript.Symbols
             }
         }
 
-        private static int PopDouble(Stack<ConstantValue> args, bool allowNull = false, bool allowTypeConversion = false)
+        private static int PopDouble(Stack<ConstantValue> args, bool allowNull = true, bool allowTypeConversion = false)
         {
             var value = PopArgument(args);
             switch (value.Type)

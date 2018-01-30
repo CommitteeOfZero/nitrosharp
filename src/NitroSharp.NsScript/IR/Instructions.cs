@@ -30,8 +30,8 @@ namespace NitroSharp.NsScript.IR
         public static Instruction WaitForInput(PXmlLineSeparator syntax) => new Instruction(Opcode.WaitForInput);
 
         public static Instruction Call(Symbol symbol) => new Instruction(Opcode.Call, symbol);
-        public static Instruction CallFar(SourceFileReference module, string symbolName)
-            => new Instruction(Opcode.CallFar, module, symbolName);
+        public static Instruction CallFar(string modulePath, string symbolName)
+            => new Instruction(Opcode.CallFar, modulePath, symbolName);
 
         public static Instruction Nop() => new Instruction(Opcode.Nop);
         public static Instruction Jump(int targetInstructionIndex) => new Instruction(Opcode.Jump, targetInstructionIndex);

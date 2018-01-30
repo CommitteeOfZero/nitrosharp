@@ -447,7 +447,7 @@ namespace NitroSharp.NsScript.Syntax
                 SkipSyntaxTrivia(isTrailing: true);
             }
 
-            return SyntaxToken.WithTextAndValue(kind, text, GetCurrentLexemeSpan(), text);
+            return SyntaxToken.WithText(kind, text, GetCurrentLexemeSpan());
         }
 
         private bool ScanIdentifier(ref TokenInfo tokenInfo)

@@ -4,6 +4,11 @@ namespace NitroSharp.NsScript.Syntax
 {
     public class SyntaxToken
     {
+        internal static SyntaxToken WithText(SyntaxTokenKind kind, string text, TextSpan span)
+        {
+            return new SyntaxTokenWithText(kind, text, span);
+        }
+        
         internal static SyntaxToken WithTextAndValue(SyntaxTokenKind kind, string text, TextSpan span, string value)
         {
             return new SyntaxTokenWithTextAndValue(kind, text, span, value);

@@ -83,7 +83,6 @@ namespace NitroSharp.NsScript.Tests
         public void ParseFunctionDeclarationWithStringParameterWithSigil()
         {
             TestFunctionWithStringParameterWithSigilImpl("\"$stringParam\"", "stringParam", SigilKind.Dollar);
-            TestFunctionWithStringParameterWithSigilImpl("\"#stringParam\"", "stringParam", SigilKind.Hash);
         }
 
         private void TestFunctionWithStringParameterWithSigilImpl(string fullName, string simplifiedName, SigilKind sigil)

@@ -182,11 +182,11 @@ namespace NitroSharp.NsScript.Execution
                     break;
 
                 case Opcode.PushGlobal:
-                    PushGlobal(ref instruction);
+                    PushVariable(ref instruction, _globals);
                     break;
 
                 case Opcode.PushLocal:
-                    PushLocal(ref instruction);
+                    PushVariable(ref instruction, CurrentFrame.Arguments);
                     break;
 
                 case Opcode.ApplyBinary:
@@ -250,17 +250,10 @@ namespace NitroSharp.NsScript.Execution
             PushValue(value);
         }
         
-        private void PushGlobal(ref Instruction instruction)
+        private void PushVariable(ref Instruction instruction, Environment env)
         {
             var name = (string)instruction.Operand1;
-            PushValue(_globals.Get(name));
-        }
-        
-        private void PushLocal(ref Instruction instruction)
-        {
-            var name = (string)instruction.Operand1;
-            var value = CurrentFrame.Arguments.Get(name);
-            PushValue(value);
+            PushValue(env.Get(name));
         }
         
         private void ApplyBinary(ref Instruction instruction)
@@ -360,9 +353,9 @@ namespace NitroSharp.NsScript.Execution
 
         private void CallFar(ref Instruction instruction)
         {
-            var moduleRef = (SourceFileReference)instruction.Operand1;
+            var modulePath = (string)instruction.Operand1;
             string symbolName = (string)instruction.Operand2;
-            var module = _sourceFileManager.Resolve(moduleRef);
+            var module = _sourceFileManager.Resolve(modulePath);
             var symbol = module.LookupMember(symbolName);
             if (symbol != null)
             {

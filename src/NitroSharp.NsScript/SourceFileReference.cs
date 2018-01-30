@@ -4,13 +4,31 @@ namespace NitroSharp.NsScript
 {
     public struct SourceFileReference : IEquatable<SourceFileReference>
     {
+        private string _fileName;
+        
         public SourceFileReference(string filePath)
         {
+            if (string.IsNullOrEmpty(filePath))
+            {
+                throw new ArgumentNullException(nameof(filePath));
+            }
+
             FilePath = filePath;
-            FileName = System.IO.Path.GetFileName(filePath);
+            _fileName = null;
         }
 
-        public string FileName { get; }
+        public string FileName
+        {
+            get
+            {
+                if (_fileName == null)
+                {
+                    _fileName = System.IO.Path.GetFileName(FilePath);
+                }
+
+                return _fileName;
+            }
+        }
         public string FilePath { get; }
 
         public bool Equals(SourceFileReference other) => FileName.Equals(other.FileName, StringComparison.OrdinalIgnoreCase);

@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
-using System.Text;
 
 namespace NitroSharp.NsScript.Syntax
 {
@@ -31,33 +30,27 @@ namespace NitroSharp.NsScript.Syntax
         public SourceFile ParseScript()
         {
             var fileReferences = ImmutableArray.CreateBuilder<SourceFileReference>();
-            while (true)
+            SyntaxTokenKind tk;
+            while ((tk = CurrentToken.Kind) != SyntaxTokenKind.EndOfFileToken && !CanStartDeclaration(tk))
             {
-                bool exit = false;
                 switch (CurrentToken.Kind)
                 {
                     case SyntaxTokenKind.HashToken:
-                    case SyntaxTokenKind.IncludeKeyword:
-                        EatToken();
-                        break;
+                        if (PeekToken(1).Kind != SyntaxTokenKind.IncludeKeyword)
+                        {
+                            goto default;
+                        }
 
-                    case SyntaxTokenKind.StringLiteralToken:
+                        EatToken();
+                        EatToken(SyntaxTokenKind.IncludeKeyword);
                         var filePath = EatToken(SyntaxTokenKind.StringLiteralToken);
                         fileReferences.Add(new SourceFileReference((string)filePath.Value));
                         break;
 
                     case SyntaxTokenKind.SemicolonToken:
+                    default:
                         EatToken();
                         break;
-
-                    default:
-                        exit = true;
-                        break;
-                }
-
-                if (exit)
-                {
-                    break;
                 }
             }
 
@@ -79,6 +72,20 @@ namespace NitroSharp.NsScript.Syntax
             }
 
             return new SourceFile(SourceText.FilePath, members.ToImmutable(), fileReferences.ToImmutable());
+        }
+
+        private static bool CanStartDeclaration(SyntaxTokenKind tk)
+        {
+            switch (tk)
+            {
+                case SyntaxTokenKind.ChapterKeyword:
+                case SyntaxTokenKind.SceneKeyword:
+                case SyntaxTokenKind.FunctionKeyword:
+                    return true;
+
+                default:
+                    return false;
+            }
         }
 
         public MemberDeclaration ParseMemberDeclaration()
@@ -650,7 +657,7 @@ namespace NitroSharp.NsScript.Syntax
                 EatToken();
             }
             
-            string filePath = null, symbolName = string.Empty;
+            string filePath = null, symbolName = null;
             string part = ConsumeTextUntil(tk => tk == SyntaxTokenKind.SemicolonToken || tk == SyntaxTokenKind.ArrowToken);
             if (CurrentToken.Kind == SyntaxTokenKind.ArrowToken)
             {
