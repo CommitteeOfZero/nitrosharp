@@ -4,35 +4,56 @@ namespace NitroSharp.NsScript.Syntax
 {
     public class SyntaxToken
     {
-        internal static SyntaxToken WithText(SyntaxTokenKind kind, string text, TextSpan span)
+        internal static SyntaxToken WithText(SyntaxTokenKind kind, string text, TextSpan span, Diagnostic syntaxError)
         {
-            return new SyntaxTokenWithText(kind, text, span);
+            return new SyntaxTokenWithText(kind, text, span, syntaxError);
+        }
+
+        internal static SyntaxToken WithValue(SyntaxTokenKind kind, string value, TextSpan span, Diagnostic syntaxError)
+        {
+            return new SyntaxTokenWithStringValue(kind, value, span, syntaxError);
         }
         
-        internal static SyntaxToken WithTextAndValue(SyntaxTokenKind kind, string text, TextSpan span, string value)
+        internal static SyntaxToken WithTextAndValue(SyntaxTokenKind kind, string text, TextSpan span, string value, Diagnostic syntaxError)
         {
-            return new SyntaxTokenWithTextAndValue(kind, text, span, value);
+            return new SyntaxTokenWithTextAndValue(kind, text, span, value, syntaxError);
         }
 
-        internal static SyntaxToken Identifier(string text, TextSpan span, SigilKind sigil, bool isQuoted)
+        internal static SyntaxToken Identifier(string text, TextSpan span, SigilKind sigil, bool isQuoted, Diagnostic syntaxError)
         {
-            return new IdentifierToken(text, span, sigil, isQuoted);
+            return new IdentifierToken(text, span, sigil, isQuoted, syntaxError);
         }
 
-        internal static SyntaxToken Literal(string value, TextSpan span)
+        internal static SyntaxToken Literal(string value, TextSpan span, Diagnostic syntaxError)
         {
-            return new StringLiteralToken(value, span);
+            return new StringLiteralToken(value, span, syntaxError);
         }
 
-        internal static SyntaxToken Literal(string text, TextSpan span, double value)
+        internal static SyntaxToken Literal(double value, TextSpan span, Diagnostic syntaxError)
         {
-            return new NumericLiteralToken(text, span, value);
+            return new NumericLiteralToken(value, span, syntaxError);
         }
 
-        internal SyntaxToken(SyntaxTokenKind kind, TextSpan span)
+        internal static SyntaxToken HexTriplet(double value, TextSpan span, Diagnostic syntaxError)
+        {
+            return new HexTripletToken(value, span, syntaxError);
+        }
+
+        internal static SyntaxToken DialogueBlockStartTag(string boxName, TextSpan span, Diagnostic syntaxError)
+        {
+            return new DialogueBlockStartTagToken(boxName, span, syntaxError);
+        }
+
+        internal static SyntaxToken DialogueBlockIdentifier(string name, TextSpan span, Diagnostic syntaxError)
+        {
+            return new DialogueBlockIdentifierToken(name, span, syntaxError);
+        }
+
+        internal SyntaxToken(SyntaxTokenKind kind, TextSpan span, Diagnostic syntaxError = null)
         {
             Kind = kind;
             TextSpan = span;
+            SyntaxError = syntaxError;
         }
 
         public SyntaxTokenKind Kind { get; }
@@ -56,6 +77,9 @@ namespace NitroSharp.NsScript.Syntax
             }
         }
 
+        public Diagnostic SyntaxError { get; }
+        public bool HasErrors => SyntaxError != null;
+
         public override string ToString()
         {
             return Text;
@@ -64,7 +88,8 @@ namespace NitroSharp.NsScript.Syntax
 
     internal class SyntaxTokenWithText : SyntaxToken
     {
-        internal SyntaxTokenWithText(SyntaxTokenKind kind, string text, TextSpan span) : base(kind, span)
+        internal SyntaxTokenWithText(SyntaxTokenKind kind, string text, TextSpan span, Diagnostic syntaxError)
+            : base(kind, span, syntaxError)
         {
             Text = text;
         }
@@ -74,8 +99,8 @@ namespace NitroSharp.NsScript.Syntax
 
     internal class SyntaxTokenWithStringValue : SyntaxToken
     {
-        internal SyntaxTokenWithStringValue(SyntaxTokenKind kind, string value, TextSpan textSpan)
-            : base(kind, textSpan)
+        internal SyntaxTokenWithStringValue(SyntaxTokenKind kind, string value, TextSpan textSpan, Diagnostic syntaxError)
+            : base(kind, textSpan, syntaxError)
         {
             StringValue = value;
         }
@@ -86,8 +111,8 @@ namespace NitroSharp.NsScript.Syntax
 
     internal sealed class SyntaxTokenWithTextAndValue : SyntaxTokenWithStringValue
     {
-        internal SyntaxTokenWithTextAndValue(SyntaxTokenKind kind, string text, TextSpan textSpan, string value)
-            : base(kind, value, textSpan)
+        internal SyntaxTokenWithTextAndValue(SyntaxTokenKind kind, string text, TextSpan textSpan, string value, Diagnostic syntaxError)
+            : base(kind, value, textSpan, syntaxError)
         {
             Text = text;
         }
@@ -97,27 +122,40 @@ namespace NitroSharp.NsScript.Syntax
     
     internal sealed class StringLiteralToken : SyntaxTokenWithStringValue
     {
-        internal StringLiteralToken(string value, TextSpan span) : base(SyntaxTokenKind.StringLiteralToken, value, span) { }
+        internal StringLiteralToken(string value, TextSpan span, Diagnostic syntaxError)
+            : base(SyntaxTokenKind.StringLiteralToken, value, span, syntaxError) { }
 
         public override string Text => "\"" + StringValue + "\"";
     }
 
-    internal sealed class NumericLiteralToken : SyntaxTokenWithText
+    internal class NumericLiteralToken : SyntaxToken
     {
-        internal NumericLiteralToken(string text, TextSpan textSpan, double value)
-            : base(SyntaxTokenKind.NumericLiteralToken, text, textSpan)
+        internal NumericLiteralToken(double value, TextSpan textSpan, Diagnostic syntaxError)
+            : base(SyntaxTokenKind.NumericLiteralToken, textSpan, syntaxError)
         {
             DoubleValue = value;
         }
 
         public double DoubleValue { get; }
         public override object Value => DoubleValue;
+
+        public override string Text => DoubleValue.ToString();
+    }
+
+    internal sealed class HexTripletToken : NumericLiteralToken
+    {
+        internal HexTripletToken(double value, TextSpan textSpan, Diagnostic syntaxError) : base(value, textSpan, syntaxError)
+        {
+        }
+
+        public int IntegralValue => (int)DoubleValue;
+        public override string Text => "#" + IntegralValue.ToString("X");
     }
 
     internal sealed class IdentifierToken : SyntaxTokenWithStringValue
     {
-        internal IdentifierToken(string name, TextSpan textSpan, SigilKind sigil, bool isQuoted)
-            : base(SyntaxTokenKind.IdentifierToken, name, textSpan)
+        internal IdentifierToken(string name, TextSpan textSpan, SigilKind sigil, bool isQuoted, Diagnostic syntaxError)
+            : base(SyntaxTokenKind.IdentifierToken, name, textSpan, syntaxError)
         {
             Sigil = sigil;
             IsQuoted = isQuoted;
@@ -139,5 +177,27 @@ namespace NitroSharp.NsScript.Syntax
                 return s;
             }
         }
+    }
+
+    internal sealed class DialogueBlockStartTagToken : SyntaxTokenWithStringValue
+    {
+        internal DialogueBlockStartTagToken(string boxName, TextSpan textSpan, Diagnostic syntaxError)
+        : base(SyntaxTokenKind.DialogueBlockStartTag, boxName, textSpan, syntaxError)
+        {
+        }
+
+        public string BoxName => StringValue;
+        public override string Text => "<PRE " + BoxName + ">";
+    }
+
+    internal sealed class DialogueBlockIdentifierToken : SyntaxTokenWithStringValue
+    {
+        internal DialogueBlockIdentifierToken(string name, TextSpan textSpan, Diagnostic syntaxError)
+        : base(SyntaxTokenKind.DialogueBlockIdentifier, name, textSpan, syntaxError)
+        {
+        }
+
+        public string Name => StringValue;
+        public override string Text => "[" + Name + "]";
     }
 }

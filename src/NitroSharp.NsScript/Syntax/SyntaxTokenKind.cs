@@ -5,6 +5,8 @@
         None,
         BadToken,
 
+        IncludeDirective,
+
         IdentifierToken,
         NumericLiteralToken,
         StringLiteralToken,
@@ -48,7 +50,6 @@
         AmpersandAmpersandToken,
 
         // Keywords
-        IncludeKeyword,
         ChapterKeyword,
         FunctionKeyword,
         SceneKeyword,

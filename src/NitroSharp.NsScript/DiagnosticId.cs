@@ -2,6 +2,13 @@
 {
     public enum DiagnosticId
     {
-        
+        UnterminatedString,
+        UnterminatedQuotedIdentifier,
+        UnterminatedComment,
+        UnterminatedDialogueBlockStartTag,
+        UnterminatedDialogueBlockIdentifier,
+        NumberTooLarge,
+
+        TokenExpected
     }
 }

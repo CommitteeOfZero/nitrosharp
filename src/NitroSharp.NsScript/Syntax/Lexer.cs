@@ -1,6 +1,7 @@
 ﻿using System.Globalization;
 using System.Collections.Generic;
 using NitroSharp.NsScript.Text;
+using System.Runtime.CompilerServices;
 
 namespace NitroSharp.NsScript.Syntax
 {
@@ -13,7 +14,9 @@ namespace NitroSharp.NsScript.Syntax
             public string StringValue;
             public double DoubleValue;
             public SigilKind SigilKind;
-            public bool IsQuoted;
+            public bool IsQuotedIdentifier;
+            public bool IsHexTriplet;
+            public TextSpan Span;
         }
 
         private const string PRE_StartTag = "<pre>";
@@ -21,6 +24,7 @@ namespace NitroSharp.NsScript.Syntax
 
         private readonly LexingMode _initialMode;
         private readonly Stack<LexingMode> _lexingModeStack = new Stack<LexingMode>();
+        private Diagnostic _lastSyntaxError;
 
         public Lexer(SourceText sourceText, LexingMode lexingMode = LexingMode.Normal) : base(sourceText.Source)
         {
@@ -90,16 +94,14 @@ namespace NitroSharp.NsScript.Syntax
                     {
                         ScanStringLiteral(ref info);
                         // Could actually be a quoted keyword (e.g "null")
-                        info.Kind = SyntaxFacts.GetKeywordKind(info.StringValue);
-                        if (info.Kind == SyntaxTokenKind.None)
+                        if (SyntaxFacts.TryGetKeywordKind(info.StringValue, out var keywordKind))
                         {
-                            info.Kind = SyntaxTokenKind.StringLiteralToken;
+                            info.Kind = keywordKind;
                         }
                     }
                     else // it's a quoted identifier
                     {
                         ScanIdentifier(ref info);
-                        info.Kind = SyntaxTokenKind.IdentifierToken;
                     }
                     break;
 
@@ -113,30 +115,26 @@ namespace NitroSharp.NsScript.Syntax
                 case '7':
                 case '8':
                 case '9':
-                    ScanNumericLiteral(ref info);
-                    info.Kind = SyntaxTokenKind.NumericLiteralToken;
+                    if (!ScanDecNumericLiteral(ref info))
+                    {
+                        // If it's not a number, then it's an identifier starting with a number.
+                        goto default;
+                    }
                     break;
 
                 case '$':
                     ScanIdentifier(ref info);
-                    info.Kind = SyntaxTokenKind.IdentifierToken;
                     break;
 
                 case '#':
-                    if (IsIncludeDirective())
+                    if (AdvanceIfMatches("#include"))
+                    {
+                        info.Kind = SyntaxTokenKind.IncludeDirective;
+                    }
+                    else if (!ScanHexTriplet(ref info) && !ScanIdentifier(ref info))
                     {
                         AdvanceChar();
                         info.Kind = SyntaxTokenKind.HashToken;
-                    }
-                    else if (IsHexNumericLiteral())
-                    {
-                        ScanNumericLiteral(ref info);
-                        info.Kind = SyntaxTokenKind.NumericLiteralToken;
-                    }
-                    else
-                    {
-                        ScanIdentifier(ref info);
-                        info.Kind = SyntaxTokenKind.IdentifierToken;
                     }
                     break;
 
@@ -170,14 +168,21 @@ namespace NitroSharp.NsScript.Syntax
 
                         case 'p':
                         case 'P':
-                            ScanDialogueBlockStartTag(ref info);
-                            info.Kind = SyntaxTokenKind.DialogueBlockStartTag;
+                            if (!ScanDialogueBlockStartTag(ref info))
+                            {
+                                goto default;
+                            }
                             break;
 
                         case '/':
-                            AdvanceChar(PRE_EndTag.Length);
-                            info.Kind = SyntaxTokenKind.DialogueBlockEndTag;
-                            info.Text = "</PRE>";
+                            if (AdvanceIfMatches(PRE_EndTag))
+                            {
+                                info.Kind = SyntaxTokenKind.DialogueBlockEndTag;
+                            }
+                            else
+                            {
+                                goto default;
+                            }
                             break;
 
                         default:
@@ -368,16 +373,14 @@ namespace NitroSharp.NsScript.Syntax
                     bool success = ScanIdentifier(ref info);
                     if (success)
                     {
-                        info.Kind = SyntaxFacts.GetKeywordKind(info.StringValue);
-                        if (info.Kind == SyntaxTokenKind.None)
+                        if (SyntaxFacts.TryGetKeywordKind(info.StringValue, out var keywordKind))
                         {
-                            info.Kind = SyntaxTokenKind.IdentifierToken;
+                            info.Kind = keywordKind;
                         }
                     }
                     else
                     {
-                        ScanBadToken();
-                        info.Kind = SyntaxTokenKind.BadToken;
+                        ScanBadToken(ref info);
                     }
                     break;
             }
@@ -389,69 +392,85 @@ namespace NitroSharp.NsScript.Syntax
 
         private SyntaxToken CreateToken(ref TokenInfo tokenInfo)
         {
-            var span = GetCurrentLexemeSpan();
+            var span = tokenInfo.Span;
+            if (span == default(TextSpan))
+            {
+                span = CurrentLexemeSpan;
+            }
+
+            var error = _lastSyntaxError;
+            _lastSyntaxError = null;
+
             switch (tokenInfo.Kind)
             {
                 case SyntaxTokenKind.IdentifierToken:
-                    return SyntaxToken.Identifier(tokenInfo.StringValue, span, tokenInfo.SigilKind, tokenInfo.IsQuoted);
+                    return SyntaxToken.Identifier(tokenInfo.StringValue, span, tokenInfo.SigilKind, tokenInfo.IsQuotedIdentifier, error);
 
                 case SyntaxTokenKind.StringLiteralToken:
-                    return SyntaxToken.Literal(tokenInfo.StringValue, span);
+                    return SyntaxToken.Literal(tokenInfo.StringValue, span, error);
 
                 case SyntaxTokenKind.NumericLiteralToken:
-                    return SyntaxToken.Literal(tokenInfo.Text, span, tokenInfo.DoubleValue);
+                    return tokenInfo.IsHexTriplet
+                        ? SyntaxToken.HexTriplet(tokenInfo.DoubleValue, span, error)
+                        : SyntaxToken.Literal(tokenInfo.DoubleValue, span, error);
 
                 case SyntaxTokenKind.DialogueBlockStartTag:
-                case SyntaxTokenKind.DialogueBlockEndTag:
-                    return SyntaxToken.WithTextAndValue(tokenInfo.Kind, tokenInfo.Text, span, tokenInfo.StringValue);
+                    return SyntaxToken.DialogueBlockStartTag(tokenInfo.StringValue, span, error);
+
+                case SyntaxTokenKind.DialogueBlockIdentifier:
+                    return SyntaxToken.DialogueBlockIdentifier(tokenInfo.StringValue, span, error);
+
+                case SyntaxTokenKind.PXmlString:
+                    return SyntaxToken.WithText(SyntaxTokenKind.PXmlString, tokenInfo.Text, span, error);
+
+                case SyntaxTokenKind.BadToken:
+                    return SyntaxToken.WithText(SyntaxTokenKind.BadToken, tokenInfo.Text, span, error);
 
                 default:
-                    return new SyntaxToken(tokenInfo.Kind, span);
+                    return new SyntaxToken(tokenInfo.Kind, span, error);
             }
         }
 
         private SyntaxToken LexPXmlToken()
         {
-            SyntaxTokenKind kind = SyntaxTokenKind.None;
-            bool scanTrailingTrivia = false;
+            var info = new TokenInfo();
+            bool skipTrailingTrivia = false;
             StartScanning();
 
             char character = PeekChar();
             switch (character)
             {
                 case '[':
-                    kind = SyntaxTokenKind.DialogueBlockIdentifier;
-                    ScanDialogueBlockIdentifier();
-                    scanTrailingTrivia = true;
+                    ScanDialogueBlockIdentifier(ref info);
+                    skipTrailingTrivia = true;
                     break;
 
                 case '\r':
                 case '\n':
-                    kind = SyntaxTokenKind.PXmlLineSeparator;
+                    info.Kind = SyntaxTokenKind.PXmlLineSeparator;
                     ScanEndOfLineSequence();
                     break;
 
                 case EofCharacter:
-                    kind = SyntaxTokenKind.EndOfFileToken;
+                    info.Kind = SyntaxTokenKind.EndOfFileToken;
                     break;
 
                 default:
-                    kind = SyntaxTokenKind.PXmlString;
-                    ScanPXmlString();
+                    ScanPXmlString(ref info);
                     break;
             }
 
-            string text = GetCurrentLexeme();
-            if (scanTrailingTrivia)
+            if (skipTrailingTrivia)
             {
                 SkipSyntaxTrivia(isTrailing: true);
             }
 
-            return SyntaxToken.WithText(kind, text, GetCurrentLexemeSpan());
+            return CreateToken(ref info);
         }
 
         private bool ScanIdentifier(ref TokenInfo tokenInfo)
         {
+            int start = Position;
             bool isQuoted = false;
             if (PeekChar() == '"')
             {
@@ -473,127 +492,123 @@ namespace NitroSharp.NsScript.Syntax
             }
 
             StartScanning();
-            
-            char c;
-            while (SyntaxFacts.IsIdentifierPartCharacter((c = PeekChar())) && c != EofCharacter)
+            while (SyntaxFacts.IsIdentifierPartCharacter(PeekChar()))
             {
                 AdvanceChar();
             }
-            
-            tokenInfo.StringValue = GetCurrentLexeme();
-            tokenInfo.IsQuoted = isQuoted;
-            if (isQuoted)
+
+            string value = GetCurrentLexeme();
+            if (isQuoted && !TryEatChar('"'))
             {
-                EatChar('"');
+                Report(DiagnosticId.UnterminatedQuotedIdentifier, new TextSpan(start, 0));
             }
 
-            return tokenInfo.StringValue.Length > 0;
-        }
-
-        private void ScanBadToken()
-        {
-            while (!SyntaxFacts.IsWhitespace(PeekChar()) && PeekChar() != EofCharacter)
+            int end = Position;
+            bool empty = value.Length == 0;
+            if (empty)
             {
-                AdvanceChar();
+                SetPosition(start);
+                return false;
             }
+
+            tokenInfo.Kind = SyntaxTokenKind.IdentifierToken;
+            tokenInfo.StringValue = value;
+            tokenInfo.IsQuotedIdentifier = isQuoted;
+            tokenInfo.Span = new TextSpan(start, end - start);
+            return true;
         }
 
         private void ScanStringLiteral(ref TokenInfo tokenInfo)
         {
+            int start = Position;
             EatChar('"');
             StartScanning();
+
             char c;
-            while ((c = PeekChar()) != '"' && c != EofCharacter)
+            while ((c = PeekChar()) != '"' && !IsEofOrNewLine(c))
             {
                 AdvanceChar();
             }
 
-            tokenInfo.StringValue = GetCurrentLexeme();
-            EatChar('"');
+            tokenInfo.StringValue = GetCurrentLexeme(); // value without the quotes
+            if (!TryEatChar('"'))
+            {
+                Report(DiagnosticId.UnterminatedString, new TextSpan(start, 0));
+            }
+
+            int end = Position;
+            tokenInfo.Span = new TextSpan(start, end - start);
+            tokenInfo.Kind = SyntaxTokenKind.StringLiteralToken;
         }
 
-        private void ScanNumericLiteral(ref TokenInfo tokenInfo)
+        private bool ScanDecNumericLiteral(ref TokenInfo tokenInfo)
         {
-            char character = PeekChar();
-            bool isHex = character == '#';
-            bool isPrefixedByAt = character == '@';
-            if (!isHex)
+            char c;
+            while ((SyntaxFacts.IsDecDigit((c = PeekChar())) || c == '.'))
             {
-                if (isPrefixedByAt)
-                {
-                    AdvanceChar();
-                    if ((character = PeekChar()) == '-' || character == '+')
-                    {
-                        AdvanceChar();
-                    }
-                }
-
-                char c;
-                while ((SyntaxFacts.IsDecDigit((c = PeekChar())) || c == '.') && c != EofCharacter)
-                {
-                    AdvanceChar();
-                }
-            }
-            else
-            {
-                char c;
-                while (SyntaxFacts.IsHexDigit((c = PeekChar())) && c != EofCharacter)
-                {
-                    AdvanceChar();
-                }
+                AdvanceChar();
             }
 
             string stringValue = tokenInfo.Text = GetCurrentLexeme();
-            if (isHex)
+            bool valid = double.TryParse(stringValue, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out tokenInfo.DoubleValue);
+            if (!valid)
             {
-                stringValue = stringValue.Replace("#", "0x");
-            }
-            else if (isPrefixedByAt)
-            {
-                stringValue = stringValue.Substring(1);
+                Report(DiagnosticId.NumberTooLarge);
             }
 
-            var numberStyles = isHex ? NumberStyles.AllowHexSpecifier : NumberStyles.AllowLeadingSign;
-            numberStyles |= NumberStyles.AllowDecimalPoint;
-            tokenInfo.DoubleValue = double.Parse(stringValue, numberStyles);
+            // If the next character is a valid identifier character,
+            // then what we're scanning is actually an identifier that starts with a number
+            // e.g "215_ＡＡルートグッドエンド".
+            if (SyntaxFacts.IsIdentifierPartCharacter(PeekChar()))
+            {
+                SetPosition(LexemeStart);
+                return false;
+            }
+
+            tokenInfo.Kind = SyntaxTokenKind.NumericLiteralToken;
+            return true;
         }
 
-        private bool IsIncludeDirective() => Match("#include");
-
-        private bool IsHexNumericLiteral()
+        private bool ScanHexTriplet(ref TokenInfo tokenInfo)
         {
-            // In NSS, hex literals are always 3 bytes long.
-            // So we need to check if the first 6 characters are valid hex digits
-            // and then make sure those are followed by a stop character (whitespace/comma/etc).
+            int start = Position;
+            EatChar('#');
+            StartScanning();
 
-            bool result = false;
-            for (int n = 1; n < 7; n++)
+            // We need exactly six digits.
+            for (int i = 0; i < 6; i++)
             {
-                char c = PeekChar(n);
-                if (c == EofCharacter)
+                if (!SyntaxFacts.IsHexDigit(PeekChar()))
                 {
+                    SetPosition(start);
                     return false;
                 }
 
-                if (!SyntaxFacts.IsHexDigit(c))
-                {
-                    result = false;
-                }
+                AdvanceChar();
             }
 
-            if (!SyntaxFacts.IsIdentifierStopCharacter(PeekChar(7)))
+            // If the next character can be part of an identifer, then what we're dealing with is not a hex triplet,
+            // but rather an identifier prefixed with a '#', and it just so happens that its first 6 characters
+            // are valid hex digits. '#ABCDEFghijklmno' would be an example of such an identifier.
+            // NOTE: if the identifier is exactly 6 characters long, it will be treated as a hex triplet.
+            // It isn't clear at the moment if there's a good solution for this.
+            if (SyntaxFacts.IsIdentifierPartCharacter(PeekChar()))
             {
-                result = false;
+                SetPosition(start);
+                return false;
             }
 
-            // TODO: expression is always false.
-            return result;
+            string stringValue = tokenInfo.Text = GetCurrentLexeme(); // value without the '#'
+            // Not expected to throw
+            tokenInfo.DoubleValue = int.Parse(stringValue, NumberStyles.HexNumber, CultureInfo.InvariantCulture);
+            tokenInfo.IsHexTriplet = true;
+            tokenInfo.Kind = SyntaxTokenKind.NumericLiteralToken;
+            return true;
         }
 
-        private bool Is_PRE_StartTag() => Match("<pre");
         private bool Is_PRE_EndTag() => Match("</pre>");
 
-        private void ScanPXmlString()
+        private void ScanPXmlString(ref TokenInfo tokenInfo)
         {
             int preNestingLevel = 0;
 
@@ -602,13 +617,12 @@ namespace NitroSharp.NsScript.Syntax
             {
                 if (c == '<')
                 {
-                    if (Is_PRE_StartTag())
+                    if (AdvanceIfMatches(PRE_StartTag))
                     {
                         preNestingLevel++;
-                        AdvanceChar(5);
                         continue;
                     }
-                    else if (Is_PRE_EndTag())
+                    else if (AdvanceIfMatches(PRE_EndTag))
                     {
                         if (preNestingLevel == 0)
                         {
@@ -616,7 +630,6 @@ namespace NitroSharp.NsScript.Syntax
                         }
 
                         preNestingLevel--;
-                        AdvanceChar(6);
                         continue;
                     }
                 }
@@ -633,32 +646,71 @@ namespace NitroSharp.NsScript.Syntax
 
                 AdvanceChar();
             }
-        }
 
-        private void ScanDialogueBlockStartTag(ref TokenInfo tokenInfo)
-        {
-            char c;
-            while ((c = PeekChar()) != '>' && c != EofCharacter)
-            {
-                AdvanceChar();
-            }
-
-            AdvanceChar();
+            tokenInfo.Kind = SyntaxTokenKind.PXmlString;
             tokenInfo.Text = GetCurrentLexeme();
-            tokenInfo.StringValue = tokenInfo.Text.Substring(5, tokenInfo.Text.Length - 6);
         }
 
-        private void ScanDialogueBlockIdentifier()
+        private bool ScanDialogueBlockStartTag(ref TokenInfo tokenInfo)
         {
-            AdvanceChar();
+            int start = Position;
+            if (!AdvanceIfMatches("<PRE "))
+            {
+                return false;
+            }
+
+            StartScanning();
 
             char c;
-            while ((c = PeekChar()) != ']' && c != EofCharacter)
+            while ((c = PeekChar()) != '>' && !IsEofOrNewLine(c))
             {
                 AdvanceChar();
             }
 
+            tokenInfo.StringValue = GetCurrentLexeme(); // just the box name, without the '<PRE  >'
+            if (!TryEatChar('>'))
+            {
+                Report(DiagnosticId.UnterminatedDialogueBlockStartTag, new TextSpan(start, 0));
+            }
+
+            int end = Position;
+            tokenInfo.Span = new TextSpan(start, end - start);
+            tokenInfo.Kind = SyntaxTokenKind.DialogueBlockStartTag;
+            return true;
+        }
+
+        private void ScanDialogueBlockIdentifier(ref TokenInfo tokenInfo)
+        {
+            int start = Position;
             AdvanceChar();
+            StartScanning();
+
+            char c;
+            while ((c = PeekChar()) != ']' && !IsEofOrNewLine(c))
+            {
+                AdvanceChar();
+            }
+
+            tokenInfo.StringValue = GetCurrentLexeme();
+            if (!TryEatChar(']'))
+            {
+                Report(DiagnosticId.UnterminatedDialogueBlockIdentifier, new TextSpan(start, 0));
+            }
+
+            int end = Position;
+            tokenInfo.Span = new TextSpan(start, end - start);
+            tokenInfo.Kind = SyntaxTokenKind.DialogueBlockIdentifier;
+        }
+
+        private void ScanBadToken(ref TokenInfo tokenInfo)
+        {
+            while (!IsEofOrNewLine(PeekChar()))
+            {
+                AdvanceChar();
+            }
+
+            tokenInfo.Text = GetCurrentLexeme();
+            tokenInfo.Kind = SyntaxTokenKind.BadToken;
         }
 
         private void SkipSyntaxTrivia(bool isTrailing)
@@ -726,12 +778,39 @@ namespace NitroSharp.NsScript.Syntax
         private void ScanMultiLineComment()
         {
             char c;
-            while (!((c = PeekChar()) == '*' && PeekChar(1) == '/') && c != EofCharacter)
+            while (!((c = PeekChar()) == '*' && PeekChar(1) == '/'))
             {
+                if (c == EofCharacter)
+                {
+                    Report(DiagnosticId.UnterminatedComment, CurrentSpanStart);
+                    return;
+                }
+
                 AdvanceChar();
             }
 
-            AdvanceChar(2);
+            AdvanceChar(2); // "*/"
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool IsEofOrNewLine(char c)
+        {
+            switch (c)
+            {
+                case EofCharacter:
+                case '\r':
+                case '\n':
+                    return true;
+
+                default:
+                    return false;
+            }
+        }
+
+        private void Report(DiagnosticId diagnosticId) => Report(diagnosticId, CurrentLexemeSpan);
+        private void Report(DiagnosticId diagnosticId, TextSpan textSpan)
+        {
+            _lastSyntaxError = new Diagnostic(textSpan, diagnosticId);
         }
     }
 }

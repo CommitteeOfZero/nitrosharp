@@ -35,14 +35,8 @@ namespace NitroSharp.NsScript.Syntax
             {
                 switch (CurrentToken.Kind)
                 {
-                    case SyntaxTokenKind.HashToken:
-                        if (PeekToken(1).Kind != SyntaxTokenKind.IncludeKeyword)
-                        {
-                            goto default;
-                        }
-
+                    case SyntaxTokenKind.IncludeDirective:
                         EatToken();
-                        EatToken(SyntaxTokenKind.IncludeKeyword);
                         var filePath = EatToken(SyntaxTokenKind.StringLiteralToken);
                         fileReferences.Add(new SourceFileReference((string)filePath.Value));
                         break;
@@ -103,7 +97,7 @@ namespace NitroSharp.NsScript.Syntax
                     return ParseFunction();
 
                 default:
-                    throw new InvalidOperationException();
+                    throw new InvalidOperationException($"{CurrentToken.Kind} cannot start a declaration.");
             }
         }
 
@@ -690,15 +684,10 @@ namespace NitroSharp.NsScript.Syntax
 
         private DialogueBlock ParseDialogueBlock()
         {
-            string TrimDialogueBlockIdentifier(string s)
-            {
-                return s.Length > 2 && s[0] == '[' && s[s.Length - 1] == ']' ? s.Substring(1, s.Length - 2) : s;
-            }
-
             var startTag = EatToken(SyntaxTokenKind.DialogueBlockStartTag);
             string associatedBox = (string)startTag.Value;
 
-            var identifier = EatToken(SyntaxTokenKind.DialogueBlockIdentifier);
+            var boxName = (string)EatToken(SyntaxTokenKind.DialogueBlockIdentifier).Value;
             var statements = ImmutableArray.CreateBuilder<Statement>();
             while (CurrentToken.Kind != SyntaxTokenKind.DialogueBlockEndTag)
             {
@@ -710,9 +699,8 @@ namespace NitroSharp.NsScript.Syntax
             }
 
             EatToken(SyntaxTokenKind.DialogueBlockEndTag);
-            string identifierString = TrimDialogueBlockIdentifier(identifier.Text);
-            var name = new Identifier(identifierString);
-            return new DialogueBlock(name, associatedBox, new Block(statements.ToImmutable()));
+            var id = new Identifier(boxName);
+            return new DialogueBlock(id, associatedBox, new Block(statements.ToImmutable()));
         }
 
         private static NsParseException UnexpectedToken(string scriptName, string token)

@@ -8,7 +8,7 @@ namespace NitroSharp.NsScript
         
         public SourceFileReference(string filePath)
         {
-            if (string.IsNullOrEmpty(filePath))
+            if (filePath == null)
             {
                 throw new ArgumentNullException(nameof(filePath));
             }

@@ -1,18 +1,18 @@
 ﻿using NitroSharp.NsScript.Text;
 
-namespace NitroSharp.NsScript.Syntax
+namespace NitroSharp.NsScript
 {
     public sealed class Diagnostic
     {
-        public Diagnostic(TextSpan textSpan, DiagnosticId id, string message)
+        public Diagnostic(TextSpan textSpan, DiagnosticId id)
         {
             TextSpan = textSpan;
             Id = id;
-            Message = message;
         }
 
         public DiagnosticId Id { get; }
         public TextSpan TextSpan { get; }
-        public string Message { get; }
+
+        public DiagnosticSeverity Severity => DiagnosticInfo.GetSeverity(Id);
     }
 }

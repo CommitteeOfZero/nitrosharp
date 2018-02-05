@@ -1,10 +1,12 @@
-﻿using System.Diagnostics;
-using System.Globalization;
+﻿using System.Globalization;
+using System.Runtime.CompilerServices;
 
 namespace NitroSharp.NsScript.Syntax
 {
     public static class SyntaxFacts
     {
+        private const char EofCharacter = char.MaxValue;
+
         public static bool IsLetter(char c) => char.IsLetter(c);
         public static bool IsLatinLetter(char c) => c >= 'A' && c <= 'z';
         public static bool IsDecDigit(char c) => c >= '0' && c <= '9';
@@ -22,6 +24,7 @@ namespace NitroSharp.NsScript.Syntax
                 || (c > 255 && CharUnicodeInfo.GetUnicodeCategory(c) == UnicodeCategory.SpaceSeparator);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool IsNewLine(char c)
         {
             return c == '\r' || c == '\n';
@@ -32,11 +35,15 @@ namespace NitroSharp.NsScript.Syntax
             return c == '$' || c == '#';
         }
 
+        public static bool TryGetKeywordKind(string keyword, out SyntaxTokenKind kind)
+        {
+            kind = GetKeywordKind(keyword);
+            return kind != SyntaxTokenKind.None;
+        }
         public static SyntaxTokenKind GetKeywordKind(string keyword)
         {
             switch (keyword)
             {
-                case "include": return SyntaxTokenKind.IncludeKeyword;
                 case "chapter": return SyntaxTokenKind.ChapterKeyword;
                 case "function": return SyntaxTokenKind.FunctionKeyword;
                 case "scene": return SyntaxTokenKind.SceneKeyword;
@@ -92,6 +99,7 @@ namespace NitroSharp.NsScript.Syntax
                 case '!':
                 case '|':
                 case '&':
+                case EofCharacter:
                     return false;
 
                 default:
@@ -280,8 +288,6 @@ namespace NitroSharp.NsScript.Syntax
                 case SyntaxTokenKind.MinusEqualsToken:
                     return "-=";
 
-                case SyntaxTokenKind.IncludeKeyword:
-                    return "include";
                 case SyntaxTokenKind.ChapterKeyword:
                     return "chapter";
                 case SyntaxTokenKind.FunctionKeyword:
@@ -311,11 +317,15 @@ namespace NitroSharp.NsScript.Syntax
                 case SyntaxTokenKind.BreakKeyword:
                     return "break";
 
-                case SyntaxTokenKind.None:
-                    return string.Empty;
+                case SyntaxTokenKind.IncludeDirective:
+                    return "#include";
+
+                case SyntaxTokenKind.PXmlLineSeparator:
+                    return "\r\n";
+                case SyntaxTokenKind.DialogueBlockEndTag:
+                    return "</PRE>";
 
                 default:
-                    Debug.Assert(false, "This should never happen.");
                     return string.Empty;
             }
         }
@@ -328,7 +338,7 @@ namespace NitroSharp.NsScript.Syntax
                     return "$";
                 case SigilKind.Hash:
                     return "#";
-                
+
                 default:
                     return string.Empty;
             }
