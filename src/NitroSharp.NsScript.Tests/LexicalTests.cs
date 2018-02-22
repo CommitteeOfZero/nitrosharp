@@ -19,14 +19,28 @@ namespace NitroSharp.NsScript.Tests
         }
 
         [Fact]
+        public void LexMultilineStringLiteral()
+        {
+            string text = "\"foo\r\nbar\"";
+            AssertValidToken(text, SyntaxTokenKind.StringLiteralToken, "foo\r\nbar");
+        }
+
+        [Fact]
+        public void LexStringLiteralWithKeywordAsValue()
+        {
+            string text = "\"if\"";
+            AssertValidToken(text, SyntaxTokenKind.StringLiteralToken, "if");
+        }
+
+        [Fact]
         public void LexUnterminatedStringLiteral()
         {
             string text = "\"foo";
             var token = LexToken(text);
 
             Assert.Equal(SyntaxTokenKind.StringLiteralToken, token.Kind);
-            Assert.True(token.HasErrors);
-            Assert.Equal(DiagnosticId.UnterminatedString, token.SyntaxError.Id);
+            Assert.True(token.HasDiagnostics);
+            Assert.Equal(DiagnosticId.UnterminatedString, token.Diagnostic.Id);
         }
 
         [Fact]
@@ -131,7 +145,7 @@ namespace NitroSharp.NsScript.Tests
 
             Assert.Equal(SyntaxTokenKind.IdentifierToken, token.Kind);
             Assert.Equal(text, token.Text);
-            Assert.False(token.HasErrors);
+            Assert.False(token.HasDiagnostics);
         }
 
         [Fact]
@@ -141,9 +155,9 @@ namespace NitroSharp.NsScript.Tests
             var token = LexToken(text);
 
             Assert.Equal(SyntaxTokenKind.IdentifierToken, token.Kind);
-            Assert.True(token.HasErrors);
-            Assert.Equal(DiagnosticId.UnterminatedQuotedIdentifier, token.SyntaxError.Id);
-            Assert.Equal(new TextSpan(0, 0), token.SyntaxError.TextSpan);
+            Assert.True(token.HasDiagnostics);
+            Assert.Equal(DiagnosticId.UnterminatedQuotedIdentifier, token.Diagnostic.Id);
+            Assert.Equal(new TextSpan(0, 0), token.Diagnostic.Span);
         }
 
         [Fact]
@@ -158,7 +172,9 @@ namespace NitroSharp.NsScript.Tests
         public void LexMultiLineComment()
         {
             string comment = @"/*
-				初回起動時ではないときは、プレイ速度をバックアップ
+            line1
+            line2
+            line3
 			*/";
             var token = LexToken(comment);
             Assert.Equal(SyntaxTokenKind.EndOfFileToken, token.Kind);
@@ -171,9 +187,9 @@ namespace NitroSharp.NsScript.Tests
             var token = LexToken(text);
 
             Assert.Equal(SyntaxTokenKind.EndOfFileToken, token.Kind);
-            Assert.True(token.HasErrors);
-            Assert.Equal(DiagnosticId.UnterminatedComment, token.SyntaxError.Id);
-            Assert.Equal(new TextSpan(0, 0), token.SyntaxError.TextSpan);
+            Assert.True(token.HasDiagnostics);
+            Assert.Equal(DiagnosticId.UnterminatedComment, token.Diagnostic.Id);
+            Assert.Equal(new TextSpan(0, 0), token.Diagnostic.Span);
         }
 
         [Fact]
@@ -189,9 +205,9 @@ namespace NitroSharp.NsScript.Tests
             var token = LexToken(text);
 
             Assert.Equal(SyntaxTokenKind.DialogueBlockStartTag, token.Kind);
-            Assert.True(token.HasErrors);
-            Assert.Equal(DiagnosticId.UnterminatedDialogueBlockStartTag, token.SyntaxError.Id);
-            Assert.Equal(new TextSpan(0, 0), token.SyntaxError.TextSpan);
+            Assert.True(token.HasDiagnostics);
+            Assert.Equal(DiagnosticId.UnterminatedDialogueBlockStartTag, token.Diagnostic.Id);
+            Assert.Equal(new TextSpan(0, 0), token.Diagnostic.Span);
         }
         
         [Fact]
@@ -207,8 +223,8 @@ namespace NitroSharp.NsScript.Tests
             var token = LexToken(text, LexingMode.DialogueBlock);
 
             Assert.Equal(SyntaxTokenKind.DialogueBlockIdentifier, token.Kind);
-            Assert.Equal(DiagnosticId.UnterminatedDialogueBlockIdentifier, token.SyntaxError.Id);
-            Assert.Equal(new TextSpan(0, 0), token.SyntaxError.TextSpan);
+            Assert.Equal(DiagnosticId.UnterminatedDialogueBlockIdentifier, token.Diagnostic.Id);
+            Assert.Equal(new TextSpan(0, 0), token.Diagnostic.Span);
         }
 
         [Fact]
@@ -247,6 +263,12 @@ namespace NitroSharp.NsScript.Tests
             AssertValidToken("@->", SyntaxTokenKind.AtArrowToken);
         }
 
+        [Fact]
+        public void LexDollarToken()
+        {
+            AssertValidToken("$", SyntaxTokenKind.DollarToken);
+        }
+
         private SyntaxToken LexToken(string text, LexingMode mode = LexingMode.Normal)
         {
             SyntaxToken result = null;
@@ -276,7 +298,7 @@ namespace NitroSharp.NsScript.Tests
 
             Assert.Equal(expectedKind, token.Kind);
             Assert.Equal(text, token.Text);
-            Assert.False(token.HasErrors);
+            Assert.False(token.HasDiagnostics);
         }
 
         private void AssertValidToken(string text, SyntaxTokenKind expectedKind, string expectedText, object expectedValue, LexingMode mode = LexingMode.Normal)
@@ -286,7 +308,7 @@ namespace NitroSharp.NsScript.Tests
             Assert.Equal(expectedKind, token.Kind);
             Assert.Equal(expectedValue, token.Value);
             Assert.Equal(expectedText, token.Text);
-            Assert.False(token.HasErrors);
+            Assert.False(token.HasDiagnostics);
         }
 
         private void AssertValidToken(string text, SyntaxTokenKind expectedKind, object expectedValue, LexingMode mode = LexingMode.Normal)
@@ -296,7 +318,7 @@ namespace NitroSharp.NsScript.Tests
             Assert.Equal(expectedKind, token.Kind);
             Assert.Equal(expectedValue, token.Value);
             Assert.Equal(text, token.Text);
-            Assert.False(token.HasErrors);
+            Assert.False(token.HasDiagnostics);
         }
     }
 }

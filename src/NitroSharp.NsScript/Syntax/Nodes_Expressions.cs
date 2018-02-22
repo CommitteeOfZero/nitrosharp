@@ -114,14 +114,14 @@ namespace NitroSharp.NsScript.Syntax
 
     public sealed class AssignmentExpression : Expression
     {
-        internal AssignmentExpression(Identifier target, AssignmentOperatorKind operatorKind, Expression value)
+        internal AssignmentExpression(Expression target, AssignmentOperatorKind operatorKind, Expression value)
         {
             Target = target;
             OperatorKind = operatorKind;
             Value = value;
         }
 
-        public Identifier Target { get; }
+        public Expression Target { get; }
         public AssignmentOperatorKind OperatorKind { get; }
         public Expression Value { get; }
 

@@ -117,6 +117,30 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
+  <data name="ExpectedMemeberDeclaration" xml:space="preserve">
+    <value>Expected a member declaration.</value>
+  </data>
+  <data name="InvalidExpressionStatement" xml:space="preserve">
+    <value>Only assignment, call, increment and decrement expressions can be used as a statement.</value>
+  </data>
+  <data name="InvalidExpressionTerm" xml:space="preserve">
+    <value>Invalid expression term '{0}'.</value>
+  </data>
+  <data name="MisplacedSemicolon" xml:space="preserve">
+    <value>Unexpected ';'</value>
+  </data>
+  <data name="MissingStatementTerminator" xml:space="preserve">
+    <value>Statement is not properly terminated.</value>
+  </data>
+  <data name="StrayPXmlElement" xml:space="preserve">
+    <value>Stray PXml element.</value>
+  </data>
+  <data name="StrayToken" xml:space="preserve">
+    <value>Stray token '{0}'.</value>
+  </data>
+  <data name="TokenExpected" xml:space="preserve">
+    <value>Expected '{0}', found '{1}'.</value>
+  </data>
   <data name="UnterminatedComment" xml:space="preserve">
     <value>Comment is not properly terminated.</value>
   </data>

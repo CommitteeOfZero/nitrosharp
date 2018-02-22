@@ -6,10 +6,52 @@ namespace NitroSharp.NsScript.Tests
     public class StatementParsingTests
     {
         [Fact]
+        public void ParseFunctionCall_NoParentheses_NoArguments()
+        {
+            string text = "WaitKey;";
+            var stmt = Parsing.ParseStatement(text).Root as ExpressionStatement;
+            var call = stmt.Expression as FunctionCall;
+            Assert.NotNull(call);
+            Assert.Equal(SyntaxNodeKind.FunctionCall, call.Kind);
+            Assert.Equal("WaitKey", call.Target.Name);
+            Assert.Empty(call.Arguments);
+
+            Assert.Equal("WaitKey()", call.ToString());
+        }
+
+        [Fact]
+        public void ParseFunctionCall_NoParentheses_WithArguments()
+        {
+            string text = "WaitKey 2000, true;";
+            var stmt = Parsing.ParseStatement(text).Root as ExpressionStatement;
+            var call = stmt.Expression as FunctionCall;
+            Assert.NotNull(call);
+            Assert.Equal(SyntaxNodeKind.FunctionCall, call.Kind);
+            Assert.Equal("WaitKey", call.Target.Name);
+            Assert.Equal(2, call.Arguments.Length);
+
+            Assert.Equal("WaitKey(2000, true)", call.ToString());
+        }
+
+        [Fact]
+        public void ParseFunctionCall_NameInQuotes_NoParentheses()
+        {
+            string text = "\"WaitKey\";";
+            var stmt = Parsing.ParseStatement(text).Root as ExpressionStatement;
+            var call = stmt.Expression as FunctionCall;
+            Assert.NotNull(call);
+            Assert.Equal(SyntaxNodeKind.FunctionCall, call.Kind);
+            Assert.Equal("WaitKey", call.Target.Name);
+            Assert.Empty(call.Arguments);
+
+            Assert.Equal("WaitKey()", call.ToString());
+        }
+
+        [Fact]
         public void ParseIfStatement()
         {
             string text = "if (#flag == true){}";
-            var ifStatement = Parsing.ParseStatement(text) as IfStatement;
+            var ifStatement = Parsing.ParseStatement(text).Root as IfStatement;
             Assert.NotNull(ifStatement);
             Assert.Equal(SyntaxNodeKind.IfStatement, ifStatement.Kind);
             Assert.NotNull(ifStatement.Condition);
@@ -24,7 +66,7 @@ namespace NitroSharp.NsScript.Tests
         public void ParseIfStatementWithElseClause()
         {
             string text = "if (#flag == true){}else{}";
-            var ifStatement = Parsing.ParseStatement(text) as IfStatement;
+            var ifStatement = Parsing.ParseStatement(text).Root as IfStatement;
             Assert.NotNull(ifStatement);
             Assert.Equal(SyntaxNodeKind.IfStatement, ifStatement.Kind);
             Assert.NotNull(ifStatement.Condition);
@@ -39,7 +81,7 @@ namespace NitroSharp.NsScript.Tests
         public void ParseBreakStatement()
         {
             string text = "break;";
-            var statement = Parsing.ParseStatement(text) as BreakStatement;
+            var statement = Parsing.ParseStatement(text).Root as BreakStatement;
             Assert.NotNull(statement);
             Assert.Equal(SyntaxNodeKind.BreakStatement, statement.Kind);
 
@@ -51,7 +93,7 @@ namespace NitroSharp.NsScript.Tests
         public void ParseWhileStatement()
         {
             string text = "while (true){}";
-            var whileStatement = Parsing.ParseStatement(text) as WhileStatement;
+            var whileStatement = Parsing.ParseStatement(text).Root as WhileStatement;
             Assert.NotNull(whileStatement);
             Assert.Equal(SyntaxNodeKind.WhileStatement, whileStatement.Kind);
             Assert.NotNull(whileStatement.Condition);
@@ -70,7 +112,7 @@ select
 case option:{}
 }";
 
-            var selectStatement = Parsing.ParseStatement(text) as SelectStatement;
+            var selectStatement = Parsing.ParseStatement(text).Root as SelectStatement;
             Assert.NotNull(selectStatement);
             Assert.Equal(SyntaxNodeKind.SelectStatement, selectStatement.Kind);
 
@@ -91,7 +133,7 @@ select
 {
 case goo/foo/bar:{}
 }";
-            var selectStatement = Parsing.ParseStatement(text) as SelectStatement;
+            var selectStatement = Parsing.ParseStatement(text).Root as SelectStatement;
             Assert.NotNull(selectStatement);
             var section = selectStatement.Body.Statements[0] as SelectSection;
             Assert.NotNull(section);
@@ -102,7 +144,7 @@ case goo/foo/bar:{}
         public void ParseReturnStatement()
         {
             string text = "return;";
-            var statement = Parsing.ParseStatement(text) as ReturnStatement;
+            var statement = Parsing.ParseStatement(text).Root as ReturnStatement;
 
             Assert.NotNull(statement);
             Assert.Equal(SyntaxNodeKind.ReturnStatement, statement.Kind);
@@ -112,7 +154,7 @@ case goo/foo/bar:{}
         public void ParseCallChapterStatement()
         {
             string text = "call_chapter nss/foo.nss;";
-            var statement = Parsing.ParseStatement(text) as CallChapterStatement;
+            var statement = Parsing.ParseStatement(text).Root as CallChapterStatement;
 
             Assert.NotNull(statement);
             Assert.Equal(SyntaxNodeKind.CallChapterStatement, statement.Kind);
@@ -123,7 +165,7 @@ case goo/foo/bar:{}
         public void ParseCallSceneStatement()
         {
             string text = "call_scene @->foo;";
-            var statement = Parsing.ParseStatement(text) as CallSceneStatement;
+            var statement = Parsing.ParseStatement(text).Root as CallSceneStatement;
 
             Assert.NotNull(statement);
             Assert.Equal(SyntaxNodeKind.CallSceneStatement, statement.Kind);
@@ -134,7 +176,7 @@ case goo/foo/bar:{}
         public void ParseCallSceneStatementWithFilePath()
         {
             string text = "call_scene nss/foo.nss->bar;";
-            var statement = Parsing.ParseStatement(text) as CallSceneStatement;
+            var statement = Parsing.ParseStatement(text).Root as CallSceneStatement;
 
             Assert.NotNull(statement);
             Assert.Equal(SyntaxNodeKind.CallSceneStatement, statement.Kind);

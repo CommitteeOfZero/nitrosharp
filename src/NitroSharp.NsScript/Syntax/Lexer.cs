@@ -96,7 +96,15 @@ namespace NitroSharp.NsScript.Syntax
                         // Could actually be a quoted keyword (e.g "null")
                         if (SyntaxFacts.TryGetKeywordKind(info.StringValue, out var keywordKind))
                         {
-                            info.Kind = keywordKind;
+                            switch (keywordKind)
+                            {
+                                case SyntaxTokenKind.NullKeyword:
+                                case SyntaxTokenKind.TrueKeyword:
+                                case SyntaxTokenKind.FalseKeyword:
+                                    info.Kind = keywordKind;
+                                    break;
+                            }
+
                         }
                     }
                     else // it's a quoted identifier
@@ -123,7 +131,11 @@ namespace NitroSharp.NsScript.Syntax
                     break;
 
                 case '$':
-                    ScanIdentifier(ref info);
+                    if (!ScanIdentifier(ref info))
+                    {
+                        AdvanceChar();
+                        info.Kind = SyntaxTokenKind.DollarToken;
+                    }
                     break;
 
                 case '#':
@@ -525,7 +537,7 @@ namespace NitroSharp.NsScript.Syntax
             StartScanning();
 
             char c;
-            while ((c = PeekChar()) != '"' && !IsEofOrNewLine(c))
+            while ((c = PeekChar()) != '"' && c != EofCharacter)
             {
                 AdvanceChar();
             }
@@ -598,10 +610,12 @@ namespace NitroSharp.NsScript.Syntax
                 return false;
             }
 
+            int end = Position;
             string stringValue = tokenInfo.Text = GetCurrentLexeme(); // value without the '#'
             // Not expected to throw
             tokenInfo.DoubleValue = int.Parse(stringValue, NumberStyles.HexNumber, CultureInfo.InvariantCulture);
             tokenInfo.IsHexTriplet = true;
+            tokenInfo.Span = new TextSpan(start, end - start);
             tokenInfo.Kind = SyntaxTokenKind.NumericLiteralToken;
             return true;
         }
@@ -622,13 +636,14 @@ namespace NitroSharp.NsScript.Syntax
                         preNestingLevel++;
                         continue;
                     }
-                    else if (AdvanceIfMatches(PRE_EndTag))
+                    else if (Match(PRE_EndTag))
                     {
                         if (preNestingLevel == 0)
                         {
                             break;
                         }
 
+                        AdvanceChar(PRE_EndTag.Length);
                         preNestingLevel--;
                         continue;
                     }
@@ -640,13 +655,14 @@ namespace NitroSharp.NsScript.Syntax
                     newlineSequenceLength++;
                     if (newlineSequenceLength >= 4)
                     {
-                        return;
+                        goto exit;
                     }
                 }
 
                 AdvanceChar();
             }
 
+            exit:
             tokenInfo.Kind = SyntaxTokenKind.PXmlString;
             tokenInfo.Text = GetCurrentLexeme();
         }
@@ -756,9 +772,13 @@ namespace NitroSharp.NsScript.Syntax
                         }
                         break;
 
+                    case '.':
                     case '>':
-                        character = PeekChar(1);
-                        if (SyntaxFacts.IsNewLine(character) || (character == '/' && PeekChar(2) == '/'))
+                        // The following character sequences are treated as "//":
+                        // ".//"
+                        // ">//"
+                        // ".."
+                        if (PeekChar(1) == '/' && PeekChar(2) == '/' || character == '.' && PeekChar(1) == '.')
                         {
                             ScanToEndOfLine();
                         }
@@ -778,12 +798,18 @@ namespace NitroSharp.NsScript.Syntax
         private void ScanMultiLineComment()
         {
             char c;
-            while (!((c = PeekChar()) == '*' && PeekChar(1) == '/'))
+            bool isInsideQuotes = false;
+            while (!((c = PeekChar()) == '*' && PeekChar(1) == '/') || isInsideQuotes)
             {
                 if (c == EofCharacter)
                 {
                     Report(DiagnosticId.UnterminatedComment, CurrentSpanStart);
                     return;
+                }
+
+                if (c == '"')
+                {
+                    isInsideQuotes = !isInsideQuotes;
                 }
 
                 AdvanceChar();
@@ -810,7 +836,7 @@ namespace NitroSharp.NsScript.Syntax
         private void Report(DiagnosticId diagnosticId) => Report(diagnosticId, CurrentLexemeSpan);
         private void Report(DiagnosticId diagnosticId, TextSpan textSpan)
         {
-            _lastSyntaxError = new Diagnostic(textSpan, diagnosticId);
+            _lastSyntaxError = Diagnostic.Create(textSpan, diagnosticId);
         }
     }
 }

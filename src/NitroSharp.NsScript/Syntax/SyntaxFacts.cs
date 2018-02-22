@@ -40,6 +40,7 @@ namespace NitroSharp.NsScript.Syntax
             kind = GetKeywordKind(keyword);
             return kind != SyntaxTokenKind.None;
         }
+        
         public static SyntaxTokenKind GetKeywordKind(string keyword)
         {
             switch (keyword)
@@ -105,6 +106,31 @@ namespace NitroSharp.NsScript.Syntax
                 default:
                     return true;
             }
+        }
+
+        public static bool IsStatementTerminator(SyntaxTokenKind tokenKind)
+        {
+            return tokenKind == SyntaxTokenKind.SemicolonToken || tokenKind == SyntaxTokenKind.ColonToken;
+        }
+
+        public static bool CanStartDeclaration(SyntaxTokenKind tokenKind)
+        {
+            switch (tokenKind)
+            {
+                case SyntaxTokenKind.ChapterKeyword:
+                case SyntaxTokenKind.SceneKeyword:
+                case SyntaxTokenKind.FunctionKeyword:
+                    return true;
+
+                default:
+                    return false;
+            }
+        }
+
+        public static bool IsStatementExpression(Expression expression)
+        {
+            var kind = expression.Kind;
+            return kind == SyntaxNodeKind.AssignmentExpression || kind == SyntaxNodeKind.FunctionCall;
         }
 
         public static bool TryGetUnaryOperatorKind(SyntaxTokenKind operatorTokenKind, out UnaryOperatorKind kind)
@@ -219,6 +245,8 @@ namespace NitroSharp.NsScript.Syntax
         {
             switch (kind)
             {
+                case SyntaxTokenKind.DollarToken:
+                    return "$";
                 case SyntaxTokenKind.HashToken:
                     return "#";
                 case SyntaxTokenKind.ExclamationToken:

@@ -3,94 +3,107 @@ using System.Collections.Generic;
 
 namespace NitroSharp.NsScript.Symbols
 {
-    public sealed class SymbolTableBuilder : SyntaxVisitor<NamedSymbol>
+    public sealed class SymbolTableBuilder
     {
-        private readonly Stack<SymbolTable> _scopes = new Stack<SymbolTable>();
-        private SymbolTable CurrentScope => _scopes.Peek();
+        private readonly Visitor _visitor = new Visitor();
 
-        private SymbolTable BeginScope(bool empty = false)
+        public void Build(SyntaxTree syntaxTree)
         {
-            var scope = !empty ? new SymbolTable() : SymbolTable.Empty;
-            _scopes.Push(scope);
-            return scope;
+            _visitor.SyntaxTree = syntaxTree;
+            _visitor.Visit(syntaxTree.Root);
         }
 
-        private void EndScope() => _scopes.Pop();
-
-        public override NamedSymbol Visit(SyntaxNode node)
+        private sealed class Visitor : SyntaxVisitor<NamedSymbol>
         {
-            var symbol = base.Visit(node);
-            if (symbol != null)
+            private readonly Stack<SymbolTable> _scopes = new Stack<SymbolTable>();
+
+            public SyntaxTree SyntaxTree { get; set; }
+
+            private SymbolTable CurrentScope => _scopes.Peek();
+            private SymbolTable BeginScope(bool empty = false)
             {
-                if (node.Kind != SyntaxNodeKind.SourceFile)
-                {
-                    CurrentScope.Declare(symbol);
-                }
+                var scope = !empty ? new SymbolTable() : SymbolTable.Empty;
+                _scopes.Push(scope);
+                return scope;
             }
 
-            node.Symbol = symbol;
-            return symbol;
-        }
+            private void EndScope() => _scopes.Pop();
 
-        public override NamedSymbol VisitSourceFile(SourceFile sourceFile)
-        {
-            var members = BeginScope();
-            VisitArray(sourceFile.Members);
-            EndScope();
-
-            return new SourceFileSymbol(sourceFile.FileName, sourceFile, members);
-        }
-
-        public override NamedSymbol VisitChapter(Chapter chapter)
-        {
-            return new ChapterSymbol(chapter.Identifier.Name, chapter);
-        }
-
-        public override NamedSymbol VisitScene(Scene scene)
-        {
-            return new SceneSymbol(scene.Identifier.Name, scene);
-        }
-
-        public override NamedSymbol VisitFunction(Function function)
-        {
-            var locals = BeginScope(empty: false);
-            VisitArray(function.Parameters);
-            Visit(function.Body);
-            EndScope();
-
-            return new FunctionSymbol(function.Identifier.Name, function, locals);
-        }
-
-        public override NamedSymbol VisitBlock(Block block)
-        {
-            foreach (var stmt in block.Statements)
+            public override NamedSymbol Visit(SyntaxNode node)
             {
-                if (stmt is Declaration)
+                var symbol = base.Visit(node);
+                if (symbol != null)
                 {
-                    Visit(stmt);
-                }
-                // The body of an if statement can contain dialogue blocks.
-                else if (stmt is IfStatement ifStatement)
-                {
-                    Visit(ifStatement.IfTrueStatement);
-                    if (ifStatement.IfFalseStatement != null)
+                    if (node.Kind != SyntaxNodeKind.SourceFile)
                     {
-                        Visit(ifStatement.IfFalseStatement);
+                        CurrentScope.Declare(symbol);
                     }
                 }
+
+                node.Symbol = symbol;
+                return symbol;
             }
 
-            return null;
-        }
+            public override NamedSymbol VisitSourceFile(SourceFile sourceFile)
+            {
+                var members = BeginScope();
+                VisitArray(sourceFile.Members);
+                EndScope();
 
-        public override NamedSymbol VisitParameter(Parameter parameter)
-        {
-            return new ParameterSymbol(parameter.Identifier.Name, parameter);
-        }
+                return new SourceFileSymbol(SyntaxTree.SourceText.FilePath, sourceFile, members);
+            }
 
-        public override NamedSymbol VisitDialogueBlock(DialogueBlock dialogueBlock)
-        {
-            return new DialogueBlockSymbol(dialogueBlock.Identifier.Name, dialogueBlock);
+            public override NamedSymbol VisitChapter(Chapter chapter)
+            {
+                return new ChapterSymbol(chapter.Identifier.Name, chapter);
+            }
+
+            public override NamedSymbol VisitScene(Scene scene)
+            {
+                return new SceneSymbol(scene.Identifier.Name, scene);
+            }
+
+            public override NamedSymbol VisitFunction(Function function)
+            {
+                var locals = BeginScope(empty: false);
+                VisitArray(function.Parameters);
+                Visit(function.Body);
+                EndScope();
+
+                return new FunctionSymbol(function.Identifier.Name, function, locals);
+            }
+
+            public override NamedSymbol VisitBlock(Block block)
+            {
+                foreach (var stmt in block.Statements)
+                {
+                    if (stmt is Declaration)
+                    {
+                        Visit(stmt);
+                    }
+                    // The body of an if statement can contain dialogue blocks.
+                    else if (stmt is IfStatement ifStatement)
+                    {
+                        Visit(ifStatement.IfTrueStatement);
+                        if (ifStatement.IfFalseStatement != null)
+                        {
+                            Visit(ifStatement.IfFalseStatement);
+                        }
+                    }
+                }
+
+                return null;
+            }
+
+            public override NamedSymbol VisitParameter(Parameter parameter)
+            {
+                return new ParameterSymbol(parameter.Identifier.Name, parameter);
+            }
+
+            public override NamedSymbol VisitDialogueBlock(DialogueBlock dialogueBlock)
+            {
+                return new DialogueBlockSymbol(dialogueBlock.Identifier.Name, dialogueBlock);
+            }
         }
     }
 }

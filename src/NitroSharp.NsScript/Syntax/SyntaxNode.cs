@@ -1,7 +1,5 @@
 ﻿using NitroSharp.NsScript.Symbols;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 
 namespace NitroSharp.NsScript.Syntax
 {
@@ -16,7 +14,6 @@ namespace NitroSharp.NsScript.Syntax
 
         public abstract void Accept(SyntaxVisitor visitor);
         public abstract TResult Accept<TResult>(SyntaxVisitor<TResult> visitor);
-        IEnumerable<SyntaxNode> Descendants() { return Enumerable.Empty<SyntaxNode>(); }
 
         public override string ToString()
         {

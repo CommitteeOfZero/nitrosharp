@@ -17,8 +17,25 @@ namespace NitroSharp.NsScript
                 case DiagnosticId.UnterminatedDialogueBlockIdentifier:
                     return Resources.UnterminatedDialogueBlockIdentifier;
 
+                case DiagnosticId.TokenExpected:
+                    return Resources.TokenExpected;
+                case DiagnosticId.MissingStatementTerminator:
+                    return Resources.MissingStatementTerminator;
+                case DiagnosticId.StrayToken:
+                    return Resources.StrayToken;
+                case DiagnosticId.MisplacedSemicolon:
+                    return Resources.MisplacedSemicolon;
+                case DiagnosticId.ExpectedMemberDeclaration:
+                    return Resources.ExpectedMemeberDeclaration;
+                case DiagnosticId.InvalidExpressionStatement:
+                    return Resources.InvalidExpressionStatement;
+                case DiagnosticId.InvalidExpressionTerm:
+                    return Resources.InvalidExpressionTerm;
+                case DiagnosticId.StrayPXmlElement:
+                    return Resources.StrayPXmlElement;
+
                 default:
-                    return string.Empty;
+                    throw ExceptionUtils.UnexpectedValue(nameof(id));
             }
         }
 
@@ -31,10 +48,22 @@ namespace NitroSharp.NsScript
                 case DiagnosticId.UnterminatedComment:
                 case DiagnosticId.UnterminatedDialogueBlockStartTag:
                 case DiagnosticId.UnterminatedDialogueBlockIdentifier:
+                case DiagnosticId.TokenExpected:
+                case DiagnosticId.InvalidExpressionStatement:
+                case DiagnosticId.InvalidExpressionTerm:
+                case DiagnosticId.ExpectedMemberDeclaration:
                     return DiagnosticSeverity.Error;
 
-                default:
+                case DiagnosticId.MisplacedSemicolon:
+                case DiagnosticId.StrayPXmlElement:
+                case DiagnosticId.StrayToken:
                     return DiagnosticSeverity.Warning;
+
+                case DiagnosticId.MissingStatementTerminator:
+                    return DiagnosticSeverity.Info;
+
+                default:
+                    throw ExceptionUtils.UnexpectedValue(nameof(diagnosticId));
             }
         }
     }

@@ -9,6 +9,13 @@
         UnterminatedDialogueBlockIdentifier,
         NumberTooLarge,
 
-        TokenExpected
+        TokenExpected,
+        StrayToken,
+        MisplacedSemicolon,
+        ExpectedMemberDeclaration,
+        MissingStatementTerminator,
+        InvalidExpressionTerm,
+        InvalidExpressionStatement,
+        StrayPXmlElement
     }
 }

@@ -4,6 +4,7 @@
     {
         None,
         BadToken,
+        MissingToken,
 
         IncludeDirective,
 
@@ -30,6 +31,7 @@
         ExclamationToken,
         AmpersandToken,
         AtToken,
+        DollarToken,
         HashToken,
         PercentToken,
         ArrowToken,

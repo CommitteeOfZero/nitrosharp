@@ -9,11 +9,10 @@ namespace NitroSharp.NsScript.Tests
         public void ParseFunctionCall()
         {
             string text = "WaitKey(10000)";
-            var call = Parsing.ParseExpression(text) as FunctionCall;
+            var call = Parsing.ParseExpression(text).Root as FunctionCall;
             Assert.NotNull(call);
             Assert.Equal(SyntaxNodeKind.FunctionCall, call.Kind);
             Assert.Equal("WaitKey", call.Target.Name);
-            Assert.Equal(SigilKind.None, call.Target.Sigil);
             Assert.Single(call.Arguments);
 
             Assert.Equal(text, call.ToString());
@@ -23,7 +22,7 @@ namespace NitroSharp.NsScript.Tests
         public void ParseDeltaExpression()
         {
             string text = "@100";
-            var deltaExpr = Parsing.ParseExpression(text) as DeltaExpression;
+            var deltaExpr = Parsing.ParseExpression(text).Root as DeltaExpression;
 
             Assert.NotNull(deltaExpr);
             Assert.Equal(SyntaxNodeKind.DeltaExpression, deltaExpr.Kind);
@@ -35,7 +34,7 @@ namespace NitroSharp.NsScript.Tests
         public void ParseNumericLiteralExpression()
         {
             string literal = "42";
-            var expr = Parsing.ParseExpression(literal) as Literal;
+            var expr = Parsing.ParseExpression(literal).Root as Literal;
 
             Assert.NotNull(expr);
             Assert.Equal(SyntaxNodeKind.Literal, expr.Kind);
@@ -48,7 +47,7 @@ namespace NitroSharp.NsScript.Tests
         public void ParseStringLiteralExpression()
         {
             string literal = "\"stuff\"";
-            var expr = Parsing.ParseExpression(literal) as Literal;
+            var expr = Parsing.ParseExpression(literal).Root as Literal;
 
             Assert.NotNull(expr);
             Assert.Equal(SyntaxNodeKind.Literal, expr.Kind);
@@ -60,7 +59,7 @@ namespace NitroSharp.NsScript.Tests
         public void ParseIdentifierWithoutSigil()
         {
             string text = "foo";
-            var identifier = Parsing.ParseExpression(text) as Identifier;
+            var identifier = Parsing.ParseExpression(text).Root as Identifier;
 
             Assert.NotNull(identifier);
             Assert.Equal(text, identifier.Name);
@@ -72,7 +71,7 @@ namespace NitroSharp.NsScript.Tests
         public void ParseIdentifierWithDollarSigil()
         {
             string text = "$foo";
-            var identifier = Parsing.ParseExpression(text) as Identifier;
+            var identifier = Parsing.ParseExpression(text).Root as Identifier;
 
             Assert.NotNull(identifier);
             Assert.Equal("foo", identifier.Name);
@@ -86,7 +85,7 @@ namespace NitroSharp.NsScript.Tests
         public void ParseIdentifierWithHashSigil()
         {
             string text = "#foo";
-            var identifier = Parsing.ParseExpression(text) as Identifier;
+            var identifier = Parsing.ParseExpression(text).Root as Identifier;
 
             Assert.NotNull(identifier);
             Assert.Equal("foo", identifier.Name);
@@ -104,7 +103,8 @@ namespace NitroSharp.NsScript.Tests
             // every instance of "foo" in this scope is treated as an identifier.
 
             string text = "function Test(\"foo\") { SomeMethod(\"foo\"); }";
-            var root = Parsing.ParseScript(text);
+            var root = Parsing.ParseText(text).Root as SourceFile;
+            Assert.NotNull(root);
             var function = (Function)root.Members[0];
 
             var invocation = (function.Body.Statements[0] as ExpressionStatement)?.Expression as FunctionCall;
@@ -120,7 +120,7 @@ namespace NitroSharp.NsScript.Tests
         public void ParseQuotedIdentifierWithSigil()
         {
             string text = "\"$foo\"";
-            var identifier = Parsing.ParseExpression(text) as Identifier;
+            var identifier = Parsing.ParseExpression(text).Root as Identifier;
 
             Assert.NotNull(identifier);
             Assert.Equal("foo", identifier.Name);
@@ -134,7 +134,7 @@ namespace NitroSharp.NsScript.Tests
         public void ParseQuotedUppercaseNullKeyword()
         {
             string text = "\"NULL\"";
-            var expr = Parsing.ParseExpression(text) as Literal;
+            var expr = Parsing.ParseExpression(text).Root as Literal;
 
             Assert.NotNull(expr);
             Assert.Equal("null", expr.StringValue);
@@ -180,7 +180,7 @@ namespace NitroSharp.NsScript.Tests
         public void ParseIncrement()
         {
             string text = "$a++";
-            var expr = Parsing.ParseExpression(text) as AssignmentExpression;
+            var expr = Parsing.ParseExpression(text).Root as AssignmentExpression;
             Assert.NotNull(expr);
             Assert.Equal(AssignmentOperatorKind.Increment, expr.OperatorKind);
             Assert.Equal(expr.Target, expr.Value);
@@ -191,7 +191,7 @@ namespace NitroSharp.NsScript.Tests
         public void ParseDecrement()
         {
             string text = "$a--";
-            var expr = Parsing.ParseExpression(text) as AssignmentExpression;
+            var expr = Parsing.ParseExpression(text).Root as AssignmentExpression;
             Assert.NotNull(expr);
             Assert.Equal(AssignmentOperatorKind.Decrement, expr.OperatorKind);
             Assert.Equal(expr.Target, expr.Value);
@@ -201,7 +201,7 @@ namespace NitroSharp.NsScript.Tests
         private void TestUnary(UnaryOperatorKind kind)
         {
             string text = OperatorInfo.GetText(kind) + "$a";
-            var expr = Parsing.ParseExpression(text) as UnaryExpression;
+            var expr = Parsing.ParseExpression(text).Root as UnaryExpression;
 
             Assert.NotNull(expr);
             Assert.Equal(SyntaxNodeKind.UnaryExpression, expr.Kind);
@@ -217,7 +217,7 @@ namespace NitroSharp.NsScript.Tests
         private void TestBinary(BinaryOperatorKind kind)
         {
             string text = "$a " + OperatorInfo.GetText(kind) + " $b";
-            var expr = Parsing.ParseExpression(text) as BinaryExpression;
+            var expr = Parsing.ParseExpression(text).Root as BinaryExpression;
 
             Assert.NotNull(expr);
             Assert.Equal(SyntaxNodeKind.BinaryExpression, expr.Kind);
@@ -237,13 +237,13 @@ namespace NitroSharp.NsScript.Tests
         private void TestAssignment(AssignmentOperatorKind kind)
         {
             string text = "$a " + OperatorInfo.GetText(kind) + " 42";
-            var expr = Parsing.ParseExpression(text) as AssignmentExpression;
+            var expr = Parsing.ParseExpression(text).Root as AssignmentExpression;
 
             Assert.NotNull(expr);
             Assert.Equal(SyntaxNodeKind.AssignmentExpression, expr.Kind);
             Assert.Equal(kind, expr.OperatorKind);
 
-            var target = expr.Target;
+            var target = expr.Target as Identifier;
             Assert.NotNull(target);
             Assert.Equal("a", target.Name);
 

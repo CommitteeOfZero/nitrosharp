@@ -62,6 +62,78 @@ namespace NitroSharp.NsScript {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Expected a member declaration..
+        /// </summary>
+        internal static string ExpectedMemeberDeclaration {
+            get {
+                return ResourceManager.GetString("ExpectedMemeberDeclaration", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Only assignment, call, increment and decrement expressions can be used as a statement..
+        /// </summary>
+        internal static string InvalidExpressionStatement {
+            get {
+                return ResourceManager.GetString("InvalidExpressionStatement", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Invalid expression term &apos;{0}&apos;..
+        /// </summary>
+        internal static string InvalidExpressionTerm {
+            get {
+                return ResourceManager.GetString("InvalidExpressionTerm", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Unexpected &apos;;&apos;.
+        /// </summary>
+        internal static string MisplacedSemicolon {
+            get {
+                return ResourceManager.GetString("MisplacedSemicolon", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Statement is not properly terminated..
+        /// </summary>
+        internal static string MissingStatementTerminator {
+            get {
+                return ResourceManager.GetString("MissingStatementTerminator", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Stray PXml element..
+        /// </summary>
+        internal static string StrayPXmlElement {
+            get {
+                return ResourceManager.GetString("StrayPXmlElement", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Stray token &apos;{0}&apos;..
+        /// </summary>
+        internal static string StrayToken {
+            get {
+                return ResourceManager.GetString("StrayToken", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Expected &apos;{0}&apos;, found &apos;{1}&apos;..
+        /// </summary>
+        internal static string TokenExpected {
+            get {
+                return ResourceManager.GetString("TokenExpected", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Comment is not properly terminated..
         /// </summary>
         internal static string UnterminatedComment {

@@ -5,14 +5,12 @@ namespace NitroSharp.NsScript.Syntax
 {
     public sealed class SourceFile : SyntaxNode
     {
-        internal SourceFile(string fileName, ImmutableArray<MemberDeclaration> members, ImmutableArray<SourceFileReference> fileReferences)
+        internal SourceFile(ImmutableArray<MemberDeclaration> members, ImmutableArray<SourceFileReference> fileReferences)
         {
-            FileName = fileName;
             Members = members;
             FileReferences = fileReferences;
         }
 
-        public string FileName { get; }
         public ImmutableArray<MemberDeclaration> Members { get; }
 
         /// <summary>
@@ -20,10 +18,9 @@ namespace NitroSharp.NsScript.Syntax
         /// </summary>
         public ImmutableArray<SourceFileReference> FileReferences { get; }
 
-        public bool IsBound { get; internal set; }
-
         public override SyntaxNodeKind Kind => SyntaxNodeKind.SourceFile;
         public SourceFileSymbol SourceFileSymbol => (SourceFileSymbol)Symbol;
+        public bool IsBound => Symbol != null;
 
         public override void Accept(SyntaxVisitor visitor)
         {

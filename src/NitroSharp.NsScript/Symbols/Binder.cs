@@ -14,7 +14,6 @@ namespace NitroSharp.NsScript.Symbols
         {
             _mergedSymbol = context;
             Visit(sourceFile);
-            sourceFile.IsBound = true;
         }
 
         public override void VisitSourceFile(SourceFile sourceFile)

@@ -4,7 +4,7 @@ namespace NitroSharp.NsScript.Symbols
 {
     public class SourceFileSymbol : NamedSymbol
     {
-        internal SourceFileSymbol(string name, SourceFile rootNode, SymbolTable members) : base(name)
+        internal SourceFileSymbol(string filePath, SourceFile rootNode, SymbolTable members) : base(filePath)
         {
             Declaration = rootNode;
             Members = members;

@@ -9,7 +9,7 @@ using System.Text;
 namespace NitroSharp.NsScript
 {
     /// <summary>
-    /// The public API for parsing NSS and PXml.
+    /// The public API for lexing and parsing source code.
     /// </summary>
     public static class Parsing
     {
@@ -34,56 +34,40 @@ namespace NitroSharp.NsScript
             }
         }
 
-        public static SourceFile ParseScript(string text) => ParseScript(SourceText.From(text));
-        public static SourceFile ParseScript(SourceText text)
+        public static SyntaxTree ParseText(string text) => ParseText(SourceText.From(text));
+        public static SyntaxTree ParseText(SourceText sourceText)
         {
-            if (text == null)
+            if (sourceText == null)
             {
-                throw new ArgumentNullException(nameof(text));
+                throw new ArgumentNullException(nameof(sourceText));
             }
 
-            var parser = new Parser(new Lexer(text));
-            return parser.ParseScript();
-        }
-
-        public static SourceFile ParseScript(Stream stream, string fileName, Encoding encoding = null)
-        {
-            var sourceText = SourceText.From(stream, fileName, encoding);
             var parser = new Parser(new Lexer(sourceText));
-            return parser.ParseScript();
+            var root = parser.ParseSourceFile();
+            return SyntaxTree.Create(sourceText, root, parser.DiagnosticBuilder);
         }
 
-        public static Expression ParseExpression(string expression)
+        public static SyntaxTree ParseText(Stream stream, string filePath, Encoding encoding = null)
         {
-            if (expression == null)
-            {
-                throw new ArgumentNullException(nameof(expression));
-            }
-
-            var parser = new Parser(new Lexer(SourceText.From(expression)));
-            return parser.ParseExpression();
+            var sourceText = SourceText.From(stream, filePath, encoding);
+            return ParseText(sourceText);
         }
 
-        public static Statement ParseStatement(string statement)
-        {
-            if (statement == null)
-            {
-                throw new ArgumentNullException(nameof(statement));
-            }
+        public static SyntaxTree ParseExpression(string expression) => ParseString(expression, p => p.ParseExpression());
+        public static SyntaxTree ParseStatement(string statement) => ParseString(statement, p => p.ParseStatement());
+        public static SyntaxTree ParseMemberDeclaration(string text) => ParseString(text, p => p.ParseMemberDeclaration());
 
-            var parser = new Parser(new Lexer(SourceText.From(statement)));
-            return parser.ParseStatement();
-        }
-
-        public static MemberDeclaration ParseMemberDeclaration(string text)
+        private static SyntaxTree ParseString(string text, Func<Parser, SyntaxNode> parseFunc)
         {
             if (text == null)
             {
                 throw new ArgumentNullException(nameof(text));
             }
 
-            var parser = new Parser(new Lexer(SourceText.From(text)));
-            return parser.ParseMemberDeclaration();
+            var sourceText = SourceText.From(text);
+            var parser = new Parser(new Lexer(sourceText));
+            var root = parseFunc(parser);
+            return SyntaxTree.Create(sourceText, root, parser.DiagnosticBuilder);
         }
 
         public static PXmlContent ParsePXmlString(string text)

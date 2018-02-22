@@ -15,7 +15,7 @@ namespace NitroSharp.NsScript
     public class SourceFileManager
     {
         private readonly Func<SourceFileReference, Stream> _locateFunc;
-        private readonly Dictionary<SourceFileReference, SourceFile> _parsedFiles;
+        private readonly Dictionary<SourceFileReference, SyntaxTree> _syntaxTrees;
         private readonly Dictionary<SourceFileReference, MergedSourceFileSymbol> _mergedSourceFileSymbols;
 
         private readonly SymbolTableBuilder _symbolTableBuilder;
@@ -24,7 +24,7 @@ namespace NitroSharp.NsScript
         public SourceFileManager(Func<SourceFileReference, Stream> sourceFileLocator)
         {
             _locateFunc = sourceFileLocator;
-            _parsedFiles = new Dictionary<SourceFileReference, SourceFile>();
+            _syntaxTrees = new Dictionary<SourceFileReference, SyntaxTree>();
             _mergedSourceFileSymbols = new Dictionary<SourceFileReference, MergedSourceFileSymbol>();
 
             _symbolTableBuilder = new SymbolTableBuilder();
@@ -46,7 +46,8 @@ namespace NitroSharp.NsScript
         private MergedSourceFileSymbol Load(SourceFileReference sourceFileReference)
         {
             var recursiveReferences = new HashSet<SourceFileReference>();
-            var sourceFile = Parse(sourceFileReference, recursiveReferences);
+            var syntaxTree = Parse(sourceFileReference, recursiveReferences);
+            var sourceFile = (SourceFile)syntaxTree.Root;
 
             var mergedSymbol = CreateMergedSourceFileSymbol(sourceFile, recursiveReferences);
             _binder.Bind(sourceFile, mergedSymbol);
@@ -63,16 +64,17 @@ namespace NitroSharp.NsScript
             return mergedSymbol;
         }
 
-        private SourceFile Parse(SourceFileReference sourceFileReference, ISet<SourceFileReference> recursiveReferences)
+        private SyntaxTree Parse(SourceFileReference sourceFileReference, ISet<SourceFileReference> recursiveReferences)
         {
             var text = SourceText.From(_locateFunc(sourceFileReference), sourceFileReference.FileName);
-            var sourceFile = Parsing.ParseScript(text);
-            _parsedFiles[sourceFileReference] = sourceFile;
+            var syntaxTree = Parsing.ParseText(text);
+            _syntaxTrees[sourceFileReference] = syntaxTree;
 
-            foreach (var reference in sourceFile.FileReferences)
+            var root = (SourceFile)syntaxTree.Root;
+            foreach (var reference in root.FileReferences)
             {
                 recursiveReferences.Add(reference);
-                if (!_parsedFiles.ContainsKey(reference))
+                if (!_syntaxTrees.ContainsKey(reference))
                 {
                     try
                     {
@@ -85,14 +87,14 @@ namespace NitroSharp.NsScript
                 }
             }
 
-            _symbolTableBuilder.Visit(sourceFile);
-            return sourceFile;
+            _symbolTableBuilder.Build(syntaxTree);
+            return syntaxTree;
         }
 
         private MergedSourceFileSymbol CreateMergedSourceFileSymbol(SourceFile sourceFile, ISet<SourceFileReference> references)
         {
-            var deps = references.Select(x => _parsedFiles[x].SourceFileSymbol).ToImmutableArray();
-            return new MergedSourceFileSymbol(sourceFile.SourceFileSymbol, deps);
+            var dependencies = references.Select(x => _syntaxTrees[x].Root.Symbol as SourceFileSymbol).ToImmutableArray();
+            return new MergedSourceFileSymbol(sourceFile.SourceFileSymbol, dependencies);
         }
     }
 }

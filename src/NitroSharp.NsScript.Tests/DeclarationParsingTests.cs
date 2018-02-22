@@ -9,7 +9,7 @@ namespace NitroSharp.NsScript.Tests
         public void ParseChapterDeclaration()
         {
             string text = "chapter main{}";
-            var chapter = Parsing.ParseMemberDeclaration(text) as Chapter;
+            var chapter = Parsing.ParseMemberDeclaration(text).Root as Chapter;
 
             Assert.NotNull(chapter);
             Assert.Equal(SyntaxNodeKind.Chapter, chapter.Kind);
@@ -23,7 +23,7 @@ namespace NitroSharp.NsScript.Tests
         public void ParseSceneDeclaration()
         {
             string text = "scene TestScene{}";
-            var scene = Parsing.ParseMemberDeclaration(text) as Scene;
+            var scene = Parsing.ParseMemberDeclaration(text).Root as Scene;
 
             Assert.NotNull(scene);
             Assert.Equal(SyntaxNodeKind.Scene, scene.Kind);
@@ -34,7 +34,7 @@ namespace NitroSharp.NsScript.Tests
         public void ParseFunctionDeclaration()
         {
             string text = "function Test(){}";
-            var function = Parsing.ParseMemberDeclaration(text) as Function;
+            var function = Parsing.ParseMemberDeclaration(text).Root as Function;
 
             Assert.NotNull(function);
             Assert.Equal(SyntaxNodeKind.Function, function.Kind);
@@ -49,7 +49,7 @@ namespace NitroSharp.NsScript.Tests
         public void ParseFunctionDeclarationWithIntParameter()
         {
             string text = "function Test(intParam){}";
-            var function = Parsing.ParseMemberDeclaration(text) as Function;
+            var function = Parsing.ParseMemberDeclaration(text).Root as Function;
 
             Assert.NotNull(function);
             Assert.Single(function.Parameters);
@@ -66,7 +66,7 @@ namespace NitroSharp.NsScript.Tests
         public void ParseFunctionDeclarationWithStringParameter()
         {
             string text = "function Test(\"stringParam\"){}";
-            var function = Parsing.ParseMemberDeclaration(text) as Function;
+            var function = Parsing.ParseMemberDeclaration(text).Root as Function;
 
             Assert.NotNull(function);
             Assert.Single(function.Parameters);
@@ -88,7 +88,7 @@ namespace NitroSharp.NsScript.Tests
         private void TestFunctionWithStringParameterWithSigilImpl(string fullName, string simplifiedName, SigilKind sigil)
         {
             string text = $"function Test({fullName}){{}}";
-            var function = Parsing.ParseMemberDeclaration(text) as Function;
+            var function = Parsing.ParseMemberDeclaration(text).Root as Function;
 
             Assert.NotNull(function);
             Assert.Single(function.Parameters);

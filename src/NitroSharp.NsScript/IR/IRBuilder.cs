@@ -152,16 +152,19 @@ namespace NitroSharp.NsScript.IR
             public override void VisitAssignmentExpression(AssignmentExpression expression)
             {
                 Visit(expression.Value);
-                var target = expression.Target;
-                switch (target.Symbol.Kind)
+                var target = expression.Target as Identifier;
+                if (target != null)
                 {
-                    case SymbolKind.GlobalVariable:
-                        _instructions.Add(Instructions.AssignGlobal(target.Name, expression.OperatorKind));
-                        break;
-                        
-                    case SymbolKind.Parameter:
-                        _instructions.Add(Instructions.AssignParameter(target.Name, expression.OperatorKind));
-                        break;
+                    switch (target.Symbol.Kind)
+                    {
+                        case SymbolKind.GlobalVariable:
+                            _instructions.Add(Instructions.AssignGlobal(target.Name, expression.OperatorKind));
+                            break;
+
+                        case SymbolKind.Parameter:
+                            _instructions.Add(Instructions.AssignParameter(target.Name, expression.OperatorKind));
+                            break;
+                    }
                 }
             }
 
