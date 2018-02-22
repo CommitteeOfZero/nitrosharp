@@ -20,7 +20,7 @@ namespace NitroSharp.NsScript.Syntax
 
         public override SyntaxNodeKind Kind => SyntaxNodeKind.SourceFile;
         public SourceFileSymbol SourceFileSymbol => (SourceFileSymbol)Symbol;
-        public bool IsBound => Symbol != null;
+        public bool IsBound { get; internal set; }
 
         public override void Accept(SyntaxVisitor visitor)
         {

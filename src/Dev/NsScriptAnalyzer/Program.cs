@@ -76,10 +76,6 @@ namespace NsScriptAnalyzer
             var line = sourceText.Lines[lineNumber];
 
             string message = diagnostic.Message;
-            if (message.Length == 0)
-            {
-                Debugger.Break();
-            }
             var fullMessage = new StringBuilder(message.Substring(0, Math.Max(message.Length - 1, 0)));
             fullMessage.Append(" at line ");
             fullMessage.Append(lineNumber);
