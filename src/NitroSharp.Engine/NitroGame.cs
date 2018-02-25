@@ -2,7 +2,6 @@
 using NitroSharp.Foundation.Audio;
 using NitroSharp.Foundation.Content;
 using NitroSharp.Graphics;
-using NitroSharp.NsScript.Execution;
 using System;
 using NitroSharp.NsScript;
 using System.Collections.Generic;
@@ -17,6 +16,8 @@ using System.Diagnostics;
 using System.Text;
 using Serilog;
 using Serilog.Events;
+using NitroSharp.NsScript.Syntax;
+using NitroSharp.NsScript.Execution;
 
 namespace NitroSharp
 {
@@ -33,7 +34,6 @@ namespace NitroSharp
         private NsScriptInterpreter _nssInterpreter;
         private NitroCore _nitroCore;
         private Task _interpreterProc;
-        private readonly SemaphoreSlim _calculateNextStateSignal = new SemaphoreSlim(initialCount: 1, maxCount: 1);
         private volatile bool _nextStateReady = false;
 
         private ILogger _log;
@@ -94,16 +94,16 @@ namespace NitroSharp
         private void LoadStartupScript()
         {
             _nitroCore = new NitroCore(this, Entities);
-            _nssInterpreter = new NsScriptInterpreter(_nitroCore, LocateScript);
-            _nssInterpreter.BuiltInCallScheduled += OnBuiltInCallDispatched;
-            _nssInterpreter.EnteredFunction += OnEnteredFunction;
+            _nssInterpreter = new NsScriptInterpreter(LocateScript, _nitroCore);
+            //_nssInterpreter.BuiltInCallScheduled += OnBuiltInCallDispatched;
+            //_nssInterpreter.EnteredFunction += OnEnteredFunction;
 
-            _nssInterpreter.CreateThread("__MAIN", _configuration.StartupScript);
+            _nssInterpreter.CreateThread("__MAIN", _configuration.StartupScript, "main");
         }
 
-        private Stream LocateScript(string path)
+        private Stream LocateScript(SourceFileReference fileRef)
         {
-            return File.OpenRead(Path.Combine(_nssFolder, path.Replace("nss/", string.Empty)));
+            return File.OpenRead(Path.Combine(_nssFolder, fileRef.FilePath.Replace("nss/", string.Empty)));
         }
 
         public override async Task OnInitialized()
@@ -115,7 +115,7 @@ namespace NitroSharp
             Systems.ProcessEntityUpdates();
             Systems.Update(0);
 
-            _interpreterProc = Task.Run(() => RunInterpreterLoop());
+            _interpreterProc = Task.Factory.StartNew(() => RunInterpreterLoop(), TaskCreationOptions.LongRunning);
         }
 
         public override void Update(float deltaMilliseconds)
@@ -156,7 +156,6 @@ namespace NitroSharp
                 }
 
                 _nextStateReady = false;
-                _calculateNextStateSignal.Release();
 
                 elapsed = _perfCounter.Elapsed.TotalMilliseconds;
                 _perfStats.ProcessingEntityUpdates = elapsed - _perfStats.Total;
@@ -193,12 +192,16 @@ namespace NitroSharp
             }
         }
 
-        private async Task RunInterpreterLoop()
+        private void RunInterpreterLoop()
         {
             while (Running)
             {
-                await _calculateNextStateSignal.WaitAsync(ShutdownCancellation.Token);
-                _nssInterpreter.Run(TimeSpan.MaxValue);
+                while (_nextStateReady)
+                {
+                    Thread.Sleep(5);
+                }
+
+                _nssInterpreter.Run(CancellationToken.None);
                 _nextStateReady = true;
             }
         }
@@ -223,16 +226,16 @@ namespace NitroSharp
 
         private void OnEnteredFunction(object sender, Function function)
         {
-            _log.Debug("Entered function " + function.Name.SimplifiedName);
+            _log.Debug("Entered function " + function.Identifier.Name);
         }
 
-        private void OnBuiltInCallDispatched(object sender, BuiltInFunctionCall call)
-        {
-            if (call.CallingThread == _nitroCore.MainThread)
-            {
-                _log.Debug("Built-in call: " + call.ToString());
-            }
-        }
+        //private void OnBuiltInCallDispatched(object sender, BuiltInFunctionCall call)
+        //{
+        //    if (call.CallingThread == _nitroCore.MainThread)
+        //    {
+        //        _log.Debug("Built-in call: " + call.ToString());
+        //    }
+        //}
 
         private void LogPerfStats()
         {

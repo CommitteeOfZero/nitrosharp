@@ -1,0 +1,8 @@
+﻿{
+  "profiles": {
+    "NsScriptAnalyzer": {
+      "commandName": "Project",
+      "commandLineArgs": "\"S:\\ChaosContent\\Noah\\\\nss\\*.nss\""
+    }
+  }
+}

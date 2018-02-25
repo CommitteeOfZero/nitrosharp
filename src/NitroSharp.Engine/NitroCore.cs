@@ -1,14 +1,14 @@
 ﻿using System;
-using NitroSharp.NsScript.Execution;
 using NitroSharp.NsScript;
 using NitroSharp.Foundation.Content;
 using NitroSharp.Foundation;
 using NitroSharp.Graphics;
 using System.Linq;
+using NitroSharp.NsScript.Execution;
 
 namespace NitroSharp
 {
-    public sealed partial class NitroCore : BuiltInFunctionsBase
+    public sealed partial class NitroCore : EngineImplementation
     {
         private ContentManager _content;
         private readonly EntityManager _entities;
@@ -41,32 +41,32 @@ namespace NitroSharp
                 {
                     _entities.Remove(entity);
                     var attachedThread = Interpreter.Threads.FirstOrDefault(x => entityName.StartsWith(x.Name));
-                    attachedThread?.Terminate();
+                    if (attachedThread != null) Interpreter.TerminateThread(attachedThread);
                 }
             }
         }
 
         public override void Delay(TimeSpan delay)
         {
-            CurrentThread.Suspend(delay);
+            Interpreter.SuspendThread(CurrentThread, delay);
         }
 
         public override void WaitForInput()
         {
-            CurrentThread.Suspend();
+            Interpreter.SuspendThread(CurrentThread);
             WaitingForInput = true;
         }
 
         public override void WaitForInput(TimeSpan timeout)
         {
-            CurrentThread.Suspend(timeout);
+            Interpreter.SuspendThread(CurrentThread, timeout);
             WaitingForInput = true;
         }
 
         public override void CreateThread(string name, string target)
         {
             bool startImmediately = _entities.Query(name + "*").Any();
-            Interpreter.CreateThread(name, CurrentThread.CurrentModule, target, startImmediately);
+            Interpreter.CreateThread(name, target, startImmediately);
             _entities.Create(name, replace: true);
         }
 
@@ -109,14 +109,14 @@ namespace NitroSharp
                 case NsEntityAction.Start:
                     if (Interpreter.TryGetThread(entity.Name, out var thread))
                     {
-                        thread.Resume();
+                        Interpreter.ResumeThread(thread);
                     }
                     break;
 
                 case NsEntityAction.Stop:
                     if (Interpreter.TryGetThread(entity.Name, out thread))
                     {
-                        thread.Terminate();
+                        Interpreter.TerminateThread(thread);
                     }
                     break;
             }

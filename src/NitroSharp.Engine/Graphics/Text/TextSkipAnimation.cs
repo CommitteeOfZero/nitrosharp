@@ -29,7 +29,7 @@ namespace NitroSharp.Graphics
             base.Advance(deltaMilliseconds);
             _textVisual.AnimatedOpacity = CalculateFactor(Progress, TimingFunction);
 
-            if (LastFrame)
+            if (HasCompleted)
             {
                 RaiseCompleted();
             }

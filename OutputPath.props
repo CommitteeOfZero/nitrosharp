@@ -3,15 +3,33 @@
     <OutputPath>$(RepoRootDirectory)\bin\$(Configuration)\</OutputPath>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(OutputType)' == 'Exe' OR '$(OutputType)' == 'WinExe'">
-    <OutputPath>$(OutputPath)Games\$(MSBuildProjectName)\</OutputPath>
-  </PropertyGroup>
+  <Choose>
+    <When Condition="'$(OutputType)' == 'Exe' OR '$(OutputType)' == 'WinExe'">
+      <Choose>
+        <When Condition="'$(ExeProjectKind)' == 'Dev'">
+          <PropertyGroup>
+            <OutputPath>$(OutputPath)Dev\$(MSBuildProjectName)\</OutputPath>
+          </PropertyGroup>
+        </When>
 
-  <PropertyGroup Condition="'$(OutputType)' == 'Library' AND $(MSBuildProjectName.Contains('Tests'))">
-    <OutputPath>$(OutputPath)UnitTests\$(MSBuildProjectName)\</OutputPath>
-  </PropertyGroup>
+        <Otherwise>
+          <PropertyGroup>
+            <OutputPath>$(OutputPath)Games\$(MSBuildProjectName)\</OutputPath>
+          </PropertyGroup>
+        </Otherwise>
+      </Choose>
+    </When>
 
-  <PropertyGroup Condition="'$(OutputType)' == 'Library' AND !$(MSBuildProjectName.Contains('Tests'))">
-    <OutputPath>$(OutputPath)Libraries\$(MSBuildProjectName)\</OutputPath>
-  </PropertyGroup>
+    <When Condition="'$(OutputType)' == 'Library' AND !$(MSBuildProjectName.Contains('Tests'))">
+      <PropertyGroup>
+        <OutputPath>$(OutputPath)Libraries\$(MSBuildProjectName)\</OutputPath>
+      </PropertyGroup>
+    </When>
+
+    <When Condition="'$(OutputType)' == 'Library' AND $(MSBuildProjectName.Contains('Tests'))">
+      <PropertyGroup>
+        <OutputPath>$(OutputPath)UnitTests\$(MSBuildProjectName)\</OutputPath>
+      </PropertyGroup>
+    </When>
+  </Choose>
 </Project>

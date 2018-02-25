@@ -1,31 +1,57 @@
-﻿using System.Collections.Generic;
-using System.Collections.Immutable;
+﻿using NitroSharp.NsScript.IR;
+using NitroSharp.NsScript.Symbols;
+using System;
 
 namespace NitroSharp.NsScript.Execution
 {
-    public sealed class Frame
+    internal sealed class Frame
     {
-        public Frame(IJumpTarget function, ImmutableArray<Statement> statements, VariableTable globals)
-        {
-            Function = function;
-            Statements = statements;
-            Globals = globals;
-            Arguments = new VariableTable();
+        private readonly InstructionBlock _instructions;
+        private int _pc;
 
-            OperandStack = new Stack<Expression>();
-            OperationStack = new Stack<OperationKind>();
-            EvaluationStack = new Stack<Expression>();
+        public Frame(MergedSourceFileSymbol module, InvocableSymbol symbol)
+        {
+            Module = module;
+            Symbol = symbol;
+            Arguments = Environment.Empty;
+            _instructions = symbol.LinearRepresentation;
         }
 
-        public IJumpTarget Function { get; }
-        public ImmutableArray<Statement> Statements { get; }
-        public int Position { get; set; }
-        public VariableTable Globals { get; }
-        public VariableTable Arguments { get; set; }
+        public MergedSourceFileSymbol Module { get; }
+        public InvocableSymbol Symbol { get; }
+        public Environment Arguments { get; private set; }
 
-        public Expression CurrentExpression { get; internal set; }
-        public Stack<Expression> OperandStack { get; }
-        public Stack<OperationKind> OperationStack { get; }
-        public Stack<Expression> EvaluationStack { get; }
+        public ref Instruction FetchInstruction() => ref _instructions.FetchInstruction(_pc);
+
+        public void Jump(int targetInstructionIndex)
+        {
+            if (targetInstructionIndex < 0 || targetInstructionIndex >= _instructions.Length)
+            {
+                throw new ArgumentOutOfRangeException(nameof(targetInstructionIndex));
+            }
+
+            _pc = targetInstructionIndex;
+        }
+
+        public bool Advance()
+        {
+            if (_pc >= _instructions.Length)
+            {
+                return false;
+            }
+
+            _pc++;
+            return true;
+        }
+
+        public void SetArgument(string name, ConstantValue value)
+        {
+            if (ReferenceEquals(Arguments, Environment.Empty))
+            {
+                Arguments = new Environment();
+            }
+
+            Arguments.Set(name, value);
+        }
     }
 }

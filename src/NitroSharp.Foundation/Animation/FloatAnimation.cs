@@ -2,22 +2,16 @@
 
 namespace NitroSharp.Foundation.Animation
 {
-    public sealed class FloatAnimation : AnimationBase
+    public class FloatAnimation : AnimationBase
     {
-        public FloatAnimation(Component targetComponent, Action<Component, float> propertySetter,
-            float initialValue, float finalValue, TimeSpan duration, TimingFunction timingFunction)
+        public FloatAnimation(Component targetComponent, Action<Component, float> propertySetter, float initialValue,
+            float finalValue, TimeSpan duration, TimingFunction timingFunction = TimingFunction.Linear)
             : base(duration, timingFunction)
         {
             TargetComponent = targetComponent;
             PropertySetter = propertySetter;
             InitialValue = initialValue;
             FinalValue = finalValue;
-        }
-
-        public FloatAnimation(Component targetComponent, Action<Component, float> propertySetter,
-            float initialValue, float finalValue, TimeSpan duration)
-            : this(targetComponent, propertySetter, initialValue, finalValue, duration, TimingFunction.Linear)
-        {
         }
 
         public Component TargetComponent { get; }
@@ -34,7 +28,7 @@ namespace NitroSharp.Foundation.Animation
             float newValue = InitialValue + change * CalculateFactor(Progress, TimingFunction);
             PropertySetter(TargetComponent, newValue);
 
-            if (LastFrame)
+            if (HasCompleted)
             {
                 RaiseCompleted();
             }

@@ -30,21 +30,45 @@ namespace NitroSharp.NsScript
             return new NsColor(r, g, b);
         }
 
+        public static NsColor FromEnumValue(BuiltInEnumValue constant)
+        {
+            switch (constant)
+            {
+                case BuiltInEnumValue.Black: return Black;
+                case BuiltInEnumValue.White: return White;
+                case BuiltInEnumValue.Red: return Red;
+                case BuiltInEnumValue.Green: return Green;
+                case BuiltInEnumValue.Blue: return Blue;
+
+                default:
+                    throw ExceptionUtils.UnexpectedValue(nameof(constant));
+            }
+        }
+
         public static NsColor FromString(string colorString)
         {
-            if (PredefinedConstants.TryGetColor(colorString, out var color))
+            if (string.IsNullOrEmpty(colorString))
             {
-                return color;
+                throw new ArgumentNullException(nameof(colorString));
             }
 
-            if (int.TryParse(colorString.Substring(1), NumberStyles.HexNumber, null, out int colorCode))
+            bool isHexString = colorString[0] == '#';
+            if (isHexString)
             {
-                return FromRgb(colorCode);
+                if (int.TryParse(colorString.Substring(1), NumberStyles.HexNumber, null, out int colorCode))
+                {
+                    return FromRgb(colorCode);
+                }
             }
             else
             {
-                throw new ArgumentException("Illegal value", nameof(colorString));
+                if (Enum.TryParse<BuiltInEnumValue>(colorString, true, out var enumValue))
+                {
+                    return FromEnumValue(enumValue);
+                }
             }
+
+            throw ExceptionUtils.UnexpectedValue(colorString);
         }
     }
 }
