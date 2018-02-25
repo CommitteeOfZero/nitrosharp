@@ -2,6 +2,7 @@
   <PropertyGroup>
     <RepoRootDirectory>$(MSBuildThisFileDirectory)</RepoRootDirectory>
     <BaseIntermediateOutputPath>$(RepoRootDirectory)bin\obj\$(MSBuildProjectName)\</BaseIntermediateOutputPath>
+    <LangVersion>7.2</LangVersion>
     <Authors>SomeAnonDev</Authors>
     <Company>Committee of Zero</Company>
     <PackageVersion>0.1</PackageVersion>
