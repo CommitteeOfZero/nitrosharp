@@ -18,6 +18,7 @@ using Serilog;
 using Serilog.Events;
 using NitroSharp.NsScript.Syntax;
 using NitroSharp.NsScript.Execution;
+using NitroSharp.Foundation.Platform;
 
 namespace NitroSharp
 {
