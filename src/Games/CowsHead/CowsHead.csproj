@@ -22,6 +22,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="NitroSharp.Dependencies.FFmpeg" Version="0.1.0" />
     <ProjectReference Include="..\..\Nitrosharp.Launcher\NitroSharp.Launcher.csproj" />
   </ItemGroup>
 

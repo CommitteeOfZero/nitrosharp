@@ -3,10 +3,8 @@ using System;
 
 namespace NitroSharp.NsScript
 {
-    public sealed partial class DiagnosticBag
+    public sealed class DiagnosticBag
     {
-        internal static readonly DiagnosticBag Empty = new DiagnosticBag(ImmutableArray<Diagnostic>.Empty);
-
         private sealed class DiagnosticCollections
         {
             public ImmutableArray<Diagnostic> Information;

@@ -10,25 +10,17 @@ namespace NitroSharp.NsScript.Syntax
         // char.MaxValue is not a valid UTF-16 character, so it can safely be used to indicate end of file.
         protected const char EofCharacter = char.MaxValue;
 
-        private string _text;
+        private readonly string _text;
 
-        protected TextScanner() : this(string.Empty) { }
         protected TextScanner(string text)
         {
-            Reset(text);
+            _text = text ?? throw new ArgumentNullException(nameof(text));
         }
 
         protected int Position { get; private set; }
         protected int LexemeStart { get; private set; }
 
-        protected void Reset(string text)
-        {
-            _text = text ?? throw new ArgumentNullException(nameof(text));
-            Position = 0;
-            LexemeStart = 0;
-        }
-
-        public void SetPosition(int position)
+        protected void SetPosition(int position)
         {
             if (position >= _text.Length || position < 0)
             {
@@ -41,23 +33,23 @@ namespace NitroSharp.NsScript.Syntax
         /// <summary>
         /// Marks the current position as the start of a lexeme.
         /// </summary>
-        public void StartScanning() => LexemeStart = Position;
+        protected void StartScanning() => LexemeStart = Position;
 
         /// <summary>
         /// Gets the current lexeme, which is the characters between the LexemeStart marker and the current position.
         /// </summary>
-        public string GetCurrentLexeme()
+        protected string GetCurrentLexeme()
         {
             return CurrentLexemeLength > 0 ? _text.Substring(LexemeStart, Position - LexemeStart) : string.Empty;
         }
 
-        public TextSpan CurrentLexemeSpan => new TextSpan(LexemeStart, Position - LexemeStart);
-        public TextSpan CurrentSpanStart => new TextSpan(CurrentLexemeSpan.Start, 0);
+        protected TextSpan CurrentLexemeSpan => new TextSpan(LexemeStart, Position - LexemeStart);
+        protected TextSpan CurrentSpanStart => new TextSpan(CurrentLexemeSpan.Start, 0);
 
-        public int CurrentLexemeLength => Position - LexemeStart;
+        private int CurrentLexemeLength => Position - LexemeStart;
 
-        public char PeekChar() => PeekChar(0);
-        public char PeekChar(int offset)
+        protected char PeekChar() => PeekChar(0);
+        protected char PeekChar(int offset)
         {
             if (Position + offset >= _text.Length)
             {
@@ -67,10 +59,10 @@ namespace NitroSharp.NsScript.Syntax
             return _text[Position + offset];
         }
 
-        public void AdvanceChar() => Position++;
-        public void AdvanceChar(int n) => Position += n;
+        protected void AdvanceChar() => Position++;
+        protected void AdvanceChar(int n) => Position += n;
 
-        public void EatChar(char c)
+        protected void EatChar(char c)
         {
             char actualCharacter = PeekChar();
             if (actualCharacter != c)
@@ -81,7 +73,7 @@ namespace NitroSharp.NsScript.Syntax
             AdvanceChar();
         }
 
-        public bool TryEatChar(char c)
+        protected bool TryEatChar(char c)
         {
             char actualCharacter = PeekChar();
             if (actualCharacter != c)
@@ -97,7 +89,7 @@ namespace NitroSharp.NsScript.Syntax
         /// Returns true if the lookahead characters compose the specified string.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool Match(string s)
+        protected bool Match(string s)
         {
             for (int i = 0; i < s.Length; i++)
             {
@@ -111,7 +103,7 @@ namespace NitroSharp.NsScript.Syntax
             return true;
         }
 
-        public bool AdvanceIfMatches(string s)
+        protected bool AdvanceIfMatches(string s)
         {
             if (Match(s))
             {
