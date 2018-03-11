@@ -70,7 +70,7 @@ namespace NitroSharp.NsScript.Symbols
             var list = new List<int>();
             while (args.Count > 0)
             {
-                list.Add((int)PopDouble(args, allowNull: false, allowTypeConversion: true));
+                list.Add((int)PopDouble(args, allowNull: true, allowTypeConversion: true));
             }
 
             var builder = new StringBuilder();

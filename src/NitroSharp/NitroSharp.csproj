@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <ShaderOutputPath>$(BaseIntermediateOutputPath)\Shaders.Generated</ShaderOutputPath>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <NoWarn>1701;1702;CA1063</NoWarn>
+  </PropertyGroup>
+
+  <Import Project="..\..\OutputPath.props" />
+  
+  <ItemGroup>
+    <ProjectReference Include="..\NitroSharp.NsScript\NitroSharp.NsScript.csproj" />
+    <PackageReference Include="SharpDX.Direct2D1" Version="4.0.1" />
+
+    <PackageReference Include="Veldrid" Version="4.1.1" />
+    <PackageReference Include="Veldrid.StartupUtilities" Version="4.1.1" />
+    <PackageReference Include="Veldrid.ImageSharp" Version="4.1.1" />
+    <PackageReference Include="ShaderGen.Primitives" Version="1.1.0-gfd8f0d1665" />
+    <PackageReference Include="ShaderGen.Build" Version="1.1.0-gfd8f0d1665" PrivateAssets="All" />
+  </ItemGroup>
+
+  <Target Name="EmbedGeneratedShaderContent" AfterTargets="AssignTargetPaths">
+    <ItemGroup>
+      <EmbeddedResource Include="@(GeneratedShader)">
+        <LogicalName>NitroSharp.Graphics.Shaders.%(FileName)%(Extension)</LogicalName>
+      </EmbeddedResource>
+    </ItemGroup>
+  </Target>
+  
+</Project>
