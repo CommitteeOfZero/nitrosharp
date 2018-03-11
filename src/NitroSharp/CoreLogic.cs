@@ -6,7 +6,7 @@ using NitroSharp.Content;
 
 namespace NitroSharp
 {
-    internal sealed partial class NitroCore : EngineImplementation
+    internal sealed partial class CoreLogic : EngineImplementation
     {
         private ContentManager _content;
         private readonly EntityManager _entities;
@@ -15,7 +15,7 @@ namespace NitroSharp
 
         public bool WaitingForInput { get; set; }
 
-        public NitroCore(Game game, EntityManager entities)
+        public CoreLogic(Game game, EntityManager entities)
         {
             _game = game as NewNitroGame;
             _entities = entities;

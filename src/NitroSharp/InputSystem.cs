@@ -7,9 +7,9 @@ namespace NitroSharp
     internal sealed class InputSystem : InputTracker
     {
         private readonly Sdl2Window _window;
-        private readonly NitroCore _nitroCore;
+        private readonly CoreLogic _nitroCore;
 
-        public InputSystem(Sdl2Window window, NitroCore nitroCore) : base(window)
+        public InputSystem(Sdl2Window window, CoreLogic nitroCore) : base(window)
         {
             _window = window;
             _nitroCore = nitroCore;

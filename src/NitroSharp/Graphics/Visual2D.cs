@@ -2,7 +2,7 @@
 using NitroSharp.Primitives;
 using Veldrid;
 
-namespace NitroSharp.Logic
+namespace NitroSharp.Graphics
 {
     internal abstract class Visual2D : Component, Renderable
     {

@@ -3,9 +3,9 @@ using Veldrid;
 
 namespace NitroSharp.Graphics
 {
-    public sealed class FadeMaskEffect : Effect
+    public sealed class FadeMaskEffect : Effect2D
     {
-        private Matrix4x4 _projection;
+        private Matrix4x4 _projection, _transform;
         private TextureView _source, _mask;
         private Sampler _sampler;
         private FadeMaskProperties _properties;
@@ -16,10 +16,17 @@ namespace NitroSharp.Graphics
         }
 
         [BoundResource(ResourceKind.UniformBuffer, ShaderStages.Vertex, resourceSet: 0)]
-        public Matrix4x4 Projection
+        public override Matrix4x4 Projection
         {
             get => _projection;
             set => Update(ref _projection, value);
+        }
+
+        [BoundResource(ResourceKind.UniformBuffer, ShaderStages.Vertex, resourceSet: 0)]
+        public override Matrix4x4 Transform
+        {
+            get => _transform;
+            set => Update(ref _transform, value);
         }
 
         [BoundResource(ResourceKind.TextureReadOnly, ShaderStages.Fragment, resourceSet: 1)]

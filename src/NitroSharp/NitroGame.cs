@@ -24,7 +24,7 @@ namespace NitroSharp
         private InputSystem _inputHandler;
 
         private NsScriptInterpreter _nssInterpreter;
-        private NitroCore _nitroCore;
+        private CoreLogic _nitroCore;
         private Task _interpreterProc;
         private volatile bool _nextStateReady = false;
 
@@ -71,7 +71,7 @@ namespace NitroSharp
 
         private void LoadStartupScript()
         {
-            _nitroCore = new NitroCore(this, Entities);
+            _nitroCore = new CoreLogic(this, Entities);
             _nssInterpreter = new NsScriptInterpreter(LocateScript, _nitroCore);
             //_nssInterpreter.BuiltInCallScheduled += OnBuiltInCallDispatched;
             //_nssInterpreter.EnteredFunction += OnEnteredFunction;

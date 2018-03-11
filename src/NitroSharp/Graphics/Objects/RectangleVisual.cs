@@ -1,8 +1,7 @@
-﻿using NitroSharp.Graphics;
-using NitroSharp.Primitives;
+﻿using NitroSharp.Primitives;
 using Veldrid;
 
-namespace NitroSharp.Logic.Objects
+namespace NitroSharp.Graphics
 {
     internal sealed class RectangleVisual : Visual2D
     {

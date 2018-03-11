@@ -8,7 +8,7 @@ using Veldrid;
 
 namespace NitroSharp
 {
-    internal sealed partial class NitroCore
+    internal sealed partial class CoreLogic
     {
         public override void AddRectangle(string entityName, int priority,
             NsCoordinate x, NsCoordinate y, int width, int height, NsColor color)

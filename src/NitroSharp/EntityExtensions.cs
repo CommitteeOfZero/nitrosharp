@@ -21,7 +21,7 @@ namespace NitroSharp
 
         public static Entity WithPosition(this Entity entity, NsCoordinate x, NsCoordinate y)
         {
-            NitroCore.SetPosition(entity.Transform, x, y);
+            CoreLogic.SetPosition(entity.Transform, x, y);
             return entity;
         }
     }

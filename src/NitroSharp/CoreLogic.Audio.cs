@@ -5,7 +5,7 @@ using NitroSharp.Animation;
 
 namespace NitroSharp
 {
-    internal sealed partial class NitroCore
+    internal sealed partial class CoreLogic
     {
         public override int GetSoundAmplitude(string characterName)
         {

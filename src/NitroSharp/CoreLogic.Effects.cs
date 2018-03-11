@@ -6,7 +6,7 @@ using NitroSharp.Logic;
 
 namespace NitroSharp
 {
-    internal sealed partial class NitroCore
+    internal sealed partial class CoreLogic
     {
         public override void Fade(string entityName, TimeSpan duration, NsRational opacity, NsEasingFunction easingFunction, TimeSpan delay)
         {

@@ -5,7 +5,7 @@ using NitroSharp.Logic.Objects;
 
 namespace NitroSharp
 {
-    internal sealed partial class NitroCore
+    internal sealed partial class CoreLogic
     {
         private const float TextRightMargin = 150;
         private const string VoiceEntityName = "__VOICE";

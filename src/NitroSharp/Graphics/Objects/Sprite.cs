@@ -1,9 +1,8 @@
 ﻿using NitroSharp.Content;
-using NitroSharp.Graphics;
 using NitroSharp.Primitives;
 using Veldrid;
 
-namespace NitroSharp.Logic.Objects
+namespace NitroSharp.Graphics
 {
     internal sealed class Sprite : Visual2D
     {
