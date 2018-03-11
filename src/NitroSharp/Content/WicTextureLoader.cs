@@ -1,7 +1,4 @@
-﻿using System;
-using System.IO;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
+﻿using System.IO;
 using NitroSharp.Graphics;
 using SharpDX.WIC;
 using Veldrid;
@@ -37,18 +34,8 @@ namespace NitroSharp.Content
                     Height = (uint)pixelFormatConverter.Size.Height;
                     MipLevels = 1;
 
-                    var t = CreateTextureViaStaging(_gd, _gd.ResourceFactory, pixelFormatConverter);
-                    return new BindableTexture(_gd.ResourceFactory, t);
-                    //var d2dBitmapProps = new BitmapProperties1()
-                    //{
-                    //    BitmapOptions = BitmapOptions.None,
-                    //    PixelFormat = _rc.DeviceContext.PixelFormat,
-                    //    DpiX = 96,
-                    //    DpiY = 96
-                    //};
-
-                    //var bitmap = Bitmap1.FromWicBitmap(_rc.DeviceContext, pixelFormatConverter, d2dBitmapProps);
-                    //return new DxTexture2D(bitmap, decoder);
+                    var texture = CreateTextureViaStaging(_gd, _gd.ResourceFactory, pixelFormatConverter);
+                    return new BindableTexture(_gd.ResourceFactory, texture);
                 }
             }
         }
@@ -65,37 +52,17 @@ namespace NitroSharp.Content
             cl.Begin();
             for (uint level = 0; level < MipLevels; level++)
             {
-                //fixed (void* pin = &image.DangerousGetPinnableReferenceToPixelBuffer())
-                {
-                    MappedResource map = gd.Map(staging, MapMode.Write, level);
-                    int stride = 4 * (int)Width;
+                MappedResource map = gd.Map(staging, MapMode.Write, level);
+                int stride = 4 * (int)Width;
+                int size = (int)Width * (int)Height * 4;
+                fc.CopyPixels(stride, map.Data, size);
+                gd.Unmap(staging, level);
 
-                    int size = (int)Width * (int)Height * 4;
-                    fc.CopyPixels(stride, map.Data, size);
+                cl.CopyTexture(
+                    staging, 0, 0, 0, level, 0,
+                    ret, 0, 0, 0, level, 0,
+                    Width, Height, 1, 1);
 
-                    uint rowWidth = (uint)(Width * 4);
-                    //if (rowWidth == map.RowPitch)
-                    //{
-                    //    Unsafe.CopyBlock(map.Data.ToPointer(), pin, (uint)(image.Width * image.Height * 4));
-                    //}
-                    //else
-                    //{
-                    //    for (uint y = 0; y < Height; y++)
-                    //    {
-                    //        byte* dstStart = (byte*)map.Data.ToPointer() + y * map.RowPitch;
-                    //        byte* srcStart = (byte*)pin + y * rowWidth;
-                    //        fc.CopyPixels()
-                    //        Unsafe.CopyBlock(dstStart, srcStart, rowWidth);
-                    //    }
-                    //}
-                    gd.Unmap(staging, level);
-
-                    cl.CopyTexture(
-                        staging, 0, 0, 0, level, 0,
-                        ret, 0, 0, 0, level, 0,
-                        Width, Height, 1, 1);
-
-                }
             }
             cl.End();
 

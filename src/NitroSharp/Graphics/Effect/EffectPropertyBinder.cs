@@ -34,12 +34,11 @@ namespace NitroSharp.Graphics
                     }
 
                     var propertyType = propertyInfo.PropertyType;
-                    string resourceName = attribute.ResourceName ?? propertyInfo.Name;
                     uint bufferSize = propertyType.IsValueType ? (uint)MathHelper.RoundUp(Marshal.SizeOf(propertyType), multiple: 16) : 0;
-                    propertyBindings[propertyInfo.Name] = new PropertyBinding(resourceName, attribute, positionInResourceSet++, bufferSize);
+                    propertyBindings[propertyInfo.Name] = new PropertyBinding(attribute, positionInResourceSet++, bufferSize);
 
                     ref var currentElement = ref layoutBuilder.Add();
-                    currentElement.Name = propertyInfo.Name;
+                    currentElement.Name = attribute.ResourceName ?? propertyInfo.Name;
                     currentElement.Kind = attribute.ResourceKind;
                     currentElement.Stages = attribute.ShaderStages;
 

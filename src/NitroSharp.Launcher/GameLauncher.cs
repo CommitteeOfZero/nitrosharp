@@ -12,7 +12,7 @@ namespace NitroSharp.Launcher
             Directory.SetCurrentDirectory(gameRootDir);
 
             var config = ConfigurationReader.Read(configFilePath);
-            var game = new NitroGame(config);
+            var game = new NewNitroGame(config);
             game.Run();
         }
     }

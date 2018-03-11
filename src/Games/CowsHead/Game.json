@@ -22,7 +22,7 @@
     },
 
     "Test": {
-      "startupScript": "boot_any.nss"
+      "startupScript": "test.nss"
     },
 
     "Saya": {

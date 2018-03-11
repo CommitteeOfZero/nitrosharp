@@ -8,21 +8,18 @@ namespace NitroSharp.Logic.Objects
     {
         private readonly RectangleF _rect;
 
-        public RectangleVisual(in RectangleF rect)
-        {
-            _rect = rect;
-        }
-
         public RectangleVisual(float width, float height, in RgbaFloat color, float opacity, int priority)
             : base(color, opacity, priority)
         {
+            _rect = new RectangleF(0, 0, width, height);
         }
 
         public override SizeF Bounds => new SizeF(_rect.Width, _rect.Height);
 
         public override void Render(Canvas canvas)
         {
-            canvas.FillRectangle(_rect, Color);
+            var c = new RgbaFloat(Color.R, Color.G, Color.B, Opacity);
+            canvas.FillRectangle(_rect, c);
         }
     }
 }

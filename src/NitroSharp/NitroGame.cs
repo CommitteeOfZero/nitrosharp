@@ -15,9 +15,9 @@ using NitroSharp.Animation;
 
 namespace NitroSharp
 {
-    public sealed class NitroGame : Game
+    public sealed class NewNitroGame : Game
     {
-        private readonly NitroConfiguration _configuration;
+        private readonly NewNitroConfiguration _configuration;
         private readonly string _nssFolder;
 
         private RenderSystem _renderSystem;
@@ -28,7 +28,7 @@ namespace NitroSharp
         private Task _interpreterProc;
         private volatile bool _nextStateReady = false;
 
-        public NitroGame(NitroConfiguration configuration)
+        public NewNitroGame(NewNitroConfiguration configuration)
         {
             _configuration = configuration;
             _nssFolder = Path.Combine(configuration.ContentRoot, "nss");

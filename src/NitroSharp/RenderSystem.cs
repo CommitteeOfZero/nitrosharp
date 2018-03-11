@@ -10,13 +10,13 @@ namespace NitroSharp.Graphics
 {
     internal sealed class RenderSystem : EntityProcessingSystem, IDisposable
     {
-        private readonly NitroConfiguration _config;
+        private readonly NewNitroConfiguration _config;
         private readonly CommandList cl;
         private readonly GraphicsDevice _gd;
         private readonly ResourceFactory _factory;
         private readonly Canvas _canvas;
 
-        public RenderSystem(GraphicsDevice graphicsDevice, NitroConfiguration configuration)
+        public RenderSystem(GraphicsDevice graphicsDevice, NewNitroConfiguration configuration)
         {
             _gd = graphicsDevice;
             _config = configuration;
@@ -81,7 +81,7 @@ namespace NitroSharp.Graphics
 
         private void RenderItem(Visual2D visual, Vector2 scale)
         {
-            var transform = visual.Entity.Transform.GetWorldMatrix(DesignResolution) * Matrix3x2.CreateScale(scale);
+            var transform = visual.Entity.Transform.GetWorldMatrix();
             _canvas.SetTransform(transform);
             visual.Render(_canvas);
         }

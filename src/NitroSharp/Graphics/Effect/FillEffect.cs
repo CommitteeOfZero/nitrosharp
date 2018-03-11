@@ -13,14 +13,14 @@ namespace NitroSharp.Graphics
         }
 
         [BoundResource(ResourceKind.UniformBuffer, ShaderStages.Vertex)]
-        protected override Matrix4x4 Transform
+        public override Matrix4x4 Transform
         {
             get => _transform;
             set => Update(ref _transform, value);
         }
 
         [BoundResource(ResourceKind.UniformBuffer, ShaderStages.Vertex)]
-        protected override Matrix4x4 Projection
+        public override Matrix4x4 Projection
         {
             get => _projection;
             set => Update(ref _projection, value);

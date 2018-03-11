@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Numerics;
 using NitroSharp.Utilities;
 
 namespace NitroSharp.Primitives
@@ -28,5 +29,7 @@ namespace NitroSharp.Primitives
 
         public static bool operator ==(SizeF left, SizeF right) => left.Equals(right);
         public static bool operator !=(SizeF left, SizeF right) => !left.Equals(right);
+
+        public Vector2 ToVector() => new Vector2(Width, Height);
     }
 }

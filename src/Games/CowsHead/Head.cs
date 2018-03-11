@@ -59,9 +59,6 @@ namespace CowsHead
 
             _canvas.Begin(_cl, viewport);
             _canvas.DrawImage(_azis, 0, 0, 1280, 720);
-            _canvas.SetTransform(Matrix3x2.CreateRotation(-(float)Math.PI / 2, new Vector2(100, 100)) * Matrix3x2.CreateScale(2.0f) * Matrix3x2.CreateTranslation(200, 200));
-            _canvas.DrawImage(_meow, 0, 0, 200, 200);
-            _canvas.SetTransform(Matrix3x2.CreateRotation(-(float)Math.PI / 4) * Matrix3x2.CreateScale(2.0f) * Matrix3x2.CreateTranslation(300, 300));
             _canvas.FillRectangle(0, 0, 100, 100, new RgbaFloat(0.0f, 1.0f, 0.0f, 0.5f));
             _canvas.End();
 

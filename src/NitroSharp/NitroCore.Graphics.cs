@@ -89,33 +89,41 @@ namespace NitroSharp
 
         public override int GetTextureWidth(string entityName)
         {
-            return _entities.TryGet(entityName, out var entity) ? (int)entity.Transform.Bounds.Width : 0;
+            return _entities.TryGet(entityName, out var entity) ? (int)entity.Transform.Dimensions.X : 0;
         }
 
         public override int GetTextureHeight(string entityName)
         {
-            return _entities.TryGet(entityName, out var entity) ? (int)entity.Transform.Bounds.Height : 0;
+            return _entities.TryGet(entityName, out var entity) ? (int)entity.Transform.Dimensions.Y : 0;
         }
 
         internal static void SetPosition(Transform transform, NsCoordinate x, NsCoordinate y)
         {
-            transform.SetMarginX(x.Origin == NsCoordinateOrigin.CurrentValue ? transform.Margin.X + x.Value : x.Value);
-            transform.SetMarginY(y.Origin == NsCoordinateOrigin.CurrentValue ? transform.Margin.Y + y.Value : y.Value);
-            transform.AnchorPoint = new Vector2(x.AnchorPoint, y.AnchorPoint);
+            var Parent = transform.Parent;
+            var screenBounds = new Vector3(1280, 720, 0);
+            var parentBounds = Parent == null ? screenBounds : Parent.Dimensions;
 
+            var value = new Vector3(
+                x.Origin == NsCoordinateOrigin.CurrentValue ? transform.Position.X + x.Value : x.Value,
+                y.Origin == NsCoordinateOrigin.CurrentValue ? transform.Position.Y + y.Value : y.Value, 0);
+
+            var AnchorPoint = new Vector3(x.AnchorPoint, y.AnchorPoint, 0);
+
+            Vector3 translateOrigin;
+            translateOrigin.Z = 0;
             switch (x.Origin)
             {
                 case NsCoordinateOrigin.Left:
                 default:
-                    transform.SetTranslateOriginX(0.0f);
+                    translateOrigin.X = 0.0f;
                     break;
 
                 case NsCoordinateOrigin.Center:
-                    transform.SetTranslateOriginX(0.5f);
+                    translateOrigin.X = 0.5f;
                     break;
 
                 case NsCoordinateOrigin.Right:
-                    transform.SetTranslateOriginX(1.0f);
+                    translateOrigin.X = 1.0f;
                     break;
             }
 
@@ -123,17 +131,23 @@ namespace NitroSharp
             {
                 case NsCoordinateOrigin.Top:
                 default:
-                    transform.SetTranslateOriginY(0.0f);
+                    translateOrigin.Y = 0.0f;
                     break;
 
                 case NsCoordinateOrigin.Center:
-                    transform.SetTranslateOriginY(0.5f);
+                    translateOrigin.Y = 0.5f;
                     break;
 
                 case NsCoordinateOrigin.Bottom:
-                    transform.SetTranslateOriginY(1.0f);
+                    translateOrigin.Y = 1.0f;
                     break;
             }
+
+            var position = translateOrigin * parentBounds;
+            position -= AnchorPoint * transform.Dimensions;
+            position += value;
+
+            transform.Position = position;
         }
     }
 }

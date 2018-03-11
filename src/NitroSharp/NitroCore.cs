@@ -11,13 +11,13 @@ namespace NitroSharp
         private ContentManager _content;
         private readonly EntityManager _entities;
 
-        private readonly NitroGame _game;
+        private readonly NewNitroGame _game;
 
         public bool WaitingForInput { get; set; }
 
         public NitroCore(Game game, EntityManager entities)
         {
-            _game = game as NitroGame;
+            _game = game as NewNitroGame;
             _entities = entities;
         }
 

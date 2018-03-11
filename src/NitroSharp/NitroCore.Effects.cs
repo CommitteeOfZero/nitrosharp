@@ -67,19 +67,19 @@ namespace NitroSharp
                 entity.RemoveComponent(existingAnimation);
             }
             
-            float targetX = x.Origin == NsCoordinateOrigin.CurrentValue ? entity.Transform.Margin.X + x.Value : x.Value;
-            float targetY = y.Origin == NsCoordinateOrigin.CurrentValue ? entity.Transform.Margin.Y + y.Value : y.Value;
-            Vector2 destination = new Vector2(targetX, targetY);
+            float targetX = x.Origin == NsCoordinateOrigin.CurrentValue ? entity.Transform.Position.X + x.Value : x.Value;
+            float targetY = y.Origin == NsCoordinateOrigin.CurrentValue ? entity.Transform.Position.Y + y.Value : y.Value;
+            Vector3 destination = new Vector3(targetX, targetY, 0);
 
             if (duration > TimeSpan.Zero)
             {
                 var fn = (TimingFunction)easingFunction;
-                var animation = new MoveAnimation(entity.Transform, entity.Transform.Margin, destination, duration, fn);
+                var animation = new MoveAnimation(entity.Transform, entity.Transform.Position, destination, duration, fn);
                 entity.AddComponent(animation);
             }
             else
             {
-                entity.Transform.Margin = destination;
+                entity.Transform.Position = destination;
             }
         }
 
@@ -109,11 +109,11 @@ namespace NitroSharp
 
             if (duration > TimeSpan.Zero)
             {
-                Vector2 initialScale = entity.Transform.Scale;
-                Vector2 finalScale = new Vector2(scaleX, scaleY);
+                Vector3 initialScale = entity.Transform.Scale;
+                Vector3 finalScale = new Vector3(scaleX, scaleY, 1);
                 if (initialScale == finalScale)
                 {
-                    entity.Transform.Scale = new Vector2(0.0f, 0.0f);
+                    entity.Transform.Scale = Vector3.Zero;
                 }
 
                 var fn = (TimingFunction)easingFunction;
@@ -122,7 +122,7 @@ namespace NitroSharp
             }
             else
             {
-                entity.Transform.Scale = new Vector2(scaleX, scaleY);
+                entity.Transform.Scale = new Vector3(scaleX, scaleY, 1);
             }
         }
 

@@ -1,6 +1,6 @@
 ﻿namespace NitroSharp
 {
-    public sealed class NitroConfiguration : GameParameters
+    public sealed class NewNitroConfiguration : GameParameters
     {
         public string ProductName { get; set; } = "NitroSharp";
         public string ContentRoot { get; set; }

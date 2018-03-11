@@ -20,7 +20,7 @@ namespace NitroSharp.Graphics
         private DeviceBuffer _vertexBuffer;
         private readonly DeviceBuffer _indexBuffer;
 
-        private readonly Stack<Matrix3x2> _transforms = new Stack<Matrix3x2>();
+        private readonly Stack<Matrix4x4> _transforms = new Stack<Matrix4x4>();
 
         public Canvas(GraphicsDevice graphicsDevice)
         {
@@ -53,19 +53,19 @@ namespace NitroSharp.Graphics
             _offset = 0;
         }
 
-        public void SetTransform(in Matrix3x2 transform)
+        public void SetTransform(in Matrix4x4 transform)
         {
             _transforms.Push(transform);
         }
 
-        private Matrix3x2 PopTransform()
+        private Matrix4x4 PopTransform()
         {
             if (_transforms.Count > 0)
             {
                 return _transforms.Pop();
             }
 
-            return Matrix3x2.Identity;
+            return Matrix4x4.Identity;
         }
 
         public void FillRectangle(float x, float y, float width, float height, in RgbaFloat fillColor)
@@ -76,7 +76,7 @@ namespace NitroSharp.Graphics
             DrawQuadGeometry(rect, fillColor);
 
             _fillEffect.Begin(_cl);
-            _fillEffect.SetTransform(PopTransform());
+            _fillEffect.Transform = PopTransform();
             _fillEffect.End();
 
             Submit();
@@ -112,7 +112,7 @@ namespace NitroSharp.Graphics
             DrawQuadGeometry(destinationRect, color, texCoordTL, texCoordBR);
 
             _spriteEffect.Begin(_cl);
-            _spriteEffect.SetTransform(PopTransform());
+            _spriteEffect.Transform = PopTransform();
             _spriteEffect.Texture = image.GetTextureView();
             _spriteEffect.End();
 
