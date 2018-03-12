@@ -1,10 +1,9 @@
-﻿using NitroSharp.Graphics;
-using NitroSharp.Primitives;
+﻿using NitroSharp.Primitives;
 using Veldrid;
 
 namespace NitroSharp.Graphics
 {
-    internal abstract class Visual2D : Component, Renderable
+    internal abstract class Visual2D : Visual
     {
         protected Visual2D()
         {
@@ -36,10 +35,8 @@ namespace NitroSharp.Graphics
 
         public float Opacity { get; set; }
         public RgbaFloat Color { get; }
-        public int Priority { get; }
 
-        public abstract SizeF Bounds { get; }
-
+        public override void Render(RenderContext renderContext) => Render(renderContext.Canvas);
         public abstract void Render(Canvas canvas);
     }
 }

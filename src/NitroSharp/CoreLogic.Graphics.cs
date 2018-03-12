@@ -1,5 +1,5 @@
 ﻿using NitroSharp.Graphics;
-using NitroSharp.Logic.Objects;
+using NitroSharp.Graphics.Objects;
 using NitroSharp.NsScript;
 using NitroSharp.Primitives;
 using System;
@@ -10,6 +10,8 @@ namespace NitroSharp
 {
     internal sealed partial class CoreLogic
     {
+        private Cube _cube;
+
         public override void AddRectangle(string entityName, int priority,
             NsCoordinate x, NsCoordinate y, int width, int height, NsColor color)
         {
@@ -85,6 +87,26 @@ namespace NitroSharp
                 .WithComponent(texture)
                 .WithParent(parentEntity)
                 .WithPosition(x, y);
+        }
+
+        public override void CreateCube(string entityName, string front, string back, string right, string left, string top, string bottom)
+        {
+            _cube = new Cube(
+                _content.Get<BindableTexture>(front),
+                _content.Get<BindableTexture>(back),
+                _content.Get<BindableTexture>(left),
+                _content.Get<BindableTexture>(right),
+                _content.Get<BindableTexture>(top),
+                _content.Get<BindableTexture>(bottom));
+
+            _cube.CreateDeviceObjects(_game.RenderSystem.RC);
+            _entities.Create(entityName)
+                .WithComponent(_cube);
+        }
+
+        public override void SetFieldOfView(string entityName, double angle)
+        {
+            _cube.SetFieldOfView((float)angle);
         }
 
         public override int GetTextureWidth(string entityName)

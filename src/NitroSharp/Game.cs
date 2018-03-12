@@ -131,11 +131,11 @@ namespace NitroSharp
             Window = new Sdl2Window(_parameters.WindowTitle, 100, 100,
                 _parameters.WindowWidth, _parameters.WindowHeight, sDL_WindowFlags, true);
 
-            GraphicsDeviceOptions options = new GraphicsDeviceOptions(false, null, true);
+            GraphicsDeviceOptions options = new GraphicsDeviceOptions(false, PixelFormat.R16_UNorm, false);
 #if DEBUG
             options.Debug = true;
 #endif
-            GraphicsDevice = VeldridStartup.CreateGraphicsDevice(Window, options, GraphicsBackend.OpenGL);
+            GraphicsDevice = VeldridStartup.CreateGraphicsDevice(Window, options, GraphicsBackend.Direct3D11);
 
             //Window = new DedicatedThreadWindow(_parameters.WindowTitle, _parameters.WindowWidth, _parameters.WindowHeight, WindowState.Normal);
             //RenderContext = new DxRenderContext(Window, multithreaded: true, enableVSync: _parameters.EnableVSync);

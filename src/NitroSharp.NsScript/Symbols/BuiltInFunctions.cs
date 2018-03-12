@@ -49,6 +49,33 @@ namespace NitroSharp.NsScript.Symbols
             Declare("ModuleFileName", ModuleFileName);
             Declare("String", String);
             Declare("Time", Time);
+
+            Declare("CreateCube", CreateCube);
+            Declare("SetFov", SetFov);
+        }
+
+        private static ConstantValue SetFov(EngineImplementationBase implementation, Stack<ConstantValue> args)
+        {
+            var entityName = EntityName(PopString(args));
+            double angle = PopDouble(args);
+
+            implementation.SetFieldOfView(entityName, angle);
+            return null;
+        }
+
+        private static ConstantValue CreateCube(EngineImplementationBase implementation, Stack<ConstantValue> args)
+        {
+            var entityName = EntityName(PopString(args));
+            double someNumber = PopDouble(args);
+            var front = PopString(args);
+            var back = PopString(args);
+            var right = PopString(args);
+            var left = PopString(args);
+            var top = PopString(args);
+            var bottom = PopString(args);
+
+            implementation.CreateCube(entityName, front, back, right, left, top, bottom);
+            return null;
         }
 
         private static ConstantValue Time(EngineImplementationBase arg1, Stack<ConstantValue> arg2)

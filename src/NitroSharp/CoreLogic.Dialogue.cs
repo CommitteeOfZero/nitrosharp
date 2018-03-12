@@ -1,7 +1,7 @@
-﻿using NitroSharp.NsScript;
+﻿using NitroSharp.Graphics;
+using NitroSharp.NsScript;
 using NitroSharp.NsScript.Symbols;
 using Veldrid;
-using NitroSharp.Logic.Objects;
 
 namespace NitroSharp
 {

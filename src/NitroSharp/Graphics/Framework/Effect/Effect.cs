@@ -9,8 +9,11 @@ namespace NitroSharp.Graphics
 {
     public abstract class Effect : IDisposable
     {
-        private readonly GraphicsDevice _gd;
-        private readonly Shader _vs, _fs;
+        protected readonly GraphicsDevice _gd;
+        protected readonly Shader _vs, _fs;
+        protected readonly ShaderSetDescription _shaderSet;
+        protected readonly ResourceLayout[] _resourceLayouts;
+
         private readonly DisposeCollectorResourceFactory _factory;
         private readonly Pipeline _pipeline;
 
@@ -31,7 +34,7 @@ namespace NitroSharp.Graphics
 
             EffectPropertyBinder.Bind(effectType: GetType(), _factory, out _propertyBindings, out _layoutSetPairs);
 
-            ShaderSetDescription shaderSet = new ShaderSetDescription(
+            _shaderSet = new ShaderSetDescription(
                 new[]
                 {
                     Vertex2D.LayoutDescription
@@ -42,14 +45,21 @@ namespace NitroSharp.Graphics
                     fragmentShader
                 });
 
-            _pipeline = _factory.CreateGraphicsPipeline(new GraphicsPipelineDescription(
+
+            _resourceLayouts = _layoutSetPairs.Select(x => x.ResourceLayout).ToArray();
+            _pipeline = _factory.CreateGraphicsPipeline(SetupPipeline());
+        }
+
+        protected virtual GraphicsPipelineDescription SetupPipeline()
+        {
+            return new GraphicsPipelineDescription(
                 BlendStateDescription.SingleAlphaBlend,
                 DepthStencilStateDescription.Disabled,
                 RasterizerStateDescription.Default,
                 PrimitiveTopology.TriangleList,
-                shaderSet,
-                _layoutSetPairs.Select(x => x.ResourceLayout).ToArray(),
-                graphicsDevice.SwapchainFramebuffer.OutputDescription));
+                _shaderSet,
+                _resourceLayouts,
+                _gd.SwapchainFramebuffer.OutputDescription);
         }
 
         public void Begin(CommandList cl)

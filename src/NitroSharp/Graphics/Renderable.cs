@@ -2,6 +2,7 @@
 {
     internal interface Renderable
     {
-        void Render(Canvas canvas);
+        void CreateDeviceObjects(RenderContext renderContext);
+        void Render(RenderContext renderContext);
     }
 }

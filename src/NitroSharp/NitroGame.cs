@@ -20,7 +20,7 @@ namespace NitroSharp
         private readonly NewNitroConfiguration _configuration;
         private readonly string _nssFolder;
 
-        private RenderSystem _renderSystem;
+        internal RenderSystem RenderSystem;
         private InputSystem _inputHandler;
 
         private NsScriptInterpreter _nssInterpreter;
@@ -65,8 +65,8 @@ namespace NitroSharp
             var animationSystem = new AnimationSystem();
             systems.Add(animationSystem);
 
-            _renderSystem = new RenderSystem(GraphicsDevice, _configuration);
-            systems.Add(_renderSystem);
+            RenderSystem = new RenderSystem(GraphicsDevice, _configuration);
+            systems.Add(RenderSystem);
         }
 
         private void LoadStartupScript()
@@ -130,7 +130,7 @@ namespace NitroSharp
                 system.Update(deltaMilliseconds);
             }
 
-            _renderSystem.Present();
+            RenderSystem.Present();
         }
 
         private void RunInterpreterLoop()

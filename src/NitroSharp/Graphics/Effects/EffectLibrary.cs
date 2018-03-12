@@ -1,13 +1,32 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using Veldrid;
 
 namespace NitroSharp.Graphics
 {
-    internal static class EffectLibrary
+    internal sealed class EffectLibrary : IDisposable
     {
         private static Assembly s_assembly = typeof(EffectLibrary).Assembly;
+
+        private readonly GraphicsDevice _gd;
+        private readonly Dictionary<Type, Effect> _effectCache = new Dictionary<Type, Effect>();
+
+        public EffectLibrary(GraphicsDevice graphicsDevice)
+        {
+            _gd = graphicsDevice;
+        }
+
+        public T Get<T>() where T : Effect
+        {
+            if (!_effectCache.TryGetValue(typeof(T), out var effect))
+            {
+                effect = _effectCache[typeof(T)] = LoadEffect<T>(_gd);
+            }
+
+            return (T)effect;
+        }
 
         public static T LoadEffect<T>(GraphicsDevice graphicsDevice) where T : Effect
         {
@@ -41,6 +60,16 @@ namespace NitroSharp.Graphics
                     : (backendType == GraphicsBackend.Metal)
                         ? "metallib"
                         : "330.glsl";
+        }
+
+        public void Dispose()
+        {
+            foreach (var effect in _effectCache.Values)
+            {
+                effect.Dispose();
+            }
+
+            _effectCache.Clear();
         }
     }
 }

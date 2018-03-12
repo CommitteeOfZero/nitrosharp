@@ -1,5 +1,5 @@
 ﻿using System;
-using NitroSharp.Logic;
+using NitroSharp.Graphics;
 
 namespace NitroSharp.Animation
 {

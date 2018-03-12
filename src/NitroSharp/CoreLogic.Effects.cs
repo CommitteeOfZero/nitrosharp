@@ -2,7 +2,7 @@
 using System;
 using System.Numerics;
 using NitroSharp.Animation;
-using NitroSharp.Logic;
+using NitroSharp.Graphics;
 
 namespace NitroSharp
 {

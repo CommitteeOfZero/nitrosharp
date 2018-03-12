@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
-using NitroSharp.Logic;
+using NitroSharp.Graphics;
 
 namespace NitroSharp
 {
@@ -30,7 +30,7 @@ namespace NitroSharp
             }
         }
 
-        public Vector3 Dimensions => new Vector3(Entity.GetComponent<Visual2D>().Bounds.ToVector(), 0.0f);
+        public Vector3 Dimensions => new Vector3(Entity.GetComponent<Visual>().Bounds.ToVector(), 0.0f);
 
         /// <summary>
         /// Position (in pixels) relative to the parent.

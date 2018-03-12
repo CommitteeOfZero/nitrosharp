@@ -1,6 +1,6 @@
 ﻿{
   "productName": "COWSHEAD_NOAH",
-  "activeProfile": "Prologue",
+  "activeProfile": "Test",
   "graphics.vsync": false,
   "window.title": "COWS;HEAD NOAH",
   "window.width": 1280,
@@ -22,7 +22,7 @@
     },
 
     "Test": {
-      "startupScript": "test.nss"
+      "startupScript": "boot_any.nss"
     },
 
     "Saya": {
