@@ -47,7 +47,9 @@ namespace NitroSharp.Graphics
             _cl.SetVertexBuffer(0, _vertexBuffer);
             _cl.SetIndexBuffer(_indexBuffer, IndexFormat.UInt16);
 
+            _spriteEffect.Begin(cl);
             _spriteEffect.SetOrthographicsProjection(viewport);
+            _fillEffect.Begin(cl);
             _fillEffect.SetOrthographicsProjection(viewport);
 
             _offset = 0;
