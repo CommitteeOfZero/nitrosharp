@@ -65,9 +65,7 @@ namespace NitroSharp.Content
                     }
                 }
 
-                
                 gd.Unmap(staging, level);
-
                 cl.CopyTexture(
                     staging, 0, 0, 0, level, 0,
                     result, 0, 0, 0, level, 0,

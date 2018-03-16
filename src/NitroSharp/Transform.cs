@@ -36,17 +36,18 @@ namespace NitroSharp
         /// Position (in pixels) relative to the parent.
         /// </summary>
         public Vector3 Position { get; set; }
+        public Quaternion Rotation { get; set; }
         public Vector3 Scale { get; set; } = Vector3.One;
-        public Vector3 ScaleOrigin { get; set; } = new Vector3(0.5f, 0.5f, 0.5f);
 
-        public Matrix4x4 GetWorldMatrix()
+        public Matrix4x4 GetTransformMatrix()
         {
-            var matrix = Matrix4x4.CreateScale(Scale, ScaleOrigin * Dimensions)
+            var matrix = Matrix4x4.CreateScale(Scale, new Vector3(0.5f) * Dimensions)
+                * Matrix4x4.CreateFromQuaternion(Rotation)
                 * Matrix4x4.CreateTranslation(Position);
 
             if (Parent != null)
             {
-                matrix *= Parent.GetWorldMatrix();
+                matrix *= Parent.GetTransformMatrix();
             }
 
             return matrix;

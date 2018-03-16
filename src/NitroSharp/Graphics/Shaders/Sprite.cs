@@ -11,10 +11,10 @@ namespace NitroSharp.Graphics.Shaders
     internal class Sprite
     {
         [ResourceSet(0)]
-        public Matrix4x4 Transform;
-        [ResourceSet(0)]
         public Matrix4x4 Projection;
 
+        [ResourceSet(1)]
+        public Matrix4x4 Transform;
         [ResourceSet(1)]
         public Texture2DResource Texture;
         [ResourceSet(1)]

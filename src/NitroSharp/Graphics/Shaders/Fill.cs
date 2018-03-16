@@ -10,8 +10,11 @@ namespace NitroSharp.Graphics.Shaders
 {
     internal class Fill
     {
-        public Matrix4x4 Transform;
+        [ResourceSet(0)]
         public Matrix4x4 Projection;
+
+        [ResourceSet(1)]
+        public Matrix4x4 Transform;
 
         [VertexShader]
         public FragmentInput VS(VertexInput2D input)

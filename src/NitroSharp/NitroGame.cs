@@ -20,7 +20,7 @@ namespace NitroSharp
         private readonly NewNitroConfiguration _configuration;
         private readonly string _nssFolder;
 
-        internal RenderSystem RenderSystem;
+        internal RenderSystem RenderSystem { get; private set; }
         private InputSystem _inputHandler;
 
         private NsScriptInterpreter _nssInterpreter;

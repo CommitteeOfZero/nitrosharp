@@ -6,7 +6,7 @@ using Veldrid;
 
 namespace NitroSharp.Graphics
 {
-    internal sealed class EffectLibrary : IDisposable
+    public sealed class EffectLibrary : IDisposable
     {
         private static Assembly s_assembly = typeof(EffectLibrary).Assembly;
 
@@ -18,24 +18,24 @@ namespace NitroSharp.Graphics
             _gd = graphicsDevice;
         }
 
-        public T Get<T>() where T : Effect
+        public T Get<T>(BoundResourceSet sharedProperties) where T : Effect
         {
             if (!_effectCache.TryGetValue(typeof(T), out var effect))
             {
-                effect = _effectCache[typeof(T)] = LoadEffect<T>(_gd);
+                effect = _effectCache[typeof(T)] = LoadEffect<T>(_gd, sharedProperties);
             }
 
             return (T)effect;
         }
 
-        public static T LoadEffect<T>(GraphicsDevice graphicsDevice) where T : Effect
+        private T LoadEffect<T>(GraphicsDevice graphicsDevice, BoundResourceSet sharedProperties) where T : Effect
         {
             var type = typeof(T);
             var factory = graphicsDevice.ResourceFactory;
             string name = type.Name.Replace("Effect", string.Empty);
             var vertex = LoadShader(factory, name, ShaderStages.Vertex, "VS");
             var fragment = LoadShader(factory, name, ShaderStages.Fragment, "FS");
-            return (T)Activator.CreateInstance(type, graphicsDevice, vertex, fragment);
+            return (T)Activator.CreateInstance(type, graphicsDevice, vertex, fragment, sharedProperties);
         }
 
         public static Shader LoadShader(ResourceFactory factory, string set, ShaderStages stage, string entryPoint)

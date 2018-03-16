@@ -1,7 +1,7 @@
 ﻿using System.Numerics;
 using Veldrid;
 
-namespace NitroSharp.Graphics.Framework
+namespace NitroSharp.Graphics
 {
     public struct Vertex3D
     {

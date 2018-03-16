@@ -11,9 +11,9 @@ namespace NitroSharp.Graphics.Shaders
     public class Cube
     {
         [ResourceSet(0)]
-        public Matrix4x4 Projection;
-        [ResourceSet(0)]
         public Matrix4x4 View;
+        [ResourceSet(0)]
+        public Matrix4x4 Projection;
 
         [ResourceSet(1)]
         public Matrix4x4 World;
@@ -25,6 +25,12 @@ namespace NitroSharp.Graphics.Shaders
         [VertexShader]
         public FragmentInput VS(VertexInput input)
         {
+            //Matrix4x4 view = new Matrix4x4(
+            //    1, 0, 0, 0,
+            //    0, 1, 0, 0,
+            //    0, 0, 1, 0,
+            //    0, 0, 1, 1);
+
             FragmentInput output;
             Vector4 worldPosition = Mul(World, new Vector4(input.Position, 1));
             Vector4 viewPosition = Mul(View, worldPosition);

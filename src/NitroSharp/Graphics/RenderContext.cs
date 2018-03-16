@@ -2,15 +2,19 @@
 
 namespace NitroSharp.Graphics
 {
-    internal sealed class RenderContext
+    public sealed class RenderContext
     {
-        public RenderContext(GraphicsDevice device, ResourceFactory factory, CommandList commandList, Canvas canvas, EffectLibrary effectLibrary)
+        public RenderContext(GraphicsDevice device, ResourceFactory factory,
+            CommandList commandList, Canvas canvas, EffectLibrary effectLibrary,
+            SharedEffectProperties2D sharedEffectProperties2D, SharedEffectProperties3D camera)
         {
             Device = device;
             Factory = factory;
             CommandList = commandList;
             Canvas = canvas;
             Effects = effectLibrary;
+            SharedEffectProperties2D = sharedEffectProperties2D;
+            Camera = camera;
         }
 
         public GraphicsDevice Device { get; }
@@ -18,5 +22,7 @@ namespace NitroSharp.Graphics
         public CommandList CommandList { get; }
         public Canvas Canvas { get; }
         public EffectLibrary Effects { get; }
+        public SharedEffectProperties2D SharedEffectProperties2D { get; }
+        public SharedEffectProperties3D Camera { get; }
     }
 }

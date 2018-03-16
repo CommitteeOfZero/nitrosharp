@@ -22,16 +22,16 @@ namespace NitroSharp.Graphics
 
         private readonly Stack<Matrix4x4> _transforms = new Stack<Matrix4x4>();
 
-        public Canvas(GraphicsDevice graphicsDevice)
+        public Canvas(GraphicsDevice graphicsDevice, EffectLibrary effectLibrary, SharedEffectProperties2D sharedEffectProperties)
         {
             _gd = graphicsDevice;
-            _spriteEffect = EffectLibrary.LoadEffect<SpriteEffect>(_gd);
-            _spriteEffect.Sampler = _gd.LinearSampler;
-            _fillEffect = EffectLibrary.LoadEffect<FillEffect>(_gd);
+            _spriteEffect = effectLibrary.Get<SpriteEffect>(sharedEffectProperties);
+            _spriteEffect.Properties.Sampler = _gd.LinearSampler;
+            _fillEffect = effectLibrary.Get<FillEffect>(sharedEffectProperties);
 
             _vertices = new Vertex2D[InitialVertexBufferCapacity];
             CreateVertexBuffer(InitialVertexBufferCapacity);
-            _indexBuffer = graphicsDevice.CreateStaticBuffer(new ushort[] { 0, 1, 2, 2, 1, 3 }, BufferUsage.IndexBuffer);
+            _indexBuffer = _gd.CreateStaticBuffer(new ushort[] { 0, 1, 2, 2, 1, 3 }, BufferUsage.IndexBuffer);
         }
 
         private void CreateVertexBuffer(uint vertexCount)
@@ -46,11 +46,6 @@ namespace NitroSharp.Graphics
             _cl = cl;
             _cl.SetVertexBuffer(0, _vertexBuffer);
             _cl.SetIndexBuffer(_indexBuffer, IndexFormat.UInt16);
-
-            _spriteEffect.Begin(cl);
-            _spriteEffect.SetOrthographicsProjection(viewport);
-            _fillEffect.Begin(cl);
-            _fillEffect.SetOrthographicsProjection(viewport);
 
             _offset = 0;
         }
@@ -77,9 +72,12 @@ namespace NitroSharp.Graphics
         {
             DrawQuadGeometry(rect, fillColor);
 
-            _fillEffect.Begin(_cl);
-            _fillEffect.Transform = PopTransform();
-            _fillEffect.End();
+            var properties = _fillEffect.Properties;
+            properties.BeginRecording(_cl);
+            properties.Transform = PopTransform();
+            properties.EndRecording();
+
+            _fillEffect.Apply(_cl);
 
             Submit();
         }
@@ -113,10 +111,13 @@ namespace NitroSharp.Graphics
 
             DrawQuadGeometry(destinationRect, color, texCoordTL, texCoordBR);
 
-            _spriteEffect.Begin(_cl);
-            _spriteEffect.Transform = PopTransform();
-            _spriteEffect.Texture = image.GetTextureView();
-            _spriteEffect.End();
+            var properties = _spriteEffect.Properties;
+            properties.BeginRecording(_cl);
+            properties.Transform = PopTransform();
+            properties.Texture = image.GetTextureView();
+            properties.EndRecording();
+
+            _spriteEffect.Apply(_cl);
 
             Submit();
         }

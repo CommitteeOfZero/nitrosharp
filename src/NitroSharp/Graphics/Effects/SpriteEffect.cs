@@ -1,11 +1,11 @@
 ﻿using System.Numerics;
 using Veldrid;
 
-namespace NitroSharp.Graphics.Effects
+namespace NitroSharp.Graphics
 {
-    public sealed class CubeEffect : Effect
+    internal sealed class SpriteEffect : Effect
     {
-        public CubeEffect(GraphicsDevice graphicsDevice, Shader vertexShader, Shader fragmentShader, SharedEffectProperties3D sharedProperties)
+        public SpriteEffect(GraphicsDevice graphicsDevice, Shader vertexShader, Shader fragmentShader, SharedEffectProperties2D sharedProperties)
             : base(graphicsDevice, vertexShader, fragmentShader)
         {
             Properties = new EffectProperties(graphicsDevice);
@@ -16,7 +16,7 @@ namespace NitroSharp.Graphics.Effects
 
         public sealed class EffectProperties : BoundResourceSet
         {
-            private Matrix4x4 _world;
+            private Matrix4x4 _transform;
             private TextureView _texture;
             private Sampler _sampler;
 
@@ -25,10 +25,10 @@ namespace NitroSharp.Graphics.Effects
             }
 
             [BoundResource(ResourceKind.UniformBuffer, ShaderStages.Vertex)]
-            public Matrix4x4 World
+            public Matrix4x4 Transform
             {
-                get => _world;
-                set => Update(ref _world, value);
+                get => _transform;
+                set => Update(ref _transform, value);
             }
 
             [BoundResource(ResourceKind.TextureReadOnly, ShaderStages.Fragment)]
@@ -44,29 +44,6 @@ namespace NitroSharp.Graphics.Effects
                 get => _sampler;
                 set => Set(ref _sampler, value);
             }
-        }
-
-        protected override GraphicsPipelineDescription SetupPipeline()
-        {
-            var shaderSet = new ShaderSetDescription(
-                new[]
-                {
-                    Vertex3D.LayoutDescription
-                },
-                new Shader[]
-                {
-                    _vs,
-                    _fs
-                });
-
-            return new GraphicsPipelineDescription(
-                BlendStateDescription.SingleOverrideBlend,
-                DepthStencilStateDescription.DepthOnlyLessEqual,
-                RasterizerStateDescription.Default,
-                PrimitiveTopology.TriangleList,
-                shaderSet,
-                _resourceLayouts,
-                _gd.SwapchainFramebuffer.OutputDescription);
         }
     }
 }

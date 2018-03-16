@@ -1,5 +1,4 @@
-﻿using NitroSharp.Primitives;
-using Veldrid;
+﻿using Veldrid;
 
 namespace NitroSharp.Graphics
 {

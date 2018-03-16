@@ -1,27 +1,24 @@
-﻿using System;
-using System.Diagnostics;
-using System.Numerics;
+﻿using System.Numerics;
 using NitroSharp.Content;
 using NitroSharp.Graphics.Effects;
-using NitroSharp.Graphics.Framework;
 using NitroSharp.Primitives;
-using NitroSharp.Utilities;
 using Veldrid;
 
 namespace NitroSharp.Graphics.Objects
 {
     internal sealed class Cube : Visual
     {
-        private CubeEffect _cubeShader;
-        private DeviceBuffer _vb;
-        private DeviceBuffer _ib;
-        private BindableTexture _texture;
         private readonly AssetRef<BindableTexture> _front;
         private readonly AssetRef<BindableTexture> _back;
         private readonly AssetRef<BindableTexture> _left;
         private readonly AssetRef<BindableTexture> _right;
         private readonly AssetRef<BindableTexture> _top;
         private readonly AssetRef<BindableTexture> _bottom;
+
+        private CubeEffect _cubeShader;
+        private DeviceBuffer _vb;
+        private DeviceBuffer _ib;
+        private BindableTexture _texture;
 
         public Cube(AssetRef<BindableTexture> front, AssetRef<BindableTexture> back, AssetRef<BindableTexture> left,
             AssetRef<BindableTexture> right, AssetRef<BindableTexture> top, AssetRef<BindableTexture> bottom)
@@ -32,11 +29,12 @@ namespace NitroSharp.Graphics.Objects
             _right = right;
             _top = top;
             _bottom = bottom;
+            Priority = 0;
         }
 
         public override void CreateDeviceObjects(RenderContext renderContext)
         {
-            _cubeShader = renderContext.Effects.Get<CubeEffect>();
+            _cubeShader = renderContext.Effects.Get<CubeEffect>(renderContext.Camera);
 
             var gd = renderContext.Device;
             var factory = renderContext.Factory;
@@ -59,7 +57,6 @@ namespace NitroSharp.Graphics.Objects
             var cl = factory.CreateCommandList();
             cl.Begin();
 
-            uint faceSize = width * height * 4;
             var right = _right.Asset.DeviceTexture;
             cl.CopyTexture(right, 0, 0, 0, 0, 0, textureCube, 0, 0, 0, 0, dstBaseArrayLayer: 0, width, height, 1, 1);
             var left = _left.Asset.DeviceTexture;
@@ -79,28 +76,19 @@ namespace NitroSharp.Graphics.Objects
             gd.WaitForIdle();
 
             _texture = new BindableTexture(factory, textureCube);
-        }
-
-        public void SetFieldOfView(float angle)
-        {
-            float rad = angle / 180.0f * (float)Math.PI;
-            _cubeShader.Projection = Matrix4x4.CreatePerspectiveFieldOfView(
-                1.0f,
-                (float)1280 / (float)720,
-                0.1f,
-                20f);
-
-            _cubeShader.View = Matrix4x4.CreateLookAt(-Vector3.UnitZ, Vector3.Zero, Vector3.UnitY);
-            _cubeShader.World = Matrix4x4.Identity; //Matrix4x4.CreateRotationY((float)Math.PI / 4) * Matrix4x4.CreateRotationX((float)Math.PI / 4);
+            _cubeShader.Properties.World = Matrix4x4.Identity;
+            _cubeShader.Properties.Sampler = renderContext.Device.Aniso4xSampler;
         }
 
         public override void Render(RenderContext renderContext)
         {
             var cl = renderContext.CommandList;
-            _cubeShader.Begin(cl);
-            _cubeShader.Texture = _texture.GetTextureView();
-            _cubeShader.Sampler = renderContext.Device.PointSampler;
-            _cubeShader.End();
+            var properties = _cubeShader.Properties;
+            properties.BeginRecording(cl);
+            properties.Texture = _texture.GetTextureView();
+            properties.EndRecording();
+
+            _cubeShader.Apply(cl);
 
             cl.ClearDepthStencil(1f);
             cl.SetVertexBuffer(0, _vb);

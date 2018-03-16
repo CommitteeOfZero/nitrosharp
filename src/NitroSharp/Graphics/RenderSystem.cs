@@ -4,6 +4,7 @@ using System;
 using System.Numerics;
 using Veldrid;
 using NitroSharp.Primitives;
+using NitroSharp.Graphics.Objects;
 
 namespace NitroSharp.Graphics
 {
@@ -17,6 +18,10 @@ namespace NitroSharp.Graphics
         private readonly EffectLibrary _effectLibrary;
         public readonly RenderContext RC;
 
+        private readonly SharedEffectProperties2D _projectionMatrix2D;
+        private readonly SharedEffectProperties3D _camera;
+        private Cube _cube;
+
         public RenderSystem(GraphicsDevice graphicsDevice, NewNitroConfiguration configuration)
         {
             _gd = graphicsDevice;
@@ -24,9 +29,22 @@ namespace NitroSharp.Graphics
             
             _factory = _gd.ResourceFactory;
             _cl = _factory.CreateCommandList();
-            _canvas = new Canvas(graphicsDevice);
             _effectLibrary = new EffectLibrary(_gd);
-            RC = new RenderContext(_gd, _factory, _cl, _canvas, _effectLibrary);
+
+            _projectionMatrix2D = new SharedEffectProperties2D(_gd);
+            _projectionMatrix2D.Projection = Matrix4x4.CreateOrthographicOffCenter(
+                0, DesignResolution.Width, DesignResolution.Height, 0, 0, -1);
+
+            _camera = new SharedEffectProperties3D(_gd);
+            _camera.View = Matrix4x4.CreateLookAt(-Vector3.UnitZ, Vector3.Zero, Vector3.UnitY);
+            _camera.Projection = Matrix4x4.CreatePerspectiveFieldOfView(
+                (float)Math.PI / 3.0f,
+                DesignResolution.Width / DesignResolution.Height,
+                0.1f,
+                1.0f);
+
+            _canvas = new Canvas(graphicsDevice, _effectLibrary, _projectionMatrix2D);
+            RC = new RenderContext(_gd, _factory, _cl, _canvas, _effectLibrary, _projectionMatrix2D, _camera);
         }
 
         private SizeF DesignResolution => new SizeF(_config.WindowWidth, _config.WindowHeight);
@@ -42,7 +60,9 @@ namespace NitroSharp.Graphics
 
             _cl.SetFramebuffer(_gd.SwapchainFramebuffer);
             _cl.SetFullViewports();
-            _cl.ClearColorTarget(0, RgbaFloat.Black);
+            _cl.ClearColorTarget(0, RgbaFloat.CornflowerBlue);
+
+            _cube?.Render(RC);
 
             _canvas.Begin(_cl, new Viewport(0, 0, DesignResolution.Width, DesignResolution.Height, 0, 0));
             base.Update(deltaMilliseconds);
@@ -61,7 +81,7 @@ namespace NitroSharp.Graphics
 
         public override IEnumerable<Entity> SortEntities(IEnumerable<Entity> entities)
         {
-            return entities.OrderBy(x => ((Visual)x.GetComponent<Visual>()).Priority).ThenBy(x => x.CreationTime);
+            return entities.OrderBy(x => x.GetComponent<Visual>().Priority).ThenBy(x => x.CreationTime);
         }
 
         private IEnumerable<Entity> SortByPriority(IEnumerable<Entity> entities)
@@ -82,7 +102,13 @@ namespace NitroSharp.Graphics
 
         private void RenderItem(Visual visual, Vector2 scale)
         {
-            var transform = visual.Entity.Transform.GetWorldMatrix();
+            if (visual is Cube cube)
+            {
+                _cube = cube;
+                return;
+            }
+
+            var transform = visual.Entity.Transform.GetTransformMatrix();
             _canvas.SetTransform(transform);
             visual.Render(RC);
         }
@@ -91,6 +117,8 @@ namespace NitroSharp.Graphics
         {
             _canvas.Dispose();
             _effectLibrary.Dispose();
+            _projectionMatrix2D.Dispose();
+            _camera.Dispose();
             _cl.Dispose();
         }
     }
