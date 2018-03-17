@@ -29,8 +29,8 @@ namespace NitroSharp
         }
 
         protected ContentManager Content { get; private set; }
-        protected EntityManager Entities { get; }
-        protected SystemManager Systems { get; }
+        private protected EntityManager Entities { get; }
+        private protected SystemManager Systems { get; }
 
         protected bool Running => _running;
         protected CancellationTokenSource ShutdownCancellation { get; }
@@ -129,13 +129,14 @@ namespace NitroSharp
             SDL_WindowFlags sDL_WindowFlags = SDL_WindowFlags.OpenGL;
 
             Window = new Sdl2Window(_parameters.WindowTitle, 100, 100,
-                _parameters.WindowWidth, _parameters.WindowHeight, sDL_WindowFlags, true);
+                _parameters.WindowWidth, _parameters.WindowHeight, sDL_WindowFlags, false);
+            Window.LimitPollRate = true;
 
             GraphicsDeviceOptions options = new GraphicsDeviceOptions(false, PixelFormat.R16_UNorm, false);
 #if DEBUG
             options.Debug = true;
 #endif
-            GraphicsDevice = VeldridStartup.CreateGraphicsDevice(Window, options, GraphicsBackend.Direct3D11);
+            GraphicsDevice = VeldridStartup.CreateGraphicsDevice(Window, options);
 
             //Window = new DedicatedThreadWindow(_parameters.WindowTitle, _parameters.WindowWidth, _parameters.WindowHeight, WindowState.Normal);
             //RenderContext = new DxRenderContext(Window, multithreaded: true, enableVSync: _parameters.EnableVSync);

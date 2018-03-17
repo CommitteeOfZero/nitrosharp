@@ -79,5 +79,7 @@ namespace NitroSharp.NsScript
         public virtual void CreateChoice(string entityName) { }
         public virtual void PlayCutscene(string entityName, int priority, bool loop, bool alpha, string fileName, bool enableAudio) { }
         public virtual void AddClippedTexture(string entityName, int priority, NsCoordinate x1, NsCoordinate y1, NsCoordinate x2, NsCoordinate y2, int width, int height, string srcEntityName) { }
+
+        public virtual void Rotate(string entityName, TimeSpan duration, int xRotation, int yRotation, int zRotation, NsEasingFunction easingFunction, TimeSpan delay) { }
     }
 }

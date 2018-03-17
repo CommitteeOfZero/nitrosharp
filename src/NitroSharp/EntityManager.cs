@@ -4,7 +4,7 @@ using System.Diagnostics;
 
 namespace NitroSharp
 {
-    public sealed class EntityManager
+    internal sealed class EntityManager
     {
         private readonly Dictionary<string, Entity> _allEntities;
         private readonly HashSet<(Entity entity, Component component)> _componentsToRemove;

@@ -6,7 +6,8 @@ namespace NitroSharp.Graphics
     {
         public RenderContext(GraphicsDevice device, ResourceFactory factory,
             CommandList commandList, Canvas canvas, EffectLibrary effectLibrary,
-            SharedEffectProperties2D sharedEffectProperties2D, SharedEffectProperties3D camera)
+            SharedEffectProperties2D sharedEffectProperties2D,
+            SharedEffectProperties3D sharedEffectProperties3D)
         {
             Device = device;
             Factory = factory;
@@ -14,7 +15,7 @@ namespace NitroSharp.Graphics
             Canvas = canvas;
             Effects = effectLibrary;
             SharedEffectProperties2D = sharedEffectProperties2D;
-            Camera = camera;
+            SharedEffectProperties3D = sharedEffectProperties3D;
         }
 
         public GraphicsDevice Device { get; }
@@ -23,6 +24,6 @@ namespace NitroSharp.Graphics
         public Canvas Canvas { get; }
         public EffectLibrary Effects { get; }
         public SharedEffectProperties2D SharedEffectProperties2D { get; }
-        public SharedEffectProperties3D Camera { get; }
+        public SharedEffectProperties3D SharedEffectProperties3D { get; }
     }
 }

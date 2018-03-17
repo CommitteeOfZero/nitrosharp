@@ -2,10 +2,11 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using NitroSharp.Graphics;
 
 namespace NitroSharp
 {
-    public sealed class Entity
+    internal sealed class Entity
     {
         private readonly EntityManager _manager;
         private readonly Dictionary<Type, IList<Component>> _components;
@@ -29,6 +30,7 @@ namespace NitroSharp
         public string Name { get; }
         public TimeSpan CreationTime { get; }
         public Transform Transform { get; }
+        public Visual Visual { get; private set; }
         public bool IsScheduledForRemoval { get; internal set; }
 
         public Dictionary<string, object> AdditionalProperties
@@ -71,6 +73,11 @@ namespace NitroSharp
 
                 collection.Add(component);
                 component.AttachToEntity(this);
+            }
+
+            if (component is Visual visual)
+            {
+                Visual = visual;
             }
 
             _manager.InternalComponentAdded(this);

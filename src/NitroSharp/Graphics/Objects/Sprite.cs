@@ -22,5 +22,10 @@ namespace NitroSharp.Graphics
         {
             canvas.DrawImage(Source.Asset, 0, 0, Opacity);
         }
+
+        public override void DestroyDeviceResources(RenderContext renderContext)
+        {
+            Source.Dispose();
+        }
     }
 }

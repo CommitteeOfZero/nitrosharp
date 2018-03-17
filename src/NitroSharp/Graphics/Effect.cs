@@ -62,6 +62,11 @@ namespace NitroSharp.Graphics
             commandList.SetPipeline(_pipeline);
         }
 
+        public void SetPipeline(CommandList commandList)
+        {
+            commandList.SetPipeline(_pipeline);
+        }
+
         public void Apply(CommandList commandList)
         {
             ThrowIfUninitialized();

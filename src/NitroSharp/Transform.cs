@@ -1,11 +1,12 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using NitroSharp.Graphics;
 
 namespace NitroSharp
 {
-    public class Transform : Component
+    internal class Transform : Component
     {
         private Transform _parent;
         private List<Transform> _children;

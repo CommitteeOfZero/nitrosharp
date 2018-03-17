@@ -62,7 +62,7 @@ namespace NitroSharp.Graphics.Effects
             return new GraphicsPipelineDescription(
                 BlendStateDescription.SingleOverrideBlend,
                 DepthStencilStateDescription.DepthOnlyLessEqual,
-                RasterizerStateDescription.Default,
+                RasterizerStateDescription.CullNone,
                 PrimitiveTopology.TriangleList,
                 shaderSet,
                 _resourceLayouts,

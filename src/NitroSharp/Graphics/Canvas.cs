@@ -26,7 +26,7 @@ namespace NitroSharp.Graphics
         {
             _gd = graphicsDevice;
             _spriteEffect = effectLibrary.Get<SpriteEffect>(sharedEffectProperties);
-            _spriteEffect.Properties.Sampler = _gd.LinearSampler;
+            _spriteEffect.Properties.Sampler = _gd.Aniso4xSampler;
             _fillEffect = effectLibrary.Get<FillEffect>(sharedEffectProperties);
 
             _vertices = new Vertex2D[InitialVertexBufferCapacity];
@@ -143,71 +143,73 @@ namespace NitroSharp.Graphics
         public void DrawQuadGeometry(in RectangleF rect, in RgbaFloat color, in Vector2 texCoordTL, in Vector2 texCoordBR)
         {
             EnsureCapacity();
+            int offset = _offset;
 
-            ref var VertexTL = ref _vertices[_offset];
+            ref var VertexTL = ref _vertices[offset];
             VertexTL.Position.X = rect.X;
             VertexTL.Position.Y = rect.Y;
             VertexTL.Color = color;
             VertexTL.TexCoords.X = texCoordTL.X;
             VertexTL.TexCoords.Y = texCoordTL.Y;
 
-            ref var VertexTR = ref _vertices[_offset + 1];
+            ref var VertexTR = ref _vertices[++offset];
             VertexTR.Position.X = rect.X + rect.Width;
             VertexTR.Position.Y = rect.Y;
             VertexTR.Color = color;
             VertexTR.TexCoords.X = texCoordBR.X;
             VertexTR.TexCoords.Y = texCoordTL.Y;
 
-            ref var VertexBL = ref _vertices[_offset + 2];
+            ref var VertexBL = ref _vertices[++offset];
             VertexBL.Position.X = rect.X;
             VertexBL.Position.Y = rect.Y + rect.Height;
             VertexBL.Color = color;
             VertexBL.TexCoords.X = texCoordTL.X;
             VertexBL.TexCoords.Y = texCoordBR.Y;
 
-            ref var VertexBR = ref _vertices[_offset + 3];
+            ref var VertexBR = ref _vertices[++offset];
             VertexBR.Position.X = rect.X + rect.Width;
             VertexBR.Position.Y = rect.Y + rect.Height;
             VertexBR.Color = color;
             VertexBR.TexCoords.X = texCoordBR.X;
             VertexBR.TexCoords.Y = texCoordBR.Y;
 
-            _offset += 4;
+            _offset = ++offset;
         }
 
         public void DrawQuadGeometry(in RectangleF rect, in RgbaFloat color)
         {
             EnsureCapacity();
+            int offset = _offset;
 
-            ref var VertexTL = ref _vertices[_offset];
+            ref var VertexTL = ref _vertices[offset];
             VertexTL.Position.X = rect.X;
             VertexTL.Position.Y = rect.Y;
             VertexTL.Color = color;
             VertexTL.TexCoords.X = 0;
             VertexTL.TexCoords.Y = 0;
 
-            ref var VertexTR = ref _vertices[_offset + 1];
+            ref var VertexTR = ref _vertices[++offset];
             VertexTR.Position.X = rect.X + rect.Width;
             VertexTR.Position.Y = rect.Y;
             VertexTR.Color = color;
             VertexTR.TexCoords.X = 1;
             VertexTR.TexCoords.Y = 0;
 
-            ref var VertexBL = ref _vertices[_offset + 2];
+            ref var VertexBL = ref _vertices[++offset];
             VertexBL.Position.X = rect.X;
             VertexBL.Position.Y = rect.Y + rect.Height;
             VertexBL.Color = color;
             VertexBL.TexCoords.X = 0;
             VertexBL.TexCoords.Y = 1;
 
-            ref var VertexBR = ref _vertices[_offset + 3];
+            ref var VertexBR = ref _vertices[++offset];
             VertexBR.Position.X = rect.X + rect.Width;
             VertexBR.Position.Y = rect.Y + rect.Height;
             VertexBR.Color = color;
             VertexBR.TexCoords.X = 1;
             VertexBR.TexCoords.Y = 1;
 
-            _offset += 4;
+            _offset = ++offset;
         }
 
         private void EnsureCapacity()

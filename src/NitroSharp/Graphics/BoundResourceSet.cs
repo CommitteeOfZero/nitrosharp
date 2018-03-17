@@ -11,27 +11,24 @@ namespace NitroSharp.Graphics
     public abstract class BoundResourceSet
     {
         private readonly GraphicsDevice _gd;
-        public ResourceLayout ResourceLayout { get; }
-
         private readonly DisposeCollectorResourceFactory _factory;
+        private CommandList _cl;
 
         private readonly IDictionary<string, PropertyBinding> _propertyBindings;
         private (ResourceLayout layout, ResourceSetDescription setDescription) _layoutSetPair;
-
-        private CommandList _cl;
-
         private readonly Dictionary<ResourceSetDescription, ResourceSet> _resourceSetCache;
 
         public BoundResourceSet(GraphicsDevice graphicsDevice)
         {
             _gd = graphicsDevice;
             _factory = new DisposeCollectorResourceFactory(_gd.ResourceFactory);
-
-            _layoutSetPair = Bind(GetType(), _factory, out _propertyBindings);
-
-            ResourceLayout = _layoutSetPair.layout;
             _resourceSetCache = new Dictionary<ResourceSetDescription, ResourceSet>();
+
+            Bind(GetType(), _factory, out _propertyBindings, out _layoutSetPair);
+            ResourceLayout = _layoutSetPair.layout;
         }
+
+        public ResourceLayout ResourceLayout { get; }
 
         public void BeginRecording(CommandList commandList)
         {
@@ -49,19 +46,15 @@ namespace NitroSharp.Graphics
             commandList.SetGraphicsResourceSet(slot, GetResourceSet(ref descriptor));
         }
 
-        protected void NotifyPropertyChanged(string propertyName, BindableResource newValue)
-        {
-            var binding = _propertyBindings[propertyName];
-            ref var pair = ref _layoutSetPair;
-            ref var resource = ref pair.setDescription.BoundResources[binding.PositionInResourceSet];
-            resource = newValue;
-        }
-
         protected void Set<T>(ref T property, T newValue, [CallerMemberName] string propertyName = "")
             where T : BindableResource
         {
             property = newValue;
-            NotifyPropertyChanged(propertyName, newValue);
+
+            var binding = _propertyBindings[propertyName];
+            ref var resourceSetDesc = ref _layoutSetPair.setDescription;
+            ref var resource = ref resourceSetDesc.BoundResources[binding.PositionInResourceSet];
+            resource = newValue;
         }
 
         protected void Update<T>(ref T property, T newValue, [CallerMemberName] string propertyName = "")
@@ -70,8 +63,8 @@ namespace NitroSharp.Graphics
             property = newValue;
 
             var binding = _propertyBindings[propertyName];
-            ref var pair = ref _layoutSetPair;
-            ref var buffer = ref pair.setDescription.BoundResources[binding.PositionInResourceSet];
+            ref var resourceSetDesc = ref _layoutSetPair.setDescription;
+            ref var buffer = ref resourceSetDesc.BoundResources[binding.PositionInResourceSet];
             if (buffer == null)
             {
                 buffer = _factory.CreateBuffer(new BufferDescription(binding.BufferSize, BufferUsage.UniformBuffer));
@@ -104,9 +97,10 @@ namespace NitroSharp.Graphics
             _factory.DisposeCollector.DisposeAll();
         }
 
-        private static (ResourceLayout layout, ResourceSetDescription setDesc) Bind(
+        private static void Bind(
             Type type, ResourceFactory resourceFactory,
-            out IDictionary<string, PropertyBinding> propertyBindings)
+            out IDictionary<string, PropertyBinding> propertyBindings,
+            out (ResourceLayout, ResourceSetDescription) layoutSetPair)
         {
             propertyBindings = new Dictionary<string, PropertyBinding>();
             var layoutBuilder = new ArrayBuilder<ResourceLayoutElementDescription>(4);
@@ -121,8 +115,9 @@ namespace NitroSharp.Graphics
                 {
                     var propertyType = propertyInfo.PropertyType;
                     uint bufferSize = propertyType.IsValueType
-                        ? (uint)MathHelper.RoundUp(Marshal.SizeOf(propertyType), multiple: 16)
+                        ? (uint)MathUtil.RoundUp(Marshal.SizeOf(propertyType), multiple: 16)
                         : 0;
+
                     propertyBindings[propertyInfo.Name] = new PropertyBinding(attribute, positionInResourceSet++, bufferSize);
 
                     ref var currentElement = ref layoutBuilder.Add();
@@ -137,7 +132,7 @@ namespace NitroSharp.Graphics
             var set = new ResourceSetDescription(layout, new BindableResource[layoutElements.Length]);
 
             layoutBuilder.Reset();
-            return (layout, set);
+            layoutSetPair = (layout, set);
         }
     }
 }

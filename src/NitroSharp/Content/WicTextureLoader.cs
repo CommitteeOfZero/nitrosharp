@@ -46,6 +46,7 @@ namespace NitroSharp.Content
 
             CommandList cl = gd.ResourceFactory.CreateCommandList();
             cl.Begin();
+
             for (uint level = 0; level < MipLevels; level++)
             {
                 MappedResource map = gd.Map(staging, MapMode.Write, level);

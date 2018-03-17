@@ -36,7 +36,9 @@ namespace NitroSharp.Graphics.Shaders
             Vector4 viewPosition = Mul(View, worldPosition);
             Vector4 clipPosition = Mul(Projection, viewPosition);
             output.SystemPosition = clipPosition;
-            output.TexCoords = input.Position;
+
+            var pos = input.Position;
+            output.TexCoords = new Vector3(-pos.X, pos.Y, pos.Z);
 
             return output;
         }

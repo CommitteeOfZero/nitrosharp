@@ -3,6 +3,8 @@ using System;
 using System.Numerics;
 using NitroSharp.Animation;
 using NitroSharp.Graphics;
+using NitroSharp.Primitives;
+using NitroSharp.Utilities;
 
 namespace NitroSharp
 {
@@ -124,6 +126,29 @@ namespace NitroSharp
             {
                 entity.Transform.Scale = new Vector3(scaleX, scaleY, 1);
             }
+        }
+
+        public override void Rotate(string entityName, TimeSpan duration, int xRotation, int yRotation, int zRotation, NsEasingFunction easingFunction, TimeSpan delay)
+        {
+            foreach (var entity in _entities.Query(entityName))
+            {
+                RotateCore(entity, duration, xRotation, yRotation, zRotation, easingFunction);
+            }
+
+            if (delay > TimeSpan.Zero)
+            {
+                Interpreter.SuspendThread(CurrentThread, duration);
+            }
+        }
+
+        private static void RotateCore(Entity entity, TimeSpan duration, int xRotation, int yRotation, int zRotation, NsEasingFunction easingFunction)
+        {
+            var initial = Quaternion.Identity;
+            var final = Quaternion.CreateFromYawPitchRoll(MathUtil.ToRadians(yRotation), MathUtil.ToRadians(xRotation), MathUtil.ToRadians(zRotation));
+
+            var fn = (TimingFunction)easingFunction;
+            var animation = new RotateAnimation(entity.Transform, initial, final, duration, fn);
+            entity.AddComponent(animation);
         }
 
         public override void DrawTransition(string sourceEntityName, TimeSpan duration, NsRational initialOpacity,

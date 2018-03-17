@@ -2,9 +2,13 @@
 
 namespace NitroSharp.Graphics
 {
-    internal abstract class Visual : Component, Renderable
+    internal abstract class Visual : Component
     {
         public virtual void CreateDeviceObjects(RenderContext renderContext)
+        {
+        }
+
+        public virtual void DestroyDeviceResources(RenderContext renderContext)
         {
         }
 

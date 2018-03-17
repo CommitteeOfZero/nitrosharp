@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace NitroSharp
 {
-    public sealed class SystemManager : IDisposable
+    internal sealed class SystemManager : IDisposable
     {
         private readonly List<GameSystem> _systems;
         private readonly EntityManager _entities;

@@ -3,7 +3,7 @@ using System.Diagnostics;
 
 namespace NitroSharp.Audio
 {
-    public sealed class SoundComponent : Component
+    internal sealed class SoundComponent : Component
     {
         public AudioKind Kind { get; }
 

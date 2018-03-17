@@ -97,14 +97,8 @@ namespace NitroSharp
                 _content.Get<BindableTexture>(top),
                 _content.Get<BindableTexture>(bottom));
 
-            cube.CreateDeviceObjects(_game.RenderSystem.RC);
             _entities.Create(entityName).WithComponent(cube);
         }
-
-        //public override void SetFieldOfView(string entityName, double angle)
-        //{
-        //    _cube.SetFieldOfView((float)angle);
-        //}
 
         public override int GetTextureWidth(string entityName)
         {

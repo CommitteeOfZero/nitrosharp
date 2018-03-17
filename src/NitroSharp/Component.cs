@@ -1,6 +1,6 @@
 ﻿namespace NitroSharp
 {
-    public abstract class Component
+    internal abstract class Component
     {
         public Entity Entity { get; private set; }
         public bool IsEnabled { get; set; } = true;

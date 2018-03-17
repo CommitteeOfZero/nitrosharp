@@ -52,6 +52,7 @@ namespace NitroSharp.NsScript.Symbols
 
             Declare("CreateCube", CreateCube);
             Declare("SetFov", SetFov);
+            Declare("Rotate", Rotate);
         }
 
         private static ConstantValue SetFov(EngineImplementationBase implementation, Stack<ConstantValue> args)
@@ -337,6 +338,21 @@ namespace NitroSharp.NsScript.Symbols
             TimeSpan delay = delayArg == 1.0d ? duration : TimeSpan.FromMilliseconds(delayArg);
 
             implementation.Zoom(entityName, duration, scaleX, scaleY, easingFunction, delay);
+            return null;
+        }
+
+        private static ConstantValue Rotate(EngineImplementationBase implementation, Stack<ConstantValue> args)
+        {
+            var entityName = EntityName(PopString(args));
+            TimeSpan duration = PopTimeSpan(args);
+            var xRotation = PopDouble(args);
+            var yRotation = PopDouble(args);
+            var zRotation = PopDouble(args);
+            var easingFunction = PopEasingFunction(args);
+            double delayArg = PopDouble(args, allowNull: true, allowTypeConversion: true);
+            TimeSpan delay = delayArg == 1.0d ? duration : TimeSpan.FromMilliseconds(delayArg);
+
+            implementation.Rotate(entityName, duration, xRotation, yRotation, zRotation, easingFunction, delay);
             return null;
         }
 

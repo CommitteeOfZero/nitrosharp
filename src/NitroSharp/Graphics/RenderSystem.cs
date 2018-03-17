@@ -16,35 +16,38 @@ namespace NitroSharp.Graphics
         private readonly ResourceFactory _factory;
         private readonly Canvas _canvas;
         private readonly EffectLibrary _effectLibrary;
-        public readonly RenderContext RC;
+        public readonly RenderContext _rc;
 
-        private readonly SharedEffectProperties2D _projectionMatrix2D;
-        private readonly SharedEffectProperties3D _camera;
+        private readonly SharedEffectProperties2D _sharedProps2D;
+        private readonly SharedEffectProperties3D _sharedProps3D;
         private Cube _cube;
 
         public RenderSystem(GraphicsDevice graphicsDevice, NewNitroConfiguration configuration)
         {
             _gd = graphicsDevice;
             _config = configuration;
-            
+
             _factory = _gd.ResourceFactory;
             _cl = _factory.CreateCommandList();
             _effectLibrary = new EffectLibrary(_gd);
 
-            _projectionMatrix2D = new SharedEffectProperties2D(_gd);
-            _projectionMatrix2D.Projection = Matrix4x4.CreateOrthographicOffCenter(
+            _sharedProps2D = new SharedEffectProperties2D(_gd);
+            _sharedProps2D.Projection = Matrix4x4.CreateOrthographicOffCenter(
                 0, DesignResolution.Width, DesignResolution.Height, 0, 0, -1);
 
-            _camera = new SharedEffectProperties3D(_gd);
-            _camera.View = Matrix4x4.CreateLookAt(-Vector3.UnitZ, Vector3.Zero, Vector3.UnitY);
-            _camera.Projection = Matrix4x4.CreatePerspectiveFieldOfView(
+            _sharedProps3D = new SharedEffectProperties3D(_gd);
+            var view = Matrix4x4.CreateLookAt(Vector3.Zero, Vector3.UnitZ, Vector3.UnitY);
+            //view.M33 = -view.M33;
+            _sharedProps3D.View = view;
+
+            _sharedProps3D.Projection = Matrix4x4.CreatePerspectiveFieldOfView(
                 (float)Math.PI / 3.0f,
                 DesignResolution.Width / DesignResolution.Height,
                 0.1f,
-                1.0f);
+                100.0f);
 
-            _canvas = new Canvas(graphicsDevice, _effectLibrary, _projectionMatrix2D);
-            RC = new RenderContext(_gd, _factory, _cl, _canvas, _effectLibrary, _projectionMatrix2D, _camera);
+            _canvas = new Canvas(graphicsDevice, _effectLibrary, _sharedProps2D);
+            _rc = new RenderContext(_gd, _factory, _cl, _canvas, _effectLibrary, _sharedProps2D, _sharedProps3D);
         }
 
         private SizeF DesignResolution => new SizeF(_config.WindowWidth, _config.WindowHeight);
@@ -54,15 +57,25 @@ namespace NitroSharp.Graphics
             interests.Add(typeof(Visual));
         }
 
+        public override void OnRelevantEntityAdded(Entity entity)
+        {
+            entity.Visual.CreateDeviceObjects(_rc);
+        }
+
+        public override void OnRelevantEntityRemoved(Entity entity)
+        {
+            entity.Visual.DestroyDeviceResources(_rc);
+        }
+
         public override void Update(float deltaMilliseconds)
         {
             _cl.Begin();
 
             _cl.SetFramebuffer(_gd.SwapchainFramebuffer);
             _cl.SetFullViewports();
-            _cl.ClearColorTarget(0, RgbaFloat.CornflowerBlue);
+            _cl.ClearColorTarget(0, RgbaFloat.Black);
 
-            _cube?.Render(RC);
+            _cube?.Render(_rc);
 
             _canvas.Begin(_cl, new Viewport(0, 0, DesignResolution.Width, DesignResolution.Height, 0, 0));
             base.Update(deltaMilliseconds);
@@ -110,15 +123,15 @@ namespace NitroSharp.Graphics
 
             var transform = visual.Entity.Transform.GetTransformMatrix();
             _canvas.SetTransform(transform);
-            visual.Render(RC);
+            visual.Render(_rc);
         }
 
         public void Dispose()
         {
             _canvas.Dispose();
             _effectLibrary.Dispose();
-            _projectionMatrix2D.Dispose();
-            _camera.Dispose();
+            _sharedProps2D.Dispose();
+            _sharedProps3D.Dispose();
             _cl.Dispose();
         }
     }

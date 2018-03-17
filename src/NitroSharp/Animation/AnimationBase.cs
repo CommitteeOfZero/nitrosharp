@@ -19,7 +19,7 @@ namespace NitroSharp.Animation
 
         public TimeSpan Duration { get; protected set; }
         public TimingFunction TimingFunction { get; }
-        public float Progress => MathHelper.Clamp(_elapsed / (float)Duration.TotalMilliseconds, 0.0f, 1.0f);
+        public float Progress => MathUtil.Clamp(_elapsed / (float)Duration.TotalMilliseconds, 0.0f, 1.0f);
         public bool Started { get; private set; }
         public bool HasCompleted => Progress == 1.0f;
 

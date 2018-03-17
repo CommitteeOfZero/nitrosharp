@@ -1,4 +1,5 @@
-﻿using System.Numerics;
+﻿using System;
+using System.Numerics;
 using NitroSharp.Content;
 using NitroSharp.Graphics.Effects;
 using NitroSharp.Primitives;
@@ -34,7 +35,7 @@ namespace NitroSharp.Graphics.Objects
 
         public override void CreateDeviceObjects(RenderContext renderContext)
         {
-            _cubeShader = renderContext.Effects.Get<CubeEffect>(renderContext.Camera);
+            _cubeShader = renderContext.Effects.Get<CubeEffect>(renderContext.SharedEffectProperties3D);
 
             var gd = renderContext.Device;
             var factory = renderContext.Factory;
@@ -65,10 +66,10 @@ namespace NitroSharp.Graphics.Objects
             cl.CopyTexture(top, 0, 0, 0, 0, 0, textureCube, 0, 0, 0, 0, dstBaseArrayLayer: 2, width, height, 1, 1);
             var bottom = _bottom.Asset.DeviceTexture;
             cl.CopyTexture(bottom, 0, 0, 0, 0, 0, textureCube, 0, 0, 0, 0, dstBaseArrayLayer: 3, width, height, 1, 1);
-            var back = _back.Asset.DeviceTexture;
-            cl.CopyTexture(back, 0, 0, 0, 0, 0, textureCube, 0, 0, 0, 0, dstBaseArrayLayer: 4, width, height, 1, 1);
             var front = _front.Asset.DeviceTexture;
-            cl.CopyTexture(front, 0, 0, 0, 0, 0, textureCube, 0, 0, 0, 0, dstBaseArrayLayer: 5, width, height, 1, 1);
+            cl.CopyTexture(front, 0, 0, 0, 0, 0, textureCube, 0, 0, 0, 0, dstBaseArrayLayer: 4, width, height, 1, 1);
+            var back = _back.Asset.DeviceTexture;
+            cl.CopyTexture(back, 0, 0, 0, 0, 0, textureCube, 0, 0, 0, 0, dstBaseArrayLayer: 5, width, height, 1, 1);
 
             cl.End();
             gd.SubmitCommands(cl);
@@ -76,8 +77,22 @@ namespace NitroSharp.Graphics.Objects
             gd.WaitForIdle();
 
             _texture = new BindableTexture(factory, textureCube);
-            _cubeShader.Properties.World = Matrix4x4.Identity;
-            _cubeShader.Properties.Sampler = renderContext.Device.Aniso4xSampler;
+            _cubeShader.Properties.Texture = _texture.GetTextureView();
+            _cubeShader.Properties.Sampler = gd.Aniso4xSampler;
+
+            _right.Dispose();
+            _left.Dispose();
+            _top.Dispose();
+            _bottom.Dispose();
+            _front.Dispose();
+            _back.Dispose();
+        }
+
+        public override void DestroyDeviceResources(RenderContext renderContext)
+        {
+            _vb.Dispose();
+            _ib.Dispose();
+            _texture.Dispose();
         }
 
         public override void Render(RenderContext renderContext)
@@ -85,7 +100,7 @@ namespace NitroSharp.Graphics.Objects
             var cl = renderContext.CommandList;
             var properties = _cubeShader.Properties;
             properties.BeginRecording(cl);
-            properties.Texture = _texture.GetTextureView();
+            properties.World = Entity.Transform.GetTransformMatrix();
             properties.EndRecording();
 
             _cubeShader.Apply(cl);
