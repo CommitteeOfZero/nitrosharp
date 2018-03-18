@@ -7,12 +7,12 @@ namespace NitroSharp
     internal sealed class InputSystem : InputTracker
     {
         private readonly Sdl2Window _window;
-        private readonly CoreLogic _nitroCore;
+        private readonly CoreLogic _coreLogic;
 
-        public InputSystem(Sdl2Window window, CoreLogic nitroCore) : base(window)
+        public InputSystem(Sdl2Window window, CoreLogic coreLogic) : base(window)
         {
             _window = window;
-            _nitroCore = nitroCore;
+            _coreLogic = coreLogic;
         }
 
         public override void Update(float deltaMilliseconds)
@@ -21,10 +21,10 @@ namespace NitroSharp
 
             if (ShouldAdvance())
             {
-                if (_nitroCore.MainThread.SleepTimeout == TimeSpan.MaxValue || _nitroCore.WaitingForInput)
+                if (_coreLogic.MainThread.SleepTimeout == TimeSpan.MaxValue || _coreLogic.WaitingForInput)
                 {
-                    _nitroCore.Interpreter.ResumeThread(_nitroCore.MainThread);
-                    _nitroCore.WaitingForInput = false;
+                    _coreLogic.Interpreter.ResumeThread(_coreLogic.MainThread);
+                    _coreLogic.WaitingForInput = false;
                 }
             }
         }

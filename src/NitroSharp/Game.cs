@@ -166,7 +166,7 @@ namespace NitroSharp
             //const float desiredFrameTime = 1000.0f / 60.0f;
 
             float prevFrameTicks = 0.0f;
-            while (_running)
+            while (_running && Window.Exists)
             {
                 long currentFrameTicks = _gameTimer.ElapsedTicks;
                 float deltaMilliseconds = (currentFrameTicks - prevFrameTicks) / Stopwatch.Frequency * 1000.0f;

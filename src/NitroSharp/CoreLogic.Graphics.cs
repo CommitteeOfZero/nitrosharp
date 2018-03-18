@@ -13,8 +13,7 @@ namespace NitroSharp
         public override void AddRectangle(
             string entityName, int priority,
             NsCoordinate x, NsCoordinate y,
-            int width, int height,
-            NsColor color)
+            int width, int height, NsColor color)
         {
             var rgba = new RgbaFloat(color.R / 255.0f, color.G / 255.0f, color.B / 255.0f, 1.0f);
             var rect = new RectangleVisual(width, height, rgba, 1.0f, priority);
@@ -61,8 +60,7 @@ namespace NitroSharp
             string entityName, int priority,
             NsCoordinate dstX, NsCoordinate dstY,
             NsCoordinate srcX, NsCoordinate srcY,
-            int width, int height,
-            string srcEntityName)
+            int width, int height, string srcEntityName)
         {
             var srcRectangle = new RectangleF(srcX.Value, srcY.Value, width, height);
             AddTextureCore(entityName, srcEntityName, dstX, dstY, priority, srcRectangle);
