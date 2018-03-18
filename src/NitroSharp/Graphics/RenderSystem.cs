@@ -10,7 +10,7 @@ namespace NitroSharp.Graphics
 {
     internal sealed class RenderSystem : EntityProcessingSystem, IDisposable
     {
-        private readonly NewNitroConfiguration _config;
+        private readonly Configuration _config;
         private readonly CommandList _cl;
         private readonly GraphicsDevice _gd;
         private readonly ResourceFactory _factory;
@@ -22,7 +22,7 @@ namespace NitroSharp.Graphics
         private readonly SharedEffectProperties3D _sharedProps3D;
         private Cube _cube;
 
-        public RenderSystem(GraphicsDevice graphicsDevice, NewNitroConfiguration configuration)
+        public RenderSystem(GraphicsDevice graphicsDevice, Configuration configuration)
         {
             _gd = graphicsDevice;
             _config = configuration;

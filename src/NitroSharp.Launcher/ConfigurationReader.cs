@@ -6,9 +6,9 @@ namespace NitroSharp.Launcher
 {
     public static class ConfigurationReader
     {
-        public static NewNitroConfiguration Read(string configPath)
+        public static Configuration Read(string configPath)
         {
-            var configuration = new NewNitroConfiguration();
+            var configuration = new Configuration();
             configuration.ContentRoot = "Content";
 
             string json = File.ReadAllText(configPath, Encoding.UTF8);
@@ -30,7 +30,7 @@ namespace NitroSharp.Launcher
             return configuration;
         }
 
-        private static void SetProperty(NewNitroConfiguration configuration, JProperty property)
+        private static void SetProperty(Configuration configuration, JProperty property)
         {
             switch (property.Name)
             {
