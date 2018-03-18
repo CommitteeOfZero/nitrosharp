@@ -5,8 +5,10 @@ namespace NitroSharp.Animation
 {
     internal class Vector3Animation : AnimationBase
     {
-        public Vector3Animation(Component transform, Action<Component, Vector3> propertySetter, Vector3 initialValue,
-            Vector3 finalValue, TimeSpan duration, TimingFunction timingFunction = TimingFunction.Linear)
+        public Vector3Animation(
+            Component transform, Action<Component, Vector3> propertySetter,
+            Vector3 initialValue, Vector3 finalValue, TimeSpan duration,
+            TimingFunction timingFunction = TimingFunction.Linear)
             : base(duration, timingFunction)
         {
             Transform = transform;

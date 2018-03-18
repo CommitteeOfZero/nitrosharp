@@ -11,12 +11,12 @@ namespace NitroSharp.Graphics
         {
             Source = source;
             SourceRectangle = sourceRectangle;
+            Bounds = new SizeF(Source.Asset.Width, Source.Asset.Height);
         }
 
         public AssetRef<BindableTexture> Source { get; set; }
         public RectangleF? SourceRectangle { get; set; }
-
-        public override SizeF Bounds => new SizeF(Source.Asset.Width, Source.Asset.Height);
+        public override SizeF Bounds { get; }
 
         public override void Render(Canvas canvas)
         {

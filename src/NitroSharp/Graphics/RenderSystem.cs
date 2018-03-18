@@ -16,7 +16,7 @@ namespace NitroSharp.Graphics
         private readonly ResourceFactory _factory;
         private readonly Canvas _canvas;
         private readonly EffectLibrary _effectLibrary;
-        public readonly RenderContext _rc;
+        private readonly RenderContext _rc;
 
         private readonly SharedEffectProperties2D _sharedProps2D;
         private readonly SharedEffectProperties3D _sharedProps3D;
@@ -36,8 +36,8 @@ namespace NitroSharp.Graphics
                 0, DesignResolution.Width, DesignResolution.Height, 0, 0, -1);
 
             _sharedProps3D = new SharedEffectProperties3D(_gd);
-            var view = Matrix4x4.CreateLookAt(Vector3.Zero, Vector3.UnitZ, Vector3.UnitY);
-            //view.M33 = -view.M33;
+            var view = Matrix4x4.CreateLookAt(Vector3.Zero, -Vector3.UnitZ, Vector3.UnitY);
+            view.M33 = -view.M33;
             _sharedProps3D.View = view;
 
             _sharedProps3D.Projection = Matrix4x4.CreatePerspectiveFieldOfView(

@@ -10,8 +10,11 @@ namespace NitroSharp
 {
     internal sealed partial class CoreLogic
     {
-        public override void AddRectangle(string entityName, int priority,
-            NsCoordinate x, NsCoordinate y, int width, int height, NsColor color)
+        public override void AddRectangle(
+            string entityName, int priority,
+            NsCoordinate x, NsCoordinate y,
+            int width, int height,
+            NsColor color)
         {
             var rgba = new RgbaFloat(color.R / 255.0f, color.G / 255.0f, color.B / 255.0f, 1.0f);
             var rect = new RectangleVisual(width, height, rgba, 1.0f, priority);
@@ -27,8 +30,10 @@ namespace NitroSharp
             _entities.Create(entityName, replace: true).WithComponent(sprite);
         }
 
-        public override void AddTexture(string entityName, int priority,
-            NsCoordinate x, NsCoordinate y, string fileOrExistingEntityName)
+        public override void AddTexture(
+            string entityName, int priority,
+            NsCoordinate x, NsCoordinate y,
+            string fileOrExistingEntityName)
         {
             if (fileOrExistingEntityName.Equals("SCREEN", StringComparison.OrdinalIgnoreCase))
             {
@@ -52,15 +57,21 @@ namespace NitroSharp
             //    .WithPosition(x, y);
         }
 
-        public override void AddClippedTexture(string entityName, int priority, NsCoordinate dstX, NsCoordinate dstY,
-            NsCoordinate srcX, NsCoordinate srcY, int width, int height, string srcEntityName)
+        public override void AddClippedTexture(
+            string entityName, int priority,
+            NsCoordinate dstX, NsCoordinate dstY,
+            NsCoordinate srcX, NsCoordinate srcY,
+            int width, int height,
+            string srcEntityName)
         {
             var srcRectangle = new RectangleF(srcX.Value, srcY.Value, width, height);
             AddTextureCore(entityName, srcEntityName, dstX, dstY, priority, srcRectangle);
         }
 
-        private void AddTextureCore(string entityName, string fileOrExistingEntityName,
-            NsCoordinate x, NsCoordinate y, int priority, RectangleF? srcRect = null)
+        private void AddTextureCore(
+            string entityName, string fileOrExistingEntityName,
+            NsCoordinate x, NsCoordinate y,
+            int priority, RectangleF? srcRect = null)
         {
             Entity parentEntity = null;
             int idxSlash = entityName.IndexOf('/');
@@ -80,14 +91,19 @@ namespace NitroSharp
                 }
             }
 
-            var texture = new Sprite(_content.Get<BindableTexture>(source), srcRect, 1.0f, priority);
+            var texture = new Sprite(
+                _content.Get<BindableTexture>(source), srcRect, 1.0f, priority);
             _entities.Create(entityName, replace: true)
                 .WithComponent(texture)
                 .WithParent(parentEntity)
                 .WithPosition(x, y);
         }
 
-        public override void CreateCube(string entityName, string front, string back, string right, string left, string top, string bottom)
+        public override void CreateCube(
+            string entityName,
+            string front, string back,
+            string right, string left,
+            string top, string bottom)
         {
             var cube = new Cube(
                 _content.Get<BindableTexture>(front),
@@ -98,6 +114,11 @@ namespace NitroSharp
                 _content.Get<BindableTexture>(bottom));
 
             _entities.Create(entityName).WithComponent(cube);
+        }
+
+        public override void SetFieldOfView(string entityName, double angle)
+        {
+            base.SetFieldOfView(entityName, angle);
         }
 
         public override int GetTextureWidth(string entityName)

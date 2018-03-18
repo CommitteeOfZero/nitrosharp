@@ -5,7 +5,10 @@ namespace NitroSharp.Graphics.Effects
 {
     public sealed class CubeEffect : Effect
     {
-        public CubeEffect(GraphicsDevice graphicsDevice, Shader vertexShader, Shader fragmentShader, SharedEffectProperties3D sharedProperties)
+        public CubeEffect(
+            GraphicsDevice graphicsDevice,
+            Shader vertexShader, Shader fragmentShader,
+            SharedEffectProperties3D sharedProperties)
             : base(graphicsDevice, vertexShader, fragmentShader)
         {
             Properties = new EffectProperties(graphicsDevice);

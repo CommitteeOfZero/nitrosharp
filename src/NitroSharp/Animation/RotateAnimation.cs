@@ -7,7 +7,8 @@ namespace NitroSharp.Animation
     {
         private readonly Transform _target;
 
-        public RotateAnimation(Transform transform, Quaternion initialValue, Quaternion finalValue,
+        public RotateAnimation(
+            Transform transform, Quaternion initialValue, Quaternion finalValue,
             TimeSpan duration, TimingFunction timingFunction = TimingFunction.Linear)
             : base(duration, timingFunction)
         {
@@ -23,7 +24,7 @@ namespace NitroSharp.Animation
         {
             base.Advance(deltaMilliseconds);
 
-            _target.Rotation = Quaternion.Lerp(InitialValue, FinalValue, CalculateFactor(Progress, TimingFunction));
+            //_target.Rotation = Quaternion.Lerp(InitialValue, FinalValue, CalculateFactor(Progress, TimingFunction));
 
             if (HasCompleted)
             {

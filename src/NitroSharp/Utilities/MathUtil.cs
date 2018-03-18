@@ -20,5 +20,10 @@ namespace NitroSharp.Utilities
         {
             return degrees / 180.0f * PI;
         }
+
+        public static float ToDegrees(float radians)
+        {
+            return radians / PI * 180.0f;
+        }
     }
 }

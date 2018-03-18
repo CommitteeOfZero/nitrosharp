@@ -1,5 +1,4 @@
-﻿using System;
-using System.Numerics;
+﻿using System.Numerics;
 using NitroSharp.Content;
 using NitroSharp.Graphics.Effects;
 using NitroSharp.Primitives;
@@ -21,8 +20,10 @@ namespace NitroSharp.Graphics.Objects
         private DeviceBuffer _ib;
         private BindableTexture _texture;
 
-        public Cube(AssetRef<BindableTexture> front, AssetRef<BindableTexture> back, AssetRef<BindableTexture> left,
-            AssetRef<BindableTexture> right, AssetRef<BindableTexture> top, AssetRef<BindableTexture> bottom)
+        public Cube(
+            AssetRef<BindableTexture> front, AssetRef<BindableTexture> back,
+            AssetRef<BindableTexture> left, AssetRef<BindableTexture> right,
+            AssetRef<BindableTexture> top, AssetRef<BindableTexture> bottom)
         {
             _front = front;
             _back = back;
@@ -43,16 +44,13 @@ namespace NitroSharp.Graphics.Objects
             _vb = gd.CreateStaticBuffer(s_vertices, BufferUsage.VertexBuffer);
             _ib = gd.CreateStaticBuffer(s_indices, BufferUsage.IndexBuffer);
 
-            Texture textureCube;
+            var frontTex = _front.Asset;
+            uint width = frontTex.Width;
+            uint height = frontTex.Height;
 
-            uint width = _front.Asset.Width;
-            uint height = _front.Asset.Height;
+            Texture textureCube;
             textureCube = factory.CreateTexture(TextureDescription.Texture2D(
-                width,
-                height,
-                1,
-                1,
-                PixelFormat.R8_G8_B8_A8_UNorm,
+                width, height, 1, 1, PixelFormat.R8_G8_B8_A8_UNorm,
                 TextureUsage.Sampled | TextureUsage.Cubemap));
 
             var cl = factory.CreateCommandList();

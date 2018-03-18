@@ -1,8 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
-using NitroSharp.Graphics;
+using NitroSharp.Utilities;
 
 namespace NitroSharp
 {
@@ -31,19 +30,21 @@ namespace NitroSharp
             }
         }
 
-        public Vector3 Dimensions => new Vector3(Entity.GetComponent<Visual>().Bounds.ToVector(), 0.0f);
+        public Vector3 Dimensions => new Vector3(Entity.Visual.Bounds.ToVector(), 0.0f);
 
         /// <summary>
         /// Position (in pixels) relative to the parent.
         /// </summary>
-        public Vector3 Position { get; set; }
-        public Quaternion Rotation { get; set; }
-        public Vector3 Scale { get; set; } = Vector3.One;
+        public Vector3 Position;
+        public Vector3 Rotation;
+        public Vector3 Scale = Vector3.One;
 
         public Matrix4x4 GetTransformMatrix()
         {
+            float coeff = MathUtil.PI / 180.0f;
+
             var matrix = Matrix4x4.CreateScale(Scale, new Vector3(0.5f) * Dimensions)
-                * Matrix4x4.CreateFromQuaternion(Rotation)
+                * Matrix4x4.CreateFromQuaternion(Quaternion.CreateFromYawPitchRoll(Rotation.Y * coeff, Rotation.X * coeff, Rotation.Z * coeff))
                 * Matrix4x4.CreateTranslation(Position);
 
             if (Parent != null)

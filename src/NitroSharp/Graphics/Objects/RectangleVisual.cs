@@ -11,9 +11,10 @@ namespace NitroSharp.Graphics
             : base(color, opacity, priority)
         {
             _rect = new RectangleF(0, 0, width, height);
+            Bounds = new SizeF(_rect.Width, _rect.Height);
         }
 
-        public override SizeF Bounds => new SizeF(_rect.Width, _rect.Height);
+        public override SizeF Bounds { get; }
 
         public override void Render(Canvas canvas)
         {

@@ -2,15 +2,14 @@
 using System;
 using System.Numerics;
 using NitroSharp.Animation;
-using NitroSharp.Graphics;
-using NitroSharp.Primitives;
-using NitroSharp.Utilities;
 
 namespace NitroSharp
 {
     internal sealed partial class CoreLogic
     {
-        public override void Fade(string entityName, TimeSpan duration, NsRational opacity, NsEasingFunction easingFunction, TimeSpan delay)
+        public override void Fade(
+            string entityName, TimeSpan duration, NsRational opacity,
+            NsEasingFunction easingFunction, TimeSpan delay)
         {
             foreach (var entity in _entities.Query(entityName))
             {
@@ -23,7 +22,8 @@ namespace NitroSharp
             }
         }
 
-        private static void FadeCore(Entity entity, TimeSpan duration, NsRational opacity, NsEasingFunction easingFunction)
+        private static void FadeCore(
+            Entity entity, TimeSpan duration, NsRational dstOpacity, NsEasingFunction easingFunction)
         {
             var existingAnimation = entity.GetComponent<FadeAnimation>();
             if (existingAnimation != null)
@@ -31,8 +31,8 @@ namespace NitroSharp
                 entity.RemoveComponent(existingAnimation);
             }
 
-            float adjustedOpacity = opacity.Rebase(1.0f);
-            var visual = entity.GetComponent<Visual2D>();
+            float adjustedOpacity = dstOpacity.Rebase(1.0f);
+            var visual = entity.Visual;
             if (visual != null)
             {
                 if (duration > TimeSpan.Zero)
@@ -48,11 +48,14 @@ namespace NitroSharp
             }
         }
 
-        public override void Move(string entityName, TimeSpan duration, NsCoordinate x, NsCoordinate y, NsEasingFunction easingFunction, TimeSpan delay)
+        public override void Move(
+            string entityName, TimeSpan duration,
+            NsCoordinate dstX, NsCoordinate dstY,
+            NsEasingFunction easingFunction, TimeSpan delay)
         {
             foreach (var entity in _entities.Query(entityName))
             {
-                MoveCore(entity, duration, x, y, easingFunction);
+                MoveCore(entity, duration, dstX, dstY, easingFunction);
             }
 
             if (delay > TimeSpan.Zero)
@@ -61,35 +64,49 @@ namespace NitroSharp
             }
         }
 
-        private static void MoveCore(Entity entity, TimeSpan duration, NsCoordinate x, NsCoordinate y, NsEasingFunction easingFunction)
+        private static void MoveCore(
+            Entity entity, TimeSpan duration,
+            NsCoordinate dstX, NsCoordinate dstY,
+            NsEasingFunction easingFunction)
         {
             var existingAnimation = entity.GetComponent<MoveAnimation>();
             if (existingAnimation != null)
             {
                 entity.RemoveComponent(existingAnimation);
             }
-            
-            float targetX = x.Origin == NsCoordinateOrigin.CurrentValue ? entity.Transform.Position.X + x.Value : x.Value;
-            float targetY = y.Origin == NsCoordinateOrigin.CurrentValue ? entity.Transform.Position.Y + y.Value : y.Value;
-            Vector3 destination = new Vector3(targetX, targetY, 0);
 
+            var transform = entity.Transform;
+            ref var position = ref transform.Position;
+
+            float targetX = dstX.Origin == NsCoordinateOrigin.CurrentValue
+                ? position.X + dstX.Value
+                : dstX.Value;
+
+            float targetY = dstY.Origin == NsCoordinateOrigin.CurrentValue
+                ? position.Y + dstY.Value
+                : dstY.Value;
+
+            var destination = new Vector3(targetX, targetY, 0);
             if (duration > TimeSpan.Zero)
             {
                 var fn = (TimingFunction)easingFunction;
-                var animation = new MoveAnimation(entity.Transform, entity.Transform.Position, destination, duration, fn);
+                var animation = new MoveAnimation(transform, position, destination, duration, fn);
                 entity.AddComponent(animation);
             }
             else
             {
-                entity.Transform.Position = destination;
+                position = destination;
             }
         }
 
-        public override void Zoom(string entityName, TimeSpan duration, NsRational scaleX, NsRational scaleY, NsEasingFunction easingFunction, TimeSpan delay)
+        public override void Zoom(
+            string entityName, TimeSpan duration,
+            NsRational dstScaleX, NsRational dstScaleY,
+            NsEasingFunction easingFunction, TimeSpan delay)
         {
             foreach (var entity in _entities.Query(entityName))
             {
-                ZoomCore(entity, duration, scaleX, scaleY, easingFunction);
+                ZoomCore(entity, duration, dstScaleX, dstScaleY, easingFunction);
             }
 
             if (delay > TimeSpan.Zero)
@@ -98,41 +115,49 @@ namespace NitroSharp
             }
         }
 
-        private static void ZoomCore(Entity entity, TimeSpan duration, NsRational scaleX, NsRational scaleY, NsEasingFunction easingFunction)
+        private static void ZoomCore(
+            Entity entity, TimeSpan duration,
+            NsRational dstScaleX, NsRational dstScaleY,
+            NsEasingFunction easingFunction)
         {
             var existingAnimation = entity.GetComponent<ZoomAnimation>();
             if (existingAnimation != null)
             {
                 entity.RemoveComponent(existingAnimation);
             }
-            
-            scaleX = scaleX.Rebase(1.0f);
-            scaleY = scaleY.Rebase(1.0f);
+
+            var transform = entity.Transform;
+            ref var scale = ref transform.Scale;
+
+            dstScaleX = dstScaleX.Rebase(1.0f);
+            dstScaleY = dstScaleY.Rebase(1.0f);
 
             if (duration > TimeSpan.Zero)
             {
-                Vector3 initialScale = entity.Transform.Scale;
-                Vector3 finalScale = new Vector3(scaleX, scaleY, 1);
-                if (initialScale == finalScale)
+                Vector3 finalScale = new Vector3(dstScaleX, dstScaleY, 1);
+                if (scale == finalScale)
                 {
-                    entity.Transform.Scale = Vector3.Zero;
+                    scale = Vector3.Zero;
                 }
 
                 var fn = (TimingFunction)easingFunction;
-                var animation = new ZoomAnimation(entity.Transform, initialScale, finalScale, duration, fn);
+                var animation = new ZoomAnimation(transform, scale, finalScale, duration, fn);
                 entity.AddComponent(animation);
             }
             else
             {
-                entity.Transform.Scale = new Vector3(scaleX, scaleY, 1);
+                scale = new Vector3(dstScaleX, dstScaleY, 1);
             }
         }
 
-        public override void Rotate(string entityName, TimeSpan duration, int xRotation, int yRotation, int zRotation, NsEasingFunction easingFunction, TimeSpan delay)
+        public override void Rotate(
+            string entityName, TimeSpan duration,
+            NsNumeric dstRotationX, NsNumeric dstRotationY, NsNumeric dstRotationZ,
+            NsEasingFunction easingFunction, TimeSpan delay)
         {
             foreach (var entity in _entities.Query(entityName))
             {
-                RotateCore(entity, duration, xRotation, yRotation, zRotation, easingFunction);
+                RotateCore(entity, duration, dstRotationX, dstRotationY, dstRotationZ, easingFunction);
             }
 
             if (delay > TimeSpan.Zero)
@@ -141,18 +166,67 @@ namespace NitroSharp
             }
         }
 
-        private static void RotateCore(Entity entity, TimeSpan duration, int xRotation, int yRotation, int zRotation, NsEasingFunction easingFunction)
+        private static void RotateCore(
+            Entity entity, TimeSpan duration,
+            NsNumeric dstRotationX, NsNumeric dstRotationY, NsNumeric dstRotationZ,
+            NsEasingFunction easingFunction)
         {
-            var initial = Quaternion.Identity;
-            var final = Quaternion.CreateFromYawPitchRoll(MathUtil.ToRadians(yRotation), MathUtil.ToRadians(xRotation), MathUtil.ToRadians(zRotation));
+            var transform = entity.Transform;
+            var initialValue = transform.Rotation;
+            var finalValue = initialValue;
+            dstRotationX.AssignTo(ref finalValue.X);
+            dstRotationY.AssignTo(ref finalValue.Y);
+            dstRotationZ.AssignTo(ref finalValue.Z);
 
             var fn = (TimingFunction)easingFunction;
-            var animation = new RotateAnimation(entity.Transform, initial, final, duration, fn);
+            var animation = new Vector3Animation(
+                transform,
+                (t, v) => (t as Transform).Rotation = v,
+                initialValue, finalValue, duration, fn);
+
             entity.AddComponent(animation);
         }
 
-        public override void DrawTransition(string sourceEntityName, TimeSpan duration, NsRational initialOpacity,
-            NsRational finalOpacity, NsRational feather, NsEasingFunction easingFunction, string maskFileName, TimeSpan delay)
+        public override void MoveCube(
+            string entityName, TimeSpan duration,
+            NsNumeric dstTranslationX, NsNumeric dstTranslationY, NsNumeric dstTranslationZ,
+            NsEasingFunction easingFunction, TimeSpan delay)
+        {
+            foreach (var entity in _entities.Query(entityName))
+            {
+                MoveCubeCore(entity, duration, dstTranslationX, dstTranslationY, dstTranslationZ, easingFunction);
+            }
+
+            if (delay > TimeSpan.Zero)
+            {
+                Interpreter.SuspendThread(CurrentThread, duration);
+            }
+        }
+
+        private static void MoveCubeCore(
+            Entity entity, TimeSpan duration,
+            NsNumeric dstTranslationX, NsNumeric dstTranslationY, NsNumeric dstTranslationZ,
+            NsEasingFunction easingFunction)
+        {
+            var initialValue = entity.Transform.Position;
+            var finalValue = initialValue;
+            dstTranslationX *= 0.001f;
+            dstTranslationY *= 0.001f;
+            dstTranslationZ *= 0.001f;
+            dstTranslationX.AssignTo(ref finalValue.X);
+            dstTranslationY.AssignTo(ref finalValue.Y);
+            dstTranslationZ.AssignTo(ref finalValue.Z);
+
+            var fn = (TimingFunction)easingFunction;
+            var animation = new MoveAnimation(entity.Transform, initialValue, finalValue, duration, fn);
+            entity.AddComponent(animation);
+        }
+
+        public override void DrawTransition(
+            string sourceEntityName, TimeSpan duration,
+            NsRational initialOpacity, NsRational finalOpacity,
+            NsRational feather, NsEasingFunction easingFunction,
+            string maskFileName, TimeSpan delay)
         {
             initialOpacity = initialOpacity.Rebase(1.0f);
             finalOpacity = finalOpacity.Rebase(1.0f);
