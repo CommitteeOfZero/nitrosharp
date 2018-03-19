@@ -34,6 +34,18 @@ namespace NitroSharp.Graphics.Objects
             Priority = 0;
         }
 
+        public override float Opacity
+        {
+            get => _cubeShader?.Properties?.Opacity ?? 0.0f;
+            set
+            {
+                if (_cubeShader != null)
+                {
+                    _cubeShader.Properties.Opacity = value;
+                }
+            }
+        }
+
         public override void CreateDeviceObjects(RenderContext renderContext)
         {
             _cubeShader = renderContext.Effects.Get<CubeEffect>(renderContext.SharedEffectProperties3D);
@@ -86,7 +98,7 @@ namespace NitroSharp.Graphics.Objects
             _back.Dispose();
         }
 
-        public override void DestroyDeviceResources(RenderContext renderContext)
+        public override void Destroy(RenderContext renderContext)
         {
             _vb.Dispose();
             _ib.Dispose();
@@ -110,38 +122,38 @@ namespace NitroSharp.Graphics.Objects
             cl.DrawIndexed((uint)s_indices.Length, 1, 0, 0, 0);
         }
 
-        private static readonly Vertex3D[] s_vertices = new Vertex3D[]
+        private static readonly CubeVertex[] s_vertices = new CubeVertex[]
         {
             // Top
-            new Vertex3D(new Vector3(-0.5f,0.5f,-0.5f)),
-            new Vertex3D(new Vector3(0.5f,0.5f,-0.5f)),
-            new Vertex3D(new Vector3(0.5f,0.5f,0.5f)),
-            new Vertex3D(new Vector3(-0.5f,0.5f,0.5f)),
+            new CubeVertex(new Vector3(-0.5f,0.5f,-0.5f)),
+            new CubeVertex(new Vector3(0.5f,0.5f,-0.5f)),
+            new CubeVertex(new Vector3(0.5f,0.5f,0.5f)),
+            new CubeVertex(new Vector3(-0.5f,0.5f,0.5f)),
             // Bottom
-            new Vertex3D(new Vector3(-0.5f,-0.5f,0.5f)),
-            new Vertex3D(new Vector3(0.5f,-0.5f,0.5f)),
-            new Vertex3D(new Vector3(0.5f,-0.5f,-0.5f)),
-            new Vertex3D(new Vector3(-0.5f,-0.5f,-0.5f)),
+            new CubeVertex(new Vector3(-0.5f,-0.5f,0.5f)),
+            new CubeVertex(new Vector3(0.5f,-0.5f,0.5f)),
+            new CubeVertex(new Vector3(0.5f,-0.5f,-0.5f)),
+            new CubeVertex(new Vector3(-0.5f,-0.5f,-0.5f)),
             // Left
-            new Vertex3D(new Vector3(-0.5f,0.5f,-0.5f)),
-            new Vertex3D(new Vector3(-0.5f,0.5f,0.5f)),
-            new Vertex3D(new Vector3(-0.5f,-0.5f,0.5f)),
-            new Vertex3D(new Vector3(-0.5f,-0.5f,-0.5f)),
+            new CubeVertex(new Vector3(-0.5f,0.5f,-0.5f)),
+            new CubeVertex(new Vector3(-0.5f,0.5f,0.5f)),
+            new CubeVertex(new Vector3(-0.5f,-0.5f,0.5f)),
+            new CubeVertex(new Vector3(-0.5f,-0.5f,-0.5f)),
             // Right
-            new Vertex3D(new Vector3(0.5f,0.5f,0.5f)),
-            new Vertex3D(new Vector3(0.5f,0.5f,-0.5f)),
-            new Vertex3D(new Vector3(0.5f,-0.5f,-0.5f)),
-            new Vertex3D(new Vector3(0.5f,-0.5f,0.5f)),
+            new CubeVertex(new Vector3(0.5f,0.5f,0.5f)),
+            new CubeVertex(new Vector3(0.5f,0.5f,-0.5f)),
+            new CubeVertex(new Vector3(0.5f,-0.5f,-0.5f)),
+            new CubeVertex(new Vector3(0.5f,-0.5f,0.5f)),
             // Back
-            new Vertex3D(new Vector3(0.5f,0.5f,-0.5f)),
-            new Vertex3D(new Vector3(-0.5f,0.5f,-0.5f)),
-            new Vertex3D(new Vector3(-0.5f,-0.5f,-0.5f)),
-            new Vertex3D(new Vector3(0.5f,-0.5f,-0.5f)),
+            new CubeVertex(new Vector3(0.5f,0.5f,-0.5f)),
+            new CubeVertex(new Vector3(-0.5f,0.5f,-0.5f)),
+            new CubeVertex(new Vector3(-0.5f,-0.5f,-0.5f)),
+            new CubeVertex(new Vector3(0.5f,-0.5f,-0.5f)),
             // Front
-            new Vertex3D(new Vector3(-0.5f,0.5f,0.5f)),
-            new Vertex3D(new Vector3(0.5f,0.5f,0.5f)),
-            new Vertex3D(new Vector3(0.5f,-0.5f,0.5f)),
-            new Vertex3D(new Vector3(-0.5f,-0.5f,0.5f)),
+            new CubeVertex(new Vector3(-0.5f,0.5f,0.5f)),
+            new CubeVertex(new Vector3(0.5f,0.5f,0.5f)),
+            new CubeVertex(new Vector3(0.5f,-0.5f,0.5f)),
+            new CubeVertex(new Vector3(-0.5f,-0.5f,0.5f)),
         };
 
         private static readonly ushort[] s_indices = new ushort[]
@@ -153,7 +165,5 @@ namespace NitroSharp.Graphics.Objects
             16,17,18, 16,18,19,
             20,21,22, 20,22,23,
         };
-
-        public override SizeF Bounds => new SizeF(1280, 720);
     }
 }

@@ -437,10 +437,10 @@ namespace NitroSharp.NsScript.Symbols
 
         private static ConstantValue SetFov(EngineImplementationBase implementation, Stack<ConstantValue> args)
         {
-            var entityName = EntityName(PopString(args));
-            double angle = PopNumeric(args);
+            var unk1 = EntityName(PopString(args));
+            double unk2 = PopNumeric(args);
 
-            implementation.SetFieldOfView(entityName, angle);
+            implementation.SetFieldOfView(unk1, unk2);
             return null;
         }
 

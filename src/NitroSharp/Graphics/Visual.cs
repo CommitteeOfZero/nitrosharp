@@ -34,16 +34,16 @@ namespace NitroSharp.Graphics
         {
         }
 
-        public float Opacity { get; set; }
+        public virtual float Opacity { get; set; }
         public RgbaFloat Color { get; }
         public int Priority { get; protected set; }
-        public virtual SizeF Bounds => throw new InvalidOperationException();
+        public virtual SizeF Bounds => SizeF.Zero;
 
         public virtual void CreateDeviceObjects(RenderContext renderContext)
         {
         }
 
-        public virtual void DestroyDeviceResources(RenderContext renderContext)
+        public virtual void Destroy(RenderContext renderContext)
         {
         }
 

@@ -5,7 +5,10 @@ namespace NitroSharp.Graphics
 {
     internal sealed class SpriteEffect : Effect
     {
-        public SpriteEffect(GraphicsDevice graphicsDevice, Shader vertexShader, Shader fragmentShader, SharedEffectProperties2D sharedProperties)
+        public SpriteEffect(
+            GraphicsDevice graphicsDevice,
+            Shader vertexShader, Shader fragmentShader,
+            SharedEffectProperties2D sharedProperties)
             : base(graphicsDevice, vertexShader, fragmentShader)
         {
             Properties = new EffectProperties(graphicsDevice);
@@ -13,6 +16,7 @@ namespace NitroSharp.Graphics
         }
 
         public EffectProperties Properties { get; }
+        protected override VertexLayoutDescription VertexLayout => Vertex2D.LayoutDescription;
 
         public sealed class EffectProperties : BoundResourceSet
         {

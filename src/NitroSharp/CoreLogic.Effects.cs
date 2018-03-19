@@ -172,19 +172,28 @@ namespace NitroSharp
             NsEasingFunction easingFunction)
         {
             var transform = entity.Transform;
-            var initialValue = transform.Rotation;
-            var finalValue = initialValue;
+            ref var rotation = ref transform.Rotation;
+
+            var finalValue = rotation;
+            dstRotationY *= -1;
             dstRotationX.AssignTo(ref finalValue.X);
             dstRotationY.AssignTo(ref finalValue.Y);
             dstRotationZ.AssignTo(ref finalValue.Z);
 
-            var fn = (TimingFunction)easingFunction;
-            var animation = new Vector3Animation(
-                transform,
-                (t, v) => (t as Transform).Rotation = v,
-                initialValue, finalValue, duration, fn);
+            if (duration > TimeSpan.Zero)
+            {
+                var fn = (TimingFunction)easingFunction;
+                var animation = new Vector3Animation(
+                    transform,
+                    (t, v) => (t as Transform).Rotation = v,
+                    rotation, finalValue, duration, fn);
 
-            entity.AddComponent(animation);
+                entity.AddComponent(animation);
+            }
+            else
+            {
+                rotation = finalValue;
+            }
         }
 
         public override void MoveCube(
@@ -208,7 +217,8 @@ namespace NitroSharp
             NsNumeric dstTranslationX, NsNumeric dstTranslationY, NsNumeric dstTranslationZ,
             NsEasingFunction easingFunction)
         {
-            var initialValue = entity.Transform.Position;
+            var transform = entity.Transform;
+            var initialValue = transform.Position;
             var finalValue = initialValue;
             dstTranslationX *= 0.001f;
             dstTranslationY *= 0.001f;
@@ -218,7 +228,7 @@ namespace NitroSharp
             dstTranslationZ.AssignTo(ref finalValue.Z);
 
             var fn = (TimingFunction)easingFunction;
-            var animation = new MoveAnimation(entity.Transform, initialValue, finalValue, duration, fn);
+            var animation = new MoveAnimation(transform, initialValue, finalValue, duration, fn);
             entity.AddComponent(animation);
         }
 

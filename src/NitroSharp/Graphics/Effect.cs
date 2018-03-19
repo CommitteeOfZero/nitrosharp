@@ -23,7 +23,7 @@ namespace NitroSharp.Graphics
             _shaderSet = new ShaderSetDescription(
                 new[]
                 {
-                    Vertex2D.LayoutDescription
+                    VertexLayout
                 },
                 new Shader[]
                 {
@@ -31,6 +31,8 @@ namespace NitroSharp.Graphics
                     fragmentShader
                 });
         }
+
+        protected abstract VertexLayoutDescription VertexLayout { get; }
 
         protected void Initialize(params BoundResourceSet[] boundResourceSets)
         {

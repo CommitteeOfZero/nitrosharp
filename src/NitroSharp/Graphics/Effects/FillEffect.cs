@@ -3,9 +3,12 @@ using Veldrid;
 
 namespace NitroSharp.Graphics
 {
-    internal class FillEffect : Effect
+    internal sealed class FillEffect : Effect
     {
-        public FillEffect(GraphicsDevice graphicsDevice, Shader vertexShader, Shader fragmentShader, SharedEffectProperties2D sharedProperties)
+        public FillEffect(
+            GraphicsDevice graphicsDevice,
+            Shader vertexShader, Shader fragmentShader,
+            SharedEffectProperties2D sharedProperties)
             : base(graphicsDevice, vertexShader, fragmentShader)
         {
             Properties = new EffectProperties(graphicsDevice);
@@ -13,6 +16,7 @@ namespace NitroSharp.Graphics
         }
 
         public EffectProperties Properties { get; }
+        protected override VertexLayoutDescription VertexLayout => Vertex2D.LayoutDescription;
 
         public class EffectProperties : BoundResourceSet
         {

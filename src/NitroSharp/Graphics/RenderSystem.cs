@@ -5,6 +5,7 @@ using System.Numerics;
 using Veldrid;
 using NitroSharp.Primitives;
 using NitroSharp.Graphics.Objects;
+using NitroSharp.Utilities;
 
 namespace NitroSharp.Graphics
 {
@@ -36,15 +37,13 @@ namespace NitroSharp.Graphics
                 0, DesignResolution.Width, DesignResolution.Height, 0, 0, -1);
 
             _sharedProps3D = new SharedEffectProperties3D(_gd);
-            var view = Matrix4x4.CreateLookAt(Vector3.Zero, -Vector3.UnitZ, Vector3.UnitY);
-            view.M33 = -view.M33;
-            _sharedProps3D.View = view;
+            _sharedProps3D.View = Matrix4x4.CreateLookAt(Vector3.Zero, Vector3.UnitZ, Vector3.UnitY);
 
             _sharedProps3D.Projection = Matrix4x4.CreatePerspectiveFieldOfView(
-                (float)Math.PI / 3.0f,
+                MathUtil.PI / 3.0f,
                 DesignResolution.Width / DesignResolution.Height,
                 0.1f,
-                100.0f);
+                1000.0f);
 
             _canvas = new Canvas(graphicsDevice, _effectLibrary, _sharedProps2D);
             _rc = new RenderContext(_gd, _factory, _cl, _canvas, _effectLibrary, _sharedProps2D, _sharedProps3D);
@@ -64,7 +63,7 @@ namespace NitroSharp.Graphics
 
         public override void OnRelevantEntityRemoved(Entity entity)
         {
-            entity.Visual.DestroyDeviceResources(_rc);
+            entity.Visual.Destroy(_rc);
         }
 
         public override void Update(float deltaMilliseconds)

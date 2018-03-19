@@ -21,6 +21,8 @@ namespace NitroSharp.Graphics.Shaders
         public TextureCubeResource Texture;
         [ResourceSet(1)]
         public SamplerResource Sampler;
+        [ResourceSet(1)]
+        public float Opacity;
 
         [VertexShader]
         public FragmentInput VS(VertexInput input)
@@ -32,7 +34,7 @@ namespace NitroSharp.Graphics.Shaders
             output.SystemPosition = clipPosition;
 
             var pos = input.Position;
-            output.TexCoords = new Vector3(pos.X, pos.Y, pos.Z);
+            output.TexCoords = new Vector3(-pos.X, pos.Y, pos.Z);
 
             return output;
         }
@@ -40,7 +42,7 @@ namespace NitroSharp.Graphics.Shaders
         [FragmentShader]
         public Vector4 FS(FragmentInput input)
         {
-            return Sample(Texture, Sampler, input.TexCoords);
+            return Sample(Texture, Sampler, input.TexCoords) * Opacity;
         }
 
         public struct VertexInput

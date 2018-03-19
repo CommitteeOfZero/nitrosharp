@@ -16,12 +16,14 @@ namespace NitroSharp.Graphics.Effects
         }
 
         public EffectProperties Properties { get; }
+        protected override VertexLayoutDescription VertexLayout => CubeVertex.LayoutDescription;
 
         public sealed class EffectProperties : BoundResourceSet
         {
             private Matrix4x4 _world;
             private TextureView _texture;
             private Sampler _sampler;
+            private float _opacity;
 
             public EffectProperties(GraphicsDevice graphicsDevice) : base(graphicsDevice)
             {
@@ -47,27 +49,23 @@ namespace NitroSharp.Graphics.Effects
                 get => _sampler;
                 set => Set(ref _sampler, value);
             }
+
+            [BoundResource(ResourceKind.UniformBuffer, ShaderStages.Fragment)]
+            public float Opacity
+            {
+                get => _opacity;
+                set => Update(ref _opacity, value);
+            }
         }
 
         protected override GraphicsPipelineDescription SetupPipeline()
         {
-            var shaderSet = new ShaderSetDescription(
-                new[]
-                {
-                    Vertex3D.LayoutDescription
-                },
-                new Shader[]
-                {
-                    _vs,
-                    _fs
-                });
-
             return new GraphicsPipelineDescription(
                 BlendStateDescription.SingleOverrideBlend,
                 DepthStencilStateDescription.DepthOnlyLessEqual,
                 RasterizerStateDescription.CullNone,
                 PrimitiveTopology.TriangleList,
-                shaderSet,
+                _shaderSet,
                 _resourceLayouts,
                 _gd.SwapchainFramebuffer.OutputDescription);
         }

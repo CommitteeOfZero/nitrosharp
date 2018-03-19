@@ -3,14 +3,11 @@ using Veldrid;
 
 namespace NitroSharp.Graphics
 {
-    public struct Vertex3D
+    internal struct CubeVertex
     {
-        public const byte SizeInBytes = 12;
-        public const byte ElementCount = 1;
-
         public readonly Vector3 Position;
 
-        public Vertex3D(Vector3 position)
+        public CubeVertex(in Vector3 position)
         {
             Position = position;
         }

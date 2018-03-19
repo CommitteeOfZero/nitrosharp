@@ -47,7 +47,7 @@ namespace NitroSharp.NsScript
         /// </summary>
         public virtual void AddTexture(string entityName, int priority, NsCoordinate x, NsCoordinate y, string fileOrExistingEntityName) { }
 
-        public virtual void SetFieldOfView(string entityName, double angle) { }
+        public virtual void SetFieldOfView(string unk1, double unk2) { }
 
         public virtual void CreateCube(string entityName, string front, string back, string right, string left, string top, string bottom) { }
 

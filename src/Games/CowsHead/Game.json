@@ -1,6 +1,6 @@
 ﻿{
   "productName": "COWSHEAD_NOAH",
-  "activeProfile": "Test",
+  "activeProfile": "CH",
   "graphics.vsync": false,
   "window.title": "COWS;HEAD NOAH",
   "window.width": 1280,
@@ -37,7 +37,7 @@
       "window.title": "Cows;Head",
       "window.width": 800,
       "window.height": 600,
-      "startupScript": "sys_config.nss",
+      "startupScript": "test.nss",
       "debug.contentRoot": "S:/ChaosContent/CH"
     }
   }

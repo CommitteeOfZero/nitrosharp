@@ -22,7 +22,10 @@ namespace NitroSharp.Graphics
 
         private readonly Stack<Matrix4x4> _transforms = new Stack<Matrix4x4>();
 
-        public Canvas(GraphicsDevice graphicsDevice, EffectLibrary effectLibrary, SharedEffectProperties2D sharedEffectProperties)
+        public Canvas(
+            GraphicsDevice graphicsDevice,
+            EffectLibrary effectLibrary,
+            SharedEffectProperties2D sharedEffectProperties)
         {
             _gd = graphicsDevice;
             _spriteEffect = effectLibrary.Get<SpriteEffect>(sharedEffectProperties);
@@ -31,14 +34,17 @@ namespace NitroSharp.Graphics
 
             _vertices = new Vertex2D[InitialVertexBufferCapacity];
             CreateVertexBuffer(InitialVertexBufferCapacity);
-            _indexBuffer = _gd.CreateStaticBuffer(new ushort[] { 0, 1, 2, 2, 1, 3 }, BufferUsage.IndexBuffer);
+            var indices = new ushort[] { 0, 1, 2, 2, 1, 3 };
+            _indexBuffer = _gd.CreateStaticBuffer(indices, BufferUsage.IndexBuffer);
         }
 
         private void CreateVertexBuffer(uint vertexCount)
         {
             _vertexBuffer?.Dispose();
             _vertexBuffer = _gd.ResourceFactory.CreateBuffer(
-                new BufferDescription(Vertex2D.SizeInBytes * vertexCount, BufferUsage.VertexBuffer | BufferUsage.Dynamic));
+                new BufferDescription(
+                    Vertex2D.SizeInBytes * vertexCount,
+                    BufferUsage.VertexBuffer | BufferUsage.Dynamic));
         }
 
         public void Begin(CommandList cl, in Viewport viewport)

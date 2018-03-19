@@ -41,11 +41,12 @@ namespace NitroSharp
 
         public Matrix4x4 GetTransformMatrix()
         {
-            float coeff = MathUtil.PI / 180.0f;
-
             var matrix = Matrix4x4.CreateScale(Scale, new Vector3(0.5f) * Dimensions)
-                * Matrix4x4.CreateFromQuaternion(Quaternion.CreateFromYawPitchRoll(Rotation.Y * coeff, Rotation.X * coeff, Rotation.Z * coeff))
-                * Matrix4x4.CreateTranslation(Position);
+                * Matrix4x4.CreateTranslation(Position)
+                * Matrix4x4.CreateFromYawPitchRoll(
+                    MathUtil.ToRadians(Rotation.Y),
+                    MathUtil.ToRadians(Rotation.X),
+                    MathUtil.ToRadians(Rotation.Z));
 
             if (Parent != null)
             {
