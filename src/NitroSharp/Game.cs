@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Veldrid;
@@ -62,7 +63,16 @@ namespace NitroSharp
         {
             var content = new ContentManager(_configuration.ContentRoot);
 
-            var textureLoader = new WicTextureLoader(GraphicsDevice);
+            ContentLoader textureLoader;
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                textureLoader = new WicTextureLoader(GraphicsDevice);
+            }
+            else
+            {
+                textureLoader = new ImageSharpTextureLoader(GraphicsDevice);
+            }
+
             content.RegisterContentLoader(typeof(BindableTexture), textureLoader);
 
             _coreLogic.SetContent(content);
