@@ -59,16 +59,6 @@ namespace NitroSharp.Graphics
                 _gd.SwapchainFramebuffer.OutputDescription);
         }
 
-        public void ApplyPipeline(CommandList commandList)
-        {
-            commandList.SetPipeline(_pipeline);
-        }
-
-        public void SetPipeline(CommandList commandList)
-        {
-            commandList.SetPipeline(_pipeline);
-        }
-
         public void Apply(CommandList commandList)
         {
             ThrowIfUninitialized();
