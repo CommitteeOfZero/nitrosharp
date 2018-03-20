@@ -183,9 +183,8 @@ namespace NitroSharp
             if (duration > TimeSpan.Zero)
             {
                 var fn = (TimingFunction)easingFunction;
-                var animation = new Vector3Animation(
+                var animation = new RotateAnimation(
                     transform,
-                    (t, v) => (t as Transform).Rotation = v,
                     rotation, finalValue, duration, fn);
 
                 entity.AddComponent(animation);

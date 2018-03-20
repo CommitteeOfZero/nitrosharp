@@ -89,8 +89,7 @@ namespace NitroSharp
                 }
             }
 
-            var texture = new Sprite(
-                _content.Get<BindableTexture>(source), srcRect, 1.0f, priority);
+            var texture = new Sprite(_content.Get<BindableTexture>(source), srcRect, 1.0f, priority);
             _entities.Create(entityName, replace: true)
                 .WithComponent(texture)
                 .WithParent(parentEntity)
