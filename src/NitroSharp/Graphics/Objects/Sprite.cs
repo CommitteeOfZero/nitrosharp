@@ -4,7 +4,7 @@ using Veldrid;
 
 namespace NitroSharp.Graphics
 {
-    internal sealed class Sprite : Visual2D
+    internal sealed class Sprite : Visual
     {
         public Sprite(AssetRef<BindableTexture> source, RectangleF? sourceRectangle, float opacity, int priority)
             : base(RgbaFloat.White, opacity, priority)
@@ -18,9 +18,9 @@ namespace NitroSharp.Graphics
         public RectangleF? SourceRectangle { get; set; }
         public override SizeF Bounds { get; }
 
-        public override void Render(Canvas canvas)
+        public override void Render(RenderContext renderContext)
         {
-            canvas.DrawImage(Source.Asset, 0, 0, Opacity);
+            renderContext.Canvas.DrawImage(Source.Asset, 0, 0, Opacity);
         }
 
         public override void Destroy(RenderContext renderContext)

@@ -3,7 +3,7 @@ using Veldrid;
 
 namespace NitroSharp.Graphics
 {
-    internal sealed class RectangleVisual : Visual2D
+    internal sealed class RectangleVisual : Visual
     {
         private readonly RectangleF _rect;
 
@@ -16,10 +16,10 @@ namespace NitroSharp.Graphics
 
         public override SizeF Bounds { get; }
 
-        public override void Render(Canvas canvas)
+        public override void Render(RenderContext renderContext)
         {
             var c = new RgbaFloat(Color.R, Color.G, Color.B, Opacity);
-            canvas.FillRectangle(_rect, c);
+            renderContext.Canvas.FillRectangle(_rect, c);
         }
     }
 }

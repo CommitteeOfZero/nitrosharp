@@ -1,7 +1,6 @@
 ﻿using System.Numerics;
 using NitroSharp.Content;
 using NitroSharp.Graphics.Effects;
-using NitroSharp.Primitives;
 using Veldrid;
 
 namespace NitroSharp.Graphics.Objects
