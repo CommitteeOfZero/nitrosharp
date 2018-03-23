@@ -25,7 +25,7 @@ namespace NitroSharp.NsScript.Tests
             string text = "<FONT incolor=\"WHITE\" outcolor=\"BLACK\">Sample Text</FONT>";
             var content = Parsing.ParsePXmlString(text);
 
-            var fontElement = content.Children[0] as ColorElement;
+            var fontElement = content.Children[0] as FontElement;
             Assert.NotNull(fontElement);
             var sampleContent = fontElement.Content.Children[0] as PXmlText;
 
@@ -39,7 +39,7 @@ namespace NitroSharp.NsScript.Tests
             string text = "<FONT incolor=\"white\" outcolor=\"black\">Sample Text <RUBY text=\"sample_ruby_text\">sample_ruby_base</RUBY></FONT>";
             var content = Parsing.ParsePXmlString(text);
 
-            var fontElement = content.Children[0] as ColorElement;
+            var fontElement = content.Children[0] as FontElement;
             Assert.NotNull(fontElement);
             Assert.Equal(2, fontElement.Content.Children.Length);
 

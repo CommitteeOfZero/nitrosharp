@@ -10,17 +10,20 @@
   <Import Project="..\..\OutputPath.props" />
   
   <ItemGroup>
-    <ProjectReference Include="..\..\..\mellinoe\veldrid\src\Veldrid.ImageSharp\Veldrid.ImageSharp.csproj" />
+    <!--<ProjectReference Include="..\..\..\mellinoe\veldrid\src\Veldrid.ImageSharp\Veldrid.ImageSharp.csproj" />
     <ProjectReference Include="..\..\..\mellinoe\veldrid\src\Veldrid.StartupUtilities\Veldrid.StartupUtilities.csproj" />
-    <ProjectReference Include="..\..\..\mellinoe\veldrid\src\Veldrid\Veldrid.csproj" />
+    <ProjectReference Include="..\..\..\mellinoe\veldrid\src\Veldrid\Veldrid.csproj" />-->
     <ProjectReference Include="..\NitroSharp.NsScript\NitroSharp.NsScript.csproj" />
 
-    <!--<PackageReference Include="Veldrid" Version="4.1.3" />
-    <PackageReference Include="Veldrid.StartupUtilities" Version="4.1.3" />
-    <PackageReference Include="Veldrid.ImageSharp" Version="4.1.3" />-->
+    <PackageReference Include="Veldrid" Version="4.1.3-g54eb5bc479" />
+    <PackageReference Include="Veldrid.StartupUtilities" Version="4.1.3-g54eb5bc479" />
+    <PackageReference Include="Veldrid.ImageSharp" Version="4.1.3-g54eb5bc479" />
     <PackageReference Include="ShaderGen.Primitives" Version="1.2.0-g3c95379510" />
     <PackageReference Include="ShaderGen.Build" Version="1.2.0-g3c95379510" PrivateAssets="All" />
     <PackageReference Include="SharpDX.Direct2D1" Version="4.0.1" />
+
+    <PackageReference Include="NitroSharp.Dependencies.FreeType" Version="0.2.9" />
+    <PackageReference Include="SharpFont.NetStandard" Version="4.1.0" />
   </ItemGroup>
 
   <Target Name="EmbedGeneratedShaderContent" AfterTargets="AssignTargetPaths">

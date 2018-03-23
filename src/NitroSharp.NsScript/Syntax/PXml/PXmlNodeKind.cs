@@ -5,7 +5,7 @@
         Content,
         Text,
         VoiceElement,
-        ColorElement,
+        FontElement,
         RubyElement
     }
 }

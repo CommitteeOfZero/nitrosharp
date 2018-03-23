@@ -41,7 +41,7 @@ namespace NitroSharp.Dialogue
                 VisitArray(content.Children);
             }
 
-            public override void VisitColorElement(ColorElement fontColorElement)
+            public override void VisitColorElement(FontElement fontColorElement)
             {
                 Visit(fontColorElement.Content);
             }

@@ -29,7 +29,7 @@ namespace NitroSharp.NsScript.Syntax.PXml
         {
         }
 
-        public virtual void VisitColorElement(ColorElement colorElement)
+        public virtual void VisitFontElement(FontElement fontElement)
         {
         }
 
