@@ -12,26 +12,26 @@ namespace FreeTypeBindings
     /// </code>
     /// </summary>
     [StructLayout(LayoutKind.Sequential)]
-	public struct FTMatrix : IEquatable<FTMatrix>
-	{
-		private IntPtr _xx, _xy;
-		private IntPtr _yx, _yy;
+    public struct FTMatrix : IEquatable<FTMatrix>
+    {
+        private IntPtr _xx, _xy;
+        private IntPtr _yx, _yy;
 
 
-		public FTMatrix(int xx, int xy, int yx, int yy)
-		{
+        public FTMatrix(int xx, int xy, int yx, int yy)
+        {
             _xx = (IntPtr)xx;
             _xy = (IntPtr)xy;
             _yx = (IntPtr)yx;
             _yy = (IntPtr)yy;
-		}
+        }
 
-		public FTMatrix(FTVector row0, FTVector row1)
-			: this(row0.X.Value, row0.Y.Value, row1.X.Value, row1.Y.Value)
-		{
-		}
+        public FTMatrix(FTVector row0, FTVector row1)
+            : this(row0.X.Value, row0.Y.Value, row1.X.Value, row1.Y.Value)
+        {
+        }
 
-		public Fixed16Dot16 XX
+        public Fixed16Dot16 XX
         {
             get => Fixed16Dot16.FromRawValue((int)_xx);
             set => _xx = (IntPtr)value.Value;
@@ -62,27 +62,27 @@ namespace FreeTypeBindings
         public void Multiply(FTMatrix b) => FT.FT_Matrix_Multiply(ref this, ref b);
 
         public void Invert()
-		{
-			Error err = FT.FT_Matrix_Invert(ref this);
-			if (err != Error.Ok)
+        {
+            Error err = FT.FT_Matrix_Invert(ref this);
+            if (err != Error.Ok)
             {
                 throw new FreeTypeException(err);
             }
         }
 
-		public bool Equals(FTMatrix other)
-		{
-			return
-				_xx == other._xx &&
-				_xy == other._xy &&
-				_yx == other._yx &&
-				_yy == other._yy;
-		}
+        public bool Equals(FTMatrix other)
+        {
+            return
+                _xx == other._xx &&
+                _xy == other._xy &&
+                _yx == other._yx &&
+                _yy == other._yy;
+        }
 
         public override bool Equals(object obj) => obj is FTMatrix matrix && Equals(matrix);
-		public override int GetHashCode()
-		{
-			return _xx.GetHashCode() ^ _xy.GetHashCode() ^ _yx.GetHashCode() ^ _yy.GetHashCode();
-		}
-	}
+        public override int GetHashCode()
+        {
+            return _xx.GetHashCode() ^ _xy.GetHashCode() ^ _yx.GetHashCode() ^ _yy.GetHashCode();
+        }
+    }
 }

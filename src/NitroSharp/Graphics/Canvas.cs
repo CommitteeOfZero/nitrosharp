@@ -13,7 +13,6 @@ namespace NitroSharp.Graphics
         private readonly GraphicsDevice _gd;
         private readonly SpriteEffect _spriteEffect;
         private readonly FillEffect _fillEffect;
-        private EffectPipelineState _pipelineState;
 
         private CommandList _cl;
         private Vertex2D[] _vertices;
@@ -48,7 +47,7 @@ namespace NitroSharp.Graphics
                     BufferUsage.VertexBuffer | BufferUsage.Dynamic));
         }
 
-        public void Begin(CommandList cl, Framebuffer renderTarget = null)
+        public void Begin(CommandList cl)
         {
             _cl = cl;
             _cl.SetVertexBuffer(0, _vertexBuffer);

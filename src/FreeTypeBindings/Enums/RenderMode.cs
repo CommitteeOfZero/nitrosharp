@@ -19,36 +19,36 @@
     /// pixmaps.
     /// </para></remarks>
     public enum RenderMode
-	{
-		/// <summary>
-		/// This is the default render mode; it corresponds to 8-bit anti-aliased bitmaps.
-		/// </summary>
-		Normal = 0,
+    {
+        /// <summary>
+        /// This is the default render mode; it corresponds to 8-bit anti-aliased bitmaps.
+        /// </summary>
+        Normal = 0,
 
-		/// <summary>
-		/// This is equivalent to <see cref="RenderMode.Normal"/>. It is only defined as a separate value because
-		/// render modes are also used indirectly to define hinting algorithm selectors.
-		/// </summary>
-		/// <see cref="LoadTarget"/>
-		Light,
+        /// <summary>
+        /// This is equivalent to <see cref="RenderMode.Normal"/>. It is only defined as a separate value because
+        /// render modes are also used indirectly to define hinting algorithm selectors.
+        /// </summary>
+        /// <see cref="LoadTarget"/>
+        Light,
 
-		/// <summary>
-		/// This mode corresponds to 1-bit bitmaps (with 2 levels of opacity).
-		/// </summary>
-		Mono,
+        /// <summary>
+        /// This mode corresponds to 1-bit bitmaps (with 2 levels of opacity).
+        /// </summary>
+        Mono,
 
-		/// <summary>
-		/// This mode corresponds to horizontal RGB and BGR sub-pixel displays like LCD screens. It produces 8-bit
-		/// bitmaps that are 3 times the width of the original glyph outline in pixels, and which use the
-		/// <see cref="PixelMode.Lcd"/> mode.
-		/// </summary>
-		Lcd,
+        /// <summary>
+        /// This mode corresponds to horizontal RGB and BGR sub-pixel displays like LCD screens. It produces 8-bit
+        /// bitmaps that are 3 times the width of the original glyph outline in pixels, and which use the
+        /// <see cref="PixelMode.Lcd"/> mode.
+        /// </summary>
+        Lcd,
 
-		/// <summary>
-		/// This mode corresponds to vertical RGB and BGR sub-pixel displays (like PDA screens, rotated LCD displays,
-		/// etc.). It produces 8-bit bitmaps that are 3 times the height of the original glyph outline in pixels and
-		/// use the <see cref="PixelMode.VerticalLcd"/> mode.
-		/// </summary>
-		VerticalLcd,
-	}
+        /// <summary>
+        /// This mode corresponds to vertical RGB and BGR sub-pixel displays (like PDA screens, rotated LCD displays,
+        /// etc.). It produces 8-bit bitmaps that are 3 times the height of the original glyph outline in pixels and
+        /// use the <see cref="PixelMode.VerticalLcd"/> mode.
+        /// </summary>
+        VerticalLcd
+    }
 }

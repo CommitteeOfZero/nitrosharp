@@ -40,12 +40,12 @@ namespace NitroSharp.Text
             var size = textRun.FontSize.HasValue ? textRun.FontSize.Value : 30;
             font.SetSize(size);
 
-            var span = textRun.Text.AsReadOnlySpan();
+            string text = textRun.Text;
             ref var pen = ref _penPosition;
-            for (uint i = 0; i < span.Length; i++)
+            for (uint i = 0; i < text.Length; i++)
             {
-                char c = span[(int)i];
-                bool last = i == span.Length - 1;
+                char c = text[(int)i];
+                bool last = i == text.Length - 1;
                 ref var glyphInfo = ref font.GetGlyphInfo(c);
 
                 ref var glyph = ref _glyphs.Count > i ? ref _glyphs[i] : ref _glyphs.Add();
