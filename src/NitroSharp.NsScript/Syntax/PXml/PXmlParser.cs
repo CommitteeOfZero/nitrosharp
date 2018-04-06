@@ -139,9 +139,7 @@ namespace NitroSharp.NsScript.Syntax.PXml
                 char next = PeekChar(1);
                 if (c == '/' && next == '/')
                 {
-                    sb.Append(GetCurrentLexeme());
                     ScanToEndOfLine();
-                    StartScanning();
                 }
 
                 if (c == '&' && (next == '.' || next == ','))
@@ -150,10 +148,9 @@ namespace NitroSharp.NsScript.Syntax.PXml
                     sb.Append(next);
                 }
 
+                sb.Append(c);
                 AdvanceChar();
             }
-
-            sb.Append(GetCurrentLexeme());
 
             string processedText = sb.ToString();
             return new PXmlText(processedText);

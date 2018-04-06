@@ -22,7 +22,7 @@ namespace NitroSharp.Graphics.Shaders
         [ResourceSet(1)]
         public SamplerResource Sampler;
         [ResourceSet(1)]
-        public float Opacity;
+        public Vector4 Color;
 
         [VertexShader]
         public FragmentInput VS(VertexInput input)
@@ -42,7 +42,7 @@ namespace NitroSharp.Graphics.Shaders
         [FragmentShader]
         public Vector4 FS(FragmentInput input)
         {
-            return Sample(Texture, Sampler, input.TexCoords) * Opacity;
+            return Sample(Texture, Sampler, input.TexCoords) * Color;
         }
 
         public struct VertexInput

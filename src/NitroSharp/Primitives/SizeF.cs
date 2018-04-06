@@ -22,6 +22,8 @@ namespace NitroSharp.Primitives
             Width = Height = value;
         }
 
+        public static SizeF FromVector(in Vector2 vector) => new SizeF(vector.X, vector.Y);
+
         public bool Equals(Size other) => Width == other.Width && Height == other.Height;
         public override bool Equals(object obj) => obj is Size size && Equals(size);
 

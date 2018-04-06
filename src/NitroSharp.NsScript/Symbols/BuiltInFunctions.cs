@@ -549,7 +549,7 @@ namespace NitroSharp.NsScript.Symbols
             return EnumConversions.ToEasingFunction(PopEnumValue(args));
         }
 
-        private static TimeSpan PopTimeSpan(Stack<ConstantValue> args, bool allowNull = false)
+        private static TimeSpan PopTimeSpan(Stack<ConstantValue> args, bool allowNull = true)
         {
             int ms = (int)PopNumeric(args, allowNull);
             return TimeSpan.FromMilliseconds(ms);

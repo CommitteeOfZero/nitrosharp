@@ -6,12 +6,15 @@ namespace NitroSharp.Graphics
 {
     internal sealed class Sprite : Visual
     {
+        private readonly BindableTexture _texture;
+
         public Sprite(AssetRef<BindableTexture> source, RectangleF? sourceRectangle, float opacity, int priority)
             : base(RgbaFloat.White, opacity, priority)
         {
             Source = source;
             SourceRectangle = sourceRectangle;
             Bounds = new SizeF(Source.Asset.Width, Source.Asset.Height);
+            _texture = source.Asset;
         }
 
         public AssetRef<BindableTexture> Source { get; set; }
@@ -20,7 +23,7 @@ namespace NitroSharp.Graphics
 
         public override void Render(RenderContext renderContext)
         {
-            renderContext.Canvas.DrawImage(Source.Asset, 0, 0, Opacity);
+            renderContext.Canvas.DrawImage(_texture.GetTextureView(), 0, 0, Opacity);
         }
 
         public override void Destroy(RenderContext renderContext)

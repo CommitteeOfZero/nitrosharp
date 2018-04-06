@@ -6,6 +6,7 @@ using Veldrid;
 using NitroSharp.Primitives;
 using NitroSharp.Graphics.Objects;
 using NitroSharp.Utilities;
+using NitroSharp.Text;
 
 namespace NitroSharp.Graphics
 {
@@ -17,13 +18,13 @@ namespace NitroSharp.Graphics
         private readonly ResourceFactory _factory;
         private readonly Canvas _canvas;
         private readonly EffectLibrary _effectLibrary;
-        private readonly RenderContext _rc;
+        internal readonly RenderContext _rc;
 
         private readonly SharedEffectProperties2D _sharedProps2D;
         private readonly SharedEffectProperties3D _sharedProps3D;
         private Cube _cube;
 
-        public RenderSystem(GraphicsDevice graphicsDevice, Configuration configuration)
+        public RenderSystem(GraphicsDevice graphicsDevice, FontService fontService, Configuration configuration)
         {
             _gd = graphicsDevice;
             _config = configuration;
@@ -46,7 +47,7 @@ namespace NitroSharp.Graphics
                 1000.0f);
 
             _canvas = new Canvas(graphicsDevice, _effectLibrary, _sharedProps2D);
-            _rc = new RenderContext(_gd, _factory, _cl, _canvas, _effectLibrary, _sharedProps2D, _sharedProps3D);
+            _rc = new RenderContext(_gd, _factory, _cl, _canvas, _effectLibrary, _sharedProps2D, _sharedProps3D, fontService);
         }
 
         private SizeF DesignResolution => new SizeF(_config.WindowWidth, _config.WindowHeight);
@@ -76,14 +77,13 @@ namespace NitroSharp.Graphics
 
             _cube?.Render(_rc);
 
-            _canvas.Begin(_cl, new Viewport(0, 0, DesignResolution.Width, DesignResolution.Height, 0, 0));
+            _canvas.Begin(_cl);
             base.Update(deltaMilliseconds);
             _canvas.End();
 
             _cl.End();
 
             _gd.SubmitCommands(_cl);
-            _gd.WaitForIdle();
         }
 
         public void Present()

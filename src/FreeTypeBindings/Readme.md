@@ -1,0 +1,1 @@
+﻿Based on [SharpFont](https://github.com/Robmaister/SharpFont.git), an open source library licensed under MIT.

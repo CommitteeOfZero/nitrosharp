@@ -67,7 +67,8 @@ namespace NitroSharp.Graphics
             ref var buffer = ref resourceSetDesc.BoundResources[binding.PositionInResourceSet];
             if (buffer == null)
             {
-                buffer = _factory.CreateBuffer(new BufferDescription(binding.BufferSize, BufferUsage.UniformBuffer));
+                buffer = _factory.CreateBuffer(
+                    new BufferDescription(binding.BufferSize, BufferUsage.UniformBuffer | BufferUsage.Dynamic));
             }
 
             if (_cl != null)
@@ -85,7 +86,8 @@ namespace NitroSharp.Graphics
             if (!_resourceSetCache.TryGetValue(description, out var resourceSet))
             {
                 var copy = new ResourceSetDescription(description.Layout, (BindableResource[])description.BoundResources.Clone());
-                resourceSet = _resourceSetCache[description] = _factory.CreateResourceSet(ref copy);
+                resourceSet = _factory.CreateResourceSet(ref copy);
+                _resourceSetCache[description] = resourceSet;
             }
 
             return resourceSet;
@@ -103,7 +105,7 @@ namespace NitroSharp.Graphics
             out (ResourceLayout, ResourceSetDescription) layoutSetPair)
         {
             propertyBindings = new Dictionary<string, PropertyBinding>();
-            var layoutBuilder = new ArrayBuilder<ResourceLayoutElementDescription>(4);
+            var layoutBuilder = new ValueList<ResourceLayoutElementDescription>(4);
 
             var typeInfo = type.GetTypeInfo();
             uint positionInResourceSet = 0;
@@ -130,8 +132,6 @@ namespace NitroSharp.Graphics
             var layoutElements = layoutBuilder.ToArray();
             var layout = resourceFactory.CreateResourceLayout(new ResourceLayoutDescription(layoutElements));
             var set = new ResourceSetDescription(layout, new BindableResource[layoutElements.Length]);
-
-            layoutBuilder.Reset();
             layoutSetPair = (layout, set);
         }
     }

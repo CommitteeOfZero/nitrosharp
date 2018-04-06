@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using Veldrid;
 
 namespace NitroSharp.Graphics
@@ -6,7 +7,9 @@ namespace NitroSharp.Graphics
     public sealed class BindableTexture : IDisposable
     {
         private readonly ResourceFactory _resourceFactory;
-        private TextureView _textureView;
+
+        private readonly Dictionary<TextureViewDescription, TextureView> _textureViews;
+        private TextureViewDescription _defaultDesc;
 
         public BindableTexture(ResourceFactory resourceFactory, Texture deviceTexture)
         {
@@ -23,26 +26,49 @@ namespace NitroSharp.Graphics
 
             _resourceFactory = resourceFactory;
             DeviceTexture = deviceTexture;
+            _textureViews = new Dictionary<TextureViewDescription, TextureView>();
+            _defaultDesc = new TextureViewDescription(deviceTexture, 0, 1, 0, 1);
         }
 
         public Texture DeviceTexture { get; }
         public uint Width => DeviceTexture.Width;
         public uint Height => DeviceTexture.Height;
 
-        public TextureView GetTextureView()
+        private TextureView GetTextureView(ref TextureViewDescription textureViewDescription)
         {
-            if (_textureView == null)
+            if (!_textureViews.TryGetValue(textureViewDescription, out var textureView))
             {
-                _textureView = _resourceFactory.CreateTextureView(DeviceTexture);
+                textureView = _textureViews[textureViewDescription] =
+                    _resourceFactory.CreateTextureView(ref textureViewDescription);
             }
 
-            return _textureView;
+            return textureView;
+        }
+
+        public TextureView GetTextureView(uint baseMipLevel, uint mipLevelsInView, uint baseArrayLayer, uint arrayLayersInView)
+        {
+            var desc = new TextureViewDescription(DeviceTexture, baseMipLevel, mipLevelsInView, baseArrayLayer, arrayLayersInView);
+            return GetTextureView(ref desc);
+        }
+
+        public TextureView GetTextureView()
+        {
+            return GetTextureView(ref _defaultDesc);
         }
 
         public void Dispose()
         {
-            _textureView?.Dispose();
+            foreach (var tv in _textureViews.Values)
+            {
+                tv.Dispose();
+            }
+
             DeviceTexture.Dispose();
+        }
+
+        public static implicit operator Texture(BindableTexture bindableTexture)
+        {
+            return bindableTexture.DeviceTexture;
         }
     }
 }

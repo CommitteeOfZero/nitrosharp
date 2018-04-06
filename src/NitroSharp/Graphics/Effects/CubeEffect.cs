@@ -23,7 +23,7 @@ namespace NitroSharp.Graphics.Effects
             private Matrix4x4 _world;
             private TextureView _texture;
             private Sampler _sampler;
-            private float _opacity;
+            private RgbaFloat _color;
 
             public EffectProperties(GraphicsDevice graphicsDevice) : base(graphicsDevice)
             {
@@ -51,10 +51,10 @@ namespace NitroSharp.Graphics.Effects
             }
 
             [BoundResource(ResourceKind.UniformBuffer, ShaderStages.Fragment)]
-            public float Opacity
+            public RgbaFloat Color
             {
-                get => _opacity;
-                set => Update(ref _opacity, value);
+                get => _color;
+                set => Update(ref _color, value);
             }
         }
 

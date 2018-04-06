@@ -33,21 +33,23 @@ namespace NitroSharp.Graphics.Objects
             Priority = 0;
         }
 
-        public override float Opacity
+        public override RgbaFloat Color
         {
-            get => _cubeShader?.Properties?.Opacity ?? 0.0f;
-            set
+            get => _color;
+            protected set
             {
+                _color = value;
                 if (_cubeShader != null)
                 {
-                    _cubeShader.Properties.Opacity = value;
+                    _cubeShader.Properties.Color = value;
                 }
             }
         }
 
         public override void CreateDeviceObjects(RenderContext renderContext)
         {
-            _cubeShader = renderContext.Effects.Get<CubeEffect>(renderContext.SharedEffectProperties3D);
+            var matrices = renderContext.SharedEffectProperties3D;
+            _cubeShader = renderContext.Effects.Get<CubeEffect>(matrices);
 
             var gd = renderContext.Device;
             var factory = renderContext.Factory;
@@ -67,18 +69,18 @@ namespace NitroSharp.Graphics.Objects
             var cl = factory.CreateCommandList();
             cl.Begin();
 
-            var right = _right.Asset.DeviceTexture;
-            cl.CopyTexture(right, 0, 0, 0, 0, 0, textureCube, 0, 0, 0, 0, dstBaseArrayLayer: 0, width, height, 1, 1);
-            var left = _left.Asset.DeviceTexture;
-            cl.CopyTexture(left, 0, 0, 0, 0, 0, textureCube, 0, 0, 0, 0, dstBaseArrayLayer: 1, width, height, 1, 1);
-            var top = _top.Asset.DeviceTexture;
-            cl.CopyTexture(top, 0, 0, 0, 0, 0, textureCube, 0, 0, 0, 0, dstBaseArrayLayer: 2, width, height, 1, 1);
-            var bottom = _bottom.Asset.DeviceTexture;
-            cl.CopyTexture(bottom, 0, 0, 0, 0, 0, textureCube, 0, 0, 0, 0, dstBaseArrayLayer: 3, width, height, 1, 1);
-            var front = _front.Asset.DeviceTexture;
-            cl.CopyTexture(front, 0, 0, 0, 0, 0, textureCube, 0, 0, 0, 0, dstBaseArrayLayer: 4, width, height, 1, 1);
-            var back = _back.Asset.DeviceTexture;
-            cl.CopyTexture(back, 0, 0, 0, 0, 0, textureCube, 0, 0, 0, 0, dstBaseArrayLayer: 5, width, height, 1, 1);
+            void copy(uint dstBaseArrayLayer, Texture source)
+            {
+                cl.CopyTexture(source, 0, 0, 0, 0, 0, textureCube,
+                    0, 0, 0, 0, dstBaseArrayLayer, width, height, 1, 1);
+            }
+
+            copy(0, _right.Asset);
+            copy(1, _left.Asset);
+            copy(2, _top.Asset);
+            copy(3, _bottom.Asset);
+            copy(4, _front.Asset);
+            copy(5, _back.Asset);
 
             cl.End();
             gd.SubmitCommands(cl);
@@ -118,7 +120,7 @@ namespace NitroSharp.Graphics.Objects
             cl.SetVertexBuffer(0, _vb);
             cl.SetIndexBuffer(_ib, IndexFormat.UInt16);
 
-            cl.DrawIndexed((uint)s_indices.Length, 1, 0, 0, 0);
+            cl.DrawIndexed(36);
         }
 
         private static readonly CubeVertex[] s_vertices = new CubeVertex[]

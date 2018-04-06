@@ -8,9 +8,7 @@ namespace NitroSharp
 {
     internal sealed partial class CoreLogic : EngineImplementation
     {
-        private ContentManager _content;
         private readonly EntityManager _entities;
-
         private readonly Game _game;
 
         public bool WaitingForInput { get; set; }
@@ -21,7 +19,7 @@ namespace NitroSharp
             _entities = entities;
         }
 
-        public void SetContent(ContentManager content) => _content = content;
+        private ContentManager Content => _game.Content;
 
         public override void SetAlias(string entityName, string alias)
         {

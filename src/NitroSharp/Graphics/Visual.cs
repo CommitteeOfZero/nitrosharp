@@ -5,9 +5,10 @@ namespace NitroSharp.Graphics
 {
     internal abstract class Visual : Component
     {
+        protected RgbaFloat _color = RgbaFloat.White;
+
         protected Visual()
         {
-            Opacity = 1.0f;
         }
 
         protected Visual(RgbaFloat color, float opacity, int priority)
@@ -33,8 +34,18 @@ namespace NitroSharp.Graphics
         {
         }
 
-        public virtual float Opacity { get; set; }
-        public RgbaFloat Color { get; }
+        public virtual float Opacity
+        {
+            get => Color.A;
+            set => Color = new RgbaFloat(Color.R, Color.G, Color.B, value);
+        }
+
+        public virtual RgbaFloat Color
+        {
+            get => _color;
+            protected set => _color = value;
+        }
+
         public int Priority { get; protected set; }
         public virtual SizeF Bounds => SizeF.Zero;
 

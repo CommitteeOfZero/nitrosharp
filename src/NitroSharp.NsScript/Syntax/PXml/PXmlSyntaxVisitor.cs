@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Collections.Immutable;
 
 namespace NitroSharp.NsScript.Syntax.PXml
 {
@@ -9,7 +10,7 @@ namespace NitroSharp.NsScript.Syntax.PXml
             node.Accept(this);
         }
 
-        public void VisitArray(IEnumerable<PXmlNode> list)
+        public void VisitArray(ImmutableArray<PXmlNode> list)
         {
             foreach (var node in list)
             {

@@ -7,16 +7,16 @@ namespace NitroSharp.Primitives
     {
         public static readonly Size Zero = new Size(0, 0);
 
-        public readonly int Width;
-        public readonly int Height;
+        public readonly uint Width;
+        public readonly uint Height;
 
-        public Size(int width, int height)
+        public Size(uint width, uint height)
         {
             Width = width;
             Height = height;
         }
 
-        public Size(int value)
+        public Size(uint value)
         {
             Width = Height = value;
         }

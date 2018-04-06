@@ -9,17 +9,17 @@ namespace NitroSharp.Graphics
     public sealed class Canvas : IDisposable
     {
         private const uint InitialVertexBufferCapacity = 256 * 4;
-
+        private readonly SharedEffectProperties2D _props;
         private readonly GraphicsDevice _gd;
         private readonly SpriteEffect _spriteEffect;
         private readonly FillEffect _fillEffect;
-        private CommandList _cl;
+        private EffectPipelineState _pipelineState;
 
+        private CommandList _cl;
         private Vertex2D[] _vertices;
         private int _offset;
         private DeviceBuffer _vertexBuffer;
         private readonly DeviceBuffer _indexBuffer;
-
         private readonly Stack<Matrix4x4> _transforms = new Stack<Matrix4x4>();
 
         public Canvas(
@@ -27,6 +27,7 @@ namespace NitroSharp.Graphics
             EffectLibrary effectLibrary,
             SharedEffectProperties2D sharedEffectProperties)
         {
+            _props = sharedEffectProperties;
             _gd = graphicsDevice;
             _spriteEffect = effectLibrary.Get<SpriteEffect>(sharedEffectProperties);
             _spriteEffect.Properties.Sampler = _gd.Aniso4xSampler;
@@ -47,7 +48,7 @@ namespace NitroSharp.Graphics
                     BufferUsage.VertexBuffer | BufferUsage.Dynamic));
         }
 
-        public void Begin(CommandList cl, in Viewport viewport)
+        public void Begin(CommandList cl, Framebuffer renderTarget = null)
         {
             _cl = cl;
             _cl.SetVertexBuffer(0, _vertexBuffer);
@@ -88,39 +89,39 @@ namespace NitroSharp.Graphics
             Submit();
         }
 
-        public void DrawImage(BindableTexture image, float x, float y, float opacity = 1.0f)
-            => DrawImage(image, new RectangleF(x, y, image.Width, image.Height), new RgbaFloat(1.0f, 1.0f, 1.0f, opacity));
+        public void DrawImage(TextureView image, float x, float y, float opacity = 1.0f)
+            => DrawImage(image, new RectangleF(x, y, image.Target.Width, image.Target.Height), new RgbaFloat(1.0f, 1.0f, 1.0f, opacity));
 
-        public void DrawImage(BindableTexture image, float x, float y, in RgbaFloat color)
-            => DrawImage(image, new RectangleF(x, y, image.Width, image.Height), color);
+        public void DrawImage(TextureView image, float x, float y, in RgbaFloat color)
+            => DrawImage(image, new RectangleF(x, y, image.Target.Width, image.Target.Height), color);
 
-        public void DrawImage(BindableTexture image, float x, float y, float width, float height, float opacity = 1.0f)
+        public void DrawImage(TextureView image, float x, float y, float width, float height, float opacity = 1.0f)
             =>  DrawImage(image, null, new RectangleF(x, y, width, height), new RgbaFloat(1.0f, 1.0f, 1.0f, opacity));
 
-        public void DrawImage(BindableTexture image, in RectangleF rect, float opacity = 1.0f)
+        public void DrawImage(TextureView image, in RectangleF rect, float opacity = 1.0f)
             => DrawImage(image, rect, new RgbaFloat(1.0f, 1.0f, 1.0f, opacity));
 
-        public void DrawImage(BindableTexture image, in RectangleF rect, in RgbaFloat color)
+        public void DrawImage(TextureView image, in RectangleF rect, in RgbaFloat color)
             => DrawImage(image, null, rect, color);
 
-        public void DrawImage(BindableTexture image, in RectangleF? sourceRect, in RectangleF destinationRect, in RgbaFloat color)
+        public void DrawImage(TextureView image, in RectangleF? sourceRect, in RectangleF destinationRect, in RgbaFloat color)
         {
-            var sourceRectangle = sourceRect ?? new RectangleF(0, 0, (int)image.Width, (int)image.Height);
+            var sourceRectangle = sourceRect ?? new RectangleF(0, 0, (int)image.Target.Width, (int)image.Target.Height);
 
             var texCoordTL = new Vector2(
-                sourceRectangle.Left / image.Width,
-                sourceRectangle.Top / image.Height);
+                sourceRectangle.Left / image.Target.Width,
+                sourceRectangle.Top / image.Target.Height);
 
             var texCoordBR = new Vector2(
-                sourceRectangle.Right / image.Width,
-                sourceRectangle.Bottom / image.Height);
+                sourceRectangle.Right / image.Target.Width,
+                sourceRectangle.Bottom / image.Target.Height);
 
             DrawQuadGeometry(destinationRect, color, texCoordTL, texCoordBR);
 
             var properties = _spriteEffect.Properties;
             properties.BeginRecording(_cl);
             properties.Transform = PopTransform();
-            properties.Texture = image.GetTextureView();
+            properties.Texture = image;
             properties.EndRecording();
 
             _spriteEffect.Apply(_cl);

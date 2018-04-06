@@ -25,7 +25,7 @@ namespace NitroSharp
 
         public override void LoadImage(string entityName, string fileName)
         {
-            var sprite = new Sprite(_content.Get<BindableTexture>(fileName), null, 1.0f, 0);
+            var sprite = new Sprite(Content.Get<BindableTexture>(fileName), null, 1.0f, 0);
             _entities.Create(entityName, replace: true).WithComponent(sprite);
         }
 
@@ -89,7 +89,7 @@ namespace NitroSharp
                 }
             }
 
-            var texture = new Sprite(_content.Get<BindableTexture>(source), srcRect, 1.0f, priority);
+            var texture = new Sprite(Content.Get<BindableTexture>(source), srcRect, 1.0f, priority);
             _entities.Create(entityName, replace: true)
                 .WithComponent(texture)
                 .WithParent(parentEntity)
@@ -103,12 +103,12 @@ namespace NitroSharp
             string top, string bottom)
         {
             var cube = new Cube(
-                _content.Get<BindableTexture>(front),
-                _content.Get<BindableTexture>(back),
-                _content.Get<BindableTexture>(left),
-                _content.Get<BindableTexture>(right),
-                _content.Get<BindableTexture>(top),
-                _content.Get<BindableTexture>(bottom));
+                Content.Get<BindableTexture>(front),
+                Content.Get<BindableTexture>(back),
+                Content.Get<BindableTexture>(left),
+                Content.Get<BindableTexture>(right),
+                Content.Get<BindableTexture>(top),
+                Content.Get<BindableTexture>(bottom));
 
             _entities.Create(entityName).WithComponent(cube);
         }
