@@ -6,9 +6,9 @@ using Veldrid;
 
 namespace NitroSharp.Graphics
 {
-    public sealed class EffectLibrary : IDisposable
+    internal sealed class EffectLibrary : IDisposable
     {
-        private static Assembly s_assembly = typeof(EffectLibrary).Assembly;
+        private static readonly Assembly s_assembly = typeof(EffectLibrary).Assembly;
 
         private readonly GraphicsDevice _gd;
         private readonly Dictionary<Type, Effect> _effectCache = new Dictionary<Type, Effect>();

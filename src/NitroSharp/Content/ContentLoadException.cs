@@ -2,7 +2,7 @@
 
 namespace NitroSharp.Content
 {
-    internal class ContentLoadException : Exception
+    internal sealed class ContentLoadException : Exception
     {
         public ContentLoadException()
         {

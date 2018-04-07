@@ -2,7 +2,7 @@
 
 namespace NitroSharp.Utilities
 {
-    public sealed class DisposeCollectorResourceFactory : ResourceFactory
+    internal sealed class DisposeCollectorResourceFactory : ResourceFactory
     {
         public DisposeCollectorResourceFactory(ResourceFactory factory)
             : this(factory, new DisposeCollector())

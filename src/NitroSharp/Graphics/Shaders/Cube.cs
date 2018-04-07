@@ -8,7 +8,7 @@ using static ShaderGen.ShaderBuiltins;
 
 namespace NitroSharp.Graphics.Shaders
 {
-    public class Cube
+    internal class Cube
     {
         [ResourceSet(0)]
         public Matrix4x4 View;

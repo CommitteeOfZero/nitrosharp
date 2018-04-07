@@ -61,7 +61,7 @@ namespace NitroSharp.Text
             return collection.First(x => x.Style == fontStyle);
         }
 
-        public FontFace Load(string path)
+        private FontFace Load(string path)
         {
             unsafe
             {

@@ -8,7 +8,7 @@ using Veldrid;
 
 namespace NitroSharp.Graphics
 {
-    public abstract class BoundResourceSet
+    internal abstract class BoundResourceSet
     {
         private readonly GraphicsDevice _gd;
         private readonly DisposeCollectorResourceFactory _factory;

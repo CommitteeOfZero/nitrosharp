@@ -1,6 +1,6 @@
 ﻿namespace NitroSharp.Audio
 {
-    public enum AudioKind
+    internal enum AudioKind
     {
         BackgroundMusic,
         SoundEffect,

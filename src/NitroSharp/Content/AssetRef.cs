@@ -2,7 +2,7 @@
 
 namespace NitroSharp.Content
 {
-    public sealed class AssetRef<T> : IDisposable
+    internal sealed class AssetRef<T> : IDisposable
     {
         private readonly ContentManager _contentManager;
         private bool _alive;

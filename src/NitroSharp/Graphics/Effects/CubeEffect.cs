@@ -3,7 +3,7 @@ using Veldrid;
 
 namespace NitroSharp.Graphics.Effects
 {
-    public sealed class CubeEffect : Effect
+    internal sealed class CubeEffect : Effect
     {
         public CubeEffect(
             GraphicsDevice graphicsDevice,

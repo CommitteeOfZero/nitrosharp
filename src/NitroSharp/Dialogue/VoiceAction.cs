@@ -1,6 +1,6 @@
 ﻿namespace NitroSharp.Dialogue
 {
-    public enum VoiceAction
+    internal enum VoiceAction
     {
         Play,
         Stop

@@ -2,7 +2,7 @@
 
 namespace NitroSharp.Content
 {
-    public abstract class ContentLoader
+    internal abstract class ContentLoader
     {
         public abstract object Load(Stream stream);
     }

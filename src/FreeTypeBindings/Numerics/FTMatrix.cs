@@ -12,13 +12,12 @@ namespace FreeTypeBindings
     /// </code>
     /// </summary>
     [StructLayout(LayoutKind.Sequential)]
-    public struct FTMatrix : IEquatable<FTMatrix>
+    public readonly struct FTMatrix : IEquatable<FTMatrix>
     {
-        private IntPtr _xx, _xy;
-        private IntPtr _yx, _yy;
+        private readonly IntPtr _xx, _xy;
+        private readonly IntPtr _yx, _yy;
 
-
-        public FTMatrix(int xx, int xy, int yx, int yy)
+        private FTMatrix(int xx, int xy, int yx, int yy)
         {
             _xx = (IntPtr)xx;
             _xy = (IntPtr)xy;
@@ -31,43 +30,33 @@ namespace FreeTypeBindings
         {
         }
 
-        public Fixed16Dot16 XX
-        {
-            get => Fixed16Dot16.FromRawValue((int)_xx);
-            set => _xx = (IntPtr)value.Value;
-        }
-
-        public Fixed16Dot16 XY
-        {
-            get => Fixed16Dot16.FromRawValue((int)_xy);
-            set => _xy = (IntPtr)value.Value;
-        }
-
-        public Fixed16Dot16 YX
-        {
-            get => Fixed16Dot16.FromRawValue((int)_yx);
-            set => _yx = (IntPtr)value.Value;
-        }
-
-        public Fixed16Dot16 YY
-        {
-            get => Fixed16Dot16.FromRawValue((int)_yy);
-            set => _yy = (IntPtr)value.Value;
-        }
+        public Fixed16Dot16 XX => Fixed16Dot16.FromRawValue((int)_xx);
+        public Fixed16Dot16 XY => Fixed16Dot16.FromRawValue((int)_xy);
+        public Fixed16Dot16 YX => Fixed16Dot16.FromRawValue((int)_yx);
+        public Fixed16Dot16 YY => Fixed16Dot16.FromRawValue((int)_yy);
 
         public static bool operator ==(FTMatrix left, FTMatrix right) => left.Equals(right);
         public static bool operator !=(FTMatrix left, FTMatrix right) => !left.Equals(right);
 
         public static void Multiply(FTMatrix a, FTMatrix b) => FT.FT_Matrix_Multiply(ref a, ref b);
-        public void Multiply(FTMatrix b) => FT.FT_Matrix_Multiply(ref this, ref b);
 
-        public void Invert()
+        public FTMatrix Multiply(FTMatrix b)
         {
-            Error err = FT.FT_Matrix_Invert(ref this);
+            FTMatrix copy = this;
+            FT.FT_Matrix_Multiply(ref copy, ref b);
+            return copy;
+        }
+
+        public FTMatrix Invert()
+        {
+            FTMatrix copy = this;
+            Error err = FT.FT_Matrix_Invert(ref copy);
             if (err != Error.Ok)
             {
                 throw new FreeTypeException(err);
             }
+
+            return copy;
         }
 
         public bool Equals(FTMatrix other)

@@ -6,10 +6,9 @@ using Veldrid;
 
 namespace NitroSharp.Graphics
 {
-    public sealed class Canvas : IDisposable
+    internal sealed class Canvas : IDisposable
     {
         private const uint InitialVertexBufferCapacity = 256 * 4;
-        private readonly SharedEffectProperties2D _props;
         private readonly GraphicsDevice _gd;
         private readonly SpriteEffect _spriteEffect;
         private readonly FillEffect _fillEffect;
@@ -26,7 +25,6 @@ namespace NitroSharp.Graphics
             EffectLibrary effectLibrary,
             SharedEffectProperties2D sharedEffectProperties)
         {
-            _props = sharedEffectProperties;
             _gd = graphicsDevice;
             _spriteEffect = effectLibrary.Get<SpriteEffect>(sharedEffectProperties);
             _spriteEffect.Properties.Sampler = _gd.Aniso4xSampler;
@@ -146,7 +144,7 @@ namespace NitroSharp.Graphics
             _fillEffect.Dispose();
         }
 
-        public void DrawQuadGeometry(in RectangleF rect, in RgbaFloat color, in Vector2 texCoordTL, in Vector2 texCoordBR)
+        private void DrawQuadGeometry(in RectangleF rect, in RgbaFloat color, in Vector2 texCoordTL, in Vector2 texCoordBR)
         {
             EnsureCapacity();
             int offset = _offset;
@@ -182,7 +180,7 @@ namespace NitroSharp.Graphics
             _offset = ++offset;
         }
 
-        public void DrawQuadGeometry(in RectangleF rect, in RgbaFloat color)
+        private void DrawQuadGeometry(in RectangleF rect, in RgbaFloat color)
         {
             EnsureCapacity();
             int offset = _offset;

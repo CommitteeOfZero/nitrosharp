@@ -3,17 +3,14 @@
 namespace FreeTypeBindings
 {
     /// <summary>
-    /// A list of bit-field constants used with <see cref="Face.LoadGlyph"/> to indicate what kind of operations to
+    /// A list of bit-field constants used with LoadGlyph() to indicate what kind of operations to
     /// perform during glyph loading.
     /// </summary>
     /// <remarks><para>
-    /// By default, hinting is enabled and the font's native hinter (see <see cref="FaceFlags.Hinter"/>) is preferred
+    /// By default, hinting is enabled and the font's native hinter is preferred
     /// over the auto-hinter. You can disable hinting by setting <see cref="LoadFlags.NoHinting"/> or change the
     /// precedence by setting <see cref="LoadFlags.ForceAutohint"/>. You can also set
     /// <see cref="LoadFlags.NoAutohint"/> in case you don't want the auto-hinter to be used at all.
-    /// </para><para>
-    /// See the description of <see cref="FaceFlags.Tricky"/> for a special exception (affecting only a handful of
-    /// Asian fonts).
     /// </para><para>
     /// Besides deciding which hinter to use, you can also decide which hinting algorithm to use.
     /// </para></remarks>
@@ -56,8 +53,8 @@ namespace FreeTypeBindings
         NoHinting = 0x000002,
 
         /// <summary><para>
-        /// Call <see cref="GlyphSlot.RenderGlyph"/> after the glyph is loaded. By default, the glyph is rendered in
-        /// <see cref="RenderMode.Normal"/> mode. This can be overridden by <see cref="LoadTarget"/> or
+        /// Call RenderGlyph() after the glyph is loaded. By default, the glyph is rendered in
+        /// <see cref="RenderMode.Normal"/> mode. This can be overridden by LoadTarget or
         /// <see cref="LoadFlags.Monochrome"/>.
         /// </para><para>
         /// This flag is unset by <see cref="LoadFlags.NoScale"/>.
@@ -111,7 +108,7 @@ namespace FreeTypeBindings
         NoRecurse = 0x000400,
 
         /// <summary>
-        /// Indicates that the transform matrix set by <see cref="Face.SetTransform()"/> should be ignored.
+        /// Indicates that the transform matrix should be ignored.
         /// </summary>
         IgnoreTransform = 0x000800,
 
@@ -120,7 +117,7 @@ namespace FreeTypeBindings
         /// to a 1-bit monochrome bitmap glyph, with 8 pixels packed into each byte of the bitmap data.
         /// </para><para>
         /// Note that this has no effect on the hinting algorithm used. You should rather use
-        /// <see cref="LoadTarget.Mono"/> so that the monochrome-optimized hinting algorithm is used.
+        /// LoadTarget.Mono so that the monochrome-optimized hinting algorithm is used.
         /// </para></summary>
         Monochrome = 0x001000,
 
@@ -153,9 +150,6 @@ namespace FreeTypeBindings
         ComputeMetrics = 0x200000,
 
         /// <summary><para>
-        /// A bit-flag to be OR-ed with the ‘flags’ parameter of the <see cref="Face.GetAdvance"/> and
-        /// <see cref="Face.GetAdvances"/> functions.
-        /// </para><para>
         /// If set, it indicates that you want these functions to fail if the corresponding hinting mode or font driver
         /// doesn't allow for very quick advance computation.
         /// </para><para>

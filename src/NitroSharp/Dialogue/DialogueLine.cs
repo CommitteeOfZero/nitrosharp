@@ -8,7 +8,7 @@ namespace NitroSharp.Dialogue
 {
     internal sealed class DialogueLine
     {
-        private static PXmlTreeVisitor s_treeVisitor = new PXmlTreeVisitor();
+        private static readonly PXmlTreeVisitor s_treeVisitor = new PXmlTreeVisitor();
 
         private DialogueLine(TextRun[] text, uint textLength, in Voice voice)
         {

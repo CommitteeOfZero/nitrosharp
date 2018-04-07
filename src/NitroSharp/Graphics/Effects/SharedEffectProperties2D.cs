@@ -3,7 +3,7 @@ using Veldrid;
 
 namespace NitroSharp.Graphics
 {
-    public sealed class SharedEffectProperties2D : BoundResourceSet
+    internal sealed class SharedEffectProperties2D : BoundResourceSet
     {
         private Matrix4x4 _projection;
 

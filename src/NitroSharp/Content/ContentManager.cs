@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace NitroSharp.Content
 {
-    public class ContentManager : IDisposable
+    internal class ContentManager : IDisposable
     {
         private readonly Dictionary<Type, ContentLoader> _contentLoaders;
         private readonly Dictionary<AssetId, (object asset, int refCount)> _loadedAssets;

@@ -4,7 +4,7 @@ using Veldrid;
 
 namespace NitroSharp.Graphics
 {
-    public abstract class Effect : IDisposable
+    internal abstract class Effect : IDisposable
     {
         protected readonly GraphicsDevice _gd;
         protected readonly Shader _vs, _fs;

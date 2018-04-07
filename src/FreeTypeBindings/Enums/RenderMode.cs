@@ -4,19 +4,18 @@
     /// An enumeration type that lists the render modes supported by FreeType 2. Each mode corresponds to a specific
     /// type of scanline conversion performed on the outline.
     /// </para><para>
-    /// For bitmap fonts and embedded bitmaps the <see cref="FTBitmap.PixelMode"/> field in the <see cref="GlyphSlot"/>
+    /// For bitmap fonts and embedded bitmaps the <see cref="Bitmap.pixel_mode"/> field in the <see cref="GlyphSlot"/>
     /// structure gives the format of the returned bitmap.
     /// </para><para>
     /// All modes except <see cref="RenderMode.Mono"/> use 256 levels of opacity.
     /// </para></summary>
     /// <remarks><para>
-    /// The LCD-optimized glyph bitmaps produced by <see cref="GlyphSlot.RenderGlyph"/> can be filtered to reduce
-    /// color-fringes by using <see cref="Library.SetLcdFilter"/> (not active in the default builds). It is up to the
-    /// caller to either call <see cref="Library.SetLcdFilter"/> (if available) or do the filtering itself.
+    /// The LCD-optimized glyph bitmaps produced by RenderGlyph() can be filtered to reduce
+    /// color-fringes by using SetLcdFilter. It is up to the
+    /// caller to either call SetLcdFilter (if available) or do the filtering itself.
     /// </para><para>
     /// The selected render mode only affects vector glyphs of a font. Embedded bitmaps often have a different pixel
-    /// mode like <see cref="PixelMode.Mono"/>. You can use <see cref="FTBitmap.Convert"/> to transform them into 8-bit
-    /// pixmaps.
+    /// mode like <see cref="PixelMode.Mono"/>.
     /// </para></remarks>
     public enum RenderMode
     {
@@ -29,7 +28,6 @@
         /// This is equivalent to <see cref="RenderMode.Normal"/>. It is only defined as a separate value because
         /// render modes are also used indirectly to define hinting algorithm selectors.
         /// </summary>
-        /// <see cref="LoadTarget"/>
         Light,
 
         /// <summary>

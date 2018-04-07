@@ -15,10 +15,9 @@ namespace NitroSharp.Graphics
         private readonly Configuration _config;
         private readonly CommandList _cl;
         private readonly GraphicsDevice _gd;
-        private readonly ResourceFactory _factory;
         private readonly Canvas _canvas;
         private readonly EffectLibrary _effectLibrary;
-        internal readonly RenderContext _rc;
+        private readonly RenderContext _rc;
 
         private readonly SharedEffectProperties2D _sharedProps2D;
         private readonly SharedEffectProperties3D _sharedProps3D;
@@ -29,8 +28,8 @@ namespace NitroSharp.Graphics
             _gd = graphicsDevice;
             _config = configuration;
 
-            _factory = _gd.ResourceFactory;
-            _cl = _factory.CreateCommandList();
+            ResourceFactory factory = _gd.ResourceFactory;
+            _cl = factory.CreateCommandList();
             _effectLibrary = new EffectLibrary(_gd);
 
             _sharedProps2D = new SharedEffectProperties2D(_gd);
@@ -47,7 +46,7 @@ namespace NitroSharp.Graphics
                 1000.0f);
 
             _canvas = new Canvas(graphicsDevice, _effectLibrary, _sharedProps2D);
-            _rc = new RenderContext(_gd, _factory, _cl, _canvas, _effectLibrary, _sharedProps2D, _sharedProps3D, fontService);
+            _rc = new RenderContext(_gd, factory, _cl, _canvas, _effectLibrary, _sharedProps2D, _sharedProps3D, fontService);
         }
 
         private SizeF DesignResolution => new SizeF(_config.WindowWidth, _config.WindowHeight);
@@ -94,13 +93,6 @@ namespace NitroSharp.Graphics
         public override IEnumerable<Entity> SortEntities(IEnumerable<Entity> entities)
         {
             return entities.OrderBy(x => x.GetComponent<Visual>().Priority).ThenBy(x => x.CreationTime);
-        }
-
-        private IEnumerable<Entity> SortByPriority(IEnumerable<Entity> entities)
-        {
-            return entities
-                .OrderByDescending(x => x.GetComponent<Visual>().Priority)
-                .ThenByDescending(x => x.CreationTime);
         }
 
         public override void Process(Entity entity, float deltaMilliseconds)

@@ -71,13 +71,15 @@ namespace NitroSharp.Graphics.Objects
                 
                 var bitmapInfo = font.Rasterize(ref glyphInfo, buffer, RgbaByte.White);
                 var dimensions = bitmapInfo.Dimensions;
-                if (dimensions.Width == 0) continue;
+                if (dimensions.Width == 0)
+                {
+                    continue;
+                }
 
                 var margin = bitmapInfo.Margin;
-                uint size = dimensions.Width * dimensions.Height;
 
                 var pos = new Vector2(glyph.Position.X + margin.X, 28 + glyph.Position.Y - margin.Y);
-                var color = glyph.Color.HasValue ? glyph.Color.Value : RgbaFloat.White;
+                var color = glyph.Color ?? RgbaFloat.White;
                 for (uint y = 0; y < dimensions.Height; y++)
                 {
                     for (uint x = 0; x < dimensions.Width; x++)

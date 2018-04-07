@@ -1,10 +1,9 @@
-﻿using FreeTypeBindings;
-using NitroSharp.Text;
+﻿using NitroSharp.Text;
 using Veldrid;
 
 namespace NitroSharp.Graphics
 {
-    public sealed class RenderContext
+    internal sealed class RenderContext
     {
         internal RenderContext(GraphicsDevice device, ResourceFactory factory,
             CommandList commandList, Canvas canvas, EffectLibrary effectLibrary,
@@ -29,7 +28,6 @@ namespace NitroSharp.Graphics
         public EffectLibrary Effects { get; }
         public SharedEffectProperties2D SharedEffectProperties2D { get; }
         public SharedEffectProperties3D SharedEffectProperties3D { get; }
-
-        internal FontService FontService { get; }
+        public FontService FontService { get; }
     }
 }

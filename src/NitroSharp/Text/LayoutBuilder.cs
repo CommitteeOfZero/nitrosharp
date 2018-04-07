@@ -37,7 +37,7 @@ namespace NitroSharp.Text
         private bool AppendTextRun(ref TextRun textRun)
         {
             var font = _fontFamily.GetFace(textRun.FontStyle);
-            var size = textRun.FontSize.HasValue ? textRun.FontSize.Value : 30;
+            var size = textRun.FontSize ?? 30;
             font.SetSize(size);
 
             string text = textRun.Text;
@@ -45,16 +45,11 @@ namespace NitroSharp.Text
             for (uint i = 0; i < text.Length; i++)
             {
                 char c = text[(int)i];
-                bool last = i == text.Length - 1;
                 ref var glyphInfo = ref font.GetGlyphInfo(c);
-
                 ref var glyph = ref _glyphs.Count > i ? ref _glyphs[i] : ref _glyphs.Add();
                 glyph.Char = c;
-                glyph.Size = glyphInfo.Size;
-                glyph.Advance = glyphInfo.Advance;
                 glyph.Color = textRun.Color;
                 glyph.FontStyle = textRun.FontStyle;
-                glyph.FontSize = textRun.FontSize;
 
                 if (c == '\n')
                 {

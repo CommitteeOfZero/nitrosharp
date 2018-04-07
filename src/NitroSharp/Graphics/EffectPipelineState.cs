@@ -4,7 +4,7 @@ using Veldrid;
 
 namespace NitroSharp.Graphics
 {
-    public readonly struct EffectPipelineState : IEquatable<EffectPipelineState>
+    internal readonly struct EffectPipelineState : IEquatable<EffectPipelineState>
     {
         public readonly RasterizerStateDescription RasterizerState;
         public readonly DepthStencilStateDescription DepthStencilState;
@@ -12,10 +12,10 @@ namespace NitroSharp.Graphics
         public readonly OutputDescription OutputDescription;
 
         public EffectPipelineState(
-            in RasterizerStateDescription rasterizerState,
-            in DepthStencilStateDescription depthStencilState,
-            in BlendStateDescription blendState,
-            in OutputDescription outputDescription)
+            ref RasterizerStateDescription rasterizerState,
+            ref DepthStencilStateDescription depthStencilState,
+            ref BlendStateDescription blendState,
+            ref OutputDescription outputDescription)
         {
             RasterizerState = rasterizerState;
             DepthStencilState = depthStencilState;

@@ -6,7 +6,7 @@ namespace NitroSharp.Primitives
     /// <summary>
     /// A read-only rectangle struct. Meant to be used in conjuction with the 'in' modifier.
     /// </summary>
-    public readonly struct Rectangle : IEquatable<Rectangle>
+    internal readonly struct Rectangle : IEquatable<Rectangle>
     {
         public readonly int X;
         public readonly int Y;

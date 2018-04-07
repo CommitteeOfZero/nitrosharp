@@ -97,25 +97,7 @@ namespace FreeTypeBindings
 
         [DllImport(FreetypeDll, CallingConvention = CallConvention)]
         public static extern void FT_Done_Glyph(Glyph* glyph);
-
-
-        [DllImport(FreetypeDll, CallingConvention = CallConvention)]
-        public static extern IntPtr FT_MulDiv(IntPtr a, IntPtr b, IntPtr c);
-
-        [DllImport(FreetypeDll, CallingConvention = CallConvention)]
-        public static extern IntPtr FT_MulFix(IntPtr a, IntPtr b);
-
-        [DllImport(FreetypeDll, CallingConvention = CallConvention)]
-        public static extern IntPtr FT_DivFix(IntPtr a, IntPtr b);
-
-        [DllImport(FreetypeDll, CallingConvention = CallConvention)]
-        public static extern IntPtr FT_RoundFix(IntPtr a);
-
-        [DllImport(FreetypeDll, CallingConvention = CallConvention)]
-        public static extern IntPtr FT_CeilFix(IntPtr a);
-
-        [DllImport(FreetypeDll, CallingConvention = CallConvention)]
-        public static extern IntPtr FT_FloorFix(IntPtr a);
+        
 
         [DllImport(FreetypeDll, CallingConvention = CallConvention)]
         public static extern void FT_Vector_Transform(ref FTVector vec, ref FTMatrix matrix);
@@ -127,33 +109,6 @@ namespace FreeTypeBindings
         public static extern Error FT_Matrix_Invert(ref FTMatrix matrix);
 
         [DllImport(FreetypeDll, CallingConvention = CallConvention)]
-        public static extern IntPtr FT_Sin(IntPtr angle);
-
-        [DllImport(FreetypeDll, CallingConvention = CallConvention)]
-        public static extern IntPtr FT_Cos(IntPtr angle);
-
-        [DllImport(FreetypeDll, CallingConvention = CallConvention)]
-        public static extern IntPtr FT_Tan(IntPtr angle);
-
-        [DllImport(FreetypeDll, CallingConvention = CallConvention)]
-        public static extern IntPtr FT_Atan2(IntPtr x, IntPtr y);
-
-        [DllImport(FreetypeDll, CallingConvention = CallConvention)]
-        public static extern IntPtr FT_Angle_Diff(IntPtr angle1, IntPtr angle2);
-
-        [DllImport(FreetypeDll, CallingConvention = CallConvention)]
-        public static extern void FT_Vector_Unit(out FTVector vec, IntPtr angle);
-
-        [DllImport(FreetypeDll, CallingConvention = CallConvention)]
         public static extern void FT_Vector_Rotate(ref FTVector vec, IntPtr angle);
-
-        [DllImport(FreetypeDll, CallingConvention = CallConvention)]
-        public static extern IntPtr FT_Vector_Length(ref FTVector vec);
-
-        [DllImport(FreetypeDll, CallingConvention = CallConvention)]
-        public static extern void FT_Vector_Polarize(ref FTVector vec, out IntPtr length, out IntPtr angle);
-
-        [DllImport(FreetypeDll, CallingConvention = CallConvention)]
-        public static extern void FT_Vector_From_Polar(out FTVector vec, IntPtr length, IntPtr angle);
     }
 }

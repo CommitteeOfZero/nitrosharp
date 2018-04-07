@@ -6,10 +6,10 @@ using FT_Long = System.IntPtr;
 namespace FreeTypeBindings
 {
     [StructLayout(LayoutKind.Sequential)]
-    public struct BBox : IEquatable<BBox>
+    public readonly struct BBox : IEquatable<BBox>
     {
-        private FT_Long _xMin, _yMin;
-        private FT_Long _xMax, _yMax;
+        private readonly FT_Long _xMin, _yMin;
+        private readonly FT_Long _xMax, _yMax;
 
         public BBox(int left, int bottom, int right, int top)
         {

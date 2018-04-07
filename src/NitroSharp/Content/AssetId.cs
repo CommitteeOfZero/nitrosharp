@@ -2,7 +2,7 @@
 
 namespace NitroSharp.Content
 {
-    public struct AssetId
+    internal readonly struct AssetId
     {
         public AssetId(string value)
         {

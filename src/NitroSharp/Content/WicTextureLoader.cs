@@ -5,7 +5,7 @@ using Veldrid;
 
 namespace NitroSharp.Content
 {
-    public class WicTextureLoader : ContentLoader
+    internal sealed class WicTextureLoader : ContentLoader
     {
         private const int MipLevels = 1;
 

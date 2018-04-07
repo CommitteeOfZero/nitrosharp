@@ -10,12 +10,12 @@ namespace FreeTypeBindings
     [StructLayout(LayoutKind.Sequential)]
     public struct Fixed26Dot6 : IEquatable<Fixed26Dot6>, IComparable<Fixed26Dot6>
     {
-        public Fixed26Dot6(int value)
+        private Fixed26Dot6(int value)
         {
             Value = value << 6;
         }
 
-        public Fixed26Dot6(float value)
+        private Fixed26Dot6(float value)
         {
             Value = (int)(value * 64);
         }
@@ -37,22 +37,12 @@ namespace FreeTypeBindings
             return new Fixed26Dot6(value);
         }
 
-        public static Fixed26Dot6 FromDouble(double value)
-        {
-            return new Fixed26Dot6(value);
-        }
-
-        public static Fixed26Dot6 FromDecimal(decimal value)
-        {
-            return new Fixed26Dot6(value);
-        }
-
-        public Fixed26Dot6(double value)
+        private Fixed26Dot6(double value)
         {
             Value = (int)(value * 64);
         }
 
-        public Fixed26Dot6(decimal value)
+        private Fixed26Dot6(decimal value)
         {
             Value = (int)(value * 64);
         }
@@ -75,21 +65,9 @@ namespace FreeTypeBindings
         public static bool operator >(Fixed26Dot6 left, Fixed26Dot6 right) => left.CompareTo(right) > 0;
         public static bool operator >=(Fixed26Dot6 left, Fixed26Dot6 right) => left.CompareTo(right) >= 0;
 
-        public int Floor()
+        private int Floor()
         {
             return Value >> 6;
-        }
-
-        public int Round()
-        {
-            // Add 2^5, rounds the integer part up if the decimal value is >= 0.5
-            return (Value + 32) >> 6;
-        }
-
-        public int Ceiling()
-        {
-            // Add 2^6 - 1, rounds the integer part up if there's any decimal value
-            return (Value + 63) >> 6;
         }
 
         public int ToInt32() => Floor();
@@ -103,9 +81,6 @@ namespace FreeTypeBindings
         public bool Equals(Fixed26Dot6 other) => Value == other.Value;
         public int CompareTo(Fixed26Dot6 other) => Value.CompareTo(other.Value);
 
-        public string ToString(IFormatProvider provider) => ToDecimal().ToString(provider);
-        public string ToString(string format) => ToDecimal().ToString(format);
-        public string ToString(string format, IFormatProvider provider) => ToDecimal().ToString(format, provider);
         public override string ToString() => ToDecimal().ToString();
 
         public override int GetHashCode() => Value.GetHashCode();
@@ -116,7 +91,7 @@ namespace FreeTypeBindings
             {
                 return Equals(fp);
             }
-            else if (obj is int)
+            if (obj is int)
             {
                 return Value == ((Fixed26Dot6)obj).Value;
             }

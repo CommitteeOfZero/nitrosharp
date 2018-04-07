@@ -14,8 +14,8 @@
         Composite = ('c' << 24 | 'o' << 16 | 'm' << 8 | 'p'),
 
         /// <summary>
-        /// The glyph image is a bitmap, and can be described as an <see cref="FTBitmap"/>. You generally need to
-        /// access the ‘bitmap’ field of the <see cref="GlyphSlot"/> structure to read it.
+        /// The glyph image is a bitmap. You generally need to access the ‘bitmap’ field of the
+        /// <see cref="GlyphSlot"/> structure to read it.
         /// </summary>
         Bitmap = ('b' << 24 | 'i' << 16 | 't' << 8 | 's'),
 

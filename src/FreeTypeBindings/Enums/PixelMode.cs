@@ -15,7 +15,7 @@
 
         /// <summary>
         /// An 8-bit bitmap, generally used to represent anti-aliased glyph images. Each pixel is stored in one byte.
-        /// Note that the number of ‘gray’ levels is stored in the ‘num_grays’ field of the <see cref="FTBitmap"/>
+        /// Note that the number of ‘gray’ levels is stored in the ‘num_grays’ field of the <see cref="Bitmap"/>
         /// structure (it generally is 256).
         /// </summary>
         Gray,

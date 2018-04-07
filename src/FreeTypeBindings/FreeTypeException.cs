@@ -4,7 +4,7 @@ namespace FreeTypeBindings
 {
     public class FreeTypeException : Exception
     {
-        private Error _error;
+        private readonly Error _error;
 
         public FreeTypeException(Error error)
             : base("FreeType error: " + GetErrorMessage(error))

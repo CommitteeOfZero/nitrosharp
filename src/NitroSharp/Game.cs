@@ -18,20 +18,24 @@ using Veldrid.StartupUtilities;
 
 namespace NitroSharp
 {
-    public class Game
+    public sealed class Game
     {
         private volatile bool _running;
         private readonly Stopwatch _gameTimer;
-
+        private readonly CancellationTokenSource _shutdownCancellation;
+        
+        private Sdl2Window _window;
+        private GraphicsDevice _graphicsDevice;
+        private readonly SystemManager _systems;
+        private RenderSystem _renderSystem;
+        private InputSystem _inputHandler;
         private readonly Configuration _configuration;
+        
         private readonly string _nssFolder;
-
         private NsScriptInterpreter _nssInterpreter;
-        private CoreLogic _coreLogic;
+        private readonly CoreLogic _coreLogic;
         private Task _interpreterProc;
         private volatile bool _nextStateReady = false;
-
-        private InputSystem _inputHandler;
 
         public Game(Configuration configuration)
         {
@@ -39,59 +43,42 @@ namespace NitroSharp
             _nssFolder = Path.Combine(configuration.ContentRoot, "nss");
 
             _gameTimer = new Stopwatch();
-            Entities = new EntityManager(_gameTimer);
-            Systems = new SystemManager(Entities);
-            ShutdownCancellation = new CancellationTokenSource();
-            _coreLogic = new CoreLogic(this, Entities);
+            var entities = new EntityManager(_gameTimer);
+            _systems = new SystemManager(entities);
+            _shutdownCancellation = new CancellationTokenSource();
+            _coreLogic = new CoreLogic(this, entities);
         }
 
         internal ContentManager Content { get; private set; }
-        private protected EntityManager Entities { get; }
-        private protected SystemManager Systems { get; }
-
-        protected Sdl2Window Window { get; private set; }
-        protected GraphicsDevice GraphicsDevice { get; private set; }
         internal FontService FontService { get; private set; }
-        internal RenderSystem RenderSystem { get; set; }
-
-        protected bool Running => _running;
-        protected CancellationTokenSource ShutdownCancellation { get; }
 
         public void Run()
         {
             _running = true;
             _gameTimer.Start();
 
-            var startupTasks = new List<Action>();
-            RegisterStartupTasks(startupTasks);
-
-            var startup = Task.WhenAll(startupTasks.Select(x => Task.Run(x)));
+            var loadScriptTask = Task.Run((Action)LoadStartupScript);
             Initialize();
 
-            startup.Wait();
+            loadScriptTask.Wait();
             OnInitialized();
             RunMainLoop();
         }
 
-        protected virtual void RegisterStartupTasks(IList<Action> tasks)
-        {
-            tasks.Add(() => LoadStartupScript());
-        }
-
         private void Initialize()
         {
-            Window = new Sdl2Window(
+            _window = new Sdl2Window(
                 _configuration.WindowTitle, 100, 100,
                 _configuration.WindowWidth, _configuration.WindowHeight,
                 SDL_WindowFlags.OpenGL, false);
 
-            Window.LimitPollRate = true;
+            _window.LimitPollRate = true;
 
             var options = new GraphicsDeviceOptions(false, PixelFormat.R16_UNorm, true);
-            //#if DEBUG
-            //            options.Debug = true;
-            //#endif
-            GraphicsDevice = VeldridStartup.CreateGraphicsDevice(Window, options);
+#if DEBUG
+            options.Debug = true;
+#endif
+            _graphicsDevice = VeldridStartup.CreateGraphicsDevice(_window, options);
 
             Content = CreateContentManager();
             FontService = CreateFontService();
@@ -100,17 +87,17 @@ namespace NitroSharp
             RegisterSystems(userSystems);
             foreach (var system in userSystems)
             {
-                Systems.Add(system);
+                _systems.Add(system);
             }
         }
 
-        protected virtual ContentManager CreateContentManager()
+        private ContentManager CreateContentManager()
         {
             var content = new ContentManager(_configuration.ContentRoot);
             ContentLoader textureLoader = null;
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                textureLoader = new WicTextureLoader(GraphicsDevice);
+                textureLoader = new WicTextureLoader(_graphicsDevice);
             }
             else
             {
@@ -129,20 +116,20 @@ namespace NitroSharp
             return fontService;
         }
 
-        protected virtual void RegisterSystems(IList<GameSystem> systems)
+        private void RegisterSystems(IList<GameSystem> systems)
         {
-            _inputHandler = new InputSystem(Window, _coreLogic);
+            _inputHandler = new InputSystem(_window, _coreLogic);
 
             var animationSystem = new AnimationSystem();
             systems.Add(animationSystem);
 
-            RenderSystem = new RenderSystem(GraphicsDevice, FontService, _configuration);
-            systems.Add(RenderSystem);
+            _renderSystem = new RenderSystem(_graphicsDevice, FontService, _configuration);
+            systems.Add(_renderSystem);
         }
 
-        protected virtual void OnInitialized()
+        private void OnInitialized()
         {
-            _interpreterProc = Task.Factory.StartNew(() => RunInterpreterLoop(), TaskCreationOptions.LongRunning);
+            _interpreterProc = Task.Factory.StartNew(RunInterpreterLoop, TaskCreationOptions.LongRunning);
         }
 
         private void LoadStartupScript()
@@ -156,7 +143,7 @@ namespace NitroSharp
             return File.OpenRead(Path.Combine(_nssFolder, fileRef.FilePath.Replace("nss/", string.Empty)));
         }
 
-        protected virtual void Update(float deltaMilliseconds)
+        private void Update(float deltaMilliseconds)
         {
             try
             {
@@ -171,7 +158,7 @@ namespace NitroSharp
         {
             if (_nextStateReady)
             {
-                Systems.ProcessEntityUpdates();
+                _systems.ProcessEntityUpdates();
                 _inputHandler.Update(deltaMilliseconds);
 
                 if (!_nssInterpreter.Threads.Any())
@@ -186,13 +173,13 @@ namespace NitroSharp
                 throw _interpreterProc.Exception.InnerException;
             }
 
-            Systems.Update(deltaMilliseconds);
-            RenderSystem.Present();
+            _systems.Update(deltaMilliseconds);
+            _renderSystem.Present();
         }
 
         private void RunInterpreterLoop()
         {
-            while (Running)
+            while (_running)
             {
                 while (_nextStateReady)
                 {
@@ -206,20 +193,11 @@ namespace NitroSharp
 
         private void RunMainLoop()
         {
-            //const float desiredFrameTime = 1000.0f / 60.0f;
-
             float prevFrameTicks = 0.0f;
-            while (_running && Window.Exists)
+            while (_running && _window.Exists)
             {
                 long currentFrameTicks = _gameTimer.ElapsedTicks;
                 float deltaMilliseconds = (currentFrameTicks - prevFrameTicks) / Stopwatch.Frequency * 1000.0f;
-
-                //while (deltaMilliseconds < desiredFrameTime)
-                //{
-                //    currentFrameTicks = _gameTimer.ElapsedTicks;
-                //    deltaMilliseconds = (currentFrameTicks - prevFrameTicks) / Stopwatch.Frequency * 1000.0f;
-                //}
-
                 prevFrameTicks = currentFrameTicks;
                 Update(deltaMilliseconds);
             }
@@ -230,15 +208,15 @@ namespace NitroSharp
         public void Exit()
         {
             _running = false;
-            ShutdownCancellation.Cancel();
+            _shutdownCancellation.Cancel();
         }
 
-        public virtual void DestroyResources()
+        private void DestroyResources()
         {
-            Systems.Dispose();
+            _systems.Dispose();
             FontService.Dispose();
             Content.Dispose();
-            GraphicsDevice.Dispose();
+            _graphicsDevice.Dispose();
         }
     }
 }

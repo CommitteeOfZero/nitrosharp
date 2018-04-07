@@ -61,8 +61,7 @@ namespace NitroSharp.Graphics.Objects
             uint width = frontTex.Width;
             uint height = frontTex.Height;
 
-            Texture textureCube;
-            textureCube = factory.CreateTexture(TextureDescription.Texture2D(
+            Texture textureCube = factory.CreateTexture(TextureDescription.Texture2D(
                 width, height, 1, 1, PixelFormat.R8_G8_B8_A8_UNorm,
                 TextureUsage.Sampled | TextureUsage.Cubemap));
 

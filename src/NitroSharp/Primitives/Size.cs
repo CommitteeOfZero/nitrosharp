@@ -3,7 +3,7 @@ using NitroSharp.Utilities;
 
 namespace NitroSharp.Primitives
 {
-    public readonly struct Size : IEquatable<Size>
+    internal readonly struct Size : IEquatable<Size>
     {
         public static readonly Size Zero = new Size(0, 0);
 

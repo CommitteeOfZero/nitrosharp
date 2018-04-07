@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace NitroSharp.Utilities
 {
-    public sealed class DisposeCollector
+    internal sealed class DisposeCollector
     {
         private readonly List<IDisposable> _disposables = new List<IDisposable>();
 
