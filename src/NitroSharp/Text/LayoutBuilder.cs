@@ -47,7 +47,8 @@ namespace NitroSharp.Text
             {
                 char c = text[(int)i];
                 ref var glyphInfo = ref font.GetGlyphInfo(c);
-                ref var glyph = ref _glyphs.Count > i ? ref _glyphs[idxRunStart + i] : ref _glyphs.Add();
+                uint index = idxRunStart + i;
+                ref var glyph = ref _glyphs.Count > index ? ref _glyphs[index] : ref _glyphs.Add();
                 glyph.Char = c;
                 glyph.Color = textRun.Color;
                 glyph.FontStyle = textRun.FontStyle;
