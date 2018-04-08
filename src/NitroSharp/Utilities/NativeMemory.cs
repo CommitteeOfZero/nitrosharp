@@ -29,13 +29,19 @@ namespace NitroSharp.Utilities
 
         public void Dispose()
         {
+            Destroy();
+            GC.SuppressFinalize(this);
+        }
+
+        private void Destroy()
+        {
             Marshal.FreeHGlobal(Pointer);
             Pointer = IntPtr.Zero;
         }
 
         ~NativeMemory()
         {
-            Dispose();
+            Destroy();
         }
     }
 }

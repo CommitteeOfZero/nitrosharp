@@ -141,6 +141,12 @@ namespace NitroSharp.Text
 
         public void Dispose()
         {
+            Destroy();
+            GC.SuppressFinalize(this);
+        }
+
+        private void Destroy()
+        {
             unsafe
             {
                 for (uint i = 0; i < _cachedGlyphs.Count; i++)
@@ -159,7 +165,7 @@ namespace NitroSharp.Text
 
         ~FontFace()
         {
-            Dispose();
+            Destroy();
         }
     }
 }

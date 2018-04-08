@@ -7,15 +7,13 @@ namespace NitroSharp.Text
 {
     internal sealed class FontService : IDisposable
     {
-        private IntPtr _freetype;
-
+        private readonly FreeTypeInstance _freetype;
         private readonly Dictionary<string, List<FontFace>> _instances;
         private readonly Dictionary<string, FontFamily> _families;
 
         public FontService()
         {
-            FT.FT_Init_FreeType(out _freetype);
-
+            _freetype = new FreeTypeInstance();
             _instances = new Dictionary<string, List<FontFace>>(StringComparer.OrdinalIgnoreCase);
             _families = new Dictionary<string, FontFamily>(StringComparer.OrdinalIgnoreCase);
         }
@@ -65,7 +63,7 @@ namespace NitroSharp.Text
         {
             unsafe
             {
-                FT.CheckResult(FT.FT_New_Face(_freetype, path, 0, out var face));
+                FT.CheckResult(FT.FT_New_Face(_freetype.Handle, path, 0, out var face));
                 return new FontFace(face);
             }
         }
@@ -82,9 +80,7 @@ namespace NitroSharp.Text
 
             _instances.Clear();
             _families.Clear();
-
-            FT.FT_Done_FreeType(_freetype);
-            _freetype = IntPtr.Zero;
+            _freetype.Dispose();
         }
 
         ~FontService()
