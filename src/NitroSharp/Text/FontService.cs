@@ -82,10 +82,5 @@ namespace NitroSharp.Text
             _families.Clear();
             _freetype.Dispose();
         }
-
-        ~FontService()
-        {
-            Dispose();
-        }
     }
 }
