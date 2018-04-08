@@ -16,7 +16,7 @@ namespace NitroSharp.Animation
             {
                 if (animation.IsEnabled)
                 {
-                    animation.Advance(animation.Started ? deltaMilliseconds : 0.0f);
+                    animation.Advance(deltaMilliseconds);
                 }
             }
         }

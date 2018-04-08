@@ -5,36 +5,50 @@ namespace NitroSharp.Animation
 {
     internal abstract class AnimationBase : Component
     {
-        protected float _elapsed;
+        private float _elapsed;
+        private bool _initialized;
 
-        protected AnimationBase()
-        {
-        }
-
-        protected AnimationBase(TimeSpan duration, TimingFunction timingFunction = TimingFunction.Linear)
+        protected AnimationBase(TimeSpan duration, TimingFunction timingFunction = TimingFunction.Linear, bool repeat = false)
         {
             Duration = duration;
             TimingFunction = timingFunction;
+            Repeat = repeat;
         }
 
-        public TimeSpan Duration { get; protected set; }
+        public TimeSpan Duration { get; }
         public TimingFunction TimingFunction { get; }
         public float Progress => MathUtil.Clamp(_elapsed / (float)Duration.TotalMilliseconds, 0.0f, 1.0f);
-        public bool Started { get; private set; }
-        public bool HasCompleted => Progress == 1.0f;
+        public bool Repeat { get; }
 
         public event EventHandler Completed;
 
         public virtual void Advance(float deltaMilliseconds)
         {
-            Started = true;
-            _elapsed += deltaMilliseconds;
+            if (_initialized)
+            {
+                _elapsed += deltaMilliseconds;
+            }
+            else
+            {
+                _initialized = true;
+            }
         }
 
-        protected void RaiseCompleted()
+        protected void PostAdvance()
         {
-            Completed?.Invoke(this, EventArgs.Empty);
-            Entity.RemoveComponent(this);
+            if (Progress == 1.0f)
+            {
+                if (Repeat)
+                {
+                    _elapsed = 0;
+                    _initialized = false;
+                }
+                else
+                {
+                    Completed?.Invoke(this, EventArgs.Empty);
+                    Entity.RemoveComponent(this);
+                }
+            }
         }
 
         protected float CalculateFactor(float progress, TimingFunction function)

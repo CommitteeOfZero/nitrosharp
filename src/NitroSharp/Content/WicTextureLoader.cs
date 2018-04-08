@@ -10,20 +10,20 @@ namespace NitroSharp.Content
         private const int MipLevels = 1;
 
         private readonly GraphicsDevice _gd;
-        private readonly ImagingFactory WicFactory;
+        private readonly ImagingFactory _wicFactory;
 
-        public WicTextureLoader(GraphicsDevice gd)
+        public WicTextureLoader(ImagingFactory wicFactory, GraphicsDevice gd)
         {
             _gd = gd;
-            WicFactory = new SharpDX.WIC.ImagingFactory();
+            _wicFactory = wicFactory;
         }
 
         public override object Load(Stream stream)
         {
             using (stream)
             {
-                var decoder = new BitmapDecoder(WicFactory, stream, DecodeOptions.CacheOnDemand);
-                using (var pixelFormatConverter = new FormatConverter(WicFactory))
+                var decoder = new BitmapDecoder(_wicFactory, stream, DecodeOptions.CacheOnDemand);
+                using (var pixelFormatConverter = new FormatConverter(_wicFactory))
                 using (var frame = decoder.GetFrame(0))
                 {
                     pixelFormatConverter.Initialize(frame, SharpDX.WIC.PixelFormat.Format32bppRGBA);

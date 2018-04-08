@@ -47,6 +47,7 @@ namespace NitroSharp.NsScript.Execution
         }
         
         public IEnumerable<ThreadContext> Threads => _threads.Values;
+        public Environment Globals => _globals;
         internal ThreadContext CurrentThread;
         private Frame CurrentFrame => CurrentThread.CurrentFrame;
         

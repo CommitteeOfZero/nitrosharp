@@ -37,7 +37,7 @@ namespace NitroSharp.Text
         private bool AppendTextRun(ref TextRun textRun)
         {
             var font = _fontFamily.GetFace(textRun.FontStyle);
-            var size = textRun.FontSize ?? 30;
+            var size = textRun.FontSize ?? 26;
             font.SetSize(size);
 
             string text = textRun.Text;

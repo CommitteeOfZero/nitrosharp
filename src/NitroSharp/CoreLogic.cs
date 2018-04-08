@@ -21,6 +21,11 @@ namespace NitroSharp
 
         private ContentManager Content => _game.Content;
 
+        public void InitializeResources()
+        {
+            LoadPageIndicator();
+        }
+
         public override void SetAlias(string entityName, string alias)
         {
             if (entityName != alias && _entities.TryGet(entityName, out var entity))

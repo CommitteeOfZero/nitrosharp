@@ -37,6 +37,8 @@ namespace NitroSharp
         private Task _interpreterProc;
         private volatile bool _nextStateReady = false;
 
+        private SharpDX.WIC.ImagingFactory _wicFactory;
+
         public Game(Configuration configuration)
         {
             _configuration = configuration;
@@ -95,9 +97,12 @@ namespace NitroSharp
         {
             var content = new ContentManager(_configuration.ContentRoot);
             ContentLoader textureLoader = null;
+            ContentLoader textureDataLoader = null;
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                textureLoader = new WicTextureLoader(_graphicsDevice);
+                _wicFactory = new SharpDX.WIC.ImagingFactory();
+                textureLoader = new WicTextureLoader(_wicFactory, _graphicsDevice);
+                textureDataLoader = new WicTextureDataLoader(_wicFactory);
             }
             else
             {
@@ -106,6 +111,7 @@ namespace NitroSharp
             }
 
             content.RegisterContentLoader(typeof(BindableTexture), textureLoader);
+            content.RegisterContentLoader(typeof(TextureData), textureDataLoader);
             return content;
         }
 
@@ -129,6 +135,7 @@ namespace NitroSharp
 
         private void OnInitialized()
         {
+            _coreLogic.InitializeResources();
             _interpreterProc = Task.Factory.StartNew(RunInterpreterLoop, TaskCreationOptions.LongRunning);
         }
 
@@ -174,7 +181,10 @@ namespace NitroSharp
             }
 
             _systems.Update(deltaMilliseconds);
-            _renderSystem.Present();
+            if (_window.Exists)
+            {
+                _renderSystem.Present();
+            }
         }
 
         private void RunInterpreterLoop()
@@ -194,7 +204,7 @@ namespace NitroSharp
         private void RunMainLoop()
         {
             float prevFrameTicks = 0.0f;
-            while (_running && _window.Exists)
+            while (!_shutdownCancellation.IsCancellationRequested && _window.Exists)
             {
                 long currentFrameTicks = _gameTimer.ElapsedTicks;
                 float deltaMilliseconds = (currentFrameTicks - prevFrameTicks) / Stopwatch.Frequency * 1000.0f;
@@ -217,6 +227,7 @@ namespace NitroSharp
             FontService.Dispose();
             Content.Dispose();
             _graphicsDevice.Dispose();
+            _wicFactory?.Dispose();
         }
     }
 }

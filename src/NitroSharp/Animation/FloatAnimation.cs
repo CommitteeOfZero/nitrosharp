@@ -2,36 +2,22 @@
 
 namespace NitroSharp.Animation
 {
-    internal class FloatAnimation : AnimationBase
+    internal class FloatAnimation<TComponent> : ComponentPropertyAnimation<TComponent, float>
+        where TComponent : Component
     {
-        public FloatAnimation(Component targetComponent, Action<Component, float> propertySetter, float initialValue,
-            float finalValue, TimeSpan duration, TimingFunction timingFunction = TimingFunction.Linear)
-            : base(duration, timingFunction)
+        public FloatAnimation(
+            TComponent targetComponent, Action<TComponent, float> propertySetter,
+            float initialValue, float finalValue, TimeSpan duration,
+            TimingFunction timingFunction = TimingFunction.Linear, bool repeat = false)
+            : base(targetComponent, propertySetter, initialValue, finalValue, duration, timingFunction, repeat)
         {
-            TargetComponent = targetComponent;
-            PropertySetter = propertySetter;
-            InitialValue = initialValue;
-            FinalValue = finalValue;
         }
 
-        public Component TargetComponent { get; }
-        public Action<Component, float> PropertySetter { get; }
-
-        public float InitialValue { get; }
-        public float FinalValue { get; }
-
-        public override void Advance(float deltaMilliseconds)
+        protected override float InterpolateValue(float factor)
         {
-            base.Advance(deltaMilliseconds);
-
-            float change = FinalValue - InitialValue;
-            float newValue = InitialValue + change * CalculateFactor(Progress, TimingFunction);
-            PropertySetter(TargetComponent, newValue);
-
-            if (HasCompleted)
-            {
-                RaiseCompleted();
-            }
+            var change = FinalValue - InitialValue;
+            var newValue = InitialValue + change * factor;
+            return newValue;
         }
     }
 }

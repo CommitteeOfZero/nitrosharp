@@ -32,8 +32,8 @@ namespace NitroSharp
             volume = volume.Rebase(1.0f);
             if (duration > TimeSpan.Zero)
             {
-                Action<Component, float> propertySetter = (c, v) => (c as SoundComponent).Volume = v;
-                var animation = new FloatAnimation(sound, propertySetter, sound.Volume, volume, duration);
+                Action<SoundComponent, float> propertySetter = (s, v) => s.Volume = v;
+                var animation = new FloatAnimation<SoundComponent>(sound, propertySetter, sound.Volume, volume, duration);
                 entity.AddComponent(animation);
             }
             else

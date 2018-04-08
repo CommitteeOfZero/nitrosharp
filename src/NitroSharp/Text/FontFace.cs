@@ -5,7 +5,6 @@ using System.Runtime.InteropServices;
 using FreeTypeBindings;
 using NitroSharp.Primitives;
 using NitroSharp.Utilities;
-using Veldrid;
 
 namespace NitroSharp.Text
 {
@@ -105,20 +104,20 @@ namespace NitroSharp.Text
             unsafe
             {
                 var face = _face;
-                FT.CheckResult(FT.FT_Load_Char(_face, c, LoadFlags.Default));
+                FT.CheckResult(FT.FT_Load_Char(face, c, LoadFlags.Default));
                 var slot = face->glyph;
-                var metrics = &_face->glyph->metrics;
+                var metrics = &face->glyph->metrics;
 
                 glyphInfo.Size = new SizeF((long)metrics->width / 64.0f, (long)metrics->height / 64.0f);
                 glyphInfo.Advance = new Vector2(slot->advance.X.ToSingle(), slot->advance.Y.ToSingle());
 
-                FT.CheckResult(FT.FT_Get_Glyph(_face->glyph, out var ftGlyph));
+                FT.CheckResult(FT.FT_Get_Glyph(face->glyph, out var ftGlyph));
                 glyphInfo.FTGlyph = ftGlyph;
                 return ref glyphInfo;
             }
         }
 
-        public GlyphBitmapInfo Rasterize(ref GlyphInfo glyphInfo, Span<byte> buffer, in RgbaByte color)
+        public GlyphBitmapInfo Rasterize(ref GlyphInfo glyphInfo, Span<byte> buffer)
         {
             unsafe
             {

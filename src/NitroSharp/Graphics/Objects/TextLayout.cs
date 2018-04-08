@@ -69,7 +69,7 @@ namespace NitroSharp.Graphics.Objects
                 var font = _fontFamily.GetFace(glyph.FontStyle);
                 ref var glyphInfo = ref font.GetGlyphInfo(glyph.Char);
                 
-                var bitmapInfo = font.Rasterize(ref glyphInfo, buffer, RgbaByte.White);
+                var bitmapInfo = font.Rasterize(ref glyphInfo, buffer);
                 var dimensions = bitmapInfo.Dimensions;
                 if (dimensions.Width == 0)
                 {
@@ -110,6 +110,7 @@ namespace NitroSharp.Graphics.Objects
 
         public override void Destroy(RenderContext renderContext)
         {
+            _cl.Dispose();
             _layoutStaging.Dispose();
             _layoutTexture.Dispose();
             _nativeBuffer.Dispose();
