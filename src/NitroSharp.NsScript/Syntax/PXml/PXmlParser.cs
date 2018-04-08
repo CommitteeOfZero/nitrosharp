@@ -146,6 +146,7 @@ namespace NitroSharp.NsScript.Syntax.PXml
                 {
                     AdvanceChar(2);
                     sb.Append(next);
+                    continue;
                 }
 
                 sb.Append(c);

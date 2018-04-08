@@ -28,6 +28,14 @@ namespace NitroSharp.Utilities
             return ref _elements[Count++];
         }
 
+        public void RemoveLast()
+        {
+            if (Count > 0)
+            {
+                Count--;
+            }
+        }
+
         public T[] ToArray()
         {
             var copy = new T[Count];

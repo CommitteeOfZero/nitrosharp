@@ -41,12 +41,13 @@ namespace NitroSharp.Text
             font.SetSize(size);
 
             string text = textRun.Text;
+            uint idxRunStart = _glyphs.Count;
             ref var pen = ref _penPosition;
             for (uint i = 0; i < text.Length; i++)
             {
                 char c = text[(int)i];
                 ref var glyphInfo = ref font.GetGlyphInfo(c);
-                ref var glyph = ref _glyphs.Count > i ? ref _glyphs[i] : ref _glyphs.Add();
+                ref var glyph = ref _glyphs.Count > i ? ref _glyphs[idxRunStart + i] : ref _glyphs.Add();
                 glyph.Char = c;
                 glyph.Color = textRun.Color;
                 glyph.FontStyle = textRun.FontStyle;
@@ -55,6 +56,7 @@ namespace NitroSharp.Text
                 {
                     if (!StartNewLine(font))
                     {
+                        _glyphs.RemoveLast();
                         return false;
                     }
 
@@ -77,6 +79,7 @@ namespace NitroSharp.Text
                     i--;
                     if (!StartNewLine(font))
                     {
+                        _glyphs.RemoveLast();
                         return false;
                     }
                 }
