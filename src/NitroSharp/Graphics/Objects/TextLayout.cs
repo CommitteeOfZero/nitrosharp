@@ -15,7 +15,7 @@ namespace NitroSharp.Graphics.Objects
 
         private CommandList _cl;
         private Texture _layoutStaging;
-        private Texture _leased;
+        private Texture _layoutTexture;
         private TextureView _textureView;
         private NativeMemory _nativeBuffer;
 
@@ -33,8 +33,8 @@ namespace NitroSharp.Graphics.Objects
         {
             var texturePool = renderContext.TexturePool;
             _layoutStaging = texturePool.RentStaging(_bounds, clearMemory: true);
-            _leased = texturePool.RentSampled(_bounds);
-            _textureView = renderContext.Factory.CreateTextureView(_leased);
+            _layoutTexture = texturePool.RentSampled(_bounds);
+            _textureView = renderContext.Factory.CreateTextureView(_layoutTexture);
             _nativeBuffer = NativeMemory.Allocate(128 * 128);
 
             _cl = renderContext.Factory.CreateCommandList();
@@ -87,7 +87,7 @@ namespace NitroSharp.Graphics.Objects
             device.Unmap(_layoutStaging);
 
             _cl.Begin();
-            _cl.CopyTexture(_layoutStaging, _leased);
+            _cl.CopyTexture(_layoutStaging, _layoutTexture);
             _cl.End();
             device.SubmitCommands(_cl);
         }
@@ -104,7 +104,7 @@ namespace NitroSharp.Graphics.Objects
             _nativeBuffer.Dispose();
 
             _textureView.Dispose();
-            renderContext.TexturePool.Return(_leased);
+            renderContext.TexturePool.Return(_layoutTexture);
             renderContext.TexturePool.Return(_layoutStaging);
         }
     }
