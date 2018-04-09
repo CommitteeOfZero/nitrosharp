@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Numerics;
-using System.Runtime.CompilerServices;
 using NitroSharp.Primitives;
 using NitroSharp.Text;
 using NitroSharp.Utilities;
@@ -16,7 +15,8 @@ namespace NitroSharp.Graphics.Objects
 
         private CommandList _cl;
         private Texture _layoutStaging;
-        private BindableTexture _layoutTexture;
+        private Texture _leased;
+        private TextureView _textureView;
         private NativeMemory _nativeBuffer;
 
         public TextLayout(TextRun[] text, uint textLength, FontFamily fontFamily, in Size maxBounds)
@@ -31,29 +31,13 @@ namespace NitroSharp.Graphics.Objects
 
         public override void CreateDeviceObjects(RenderContext renderContext)
         {
-            var device = renderContext.Device;
-            var factory = renderContext.Factory;
-            _cl = factory.CreateCommandList();
+            var texturePool = renderContext.TexturePool;
+            _layoutStaging = texturePool.RentStaging(_bounds, clearMemory: true);
+            _leased = texturePool.RentSampled(_bounds);
+            _textureView = renderContext.Factory.CreateTextureView(_leased);
+            _nativeBuffer = NativeMemory.Allocate(128 * 128);
 
-            _layoutStaging = factory.CreateTexture(
-                TextureDescription.Texture2D(
-                    _bounds.Width, _bounds.Height, 1, 1,
-                    PixelFormat.R8_G8_B8_A8_UNorm, TextureUsage.Staging));
-
-            var data = device.Map<RgbaByte>(_layoutStaging, MapMode.Write);
-            unsafe
-            {
-                var res = data.MappedResource;
-                Unsafe.InitBlock(res.Data.ToPointer(), 0x00, res.SizeInBytes);
-            }
-            device.Unmap(_layoutStaging);
-
-            _layoutTexture = new BindableTexture(factory,
-                factory.CreateTexture(TextureDescription.Texture2D(
-                    _bounds.Width, _bounds.Height, 1, 1,
-                    PixelFormat.R8_G8_B8_A8_UNorm, TextureUsage.Sampled)));
-
-            _nativeBuffer = NativeMemory.Allocate(1000 * 1000);
+            _cl = renderContext.Factory.CreateCommandList();
             Update(renderContext, _builder.Glyphs.AsReadonlySpan());
         }
 
@@ -89,7 +73,12 @@ namespace NitroSharp.Graphics.Objects
                         {
                             int srcIndex = (int)(y * dimensions.Width + x);
                             ref var srcValue = ref buffer[srcIndex];
-                            var rgbaByte = new RgbaByte((byte)(255 * color.R), (byte)(255 * color.G), (byte)(255 * color.B), srcValue);
+                            var rgbaByte = new RgbaByte(
+                                (byte)(255 * color.R),
+                                (byte)(255 * color.G),
+                                (byte)(255 * color.B),
+                                srcValue);
+
                             data[(uint)pos.X + x, (uint)pos.Y + y] = rgbaByte;
                         }
                     }
@@ -98,22 +87,25 @@ namespace NitroSharp.Graphics.Objects
             device.Unmap(_layoutStaging);
 
             _cl.Begin();
-            _cl.CopyTexture(_layoutStaging, _layoutTexture);
+            _cl.CopyTexture(_layoutStaging, _leased);
             _cl.End();
             device.SubmitCommands(_cl);
         }
 
         public override void Render(RenderContext renderContext)
         {
-            renderContext.Canvas.DrawImage(_layoutTexture.GetTextureView(), 0, 0, RgbaFloat.White);
+            var rect = new RectangleF(0, 0, _bounds.Width, _bounds.Height);
+            renderContext.Canvas.DrawImage(_textureView, rect, rect, RgbaFloat.White);
         }
 
         public override void Destroy(RenderContext renderContext)
         {
             _cl.Dispose();
-            _layoutStaging.Dispose();
-            _layoutTexture.Dispose();
             _nativeBuffer.Dispose();
+
+            _textureView.Dispose();
+            renderContext.TexturePool.Return(_leased);
+            renderContext.TexturePool.Return(_layoutStaging);
         }
     }
 }

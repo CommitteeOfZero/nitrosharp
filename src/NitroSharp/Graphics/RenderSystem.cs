@@ -16,6 +16,7 @@ namespace NitroSharp.Graphics
         private readonly CommandList _cl;
         private readonly GraphicsDevice _gd;
         private readonly Canvas _canvas;
+        private readonly RgbaTexturePool _texturePool;
         private readonly EffectLibrary _effectLibrary;
         private readonly RenderContext _rc;
 
@@ -46,7 +47,9 @@ namespace NitroSharp.Graphics
                 1000.0f);
 
             _canvas = new Canvas(graphicsDevice, _effectLibrary, _sharedProps2D);
-            _rc = new RenderContext(_gd, factory, _cl, _canvas, _effectLibrary, _sharedProps2D, _sharedProps3D, fontService);
+            _texturePool = new RgbaTexturePool(_gd);
+            _rc = new RenderContext(_gd, factory, _cl, _canvas, _effectLibrary,
+                _sharedProps2D, _sharedProps3D, _texturePool, fontService);
         }
 
         private SizeF DesignResolution => new SizeF(_config.WindowWidth, _config.WindowHeight);
@@ -83,6 +86,7 @@ namespace NitroSharp.Graphics
             _cl.End();
 
             _gd.SubmitCommands(_cl);
+            _gd.WaitForIdle();
         }
 
         public void Present()
@@ -123,6 +127,7 @@ namespace NitroSharp.Graphics
             _effectLibrary.Dispose();
             _sharedProps2D.Dispose();
             _sharedProps3D.Dispose();
+            _texturePool.Dispose();
             _cl.Dispose();
         }
     }

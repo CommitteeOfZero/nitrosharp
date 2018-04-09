@@ -9,7 +9,7 @@ namespace NitroSharp.Graphics
             CommandList commandList, Canvas canvas, EffectLibrary effectLibrary,
             SharedEffectProperties2D sharedEffectProperties2D,
             SharedEffectProperties3D sharedEffectProperties3D,
-            FontService fontService)
+            RgbaTexturePool texturePool, FontService fontService)
         {
             Device = device;
             Factory = factory;
@@ -18,6 +18,7 @@ namespace NitroSharp.Graphics
             Effects = effectLibrary;
             SharedEffectProperties2D = sharedEffectProperties2D;
             SharedEffectProperties3D = sharedEffectProperties3D;
+            TexturePool = texturePool;
             FontService = fontService;
         }
 
@@ -28,6 +29,7 @@ namespace NitroSharp.Graphics
         public EffectLibrary Effects { get; }
         public SharedEffectProperties2D SharedEffectProperties2D { get; }
         public SharedEffectProperties3D SharedEffectProperties3D { get; }
+        public RgbaTexturePool TexturePool { get; }
         public FontService FontService { get; }
     }
 }

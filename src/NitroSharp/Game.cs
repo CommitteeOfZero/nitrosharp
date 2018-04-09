@@ -80,7 +80,7 @@ namespace NitroSharp
 #if DEBUG
             options.Debug = true;
 #endif
-            _graphicsDevice = VeldridStartup.CreateGraphicsDevice(_window, options);
+            _graphicsDevice = VeldridStartup.CreateGraphicsDevice(_window, options, GraphicsBackend.Vulkan);
 
             Content = CreateContentManager();
             FontService = CreateFontService();
