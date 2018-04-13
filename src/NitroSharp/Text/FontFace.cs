@@ -59,14 +59,12 @@ namespace NitroSharp.Text
                 }
 
                 CurrentSize = ptSize;
-
                 unsafe
                 {
                     var metrics = _face->size->metrics;
                     float ascender = Fixed26Dot6.FromRawValue((int)metrics.ascender).ToSingle();
                     float descender = Fixed26Dot6.FromRawValue((int)metrics.descender).ToSingle();
                     float height = Fixed26Dot6.FromRawValue((int)metrics.height).ToSingle();
-
                     ScaledMetrics = new FontMetrics(ascender, descender, height);
                 }
             }

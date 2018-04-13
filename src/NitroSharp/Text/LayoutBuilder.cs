@@ -86,10 +86,10 @@ namespace NitroSharp.Text
                         || !LineBreakingRules.CanEndLine(_glyphs[glyphPos - 1].Char))
                     {
                         glyphPos--;
-                        while (char.IsWhiteSpace(text[stringPos]))
+                        do
                         {
                             stringPos--;
-                        }
+                        } while (char.IsWhiteSpace(text[stringPos]));
                     }
 
                     stringPos--;

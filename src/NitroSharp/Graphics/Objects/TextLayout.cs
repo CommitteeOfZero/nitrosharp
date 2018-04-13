@@ -94,7 +94,6 @@ namespace NitroSharp.Graphics.Objects
             _cl.Begin();
             if (glyphIndices != null)
             {
-                
                 foreach (uint index in glyphIndices)
                 {
                     DrawGlyph(_cl, index, buffer, map);
