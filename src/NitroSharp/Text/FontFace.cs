@@ -43,7 +43,6 @@ namespace NitroSharp.Text
         public string FontFamily { get; }
         public FontStyle Style { get; }
         public float CurrentSize { get; private set; }
-
         public FontMetrics ScaledMetrics { get; private set; }
 
         public void SetSize(float ptSize)

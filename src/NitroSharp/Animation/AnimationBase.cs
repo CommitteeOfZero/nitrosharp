@@ -8,6 +8,10 @@ namespace NitroSharp.Animation
         private float _elapsed;
         private bool _initialized;
 
+        protected AnimationBase()
+        {
+        }
+
         protected AnimationBase(TimeSpan duration, TimingFunction timingFunction = TimingFunction.Linear, bool repeat = false)
         {
             Duration = duration;
@@ -15,8 +19,9 @@ namespace NitroSharp.Animation
             Repeat = repeat;
         }
 
-        public TimeSpan Duration { get; }
+        public TimeSpan Duration { get; protected set; }
         public TimingFunction TimingFunction { get; }
+        protected float Elapsed => _elapsed;
         public float Progress => MathUtil.Clamp(_elapsed / (float)Duration.TotalMilliseconds, 0.0f, 1.0f);
         public bool Repeat { get; }
 

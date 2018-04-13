@@ -17,7 +17,7 @@ namespace NitroSharp
         private const float TextRightMargin = 200;
 
         private DialogueBlockSymbol _currentDialogueBlock;
-        private Entity _textEntity;
+        internal Entity TextEntity;
         private Entity _pageIndicator;
 
         private FontFamily _currentFontFamily;
@@ -57,7 +57,7 @@ namespace NitroSharp
         protected override void OnDialogueBlockEntered(DialogueBlockSymbol dialogueBlock)
         {
             _currentDialogueBlock = dialogueBlock;
-            _textEntity?.Destroy();
+            TextEntity?.Destroy();
         }
 
         public override void DisplayDialogue(string pxmlString)
@@ -71,11 +71,12 @@ namespace NitroSharp
                 var text = dialogueLine.Text;
 
                 var textLayout = new TextLayout(text, dialogueLine.TextLength, _currentFontFamily, bounds);
-                _textEntity = _entities.Create(_currentDialogueBlock.Identifier, replace: true)
+                TextEntity = _entities.Create(_currentDialogueBlock.Identifier, replace: true)
                     .WithParent(dialogueBox)
-                    .WithComponent(textLayout);
+                    .WithComponent(textLayout)
+                    .WithComponent(new TextRevealAnimation());
 
-                _textEntity.Transform.Position.Y += 10;
+                TextEntity.Transform.Position.Y += 10;
 
                 double iconX = Interpreter.Globals.Get("SYSTEM_position_x_text_icon").DoubleValue;
                 double iconY = Interpreter.Globals.Get("SYSTEM_position_y_text_icon").DoubleValue;

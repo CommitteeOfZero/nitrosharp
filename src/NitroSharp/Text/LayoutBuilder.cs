@@ -3,6 +3,7 @@ using System.Numerics;
 using System.Runtime.CompilerServices;
 using NitroSharp.Primitives;
 using NitroSharp.Utilities;
+using Veldrid;
 
 namespace NitroSharp.Text
 {
@@ -37,20 +38,25 @@ namespace NitroSharp.Text
         private bool AppendTextRun(ref TextRun textRun)
         {
             var font = _fontFamily.GetFace(textRun.FontStyle);
-            var size = textRun.FontSize ?? 26;
+            var size = textRun.FontSize ?? 28;
             font.SetSize(size);
 
             string text = textRun.Text;
-            uint idxRunStart = _glyphs.Count;
             ref var pen = ref _penPosition;
-            for (uint i = 0; i < text.Length; i++)
+
+            // There is no one-to-one mapping between characters in the original string and LayoutGlyphs
+            // in the output glyph array, as whitespace characters do not have any corresponding glyphs.
+            // So we need 2 variables, stringPos and glyphPos, to track the current position in the text.
+            uint glyphPos = _glyphs.Count;
+            for (int stringPos = 0; stringPos < text.Length; stringPos++)
             {
-                char c = text[(int)i];
+                char c = text[stringPos];
+                bool isWhitespace = char.IsWhiteSpace(c);
+
                 ref var glyphInfo = ref font.GetGlyphInfo(c);
-                uint index = idxRunStart + i;
-                ref var glyph = ref _glyphs.Count > index ? ref _glyphs[index] : ref _glyphs.Add();
+                ref var glyph = ref _glyphs.Count > glyphPos ? ref _glyphs[glyphPos] : ref _glyphs.Add();
                 glyph.Char = c;
-                glyph.Color = textRun.Color;
+                glyph.Color = textRun.Color ?? RgbaFloat.White;
                 glyph.FontStyle = textRun.FontStyle;
 
                 if (c == '\n')
@@ -66,18 +72,28 @@ namespace NitroSharp.Text
 
                 if (CanFitGlyph(glyphInfo.Size))
                 {
-                    glyph.Position = pen;
-                    pen += glyphInfo.Advance;
-                }
-                else if (!char.IsWhiteSpace(c))
-                {
-                    while (!LineBreakingRules.CanStartLine(_glyphs[i].Char)
-                        || !LineBreakingRules.CanEndLine(_glyphs[i - 1].Char))
+                    if (!isWhitespace)
                     {
-                        i--;
+                        glyph.Position = pen;
+                        glyphPos++;
                     }
 
-                    i--;
+                    pen += glyphInfo.Advance;
+                }
+                else if (!isWhitespace)
+                {
+                    while (!LineBreakingRules.CanStartLine(_glyphs[glyphPos].Char)
+                        || !LineBreakingRules.CanEndLine(_glyphs[glyphPos - 1].Char))
+                    {
+                        glyphPos--;
+                        while (char.IsWhiteSpace(text[stringPos]))
+                        {
+                            stringPos--;
+                        }
+                    }
+
+                    stringPos--;
+                    glyphPos--;
                     if (!StartNewLine(font))
                     {
                         _glyphs.RemoveLast();

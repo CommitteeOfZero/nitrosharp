@@ -1,5 +1,4 @@
 ﻿using System.Numerics;
-using NitroSharp.Primitives;
 using Veldrid;
 
 namespace NitroSharp.Text
@@ -8,7 +7,7 @@ namespace NitroSharp.Text
     {
         public char Char;
         public Vector2 Position;
-        public RgbaFloat? Color;
+        public RgbaFloat Color;
         public FontStyle FontStyle;
     }
 }

@@ -1,7 +1,7 @@
 ﻿using System.Runtime.InteropServices;
 using Veldrid;
 
-namespace NitroSharp.Graphics
+namespace NitroSharp.Utilities
 {
     internal static class GraphicsDeviceExtensions
     {

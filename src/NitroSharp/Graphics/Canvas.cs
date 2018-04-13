@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Numerics;
 using NitroSharp.Primitives;
+using NitroSharp.Utilities;
 using Veldrid;
 
 namespace NitroSharp.Graphics

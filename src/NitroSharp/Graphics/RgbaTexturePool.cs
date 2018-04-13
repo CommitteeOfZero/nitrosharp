@@ -19,7 +19,6 @@ namespace NitroSharp.Graphics
             _gd = graphicsDevice;
             _staging = new Bucket(_gd.ResourceFactory, TextureUsage.Staging);
             _sampled = new Bucket(_gd.ResourceFactory, TextureUsage.Sampled);
-            _stagingBucketLock = new object();
         }
         
         public Texture RentStaging(Size minimalSize, bool clearMemory = false)
