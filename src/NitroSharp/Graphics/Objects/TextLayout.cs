@@ -109,6 +109,7 @@ namespace NitroSharp.Graphics.Objects
             _cl.End();
             device.Unmap(_layoutStaging);
             device.SubmitCommands(_cl);
+            device.WaitForIdle();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

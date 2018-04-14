@@ -53,8 +53,8 @@ namespace NitroSharp.Graphics.Objects
 
             _textureArray = new BindableTexture(factory,
                 factory.CreateTexture(TextureDescription.Texture2D(
-                _size.Width, _size.Height, 1, (uint)_icons.Count,
-                PixelFormat.R8_G8_B8_A8_UNorm, TextureUsage.Sampled)));
+                    _size.Width, _size.Height, 1, (uint)_icons.Count,
+                    PixelFormat.R8_G8_B8_A8_UNorm, TextureUsage.Sampled)));
 
             var cl = factory.CreateCommandList();
             cl.Begin();
@@ -62,8 +62,8 @@ namespace NitroSharp.Graphics.Objects
             cl.End();
 
             device.SubmitCommands(cl);
-            device.WaitForIdle();
-            cl.Dispose();
+            device.DisposeWhenIdle(staging);
+            device.DisposeWhenIdle(cl);
 
             foreach (var assetRef in _icons)
             {
