@@ -13,8 +13,10 @@ namespace NitroSharp.Graphics
         {
             Source = source;
             SourceRectangle = sourceRectangle;
-            Bounds = new SizeF(Source.Asset.Width, Source.Asset.Height);
             _texture = source.Asset;
+            Bounds = sourceRectangle == null
+                ? new SizeF(_texture.Width, _texture.Height)
+                : new SizeF(SourceRectangle.Value.Width, SourceRectangle.Value.Height);
         }
 
         public AssetRef<BindableTexture> Source { get; set; }
@@ -23,7 +25,8 @@ namespace NitroSharp.Graphics
 
         public override void Render(RenderContext renderContext)
         {
-            renderContext.Canvas.DrawImage(_texture.GetTextureView(), 0, 0, Opacity);
+            var dstRect = new RectangleF(0, 0, Bounds.Width, Bounds.Height);
+            renderContext.Canvas.DrawImage(_texture.GetTextureView(), SourceRectangle, dstRect, Color);
         }
 
         public override void Destroy(RenderContext renderContext)
