@@ -54,17 +54,16 @@ namespace NitroSharp.Dialogue
 
             public override void VisitFontElement(FontElement fontElement)
             {
+                var old = _currentRun;
+                _currentRun.FontSize = fontElement.Size;
                 if (fontElement.Color.HasValue)
                 {
                     var val = fontElement.Color.Value;
                     _currentRun.Color = new RgbaFloat(val.R / 255.0f, val.G / 255.0f, val.B / 255.0f, 1.0f);
                 }
 
-                _currentRun.FontSize = fontElement.Size;
-
-                var copy = _currentRun;
                 Visit(fontElement.Content);
-                _currentRun = copy;
+                _currentRun = old;
             }
 
             public override void VisitText(PXmlText text)

@@ -110,7 +110,8 @@ namespace NitroSharp
                 Content.Get<BindableTexture>(top),
                 Content.Get<BindableTexture>(bottom));
 
-            _entities.Create(entityName).WithComponent(cube);
+            var entity = _entities.Create(entityName).WithComponent(cube);
+            entity.Transform.TransformationOrder = TransformationOrder.ScaleTranslationRotation;
         }
 
         public override void SetFieldOfView(string entityName, double angle)

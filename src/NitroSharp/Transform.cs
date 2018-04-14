@@ -38,22 +38,27 @@ namespace NitroSharp
         public Vector3 Position;
         public Vector3 Rotation;
         public Vector3 Scale = Vector3.One;
+        public TransformationOrder TransformationOrder;
 
         public Matrix4x4 GetTransformMatrix()
         {
-            var matrix = Matrix4x4.CreateScale(Scale, new Vector3(0.5f) * Dimensions)
-                * Matrix4x4.CreateTranslation(Position)
-                * Matrix4x4.CreateFromYawPitchRoll(
-                    MathUtil.ToRadians(Rotation.Y),
-                    MathUtil.ToRadians(Rotation.X),
-                    MathUtil.ToRadians(Rotation.Z));
+            var center = new Vector3(0.5f) * Dimensions;
+            var scale = Matrix4x4.CreateScale(Scale, center);
+            var rotation = Matrix4x4.CreateRotationZ(MathUtil.ToRadians(Rotation.Z), center)
+                * Matrix4x4.CreateRotationX(MathUtil.ToRadians(Rotation.X), center)
+                * Matrix4x4.CreateRotationY(MathUtil.ToRadians(Rotation.Y), center);
+            var translation = Matrix4x4.CreateTranslation(Position);
+
+            var composite = TransformationOrder == TransformationOrder.ScaleRotationTranslation
+                ? scale * rotation * translation
+                : scale * translation * rotation;
 
             if (Parent != null)
             {
-                matrix *= Parent.GetTransformMatrix();
+                composite *= Parent.GetTransformMatrix();
             }
 
-            return matrix;
+            return composite;
         }
 
         private void SetParent(Transform newParent)
