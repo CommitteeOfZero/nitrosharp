@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
 
 namespace NitroSharp.NsScript.Syntax.PXml
 {
@@ -35,6 +34,14 @@ namespace NitroSharp.NsScript.Syntax.PXml
         }
 
         public virtual void VisitRubyElement(RubyElement rubyElement)
+        {
+        }
+
+        public virtual void VisitHaltElement(HaltElement haltElement)
+        {
+        }
+
+        public virtual void VisitNoLinebreaksElement(NoLinebreaksElement noLinebreaksElement)
         {
         }
     }

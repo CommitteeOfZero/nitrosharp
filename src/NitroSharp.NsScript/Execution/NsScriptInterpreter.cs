@@ -306,7 +306,7 @@ namespace NitroSharp.NsScript.Execution
         private void Say(ref Instruction instruction)
         {
             var text = (string)instruction.Operand1;
-            _engineImplementation.DisplayDialogue(text);
+            _engineImplementation.BeginDialogue(text);
         }
         
         private void WaitForInput()

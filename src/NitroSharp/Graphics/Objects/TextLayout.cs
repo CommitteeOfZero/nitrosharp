@@ -15,29 +15,62 @@ namespace NitroSharp.Graphics.Objects
         private readonly Size _bounds;
         private readonly FontFamily _fontFamily;
 
+        private GraphicsDevice _gd;
         private CommandList _cl;
         private Texture _layoutStaging;
         private Texture _layoutTexture;
         private TextureView _textureView;
+
         private NativeMemory _nativeBuffer;
-
         private readonly HashSet<uint> _glyphsToUpdate;
-        private readonly bool _hidden;
 
-        public TextLayout(TextRun[] text, uint textLength, FontFamily fontFamily, in Size maxBounds, bool hidden = true)
+        public TextLayout(uint initialGlyphCapacity, FontFamily fontFamily, in Size maxBounds)
         {
             _bounds = maxBounds;
             _fontFamily = fontFamily;
 
-            _builder = new LayoutBuilder(fontFamily, textLength, maxBounds);
-            _builder.Append(text);
-            Priority = int.MaxValue;
-
+            _builder = new LayoutBuilder(fontFamily, initialGlyphCapacity, maxBounds);
             _glyphsToUpdate = new HashSet<uint>();
-            _hidden = hidden;
+            Priority = int.MaxValue;
         }
 
         public uint GlyphCount => _builder.Glyphs.Count;
+
+        public void Append(TextRun textRun, bool display = false)
+        {
+            uint start = GlyphCount;
+            _builder.Append(textRun);
+            if (display)
+            {
+                for (uint i = start; i < start + textRun.Text.Length; i++)
+                {
+                    _glyphsToUpdate.Add(i);
+                }
+            }
+        }
+
+        public void StartNewLine()
+        {
+            _builder.StartNewLine();
+        }
+
+        public void Clear()
+        {
+            _builder.Clear();
+            _glyphsToUpdate.Clear();
+            if (_gd != null)
+            {
+                _gd.InitStagingTexture(_layoutStaging);
+                using (var cl = _gd.ResourceFactory.CreateCommandList())
+                {
+                    cl.Begin();
+                    cl.CopyTexture(_layoutStaging, _layoutTexture);
+                    cl.End();
+                    _gd.SubmitCommands(cl);
+                    _gd.WaitForIdle();
+                }
+            }
+        }
 
         public ref LayoutGlyph MutateGlyph(uint index)
         {
@@ -68,22 +101,28 @@ namespace NitroSharp.Graphics.Objects
 
         public override void CreateDeviceObjects(RenderContext renderContext)
         {
+            _gd = renderContext.Device;
+            _cl = renderContext.Factory.CreateCommandList();
+
             var texturePool = renderContext.TexturePool;
-            _layoutStaging = texturePool.RentStaging(_bounds, clearMemory: true);
+            _layoutStaging = texturePool.RentStaging(_bounds);
             _layoutTexture = texturePool.RentSampled(_bounds);
             _textureView = renderContext.Factory.CreateTextureView(_layoutTexture);
             _nativeBuffer = NativeMemory.Allocate(128 * 128);
 
-            _cl = renderContext.Factory.CreateCommandList();
-            _cl.Begin();
-            _cl.CopyTexture(_layoutStaging, _layoutTexture);
-            _cl.End();
-            renderContext.Device.SubmitCommands(_cl);
+            Clear();
+        }
 
-            if (!_hidden)
+        public override void Render(RenderContext renderContext)
+        {
+            if (_glyphsToUpdate.Count > 0)
             {
-                Redraw(renderContext);
+                Redraw(renderContext, _glyphsToUpdate);
+                _glyphsToUpdate.Clear();
             }
+
+            var rect = new RectangleF(0, 0, _bounds.Width, _bounds.Height);
+            renderContext.Canvas.DrawImage(_textureView, rect, rect, RgbaFloat.White);
         }
 
         private void Redraw(RenderContext renderContext, ISet<uint> glyphIndices = null)
@@ -117,23 +156,24 @@ namespace NitroSharp.Graphics.Objects
             CommandList commandList, uint index,
             Span<byte> srcBuffer, MappedResourceView<RgbaByte> dstBuffer)
         {
-            ref var glyph = ref _builder.Glyphs[index];
+            ref LayoutGlyph glyph = ref _builder.Glyphs[index];
             if (glyph.Color.A == 0)
             {
                 return;
             }
 
-            var font = _fontFamily.GetFace(glyph.FontStyle);
-            ref var glyphInfo = ref font.GetGlyphInfo(glyph.Char);
+            FontFace font = _fontFamily.GetFace(glyph.FontStyle);
+            ref GlyphInfo glyphInfo = ref font.GetGlyphInfo(glyph.Char);
 
-            var bitmapInfo = font.Rasterize(ref glyphInfo, srcBuffer);
-            var dimensions = bitmapInfo.Dimensions;
+            GlyphBitmapInfo bitmapInfo = font.Rasterize(ref glyphInfo, srcBuffer);
+            Size dimensions = bitmapInfo.Dimensions;
             if (dimensions.Width == 0)
             {
                 return;
             }
 
-            var margin = bitmapInfo.Margin;
+            Vector2 margin = bitmapInfo.Margin;
+            // TODO: remove the hardcoded top margin.
             var pos = new Vector2(glyph.Position.X + margin.X, 28 + glyph.Position.Y - margin.Y);
             var color = glyph.Color;
             for (uint y = 0; y < dimensions.Height; y++)
@@ -159,24 +199,12 @@ namespace NitroSharp.Graphics.Objects
                 (uint)pos.X, (uint)pos.Y, 0, 0, 0, dimensions.Width, dimensions.Height, 1, 1);
         }
 
-        public override void Render(RenderContext renderContext)
-        {
-            if (_glyphsToUpdate.Count > 0)
-            {
-                Redraw(renderContext, _glyphsToUpdate);
-                _glyphsToUpdate.Clear();
-            }
-
-            var rect = new RectangleF(0, 0, _bounds.Width, _bounds.Height);
-            renderContext.Canvas.DrawImage(_textureView, rect, rect, RgbaFloat.White);
-        }
-
         public override void Destroy(RenderContext renderContext)
         {
             _cl.Dispose();
             _nativeBuffer.Dispose();
-
             _textureView.Dispose();
+
             renderContext.TexturePool.Return(_layoutTexture);
             renderContext.TexturePool.Return(_layoutStaging);
         }

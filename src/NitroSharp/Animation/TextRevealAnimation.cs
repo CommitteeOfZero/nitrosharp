@@ -9,29 +9,25 @@ namespace NitroSharp.Dialogue
 {
     internal sealed class TextRevealAnimation : AnimationBase
     {
-        private const float GlyphTime = 60;
+        private const float GlyphTime = 50;
 
-        private TextLayout _textLayout;
-        private uint _idxCurrentGlyph;
+        private readonly TextLayout _textLayout;
+        private readonly uint _startIndex;
+        private uint _offset;
 
-        public uint CurrentGlyphIndex => _idxCurrentGlyph;
-        public bool IsAllTextVisible { get; private set; }
-
-        public override void OnAttached()
+        public TextRevealAnimation(TextLayout textLayout, uint startPosition)
+            : base(CalculateDuration(textLayout, startPosition))
         {
-            var textLayout = Entity.GetComponent<TextLayout>();
-            if (textLayout == null)
-            {
-                throw new InvalidOperationException("This component can't be attached to an entity that doesn't have a TextLayout component.");
-            }
-
-            Duration = CalculateDuration(textLayout);
             _textLayout = textLayout;
+            _startIndex = startPosition;
         }
 
-        private static TimeSpan CalculateDuration(TextLayout textLayout)
+        public uint Position => _startIndex + _offset;
+        public bool IsAllTextVisible { get; private set; }
+
+        private static TimeSpan CalculateDuration(TextLayout textLayout, uint start)
         {
-            return TimeSpan.FromMilliseconds(GlyphTime * textLayout.GlyphCount);
+            return TimeSpan.FromMilliseconds(GlyphTime * (textLayout.GlyphCount - start));
         }
 
         public override void Advance(float deltaMilliseconds)
@@ -39,24 +35,22 @@ namespace NitroSharp.Dialogue
             float prevElapsed = Elapsed;
             base.Advance(deltaMilliseconds);
 
-            uint idxCurrentGlyph = _idxCurrentGlyph;
             // First, we need to catch up (i.e. fully reveal the glyphs before
             // the one we're supposed to be animating at this time).
-            uint nbCharsToReveal = (uint)(Elapsed / GlyphTime) - idxCurrentGlyph;
-            nbCharsToReveal = Math.Min(nbCharsToReveal, _textLayout.GlyphCount - idxCurrentGlyph);
-            RevealSpan(idxCurrentGlyph, nbCharsToReveal);
-            idxCurrentGlyph += nbCharsToReveal;
+            uint nbCharsToReveal = (uint)(Elapsed / GlyphTime) - _offset;
+            nbCharsToReveal = Math.Min(nbCharsToReveal, _textLayout.GlyphCount - Position);
+            RevealSpan(Position, nbCharsToReveal);
+            _offset += nbCharsToReveal;
 
-            if (idxCurrentGlyph < _textLayout.GlyphCount)
+            if (Position < _textLayout.GlyphCount)
             {
                 float currentGlyphOpacity = (Elapsed % GlyphTime) / GlyphTime;
-                ref var glyph = ref _textLayout.MutateGlyph(idxCurrentGlyph);
+                ref var glyph = ref _textLayout.MutateGlyph(Position);
                 SetOpacity(ref glyph, currentGlyphOpacity);
-                _idxCurrentGlyph = idxCurrentGlyph;
             }
 
             PostAdvance();
-            if (Progress == 1.0f)
+            if (HasCompleted)
             {
                 IsAllTextVisible = true;
             }
@@ -83,10 +77,9 @@ namespace NitroSharp.Dialogue
         public void Stop()
         {
             IsEnabled = false;
-            ref var glyph = ref _textLayout.MutateGlyph(_idxCurrentGlyph);
+            ref var glyph = ref _textLayout.MutateGlyph(Position);
             Reveal(ref glyph);
-            _idxCurrentGlyph = Math.Min(_idxCurrentGlyph + 1, _textLayout.GlyphCount - 1);
-            IsAllTextVisible = _idxCurrentGlyph >= _textLayout.GlyphCount - 1;
+            IsAllTextVisible = Position == (_textLayout.GlyphCount - 1);
         }
     }
 }

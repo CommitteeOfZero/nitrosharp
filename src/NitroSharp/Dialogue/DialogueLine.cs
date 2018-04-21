@@ -1,8 +1,8 @@
-﻿using NitroSharp.NsScript;
+﻿using System.Collections.Immutable;
+using NitroSharp.NsScript;
 using NitroSharp.NsScript.Syntax.PXml;
+using NitroSharp.Primitives;
 using NitroSharp.Text;
-using NitroSharp.Utilities;
-using Veldrid;
 
 namespace NitroSharp.Dialogue
 {
@@ -10,16 +10,14 @@ namespace NitroSharp.Dialogue
     {
         private static readonly PXmlTreeVisitor s_treeVisitor = new PXmlTreeVisitor();
 
-        private DialogueLine(TextRun[] text, uint textLength, in Voice voice)
+        public DialogueLine(ImmutableArray<DialogueLinePart> parts, uint textLength)
         {
-            Text = text;
+            Parts = parts;
             TextLength = textLength;
-            Voice = voice;
         }
 
-        public TextRun[] Text { get; }
+        public ImmutableArray<DialogueLinePart> Parts { get; }
         public uint TextLength { get; }
-        public Voice Voice { get; }
 
         public static DialogueLine Parse(string pxmlString)
         {
@@ -29,22 +27,26 @@ namespace NitroSharp.Dialogue
 
         private sealed class PXmlTreeVisitor : PXmlSyntaxVisitor
         {
-            private TextRun _currentRun = new TextRun();
-            private ValueList<TextRun> _textRuns = new ValueList<TextRun>(2);
-            private Voice _voice;
+            private readonly ImmutableArray<DialogueLinePart>.Builder _parts;
+            private TextRun _textParams = new TextRun();
             private uint _textLength;
+
+            public PXmlTreeVisitor()
+            {
+                _parts = ImmutableArray.CreateBuilder<DialogueLinePart>(4);
+            }
 
             public DialogueLine ProduceDialogueLine(PXmlNode treeRoot)
             {
-                _textRuns.Reset();
+                _parts.Clear();
                 _textLength = 0;
                 Visit(treeRoot);
-                return new DialogueLine(_textRuns.ToArray(), _textLength, _voice);
+                return new DialogueLine(_parts.ToImmutable(), _textLength);
             }
 
             public override void VisitVoiceElement(VoiceElement node)
             {
-                _voice = new Voice(node.CharacterName, node.FileName, (VoiceAction)node.Action);
+                _parts.Add(new Voice(node.CharacterName, node.FileName, (VoiceAction)node.Action));
             }
 
             public override void VisitContent(PXmlContent content)
@@ -54,28 +56,41 @@ namespace NitroSharp.Dialogue
 
             public override void VisitFontElement(FontElement fontElement)
             {
-                var old = _currentRun;
-                _currentRun.FontSize = fontElement.Size;
+                TextRun old = _textParams;
+                _textParams.FontSize = fontElement.Size;
                 if (fontElement.Color.HasValue)
                 {
-                    var val = fontElement.Color.Value;
-                    _currentRun.Color = new RgbaFloat(val.R / 255.0f, val.G / 255.0f, val.B / 255.0f, 1.0f);
+                    NsColor color = fontElement.Color.Value;
+                    _textParams.Color = color.ToRgbaFloat();
                 }
 
                 Visit(fontElement.Content);
-                _currentRun = old;
+                _textParams = old;
             }
 
             public override void VisitText(PXmlText text)
             {
-                ref var current = ref _currentRun;
-                ref var span = ref _textRuns.Add();
-                span.Text = text.Text;
-                span.FontSize = current.FontSize;
-                span.Color = current.Color;
-                span.ShadowColor = current.ShadowColor;
+                if (text.Text.Length > 0)
+                {
+                    var textRun = new TextRun();
+                    textRun.Text = text.Text;
+                    textRun.FontSize = _textParams.FontSize;
+                    textRun.Color = _textParams.Color;
+                    textRun.ShadowColor = _textParams.ShadowColor;
 
-                _textLength += (uint)text.Text.Length;
+                    _parts.Add(new TextPart(textRun));
+                    _textLength += (uint)text.Text.Length;
+                }
+            }
+
+            public override void VisitHaltElement(HaltElement haltElement)
+            {
+                _parts.Add(new Marker(MarkerKind.Halt));
+            }
+
+            public override void VisitNoLinebreaksElement(NoLinebreaksElement element)
+            {
+                _parts.Add(new Marker(MarkerKind.NoLinebreaks));
             }
         }
     }

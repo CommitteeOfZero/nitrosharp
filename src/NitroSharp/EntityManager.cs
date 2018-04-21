@@ -27,6 +27,7 @@ namespace NitroSharp
         public IReadOnlyDictionary<string, Entity> AllEntities => _allEntities;
 
         public event EventHandler<Entity> EntityUpdated;
+        public event EventHandler<Entity> EntityDetached;
         public event EventHandler<Entity> EntityRemoved;
         public event EventHandler<Entity> EntityUpdateScheduled;
         public event EventHandler<Entity> EntityRemovalScheduled;

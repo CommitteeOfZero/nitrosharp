@@ -23,6 +23,7 @@ namespace NitroSharp.Animation
         public TimingFunction TimingFunction { get; }
         protected float Elapsed => _elapsed;
         public float Progress => MathUtil.Clamp(_elapsed / (float)Duration.TotalMilliseconds, 0.0f, 1.0f);
+        public bool HasCompleted => _elapsed >= Duration.TotalMilliseconds;
         public bool Repeat { get; }
 
         public event EventHandler Completed;
@@ -41,7 +42,7 @@ namespace NitroSharp.Animation
 
         protected void PostAdvance()
         {
-            if (Progress == 1.0f)
+            if (HasCompleted)
             {
                 if (Repeat)
                 {

@@ -48,6 +48,7 @@ namespace NitroSharp.Graphics
 
         public int Priority { get; protected set; }
         public virtual SizeF Bounds => SizeF.Zero;
+        public bool IsInitialized { get; internal set; }
 
         public virtual void CreateDeviceObjects(RenderContext renderContext)
         {

@@ -4,7 +4,7 @@ namespace NitroSharp.NsScript
 {
     public abstract class EngineImplementationBase
     {
-        public virtual void DisplayDialogue(string pxmlString) { }
+        public virtual void BeginDialogue(string pxmlString) { }
 
         public virtual int GetPlatformId() => throw new NotImplementedException();
         public virtual string GetCurrentModuleName() => throw new NotImplementedException();

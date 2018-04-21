@@ -1,4 +1,6 @@
-﻿using System.Runtime.InteropServices;
+﻿using System;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using Veldrid;
 
 namespace NitroSharp.Utilities
@@ -19,6 +21,21 @@ namespace NitroSharp.Utilities
 
             graphicsDevice.UpdateBuffer(result, 0, data);
             return result;
+        }
+
+        public static void InitStagingTexture(this GraphicsDevice graphicsDevice, Texture texture)
+        {
+            if ((texture.Usage & TextureUsage.Staging) != TextureUsage.Staging)
+            {
+                throw new ArgumentException("Expected a staging texture.");
+            }
+
+            var map = graphicsDevice.Map(texture, MapMode.Write);
+            unsafe
+            {
+                Unsafe.InitBlock(map.Data.ToPointer(), 0x00, map.SizeInBytes);
+            }
+            graphicsDevice.Unmap(texture);
         }
     }
 }

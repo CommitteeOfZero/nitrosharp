@@ -61,7 +61,12 @@ namespace NitroSharp.Graphics
 
         public override void OnRelevantEntityAdded(Entity entity)
         {
-            entity.Visual.CreateDeviceObjects(_rc);
+            var visual = entity.Visual;
+            if (!visual.IsInitialized)
+            {
+                visual.CreateDeviceObjects(_rc);
+                visual.IsInitialized = true;
+            }
         }
 
         public override void OnRelevantEntityRemoved(Entity entity)

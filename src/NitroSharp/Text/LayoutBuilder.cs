@@ -11,6 +11,7 @@ namespace NitroSharp.Text
     {
         private ValueList<LayoutGlyph> _glyphs;
         private readonly FontFamily _fontFamily;
+        private FontFace _lastFont;
         private Vector2 _penPosition;
         private Size _maxLayoutBounds;
 
@@ -24,20 +25,20 @@ namespace NitroSharp.Text
 
         public ref ValueList<LayoutGlyph> Glyphs => ref _glyphs;
 
-        public void Append(TextRun[] textRuns)
+        public void Append(Span<TextRun> textRuns)
         {
             for (int i = 0; i < textRuns.Length; i++)
             {
-                if (!AppendTextRun(ref textRuns[i]))
+                if (!Append(textRuns[i]))
                 {
                     return;
                 }
             }
         }
 
-        private bool AppendTextRun(ref TextRun textRun)
+        public bool Append(TextRun textRun)
         {
-            var font = _fontFamily.GetFace(textRun.FontStyle);
+            var font = _lastFont = _fontFamily.GetFace(textRun.FontStyle);
             var size = textRun.FontSize ?? 28;
             font.SetSize(size);
 
@@ -61,7 +62,7 @@ namespace NitroSharp.Text
 
                 if (c == '\n')
                 {
-                    if (!StartNewLine(font))
+                    if (!StartNewLine())
                     {
                         _glyphs.RemoveLast();
                         return false;
@@ -94,7 +95,7 @@ namespace NitroSharp.Text
 
                     stringPos--;
                     glyphPos--;
-                    if (!StartNewLine(font))
+                    if (!StartNewLine())
                     {
                         _glyphs.RemoveLast();
                         return false;
@@ -105,18 +106,24 @@ namespace NitroSharp.Text
             return true;
         }
 
-        private bool StartNewLine(FontFace fontFace)
+        public bool StartNewLine()
         {
             ref var pen = ref _penPosition;
-            var metrics = fontFace.ScaledMetrics;
+            var metrics = _lastFont.ScaledMetrics;
             if ((pen.Y + metrics.LineHeight * 2) <= _maxLayoutBounds.Height)
             {
                 pen.X = 0;
-                pen.Y += fontFace.ScaledMetrics.LineHeight;
+                pen.Y += _lastFont.ScaledMetrics.LineHeight;
                 return true;
             }
 
             return false;
+        }
+
+        public void Clear()
+        {
+            _glyphs.Reset();
+            _penPosition = default;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -1,6 +1,6 @@
 ﻿namespace NitroSharp.Dialogue
 {
-    internal readonly struct Voice
+    internal sealed class Voice : DialogueLinePart
     {
         public Voice(string characterName, string fileName, VoiceAction action)
         {
@@ -12,5 +12,7 @@
         public string CharacterName { get; }
         public string FileName { get; }
         public VoiceAction Action { get; }
+
+        public override DialogueLinePartKind PartKind => DialogueLinePartKind.VoicePart;
     }
 }

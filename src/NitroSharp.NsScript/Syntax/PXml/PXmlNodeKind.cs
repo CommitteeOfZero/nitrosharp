@@ -6,6 +6,8 @@
         Text,
         VoiceElement,
         FontElement,
-        RubyElement
+        RubyElement,
+        HaltElement,
+        NoLinebreaksElement
     }
 }

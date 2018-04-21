@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using NitroSharp.Primitives;
 using Veldrid;
 
@@ -20,23 +19,12 @@ namespace NitroSharp.Graphics
             _staging = new Bucket(_gd.ResourceFactory, TextureUsage.Staging);
             _sampled = new Bucket(_gd.ResourceFactory, TextureUsage.Sampled);
         }
-        
-        public Texture RentStaging(Size minimalSize, bool clearMemory = false)
+
+        public Texture RentStaging(Size minimalSize)
         {
             lock (_stagingBucketLock)
             {
-                var texture = _staging.Rent(minimalSize);
-                if (clearMemory)
-                {
-                    var map = _gd.Map(texture, MapMode.Write);
-                    unsafe
-                    {
-                        Unsafe.InitBlock(map.Data.ToPointer(), 0x00, map.SizeInBytes);
-                    }
-                    _gd.Unmap(texture);
-                }
-
-                return texture;
+                return _staging.Rent(minimalSize);
             }
         }
 
@@ -50,24 +38,23 @@ namespace NitroSharp.Graphics
 
         public void Return(Texture texture)
         {
-            switch (texture.Usage)
+            if ((texture.Usage & TextureUsage.Staging) == TextureUsage.Staging)
             {
-                case TextureUsage.Staging:
-                    lock (_stagingBucketLock)
-                    {
-                        _staging.Return(texture);
-                    }
-                    break;
-
-                case TextureUsage.Sampled:
-                    lock (_sampledBucketLock)
-                    {
-                        _sampled.Return(texture);
-                    }
-                    break;
-
-                default:
-                    throw new InvalidOperationException("Texture does not belong to the pool.");
+                lock (_stagingBucketLock)
+                {
+                    _staging.Return(texture);
+                }
+            }
+            else if ((texture.Usage & TextureUsage.Sampled) == TextureUsage.Sampled)
+            {
+                lock (_sampledBucketLock)
+                {
+                    _sampled.Return(texture);
+                }
+            }
+            else
+            {
+                throw new InvalidOperationException("Texture does not belong to the pool.");
             }
         }
 
@@ -117,7 +104,7 @@ namespace NitroSharp.Graphics
 
             public void Return(Texture texture)
             {
-                if (texture.Usage != _textureUsage)
+                if ((texture.Usage & _textureUsage) != _textureUsage)
                 {
                     throw new InvalidOperationException($"Texture cannot be returned to the {_textureUsage} texture bucket.");
                 }

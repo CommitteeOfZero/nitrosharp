@@ -3,7 +3,7 @@ using Veldrid;
 
 namespace NitroSharp.Text
 {
-    internal struct TextRun
+    internal sealed class TextRun
     {
         public string Text;
         public int? FontSize;

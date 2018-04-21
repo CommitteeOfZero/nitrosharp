@@ -72,10 +72,10 @@ namespace NitroSharp.NsScript.Syntax.PXml
                     node = ParseVoiceElement(startTag);
                     break;
 
-                // TODO: actually figure out what <k> and <?> do.
                 case "k":
+                    return new HaltElement();
                 case "?":
-                    return null;
+                    return new NoLinebreaksElement();
 
                 default:
                     throw new NotImplementedException($"PXml tag '{startTag.Name}' is not yet supported.");
