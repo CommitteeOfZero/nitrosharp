@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using NitroSharp.Primitives;
@@ -94,7 +95,6 @@ namespace NitroSharp.Text
                     }
 
                     stringPos--;
-                    glyphPos--;
                     if (!StartNewLine())
                     {
                         _glyphs.RemoveLast();
