@@ -45,8 +45,8 @@ namespace NitroSharp
             var center = new Vector3(0.5f) * Dimensions;
             var scale = Matrix4x4.CreateScale(Scale, center);
             var rotation = Matrix4x4.CreateRotationZ(MathUtil.ToRadians(Rotation.Z), center)
-                * Matrix4x4.CreateRotationX(MathUtil.ToRadians(Rotation.X), center)
-                * Matrix4x4.CreateRotationY(MathUtil.ToRadians(Rotation.Y), center);
+                * Matrix4x4.CreateRotationY(MathUtil.ToRadians(Rotation.Y), center)
+                * Matrix4x4.CreateRotationX(MathUtil.ToRadians(Rotation.X), center);
             var translation = Matrix4x4.CreateTranslation(Position);
 
             var composite = TransformationOrder == TransformationOrder.ScaleRotationTranslation
