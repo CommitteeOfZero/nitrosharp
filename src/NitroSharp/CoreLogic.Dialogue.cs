@@ -226,7 +226,8 @@ namespace NitroSharp
 
             var animation = new TextRevealAnimation(state.TextLayout, revealStart);
             state.TextEntity.AddComponent(animation);
-            SuspendMainThread(animation.Duration);
+            SuspendMainThread();
+            animation.Completed += (obj, args) => ResumeMainThread();
         }
 
         private void SkipTextRevealAnimation()
