@@ -60,15 +60,20 @@ namespace NitroSharp.Graphics.Objects
             _glyphsToUpdate.Clear();
             if (_gd != null)
             {
-                _gd.InitStagingTexture(_layoutStaging);
-                using (var cl = _gd.ResourceFactory.CreateCommandList())
-                {
-                    cl.Begin();
-                    cl.CopyTexture(_layoutStaging, _layoutTexture);
-                    cl.End();
-                    _gd.SubmitCommands(cl);
-                    _gd.WaitForIdle();
-                }
+                ClearTextures();
+            }
+        }
+
+        private void ClearTextures()
+        {
+            _gd.InitStagingTexture(_layoutStaging);
+            using (var cl = _gd.ResourceFactory.CreateCommandList())
+            {
+                cl.Begin();
+                cl.CopyTexture(_layoutStaging, _layoutTexture);
+                cl.End();
+                _gd.SubmitCommands(cl);
+                _gd.WaitForIdle();
             }
         }
 
@@ -110,7 +115,7 @@ namespace NitroSharp.Graphics.Objects
             _textureView = renderContext.Factory.CreateTextureView(_layoutTexture);
             _nativeBuffer = NativeMemory.Allocate(128 * 128);
 
-            Clear();
+            ClearTextures();
         }
 
         public override void Render(RenderContext renderContext)
