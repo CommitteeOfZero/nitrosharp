@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
@@ -20,8 +20,8 @@
     <PackageReference Include="NitroSharp.Fonts" Version="0.1.1" />
     <PackageReference Include="NitroSharp.Dependencies.FreeType" Version="0.2.901" />
 
-    <PackageReference Include="Veldrid" Version="4.2.0-beta1-gdfef8fe723" />
-    <PackageReference Include="Veldrid.StartupUtilities" Version="4.2.0-beta1-gdfef8fe723" />
+    <PackageReference Include="Veldrid" Version="4.2.0-beta2-gf23e6c5f8f" />
+    <PackageReference Include="Veldrid.StartupUtilities" Version="4.2.0-beta2-gf23e6c5f8f" />
     <PackageReference Include="ShaderGen.Primitives" Version="1.2.0-gf5792ed443" />
     <PackageReference Include="ShaderGen.Build" Version="1.2.0-gf5792ed443" PrivateAssets="All" />
     

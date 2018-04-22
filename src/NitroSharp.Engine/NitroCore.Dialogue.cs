@@ -35,7 +35,7 @@ namespace NitroSharp
             TextEntity?.Destroy();
         }
 
-        public override void DisplayDialogue(string pxmlString)
+        public override void BeginDialogue(string pxmlString)
         {
             var line = DialogueParser.Parse(pxmlString);
             DisplayDialogueCore(line);
