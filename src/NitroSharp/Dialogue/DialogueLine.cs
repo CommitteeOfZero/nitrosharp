@@ -3,6 +3,7 @@ using NitroSharp.NsScript;
 using NitroSharp.NsScript.Syntax.PXml;
 using NitroSharp.Primitives;
 using NitroSharp.Text;
+using Veldrid;
 
 namespace NitroSharp.Dialogue
 {
@@ -27,8 +28,16 @@ namespace NitroSharp.Dialogue
 
         private sealed class PXmlTreeVisitor : PXmlSyntaxVisitor
         {
+            private struct TextParams
+            {
+                public int? FontSize;
+                public RgbaFloat? Color;
+                public RgbaFloat? ShadowColor;
+                public FontStyle FontStyle;
+            }
+
             private readonly ImmutableArray<DialogueLinePart>.Builder _parts;
-            private TextRun _textParams = new TextRun();
+            private TextParams _textParams;
             private uint _textLength;
 
             public PXmlTreeVisitor()
@@ -56,7 +65,7 @@ namespace NitroSharp.Dialogue
 
             public override void VisitFontElement(FontElement fontElement)
             {
-                TextRun old = _textParams;
+                TextParams oldParams = _textParams;
                 _textParams.FontSize = fontElement.Size;
                 if (fontElement.Color.HasValue)
                 {
@@ -65,7 +74,7 @@ namespace NitroSharp.Dialogue
                 }
 
                 Visit(fontElement.Content);
-                _textParams = old;
+                _textParams = oldParams;
             }
 
             public override void VisitText(PXmlText text)

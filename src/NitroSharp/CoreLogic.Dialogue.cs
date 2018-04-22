@@ -17,6 +17,14 @@ namespace NitroSharp
     {
         private sealed class DialogueState
         {
+            public enum Status
+            {
+                LineNotLoaded,
+                PlayingRevealAnimation,
+                PlayingSkipAnimation,
+                Waiting
+            }
+
             public DialogueBlockSymbol DialogueBlock;
             public DialogueLine DialogueLine;
             public int CurrentDialoguePart;
@@ -24,7 +32,11 @@ namespace NitroSharp
             public Entity TextEntity;
             public TextLayout TextLayout;
             public bool StartFromNewLine;
+            public bool Clear;
             public Entity PageIndicator;
+
+            public TextRevealAnimation RevealAnimation;
+            public RevealSkipAnimation RevealSkipAnimation;
 
             public bool CanAdvance
             {
@@ -36,6 +48,27 @@ namespace NitroSharp
                 DialogueLine = null;
                 CurrentDialoguePart = 0;
                 StartFromNewLine = false;
+            }
+
+            public Status GetStatus()
+            {
+                if (DialogueLine == null)
+                {
+                    return Status.LineNotLoaded;
+                }
+
+                if ((RevealAnimation = TextEntity.GetComponent<TextRevealAnimation>()) != null)
+                {
+                    RevealSkipAnimation = null;
+                    return Status.PlayingRevealAnimation;
+                }
+                if ((RevealSkipAnimation = TextEntity.GetComponent<RevealSkipAnimation>()) != null)
+                {
+                    RevealAnimation = null;
+                    return Status.PlayingSkipAnimation;
+                }
+
+                return Status.Waiting;
             }
         }
 
@@ -101,8 +134,12 @@ namespace NitroSharp
         public override void BeginDialogue(string pxmlString)
         {
             var state = _dialogueState;
+            if (state.Clear)
+            {
+                state.TextLayout.Clear();
+                state.Clear = false;
+            }
             state.Reset();
-            state.TextLayout.Clear();
             state.DialogueLine = DialogueLine.Parse(pxmlString);
 
             double iconX = Interpreter.Globals.Get("SYSTEM_position_x_text_icon").DoubleValue;
@@ -116,31 +153,29 @@ namespace NitroSharp
 
         public void Advance()
         {
-            var textEntity = _dialogueState.TextEntity;
-            if (textEntity != null)
+            switch (_dialogueState.GetStatus())
             {
-                var reveal = textEntity.GetComponent<TextRevealAnimation>();
-                if (reveal != null)
-                {
-                    SkipTextRevealAnimation(reveal);
-                    return;
-                }
+                case DialogueState.Status.LineNotLoaded:
+                    ResumeMainThread();
+                    break;
 
-                var skipAnimation = textEntity.GetComponent<RevealSkipAnimation>();
-                if (skipAnimation != null)
-                {
-                    return;
-                }
-            }
+                case DialogueState.Status.PlayingRevealAnimation:
+                    SkipTextRevealAnimation();
+                    break;
 
-            bool waitingForInput = MainThread.SleepTimeout == TimeSpan.MaxValue;
-            if (waitingForInput && !_dialogueState.CanAdvance)
-            {
-                Interpreter.ResumeThread(MainThread);
-            }
-            else if (waitingForInput)
-            {
-                AdvanceDialogue();
+                case DialogueState.Status.PlayingSkipAnimation:
+                    return;
+
+                case DialogueState.Status.Waiting:
+                    if (_dialogueState.CanAdvance)
+                    {
+                        AdvanceDialogue();
+                    }
+                    else
+                    {
+                        ResumeMainThread();
+                    }
+                    break;
             }
         }
 
@@ -148,6 +183,14 @@ namespace NitroSharp
         {
             DialogueState state = _dialogueState;
             ImmutableArray<DialogueLinePart> parts = state.DialogueLine.Parts;
+
+            if (state.StartFromNewLine)
+            {
+                state.TextLayout.StartNewLine();
+                state.StartFromNewLine = false;
+            }
+
+            uint revealStart = state.TextLayout.GlyphCount;
             for (int i = state.CurrentDialoguePart; i < parts.Length; i++)
             {
                 state.CurrentDialoguePart++;
@@ -156,16 +199,7 @@ namespace NitroSharp
                 {
                     case DialogueLinePartKind.TextPart:
                         var textPart = (TextPart)part;
-                        uint positionInText = state.TextLayout.GlyphCount;
-                        if (state.StartFromNewLine)
-                        {
-                            state.TextLayout.StartNewLine();
-                            state.StartFromNewLine = false;
-                        }
-
                         state.TextLayout.Append(textPart.Text, display: false);
-                        var animation = new TextRevealAnimation(state.TextLayout, positionInText);
-                        state.TextEntity.AddComponent(animation);
                         break;
 
                     case DialogueLinePartKind.VoicePart:
@@ -179,6 +213,7 @@ namespace NitroSharp
                         {
                             case MarkerKind.Halt:
                                 state.StartFromNewLine = true;
+                                SuspendMainThread();
                                 return;
 
                             case MarkerKind.NoLinebreaks:
@@ -188,11 +223,16 @@ namespace NitroSharp
                         break;
                 }
             }
+
+            var animation = new TextRevealAnimation(state.TextLayout, revealStart);
+            state.TextEntity.AddComponent(animation);
+            SuspendMainThread(animation.Duration);
         }
 
-        private void SkipTextRevealAnimation(TextRevealAnimation animation)
+        private void SkipTextRevealAnimation()
         {
             var state = _dialogueState;
+            var animation = state.RevealAnimation;
             var textEntity = state.TextEntity;
             if (!animation.IsAllTextVisible)
             {
@@ -202,6 +242,7 @@ namespace NitroSharp
                 {
                     var skip = new RevealSkipAnimation(state.TextLayout, animation.Position + 1);
                     textEntity.AddComponent(skip);
+                    ResumeMainThread();
                 }
             }
         }

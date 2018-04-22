@@ -140,6 +140,8 @@ namespace NitroSharp.NsScript.Syntax.PXml
                 if (c == '/' && next == '/')
                 {
                     ScanToEndOfLine();
+                    ScanEndOfLineSequence();
+                    continue;
                 }
 
                 if (c == '&' && (next == '.' || next == ','))

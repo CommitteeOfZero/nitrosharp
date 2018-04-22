@@ -11,8 +11,6 @@ namespace NitroSharp
         private readonly EntityManager _entities;
         private readonly Game _game;
 
-        public bool WaitingForInput { get; set; }
-
         public CoreLogic(Game game, EntityManager entities)
         {
             _game = game;
@@ -24,6 +22,21 @@ namespace NitroSharp
         public void InitializeResources()
         {
             LoadPageIndicator();
+        }
+
+        private void SuspendMainThread()
+        {
+            Interpreter.SuspendThread(MainThread);
+        }
+
+        private void SuspendMainThread(TimeSpan timeout)
+        {
+            Interpreter.SuspendThread(MainThread, timeout);
+        }
+
+        private void ResumeMainThread()
+        {
+            Interpreter.ResumeThread(MainThread);
         }
 
         public override void SetAlias(string entityName, string alias)
@@ -55,13 +68,12 @@ namespace NitroSharp
         public override void WaitForInput()
         {
             Interpreter.SuspendThread(CurrentThread);
-            WaitingForInput = true;
+            _dialogueState.Clear = true;
         }
 
         public override void WaitForInput(TimeSpan timeout)
         {
             Interpreter.SuspendThread(CurrentThread, timeout);
-            WaitingForInput = true;
         }
 
         public override void CreateThread(string name, string target)
