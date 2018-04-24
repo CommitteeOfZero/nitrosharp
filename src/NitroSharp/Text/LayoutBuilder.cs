@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using NitroSharp.Primitives;
@@ -84,14 +83,15 @@ namespace NitroSharp.Text
                 }
                 else if (!isWhitespace)
                 {
-                    while (!LineBreakingRules.CanStartLine(_glyphs[glyphPos].Char)
-                        || !LineBreakingRules.CanEndLine(_glyphs[glyphPos - 1].Char))
+                    while (stringPos >= 1 &&
+                        (!LineBreakingRules.CanStartLine(text[stringPos])
+                        || !LineBreakingRules.CanEndLine(text[stringPos - 1])))
                     {
-                        glyphPos--;
-                        do
+                        stringPos--;
+                        if (!char.IsWhiteSpace(text[stringPos]))
                         {
-                            stringPos--;
-                        } while (char.IsWhiteSpace(text[stringPos]));
+                            glyphPos--;
+                        }
                     }
 
                     stringPos--;
