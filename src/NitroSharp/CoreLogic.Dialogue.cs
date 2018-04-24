@@ -223,7 +223,7 @@ namespace NitroSharp
                             case MarkerKind.Halt:
                                 state.StartFromNewLine = true;
                                 SuspendMainThread();
-                                return;
+                                goto exit;
 
                             case MarkerKind.NoLinebreaks:
                                 state.StartFromNewLine = false;
@@ -233,10 +233,14 @@ namespace NitroSharp
                 }
             }
 
+        exit:
             var animation = new TextRevealAnimation(state.TextLayout, revealStart);
             state.TextEntity.AddComponent(animation);
             SuspendMainThread();
-            animation.Completed += (obj, args) => ResumeMainThread();
+            if (!state.CanAdvance)
+            {
+                animation.Completed += (obj, args) => ResumeMainThread();
+            }
         }
 
         private void SkipTextRevealAnimation()
@@ -252,7 +256,10 @@ namespace NitroSharp
                 {
                     var skip = new RevealSkipAnimation(state.TextLayout, animation.Position + 1);
                     textEntity.AddComponent(skip);
-                    ResumeMainThread();
+                    if (!_dialogueState.CanAdvance)
+                    {
+                        ResumeMainThread();
+                    }
                 }
             }
         }
