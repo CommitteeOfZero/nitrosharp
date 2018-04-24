@@ -63,6 +63,11 @@ namespace NitroSharp
 
         public override void WaitForInput()
         {
+            if (_dialogueState.DialogueLine?.IsEmpty == true)
+            {
+                return;
+            }
+
             Interpreter.SuspendThread(CurrentThread);
             _dialogueState.Clear = true;
         }

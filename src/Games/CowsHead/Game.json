@@ -1,6 +1,6 @@
 ﻿{
   "productName": "COWSHEAD_NOAH",
-  "activeProfile": "Test",
+  "activeProfile": "CustomBoot",
   "graphics.vsync": false,
   "window.title": "COWS;HEAD NOAH",
   "window.width": 1280,
@@ -22,6 +22,10 @@
     },
 
     "Test": {
+      "startupScript": "tests/dialogue.nss"
+    },
+
+    "CustomBoot": {
       "startupScript": "boot_any.nss"
     },
 

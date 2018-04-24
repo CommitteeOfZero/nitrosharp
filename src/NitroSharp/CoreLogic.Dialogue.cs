@@ -141,6 +141,10 @@ namespace NitroSharp
             }
             state.Reset();
             state.DialogueLine = DialogueLine.Parse(pxmlString);
+            if (state.DialogueLine.IsEmpty)
+            {
+                return;
+            }
 
             double iconX = Interpreter.Globals.Get("SYSTEM_position_x_text_icon").DoubleValue;
             double iconY = Interpreter.Globals.Get("SYSTEM_position_y_text_icon").DoubleValue;

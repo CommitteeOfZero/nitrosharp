@@ -19,6 +19,7 @@ namespace NitroSharp.Dialogue
 
         public ImmutableArray<DialogueLinePart> Parts { get; }
         public uint TextLength { get; }
+        public bool IsEmpty => Parts.Length == 0;
 
         public static DialogueLine Parse(string pxmlString)
         {
