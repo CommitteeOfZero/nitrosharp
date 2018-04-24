@@ -153,6 +153,11 @@ namespace NitroSharp
 
         public void Advance()
         {
+            if (IsAnimationInProgress)
+            {
+                return;
+            }
+
             switch (_dialogueState.GetStatus())
             {
                 case DialogueState.Status.LineNotLoaded:

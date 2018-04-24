@@ -18,6 +18,7 @@ namespace NitroSharp
         }
 
         private ContentManager Content => _game.Content;
+        private bool IsAnimationInProgress => MainThread.SleepTimeout != TimeSpan.MaxValue;
 
         public void InitializeResources()
         {
@@ -27,11 +28,6 @@ namespace NitroSharp
         private void SuspendMainThread()
         {
             Interpreter.SuspendThread(MainThread);
-        }
-
-        private void SuspendMainThread(TimeSpan timeout)
-        {
-            Interpreter.SuspendThread(MainThread, timeout);
         }
 
         private void ResumeMainThread()
