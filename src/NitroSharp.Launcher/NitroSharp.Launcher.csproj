@@ -7,11 +7,8 @@
   <Import Project="..\..\OutputPath.props" />
 
   <ItemGroup>
+    <ProjectReference Include="..\NitroSharp\NitroSharp.csproj" />
     <PackageReference Include="Newtonsoft.Json" Version="10.0.3" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\NitroSharp.Engine\NitroSharp.Engine.csproj" />
   </ItemGroup>
 
 </Project>

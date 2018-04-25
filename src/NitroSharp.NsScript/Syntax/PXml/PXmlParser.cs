@@ -72,10 +72,10 @@ namespace NitroSharp.NsScript.Syntax.PXml
                     node = ParseVoiceElement(startTag);
                     break;
 
-                // TODO: actually figure out what <k> and <?> do.
                 case "k":
+                    return new HaltElement();
                 case "?":
-                    return null;
+                    return new NoLinebreaksElement();
 
                 default:
                     throw new NotImplementedException($"PXml tag '{startTag.Name}' is not yet supported.");
@@ -84,7 +84,7 @@ namespace NitroSharp.NsScript.Syntax.PXml
             return node;
         }
 
-        private VoiceElement ParseVoiceElement(PXmlTag tag)
+        private VoiceElement ParseVoiceElement(in PXmlTag tag)
         {
             string characterName = tag.Attributes["name"];
             string fileName = tag.Attributes["src"];
@@ -96,16 +96,31 @@ namespace NitroSharp.NsScript.Syntax.PXml
             return new VoiceElement(action, characterName, fileName);
         }
 
-        private ColorElement ParseFontElement(PXmlTag startTag)
+        private FontElement ParseFontElement(in PXmlTag startTag)
         {
-            string colorString = startTag.Attributes["incolor"];
-            NsColor color = NsColor.FromString(colorString);
+            int? size = null;
+            NsColor? color = null, shadowColor = null;
+
+            var attributes = startTag.Attributes;
+            string value;
+            if (attributes.TryGetValue("size", out value))
+            {
+                size = int.Parse(value);
+            }
+            if (attributes.TryGetValue("incolor", out value))
+            {
+                color = NsColor.FromString(value);
+            }
+            if (attributes.TryGetValue("outcolor", out value))
+            {
+                shadowColor = NsColor.FromString(value);
+            }
 
             var content = ParseContent(startTag.Name);
-            return new ColorElement(color, content);
+            return new FontElement(size, color, shadowColor, content);
         }
 
-        private RubyElement ParseRubyElement(PXmlTag startTag)
+        private RubyElement ParseRubyElement(in PXmlTag startTag)
         {
             string rubyText = startTag.Attributes["text"];
             var rubyBase = ParseContent("RUBY");
@@ -121,19 +136,24 @@ namespace NitroSharp.NsScript.Syntax.PXml
             char c;
             while ((c = PeekChar()) != '<' && c != EofCharacter)
             {
-                if (c == '/' && PeekChar() == '/')
+                char next = PeekChar(1);
+                if (c == '/' && next == '/')
                 {
-                    sb.Append(GetCurrentLexeme());
                     ScanToEndOfLine();
-                    StartScanning();
+                    ScanEndOfLineSequence();
+                    continue;
                 }
 
+                if (c == '&' && (next == '.' || next == ','))
+                {
+                    AdvanceChar(2);
+                    sb.Append(next);
+                    continue;
+                }
+
+                sb.Append(c);
                 AdvanceChar();
             }
-
-            sb.Append(GetCurrentLexeme());
-            sb.Replace("&.", ".");
-            sb.Replace("&,", ",");
 
             string processedText = sb.ToString();
             return new PXmlText(processedText);
@@ -221,7 +241,7 @@ namespace NitroSharp.NsScript.Syntax.PXml
             return new KeyValuePair<string, string>(key, value);
         }
 
-        private sealed class PXmlTag
+        private readonly struct PXmlTag
         {
             public PXmlTag(string name, ImmutableDictionary<string, string> attributes)
             {

@@ -47,6 +47,7 @@ namespace NitroSharp.NsScript.Execution
         }
         
         public IEnumerable<ThreadContext> Threads => _threads.Values;
+        public Environment Globals => _globals;
         internal ThreadContext CurrentThread;
         private Frame CurrentFrame => CurrentThread.CurrentFrame;
         
@@ -305,7 +306,7 @@ namespace NitroSharp.NsScript.Execution
         private void Say(ref Instruction instruction)
         {
             var text = (string)instruction.Operand1;
-            _engineImplementation.DisplayDialogue(text);
+            _engineImplementation.BeginDialogue(text);
         }
         
         private void WaitForInput()

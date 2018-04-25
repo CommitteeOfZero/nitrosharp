@@ -27,9 +27,13 @@ namespace NitroSharp.NsScript.Symbols
             Declare("CreateTexture", CreateTexture);
             Declare("CreateClipTexture", CreateClipTexture);
             Declare("CreateSound", CreateSound);
+
             Declare("Fade", Fade);
             Declare("Move", Move);
             Declare("Zoom", Zoom);
+            Declare("Rotate", Rotate);
+            Declare("MoveCube", MoveCube);
+
             Declare("SetVolume", SetVolume);
             Declare("CreateWindow", CreateWindow);
             Declare("LoadText", LoadText);
@@ -49,6 +53,9 @@ namespace NitroSharp.NsScript.Symbols
             Declare("ModuleFileName", ModuleFileName);
             Declare("String", String);
             Declare("Time", Time);
+
+            Declare("CreateCube", CreateCube);
+            Declare("SetFov", SetFov);
         }
 
         private static ConstantValue Time(EngineImplementationBase arg1, Stack<ConstantValue> arg2)
@@ -70,7 +77,7 @@ namespace NitroSharp.NsScript.Symbols
             var list = new List<int>();
             while (args.Count > 0)
             {
-                list.Add((int)PopDouble(args, allowNull: false, allowTypeConversion: true));
+                list.Add((int)PopNumeric(args, allowNull: true, allowTypeConversion: true));
             }
 
             var builder = new StringBuilder();
@@ -138,7 +145,7 @@ namespace NitroSharp.NsScript.Symbols
 
         private static ConstantValue Random(EngineImplementationBase implementation, Stack<ConstantValue> args)
         {
-            int max = PopDouble(args);
+            int max = (int)PopNumeric(args);
             int n = implementation.GenerateRandomNumber(max);
             return ConstantValue.Create(n);
         }
@@ -214,7 +221,7 @@ namespace NitroSharp.NsScript.Symbols
         private static ConstantValue CreateTexture(EngineImplementationBase implementation, Stack<ConstantValue> args)
         {
             string entityName = EntityName(PopString(args));
-            int priority = PopDouble(args);
+            int priority = (int)PopNumeric(args);
             NsCoordinate x = PopCoordinate(args);
             NsCoordinate y = PopCoordinate(args);
             string fileOrEntityName = EntityName(PopString(args, allowNull: false, allowTypeConversion: true));
@@ -226,13 +233,13 @@ namespace NitroSharp.NsScript.Symbols
         private static ConstantValue CreateClipTexture(EngineImplementationBase implementation, Stack<ConstantValue> args)
         {
             string entityName = EntityName(PopString(args));
-            int priority = PopDouble(args);
+            int priority = (int)PopNumeric(args);
             NsCoordinate x1 = PopCoordinate(args);
             NsCoordinate y1 = PopCoordinate(args);
             NsCoordinate x2 = PopCoordinate(args);
             NsCoordinate y2 = PopCoordinate(args);
-            int width = PopDouble(args);
-            int height = PopDouble(args);
+            int width = (int)PopNumeric(args);
+            int height = (int)PopNumeric(args);
             string srcEntityName = PopString(args);
 
             implementation.AddClippedTexture(entityName, priority, x1, y1, x2, y2, width, height, srcEntityName);
@@ -251,11 +258,11 @@ namespace NitroSharp.NsScript.Symbols
         private static ConstantValue CreateColor(EngineImplementationBase implementation, Stack<ConstantValue> args)
         {
             string entityName = EntityName(PopString(args));
-            int priority = PopDouble(args);
+            int priority = (int)PopNumeric(args);
             NsCoordinate x = PopCoordinate(args);
             NsCoordinate y = PopCoordinate(args);
-            int width = PopDouble(args);
-            int height = PopDouble(args);
+            int width = (int)PopNumeric(args);
+            int height = (int)PopNumeric(args);
             NsColor color = PopColor(args);
 
             implementation.AddRectangle(entityName, priority, x, y, width, height, color);
@@ -266,7 +273,7 @@ namespace NitroSharp.NsScript.Symbols
         {
             string entityName = EntityName(PopString(args));
             TimeSpan duration = PopTimeSpan(args);
-            NsRational volume = new NsRational(PopDouble(args), NssMaxVolume);
+            NsRational volume = new NsRational(PopNumeric(args), NssMaxVolume);
 
             implementation.SetVolume(entityName, duration, volume);
             return null;
@@ -276,12 +283,12 @@ namespace NitroSharp.NsScript.Symbols
         {
             string entityName = EntityName(PopString(args));
             TimeSpan duration = PopTimeSpan(args);
-            var opacity = new NsRational(PopDouble(args), NssMaxOpacity);
+            var dstOpacity = new NsRational(PopNumeric(args), NssMaxOpacity);
             var easingFunction = PopEasingFunction(args);
-            double delayArg = PopDouble(args, allowNull: true, allowTypeConversion: true);
+            double delayArg = PopNumeric(args, allowNull: true, allowTypeConversion: true);
             TimeSpan delay = delayArg == 1.0d ? duration : TimeSpan.FromMilliseconds(delayArg);
 
-            implementation.Fade(entityName, duration, opacity, easingFunction, delay);
+            implementation.Fade(entityName, duration, dstOpacity, easingFunction, delay);
             return null;
         }
 
@@ -289,13 +296,13 @@ namespace NitroSharp.NsScript.Symbols
         {
             string entityName = EntityName(PopString(args));
             TimeSpan duration = PopTimeSpan(args);
-            NsCoordinate x = PopCoordinate(args);
-            NsCoordinate y = PopCoordinate(args);
+            NsCoordinate dstX = PopCoordinate(args);
+            NsCoordinate dstY = PopCoordinate(args);
             var easingFunction = PopEasingFunction(args);
-            double delayArg = PopDouble(args, allowNull: true, allowTypeConversion: true);
+            double delayArg = PopNumeric(args, allowNull: true, allowTypeConversion: true);
             TimeSpan delay = delayArg == 1.0d ? duration : TimeSpan.FromMilliseconds(delayArg);
 
-            implementation.Move(entityName, duration, x, y, easingFunction, delay);
+            implementation.Move(entityName, duration, dstX, dstY, easingFunction, delay);
             return null;
         }
 
@@ -303,24 +310,54 @@ namespace NitroSharp.NsScript.Symbols
         {
             string entityName = EntityName(PopString(args));
             TimeSpan duration = PopTimeSpan(args);
-            var scaleX = new NsRational(PopDouble(args), 1000);
-            var scaleY = new NsRational(PopDouble(args), 1000);
+            var dstScaleX = new NsRational(PopNumeric(args), 1000);
+            var dstScaleY = new NsRational(PopNumeric(args), 1000);
             var easingFunction = PopEasingFunction(args);
-            double delayArg = PopDouble(args, allowNull: true, allowTypeConversion: true);
+            double delayArg = PopNumeric(args, allowNull: true, allowTypeConversion: true);
             TimeSpan delay = delayArg == 1.0d ? duration : TimeSpan.FromMilliseconds(delayArg);
 
-            implementation.Zoom(entityName, duration, scaleX, scaleY, easingFunction, delay);
+            implementation.Zoom(entityName, duration, dstScaleX, dstScaleY, easingFunction, delay);
+            return null;
+        }
+
+        private static ConstantValue Rotate(EngineImplementationBase implementation, Stack<ConstantValue> args)
+        {
+            var entityName = EntityName(PopString(args));
+            TimeSpan duration = PopTimeSpan(args);
+            var xRotation = PopNumeric(args);
+            var yRotation = PopNumeric(args);
+            var zRotation = PopNumeric(args);
+            var easingFunction = PopEasingFunction(args);
+            double delayArg = PopNumeric(args, allowNull: true, allowTypeConversion: true);
+            TimeSpan delay = delayArg == 1.0d ? duration : TimeSpan.FromMilliseconds(delayArg);
+
+            implementation.Rotate(entityName, duration, xRotation, yRotation, zRotation, easingFunction, delay);
+            return null;
+        }
+
+        private static ConstantValue MoveCube(EngineImplementationBase implementation, Stack<ConstantValue> args)
+        {
+            var entityName = EntityName(PopString(args));
+            TimeSpan duration = PopTimeSpan(args);
+            var dstTranslationX = PopNumeric(args);
+            var dstTranslationY = PopNumeric(args);
+            var dstTranslationZ = PopNumeric(args);
+            var easingFunction = PopEasingFunction(args);
+            double delayArg = PopNumeric(args, allowNull: true, allowTypeConversion: true);
+            TimeSpan delay = delayArg == 1.0d ? duration : TimeSpan.FromMilliseconds(delayArg);
+
+            implementation.MoveCube(entityName, duration, dstTranslationX, dstTranslationY, dstTranslationZ, easingFunction, delay);
             return null;
         }
 
         private static ConstantValue CreateWindow(EngineImplementationBase implementation, Stack<ConstantValue> args)
         {
             string entityName = EntityName(PopString(args));
-            int priority = PopDouble(args);
+            int priority = (int)PopNumeric(args);
             NsCoordinate x = PopCoordinate(args);
             NsCoordinate y = PopCoordinate(args);
-            int width = PopDouble(args);
-            int height = PopDouble(args);
+            int width = (int)PopNumeric(args);
+            int height = (int)PopNumeric(args);
 
             implementation.CreateDialogueBox(entityName, priority, x, y, width, height);
             return null;
@@ -341,10 +378,10 @@ namespace NitroSharp.NsScript.Symbols
             var boxName = PopArgument(args);
             var someStr = PopArgument(args);
 
-            int maxWidth = PopDouble(args);
-            int maxHeight = PopDouble(args);
-            int letterSpacing = PopDouble(args);
-            int lineSpacing = PopDouble(args);
+            int maxWidth = (int)PopNumeric(args);
+            int maxHeight = (int)PopNumeric(args);
+            int letterSpacing = (int)PopNumeric(args);
+            int lineSpacing = (int)PopNumeric(args);
             return null;
         }
 
@@ -371,15 +408,39 @@ namespace NitroSharp.NsScript.Symbols
         {
             string entityName = EntityName(PopString(args));
             TimeSpan duration = PopTimeSpan(args);
-            var initialOpacity = new NsRational(PopDouble(args), NssMaxOpacity);
-            var finalOpacity = new NsRational(PopDouble(args), NssMaxOpacity);
-            var feather = new NsRational(PopDouble(args), 100);
+            var initialOpacity = new NsRational(PopNumeric(args), NssMaxOpacity);
+            var finalOpacity = new NsRational(PopNumeric(args), NssMaxOpacity);
+            var feather = new NsRational(PopNumeric(args), 100);
             var easingFunction = PopEasingFunction(args);
             string fileName = PopString(args);
-            double delayArg = PopDouble(args, allowNull: true, allowTypeConversion: true);
+            double delayArg = PopNumeric(args, allowNull: true, allowTypeConversion: true);
             TimeSpan delay = delayArg == 1.0d ? duration : TimeSpan.FromMilliseconds(delayArg);
 
             implementation.DrawTransition(entityName, duration, initialOpacity, finalOpacity, feather, easingFunction, fileName, delay);
+            return null;
+        }
+
+        private static ConstantValue CreateCube(EngineImplementationBase implementation, Stack<ConstantValue> args)
+        {
+            var entityName = EntityName(PopString(args));
+            double someNumber = PopNumeric(args);
+            var front = PopString(args);
+            var back = PopString(args);
+            var right = PopString(args);
+            var left = PopString(args);
+            var top = PopString(args);
+            var bottom = PopString(args);
+
+            implementation.CreateCube(entityName, front, back, right, left, top, bottom);
+            return null;
+        }
+
+        private static ConstantValue SetFov(EngineImplementationBase implementation, Stack<ConstantValue> args)
+        {
+            var unk1 = EntityName(PopString(args));
+            double unk2 = PopNumeric(args);
+
+            implementation.SetFieldOfView(unk1, unk2);
             return null;
         }
 
@@ -414,19 +475,19 @@ namespace NitroSharp.NsScript.Symbols
             }
         }
 
-        private static int PopDouble(Stack<ConstantValue> args, bool allowNull = true, bool allowTypeConversion = false)
+        private static NsNumeric PopNumeric(Stack<ConstantValue> args, bool allowNull = true, bool allowTypeConversion = false)
         {
             var value = PopArgument(args);
             switch (value.Type)
             {
                 case BuiltInType.Double:
-                    return (int)value.DoubleValue;
+                    return new NsNumeric(value.DoubleValue, value.IsDeltaValue);
 
                 case BuiltInType.Null:
-                    return allowNull ? 0 : throw new InvalidOperationException();
+                    return allowNull ? NsNumeric.Zero : throw new InvalidOperationException();
 
                 default:
-                    return allowTypeConversion ? (int)value.ConvertTo(BuiltInType.Double).DoubleValue : throw new InvalidOperationException();
+                    return allowTypeConversion ? new NsNumeric(value.ConvertTo(BuiltInType.Double).DoubleValue, false) : throw new InvalidOperationException();
             }
         }
 
@@ -488,9 +549,9 @@ namespace NitroSharp.NsScript.Symbols
             return EnumConversions.ToEasingFunction(PopEnumValue(args));
         }
 
-        private static TimeSpan PopTimeSpan(Stack<ConstantValue> args, bool allowNull = false)
+        private static TimeSpan PopTimeSpan(Stack<ConstantValue> args, bool allowNull = true)
         {
-            int ms = PopDouble(args, allowNull);
+            int ms = (int)PopNumeric(args, allowNull);
             return TimeSpan.FromMilliseconds(ms);
         }
 
@@ -516,10 +577,10 @@ namespace NitroSharp.NsScript.Symbols
         private static ConstantValue SetFont(EngineImplementationBase implementation, Stack<ConstantValue> args)
         {
             string fontName = PopString(args);
-            int size = PopDouble(args);
+            int size = (int)PopNumeric(args);
             NsColor inColor = PopColor(args);
             NsColor outColor = PopColor(args);
-            int fontWeight = PopDouble(args);
+            int fontWeight = (int)PopNumeric(args);
 
             string strAlignment = PopString(args);
             //TextAlignment alignment;

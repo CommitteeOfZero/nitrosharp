@@ -1,0 +1,43 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <ShaderOutputPath>$(BaseIntermediateOutputPath)\Shaders.Generated</ShaderOutputPath>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <NoWarn>1701;1702;CA1063</NoWarn>
+  </PropertyGroup>
+
+  <Import Project="..\..\OutputPath.props" />
+  
+  <ItemGroup>
+    <!--<ProjectReference Include="..\..\..\mellinoe\veldrid\src\Veldrid.ImageSharp\Veldrid.ImageSharp.csproj" />-->
+    <!--<ProjectReference Include="..\..\..\mellinoe\veldrid\src\Veldrid.StartupUtilities\Veldrid.StartupUtilities.csproj" />
+    <ProjectReference Include="..\..\..\mellinoe\veldrid\src\Veldrid\Veldrid.csproj" />-->
+    
+    <ProjectReference Include="..\FreeTypeBindings\FreeTypeBindings.csproj" />
+    <ProjectReference Include="..\NitroSharp.NsScript\NitroSharp.NsScript.csproj" />
+
+    <PackageReference Include="NitroSharp.Fonts" Version="0.1.1" />
+    <PackageReference Include="NitroSharp.Dependencies.FreeType" Version="0.2.901" />
+
+    <PackageReference Include="Veldrid" Version="4.2.0-beta2-gf23e6c5f8f" />
+    <PackageReference Include="Veldrid.StartupUtilities" Version="4.2.0-beta2-gf23e6c5f8f" />
+    <PackageReference Include="ShaderGen.Primitives" Version="1.2.0-gf5792ed443" />
+    <PackageReference Include="ShaderGen.Build" Version="1.2.0-gf5792ed443" PrivateAssets="All" />
+    
+    <PackageReference Include="SharpDX.Direct2D1" Version="4.0.1" />
+    <PackageReference Include="System.Memory" Version="4.5.0-preview1-26216-02" />
+
+    <!--<PackageReference Include="Veldrid.ImageSharp" Version="4.1.4" />-->
+    <Compile Remove="Content/ImageSharpTextureLoader.cs" />
+  </ItemGroup>
+
+  <Target Name="EmbedGeneratedShaderContent" AfterTargets="AssignTargetPaths">
+    <ItemGroup>
+      <EmbeddedResource Include="@(GeneratedShader)">
+        <LogicalName>NitroSharp.Graphics.Shaders.%(FileName)%(Extension)</LogicalName>
+      </EmbeddedResource>
+    </ItemGroup>
+  </Target>
+  
+</Project>
