@@ -153,6 +153,11 @@ namespace NitroSharp.Content
             }
 
             _loadedAssets.Clear();
+
+            foreach (var loader in _contentLoaders.Values)
+            {
+                loader.Dispose();
+            }
         }
     }
 }

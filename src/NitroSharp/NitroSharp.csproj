@@ -30,6 +30,8 @@
 
     <!--<PackageReference Include="Veldrid.ImageSharp" Version="4.1.4" />-->
     <Compile Remove="Content/ImageSharpTextureLoader.cs" />
+
+    <PackageReference Include="FFmpeg.AutoGen" Version="4.0.0" />
   </ItemGroup>
 
   <Target Name="EmbedGeneratedShaderContent" AfterTargets="AssignTargetPaths">

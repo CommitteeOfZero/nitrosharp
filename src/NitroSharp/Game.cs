@@ -1,6 +1,7 @@
 ﻿using NitroSharp.Animation;
 using NitroSharp.Content;
 using NitroSharp.Graphics;
+using NitroSharp.Media;
 using NitroSharp.NsScript;
 using NitroSharp.NsScript.Execution;
 using NitroSharp.Text;
@@ -9,7 +10,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Veldrid;
@@ -23,21 +23,21 @@ namespace NitroSharp
         private volatile bool _running;
         private readonly Stopwatch _gameTimer;
         private readonly CancellationTokenSource _shutdownCancellation;
-        
+
         private Sdl2Window _window;
         private GraphicsDevice _graphicsDevice;
         private readonly SystemManager _systems;
         private RenderSystem _renderSystem;
         private InputSystem _inputHandler;
         private readonly Configuration _configuration;
-        
+
         private readonly string _nssFolder;
         private NsScriptInterpreter _nssInterpreter;
         private readonly CoreLogic _coreLogic;
         private Task _interpreterProc;
         private volatile bool _nextStateReady = false;
 
-        private SharpDX.WIC.ImagingFactory _wicFactory;
+        private DecoderCollection _decoderCollection;
 
         public Game(Configuration configuration)
         {
@@ -98,17 +98,10 @@ namespace NitroSharp
             var content = new ContentManager(_configuration.ContentRoot);
             ContentLoader textureLoader = null;
             ContentLoader textureDataLoader = null;
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                _wicFactory = new SharpDX.WIC.ImagingFactory();
-                textureLoader = new WicTextureLoader(_wicFactory, _graphicsDevice);
-                textureDataLoader = new WicTextureDataLoader(_wicFactory);
-            }
-            else
-            {
-                throw new Exception("Non-Windows platforms are temporarily not supported due to issues with ImageSharp.");
-                //textureLoader = new ImageSharpTextureLoader(GraphicsDevice);
-            }
+
+            _decoderCollection = new DecoderCollection();
+            textureLoader = new FFmpegTextureLoader(_graphicsDevice, _decoderCollection);
+            textureDataLoader = new FFmpegTextureDataLoader(_decoderCollection);
 
             content.RegisterContentLoader(typeof(BindableTexture), textureLoader);
             content.RegisterContentLoader(typeof(TextureData), textureDataLoader);
@@ -226,8 +219,8 @@ namespace NitroSharp
             _systems.Dispose();
             FontService.Dispose();
             Content.Dispose();
+            _decoderCollection.Dispose();
             _graphicsDevice.Dispose();
-            _wicFactory?.Dispose();
         }
     }
 }
