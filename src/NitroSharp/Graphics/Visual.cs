@@ -54,7 +54,7 @@ namespace NitroSharp.Graphics
         {
         }
 
-        public virtual void Destroy(RenderContext renderContext)
+        public virtual void DestroyDeviceObjects(RenderContext renderContext)
         {
         }
 

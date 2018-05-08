@@ -10,28 +10,31 @@
   <Import Project="..\..\OutputPath.props" />
   
   <ItemGroup>
-    <!--<ProjectReference Include="..\..\..\mellinoe\veldrid\src\Veldrid.ImageSharp\Veldrid.ImageSharp.csproj" />-->
-    <!--<ProjectReference Include="..\..\..\mellinoe\veldrid\src\Veldrid.StartupUtilities\Veldrid.StartupUtilities.csproj" />
-    <ProjectReference Include="..\..\..\mellinoe\veldrid\src\Veldrid\Veldrid.csproj" />-->
-    
-    <ProjectReference Include="..\FreeTypeBindings\FreeTypeBindings.csproj" />
     <ProjectReference Include="..\NitroSharp.NsScript\NitroSharp.NsScript.csproj" />
+    <ProjectReference Include="..\FreeTypeBindings\FreeTypeBindings.csproj" />
 
+    <ProjectReference Include="..\..\..\mellinoe\veldrid\src\Veldrid.OpenGLBindings\Veldrid.OpenGLBindings.csproj" />
+    <ProjectReference Include="..\..\..\mellinoe\veldrid\src\Veldrid.SDL2\Veldrid.SDL2.csproj" />
+    <ProjectReference Include="..\..\..\mellinoe\veldrid\src\Veldrid.StartupUtilities\Veldrid.StartupUtilities.csproj" />
+    <ProjectReference Include="..\..\..\mellinoe\veldrid\src\Veldrid\Veldrid.csproj" />
+    
+    <PackageReference Include="NitroSharp.Dependencies.FFmpeg" Version="0.4.0.12" />
+    <PackageReference Include="NitroSharp.Dependencies.FreeType" Version="0.2.903" />
     <PackageReference Include="NitroSharp.Fonts" Version="0.1.1" />
-    <PackageReference Include="NitroSharp.Dependencies.FreeType" Version="0.2.901" />
+    <PackageReference Include="FFmpeg.AutoGen.DllImport" Version="4.0.0" />
+    <PackageReference Include="System.Memory" Version="4.4.0-preview3-25526-01" />
+    <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="4.4.0"/>
 
-    <PackageReference Include="Veldrid" Version="4.2.0-beta2-gf23e6c5f8f" />
-    <PackageReference Include="Veldrid.StartupUtilities" Version="4.2.0-beta2-gf23e6c5f8f" />
-    <PackageReference Include="ShaderGen.Primitives" Version="1.2.0-gf5792ed443" />
-    <PackageReference Include="ShaderGen.Build" Version="1.2.0-gf5792ed443" PrivateAssets="All" />
+    <!--<PackageReference Include="Veldrid" Version="4.2.0-beta1" />
+    <PackageReference Include="Veldrid.StartupUtilities" Version="4.2.0-beta1" />-->
+    <PackageReference Include="ShaderGen.Primitives" Version="1.2.0-g4bf25fc276" />
+    <PackageReference Include="ShaderGen.Build" Version="1.2.0-g4bf25fc276" PrivateAssets="All" />
     
     <PackageReference Include="SharpDX.Direct2D1" Version="4.0.1" />
-    <PackageReference Include="System.Memory" Version="4.5.0-preview1-26216-02" />
 
-    <!--<PackageReference Include="Veldrid.ImageSharp" Version="4.1.4" />-->
     <Compile Remove="Content/ImageSharpTextureLoader.cs" />
 
-    <PackageReference Include="FFmpeg.AutoGen" Version="4.0.0" />
+    <!--<PackageReference Include="FFmpeg.AutoGen" Version="4.0.0" />-->
   </ItemGroup>
 
   <Target Name="EmbedGeneratedShaderContent" AfterTargets="AssignTargetPaths">

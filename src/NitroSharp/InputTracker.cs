@@ -7,7 +7,7 @@ namespace NitroSharp
 {
     internal abstract class InputTracker : GameSystem
     {
-        private readonly Sdl2Window _window;
+        private readonly GameWindow _window;
 
         private readonly HashSet<Key> _currentlyPressedKeys = new HashSet<Key>();
         private readonly HashSet<Key> _newKeysThisFrame = new HashSet<Key>();
@@ -17,11 +17,11 @@ namespace NitroSharp
 
         private Vector2 _previousSnapshotMousePosition;
 
-        protected InputTracker(Sdl2Window window)
+        protected InputTracker(GameWindow window)
         {
             _window = window;
-            window.FocusGained += OnGotFocus;
-            window.FocusLost += OnLostFocus;
+            //window.FocusGained += OnGotFocus;
+            //window.FocusLost += OnLostFocus;
         }
 
         public Vector2 MouseDelta { get; private set; }

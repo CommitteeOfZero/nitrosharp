@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using NitroSharp.Graphics;
+using Veldrid;
 
 namespace NitroSharp.Content
 {
@@ -22,31 +24,7 @@ namespace NitroSharp.Content
         }
 
         public string RootDirectory { get; }
-
-        public bool IsLoaded(AssetId assetId) => _loadedAssets.ContainsKey(assetId);
-        public bool Exists(AssetId assetId)
-        {
-            Stream stream = null;
-            try
-            {
-                stream = OpenStream(assetId);
-                return true;
-            }
-            catch
-            {
-                return false;
-            }
-            finally
-            {
-                stream?.Dispose();
-            }
-        }
-
-        public virtual IEnumerable<AssetId> Search(string relativePath, string searchPattern)
-        {
-            string path = Path.Combine(RootDirectory.Replace('/', '\\'), relativePath);
-            return Directory.EnumerateFiles(path, searchPattern).Select(x => new AssetId(x));
-        }
+        public GraphicsDevice GraphicsDevice { get; private set; }
 
         public AssetRef<T> Get<T>(AssetId assetId)
         {
@@ -73,6 +51,70 @@ namespace NitroSharp.Content
             {
                 asset = null;
                 return false;
+            }
+        }
+
+        public bool IsLoaded(AssetId assetId) => _loadedAssets.ContainsKey(assetId);
+        public bool Exists(AssetId assetId)
+        {
+            Stream stream = null;
+            try
+            {
+                stream = OpenStream(assetId);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+            finally
+            {
+                stream?.Dispose();
+            }
+        }
+
+        public virtual IEnumerable<AssetId> Search(string relativePath, string searchPattern)
+        {
+            string path = Path.Combine(RootDirectory.Replace("\\", "/"), relativePath);
+            try
+            {
+                return Directory.EnumerateFiles(path, searchPattern).Select(x => new AssetId(x));
+            }
+            catch (Exception e)
+            {
+                return Enumerable.Empty<AssetId>();
+            }
+        }
+
+        public void SetGraphicsDevice(GraphicsDevice graphicsDevice)
+        {
+            GraphicsDevice = graphicsDevice;
+        }
+
+        public void DestroyTextures()
+        {
+            foreach (var cacheValue in _loadedAssets.Values)
+            {
+                if (cacheValue.asset is BindableTexture texture)
+                {
+                    texture.Dispose();
+                }
+            }
+        }
+
+        public void ReloadTextures()
+        {
+            var texturesToReload = _loadedAssets
+                .Where(x => x.Value.asset is BindableTexture)
+                .ToDictionary(x => x.Key, x => x.Value);
+
+            foreach (var oldKvp in texturesToReload)
+            {
+                var oldTexture = oldKvp.Value.asset as BindableTexture;
+                oldTexture.Dispose();
+
+                var newTexture = Load<BindableTexture>(oldKvp.Key);
+                _loadedAssets[oldKvp.Key] = (newTexture, oldKvp.Value.refCount);
             }
         }
 

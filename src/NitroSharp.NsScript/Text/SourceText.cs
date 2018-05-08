@@ -7,7 +7,13 @@ namespace NitroSharp.NsScript.Text
 {
     public sealed class SourceText
     {
-        private static readonly Encoding s_defaultEncoding = CodePagesEncodingProvider.Instance.GetEncoding("shift-jis");
+        private static readonly Encoding s_defaultEncoding;
+
+        static SourceText()
+        {
+            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+            s_defaultEncoding = Encoding.GetEncoding("shift-jis");
+        }
 
         private SourceText(string text, string filePath)
         {

@@ -9,14 +9,15 @@ namespace NitroSharp.Graphics
 {
     internal sealed class Canvas : IDisposable
     {
-        private const uint InitialVertexBufferCapacity = 256 * 4;
+        private const uint InitialVertexBufferCapacity = 6;
         private readonly GraphicsDevice _gd;
+        private Framebuffer _frameBuffer;
         private readonly SpriteEffect _spriteEffect;
         private readonly FillEffect _fillEffect;
 
         private CommandList _cl;
         private Vertex2D[] _vertices;
-        private int _offset;
+        private readonly int _offset = 0;
         private DeviceBuffer _vertexBuffer;
         private readonly DeviceBuffer _indexBuffer;
         private readonly Stack<Matrix4x4> _transforms = new Stack<Matrix4x4>();
@@ -46,13 +47,14 @@ namespace NitroSharp.Graphics
                     BufferUsage.VertexBuffer | BufferUsage.Dynamic));
         }
 
-        public void Begin(CommandList cl)
+        public void Begin(CommandList cl, Framebuffer framebuffer)
         {
             _cl = cl;
+            _frameBuffer = framebuffer;
             _cl.SetVertexBuffer(0, _vertexBuffer);
             _cl.SetIndexBuffer(_indexBuffer, IndexFormat.UInt16);
 
-            _offset = 0;
+            //_offset = 0;
         }
 
         public void SetTransform(in Matrix4x4 transform)
@@ -82,7 +84,7 @@ namespace NitroSharp.Graphics
             properties.Transform = PopTransform();
             properties.EndRecording();
 
-            _fillEffect.Apply(_cl);
+            _fillEffect.Apply(_cl, _frameBuffer.OutputDescription);
 
             Submit();
         }
@@ -122,14 +124,15 @@ namespace NitroSharp.Graphics
             properties.Texture = image;
             properties.EndRecording();
 
-            _spriteEffect.Apply(_cl);
+            _spriteEffect.Apply(_cl, _frameBuffer.OutputDescription);
 
             Submit();
         }
 
         private void Submit()
         {
-            _cl.DrawIndexed(6, 1, 0, _offset - 4, 0);
+            _cl.UpdateBuffer(_vertexBuffer, 0, _vertices);
+            _cl.DrawIndexed(6);
         }
 
         public void End()
@@ -178,7 +181,7 @@ namespace NitroSharp.Graphics
             VertexBR.TexCoords.X = texCoordBR.X;
             VertexBR.TexCoords.Y = texCoordBR.Y;
 
-            _offset = ++offset;
+            //_offset = ++offset;
         }
 
         private void DrawQuadGeometry(in RectangleF rect, in RgbaFloat color)
@@ -214,7 +217,7 @@ namespace NitroSharp.Graphics
             VertexBR.TexCoords.X = 1;
             VertexBR.TexCoords.Y = 1;
 
-            _offset = ++offset;
+            //_offset = ++offset;
         }
 
         private void EnsureCapacity()

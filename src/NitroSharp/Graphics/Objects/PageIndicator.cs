@@ -65,21 +65,22 @@ namespace NitroSharp.Graphics.Objects
             device.DisposeWhenIdle(staging);
             device.DisposeWhenIdle(cl);
 
-            foreach (var assetRef in _icons)
-            {
-                assetRef.Dispose();
-            }
-
-            _icons.Clear();
+            //foreach (var assetRef in _icons)
+            //{
+            //    assetRef.Dispose();
+            //}
         }
 
         public override void Render(RenderContext renderContext)
         {
-            var view = _textureArray.GetTextureView(0, 1, ActiveIconIndex, 1);
-            renderContext.Canvas.DrawImage(view, 0, 0, Color);
+            if (renderContext.Device.BackendType != GraphicsBackend.OpenGLES)
+            {
+                var view = _textureArray.GetTextureView(0, 1, ActiveIconIndex, 1);
+                renderContext.Canvas.DrawImage(view, 0, 0, Color);
+            }
         }
 
-        public override void Destroy(RenderContext renderContext)
+        public override void DestroyDeviceObjects(RenderContext renderContext)
         {
             _textureArray.Dispose();
         }

@@ -5,10 +5,10 @@ namespace NitroSharp
 {
     internal sealed class InputSystem : InputTracker
     {
-        private readonly Sdl2Window _window;
+        private readonly GameWindow _window;
         private readonly CoreLogic _coreLogic;
 
-        public InputSystem(Sdl2Window window, CoreLogic coreLogic) : base(window)
+        public InputSystem(GameWindow window, CoreLogic coreLogic) : base(window)
         {
             _window = window;
             _coreLogic = coreLogic;

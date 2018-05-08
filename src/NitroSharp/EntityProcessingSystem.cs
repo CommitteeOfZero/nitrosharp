@@ -16,6 +16,7 @@ namespace NitroSharp
             DeclareInterests(_interests);
         }
 
+        public IEnumerable<Entity> Entities => _entities;
         public IEnumerable<Type> Interests => _interests;
 
         protected abstract void DeclareInterests(ISet<Type> interests);

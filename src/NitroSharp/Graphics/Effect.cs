@@ -12,6 +12,7 @@ namespace NitroSharp.Graphics
         protected ResourceLayout[] _resourceLayouts;
         private BoundResourceSet[] _boundResourceSets;
 
+        protected OutputDescription _outputDescription;
         private Pipeline _pipeline;
         private bool _initialized;
 
@@ -43,8 +44,13 @@ namespace NitroSharp.Graphics
 
             _boundResourceSets = boundResourceSets;
             _resourceLayouts = _boundResourceSets.Select(x => x.ResourceLayout).ToArray();
-            _pipeline = _gd.ResourceFactory.CreateGraphicsPipeline(SetupPipeline());
+            //CreatePipeline();
             _initialized = true;
+        }
+
+        private void CreatePipeline()
+        {
+            _pipeline = _gd.ResourceFactory.CreateGraphicsPipeline(SetupPipeline());
         }
 
         protected virtual GraphicsPipelineDescription SetupPipeline()
@@ -56,12 +62,19 @@ namespace NitroSharp.Graphics
                 PrimitiveTopology.TriangleList,
                 _shaderSet,
                 _resourceLayouts,
-                _gd.SwapchainFramebuffer.OutputDescription);
+                _outputDescription);
         }
 
-        public void Apply(CommandList commandList)
+        public void Apply(CommandList commandList, OutputDescription outputDescription)
         {
             ThrowIfUninitialized();
+
+            if (!outputDescription.Equals(_outputDescription))
+            {
+                _pipeline?.Dispose();
+                _outputDescription = outputDescription;
+                CreatePipeline();
+            }
 
             commandList.SetPipeline(_pipeline);
             for (int i = 0; i < _boundResourceSets.Length; i++)

@@ -1,4 +1,5 @@
 ﻿using System.Numerics;
+using NitroSharp.Primitives;
 using Veldrid;
 
 namespace NitroSharp.Graphics
@@ -7,8 +8,8 @@ namespace NitroSharp.Graphics
     {
         public const uint SizeInBytes = 32;
 
-        public Vector2 Position;
-        public Vector2 TexCoords;
+        public SimpleVector2 Position;
+        public SimpleVector2 TexCoords;
         public RgbaFloat Color;
 
         public static readonly VertexLayoutDescription LayoutDescription = new VertexLayoutDescription(

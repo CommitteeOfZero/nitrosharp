@@ -44,7 +44,7 @@ namespace NitroSharp.Utilities
         }
 
         public Span<T> AsSpan() => _elements.AsSpan().Slice(0, (int)Count);
-        public ReadOnlySpan<T> AsReadonlySpan() => _elements.AsReadOnlySpan().Slice(0, (int)Count);
+        public ReadOnlySpan<T> AsReadonlySpan() => _elements.AsSpan().Slice(0, (int)Count);
 
         public void Reset()
         {

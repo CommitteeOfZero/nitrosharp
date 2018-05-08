@@ -22,14 +22,15 @@ namespace NitroSharp.Graphics
             FontService = fontService;
         }
 
-        public GraphicsDevice Device { get; }
-        public ResourceFactory Factory { get; }
-        public CommandList CommandList { get; }
-        public Canvas Canvas { get; }
-        public EffectLibrary Effects { get; }
-        public SharedEffectProperties2D SharedEffectProperties2D { get; }
-        public SharedEffectProperties3D SharedEffectProperties3D { get; }
-        public RgbaTexturePool TexturePool { get; }
+        public GraphicsDevice Device { get; internal set; }
+        public Swapchain MainSwapchain { get; internal set; }
+        public ResourceFactory Factory { get; internal set; }
+        public CommandList CommandList { get; internal set; }
+        public Canvas Canvas { get; internal set; }
+        public EffectLibrary Effects { get; internal set; }
+        public SharedEffectProperties2D SharedEffectProperties2D { get; internal set; }
+        public SharedEffectProperties3D SharedEffectProperties3D { get; internal set; }
+        public RgbaTexturePool TexturePool { get; internal set; }
         public FontService FontService { get; }
     }
 }

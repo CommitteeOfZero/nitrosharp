@@ -67,7 +67,7 @@ namespace NitroSharp.Graphics.Effects
                 PrimitiveTopology.TriangleList,
                 _shaderSet,
                 _resourceLayouts,
-                _gd.SwapchainFramebuffer.OutputDescription);
+                _outputDescription);
         }
     }
 }

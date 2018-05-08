@@ -1,6 +1,7 @@
 ﻿using Newtonsoft.Json.Linq;
 using System.IO;
 using System.Text;
+using Veldrid;
 
 namespace NitroSharp.Launcher
 {
@@ -58,6 +59,11 @@ namespace NitroSharp.Launcher
                     configuration.EnableVSync = property.Value.Value<bool>();
                     break;
 
+                case "graphics.backend":
+                    string name = property.Value.Value<string>().ToUpperInvariant();
+                    configuration.PreferredBackend = GetBackend(name);
+                    break;
+
                 case "dev.contentRoot":
                 case "debug.contentRoot":
                     configuration.ContentRoot = property.Value.Value<string>();
@@ -66,6 +72,36 @@ namespace NitroSharp.Launcher
                 case "dev.enableDiagnostics":
                     configuration.EnableDiagnostics = property.Value.Value<bool>();
                     break;
+            }
+        }
+
+        private static GraphicsBackend? GetBackend(string name)
+        {
+            switch (name)
+            {
+                case "DIRECT3D11":
+                case "DIRECT3D 11":
+                case "DIRECT3D":
+                case "D3D11":
+                case "D3D 11":
+                case "D3D":
+                    return GraphicsBackend.Direct3D11;
+
+                case "VULKAN":
+                    return GraphicsBackend.Vulkan;
+
+                case "OPENGL":
+                case "GL":
+                    return GraphicsBackend.OpenGL;
+
+                case "OPENGLES":
+                case "OPENGL ES":
+                case "GLES":
+                case "GL ES":
+                    return GraphicsBackend.OpenGLES;
+
+                default:
+                    return null;
             }
         }
     }

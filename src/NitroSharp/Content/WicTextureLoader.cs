@@ -7,14 +7,10 @@ namespace NitroSharp.Content
 {
     internal sealed class WicTextureLoader : ContentLoader
     {
-        private const int MipLevels = 1;
-
-        private readonly GraphicsDevice _gd;
         private readonly ImagingFactory _wicFactory;
 
-        public WicTextureLoader(ImagingFactory wicFactory, GraphicsDevice gd)
+        public WicTextureLoader(ContentManager content, ImagingFactory wicFactory) : base(content)
         {
-            _gd = gd;
             _wicFactory = wicFactory;
         }
 
@@ -27,8 +23,9 @@ namespace NitroSharp.Content
                 using (var frame = decoder.GetFrame(0))
                 {
                     pixelFormatConverter.Initialize(frame, SharpDX.WIC.PixelFormat.Format32bppRGBA);
-                    var texture = CreateDeviceTexture(_gd, _gd.ResourceFactory, pixelFormatConverter);
-                    return new BindableTexture(_gd.ResourceFactory, texture);
+                    var device = Content.GraphicsDevice;
+                    var texture = CreateDeviceTexture(device, device.ResourceFactory, pixelFormatConverter);
+                    return new BindableTexture(device.ResourceFactory, texture);
                 }
             }
         }
@@ -47,31 +44,29 @@ namespace NitroSharp.Content
             CommandList cl = gd.ResourceFactory.CreateCommandList();
             cl.Begin();
 
-            for (uint level = 0; level < MipLevels; level++)
+            uint level = 0;
+            MappedResource map = gd.Map(staging, MapMode.Write, level);
+            uint rowWidth = width * 4;
+            if (rowWidth == map.RowPitch)
             {
-                MappedResource map = gd.Map(staging, MapMode.Write, level);
-                uint rowWidth = width * 4;
-                if (rowWidth == map.RowPitch)
-                {
-                    uint size = rowWidth * height;
-                    fc.CopyPixels((int)rowWidth, map.Data, (int)size);
-                }
-                else
-                {
-                    for (uint y = 0; y < height; y++)
-                    {
-                        byte* dstStart = (byte*)map.Data.ToPointer() + y * map.RowPitch;
-                        fc.CopyPixels(new SharpDX.Mathematics.Interop.RawBox(0, (int)y, (int)width, 1),
-                            (int)rowWidth, new SharpDX.DataPointer(dstStart, (int)rowWidth));
-                    }
-                }
-
-                gd.Unmap(staging, level);
-                cl.CopyTexture(
-                    staging, 0, 0, 0, level, 0,
-                    result, 0, 0, 0, level, 0,
-                    width, height, 1, 1);
+                uint size = rowWidth * height;
+                fc.CopyPixels((int)rowWidth, map.Data, (int)size);
             }
+            else
+            {
+                for (uint y = 0; y < height; y++)
+                {
+                    byte* dstStart = (byte*)map.Data.ToPointer() + y * map.RowPitch;
+                    fc.CopyPixels(new SharpDX.Mathematics.Interop.RawBox(0, (int)y, (int)width, 1),
+                        (int)rowWidth, new SharpDX.DataPointer(dstStart, (int)rowWidth));
+                }
+            }
+
+            gd.Unmap(staging, level);
+            cl.CopyTexture(
+                staging, 0, 0, 0, level, 0,
+                result, 0, 0, 0, level, 0,
+                width, height, 1, 1);
             cl.End();
 
             gd.SubmitCommands(cl);

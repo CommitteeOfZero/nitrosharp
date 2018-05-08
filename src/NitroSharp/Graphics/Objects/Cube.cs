@@ -1,6 +1,7 @@
 ﻿using System.Numerics;
 using NitroSharp.Content;
 using NitroSharp.Graphics.Effects;
+using NitroSharp.Primitives;
 using NitroSharp.Utilities;
 using Veldrid;
 
@@ -90,16 +91,10 @@ namespace NitroSharp.Graphics.Objects
             _texture = new BindableTexture(factory, textureCube);
             _cubeShader.Properties.Texture = _texture.GetTextureView();
             _cubeShader.Properties.Sampler = gd.Aniso4xSampler;
-
-            _right.Dispose();
-            _left.Dispose();
-            _top.Dispose();
-            _bottom.Dispose();
-            _front.Dispose();
-            _back.Dispose();
+            Color = RgbaFloat.White;
         }
 
-        public override void Destroy(RenderContext renderContext)
+        public override void DestroyDeviceObjects(RenderContext renderContext)
         {
             _vb.Dispose();
             _ib.Dispose();
@@ -114,7 +109,7 @@ namespace NitroSharp.Graphics.Objects
             properties.World = Entity.Transform.GetTransformMatrix();
             properties.EndRecording();
 
-            _cubeShader.Apply(cl);
+            _cubeShader.Apply(cl, renderContext.MainSwapchain.Framebuffer.OutputDescription);
 
             cl.ClearDepthStencil(1f);
             cl.SetVertexBuffer(0, _vb);
@@ -126,35 +121,35 @@ namespace NitroSharp.Graphics.Objects
         private static readonly CubeVertex[] s_vertices = new CubeVertex[]
         {
             // Top
-            new CubeVertex(new Vector3(-0.5f,0.5f,-0.5f)),
-            new CubeVertex(new Vector3(0.5f,0.5f,-0.5f)),
-            new CubeVertex(new Vector3(0.5f,0.5f,0.5f)),
-            new CubeVertex(new Vector3(-0.5f,0.5f,0.5f)),
+            new CubeVertex(new SimpleVector3(-0.5f,0.5f,-0.5f)),
+            new CubeVertex(new SimpleVector3(0.5f,0.5f,-0.5f)),
+            new CubeVertex(new SimpleVector3(0.5f,0.5f,0.5f)),
+            new CubeVertex(new SimpleVector3(-0.5f,0.5f,0.5f)),
             // Bottom
-            new CubeVertex(new Vector3(-0.5f,-0.5f,0.5f)),
-            new CubeVertex(new Vector3(0.5f,-0.5f,0.5f)),
-            new CubeVertex(new Vector3(0.5f,-0.5f,-0.5f)),
-            new CubeVertex(new Vector3(-0.5f,-0.5f,-0.5f)),
+            new CubeVertex(new SimpleVector3(-0.5f,-0.5f,0.5f)),
+            new CubeVertex(new SimpleVector3(0.5f,-0.5f,0.5f)),
+            new CubeVertex(new SimpleVector3(0.5f,-0.5f,-0.5f)),
+            new CubeVertex(new SimpleVector3(-0.5f,-0.5f,-0.5f)),
             // Left
-            new CubeVertex(new Vector3(-0.5f,0.5f,-0.5f)),
-            new CubeVertex(new Vector3(-0.5f,0.5f,0.5f)),
-            new CubeVertex(new Vector3(-0.5f,-0.5f,0.5f)),
-            new CubeVertex(new Vector3(-0.5f,-0.5f,-0.5f)),
+            new CubeVertex(new SimpleVector3(-0.5f,0.5f,-0.5f)),
+            new CubeVertex(new SimpleVector3(-0.5f,0.5f,0.5f)),
+            new CubeVertex(new SimpleVector3(-0.5f,-0.5f,0.5f)),
+            new CubeVertex(new SimpleVector3(-0.5f,-0.5f,-0.5f)),
             // Right
-            new CubeVertex(new Vector3(0.5f,0.5f,0.5f)),
-            new CubeVertex(new Vector3(0.5f,0.5f,-0.5f)),
-            new CubeVertex(new Vector3(0.5f,-0.5f,-0.5f)),
-            new CubeVertex(new Vector3(0.5f,-0.5f,0.5f)),
+            new CubeVertex(new SimpleVector3(0.5f,0.5f,0.5f)),
+            new CubeVertex(new SimpleVector3(0.5f,0.5f,-0.5f)),
+            new CubeVertex(new SimpleVector3(0.5f,-0.5f,-0.5f)),
+            new CubeVertex(new SimpleVector3(0.5f,-0.5f,0.5f)),
             // Back
-            new CubeVertex(new Vector3(0.5f,0.5f,-0.5f)),
-            new CubeVertex(new Vector3(-0.5f,0.5f,-0.5f)),
-            new CubeVertex(new Vector3(-0.5f,-0.5f,-0.5f)),
-            new CubeVertex(new Vector3(0.5f,-0.5f,-0.5f)),
+            new CubeVertex(new SimpleVector3(0.5f,0.5f,-0.5f)),
+            new CubeVertex(new SimpleVector3(-0.5f,0.5f,-0.5f)),
+            new CubeVertex(new SimpleVector3(-0.5f,-0.5f,-0.5f)),
+            new CubeVertex(new SimpleVector3(0.5f,-0.5f,-0.5f)),
             // Front
-            new CubeVertex(new Vector3(-0.5f,0.5f,0.5f)),
-            new CubeVertex(new Vector3(0.5f,0.5f,0.5f)),
-            new CubeVertex(new Vector3(0.5f,-0.5f,0.5f)),
-            new CubeVertex(new Vector3(-0.5f,-0.5f,0.5f)),
+            new CubeVertex(new SimpleVector3(-0.5f,0.5f,0.5f)),
+            new CubeVertex(new SimpleVector3(0.5f,0.5f,0.5f)),
+            new CubeVertex(new SimpleVector3(0.5f,-0.5f,0.5f)),
+            new CubeVertex(new SimpleVector3(-0.5f,-0.5f,0.5f)),
         };
 
         private static readonly ushort[] s_indices = new ushort[]

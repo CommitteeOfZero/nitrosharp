@@ -11,14 +11,13 @@ namespace NitroSharp.Content
 {
     internal sealed class FFmpegTextureLoader : ContentLoader
     {
-        private readonly GraphicsDevice _gd;
         private readonly FrameConverter _frameConverter;
         private readonly DecoderCollection _decoderCollection;
         private unsafe AVInputFormat* _inputFormat;
 
-        public FFmpegTextureLoader(GraphicsDevice graphicsDevice, DecoderCollection decoderCollection)
+        public FFmpegTextureLoader(ContentManager content, DecoderCollection decoderCollection)
+            : base(content)
         {
-            _gd = graphicsDevice;
             _frameConverter = new FrameConverter();
 
             _decoderCollection = decoderCollection;
@@ -43,10 +42,11 @@ namespace NitroSharp.Content
                     bool succ = container.ReadFrame(&packet);
                     succ = decodingSession.TryDecodeFrame(&packet, out frame);
 
-                    var texture = CreateDeviceTexture(_gd, _gd.ResourceFactory, &frame);
+                    var device = Content.GraphicsDevice;
+                    var texture = CreateDeviceTexture(device, device.ResourceFactory, &frame);
 
                     ffmpeg.av_packet_unref(&packet);
-                    return new BindableTexture(_gd.ResourceFactory, texture);
+                    return new BindableTexture(device.ResourceFactory, texture);
                 }
             }
         }

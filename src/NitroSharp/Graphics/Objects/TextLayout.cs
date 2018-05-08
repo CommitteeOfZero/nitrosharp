@@ -204,7 +204,7 @@ namespace NitroSharp.Graphics.Objects
                 (uint)pos.X, (uint)pos.Y, 0, 0, 0, dimensions.Width, dimensions.Height, 1, 1);
         }
 
-        public override void Destroy(RenderContext renderContext)
+        public override void DestroyDeviceObjects(RenderContext renderContext)
         {
             _cl.Dispose();
             _nativeBuffer.Dispose();
@@ -212,6 +212,11 @@ namespace NitroSharp.Graphics.Objects
 
             renderContext.TexturePool.Return(_layoutTexture);
             renderContext.TexturePool.Return(_layoutStaging);
+
+            for (uint i = 0; i < GlyphCount; i++)
+            {
+                _glyphsToUpdate.Add(i);
+            }
         }
     }
 }

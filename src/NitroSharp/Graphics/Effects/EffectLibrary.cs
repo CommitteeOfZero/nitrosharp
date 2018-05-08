@@ -41,7 +41,7 @@ namespace NitroSharp.Graphics
         public static Shader LoadShader(ResourceFactory factory, string set, ShaderStages stage, string entryPoint)
         {
             string name = "NitroSharp.Graphics.Shaders." + 
-                $"{set}-{stage.ToString().ToLower()}.{GetExtension(factory.BackendType)}";
+                $"{set}-{stage.ToString().ToLower()}{GetExtension(factory.BackendType)}";
 
             using (var stream = s_assembly.GetManifestResourceStream(name))
             using (var reader = new BinaryReader(stream))
@@ -51,15 +51,48 @@ namespace NitroSharp.Graphics
             }
         }
 
-        private static string GetExtension(GraphicsBackend backendType)
+        public static string GetExtension(GraphicsBackend backend)
         {
-            return (backendType == GraphicsBackend.Direct3D11)
-                ? "hlsl.bytes"
-                : (backendType == GraphicsBackend.Vulkan)
-                    ? "450.glsl.spv"
-                    : (backendType == GraphicsBackend.Metal)
-                        ? "metallib"
-                        : "330.glsl";
+            if (backend == GraphicsBackend.Vulkan || backend == GraphicsBackend.Direct3D11)
+            {
+                return GetBytecodeExtension(backend);
+            }
+
+            return GetSourceExtension(backend);
+        }
+
+        private static string GetBytecodeExtension(GraphicsBackend backend)
+        {
+            switch (backend)
+            {
+                case GraphicsBackend.Direct3D11: return ".hlsl.bytes";
+                case GraphicsBackend.Vulkan: return ".450.glsl.spv";
+                case GraphicsBackend.OpenGL:
+                    throw new InvalidOperationException("OpenGL and OpenGLES do not support shader bytecode.");
+
+                default:
+                    throw new InvalidOperationException("Invalid Graphics backend: " + backend);
+            }
+        }
+
+        private static string GetSourceExtension(GraphicsBackend backend)
+        {
+            switch (backend)
+            {
+                case GraphicsBackend.Direct3D11:
+                    return ".hlsl";
+                case GraphicsBackend.Vulkan:
+                    return ".450.glsl";
+                case GraphicsBackend.OpenGL:
+                    return ".330.glsl";
+                case GraphicsBackend.OpenGLES:
+                    return ".300.glsles";
+                case GraphicsBackend.Metal:
+                    return ".metallib";
+
+                default:
+                    throw new InvalidOperationException("Invalid Graphics backend: " + backend);
+            }
         }
 
         public void Dispose()

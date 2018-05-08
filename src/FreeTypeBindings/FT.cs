@@ -5,7 +5,7 @@ namespace FreeTypeBindings
 {
     public static unsafe class FT
     {
-        private const string FreetypeDll = "freetype6";
+        private const string FreetypeDll = "libfreetype";
         private const CallingConvention CallConvention = CallingConvention.Cdecl;
 
         public static void CheckResult(Error error)

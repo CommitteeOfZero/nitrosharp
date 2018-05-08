@@ -1,13 +1,13 @@
-﻿using System.Numerics;
+﻿using NitroSharp.Primitives;
 using Veldrid;
 
 namespace NitroSharp.Graphics
 {
     internal struct CubeVertex
     {
-        public readonly Vector3 Position;
+        public readonly SimpleVector3 Position;
 
-        public CubeVertex(in Vector3 position)
+        public CubeVertex(in SimpleVector3 position)
         {
             Position = position;
         }

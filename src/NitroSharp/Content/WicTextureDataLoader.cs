@@ -7,7 +7,7 @@ namespace NitroSharp.Content
     {
         private readonly ImagingFactory _wicFactory;
 
-        public WicTextureDataLoader(ImagingFactory wicFactory)
+        public WicTextureDataLoader(ContentManager content, ImagingFactory wicFactory) : base(content)
         {
             _wicFactory = wicFactory;
         }

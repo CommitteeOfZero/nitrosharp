@@ -11,7 +11,8 @@ namespace NitroSharp.Content
         private unsafe AVInputFormat* _inputFormat;
         private readonly FrameConverter _frameConverter;
 
-        public FFmpegTextureDataLoader(DecoderCollection decoderCollection)
+        public FFmpegTextureDataLoader(ContentManager content, DecoderCollection decoderCollection)
+            : base(content)
         {
             _decoders = decoderCollection;
             _frameConverter = new FrameConverter();
