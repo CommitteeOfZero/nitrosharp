@@ -28,7 +28,6 @@ namespace CowsHead.Android
             CopyAssetsIfNecessary();
 
             var config = ConfigurationReader.Read(ConfigFileName);
-            config.PreferredBackend = GraphicsBackend.OpenGLES;
             _view = new MainView(this);
             var game = new Game(_view, config);
             SetContentView(_view);

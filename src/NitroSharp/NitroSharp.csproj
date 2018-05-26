@@ -22,8 +22,8 @@
     <PackageReference Include="NitroSharp.Dependencies.FreeType" Version="0.2.903" />
     <PackageReference Include="NitroSharp.Fonts" Version="0.1.1" />
     <PackageReference Include="FFmpeg.AutoGen.DllImport" Version="0.4.0" />
-    <PackageReference Include="System.Memory" Version="4.4.0-preview3-25526-01" />
-    <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="4.4.0" />
+    <PackageReference Include="System.Memory" Version="4.5.0" />
+    <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="4.5.0" />
 
     <!--<PackageReference Include="Veldrid" Version="4.2.0-beta1" />
     <PackageReference Include="Veldrid.StartupUtilities" Version="4.2.0-beta1" />-->
