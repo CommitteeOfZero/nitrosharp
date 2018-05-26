@@ -178,9 +178,11 @@ namespace NitroSharp
                     (uint)_configuration.WindowWidth, (uint)_configuration.WindowHeight,
                     options.SwapchainDepthFormat, options.SyncToVerticalBlank);
 
-            if (backend == GraphicsBackend.OpenGLES)
+            if (backend == GraphicsBackend.OpenGLES || backend == GraphicsBackend.OpenGL)
             {
-                _graphicsDevice = GraphicsDevice.CreateOpenGLES(options, swapchainDesc);
+                _graphicsDevice = _window is DesktopWindow desktopWindow
+                    ? VeldridStartup.CreateDefaultOpenGLGraphicsDevice(options, desktopWindow.SdlWindow, backend)
+                    : GraphicsDevice.CreateOpenGLES(options, swapchainDesc);
                 _swapchain = _graphicsDevice.MainSwapchain;
             }
             else
@@ -199,9 +201,6 @@ namespace NitroSharp
             {
                 case GraphicsBackend.Direct3D11:
                     return GraphicsDevice.CreateD3D11(options);
-                case GraphicsBackend.OpenGL:
-                    var desktopWindow = _window as DesktopWindow;
-                    return VeldridStartup.CreateDefaultOpenGLGraphicsDevice(options, desktopWindow.SdlWindow, backend);
                 case GraphicsBackend.Vulkan:
                     return GraphicsDevice.CreateVulkan(options);
                 case GraphicsBackend.Metal:
