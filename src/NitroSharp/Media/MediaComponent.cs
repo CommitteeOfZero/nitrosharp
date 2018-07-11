@@ -282,10 +282,10 @@ namespace NitroSharp.Media
                 unsafe
                 {
                     var span = new ReadOnlySpan<short>(sampleBuffer.ToPointer(), bufferSize / 2);
-                    short firstSample = span[0];
-                    short secondSample = span[span.Length / 4];
-                    short thirdSample = span[span.Length / 4 + span.Length / 2];
-                    short fourthSample = span[span.Length - 2];
+                    int firstSample = span[0];
+                    int secondSample = span[span.Length / 4];
+                    int thirdSample = span[span.Length / 4 + span.Length / 2];
+                    int fourthSample = span[span.Length - 2];
 
                     double amplitude =
                         (Math.Abs(firstSample) + Math.Abs(secondSample)
