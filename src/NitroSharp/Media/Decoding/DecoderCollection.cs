@@ -1,16 +1,18 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.Collections.Concurrent;
 using FFmpeg.AutoGen;
 
-namespace NitroSharp.Media
+namespace NitroSharp.Media.Decoding
 {
-    internal sealed class DecoderCollection : IDisposable
+    public sealed class DecoderCollection
     {
-        private readonly Dictionary<AVCodecID, IntPtr> _decoders;
+        public static readonly DecoderCollection Shared = new DecoderCollection();
 
-        public DecoderCollection()
+        private readonly ConcurrentDictionary<AVCodecID, IntPtr> _decoders;
+
+        private DecoderCollection()
         {
-            _decoders = new Dictionary<AVCodecID, IntPtr>();
+            _decoders = new ConcurrentDictionary<AVCodecID, IntPtr>();
         }
 
         public void Preload(AVCodecID codecId)
@@ -28,6 +30,7 @@ namespace NitroSharp.Media
                 AVCodec* pCodec = ffmpeg.avcodec_find_decoder(codecId);
                 ThrowIfMissing(pCodec, codecId);
                 decoder = new IntPtr(pCodec);
+                _decoders[codecId] = decoder;
             }
 
             return (AVCodec*)decoder;
@@ -39,11 +42,6 @@ namespace NitroSharp.Media
             {
                 throw new FFmpegException($"Decoder '{codecId}' is missing.");
             }
-        }
-
-        public void Dispose()
-        {
-            _decoders.Clear();
         }
     }
 }

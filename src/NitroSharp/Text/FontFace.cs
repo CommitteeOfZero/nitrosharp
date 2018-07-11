@@ -12,13 +12,13 @@ namespace NitroSharp.Text
     {
         private unsafe Face* _face;
 
-        private ValueList<GlyphInfo> _cachedGlyphs;
+        private ArrayBuilder<GlyphInfo> _cachedGlyphs;
         private readonly Dictionary<char, uint> _cacheEntryIndices;
 
         public unsafe FontFace(Face* face)
         {
             _face = face;
-            _cachedGlyphs = new ValueList<GlyphInfo>(256);
+            _cachedGlyphs = new ArrayBuilder<GlyphInfo>(256);
             _cacheEntryIndices = new Dictionary<char, uint>(capacity: 256);
 
             FontFamily = Marshal.PtrToStringAnsi(face->family_name);

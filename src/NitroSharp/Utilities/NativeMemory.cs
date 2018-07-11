@@ -27,6 +27,14 @@ namespace NitroSharp.Utilities
             }
         }
 
+        public ReadOnlySpan<T> AsReadOnlySpan<T>()
+        {
+            unsafe
+            {
+                return new ReadOnlySpan<T>(Pointer.ToPointer(), (int)Size);
+            }
+        }
+
         public void Dispose()
         {
             Destroy();

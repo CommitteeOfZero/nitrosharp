@@ -7,7 +7,7 @@ using Veldrid;
 
 namespace NitroSharp.Graphics
 {
-    internal sealed class Canvas : IDisposable
+    public sealed class Canvas : IDisposable
     {
         private const uint InitialVertexBufferCapacity = 6;
         private readonly GraphicsDevice _gd;
@@ -29,7 +29,7 @@ namespace NitroSharp.Graphics
         {
             _gd = graphicsDevice;
             _spriteEffect = effectLibrary.Get<SpriteEffect>(sharedEffectProperties);
-            _spriteEffect.Properties.Sampler = _gd.Aniso4xSampler;
+            _spriteEffect.Properties.Sampler = _gd.LinearSampler;
             _fillEffect = effectLibrary.Get<FillEffect>(sharedEffectProperties);
 
             _vertices = new Vertex2D[InitialVertexBufferCapacity];

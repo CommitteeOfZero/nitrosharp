@@ -20,10 +20,14 @@
     
     <PackageReference Include="NitroSharp.Dependencies.FFmpeg" Version="0.4.0.12" />
     <PackageReference Include="NitroSharp.Dependencies.FreeType" Version="0.2.903" />
+    <PackageReference Include="NitroSharp.Dependencies.OpenALSoft" Version="1.18.2" />
     <PackageReference Include="NitroSharp.Fonts" Version="0.1.1" />
     <PackageReference Include="FFmpeg.AutoGen.DllImport" Version="0.4.0" />
+    <PackageReference Include="OpenAL-CS.NetStandard" Version="1.0.0" />
     <PackageReference Include="System.Memory" Version="4.5.0" />
+    <PackageReference Include="System.Buffers" Version="4.5.0" />
     <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="4.5.0" />
+    <PackageReference Include="System.Threading.Channels" Version="4.5.0" />
 
     <!--<PackageReference Include="Veldrid" Version="4.2.0-beta1" />
     <PackageReference Include="Veldrid.StartupUtilities" Version="4.2.0-beta1" />-->
@@ -31,10 +35,9 @@
     <PackageReference Include="ShaderGen.Build" Version="1.2.0-g4bf25fc276" PrivateAssets="All" />
     
     <PackageReference Include="SharpDX.Direct2D1" Version="4.0.1" />
+    <PackageReference Include="SharpDX.XAudio2" Version="4.0.1" />
 
     <Compile Remove="Content/ImageSharpTextureLoader.cs" />
-
-    <!--<PackageReference Include="FFmpeg.AutoGen" Version="4.0.0" />-->
   </ItemGroup>
 
   <Target Name="EmbedGeneratedShaderContent" AfterTargets="AssignTargetPaths">

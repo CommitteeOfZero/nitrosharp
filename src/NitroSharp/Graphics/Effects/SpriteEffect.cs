@@ -49,5 +49,17 @@ namespace NitroSharp.Graphics
                 set => Set(ref _sampler, value);
             }
         }
+
+        protected override GraphicsPipelineDescription SetupPipeline()
+        {
+            return new GraphicsPipelineDescription(
+                BlendStateDescription.SingleAlphaBlend,
+                DepthStencilStateDescription.Disabled,
+                RasterizerStateDescription.Default,
+                PrimitiveTopology.TriangleList,
+                _shaderSet,
+                _resourceLayouts,
+                _outputDescription);
+        }
     }
 }

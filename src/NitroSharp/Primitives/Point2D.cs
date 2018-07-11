@@ -3,7 +3,7 @@ using System.Numerics;
 
 namespace NitroSharp.Primitives
 {
-    internal readonly struct Point2D
+    public readonly struct Point2D
     {
         public static readonly Point2D Zero = new Point2D(0, 0);
 

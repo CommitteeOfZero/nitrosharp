@@ -7,7 +7,7 @@ namespace NitroSharp.Primitives
     /// A read-only rectangle struct that uses floating-point numbers to represent the location and size.
     /// Meant to be used in conjuction with the 'in' modifier.
     /// </summary>
-    internal readonly struct RectangleF
+    public readonly struct RectangleF
     {
         public readonly float X;
         public readonly float Y;

@@ -46,7 +46,7 @@ namespace NitroSharp.Graphics
             protected set => _color = value;
         }
 
-        public int Priority { get; protected set; }
+        public int Priority { get; set; }
         public virtual SizeF Bounds => SizeF.Zero;
         public bool IsInitialized { get; internal set; }
 

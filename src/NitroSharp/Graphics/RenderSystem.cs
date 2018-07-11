@@ -38,6 +38,7 @@ namespace NitroSharp.Graphics
             _gd = device;
             ResourceFactory factory = _gd.ResourceFactory;
             _cl = factory.CreateCommandList();
+            _cl.Name = "Main";
             _effectLibrary = new EffectLibrary(_gd);
 
             _sharedProps2D = new SharedEffectProperties2D(_gd);
@@ -59,6 +60,7 @@ namespace NitroSharp.Graphics
                 _sharedProps2D, _sharedProps3D, _texturePool, _fontService);
 
             _rc.MainSwapchain = _swapchain = swapchain;
+            _rc.DesignResolution = new Size((uint)DesignResolution.Width, (uint)DesignResolution.Height);
             _rc.Device = device;
 
             foreach (var entity in Entities)
@@ -107,7 +109,7 @@ namespace NitroSharp.Graphics
             _cl.End();
 
             _gd.SubmitCommands(_cl);
-            _gd.WaitForIdle();
+            //_gd.WaitForIdle();
         }
 
         public void Present()

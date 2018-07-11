@@ -1,4 +1,5 @@
-﻿using Veldrid;
+﻿using NitroSharp.Media;
+using Veldrid;
 
 namespace NitroSharp
 {
@@ -10,7 +11,8 @@ namespace NitroSharp
         public string WindowTitle { get; set; }
 
         public bool EnableVSync { get; set; }
-        public GraphicsBackend? PreferredBackend { get; set; }
+        public GraphicsBackend? PreferredGraphicsBackend { get; set; }
+        public AudioBackend? PreferredAudioBackend { get; set; }
 
         public string ContentRoot { get; set; }
         public bool EnableDiagnostics { get; set; }

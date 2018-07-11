@@ -1,4 +1,4 @@
-﻿namespace NitroSharp.Audio
+﻿namespace NitroSharp.Media
 {
     internal enum AudioKind
     {

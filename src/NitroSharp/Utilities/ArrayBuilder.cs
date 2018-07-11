@@ -2,12 +2,12 @@
 
 namespace NitroSharp.Utilities
 {
-    internal struct ValueList<T> where T : struct
+    internal struct ArrayBuilder<T> where T : struct
     {
         private T[] _elements;
         private readonly uint _initialCapacity;
 
-        public ValueList(uint initialCapacity)
+        public ArrayBuilder(uint initialCapacity)
         {
             _initialCapacity = initialCapacity;
             _elements = new T[initialCapacity];
@@ -43,8 +43,8 @@ namespace NitroSharp.Utilities
             return copy;
         }
 
-        public Span<T> AsSpan() => _elements.AsSpan().Slice(0, (int)Count);
-        public ReadOnlySpan<T> AsReadonlySpan() => _elements.AsSpan().Slice(0, (int)Count);
+        public Span<T> AsSpan() => new Span<T>(_elements, 0, (int)Count);
+        public ReadOnlySpan<T> AsReadonlySpan() => new ReadOnlySpan<T>(_elements, 0, (int)Count);
 
         public void Reset()
         {

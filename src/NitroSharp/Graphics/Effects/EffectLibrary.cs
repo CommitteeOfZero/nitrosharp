@@ -6,7 +6,7 @@ using Veldrid;
 
 namespace NitroSharp.Graphics
 {
-    internal sealed class EffectLibrary : IDisposable
+    public sealed class EffectLibrary : IDisposable
     {
         private static readonly Assembly s_assembly = typeof(EffectLibrary).Assembly;
 

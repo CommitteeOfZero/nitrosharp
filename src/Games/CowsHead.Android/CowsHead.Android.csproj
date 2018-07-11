@@ -123,22 +123,25 @@
     <PackageReference Include="NitroSharp.Dependencies.FreeType">
       <Version>0.2.904</Version>
     </PackageReference>
+    <PackageReference Include="NitroSharp.Dependencies.OpenALSoft">
+      <Version>1.18.2</Version>
+    </PackageReference>
     <PackageReference Include="Xamarin.Android.Support.Design" Version="25.4.0.2" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\..\..\mellinoe\veldrid\src\Veldrid.OpenGLBindings\Veldrid.OpenGLBindings.csproj">
+    <ProjectReference Include="..\..\..\..\SomeAnonDev\veldrid\src\Veldrid.OpenGLBindings\Veldrid.OpenGLBindings.csproj">
       <Project>{f2ca0f22-3422-4142-9f36-16fdf4303b72}</Project>
       <Name>Veldrid.OpenGLBindings</Name>
     </ProjectReference>
-    <ProjectReference Include="..\..\..\..\mellinoe\veldrid\src\Veldrid.SDL2\Veldrid.SDL2.csproj">
+    <ProjectReference Include="..\..\..\..\SomeAnonDev\veldrid\src\Veldrid.SDL2\Veldrid.SDL2.csproj">
       <Project>{cbe1c7ae-837f-4c2d-a48e-89c0d9d94792}</Project>
       <Name>Veldrid.SDL2</Name>
     </ProjectReference>
-    <ProjectReference Include="..\..\..\..\mellinoe\veldrid\src\Veldrid.StartupUtilities\Veldrid.StartupUtilities.csproj">
+    <ProjectReference Include="..\..\..\..\SomeAnonDev\veldrid\src\Veldrid.StartupUtilities\Veldrid.StartupUtilities.csproj">
       <Project>{20199cee-b47f-4ed6-81fc-489cec8f126b}</Project>
       <Name>Veldrid.StartupUtilities</Name>
     </ProjectReference>
-    <ProjectReference Include="..\..\..\..\mellinoe\veldrid\src\Veldrid\Veldrid.csproj">
+    <ProjectReference Include="..\..\..\..\SomeAnonDev\veldrid\src\Veldrid\Veldrid.csproj">
       <Project>{6e1331fc-cc0c-429f-9dd2-8d357947d800}</Project>
       <Name>Veldrid</Name>
     </ProjectReference>

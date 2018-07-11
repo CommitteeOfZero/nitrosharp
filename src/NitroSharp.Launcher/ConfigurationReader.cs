@@ -1,4 +1,6 @@
 ﻿using Newtonsoft.Json.Linq;
+using NitroSharp.Media;
+using System;
 using System.IO;
 using System.Text;
 using Veldrid;
@@ -61,7 +63,12 @@ namespace NitroSharp.Launcher
 
                 case "graphics.backend":
                     string name = property.Value.Value<string>().ToUpperInvariant();
-                    configuration.PreferredBackend = GetBackend(name);
+                    configuration.PreferredGraphicsBackend = GetGraphicsBackend(name);
+                    break;
+
+                case "audio.backend":
+                    name = property.Value.Value<string>().ToUpperInvariant();
+                    configuration.PreferredAudioBackend = GetAudioBackend(name);
                     break;
 
                 case "dev.contentRoot":
@@ -75,7 +82,25 @@ namespace NitroSharp.Launcher
             }
         }
 
-        private static GraphicsBackend? GetBackend(string name)
+        private static AudioBackend? GetAudioBackend(string name)
+        {
+            switch (name)
+            {
+                case "XAUDIO":
+                case "XAUDIO2":
+                    return AudioBackend.XAudio2;
+
+                case "OPENAL":
+                case "OPENALSOFT":
+                case "OPENAL SOFT":
+                    return AudioBackend.OpenAL;
+
+                default:
+                    return null;
+            }
+        }
+
+        private static GraphicsBackend? GetGraphicsBackend(string name)
         {
             switch (name)
             {
@@ -104,5 +129,6 @@ namespace NitroSharp.Launcher
                     return null;
             }
         }
+
     }
 }

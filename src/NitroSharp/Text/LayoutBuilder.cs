@@ -9,7 +9,7 @@ namespace NitroSharp.Text
 {
     internal sealed class LayoutBuilder
     {
-        private ValueList<LayoutGlyph> _glyphs;
+        private ArrayBuilder<LayoutGlyph> _glyphs;
         private readonly FontFamily _fontFamily;
         private FontFace _lastFont;
         private Vector2 _penPosition;
@@ -20,10 +20,10 @@ namespace NitroSharp.Text
             _fontFamily = fontFamily;
             _penPosition = Vector2.Zero;
             _maxLayoutBounds = maxBounds;
-            _glyphs = new ValueList<LayoutGlyph>(initialCapacity);
+            _glyphs = new ArrayBuilder<LayoutGlyph>(initialCapacity);
         }
 
-        public ref ValueList<LayoutGlyph> Glyphs => ref _glyphs;
+        public ref ArrayBuilder<LayoutGlyph> Glyphs => ref _glyphs;
 
         public void Append(Span<TextRun> textRuns)
         {

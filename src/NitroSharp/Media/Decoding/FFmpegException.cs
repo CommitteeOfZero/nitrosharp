@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace NitroSharp.Media
+namespace NitroSharp.Media.Decoding
 {
     public class FFmpegException : Exception
     {

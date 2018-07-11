@@ -56,6 +56,22 @@ namespace NitroSharp.NsScript.Symbols
 
             Declare("CreateCube", CreateCube);
             Declare("SetFov", SetFov);
+
+            Declare("CreateMovie", CreateMovie);
+        }
+
+        private static ConstantValue CreateMovie(EngineImplementationBase impl, Stack<ConstantValue> args)
+        {
+            string entityName = EntityName(PopString(args));
+            int priority = (int)PopNumeric(args).Value;
+            var x = PopCoordinate(args);
+            var y = PopCoordinate(args);
+            bool loop = PopBoolean(args);
+            PopBoolean(args);
+            string fileName = PopString(args);
+
+            impl.LoadVideo(entityName, priority, x, y, loop, fileName);
+            return null;
         }
 
         private static ConstantValue Time(EngineImplementationBase arg1, Stack<ConstantValue> arg2)
@@ -400,7 +416,7 @@ namespace NitroSharp.NsScript.Symbols
             TimeSpan loopStart = PopTimeSpan(args);
             TimeSpan loopEnd = PopTimeSpan(args);
 
-            implementation.SetLoopPoint(entityName, loopStart, loopEnd);
+            implementation.SetLoopRegion(entityName, loopStart, loopEnd);
             return null;
         }
 

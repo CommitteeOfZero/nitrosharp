@@ -1,21 +1,19 @@
 ﻿using System.IO;
 using FFmpeg.AutoGen;
-using NitroSharp.Media;
+using NitroSharp.Media.Decoding;
 using NitroSharp.Utilities;
 
 namespace NitroSharp.Content
 {
     internal sealed class FFmpegTextureDataLoader : ContentLoader
     {
-        private readonly DecoderCollection _decoders;
         private unsafe AVInputFormat* _inputFormat;
-        private readonly FrameConverter _frameConverter;
+        private readonly VideoFrameConverter _frameConverter;
 
-        public FFmpegTextureDataLoader(ContentManager content, DecoderCollection decoderCollection)
+        public FFmpegTextureDataLoader(ContentManager content)
             : base(content)
         {
-            _decoders = decoderCollection;
-            _frameConverter = new FrameConverter();
+            _frameConverter = new VideoFrameConverter();
             unsafe
             {
                 _inputFormat = ffmpeg.av_find_input_format("image2pipe");
@@ -26,20 +24,21 @@ namespace NitroSharp.Content
         {
             unsafe
             {
-                using (var container = new MediaContainer(stream, _inputFormat, leaveOpen: false))
-                using (var decodingSession = new DecodingSession(container, container.VideoStreamId.Value, _decoders))
+                using (var container = MediaContainer.Open(stream, _inputFormat, leaveOpen: false))
+                using (var decodingSession = new DecodingSession(container, container.BestVideoStream.Id))
                 {
                     var packet = new AVPacket();
-                    // Note: av_frame_unref should NOT be called here. The DecodingSession is responsible for doing that.
                     var frame = new AVFrame();
-                    bool succ = container.ReadFrame(&packet);
-                    succ = decodingSession.TryDecodeFrame(&packet, out frame);
-
-                    ffmpeg.av_packet_unref(&packet);
+                    bool succ = container.ReadFrame(ref packet) == 0;
+                    decodingSession.DecodeFrame(ref packet, ref frame);
 
                     var buffer = NativeMemory.Allocate((uint)(frame.width * frame.height * 4));
                     var size = new Primitives.Size((uint)frame.width, (uint)frame.height);
-                    _frameConverter.ConvertToRgba(&frame, size, (byte*)buffer.Pointer);
+                    _frameConverter.ConvertToRgba(ref frame, size, (byte*)buffer.Pointer);
+
+                    FFmpegUtil.UnrefBuffers(ref packet);
+                    FFmpegUtil.UnrefBuffers(ref frame);
+
                     return new FFmpegTextureData(buffer, size);
                 }
             }

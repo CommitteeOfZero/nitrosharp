@@ -2,6 +2,7 @@
 using NitroSharp.Content;
 using NitroSharp.Graphics;
 using NitroSharp.Media;
+using NitroSharp.Media.Decoding;
 using NitroSharp.NsScript;
 using NitroSharp.NsScript.Execution;
 using NitroSharp.Primitives;
@@ -41,8 +42,10 @@ namespace NitroSharp
         private Task _interpreterProc;
         private volatile bool _nextStateReady;
 
-        private DecoderCollection _decoderCollection;
+        private VideoFrameConverter _frameConverter;
         private SharpDX.WIC.ImagingFactory _wicFactory;
+        private AudioDevice _audioDevice;
+        private AudioSourcePool _audioSourcePool;
 
         public Game(GameWindow window, Configuration configuration)
         {
@@ -65,10 +68,16 @@ namespace NitroSharp
         internal ContentManager Content { get; private set; }
         internal FontService FontService { get; private set; }
 
+        internal AudioDevice AudioDevice => _audioDevice;
+        internal AudioSourcePool AudioSourcePool => _audioSourcePool;
+
         public async Task Run(bool useDedicatedThread = false)
         {
             var loadScriptTask = Task.Run((Action)LoadStartupScript);
-            await _initializingGraphics.Task;
+            var initializeAudio = Task.Run((Action)SetupAudio);
+
+            await Task.WhenAll(_initializingGraphics.Task, initializeAudio);
+
             CreateServices();
             RegisterSystems();
             _coreLogic.InitializeResources();
@@ -109,22 +118,34 @@ namespace NitroSharp
             ContentLoader textureLoader = null;
             ContentLoader textureDataLoader = null;
 
-            _decoderCollection = new DecoderCollection();
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            //if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            //{
+            //    _wicFactory = new SharpDX.WIC.ImagingFactory();
+            //    textureLoader = new WicTextureLoader(content, _wicFactory);
+            //    textureDataLoader = new WicTextureDataLoader(content, _wicFactory);
+            //}
+            //else
             {
-                _wicFactory = new SharpDX.WIC.ImagingFactory();
-                textureLoader = new WicTextureLoader(content, _wicFactory);
-                textureDataLoader = new WicTextureDataLoader(content, _wicFactory);
-            }
-            else
-            {
-                textureLoader = new FFmpegTextureLoader(content, _decoderCollection);
-                textureDataLoader = new FFmpegTextureDataLoader(content, _decoderCollection);
+                textureLoader = new FFmpegTextureLoader(content);
+                textureDataLoader = new FFmpegTextureDataLoader(content);
             }
 
             content.RegisterContentLoader(typeof(BindableTexture), textureLoader);
             content.RegisterContentLoader(typeof(TextureData), textureDataLoader);
+
+            _frameConverter = new VideoFrameConverter();
+            var mediaFileLoader = new MediaFileLoader(content, _frameConverter, _audioDevice.AudioParameters);
+            content.RegisterContentLoader(typeof(MediaPlaybackSession), mediaFileLoader);
+
             return content;
+        }
+
+        private void SetupAudio()
+        {
+            var audioParameters = AudioParameters.Default;
+            var backend = _configuration.PreferredAudioBackend ?? AudioDevice.GetPlatformDefaultBackend();
+            _audioDevice = AudioDevice.Create(backend, audioParameters);
+            _audioSourcePool = new AudioSourcePool(_audioDevice);
         }
 
         private FontService CreateFontService()
@@ -173,7 +194,7 @@ namespace NitroSharp
 #if DEBUG
             options.Debug = true;
 #endif
-            GraphicsBackend backend = _configuration.PreferredBackend ?? VeldridStartup.GetPlatformDefaultBackend();
+            GraphicsBackend backend = _configuration.PreferredGraphicsBackend ?? VeldridStartup.GetPlatformDefaultBackend();
             var swapchainDesc = new SwapchainDescription(swapchainSource,
                     (uint)_configuration.WindowWidth, (uint)_configuration.WindowHeight,
                     options.SwapchainDepthFormat, options.SyncToVerticalBlank);
@@ -248,6 +269,7 @@ namespace NitroSharp
                 long currentFrameTicks = _gameTimer.ElapsedTicks;
                 float deltaMilliseconds = (currentFrameTicks - prevFrameTicks) / Stopwatch.Frequency * 1000.0f;
                 prevFrameTicks = currentFrameTicks;
+
                 Update(deltaMilliseconds);
             }
         }
@@ -351,13 +373,14 @@ namespace NitroSharp
 
         public void Dispose()
         {
-            Content.Dispose();
             _systems.Dispose();
+            Content.Dispose();
             FontService.Dispose();
-            _decoderCollection.Dispose();
             _wicFactory?.Dispose();
             _swapchain.Dispose();
             _graphicsDevice.Dispose();
+            _audioDevice.Dispose();
+            _frameConverter.Dispose();
         }
     }
 }

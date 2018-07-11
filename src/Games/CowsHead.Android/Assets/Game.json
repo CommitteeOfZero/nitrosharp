@@ -3,14 +3,13 @@
   "window.width": 1280,
   "window.height": 720,
   "graphics.vsync": true,
-  "graphics.backend": "gles",
+  "graphics.backend": "OpenGLES",
   "dev.contentRoot": "/storage/emulated/0/NitroSharp/Noah",
 
   "profiles": {
     "CustomBoot": {
       "startupScript": "boot_any.nss"
     },
-
 
     "Staking": {
       "startupScript": "boot-staking.nss"

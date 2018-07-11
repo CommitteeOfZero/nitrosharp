@@ -1,4 +1,5 @@
-﻿using NitroSharp.Text;
+﻿using NitroSharp.Primitives;
+using NitroSharp.Text;
 using Veldrid;
 
 namespace NitroSharp.Graphics
@@ -23,6 +24,7 @@ namespace NitroSharp.Graphics
         }
 
         public GraphicsDevice Device { get; internal set; }
+        public Size DesignResolution { get; internal set; }
         public Swapchain MainSwapchain { get; internal set; }
         public ResourceFactory Factory { get; internal set; }
         public CommandList CommandList { get; internal set; }

@@ -51,6 +51,8 @@ namespace NitroSharp.NsScript
 
         public virtual void CreateCube(string entityName, string front, string back, string right, string left, string top, string bottom) { }
 
+        public virtual void LoadVideo(string entityName, int priority, NsCoordinate x, NsCoordinate y, bool loop, string fileName) { }
+
         /// <summary>
         /// Original name: CreateColor.
         /// </summary>
@@ -69,7 +71,7 @@ namespace NitroSharp.NsScript
         {
         }
 
-        public virtual void SetLoopPoint(string entityName, TimeSpan loopStart, TimeSpan loopEnd) { }
+        public virtual void SetLoopRegion(string entityName, TimeSpan loopStart, TimeSpan loopEnd) { }
         public virtual void SetVolume(string entityName, TimeSpan duration, NsRational volume) { }
         public virtual void Fade(string entityName, TimeSpan duration, NsRational dstOpacity, NsEasingFunction easingFunction, TimeSpan delay) { }
         public virtual void Move(string entityName, TimeSpan duration, NsCoordinate dstX, NsCoordinate dstY, NsEasingFunction easingFunction, TimeSpan delay) { }

@@ -3,7 +3,7 @@ using Veldrid;
 
 namespace NitroSharp.Graphics
 {
-    internal sealed class BoundResourceAttribute : Attribute
+    public sealed class BoundResourceAttribute : Attribute
     {
         public BoundResourceAttribute(ResourceKind kind, ShaderStages shaderStages)
             : this(null, kind, shaderStages)

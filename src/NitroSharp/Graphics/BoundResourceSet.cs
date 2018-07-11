@@ -8,7 +8,7 @@ using Veldrid;
 
 namespace NitroSharp.Graphics
 {
-    internal abstract class BoundResourceSet
+    public abstract class BoundResourceSet
     {
         private readonly GraphicsDevice _gd;
         private readonly DisposeCollectorResourceFactory _factory;
@@ -105,7 +105,7 @@ namespace NitroSharp.Graphics
             out (ResourceLayout, ResourceSetDescription) layoutSetPair)
         {
             propertyBindings = new Dictionary<string, PropertyBinding>();
-            var layoutBuilder = new ValueList<ResourceLayoutElementDescription>(4);
+            var layoutBuilder = new ArrayBuilder<ResourceLayoutElementDescription>(4);
 
             var typeInfo = type.GetTypeInfo();
             uint positionInResourceSet = 0;
@@ -133,6 +133,20 @@ namespace NitroSharp.Graphics
             var layout = resourceFactory.CreateResourceLayout(new ResourceLayoutDescription(layoutElements));
             var set = new ResourceSetDescription(layout, new BindableResource[layoutElements.Length]);
             layoutSetPair = (layout, set);
+        }
+
+        internal readonly struct PropertyBinding
+        {
+            public PropertyBinding(BoundResourceAttribute attribute, uint positionInResourceSet, uint bufferSize)
+            {
+                Attribute = attribute;
+                PositionInResourceSet = positionInResourceSet;
+                BufferSize = bufferSize;
+            }
+
+            public BoundResourceAttribute Attribute { get; }
+            public uint PositionInResourceSet { get; }
+            public uint BufferSize { get; }
         }
     }
 }

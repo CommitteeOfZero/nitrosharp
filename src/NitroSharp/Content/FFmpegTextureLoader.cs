@@ -2,7 +2,7 @@
 using System.Runtime.CompilerServices;
 using FFmpeg.AutoGen;
 using NitroSharp.Graphics;
-using NitroSharp.Media;
+using NitroSharp.Media.Decoding;
 using NitroSharp.Primitives;
 using NitroSharp.Utilities;
 using Veldrid;
@@ -11,16 +11,15 @@ namespace NitroSharp.Content
 {
     internal sealed class FFmpegTextureLoader : ContentLoader
     {
-        private readonly FrameConverter _frameConverter;
-        private readonly DecoderCollection _decoderCollection;
+        private readonly VideoFrameConverter _frameConverter;
         private unsafe AVInputFormat* _inputFormat;
 
-        public FFmpegTextureLoader(ContentManager content, DecoderCollection decoderCollection)
+        public FFmpegTextureLoader(ContentManager content)
             : base(content)
         {
-            _frameConverter = new FrameConverter();
+            _frameConverter = new VideoFrameConverter();
 
-            _decoderCollection = decoderCollection;
+            var decoderCollection = DecoderCollection.Shared;
             decoderCollection.Preload(AVCodecID.AV_CODEC_ID_MJPEG);
             decoderCollection.Preload(AVCodecID.AV_CODEC_ID_PNG);
             unsafe
@@ -33,19 +32,20 @@ namespace NitroSharp.Content
         {
             unsafe
             {
-                using (var container = new MediaContainer(stream, _inputFormat, leaveOpen: false))
-                using (var decodingSession = new DecodingSession(container, container.VideoStreamId.Value, _decoderCollection))
+                using (var container = MediaContainer.Open(stream, _inputFormat, leaveOpen: false))
+                using (var decodingSession = new DecodingSession(container, container.BestVideoStream.Id))
                 {
                     var packet = new AVPacket();
-                    // Note: av_frame_unref should NOT be called here. The DecodingSession is responsible for doing that.
                     var frame = new AVFrame();
-                    bool succ = container.ReadFrame(&packet);
-                    succ = decodingSession.TryDecodeFrame(&packet, out frame);
+                    bool succ = container.ReadFrame(&packet) == 0;
+                    succ = decodingSession.TryDecodeFrame(ref packet, ref frame);
 
                     var device = Content.GraphicsDevice;
-                    var texture = CreateDeviceTexture(device, device.ResourceFactory, &frame);
+                    var texture = CreateDeviceTexture(device, device.ResourceFactory, ref frame);
 
-                    ffmpeg.av_packet_unref(&packet);
+                    FFmpegUtil.UnrefBuffers(ref packet);
+                    FFmpegUtil.UnrefBuffers(ref frame);
+
                     return new BindableTexture(device.ResourceFactory, texture);
                 }
             }
@@ -60,10 +60,10 @@ namespace NitroSharp.Content
             }
         }
 
-        private unsafe Texture CreateDeviceTexture(GraphicsDevice gd, ResourceFactory factory, AVFrame* frame)
+        private unsafe Texture CreateDeviceTexture(GraphicsDevice gd, ResourceFactory factory, ref AVFrame frame)
         {
-            uint width = (uint)frame->width;
-            uint height = (uint)frame->height;
+            uint width = (uint)frame.width;
+            uint height = (uint)frame.height;
             var size = new Size(width, height);
 
             Texture staging = factory.CreateTexture(
@@ -73,6 +73,7 @@ namespace NitroSharp.Content
                 TextureDescription.Texture2D(width, height, 1, 1, Veldrid.PixelFormat.R8_G8_B8_A8_UNorm, TextureUsage.Sampled));
 
             CommandList cl = gd.ResourceFactory.CreateCommandList();
+            cl.Name = "LoadTexture";
             cl.Begin();
 
             uint level = 0;
@@ -80,13 +81,13 @@ namespace NitroSharp.Content
             uint srcRowWidth = width * 4;
             if (srcRowWidth == map.RowPitch)
             {
-                _frameConverter.ConvertToRgba(frame, size, (byte*)map.Data);
+                _frameConverter.ConvertToRgba(ref frame, size, (byte*)map.Data);
             }
             else
             {
                 using (var buffer = NativeMemory.Allocate(width * height * 4))
                 {
-                    _frameConverter.ConvertToRgba(frame, size, (byte*)buffer.Pointer);
+                    _frameConverter.ConvertToRgba(ref frame, size, (byte*)buffer.Pointer);
                     byte* src = (byte*)buffer.Pointer;
                     byte* dst = (byte*)map.Data;
                     for (uint y = 0; y < height; y++)

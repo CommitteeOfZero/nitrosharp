@@ -2,7 +2,7 @@
 using System.Runtime.CompilerServices;
 using FFmpeg.AutoGen;
 
-namespace NitroSharp.Media
+namespace NitroSharp.Media.Decoding
 {
     internal sealed class FormatContext
     {
@@ -10,10 +10,7 @@ namespace NitroSharp.Media
 
         public unsafe FormatContext(AVFormatContext* pointer)
         {
-            unsafe
-            {
-                _ptr = pointer;
-            }
+            _ptr = pointer;
         }
 
         public unsafe bool IsInvalid => _ptr == null;
@@ -41,12 +38,14 @@ namespace NitroSharp.Media
 
         private unsafe void Free()
         {
-            fixed (AVFormatContext** ppFormatContext = &_ptr)
+            if (_ptr != null)
             {
-                ffmpeg.avformat_close_input(ppFormatContext);
+                fixed (AVFormatContext** ppFormatContext = &_ptr)
+                {
+                    ffmpeg.avformat_close_input(ppFormatContext);
+                }
+                _ptr = null;
             }
-
-            _ptr = null;
         }
     }
 }

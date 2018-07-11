@@ -5,15 +5,15 @@ VisualStudioVersion = 15.0.26124.0
 MinimumVisualStudioVersion = 15.0.26124.0
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Veldrid", "Veldrid", "{855F474F-471E-4D01-9E1A-4780361D4B46}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Veldrid", "..\mellinoe\veldrid\src\Veldrid\Veldrid.csproj", "{6E1331FC-CC0C-429F-9DD2-8D357947D800}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Veldrid", "..\SomeAnonDev\veldrid\src\Veldrid\Veldrid.csproj", "{6E1331FC-CC0C-429F-9DD2-8D357947D800}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Veldrid.SDL2", "..\mellinoe\veldrid\src\Veldrid.SDL2\Veldrid.SDL2.csproj", "{CBE1C7AE-837F-4C2D-A48E-89C0D9D94792}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Veldrid.SDL2", "..\SomeAnonDev\veldrid\src\Veldrid.SDL2\Veldrid.SDL2.csproj", "{CBE1C7AE-837F-4C2D-A48E-89C0D9D94792}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Veldrid.StartupUtilities", "..\mellinoe\veldrid\src\Veldrid.StartupUtilities\Veldrid.StartupUtilities.csproj", "{20199CEE-B47F-4ED6-81FC-489CEC8F126B}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Veldrid.StartupUtilities", "..\SomeAnonDev\veldrid\src\Veldrid.StartupUtilities\Veldrid.StartupUtilities.csproj", "{20199CEE-B47F-4ED6-81FC-489CEC8F126B}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Veldrid.OpenGLBindings", "..\mellinoe\veldrid\src\Veldrid.OpenGLBindings\Veldrid.OpenGLBindings.csproj", "{F2CA0F22-3422-4142-9F36-16FDF4303B72}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Veldrid.OpenGLBindings", "..\SomeAnonDev\veldrid\src\Veldrid.OpenGLBindings\Veldrid.OpenGLBindings.csproj", "{F2CA0F22-3422-4142-9F36-16FDF4303B72}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Veldrid.MetalBindings", "..\mellinoe\veldrid\src\Veldrid.MetalBindings\Veldrid.MetalBindings.csproj", "{7FAEE2F3-DCAF-4C27-BB87-499797AB69B8}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Veldrid.MetalBindings", "..\SomeAnonDev\veldrid\src\Veldrid.MetalBindings\Veldrid.MetalBindings.csproj", "{7FAEE2F3-DCAF-4C27-BB87-499797AB69B8}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NitroSharp.NsScript", "src\NitroSharp.NsScript\NitroSharp.NsScript.csproj", "{EDDB427C-E562-4FA2-AE7A-CD57D1B55A7E}"
 EndProject

@@ -5,6 +5,8 @@ using NitroSharp.Animation;
 using NitroSharp.Dialogue;
 using NitroSharp.Graphics;
 using NitroSharp.Graphics.Objects;
+using NitroSharp.Media;
+using NitroSharp.Media.Decoding;
 using NitroSharp.NsScript;
 using NitroSharp.NsScript.Symbols;
 using NitroSharp.Primitives;
@@ -37,6 +39,7 @@ namespace NitroSharp
 
             public TextRevealAnimation RevealAnimation;
             public RevealSkipAnimation RevealSkipAnimation;
+            internal Voice Voice;
 
             public bool CanAdvance
             {
@@ -71,6 +74,8 @@ namespace NitroSharp
                 return Status.Waiting;
             }
         }
+
+        private const string VoiceEnityName = "__VOICE";
 
         private readonly DialogueState _dialogueState = new DialogueState();
         private FontService FontService => _game.FontService;
@@ -213,7 +218,7 @@ namespace NitroSharp
 
                     case DialogueLinePartKind.VoicePart:
                         var voicePart = (Voice)part;
-                        // TODO: play voice
+                        Voice(voicePart);
                         break;
 
                     case DialogueLinePartKind.Marker:
@@ -233,13 +238,27 @@ namespace NitroSharp
                 }
             }
 
-        exit:
+            exit:
             var animation = new TextRevealAnimation(state.TextLayout, revealStart);
             state.TextEntity.AddComponent(animation);
             SuspendMainThread();
             if (!state.CanAdvance)
             {
                 animation.Completed += (obj, args) => ResumeMainThread();
+            }
+        }
+
+        private void Voice(Voice voice)
+        {
+            _dialogueState.Voice = voice;
+            if (voice.Action == VoiceAction.Play)
+            {
+                var audio = new MediaComponent(Content.Get<MediaPlaybackSession>("voice/" + voice.FileName), AudioSourcePool);
+                _entities.Create(VoiceEnityName, replace: true).WithComponent(audio);
+            }
+            else
+            {
+                _entities.Remove(voice.FileName);
             }
         }
 

@@ -69,6 +69,7 @@ namespace NitroSharp.Graphics.Objects
             _gd.InitStagingTexture(_layoutStaging);
             using (var cl = _gd.ResourceFactory.CreateCommandList())
             {
+                cl.Name = "ClearTextures";
                 cl.Begin();
                 cl.CopyTexture(_layoutStaging, _layoutTexture);
                 cl.End();
@@ -153,7 +154,7 @@ namespace NitroSharp.Graphics.Objects
             _cl.End();
             device.Unmap(_layoutStaging);
             device.SubmitCommands(_cl);
-            device.WaitForIdle();
+            //device.WaitForIdle();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
