@@ -59,6 +59,7 @@ namespace NitroSharp.Media
             }
 
             Volume = 1;
+            Priority = 100;
         }
 
         public override SizeF Bounds { get; }
@@ -354,7 +355,7 @@ namespace NitroSharp.Media
             if (_videoTexture != null)
             {
                 var rect = new RectangleF(Vector2.Zero, Bounds);
-                rc.Canvas.DrawImage(_videoTexture.GetTextureView(), rect, rect, RgbaFloat.White);
+                rc.PrimitiveBatch.DrawImage(_videoTexture.GetTextureView(), null, rect, ref _color, BlendMode.Additive);
             }
         }
 

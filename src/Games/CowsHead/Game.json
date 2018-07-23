@@ -1,8 +1,8 @@
 ﻿{
   "productName": "COWSHEAD_NOAH",
   "activeProfile": "CustomBoot",
-  "graphics.vsync": true,
-  "graphics.backend": "Direct3D11",
+  "graphics.vsync": false,
+  "graphics.backend": "D3D11",
   "audio.backend": "XAudio2",
   "window.title": "COWS;HEAD NOAH",
   "window.width": 1280,
@@ -11,6 +11,10 @@
   "dev.enableDiagnostics": true,
 
   "profiles": {
+    "Settings": {
+      "startupScript": "boot_settings.nss"
+    },
+
     "Staking": {
       "startupScript": "boot-staking.nss"
     },

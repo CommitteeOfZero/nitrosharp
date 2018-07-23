@@ -71,8 +71,8 @@ namespace NitroSharp.ShaderCompiler
                 var fsSpvReleaseOutput = SpirvCompilation.CompileGlslToSpirv(
                     fsSource, string.Empty, ShaderStages.Fragment,
                     releaseCompileOptions);
-                File.WriteAllBytes(outputBase + "-vertex.spv", vsSpvReleaseOutput.SpirvBytes);
-                File.WriteAllBytes(outputBase + "-fragment.spv", fsSpvDebugOutput.SpirvBytes);
+                File.WriteAllBytes(outputBase + "-vertex.450.glsl.spv", vsSpvReleaseOutput.SpirvBytes);
+                File.WriteAllBytes(outputBase + "-fragment.450.glsl.spv", fsSpvDebugOutput.SpirvBytes);
 
                 var glCompileOptions = new CrossCompileOptions(fixClipSpaceZ: false, invertVertexOutputY: false);
                 var glslResult = SpirvCompilation.CompileVertexFragment(
@@ -91,13 +91,20 @@ namespace NitroSharp.ShaderCompiler
                 File.WriteAllText(outputBase + "-vertex.300.glsles", glslResult.VertexShader);
                 File.WriteAllText(outputBase + "-fragment.300.glsles", glslResult.FragmentShader);
 
-                var hlslResult = SpirvCompilation.CompileVertexFragment(
+                var hlslDebugOutput = SpirvCompilation.CompileVertexFragment(
+                    vsSpvDebugOutput.SpirvBytes,
+                    fsSpvDebugOutput.SpirvBytes,
+                    CrossCompileTarget.HLSL);
+                File.WriteAllText(outputBase + "-vertex.hlsl", hlslDebugOutput.VertexShader);
+                File.WriteAllText(outputBase + "-fragment.hlsl", hlslDebugOutput.FragmentShader);
+
+                var hlslReleaseOutput = SpirvCompilation.CompileVertexFragment(
                     vsSpvReleaseOutput.SpirvBytes,
                     fsSpvReleaseOutput.SpirvBytes,
                     CrossCompileTarget.HLSL);
-                byte[] vertBytes = Encoding.UTF8.GetBytes(hlslResult.VertexShader);
-                byte[] fragBytes = Encoding.UTF8.GetBytes(hlslResult.FragmentShader);
 
+                byte[] vertBytes = Encoding.UTF8.GetBytes(hlslReleaseOutput.VertexShader);
+                byte[] fragBytes = Encoding.UTF8.GetBytes(hlslReleaseOutput.FragmentShader);
                 File.WriteAllBytes(outputBase + "-vertex.hlsl.bytes", CompileHlsl(ShaderStages.Vertex, vertBytes));
                 File.WriteAllBytes(outputBase + "-fragment.hlsl.bytes", CompileHlsl(ShaderStages.Fragment, fragBytes));
             }
@@ -105,7 +112,7 @@ namespace NitroSharp.ShaderCompiler
 
         private static byte[] CompileHlsl(ShaderStages stage, byte[] sourceCode)
         {
-            string profile = stage == ShaderStages.Vertex ? "vs_3_0" : "ps_3_0";
+            string profile = stage == ShaderStages.Vertex ? "vs_5_0" : "ps_5_0";
 
             ShaderFlags flags = ShaderFlags.OptimizationLevel3;
             CompilationResult result = ShaderBytecode.Compile(

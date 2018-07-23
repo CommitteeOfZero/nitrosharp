@@ -49,7 +49,9 @@ namespace NitroSharp.NsScript
 
         public virtual void SetFieldOfView(string unk1, double unk2) { }
 
-        public virtual void CreateCube(string entityName, string front, string back, string right, string left, string top, string bottom) { }
+        public virtual void CreateCube(string entityName, int priority, string front, string back, string right, string left, string top, string bottom) { }
+
+        public virtual void WaitPlay(string entityName) { }
 
         public virtual void LoadVideo(string entityName, int priority, NsCoordinate x, NsCoordinate y, bool loop, string fileName) { }
 

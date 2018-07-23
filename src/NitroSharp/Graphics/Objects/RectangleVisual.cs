@@ -19,7 +19,7 @@ namespace NitroSharp.Graphics
         public override void Render(RenderContext renderContext)
         {
             var c = new RgbaFloat(Color.R, Color.G, Color.B, Opacity);
-            renderContext.Canvas.FillRectangle(_rect, c);
+            renderContext.PrimitiveBatch.FillRectangle(_rect, ref c);
         }
     }
 }

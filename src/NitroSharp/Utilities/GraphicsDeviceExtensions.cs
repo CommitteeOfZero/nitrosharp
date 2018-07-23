@@ -12,15 +12,29 @@ namespace NitroSharp.Utilities
             T[] data,
             BufferUsage usage,
             uint structureByteStride = 0u)
-            where T : struct
+            where T : unmanaged
         {
-            uint bufferSize = (uint)(data.Length * Marshal.SizeOf<T>());
-
-            var result = graphicsDevice.ResourceFactory.CreateBuffer(
+            uint bufferSize = (uint)MathUtil.RoundUp(data.Length * Marshal.SizeOf<T>(), 16);
+            DeviceBuffer buffer = graphicsDevice.ResourceFactory.CreateBuffer(
                 new BufferDescription(bufferSize, usage, structureByteStride));
 
-            graphicsDevice.UpdateBuffer(result, 0, data);
-            return result;
+            graphicsDevice.UpdateBuffer(buffer, 0, data);
+            return buffer;
+        }
+
+        public static DeviceBuffer CreateStaticBuffer<T>(
+            this GraphicsDevice graphicsDevice,
+            ref T value,
+            BufferUsage usage,
+            uint structureByteStride = 0u)
+            where T : unmanaged
+        {
+            uint bufferSize = (uint)MathUtil.RoundUp(Marshal.SizeOf<T>(), 16);
+            DeviceBuffer buffer = graphicsDevice.ResourceFactory.CreateBuffer(
+                new BufferDescription(bufferSize, usage, structureByteStride));
+
+            graphicsDevice.UpdateBuffer(buffer, 0, ref value);
+            return buffer;
         }
 
         public static void InitStagingTexture(this GraphicsDevice graphicsDevice, Texture texture)

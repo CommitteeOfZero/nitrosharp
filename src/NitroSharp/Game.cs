@@ -190,7 +190,7 @@ namespace NitroSharp
 
         private void SetupGraphics(SwapchainSource swapchainSource)
         {
-            var options = new GraphicsDeviceOptions(false, PixelFormat.R16_UNorm, _configuration.EnableVSync);
+            var options = new GraphicsDeviceOptions(false, null, _configuration.EnableVSync);
 #if DEBUG
             options.Debug = true;
 #endif

@@ -7,18 +7,13 @@ namespace NitroSharp.Graphics
     internal sealed class RenderContext
     {
         internal RenderContext(GraphicsDevice device, ResourceFactory factory,
-            CommandList commandList, Canvas canvas, EffectLibrary effectLibrary,
-            SharedEffectProperties2D sharedEffectProperties2D,
-            SharedEffectProperties3D sharedEffectProperties3D,
+            CommandList commandList, PrimitiveBatcher primitiveBatch,
             RgbaTexturePool texturePool, FontService fontService)
         {
             Device = device;
             Factory = factory;
             CommandList = commandList;
-            Canvas = canvas;
-            Effects = effectLibrary;
-            SharedEffectProperties2D = sharedEffectProperties2D;
-            SharedEffectProperties3D = sharedEffectProperties3D;
+            PrimitiveBatch = primitiveBatch;
             TexturePool = texturePool;
             FontService = fontService;
         }
@@ -28,11 +23,15 @@ namespace NitroSharp.Graphics
         public Swapchain MainSwapchain { get; internal set; }
         public ResourceFactory Factory { get; internal set; }
         public CommandList CommandList { get; internal set; }
-        public Canvas Canvas { get; internal set; }
-        public EffectLibrary Effects { get; internal set; }
-        public SharedEffectProperties2D SharedEffectProperties2D { get; internal set; }
-        public SharedEffectProperties3D SharedEffectProperties3D { get; internal set; }
+        public PrimitiveBatcher PrimitiveBatch { get; internal set; }
         public RgbaTexturePool TexturePool { get; internal set; }
         public FontService FontService { get; }
+
+        public ShaderLibrary ShaderLibrary { get; set; }
+        public SharedResources SharedConstants { get; set; }
+
+        public QuadGeometryStream QuadGeometryStream { get; set; }
+
+        public RenderBucket MainBucket { get; set; }
     }
 }

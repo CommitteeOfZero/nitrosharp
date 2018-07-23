@@ -53,6 +53,15 @@ namespace NitroSharp
                 .WithPosition(x, y);
         }
 
+        public override void WaitPlay(string entityName)
+        {
+            if (_entities.TryGet(entityName, out Entity entity))
+            {
+                var media = entity.GetComponent<MediaComponent>();
+                Interpreter.SuspendThread(MainThread, media.Duration);
+            }
+        }
+
         public override void SetVolume(string entityName, TimeSpan duration, NsRational volume)
         {
             foreach (var e in _entities.Query(entityName))

@@ -5,8 +5,8 @@ using System.Numerics;
 using Veldrid;
 using NitroSharp.Primitives;
 using NitroSharp.Graphics.Objects;
-using NitroSharp.Utilities;
 using NitroSharp.Text;
+using NitroSharp.Utilities;
 
 namespace NitroSharp.Graphics
 {
@@ -18,11 +18,8 @@ namespace NitroSharp.Graphics
         private GraphicsDevice _gd;
         private Swapchain _swapchain;
         private CommandList _cl;
-        private Canvas _canvas;
+        private PrimitiveBatcher _primitiveBatch;
         private RgbaTexturePool _texturePool;
-        private EffectLibrary _effectLibrary;
-        private SharedEffectProperties2D _sharedProps2D;
-        private SharedEffectProperties3D _sharedProps3D;
         private RenderContext _rc;
 
         private Cube _cube;
@@ -39,29 +36,41 @@ namespace NitroSharp.Graphics
             ResourceFactory factory = _gd.ResourceFactory;
             _cl = factory.CreateCommandList();
             _cl.Name = "Main";
-            _effectLibrary = new EffectLibrary(_gd);
 
-            _sharedProps2D = new SharedEffectProperties2D(_gd);
-            _sharedProps2D.Projection = Matrix4x4.CreateOrthographicOffCenter(
+            ResourceLayout sharedResourceLayout = factory.CreateResourceLayout(new ResourceLayoutDescription(
+                new ResourceLayoutElementDescription("ViewProjection", ResourceKind.UniformBuffer, ShaderStages.Vertex)));
+
+            Matrix4x4 projection = Matrix4x4.CreateOrthographicOffCenter(
                 0, DesignResolution.Width, DesignResolution.Height, 0, 0, -1);
 
-            _sharedProps3D = new SharedEffectProperties3D(_gd);
-            _sharedProps3D.View = Matrix4x4.CreateLookAt(Vector3.Zero, Vector3.UnitZ, Vector3.UnitY);
+            DeviceBuffer projectionBuffer = _gd.CreateStaticBuffer(
+                ref projection, BufferUsage.UniformBuffer);
 
-            _sharedProps3D.Projection = Matrix4x4.CreatePerspectiveFieldOfView(
-                MathUtil.PI / 3.0f,
-                DesignResolution.Width / DesignResolution.Height,
-                0.1f,
-                1000.0f);
+            ResourceSet sharedResourceSet = factory.CreateResourceSet(
+                new ResourceSetDescription(sharedResourceLayout, projectionBuffer));
 
-            _canvas = new Canvas(_gd, _effectLibrary, _sharedProps2D);
+            var sharedConstants = new SharedResources(
+                sharedResourceLayout,
+                projectionBuffer,
+                sharedResourceSet);
+
+            var mainBucket = new RenderBucket(_gd, 512);
+
+            var quadGeometryStream = new QuadGeometryStream(device);
+            var cache = new ResourceSetCache(_gd.ResourceFactory);
+            var shaderLibrary = new ShaderLibrary(_gd);
+            _primitiveBatch = new PrimitiveBatcher(_gd, mainBucket, quadGeometryStream, shaderLibrary, sharedConstants, cache, swapchain.Framebuffer);
             _texturePool = new RgbaTexturePool(_gd);
-            _rc = new RenderContext(_gd, _gd.ResourceFactory, _cl, _canvas, _effectLibrary,
-                _sharedProps2D, _sharedProps3D, _texturePool, _fontService);
+            _rc = new RenderContext(_gd, _gd.ResourceFactory, _cl, _primitiveBatch, _texturePool, _fontService);
 
+            _rc.Device = device;
             _rc.MainSwapchain = _swapchain = swapchain;
             _rc.DesignResolution = new Size((uint)DesignResolution.Width, (uint)DesignResolution.Height);
-            _rc.Device = device;
+            _rc.SharedConstants = sharedConstants;
+            _rc.QuadGeometryStream = quadGeometryStream;
+            _rc.ShaderLibrary = shaderLibrary;
+
+            _rc.MainBucket = mainBucket;
 
             foreach (var entity in Entities)
             {
@@ -94,22 +103,22 @@ namespace NitroSharp.Graphics
 
         public override void Update(float deltaMilliseconds)
         {
+            _rc.QuadGeometryStream.Begin();
+
             _cl.Begin();
 
             _cl.SetFramebuffer(_swapchain.Framebuffer);
             _cl.ClearColorTarget(0, RgbaFloat.Black);
 
-            // TODO: introduce RenderQueues to avoid this hack
-            _cube?.Render(_rc);
-
-            _canvas.Begin(_cl, _swapchain.Framebuffer);
+            _rc.MainBucket.Begin();
             base.Update(deltaMilliseconds);
-            _canvas.End();
+
+            _rc.QuadGeometryStream.End(_cl);
+            _rc.MainBucket.End(_cl);
 
             _cl.End();
 
             _gd.SubmitCommands(_cl);
-            //_gd.WaitForIdle();
         }
 
         public void Present()
@@ -133,14 +142,13 @@ namespace NitroSharp.Graphics
 
         private void RenderItem(Visual visual, Vector2 scale)
         {
-            if (visual is Cube cube)
+            if (visual.Priority == 0)
             {
-                _cube = cube;
                 return;
             }
 
             var transform = visual.Entity.Transform.GetTransformMatrix();
-            _canvas.SetTransform(transform);
+            _primitiveBatch.SetTransform(transform);
             visual.Render(_rc);
         }
 
@@ -151,10 +159,7 @@ namespace NitroSharp.Graphics
                 entity.Visual.DestroyDeviceObjects(_rc);
             }
 
-            _canvas.Dispose();
-            _effectLibrary.Dispose();
-            _sharedProps2D.Dispose();
-            _sharedProps3D.Dispose();
+            _primitiveBatch.Dispose();
             _texturePool.Dispose();
             _cl.Dispose();
         }

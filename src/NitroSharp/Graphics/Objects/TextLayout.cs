@@ -31,7 +31,7 @@ namespace NitroSharp.Graphics.Objects
 
             _builder = new LayoutBuilder(fontFamily, initialGlyphCapacity, maxBounds);
             _glyphsToUpdate = new HashSet<uint>();
-            Priority = int.MaxValue;
+            Priority = 100000;
         }
 
         public uint GlyphCount => _builder.Glyphs.Count;
@@ -128,7 +128,7 @@ namespace NitroSharp.Graphics.Objects
             }
 
             var rect = new RectangleF(0, 0, _bounds.Width, _bounds.Height);
-            renderContext.Canvas.DrawImage(_textureView, rect, rect, RgbaFloat.White);
+            renderContext.PrimitiveBatch.DrawImage(_textureView, rect, rect, ref _color);
         }
 
         private void Redraw(RenderContext renderContext, ISet<uint> glyphIndices = null)

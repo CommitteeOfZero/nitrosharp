@@ -1,28 +1,28 @@
 ﻿<Directives>
   <Application>
-    <Assembly Name="NitroSharp">
-      <Type Name="NitroSharp.Graphics.SpriteEffect" Dynamic="Required All" />
-      <Type Name="NitroSharp.Graphics.FillEffect" Dynamic="Required All" />
-      <Type Name="NitroSharp.Graphics.Effects.CubeEffect" Dynamic="Required All" />
-      <Type Name="NitroSharp.Graphics.BoundResourceAttribute" Dynamic="Required All" />
-    </Assembly>
-
     <Assembly Name="NitroSharp.NsScript">
       <Type Name="NitroSharp.NsScript.BuiltInEnumValue[]" Dynamic="Required All" />
     </Assembly>
 
-    <Assembly Name="SharpDX" Dynamic="Required All">
-      <!--<Type Name="SharpDX.ShadowAttribute" Dynamic="Required All" />
+    <Assembly Name="SharpDX">
+      <Type Name="SharpDX.ShadowAttribute" Dynamic="Required All" />
       <Type Name="SharpDX.ShadowContainer" Dynamic="Required All" />
       <Type Name="SharpDX.ComObjectShadow" Dynamic="Required All" />
       <Type Name="SharpDX.CppObjectShadow" Dynamic="Required All" />
       <Type Name="SharpDX.ComObject" Dynamic="Required All" />
       <Type Name="SharpDX.CppObject" Dynamic="Required All" />
       <Type Name="SharpDX.Win32.ComStreamProxy" Dynamic="Required All" />
-      <Type Name="SharpDX.Win32.ComStreamShadow" Dynamic="Required All" />-->
+      <Type Name="SharpDX.Win32.ComStreamShadow" Dynamic="Required All" />
     </Assembly>
 
-    <Assembly Name="SharpDX.DXGI" Dynamic="Required All" />
-    <Assembly Name="SharpDX.Direct3D11" Dynamic="Required All" />
+    <Assembly Name="SharpDX.DXGI">
+      <Type Name="SharpDX.DXGI.Device" Dynamic="Required All" />
+    </Assembly>
+
+    <Assembly Name="SharpDX.Direct3D11">
+      <Type Name="SharpDX.Direct3D11.Texture2D" Dynamic="Required All" />
+      <Type Name="SharpDX.Direct3D11.DeviceContext1" Dynamic="Required All" />
+      <Type Name="SharpDX.Direct3D11.DeviceDebug" Dynamic="Required All" />
+    </Assembly>
   </Application>
 </Directives>

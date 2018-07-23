@@ -26,7 +26,7 @@ namespace NitroSharp.Graphics
         public override void Render(RenderContext renderContext)
         {
             var dstRect = new RectangleF(0, 0, Bounds.Width, Bounds.Height);
-            renderContext.Canvas.DrawImage(Source.Asset.GetTextureView(), SourceRectangle, dstRect, Color);
+            renderContext.PrimitiveBatch.DrawImage(Source.Asset.GetTextureView(), SourceRectangle, dstRect, ref _color);
         }
     }
 }

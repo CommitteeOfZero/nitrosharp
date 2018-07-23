@@ -2,10 +2,16 @@
 
 namespace NitroSharp.Utilities
 {
-    internal struct ArrayBuilder<T> where T : struct
+    internal struct ArrayBuilder<T>
     {
-        private T[] _elements;
+        private const uint DefaultCapacity = 4;
+
+        public T[] _elements;
         private readonly uint _initialCapacity;
+
+        public ArrayBuilder(int initialCapacity) : this((uint)initialCapacity)
+        {
+        }
 
         public ArrayBuilder(uint initialCapacity)
         {
@@ -16,16 +22,57 @@ namespace NitroSharp.Utilities
 
         public uint Count;
 
+        public T[] UnderlyingArray => _elements;
+
         public ref T this[uint index] => ref _elements[index];
+        public ref T this[int index] => ref _elements[index];
 
         public ref T Add()
         {
+            if (_elements == null)
+            {
+                _elements = new T[DefaultCapacity];
+            }
+
             if (_elements.Length <= Count)
             {
                 Array.Resize(ref _elements, (int)Count * 2);
             }
 
             return ref _elements[Count++];
+        }
+
+        public void Add(T item)
+        {
+            if (_elements == null)
+            {
+                _elements = new T[DefaultCapacity];
+            }
+
+            if (_elements.Length <= Count)
+            {
+                Array.Resize(ref _elements, (int)Count * 2);
+            }
+
+            _elements[Count++] = item;
+        }
+
+        public void AddRange(ReadOnlySpan<T> items)
+        {
+            if (_elements == null)
+            {
+                _elements = new T[DefaultCapacity];
+            }
+
+            if (_elements.Length <= Count)
+            {
+                Array.Resize(ref _elements, (int)Count * 2);
+            }
+
+            for (int i = 0; i < items.Length; i++)
+            {
+                _elements[Count++] = items[i];
+            }
         }
 
         public void RemoveLast()

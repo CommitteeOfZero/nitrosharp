@@ -58,6 +58,16 @@ namespace NitroSharp.NsScript.Symbols
             Declare("SetFov", SetFov);
 
             Declare("CreateMovie", CreateMovie);
+            Declare("WaitPlay", WaitPlay);
+        }
+
+        private static ConstantValue WaitPlay(EngineImplementationBase impl, Stack<ConstantValue> args)
+        {
+            string entityName = EntityName(PopString(args));
+            PopNumeric(args, true);
+
+            impl.WaitPlay(entityName);
+            return null;
         }
 
         private static ConstantValue CreateMovie(EngineImplementationBase impl, Stack<ConstantValue> args)
@@ -439,7 +449,7 @@ namespace NitroSharp.NsScript.Symbols
         private static ConstantValue CreateCube(EngineImplementationBase implementation, Stack<ConstantValue> args)
         {
             var entityName = EntityName(PopString(args));
-            double someNumber = PopNumeric(args);
+            int priority = (int)PopNumeric(args);
             var front = PopString(args);
             var back = PopString(args);
             var right = PopString(args);
@@ -447,7 +457,7 @@ namespace NitroSharp.NsScript.Symbols
             var top = PopString(args);
             var bottom = PopString(args);
 
-            implementation.CreateCube(entityName, front, back, right, left, top, bottom);
+            implementation.CreateCube(entityName, priority, front, back, right, left, top, bottom);
             return null;
         }
 

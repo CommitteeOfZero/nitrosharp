@@ -23,6 +23,15 @@ namespace NitroSharp.Utilities
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static uint RoundUp(uint value, uint multiple)
+        {
+            uint remainder = value % multiple;
+            return remainder == 0
+                ? value
+                : value + multiple - remainder;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static float ToRadians(float degrees)
         {
             return degrees / 180.0f * PI;

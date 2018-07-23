@@ -15,7 +15,7 @@ namespace NitroSharp.Graphics.Objects
         {
             _icons = icons;
             IconCount = (uint)icons.Count;
-            Priority = int.MaxValue;
+            //Priority = int.MaxValue;
         }
 
         public override SizeF Bounds => new SizeF(_size.Width, _size.Height);
@@ -73,11 +73,11 @@ namespace NitroSharp.Graphics.Objects
 
         public override void Render(RenderContext renderContext)
         {
-            if (renderContext.Device.BackendType != GraphicsBackend.OpenGLES)
-            {
-                var view = _textureArray.GetTextureView(0, 1, ActiveIconIndex, 1);
-                renderContext.Canvas.DrawImage(view, 0, 0, Color);
-            }
+            //if (renderContext.Device.BackendType != GraphicsBackend.OpenGLES)
+            //{
+            //    var view = _textureArray.GetTextureView(0, 1, ActiveIconIndex, 1);
+            //    renderContext.Canvas.DrawImage(view, 0, 0, Color);
+            //}
         }
 
         public override void DestroyDeviceObjects(RenderContext renderContext)
