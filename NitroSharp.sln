@@ -29,6 +29,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Veldrid.StartupUtilities", 
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Veldrid.SDL2", "..\SomeAnonDev\veldrid\src\Veldrid.SDL2\Veldrid.SDL2.csproj", "{4032037C-C856-4562-AA9A-A3CF5A9524DD}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NitroSharp.ShaderCompiler", "src\NitroSharp.ShaderCompiler\NitroSharp.ShaderCompiler.csproj", "{046954EC-04C3-4FB6-BFF5-B9E86C81ACD8}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -217,6 +219,22 @@ Global
 		{4032037C-C856-4562-AA9A-A3CF5A9524DD}.Release|x64.Build.0 = Release|Any CPU
 		{4032037C-C856-4562-AA9A-A3CF5A9524DD}.Release|x86.ActiveCfg = Release|Any CPU
 		{4032037C-C856-4562-AA9A-A3CF5A9524DD}.Release|x86.Build.0 = Release|Any CPU
+		{046954EC-04C3-4FB6-BFF5-B9E86C81ACD8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{046954EC-04C3-4FB6-BFF5-B9E86C81ACD8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{046954EC-04C3-4FB6-BFF5-B9E86C81ACD8}.Debug|ARM.ActiveCfg = Debug|Any CPU
+		{046954EC-04C3-4FB6-BFF5-B9E86C81ACD8}.Debug|ARM.Build.0 = Debug|Any CPU
+		{046954EC-04C3-4FB6-BFF5-B9E86C81ACD8}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{046954EC-04C3-4FB6-BFF5-B9E86C81ACD8}.Debug|x64.Build.0 = Debug|Any CPU
+		{046954EC-04C3-4FB6-BFF5-B9E86C81ACD8}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{046954EC-04C3-4FB6-BFF5-B9E86C81ACD8}.Debug|x86.Build.0 = Debug|Any CPU
+		{046954EC-04C3-4FB6-BFF5-B9E86C81ACD8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{046954EC-04C3-4FB6-BFF5-B9E86C81ACD8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{046954EC-04C3-4FB6-BFF5-B9E86C81ACD8}.Release|ARM.ActiveCfg = Release|Any CPU
+		{046954EC-04C3-4FB6-BFF5-B9E86C81ACD8}.Release|ARM.Build.0 = Release|Any CPU
+		{046954EC-04C3-4FB6-BFF5-B9E86C81ACD8}.Release|x64.ActiveCfg = Release|Any CPU
+		{046954EC-04C3-4FB6-BFF5-B9E86C81ACD8}.Release|x64.Build.0 = Release|Any CPU
+		{046954EC-04C3-4FB6-BFF5-B9E86C81ACD8}.Release|x86.ActiveCfg = Release|Any CPU
+		{046954EC-04C3-4FB6-BFF5-B9E86C81ACD8}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

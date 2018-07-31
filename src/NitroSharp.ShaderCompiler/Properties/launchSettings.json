@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "NitroSharp.ShaderCompiler": {
+      "commandName": "Project",
+      "commandLineArgs": "../../../../NitroSharp/Graphics/Shaders"
+    }
+  }
+}
