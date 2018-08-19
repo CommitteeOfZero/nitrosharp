@@ -1,7 +1,21 @@
-﻿namespace NitroSharp
+﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+
+namespace NitroSharp
 {
-    internal abstract class GameSystem
+    public abstract class GameSystem
     {
-        public abstract void Update(float deltaMilliseconds);
+        protected float DeltaTime;
+
+        protected GameSystem()
+        {
+        }
+
+
+        public virtual void Update(float deltaTime)
+        {
+            DeltaTime = deltaTime;
+        }
     }
 }

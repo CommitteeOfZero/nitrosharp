@@ -4,4 +4,11 @@
     {
         public abstract DialogueLinePartKind PartKind { get; }
     }
+
+    internal enum DialogueLinePartKind
+    {
+        Text,
+        Voice,
+        Marker
+    }
 }

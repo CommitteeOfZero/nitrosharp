@@ -5,7 +5,7 @@ using Veldrid.Sdl2;
 
 namespace NitroSharp
 {
-    internal abstract class InputTracker : GameSystem
+    internal abstract class InputTracker : OldGameSystem
     {
         private readonly GameWindow _window;
 

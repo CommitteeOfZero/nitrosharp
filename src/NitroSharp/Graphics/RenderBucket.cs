@@ -42,7 +42,6 @@ namespace NitroSharp.Graphics
         private struct RenderItem
         {
             public ResourceSet ObjectResourceSet;
-            public int Key;
             public byte SharedResourceSetId;
             public byte PipelineId;
             public byte VertexBuffer0;
@@ -56,6 +55,8 @@ namespace NitroSharp.Graphics
         }
 
         private ArrayBuilder<RenderItem> _renderItems;
+        private ArrayBuilder<int> _keys;
+        private readonly KeyComparer _keyComparer;
 
         private readonly List<VertexBuffer> _vertexBuffers;
         private (byte index, VertexBuffer buffer) _lastVertexBuffer0;
@@ -73,15 +74,18 @@ namespace NitroSharp.Graphics
         public RenderBucket(GraphicsDevice graphicsDevice, uint initialCapacity)
         {
             _renderItems = new ArrayBuilder<RenderItem>(initialCapacity);
+            _keys = new ArrayBuilder<int>(initialCapacity);
             _vertexBuffers = new List<VertexBuffer>();
             _indexBuffers = new List<DeviceBuffer>();
             _pipelines = new List<Pipeline>();
             _sharedResourceSets = new List<ResourceSet>();
+            _keyComparer = new KeyComparer();
         }
 
         public void Begin()
         {
             _renderItems.Reset();
+            _keys.Reset();
             _vertexBuffers.Clear();
             _lastVertexBuffer0 = default;
             _lastInstanceDataBuffer = default;
@@ -106,7 +110,8 @@ namespace NitroSharp.Graphics
             renderItem.PipelineId = GetPipelineId(submission.Pipeline);
             renderItem.SharedResourceSetId = GetResourceId(submission.SharedResourceSet, _sharedResourceSets, ref _lastSharedResourceSet);
             renderItem.ObjectResourceSet = submission.ObjectResourceSet;
-            renderItem.Key = key;
+
+            _keys.Add(key);
         }
 
         public void Submit<TVertex, TInstanceData>(ref RenderBucketSubmission<TVertex, TInstanceData> submission, int key)
@@ -125,10 +130,23 @@ namespace NitroSharp.Graphics
             renderItem.ObjectResourceSet = submission.ObjectResourceSet;
             renderItem.VertexBuffer1 = GetResourceId(submission.InstanceDataBuffer, _vertexBuffers, ref _lastInstanceDataBuffer);
             renderItem.InstanceBase = submission.InstanceBase;
+
+            _keys.Add(key);
+        }
+
+        private sealed class KeyComparer : IComparer<int>
+        {
+            public int Compare(int x, int y)
+            {
+                if (x > y) { return -1; }
+                return x == y ? 0 : 1;
+            }
         }
 
         public void End(CommandList commandList)
         {
+            Array.Sort(_keys.UnderlyingArray, _renderItems.UnderlyingArray, 0, (int)_renderItems.Count);
+
             byte lastVertexBuffer0 = byte.MaxValue;
             byte lastVertexBuffer1 = byte.MaxValue;
             byte lastIndexBuffer = byte.MaxValue;
@@ -179,10 +197,9 @@ namespace NitroSharp.Graphics
                 }
 
                 uint instanceStart = i;
-                uint instanceCount = 1;
                 commandList.DrawIndexed(
                     item.IndexCount,
-                    instanceCount,
+                    instanceCount: 1,
                     item.IndexBase,
                     item.VertexBase,
                     item.InstanceBase);

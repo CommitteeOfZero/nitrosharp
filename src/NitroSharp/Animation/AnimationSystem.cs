@@ -1,24 +1,20 @@
-﻿using System;
-using System.Collections.Generic;
-
-namespace NitroSharp.Animation
+﻿namespace NitroSharp.Logic.Systems
 {
-    internal sealed class AnimationSystem : EntityProcessingSystem
+    internal sealed class AnimationSystem : GameSystem
     {
-        protected override void DeclareInterests(ISet<Type> interests)
+        private readonly World _world;
+
+        public AnimationSystem(World world)
         {
-            interests.Add(typeof(AnimationBase));
+            _world = world;
         }
 
-        public override void Process(Entity entity, float deltaMilliseconds)
+        public override void Update(float deltaTime)
         {
-            foreach (AnimationBase animation in entity.GetComponents<AnimationBase>())
-            {
-                if (animation.IsEnabled)
-                {
-                    animation.Advance(deltaMilliseconds);
-                }
-            }
+            base.Update(deltaTime);
+            MoveAnimationProcessor.Process(_world, deltaTime);
+            FadeAnimationProcessor.Process(_world, deltaTime);
+            ZoomAnimationProcessor.Process(_world, deltaTime);
         }
     }
 }

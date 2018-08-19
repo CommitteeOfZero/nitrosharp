@@ -10,8 +10,8 @@ namespace NitroSharp.NsScript
         public virtual string GetCurrentModuleName() => throw new NotImplementedException();
         public virtual int GenerateRandomNumber(int max) => throw new NotImplementedException();
         public virtual int GetSoundAmplitude(string characterName) => throw new NotImplementedException();
-        public virtual int GetTextureHeight(string entityName) => throw new NotImplementedException();
-        public virtual int GetTextureWidth(string entityName) => throw new NotImplementedException();
+        public virtual int GetHeight(string entityName) => throw new NotImplementedException();
+        public virtual int GetWidth(string entityName) => throw new NotImplementedException();
         public virtual int GetSoundDuration(string entityName) => throw new NotImplementedException();
         public virtual int GetTimeRemaining(string soundEntityName) => throw new NotImplementedException();
         public virtual int GetTimeElapsed(string entityName) => throw new NotImplementedException();
@@ -58,7 +58,7 @@ namespace NitroSharp.NsScript
         /// <summary>
         /// Original name: CreateColor.
         /// </summary>
-        public virtual void AddRectangle(string entityName, int priority, NsCoordinate x, NsCoordinate y, int width, int height, NsColor color) { }
+        public virtual void FillRectangle(string entityName, int priority, NsCoordinate x, NsCoordinate y, int width, int height, NsColor color) { }
 
         /// <summary>
         /// Original name: CreateSound.

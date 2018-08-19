@@ -10,6 +10,6 @@ namespace NitroSharp.Dialogue
         }
 
         public TextRun Text { get; }
-        public override DialogueLinePartKind PartKind => DialogueLinePartKind.TextPart;
+        public override DialogueLinePartKind PartKind => DialogueLinePartKind.Text;
     }
 }

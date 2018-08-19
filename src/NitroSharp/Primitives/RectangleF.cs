@@ -1,4 +1,5 @@
-﻿using System.Numerics;
+﻿using System;
+using System.Numerics;
 using NitroSharp.Utilities;
 
 namespace NitroSharp.Primitives
@@ -7,7 +8,7 @@ namespace NitroSharp.Primitives
     /// A read-only rectangle struct that uses floating-point numbers to represent the location and size.
     /// Meant to be used in conjuction with the 'in' modifier.
     /// </summary>
-    public readonly struct RectangleF
+    public readonly struct RectangleF : IEquatable<RectangleF>
     {
         public readonly float X;
         public readonly float Y;
@@ -69,13 +70,6 @@ namespace NitroSharp.Primitives
         public override string ToString()
         {
             return $"{{X:{X} Y:{Y} Width:{Width} Height:{Height}}}";
-        }
-
-        public static RectangleF Transform(in RectangleF rect, in Matrix3x2 matrix)
-        {
-            var position = Vector2.Transform(new Vector2(rect.X, rect.Y), matrix);
-            var size = Vector2.TransformNormal(new Vector2(rect.Width, rect.Height), matrix);
-            return new RectangleF(position.X, position.Y, size.X, size.Y);
         }
     }
 }

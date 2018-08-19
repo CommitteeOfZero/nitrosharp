@@ -1,123 +1,148 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using System;
+﻿using System;
 using System.Numerics;
-using Veldrid;
+using NitroSharp.Content;
 using NitroSharp.Primitives;
-using NitroSharp.Graphics.Objects;
 using NitroSharp.Text;
 using NitroSharp.Utilities;
+using Veldrid;
 
-namespace NitroSharp.Graphics
+namespace NitroSharp.Graphics.Systems
 {
-    internal sealed class RenderSystem : EntityProcessingSystem, IDisposable
+    internal sealed class RenderSystem : GameSystem, IDisposable
     {
+        private const ushort MainBucketSize = 512;
+        private readonly World _world;
+        private readonly GraphicsDevice _gd;
+        private readonly Swapchain _swapchain;
+        private readonly ContentManager _content;
         private readonly Configuration _config;
         private readonly FontService _fontService;
 
-        private GraphicsDevice _gd;
-        private Swapchain _swapchain;
-        private CommandList _cl;
-        private PrimitiveBatcher _primitiveBatch;
-        private RgbaTexturePool _texturePool;
-        private RenderContext _rc;
+        private readonly CommandList _cl;
+        private readonly RenderContext _context;
 
-        private Cube _cube;
+        private readonly ResourceLayout _viewProjectionLayout;
+        private readonly ResourceSet _viewProjectionSet;
+        private readonly DeviceBuffer _viewProjectionBuffer;
 
-        public RenderSystem(Configuration configuration, FontService fontService)
+        private readonly Texture _whiteTexture;
+        private readonly TextureView _whiteTextureView;
+        private readonly RenderBucket _mainBucket;
+        private readonly QuadGeometryStream _quadGeometryStream;
+        private readonly QuadBatcher _quadBatcher;
+        private readonly SpriteRenderer _spriteRenderer;
+        private readonly RectangleRenderer _quadRenderer;
+        private readonly ResourceSetCache _resourceSetCache;
+        private readonly ShaderLibrary _shaderLibrary;
+        private readonly RgbaTexturePool _texturePool;
+
+        public RenderSystem(World world,
+            GraphicsDevice device,
+            Swapchain swapchain,
+            ContentManager content,
+            FontService fontService,
+            Configuration gameConfiguration)
         {
-            _config = configuration;
-            _fontService = fontService;
-        }
-
-        public void CreateDeviceResources(GraphicsDevice device, Swapchain swapchain)
-        {
+            _world = world;
             _gd = device;
+            _swapchain = swapchain;
+            _content = content;
+            _fontService = fontService;
+            _config = gameConfiguration;
+
+            DesignResolution = new SizeF(_config.WindowWidth, _config.WindowHeight);
+
             ResourceFactory factory = _gd.ResourceFactory;
             _cl = factory.CreateCommandList();
-            _cl.Name = "Main";
+            _cl.Name = "Main Pass";
 
-            ResourceLayout sharedResourceLayout = factory.CreateResourceLayout(new ResourceLayoutDescription(
+            _resourceSetCache = new ResourceSetCache(_gd.ResourceFactory);
+            _shaderLibrary = new ShaderLibrary(_gd);
+            _texturePool = new RgbaTexturePool(_gd);
+
+            _viewProjectionLayout = factory.CreateResourceLayout(new ResourceLayoutDescription(
                 new ResourceLayoutElementDescription("ViewProjection", ResourceKind.UniformBuffer, ShaderStages.Vertex)));
 
             Matrix4x4 projection = Matrix4x4.CreateOrthographicOffCenter(
                 0, DesignResolution.Width, DesignResolution.Height, 0, 0, -1);
 
-            DeviceBuffer projectionBuffer = _gd.CreateStaticBuffer(
-                ref projection, BufferUsage.UniformBuffer);
+            _viewProjectionBuffer = _gd.CreateStaticBuffer(ref projection, BufferUsage.UniformBuffer);
+            _viewProjectionSet = factory.CreateResourceSet(new ResourceSetDescription(_viewProjectionLayout, _viewProjectionBuffer));
+            var viewProjection = new ViewProjection(_viewProjectionLayout, _viewProjectionSet, _viewProjectionBuffer);
 
-            ResourceSet sharedResourceSet = factory.CreateResourceSet(
-                new ResourceSetDescription(sharedResourceLayout, projectionBuffer));
+            _mainBucket = new RenderBucket(_gd, MainBucketSize);
+            _quadGeometryStream = new QuadGeometryStream(device);
+          
+            CreateWhiteTexture(out _whiteTexture, out _whiteTextureView);
 
-            var sharedConstants = new SharedResources(
-                sharedResourceLayout,
-                projectionBuffer,
-                sharedResourceSet);
-
-            var mainBucket = new RenderBucket(_gd, 512);
-
-            var quadGeometryStream = new QuadGeometryStream(device);
-            var cache = new ResourceSetCache(_gd.ResourceFactory);
-            var shaderLibrary = new ShaderLibrary(_gd);
-            _primitiveBatch = new PrimitiveBatcher(_gd, mainBucket, quadGeometryStream, shaderLibrary, sharedConstants, cache, swapchain.Framebuffer);
-            _texturePool = new RgbaTexturePool(_gd);
-            _rc = new RenderContext(_gd, _gd.ResourceFactory, _cl, _primitiveBatch, _texturePool, _fontService);
-
-            _rc.Device = device;
-            _rc.MainSwapchain = _swapchain = swapchain;
-            _rc.DesignResolution = new Size((uint)DesignResolution.Width, (uint)DesignResolution.Height);
-            _rc.SharedConstants = sharedConstants;
-            _rc.QuadGeometryStream = quadGeometryStream;
-            _rc.ShaderLibrary = shaderLibrary;
-
-            _rc.MainBucket = mainBucket;
-
-            foreach (var entity in Entities)
+            _context = new RenderContext
             {
-                entity.Visual.CreateDeviceObjects(_rc);
-            }
+                Device = device,
+                ResourceFactory = factory,
+                MainSwapchain = swapchain,
+                MainFramebuffer = swapchain.Framebuffer,
+                MainCommandList = _cl,
+                ShaderLibrary = _shaderLibrary,
+                TexturePool = _texturePool,
+                ResourceSetCache = _resourceSetCache,
+                FontService = fontService,
+                ViewProjection = viewProjection,
+                MainBucket = _mainBucket,
+                QuadGeometryStream = _quadGeometryStream,
+                WhiteTexture = _whiteTextureView,
+                DesignResolution = new Size((uint)DesignResolution.Width, (uint)DesignResolution.Height)
+            };
+
+            _context.QuadBatcher = _context.CreateQuadBatcher(_mainBucket, _swapchain.Framebuffer);
+            _quadBatcher = _context.QuadBatcher;
+
+            _spriteRenderer = new SpriteRenderer(world, _context, _content);
+            _quadRenderer = new RectangleRenderer(_context);
         }
 
-        public RenderContext RenderContext => _rc;
-        private SizeF DesignResolution => new SizeF(_config.WindowWidth, _config.WindowHeight);
+        private SizeF DesignResolution { get; }
+        public RenderContext Context => _context;
 
-        protected override void DeclareInterests(ISet<Type> interests)
+        private void CreateWhiteTexture(out Texture texture, out TextureView textureView)
         {
-            interests.Add(typeof(Visual));
-        }
+            Texture stagingWhite = _gd.ResourceFactory.CreateTexture(TextureDescription.Texture2D(
+                width: 1, height: 1, mipLevels: 1, arrayLayers: 1,
+                PixelFormat.R8_G8_B8_A8_UNorm, TextureUsage.Staging));
 
-        public override void OnRelevantEntityAdded(Entity entity)
-        {
-            var visual = entity.Visual;
-            if (!visual.IsInitialized)
-            {
-                visual.CreateDeviceObjects(_rc);
-                visual.IsInitialized = true;
-            }
-        }
+            MappedResourceView<RgbaByte> pixels = _gd.Map<RgbaByte>(stagingWhite, MapMode.Write);
+            pixels[0] = RgbaByte.White;
+            _gd.Unmap(stagingWhite);
 
-        public override void OnRelevantEntityRemoved(Entity entity)
-        {
-            entity.Visual.DestroyDeviceObjects(_rc);
-        }
-
-        public override void Update(float deltaMilliseconds)
-        {
-            _rc.QuadGeometryStream.Begin();
+            texture = _gd.ResourceFactory.CreateTexture(TextureDescription.Texture2D(
+                 width: 1, height: 1, mipLevels: 1, arrayLayers: 1,
+                 PixelFormat.R8_G8_B8_A8_UNorm, TextureUsage.Sampled));
+            textureView = _gd.ResourceFactory.CreateTextureView(texture);
 
             _cl.Begin();
+            _cl.CopyTexture(stagingWhite, texture);
+            _cl.End();
+            _gd.SubmitCommands(_cl);
+            _gd.DisposeWhenIdle(stagingWhite);
+        }
 
+        public override void Update(float deltaTime)
+        {
+            base.Update(deltaTime);
+
+            _cl.Begin();
             _cl.SetFramebuffer(_swapchain.Framebuffer);
             _cl.ClearColorTarget(0, RgbaFloat.Black);
 
-            _rc.MainBucket.Begin();
-            base.Update(deltaMilliseconds);
+            _mainBucket.Begin();
+            _quadGeometryStream.Begin();
 
-            _rc.QuadGeometryStream.End(_cl);
-            _rc.MainBucket.End(_cl);
+            _spriteRenderer.ProcessSprites(_world.Sprites);
+            _quadRenderer.ProcessRectangles(_world.Rectangles);
+
+            _quadGeometryStream.End(_cl);
+            _mainBucket.End(_cl);
 
             _cl.End();
-
             _gd.SubmitCommands(_cl);
         }
 
@@ -126,47 +151,21 @@ namespace NitroSharp.Graphics
             _gd.SwapBuffers(_swapchain);
         }
 
-        public override IEnumerable<Entity> SortEntities(IEnumerable<Entity> entities)
-        {
-            return entities.OrderBy(x => x.GetComponent<Visual>().Priority).ThenBy(x => x.CreationTime);
-        }
-
-        public override void Process(Entity entity, float deltaMilliseconds)
-        {
-            var visual = entity.Visual;
-            if (visual.IsEnabled)
-            {
-                RenderItem(visual, Vector2.One);
-            }
-        }
-
-        private void RenderItem(Visual visual, Vector2 scale)
-        {
-            if (visual.Priority == 0)
-            {
-                return;
-            }
-
-            var transform = visual.Entity.Transform.GetTransformMatrix();
-            _primitiveBatch.SetTransform(transform);
-            visual.Render(_rc);
-        }
-
-        public void DestroyDeviceResources()
-        {
-            foreach (var entity in Entities)
-            {
-                entity.Visual.DestroyDeviceObjects(_rc);
-            }
-
-            _primitiveBatch.Dispose();
-            _texturePool.Dispose();
-            _cl.Dispose();
-        }
-
         public void Dispose()
         {
-            DestroyDeviceResources();
+            _quadBatcher.Dispose();
+            _quadGeometryStream.Dispose();
+            _resourceSetCache.Dispose();
+            _texturePool.Dispose();
+            _shaderLibrary.Dispose();
+            _whiteTextureView.Dispose();
+            _whiteTexture.Dispose();
+
+            _viewProjectionSet.Dispose();
+            _viewProjectionBuffer.Dispose();
+            _viewProjectionLayout.Dispose();
+
+            _cl.Dispose();
         }
     }
 }

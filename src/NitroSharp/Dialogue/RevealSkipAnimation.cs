@@ -36,7 +36,7 @@ namespace NitroSharp.Dialogue
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void SetOpacity(ref LayoutGlyph glyph, float opacity)
         {
-            glyph.Color = glyph.Color.SetAlpha(opacity);
+            glyph.Color.SetAlpha(opacity);
         }
     }
 }

@@ -11,13 +11,13 @@ namespace NitroSharp.Graphics
         public QuadGeometryStream(GraphicsDevice graphicsDevice, uint initialCapacity = 512)
         {
             var indexArray = new ushort[] { 0, 1, 2, 2, 1, 3 };
-            VertexBuffer = new VertexRingBuffer<QuadVertex>(graphicsDevice, initialCapacity * 4);
-            InstanceDataBuffer = new VertexRingBuffer<QuadInstanceData>(graphicsDevice, initialCapacity);
+            VertexBuffer = new CircularVertexBuffer<QuadVertex>(graphicsDevice, initialCapacity * 4);
+            InstanceDataBuffer = new CircularVertexBuffer<QuadInstanceData>(graphicsDevice, initialCapacity);
             IndexBuffer = graphicsDevice.CreateStaticBuffer(indexArray, BufferUsage.IndexBuffer);
         }
 
-        public VertexRingBuffer<QuadVertex> VertexBuffer { get; }
-        public VertexRingBuffer<QuadInstanceData> InstanceDataBuffer { get; }
+        public CircularVertexBuffer<QuadVertex> VertexBuffer { get; }
+        public CircularVertexBuffer<QuadInstanceData> InstanceDataBuffer { get; }
         public DeviceBuffer IndexBuffer { get; }
 
         public void Begin()

@@ -1,15 +1,14 @@
-﻿using System;
-using System.Numerics;
+﻿using System.Numerics;
+using NitroSharp.Animation;
 
-namespace NitroSharp.Animation
+namespace NitroSharp.Logic.Components
 {
-    internal sealed class ZoomAnimation : Vector3Animation<Transform>
+    internal struct ZoomAnimation
     {
-        public ZoomAnimation(
-            Transform transform, Vector3 initialScale, Vector3 finalScale,
-            TimeSpan duration, TimingFunction timingFunction = TimingFunction.Linear)
-            : base(transform, (t, v) => t.Scale = v, initialScale, finalScale, duration, timingFunction)
-        {
-        }
+        public Vector3 InitialScale;
+        public Vector3 FinalScale;
+        public float Duration;
+        public float Elapsed;
+        public TimingFunction TimingFunction;
     }
 }

@@ -1,14 +1,15 @@
 ﻿using System;
 using System.Numerics;
+using NitroSharp.Animation;
 
-namespace NitroSharp.Animation
+namespace NitroSharp.Logic.Components
 {
-    internal sealed class MoveAnimation : Vector3Animation<Transform>
+    internal struct MoveAnimation
     {
-        public MoveAnimation(Transform transform, Vector3 startPosition, Vector3 destination,
-            TimeSpan duration, TimingFunction timingFunction = TimingFunction.Linear)
-            : base(transform, (t, v) => t.Position = v, startPosition, destination, duration, timingFunction)
-        {
-        }
+        public Vector3 StartPosition;
+        public Vector3 Destination;
+        public float Duration;
+        public float Elapsed;
+        public TimingFunction TimingFunction;
     }
 }

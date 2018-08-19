@@ -1,7 +1,7 @@
 ﻿{
   "productName": "COWSHEAD_NOAH",
-  "activeProfile": "CustomBoot",
-  "graphics.vsync": false,
+  "activeProfile": "Settings",
+  "graphics.vsync": true,
   "graphics.backend": "D3D11",
   "audio.backend": "XAudio2",
   "window.title": "COWS;HEAD NOAH",
@@ -28,7 +28,7 @@
     },
 
     "Test": {
-      "startupScript": "tests/media.nss"
+      "startupScript": "tests/simple.nss"
     },
 
     "CustomBoot": {

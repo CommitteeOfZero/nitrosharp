@@ -1,6 +1,7 @@
-﻿using NitroSharp.Animation;
-using NitroSharp.Content;
+﻿using NitroSharp.Content;
 using NitroSharp.Graphics;
+using NitroSharp.Graphics.Systems;
+using NitroSharp.Logic.Systems;
 using NitroSharp.Media;
 using NitroSharp.Media.Decoding;
 using NitroSharp.NsScript;
@@ -11,16 +12,19 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Veldrid;
 using Veldrid.StartupUtilities;
+using System.Runtime.InteropServices;
 
 namespace NitroSharp
 {
     public sealed class Game : IDisposable
     {
+        private bool IsMultithreaded = true;
+        private bool UseWicOnWindows = false;
+
         private readonly Stopwatch _gameTimer;
         private readonly Configuration _configuration;
         private readonly CancellationTokenSource _shutdownCancellation;
@@ -32,20 +36,25 @@ namespace NitroSharp
         private Swapchain _swapchain;
         private TaskCompletionSource<int> _initializingGraphics;
 
-        private readonly SystemManager _systems;
-        private RenderSystem _renderSystem;
         private InputSystem _inputHandler;
 
         private readonly string _nssFolder;
         private NsScriptInterpreter _nssInterpreter;
-        private readonly CoreLogic _coreLogic;
+        private readonly NsBuiltins _builtinFunctions;
         private Task _interpreterProc;
-        private volatile bool _nextStateReady;
+        private volatile bool _syncToFuture;
 
         private VideoFrameConverter _frameConverter;
         private SharpDX.WIC.ImagingFactory _wicFactory;
         private AudioDevice _audioDevice;
         private AudioSourcePool _audioSourcePool;
+
+        private World _presentWorld;
+        private World _futureWorld;
+
+        private RenderSystem _renderSystem;
+        private AnimationSystem _animationSystem;
+        private bool _syncToPresent;
 
         public Game(GameWindow window, Configuration configuration)
         {
@@ -60,9 +69,7 @@ namespace NitroSharp
             _window.Mobile_SurfaceDestroyed += OnSurfaceDestroyed;
 
             _gameTimer = new Stopwatch();
-            var entities = new EntityManager(_gameTimer);
-            _systems = new SystemManager(entities);
-            _coreLogic = new CoreLogic(this, entities);
+            _builtinFunctions = new NsBuiltins(this);
         }
 
         internal ContentManager Content { get; private set; }
@@ -79,8 +86,7 @@ namespace NitroSharp
             await Task.WhenAll(_initializingGraphics.Task, initializeAudio);
 
             CreateServices();
-            RegisterSystems();
-            _coreLogic.InitializeResources();
+            CreateGameWorld();
             await loadScriptTask;
             StartInterpreter();
 
@@ -118,13 +124,13 @@ namespace NitroSharp
             ContentLoader textureLoader = null;
             ContentLoader textureDataLoader = null;
 
-            //if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            //{
-            //    _wicFactory = new SharpDX.WIC.ImagingFactory();
-            //    textureLoader = new WicTextureLoader(content, _wicFactory);
-            //    textureDataLoader = new WicTextureDataLoader(content, _wicFactory);
-            //}
-            //else
+            if (UseWicOnWindows && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                _wicFactory = new SharpDX.WIC.ImagingFactory();
+                textureLoader = new WicTextureLoader(content, _wicFactory);
+                textureDataLoader = new WicTextureDataLoader(content, _wicFactory);
+            }
+            else
             {
                 textureLoader = new FFmpegTextureLoader(content);
                 textureDataLoader = new FFmpegTextureDataLoader(content);
@@ -155,17 +161,26 @@ namespace NitroSharp
             return fontService;
         }
 
-        private void RegisterSystems()
+        private void CreateGameWorld()
         {
-            _inputHandler = new InputSystem(_window, _coreLogic);
-            _systems.Add(_inputHandler);
+            _presentWorld = new World();
+            _futureWorld = new World();
 
-            var animationSystem = new AnimationSystem();
-            _systems.Add(animationSystem);
+            _animationSystem = new AnimationSystem(_presentWorld);
+            _renderSystem = new RenderSystem(_presentWorld,
+                _graphicsDevice, _swapchain,
+                Content, FontService, _configuration);
 
-            _renderSystem = new RenderSystem(_configuration, FontService);
-            _renderSystem.CreateDeviceResources(_graphicsDevice, _swapchain);
-            _systems.Add(_renderSystem);
+            if (IsMultithreaded)
+            {
+                _builtinFunctions.SetWorld(_futureWorld);
+            }
+            else
+            {
+                _builtinFunctions.SetWorld(_presentWorld);
+            }
+
+            _inputHandler = new InputSystem(_window, _builtinFunctions);
         }
 
         private Task RunMainLoop(bool useDedicatedThread = false)
@@ -185,6 +200,132 @@ namespace NitroSharp
                 }
 
                 return Task.FromResult(0);
+            }
+        }
+
+        private void LoadStartupScript()
+        {
+            _nssInterpreter = new NsScriptInterpreter(LocateScript, _builtinFunctions);
+            _nssInterpreter.CreateThread("__MAIN", _configuration.StartupScript, "main");
+        }
+
+        private Stream LocateScript(SourceFileReference fileRef)
+        {
+            return File.OpenRead(Path.Combine(_nssFolder, fileRef.FilePath.Replace("nss/", string.Empty)));
+        }
+
+        private void StartInterpreter()
+        {
+            if (IsMultithreaded)
+            {
+                _interpreterProc = Task.Factory.StartNew(InterpreterLoop, TaskCreationOptions.LongRunning);
+            }
+        }
+
+        private void MainLoop()
+        {
+            _gameTimer.Start();
+
+            float prevFrameTicks = 0.0f;
+            while (!_shutdownCancellation.IsCancellationRequested && _window.Exists)
+            {
+                if (_surfaceDestroyed)
+                {
+                    HandleSurfaceDestroyed();
+                    return;
+                }
+                if (_needsResize)
+                {
+                    Size newSize = _window.Size;
+                    _swapchain.Resize(newSize.Width, newSize.Height);
+                    _needsResize = false;
+                }
+
+                long currentFrameTicks = _gameTimer.ElapsedTicks;
+                float deltaMilliseconds = (currentFrameTicks - prevFrameTicks) / Stopwatch.Frequency * 1000.0f;
+                prevFrameTicks = currentFrameTicks;
+
+                Update(deltaMilliseconds);
+            }
+        }
+
+        private void Update(float deltaMilliseconds)
+        {
+            try
+            {
+                UpdateCore(deltaMilliseconds);
+            }
+            catch (OperationCanceledException)
+            {
+            }
+        }
+
+        private void UpdateCore(float deltaMilliseconds)
+        {
+            _inputHandler.Update(deltaMilliseconds);
+
+            if (IsMultithreaded)
+            {
+                if (_interpreterProc.IsFaulted)
+                {
+                    throw _interpreterProc.Exception.InnerException;
+                }
+                else if (_interpreterProc.IsCompleted)
+                {
+                    Exit();
+                }
+                if (_syncToFuture)
+                {
+
+                    _futureWorld.CopyChanges(_presentWorld);
+                    _syncToFuture = false;
+                }
+                else if (_syncToPresent)
+                {
+                    _presentWorld.CopyChanges(_futureWorld);
+                    _syncToPresent = false;
+                }
+            }
+            else
+            {
+                _nssInterpreter.RefreshThreadState();
+                _nssInterpreter.ProcessPendingThreadActions();
+                _nssInterpreter.Run(CancellationToken.None);
+            }
+
+            _animationSystem.Update(deltaMilliseconds);
+           _presentWorld.FlushDetachedBehaviors();
+
+            _renderSystem.Update(deltaMilliseconds);
+
+            if (_window.Exists)
+            {
+                _renderSystem.Present();
+            }
+        }
+
+        private void InterpreterLoop()
+        {
+            while (!_shutdownCancellation.IsCancellationRequested)
+            {
+                while (_syncToFuture || _syncToPresent)
+                {
+                    Thread.Sleep(5);
+                }
+
+                bool threadStateChanged = _nssInterpreter.RefreshThreadState();
+                if (threadStateChanged || _nssInterpreter.ProcessPendingThreadActions())
+                {
+                    _syncToPresent = true;
+                    continue;
+                }
+
+                if (_nssInterpreter.Run(CancellationToken.None))
+                {
+                    _syncToFuture = true;
+                }
+
+                if (!_nssInterpreter.Threads.Any()) { return; }
             }
         }
 
@@ -231,63 +372,6 @@ namespace NitroSharp
             }
         }
 
-        private void LoadStartupScript()
-        {
-            _nssInterpreter = new NsScriptInterpreter(LocateScript, _coreLogic);
-            _nssInterpreter.CreateThread("__MAIN", _configuration.StartupScript, "main");
-        }
-
-        private Stream LocateScript(SourceFileReference fileRef)
-        {
-            return File.OpenRead(Path.Combine(_nssFolder, fileRef.FilePath.Replace("nss/", string.Empty)));
-        }
-
-        private void StartInterpreter()
-        {
-            _interpreterProc = Task.Factory.StartNew(InterpreterLoop, TaskCreationOptions.LongRunning);
-        }
-
-        private void MainLoop()
-        {
-            _gameTimer.Start();
-
-            float prevFrameTicks = 0.0f;
-            while (!_shutdownCancellation.IsCancellationRequested && _window.Exists)
-            {
-                if (_surfaceDestroyed)
-                {
-                    HandleSurfaceDestroyed();
-                    return;
-                }
-                if (_needsResize)
-                {
-                    Size newSize = _window.Size;
-                    _swapchain.Resize(newSize.Width, newSize.Height);
-                    _needsResize = false;
-                }
-
-                long currentFrameTicks = _gameTimer.ElapsedTicks;
-                float deltaMilliseconds = (currentFrameTicks - prevFrameTicks) / Stopwatch.Frequency * 1000.0f;
-                prevFrameTicks = currentFrameTicks;
-
-                Update(deltaMilliseconds);
-            }
-        }
-
-        private void InterpreterLoop()
-        {
-            while (!_shutdownCancellation.IsCancellationRequested)
-            {
-                while (_nextStateReady)
-                {
-                    Thread.Sleep(5);
-                }
-
-                _nssInterpreter.Run(CancellationToken.None);
-                _nextStateReady = true;
-            }
-        }
-
         private void OnWindowResized()
         {
             _needsResize = true;
@@ -317,52 +401,15 @@ namespace NitroSharp
             _window.Mobile_HandledSurfaceDestroyed.Set();
         }
 
-        private void Update(float deltaMilliseconds)
-        {
-            try
-            {
-                UpdateCore(deltaMilliseconds);
-            }
-            catch (OperationCanceledException)
-            {
-            }
-        }
-
-        private void UpdateCore(float deltaMilliseconds)
-        {
-            if (_nextStateReady)
-            {
-                _systems.ProcessEntityUpdates();
-                _inputHandler.Update(deltaMilliseconds);
-
-                if (!_nssInterpreter.Threads.Any())
-                {
-                    Exit();
-                }
-
-                _nextStateReady = false;
-            }
-            else if (_interpreterProc.IsFaulted)
-            {
-                throw _interpreterProc.Exception.InnerException;
-            }
-
-            _systems.Update(deltaMilliseconds);
-            if (_window.Exists)
-            {
-                _renderSystem.Present();
-            }
-        }
-
         private void RecreateGraphicsResources()
         {
             Content.ReloadTextures();
-            _renderSystem.CreateDeviceResources(_graphicsDevice, _swapchain);
+            // _renderSystem.CreateDeviceResources(_graphicsDevice, _swapchain);
         }
 
         private void DestroyDeviceResources()
         {
-            _renderSystem.DestroyDeviceResources();
+            // _renderSystem.DestroyDeviceResources();
             Content.DestroyTextures();
         }
 
@@ -373,7 +420,8 @@ namespace NitroSharp
 
         public void Dispose()
         {
-            _systems.Dispose();
+            _renderSystem.Dispose();
+            //_systems.Dispose();
             Content.Dispose();
             FontService.Dispose();
             _wicFactory?.Dispose();

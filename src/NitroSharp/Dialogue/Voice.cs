@@ -13,6 +13,12 @@
         public string FileName { get; }
         public VoiceAction Action { get; }
 
-        public override DialogueLinePartKind PartKind => DialogueLinePartKind.VoicePart;
+        public override DialogueLinePartKind PartKind => DialogueLinePartKind.Voice;
+    }
+
+    internal enum VoiceAction
+    {
+        Play,
+        Stop
     }
 }

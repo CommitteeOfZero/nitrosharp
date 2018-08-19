@@ -13,9 +13,9 @@ namespace NitroSharp.Primitives
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static RgbaFloat SetAlpha(this RgbaFloat source, float alpha)
+        public static void SetAlpha(ref this RgbaFloat color, float alpha)
         {
-            return new RgbaFloat(source.R, source.G, source.B, alpha);
+            color = new RgbaFloat(color.R, color.G, color.B, alpha);
         }
     }
 }

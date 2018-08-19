@@ -1,0 +1,99 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+
+namespace NitroSharp
+{
+    internal abstract class OldEntityProcessingSystem : OldGameSystem
+    {
+        private readonly HashSet<OldEntity> _entities;
+        private readonly HashSet<Type> _interests;
+
+        protected OldEntityProcessingSystem()
+        {
+            _entities = new HashSet<OldEntity>();
+            _interests = new HashSet<Type>();
+            DeclareInterests(_interests);
+        }
+
+        public IEnumerable<OldEntity> Entities => _entities;
+        public IEnumerable<Type> Interests => _interests;
+
+        protected abstract void DeclareInterests(ISet<Type> interests);
+
+        public override void Update(float deltaMilliseconds)
+        {
+            ProcessAll(_entities, deltaMilliseconds);
+        }
+
+        public virtual IEnumerable<OldEntity> SortEntities(IEnumerable<OldEntity> entities)
+        {
+            return entities;
+        }
+
+        public abstract void Process(OldEntity entity, float deltaMilliseconds);
+        public virtual void ProcessAll(IEnumerable<OldEntity> entities, float deltaMilliseconds)
+        {
+            foreach (var item in SortEntities(entities))
+            {
+                Process(item, deltaMilliseconds);
+            }
+        }
+
+        public virtual void OnRelevantEntityAdded(OldEntity entity)
+        {
+        }
+
+        public virtual void OnRelevantEntityRemoved(OldEntity entity)
+        {
+        }
+
+        internal void ProcessEntityUpdates(IEnumerable<OldEntity> updatedEntities, IEnumerable<OldEntity> removedEntities)
+        {
+            foreach (var removed in removedEntities)
+            {
+                if (_entities.Remove(removed))
+                {
+                    OnRelevantEntityRemoved(removed);
+                }
+            }
+
+            foreach (var updated in updatedEntities)
+            {
+                EntityUpdated(updated);
+            }
+        }
+
+        private void EntityUpdated(OldEntity entity)
+        {
+            bool relevant = IsRelevant(entity);
+            if (relevant && _entities.Add(entity))
+            {
+                OnRelevantEntityAdded(entity);
+            }
+            else if (_entities.Contains(entity) && !relevant)
+            {
+                _entities.Remove(entity);
+                OnRelevantEntityRemoved(entity);
+            }
+        }
+
+        private bool IsRelevant(OldEntity entity)
+        {
+            if (entity.Components.Values.Count == 0)
+            {
+                return false;
+            }
+
+            foreach (Type interest in _interests)
+            {
+                if (entity.GetComponents(interest).Any(x => !x.IsScheduledForRemoval))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+    }
+}

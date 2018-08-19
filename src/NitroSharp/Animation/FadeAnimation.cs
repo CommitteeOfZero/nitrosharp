@@ -1,14 +1,13 @@
-﻿using System;
-using NitroSharp.Graphics;
+﻿using NitroSharp.Animation;
 
-namespace NitroSharp.Animation
+namespace NitroSharp.Logic.Components
 {
-    internal sealed class FadeAnimation : FloatAnimation<Visual>
+    internal struct FadeAnimation
     {
-        public FadeAnimation(Visual target, float initialOpacity, float finalOpacity,
-            TimeSpan duration, TimingFunction timingFunction = TimingFunction.Linear)
-            : base(target, (t, v) => t.Opacity = v, initialOpacity, finalOpacity, duration, timingFunction)
-        {
-        }
+        public float InitialOpacity;
+        public float FinalOpacity;
+        public float Duration;
+        public float Elapsed;
+        public TimingFunction TimingFunction;
     }
 }

@@ -16,7 +16,7 @@ namespace NitroSharp.Graphics
 
         public virtual void Dispose()
         {
-            DeviceBuffer.Dispose();
+            _deviceBuffer.Dispose();
         }
     }
 

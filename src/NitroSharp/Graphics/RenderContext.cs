@@ -6,32 +6,31 @@ namespace NitroSharp.Graphics
 {
     internal sealed class RenderContext
     {
-        internal RenderContext(GraphicsDevice device, ResourceFactory factory,
-            CommandList commandList, PrimitiveBatcher primitiveBatch,
-            RgbaTexturePool texturePool, FontService fontService)
-        {
-            Device = device;
-            Factory = factory;
-            CommandList = commandList;
-            PrimitiveBatch = primitiveBatch;
-            TexturePool = texturePool;
-            FontService = fontService;
-        }
-
-        public GraphicsDevice Device { get; internal set; }
-        public Size DesignResolution { get; internal set; }
-        public Swapchain MainSwapchain { get; internal set; }
-        public ResourceFactory Factory { get; internal set; }
-        public CommandList CommandList { get; internal set; }
-        public PrimitiveBatcher PrimitiveBatch { get; internal set; }
-        public RgbaTexturePool TexturePool { get; internal set; }
-        public FontService FontService { get; }
+        public GraphicsDevice Device { get; set; }
+        public ResourceFactory ResourceFactory { get; set; }
+        public Swapchain MainSwapchain { get; set; }
+        public Framebuffer MainFramebuffer { get; set; }
+        public CommandList MainCommandList { get; set; }
 
         public ShaderLibrary ShaderLibrary { get; set; }
-        public SharedResources SharedConstants { get; set; }
+        public RgbaTexturePool TexturePool { get; set; }
+        public ResourceSetCache ResourceSetCache { get; set; }
+        public FontService FontService { get; set; }
 
-        public QuadGeometryStream QuadGeometryStream { get; set; }
-
+        public ViewProjection ViewProjection { get; set; }
         public RenderBucket MainBucket { get; set; }
+        public QuadGeometryStream QuadGeometryStream { get; set; }
+        public QuadBatcher QuadBatcher { get; set; }
+       
+
+        public TextureView WhiteTexture { get; set; }
+
+        public Size DesignResolution { get; set; }
+
+        public QuadBatcher CreateQuadBatcher(RenderBucket bucket, Framebuffer framebuffer)
+        {
+            return new QuadBatcher(Device, framebuffer, ViewProjection, bucket,
+                QuadGeometryStream, ResourceSetCache, ShaderLibrary, WhiteTexture);
+        }
     }
 }

@@ -104,9 +104,9 @@ namespace NitroSharp.Media
                 var texturePool = renderContext.TexturePool;
                 var size = new Size((uint)Bounds.Width, (uint)Bounds.Height);
                 Texture sampled = texturePool.RentSampled(size);
-                _videoTexture = new BindableTexture(renderContext.Factory, sampled);
+                _videoTexture = new BindableTexture(renderContext.ResourceFactory, sampled);
                 _stagingTexture = texturePool.RentStaging(size);
-                _cl = renderContext.Factory.CreateCommandList();
+                _cl = renderContext.ResourceFactory.CreateCommandList();
             }
             if (_playbackSession.Container.HasAudio)
             {
@@ -355,7 +355,7 @@ namespace NitroSharp.Media
             if (_videoTexture != null)
             {
                 var rect = new RectangleF(Vector2.Zero, Bounds);
-                rc.PrimitiveBatch.DrawImage(_videoTexture.GetTextureView(), null, rect, ref _color, BlendMode.Additive);
+                rc.QuadBatcher.DrawImage(_videoTexture.GetTextureView(), null, rect, ref _color, 0, BlendMode.Additive);
             }
         }
 

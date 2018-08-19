@@ -26,7 +26,7 @@ namespace NitroSharp.NsScript.Execution
         private readonly Dictionary<string, ThreadContext> _threads;
         private readonly ConcurrentQueue<(ThreadContext thread, ThreadAction action, TimeSpan)> _pendingThreadActions;
         private readonly HashSet<ThreadContext> _activeThreads;
-        
+
         private readonly Environment _globals;
         private readonly Stopwatch _timer;
         private readonly IRBuilder _irBuilder;
@@ -45,18 +45,19 @@ namespace NitroSharp.NsScript.Execution
             _timer = Stopwatch.StartNew();
             _irBuilder = new IRBuilder();
         }
-        
+
         public IEnumerable<ThreadContext> Threads => _threads.Values;
+        public uint PendingThreadActions => (uint)_pendingThreadActions.Count;
         public Environment Globals => _globals;
         internal ThreadContext CurrentThread;
         private Frame CurrentFrame => CurrentThread.CurrentFrame;
-        
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private ConstantValue PopValue() => CurrentThread.Stack.Pop();
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void PushValue(ConstantValue value) => CurrentThread.Stack.Push(value);
-        
+
         private void EnsureHasLinearRepresentation(InvocableSymbol invocable)
         {
             if (invocable.LinearRepresentation == null)
@@ -96,33 +97,43 @@ namespace NitroSharp.NsScript.Execution
             _pendingThreadActions.Enqueue((thread, ThreadAction.Create, TimeSpan.Zero));
         }
 
-        public void Run(CancellationToken cancellationToken)
+        public bool RefreshThreadState()
         {
+            int nbResumed = 0;
+            TimeSpan time = TimeSpan.MaxValue;
+            foreach (ThreadContext thread in _threads.Values)
+            {
+                if (thread.IsSuspended && !thread.SuspensionTime.Equals(TimeSpan.MaxValue))
+                {
+                    if (time == TimeSpan.MaxValue)
+                    {
+                        time = _timer.Elapsed;
+                    }
+
+                    TimeSpan delta = time - thread.SuspensionTime;
+                    if (delta >= thread.SleepTimeout)
+                    {
+                        CommitResumeThread(thread);
+                        nbResumed++;
+                    }
+                    else
+                    {
+                        continue;
+                    }
+                }
+            }
+            return nbResumed > 0;
+        }
+
+        public bool Run(CancellationToken cancellationToken)
+        {
+            bool result = false;
             while (_threads.Count > 0 || _pendingThreadActions.Count > 0)
             {
                 ProcessPendingThreadActions();
-                var time = TimeSpan.MaxValue;
-                foreach (var thread in _threads.Values)
+                foreach (var thread in _activeThreads)
                 {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    if (thread.IsSuspended && !thread.SuspensionTime.Equals(TimeSpan.MaxValue))
-                    {
-                        if (time == TimeSpan.MaxValue)
-                        {
-                            time = _timer.Elapsed;
-                        }
-                        
-                        var delta = time - thread.SuspensionTime;
-                        if (delta >= thread.SleepTimeout)
-                        {
-                            CommitResumeThread(thread);
-                        }
-                        else
-                        {
-                            continue;
-                        }
-                    }
-
+                    result = true;
                     CurrentThread = thread;
                     Tick();
 
@@ -134,9 +145,11 @@ namespace NitroSharp.NsScript.Execution
 
                 if (_activeThreads.Count == 0)
                 {
-                    return;
+                    return result;
                 }
             }
+
+            return result;
         }
 
         private void Tick()
@@ -168,14 +181,14 @@ namespace NitroSharp.NsScript.Execution
                 case Opcode.WaitForInput:
                 case Opcode.Return:
                     return true;
-                    
+
                 default:
                     return false;
             }
         }
 
         private bool Execute(ref Instruction instruction)
-        {            
+        {
             switch (instruction.Opcode)
             {
                 case Opcode.PushValue:
@@ -221,7 +234,7 @@ namespace NitroSharp.NsScript.Execution
                 case Opcode.WaitForInput:
                     WaitForInput();
                     break;
-                    
+
                 case Opcode.Call:
                     Call(ref instruction);
                     break;
@@ -250,13 +263,13 @@ namespace NitroSharp.NsScript.Execution
             var value = (ConstantValue)instruction.Operand1;
             PushValue(value);
         }
-        
+
         private void PushVariable(ref Instruction instruction, Environment env)
         {
             var name = (string)instruction.Operand1;
             PushValue(env.Get(name));
         }
-        
+
         private void ApplyBinary(ref Instruction instruction)
         {
             var op = (BinaryOperatorKind)instruction.Operand1;
@@ -266,7 +279,7 @@ namespace NitroSharp.NsScript.Execution
 
             PushValue(result);
         }
-        
+
         private void ApplyUnary(ref Instruction instruction)
         {
             var op = (UnaryOperatorKind)instruction.Operand1;
@@ -285,13 +298,13 @@ namespace NitroSharp.NsScript.Execution
             var result = Operator.Assign(env, name, value, op);
             env.Set(name, result);
         }
-        
+
         private void ConvertToDelta()
         {
             var delta = ConstantValue.Create(PopValue().DoubleValue, isDeltaValue: true);
             PushValue(delta);
         }
-        
+
         private void SetDialogueBlock(ref Instruction instruction)
         {
             var block = (DialogueBlockSymbol)instruction.Operand1;
@@ -302,18 +315,18 @@ namespace NitroSharp.NsScript.Execution
 
             _engineImplementation.NotifyDialogueBlockEntered(block);
         }
-        
+
         private void Say(ref Instruction instruction)
         {
             var text = (string)instruction.Operand1;
             _engineImplementation.BeginDialogue(text);
         }
-        
+
         private void WaitForInput()
         {
             _engineImplementation.WaitForInput();
         }
-        
+
         private bool JumpIfEquals(ref Instruction instruction)
         {
             var value = (ConstantValue)instruction.Operand1;
@@ -332,7 +345,7 @@ namespace NitroSharp.NsScript.Execution
             int targetInstrIndex = (int)instruction.Operand1;
             CurrentFrame.Jump(targetInstrIndex);
         }
-        
+
         private void Call(ref Instruction instruction)
         {
             var target = (Symbol)instruction.Operand1;
@@ -386,7 +399,7 @@ namespace NitroSharp.NsScript.Execution
 
             CurrentThread.PushFrame(stackFrame);
         }
-        
+
         private void CallBuiltInFunction(BuiltInFunctionSymbol function)
         {
             var returnValue = function.Implementation.Invoke(_engineImplementation, CurrentThread.Stack);
@@ -396,8 +409,9 @@ namespace NitroSharp.NsScript.Execution
             }
         }
 
-        private void ProcessPendingThreadActions()
+        public bool ProcessPendingThreadActions()
         {
+            bool result = false;
             while (_pendingThreadActions.TryDequeue(out var tuple))
             {
                 (ThreadContext thread, ThreadAction action, TimeSpan suspensionTimeout) = tuple;
@@ -413,6 +427,7 @@ namespace NitroSharp.NsScript.Execution
 
                     case ThreadAction.Terminate:
                         CommitTerminateThread(thread);
+                        result = true;
                         break;
 
                     case ThreadAction.Suspend:
@@ -421,10 +436,12 @@ namespace NitroSharp.NsScript.Execution
 
                     case ThreadAction.Resume:
                         CommitResumeThread(thread);
+                        result = true;
                         break;
                 }
-
             }
+
+            return result;
         }
 
         public void ResumeThread(ThreadContext thread)
@@ -458,7 +475,7 @@ namespace NitroSharp.NsScript.Execution
         private void CommitResumeThread(ThreadContext thread)
         {
             Debug.Assert(_threads.ContainsKey(thread.Name), "Attempt to resume a thread that's already been terminated.");
-            
+
             thread.IsSuspended = false;
             thread.SuspensionTime = TimeSpan.Zero;
             thread.SleepTimeout = TimeSpan.Zero;

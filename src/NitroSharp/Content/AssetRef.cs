@@ -21,12 +21,12 @@ namespace NitroSharp.Content
         {
             get
             {
-                if (!_alive)
-                {
-                    throw new InvalidOperationException($"Attempted to use an asset reference that has been released. AssetId: {Id}.");
-                }
+                //if (!_alive)
+                //{
+                //    throw new InvalidOperationException($"Attempted to use an asset reference that has been released. AssetId: {Id}.");
+                //}
 
-                //if (_asset == null)
+                if (_asset == null)
                 {
                     _asset = _contentManager.InternalGetCached<T>(Id);
                 }

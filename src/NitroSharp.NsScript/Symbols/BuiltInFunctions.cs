@@ -128,14 +128,14 @@ namespace NitroSharp.NsScript.Symbols
         private static ConstantValue ImageHorizon(EngineImplementationBase implementation, Stack<ConstantValue> args)
         {
             string entityName = EntityName(PopString(args));
-            int width = implementation.GetTextureWidth(entityName);
+            int width = implementation.GetWidth(entityName);
             return ConstantValue.Create(width);
         }
 
         private static ConstantValue ImageVertical(EngineImplementationBase implementation, Stack<ConstantValue> args)
         {
             string entityName = EntityName(PopString(args));
-            int height = implementation.GetTextureHeight(entityName);
+            int height = implementation.GetHeight(entityName);
             return ConstantValue.Create(height);
         }
 
@@ -291,7 +291,7 @@ namespace NitroSharp.NsScript.Symbols
             int height = (int)PopNumeric(args);
             NsColor color = PopColor(args);
 
-            implementation.AddRectangle(entityName, priority, x, y, width, height, color);
+            implementation.FillRectangle(entityName, priority, x, y, width, height, color);
             return null;
         }
 

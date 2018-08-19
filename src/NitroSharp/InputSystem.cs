@@ -6,9 +6,9 @@ namespace NitroSharp
     internal sealed class InputSystem : InputTracker
     {
         private readonly GameWindow _window;
-        private readonly CoreLogic _coreLogic;
+        private readonly NsBuiltins _coreLogic;
 
-        public InputSystem(GameWindow window, CoreLogic coreLogic) : base(window)
+        public InputSystem(GameWindow window, NsBuiltins coreLogic) : base(window)
         {
             _window = window;
             _coreLogic = coreLogic;
