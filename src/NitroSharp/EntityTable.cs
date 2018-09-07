@@ -16,7 +16,7 @@ namespace NitroSharp
             IsLocked = AddRow<bool>();
         }
 
-        public ushort UsedColumns { get; private set; }
+        public ushort ColumnsUsed { get; private set; }
         public ushort ColumnCount { get; private set; }
 
         public Row<bool> IsLocked { get; }
@@ -29,6 +29,13 @@ namespace NitroSharp
             return row;
         }
 
+        protected RefTypeRow<T> AddRefTypeRow<T>() where T : class
+        {
+            var row = new RefTypeRow<T>(ColumnCount);
+            _rows.Add(row);
+            return row;
+        }
+
         internal ushort ReserveColumn()
         {
             if (_freeColumns.Count > 0)
@@ -36,19 +43,17 @@ namespace NitroSharp
                 return _freeColumns.Dequeue();
             }
 
-            ushort col = UsedColumns++;
             foreach (Row row in _rows)
             {
                 row.ReserveCell();
             }
 
-            return col;
+            return ColumnsUsed++;
         }
 
         internal void FreeColumn(Entity entity, bool eraseCells)
         {
-            ushort index = entity.Index;
-            _freeColumns.Enqueue(index);
+            _freeColumns.Enqueue(entity.Index);
             if (eraseCells)
             {
                 foreach (Row row in _rows)
@@ -58,12 +63,19 @@ namespace NitroSharp
             }
         }
 
-        public  void CopyChanges(EntityTable other)
+        public void CopyChanges(EntityTable other)
         {
             Debug.Assert(_rows.Count == other._rows.Count);
             for (int i = 0; i < _rows.Count; i++)
             {
                 _rows[i].CopyChanges(other._rows[i]);
+            }
+
+            other.ColumnsUsed = ColumnsUsed;
+            other._freeColumns.Clear();
+            foreach (ushort column in _freeColumns)
+            {
+                other._freeColumns.Enqueue(column);
             }
         }
 
@@ -74,21 +86,22 @@ namespace NitroSharp
             internal abstract void EraseCell(Entity entity);
         }
 
-        internal sealed class Row<T> : Row where T : struct
+        internal abstract class RowBase<T> : Row
         {
-            private T[] _data;
-            private readonly HashSet<(ushort start, ushort length)> _dirtyColumns;
+            protected T[] _data;
+            protected readonly HashSet<(ushort start, ushort length)> _dirtyColumns;
 
-            public Row(int columnCount)
+            protected RowBase(int initialColumnCount)
             {
-                _data = new T[columnCount];
+                _data = new T[initialColumnCount];
                 _dirtyColumns = new HashSet<(ushort start, ushort length)>();
             }
 
-            public ushort ColumnCount { get; private set; }
+            public ushort ColumnsUsed { get; private set; }
 
-            public T Get(Entity key) => _data[key.Index];
-            public ReadOnlySpan<T> Enumerate() => new ReadOnlySpan<T>(_data, 0, ColumnCount);
+            public T GetValue(Entity key) => _data[key.Index];
+            public ref readonly T GetReadonlyRef(Entity entity) => ref _data[entity.Index];
+            public ReadOnlySpan<T> Enumerate() => new ReadOnlySpan<T>(_data, 0, ColumnsUsed);
 
             public void Set(Entity key, T value)
             {
@@ -110,17 +123,17 @@ namespace NitroSharp
 
             public Span<T> MutateAll()
             {
-                if (ColumnCount > 0)
+                if (ColumnsUsed > 0)
                 {
-                    _dirtyColumns.Add((0, ColumnCount));
+                    _dirtyColumns.Add((0, ColumnsUsed));
                 }
 
-                return new Span<T>(_data, 0, ColumnCount);
+                return new Span<T>(_data, 0, ColumnsUsed);
             }
 
             internal override void CopyChanges(Row dstRow)
             {
-                var other = (Row<T>)dstRow;
+                var other = (RowBase<T>)dstRow;
                 if (_data.Length == other._data.Length)
                 {
                     foreach ((ushort start, ushort length) in _dirtyColumns)
@@ -137,28 +150,43 @@ namespace NitroSharp
                 }
                 else
                 {
-                    var newArray = new T[ColumnCount];
-                    Array.Copy(_data, 0, newArray, 0, ColumnCount);
+                    var newArray = new T[ColumnsUsed];
+                    Array.Copy(_data, 0, newArray, 0, ColumnsUsed);
                     other._data = newArray;
                 }
 
-                other.ColumnCount = ColumnCount;
+                other.ColumnsUsed = ColumnsUsed;
                 _dirtyColumns.Clear();
             }
 
             internal override void ReserveCell()
             {
-                if (_data.Length == ColumnCount)
+                if (_data.Length == ColumnsUsed)
                 {
-                    Array.Resize(ref _data, ColumnCount * 2);
+                    Array.Resize(ref _data, ColumnsUsed * 2);
                 }
 
-                ColumnCount++;
+                ColumnsUsed++;
             }
 
             internal override void EraseCell(Entity entity)
             {
+                _dirtyColumns.Add((entity.Index, 1));
                 _data[entity.Index] = default;
+            }
+        }
+
+        internal sealed class Row<T> : RowBase<T> where T : struct
+        {
+            public Row(int initialColumnCount) : base(initialColumnCount)
+            {
+            }
+        }
+
+        internal sealed class RefTypeRow<T> : RowBase<T> where T : class
+        {
+            public RefTypeRow(int initialColumnCount) : base(initialColumnCount)
+            {
             }
         }
     }

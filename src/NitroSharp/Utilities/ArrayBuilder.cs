@@ -8,7 +8,6 @@ namespace NitroSharp.Utilities
         private const uint DefaultCapacity = 4;
 
         public T[] _elements;
-        private readonly uint _initialCapacity;
 
         public ArrayBuilder(int initialCapacity) : this((uint)initialCapacity)
         {
@@ -16,7 +15,6 @@ namespace NitroSharp.Utilities
 
         public ArrayBuilder(uint initialCapacity)
         {
-            _initialCapacity = initialCapacity;
             _elements = new T[initialCapacity];
             Count = 0;
         }
@@ -92,6 +90,17 @@ namespace NitroSharp.Utilities
             var copy = new T[Count];
             Array.Copy(_elements, copy, Count);
             return copy;
+        }
+
+        public void DeepCopy(ref ArrayBuilder<T> destination)
+        {
+            if (destination._elements == null || destination._elements.Length < _elements.Length)
+            {
+                destination._elements = new T[_elements.Length];
+            }
+
+            Array.Copy(_elements, 0, destination._elements, 0, Count);
+            destination.Count = Count;
         }
 
         public Span<T> AsSpan() => new Span<T>(_elements, 0, (int)Count);

@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
 using NitroSharp.Animation;
-using NitroSharp.Graphics.Objects;
 using NitroSharp.Primitives;
 using NitroSharp.Text;
 
@@ -11,54 +10,52 @@ namespace NitroSharp.Dialogue
     {
         private const float GlyphTime = 50;
 
-        private readonly TextLayout _textLayout;
-        private readonly uint _startIndex;
-        private uint _offset;
+        private readonly ushort _startIndex;
+        private ushort _offset;
+        private World _world;
 
-        public TextRevealAnimation(TextLayout textLayout, uint startPosition)
-            : base(CalculateDuration(textLayout, startPosition))
+        public TextRevealAnimation(World world, Entity textEntity, ushort startPosition)
+            : base(textEntity, CalculateDuration(world.TextInstances.Layouts.Mutate(textEntity), startPosition))
         {
-            _textLayout = textLayout;
+            _world = world;
             _startIndex = startPosition;
         }
 
-        public uint Position => _startIndex + _offset;
+        public ushort Position => (ushort)(_startIndex + _offset);
         public bool IsAllTextVisible { get; private set; }
 
-        private static TimeSpan CalculateDuration(TextLayout textLayout, uint start)
+        private static TimeSpan CalculateDuration(TextLayout textLayout, ushort start)
         {
-            return TimeSpan.FromMilliseconds(GlyphTime * (textLayout.GlyphCount - start));
+            return TimeSpan.FromMilliseconds(GlyphTime * (textLayout.Glyphs.Count - start));
         }
 
-        public override void Advance(float deltaMilliseconds)
+        protected override void Advance(World world, float deltaMilliseconds)
         {
-            float prevElapsed = Elapsed;
-            base.Advance(deltaMilliseconds);
+            TextLayout textLayout = world.TextInstances.Layouts.GetValue(Entity);
 
-            // First, we need to catch up (i.e. fully reveal the glyphs before
-            // the one we're supposed to be animating at this time).
-            uint nbCharsToReveal = (uint)(Elapsed / GlyphTime) - _offset;
-            nbCharsToReveal = Math.Min(nbCharsToReveal, _textLayout.GlyphCount - Position);
-            RevealSpan(Position, nbCharsToReveal);
+            // First, we need to catch up (i.e. fully reveal the glyphs
+            // that come before the one we're supposed to be animating at this time).
+            ushort nbCharsToReveal = (ushort)((Elapsed / GlyphTime) - _offset);
+            nbCharsToReveal = (ushort)Math.Min(nbCharsToReveal, textLayout.Glyphs.Count - Position);
+            RevealSpan(textLayout, Position, nbCharsToReveal);
             _offset += nbCharsToReveal;
 
-            if (Position < _textLayout.GlyphCount)
+            if (Position < textLayout.Glyphs.Count)
             {
                 float currentGlyphOpacity = (Elapsed % GlyphTime) / GlyphTime;
-                ref var glyph = ref _textLayout.MutateGlyph(Position);
+                ref LayoutGlyph glyph = ref textLayout.MutateGlyph(Position);
                 SetOpacity(ref glyph, currentGlyphOpacity);
             }
 
-            PostAdvance();
             if (HasCompleted)
             {
                 IsAllTextVisible = true;
             }
         }
 
-        private void RevealSpan(uint start, uint length)
+        private void RevealSpan(TextLayout textLayout, ushort start, ushort length)
         {
-            var span = _textLayout.MutateSpan(start, length);
+            Span<LayoutGlyph> span = textLayout.MutateSpan(start, length);
             for (int i = 0; i < span.Length; i++)
             {
                 Reveal(ref span[i]);
@@ -76,10 +73,12 @@ namespace NitroSharp.Dialogue
 
         public void Stop()
         {
-            IsEnabled = false;
-            ref var glyph = ref _textLayout.MutateGlyph(Position);
+            TextLayout layout = _world.TextInstances.Layouts.GetValue(Entity);
+            ref LayoutGlyph glyph = ref layout.MutateGlyph(Position);
             Reveal(ref glyph);
-            IsAllTextVisible = Position == (_textLayout.GlyphCount - 1);
+            IsAllTextVisible = Position == (layout.Glyphs.Count - 1);
+
+            _world.DeactivateBehavior(this);
         }
     }
 }

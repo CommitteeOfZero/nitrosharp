@@ -1,11 +1,10 @@
 ﻿using System.Collections.Generic;
 using System.Numerics;
 using Veldrid;
-using Veldrid.Sdl2;
 
 namespace NitroSharp
 {
-    internal abstract class InputTracker : OldGameSystem
+    internal sealed class InputTracker
     {
         private readonly GameWindow _window;
 
@@ -17,7 +16,7 @@ namespace NitroSharp
 
         private Vector2 _previousSnapshotMousePosition;
 
-        protected InputTracker(GameWindow window)
+        public InputTracker(GameWindow window)
         {
             _window = window;
             //window.FocusGained += OnGotFocus;
@@ -27,7 +26,7 @@ namespace NitroSharp
         public Vector2 MouseDelta { get; private set; }
         public InputSnapshot CurrentSnapshot { get; private set; }
 
-        public override void Update(float deltaMilliseconds)
+        public void Update(float deltaMilliseconds)
         {
             UpdateFrameInput(_window.PumpEvents());
         }

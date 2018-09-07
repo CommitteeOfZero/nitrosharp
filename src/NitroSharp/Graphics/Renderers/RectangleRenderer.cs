@@ -7,16 +7,18 @@ namespace NitroSharp.Graphics
 {
     internal sealed class RectangleRenderer : GameSystem
     {
+        private readonly World _world;
         private readonly QuadBatcher _quadBatcher;
 
-        public RectangleRenderer(RenderContext renderContext)
+        public RectangleRenderer(World world, RenderContext renderContext)
         {
+            _world = world;
             _quadBatcher = renderContext.QuadBatcher;
         }
 
         public void ProcessRectangles(Rectangles rectangles)
         {
-            TransformProcessor.ProcessTransforms(rectangles);
+            TransformProcessor.ProcessTransforms(_world, rectangles);
             ProcessRectangles(rectangles.Bounds.Enumerate(),
                 rectangles.Colors.Enumerate(),
                 rectangles.RenderPriorities.Enumerate(),

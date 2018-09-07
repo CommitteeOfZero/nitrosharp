@@ -36,7 +36,7 @@ namespace NitroSharp.Graphics
             Span<QuadVertex> vertices = stackalloc QuadVertex[4];
             int offset = 0;
 
-            ref var VertexTL = ref vertices[offset];
+            ref QuadVertex VertexTL = ref vertices[offset];
             VertexTL.Position.X = rectangle.X;
             VertexTL.Position.Y = rectangle.Y;
             VertexTL.TexCoord.X = uvTopLeft.X;
@@ -44,7 +44,7 @@ namespace NitroSharp.Graphics
 
             VertexTL.Position = Vector2.Transform(VertexTL.Position, transform);
 
-            ref var VertexTR = ref vertices[++offset];
+            ref QuadVertex VertexTR = ref vertices[++offset];
             VertexTR.Position.X = rectangle.X + rectangle.Width;
             VertexTR.Position.Y = rectangle.Y;
             VertexTR.TexCoord.X = uvBottomRight.X;
@@ -52,7 +52,7 @@ namespace NitroSharp.Graphics
 
             VertexTR.Position = Vector2.Transform(VertexTR.Position, transform);
 
-            ref var VertexBL = ref vertices[++offset];
+            ref QuadVertex VertexBL = ref vertices[++offset];
             VertexBL.Position.X = rectangle.X;
             VertexBL.Position.Y = rectangle.Y + rectangle.Height;
             VertexBL.TexCoord.X = uvTopLeft.X;
@@ -60,7 +60,7 @@ namespace NitroSharp.Graphics
 
             VertexBL.Position = Vector2.Transform(VertexBL.Position, transform);
 
-            ref var VertexBR = ref vertices[++offset];
+            ref QuadVertex VertexBR = ref vertices[++offset];
             VertexBR.Position.X = rectangle.X + rectangle.Width;
             VertexBR.Position.Y = rectangle.Y + rectangle.Height;
             VertexBR.TexCoord.X = uvBottomRight.X;

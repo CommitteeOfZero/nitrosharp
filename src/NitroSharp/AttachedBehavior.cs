@@ -1,8 +1,14 @@
 ﻿namespace NitroSharp
 {
-    internal class AttachedBehavior<T> where T : unmanaged
+    internal abstract class AttachedBehavior
     {
-        public Entity Entity;
-        public T Behavior;
+        protected AttachedBehavior(Entity entity)
+        {
+            Entity = entity;
+        }
+
+        public Entity Entity { get; }
+
+        public abstract void Update(World world, float deltaTime);
     }
 }

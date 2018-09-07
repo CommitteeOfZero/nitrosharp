@@ -1,6 +1,7 @@
 ﻿using NitroSharp.Graphics;
 using NitroSharp.NsScript;
 using NitroSharp.Primitives;
+using NitroSharp.Text;
 using System;
 using System.Numerics;
 using Veldrid;
@@ -13,6 +14,21 @@ namespace NitroSharp
         {
             var table = _world.GetTable<EntityTable>(entity);
             table.Parents.Set(entity, parent);
+        }
+
+        public override void CreateText(string entityName, int priority, NsCoordinate x, NsCoordinate y, string text)
+        {
+            var fontFamily = FontService.GetFontFamily("Noto Sans CJK JP");
+            TextLayout layout = new TextLayout(fontFamily, new Size(300, 50), 256);
+            layout.Append(new TextRun()
+            {
+                Text = text,
+                Color = RgbaFloat.White
+            });
+
+            RgbaFloat color = RgbaFloat.White;
+            Entity entity = _world.CreateTextInstance(entityName, layout, priority, ref color);
+            SetPosition(entity, x, y);
         }
 
         public override void FillRectangle(
@@ -77,7 +93,7 @@ namespace NitroSharp
             string source = fileOrExistingEntityName;
             if (_world.TryGetEntity(fileOrExistingEntityName, out Entity existingEnitity))
             {
-                source = _world.Sprites.SpriteComponents.Get(existingEnitity).Image;
+                source = _world.Sprites.SpriteComponents.GetValue(existingEnitity).Image;
             }
 
             var texture = Content.Get<BindableTexture>(source);
@@ -120,7 +136,7 @@ namespace NitroSharp
         {
             if (_world.TryGetEntity(entityName, out Entity entity))
             {
-                return (int)_world.GetTable<Visuals>(entity).Bounds.Get(entity).Width;
+                return (int)_world.GetTable<Visuals>(entity).Bounds.GetValue(entity).Width;
             }
 
             return 0;
@@ -130,7 +146,7 @@ namespace NitroSharp
         {
             if (_world.TryGetEntity(entityName, out Entity entity))
             {
-                return (int)_world.GetTable<Visuals>(entity).Bounds.Get(entity).Height;
+                return (int)_world.GetTable<Visuals>(entity).Bounds.GetValue(entity).Height;
             }
 
             return 0;
@@ -142,13 +158,13 @@ namespace NitroSharp
 
             Visuals properties = _world.GetTable<Visuals>(entity);
 
-            ref var transform = ref properties.TransformComponents.Mutate(entity);
-            SizeF bounds = properties.Bounds.Get(entity);
+            ref TransformComponents transform = ref properties.TransformComponents.Mutate(entity);
+            SizeF bounds = properties.Bounds.GetValue(entity);
 
-            Entity parent = properties.Parents.Get(entity);
+            Entity parent = properties.Parents.GetValue(entity);
             if (parent.IsValid)
             {
-                parentBounds = properties.Bounds.Get(parent);
+                parentBounds = _world.GetTable<Visuals>(parent).Bounds.GetValue(parent);
             }
 
             var value = new Vector2(

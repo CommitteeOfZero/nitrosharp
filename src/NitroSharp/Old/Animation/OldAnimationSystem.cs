@@ -7,12 +7,12 @@ namespace NitroSharp.Animation
     {
         protected override void DeclareInterests(ISet<Type> interests)
         {
-            interests.Add(typeof(AnimationBase));
+            interests.Add(typeof(OldAnimationBase));
         }
 
         public override void Process(OldEntity entity, float deltaMilliseconds)
         {
-            foreach (AnimationBase animation in entity.GetComponents<AnimationBase>())
+            foreach (OldAnimationBase animation in entity.GetComponents<OldAnimationBase>())
             {
                 if (animation.IsEnabled)
                 {

@@ -3,13 +3,6 @@ using NitroSharp.Utilities;
 
 namespace NitroSharp
 {
-    internal enum EntityKind : ushort
-    {
-        Sprite,
-        Rectangle,
-        Thread
-    }
-
     internal readonly struct Entity : IEquatable<Entity>
     {
         public bool IsValid => UniqueId > 0;

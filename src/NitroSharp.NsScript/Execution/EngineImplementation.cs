@@ -14,14 +14,14 @@ namespace NitroSharp.NsScript.Execution
 
         internal void SetInterpreter(NsScriptInterpreter instance) => Interpreter = instance;
 
-        protected virtual void OnDialogueBlockEntered(DialogueBlockSymbol dialogueBlock)
+        protected virtual void BeginDialogueBlock(DialogueBlockSymbol dialogueBlock)
         {
         }
 
         internal void NotifyDialogueBlockEntered(DialogueBlockSymbol dialogueBlock)
         {
             _currentDialogueBlock = dialogueBlock;
-            OnDialogueBlockEntered(dialogueBlock);
+            BeginDialogueBlock(dialogueBlock);
         }
 
         public override int GetPlatformId() => 0;

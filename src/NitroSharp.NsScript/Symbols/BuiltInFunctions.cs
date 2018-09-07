@@ -59,6 +59,25 @@ namespace NitroSharp.NsScript.Symbols
 
             Declare("CreateMovie", CreateMovie);
             Declare("WaitPlay", WaitPlay);
+
+            Declare("CreateText", CreateText);
+        }
+
+        private static ConstantValue CreateText(EngineImplementationBase impl, Stack<ConstantValue> args)
+        {
+            string entityName = EntityName(PopString(args));
+            int priority = (int)PopNumeric(args).Value;
+            NsCoordinate x = PopCoordinate(args);
+            NsCoordinate y = PopCoordinate(args);
+
+            PopArgument(args);
+            PopArgument(args);
+
+            string text = PopString(args);
+
+            impl.CreateText(entityName, priority, x, y, text);
+
+            return null;
         }
 
         private static ConstantValue WaitPlay(EngineImplementationBase impl, Stack<ConstantValue> args)

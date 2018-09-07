@@ -47,6 +47,7 @@ namespace NitroSharp.NsScript.Execution
         }
 
         public IEnumerable<ThreadContext> Threads => _threads.Values;
+        public ThreadContext MainThread { get; private set; }
         public uint PendingThreadActions => (uint)_pendingThreadActions.Count;
         public Environment Globals => _globals;
         internal ThreadContext CurrentThread;
@@ -67,27 +68,28 @@ namespace NitroSharp.NsScript.Execution
         }
 
         public bool TryGetThread(string name, out ThreadContext thread) => _threads.TryGetValue(name, out thread);
-        public void CreateThread(string name, string symbolName, bool start = true)
+        public ThreadContext CreateThread(string name, string symbol, bool start = true)
         {
-            CreateThread(name, CurrentFrame.Module, symbolName, start);
+            return CreateThread(name, CurrentFrame.Module, symbol, start);
         }
 
-        public void CreateThread(string name, SourceFileReference moduleName, string symbolName, bool start = true)
+        public ThreadContext CreateThread(string name, SourceFileReference script, string symbol, bool start = true)
         {
-            var module = _sourceFileManager.Resolve(moduleName);
-            CreateThread(name, module, symbolName, start);
+            MergedSourceFileSymbol module = _sourceFileManager.Resolve(script);
+            return CreateThread(name, module, symbol, start);
         }
 
-        private void CreateThread(string name, MergedSourceFileSymbol module, string symbolName, bool start = true)
+        private ThreadContext CreateThread(string name, MergedSourceFileSymbol module, string symbol, bool start = true)
         {
-            Debug.WriteLine($"Creating thread '{symbolName}'");
-            var member = module.LookupMember(symbolName);
+            Debug.WriteLine($"Creating thread '{symbol}'");
+            InvocableSymbol member = module.LookupMember(symbol);
             EnsureHasLinearRepresentation(member);
 
             var thread = new ThreadContext(name, module, member);
             if (_threads.Count == 0)
             {
                 _engineImplementation.MainThread = thread;
+                MainThread = thread;
             }
             if (!start)
             {
@@ -95,6 +97,7 @@ namespace NitroSharp.NsScript.Execution
             }
 
             _pendingThreadActions.Enqueue((thread, ThreadAction.Create, TimeSpan.Zero));
+            return thread;
         }
 
         public bool RefreshThreadState()
@@ -103,7 +106,7 @@ namespace NitroSharp.NsScript.Execution
             TimeSpan time = TimeSpan.MaxValue;
             foreach (ThreadContext thread in _threads.Values)
             {
-                if (thread.IsSuspended && !thread.SuspensionTime.Equals(TimeSpan.MaxValue))
+                if (thread.IsSuspended && !thread.SleepTimeout.Equals(TimeSpan.MaxValue))
                 {
                     if (time == TimeSpan.MaxValue)
                     {
@@ -319,7 +322,7 @@ namespace NitroSharp.NsScript.Execution
         private void Say(ref Instruction instruction)
         {
             var text = (string)instruction.Operand1;
-            _engineImplementation.BeginDialogue(text);
+            _engineImplementation.BeginDialogueLine(text);
         }
 
         private void WaitForInput()
@@ -423,15 +426,17 @@ namespace NitroSharp.NsScript.Execution
                         {
                             _activeThreads.Add(thread);
                         }
+                        result = true;
                         break;
 
                     case ThreadAction.Terminate:
                         CommitTerminateThread(thread);
-                        result = true;
+                        //result = true;
                         break;
 
                     case ThreadAction.Suspend:
                         CommitSuspendThread(thread, suspensionTimeout);
+                        //result = true;
                         break;
 
                     case ThreadAction.Resume:
@@ -460,6 +465,8 @@ namespace NitroSharp.NsScript.Execution
             _pendingThreadActions.Enqueue((thread, ThreadAction.Terminate, TimeSpan.Zero));
         }
 
+        public void ResumeMainThread() => ResumeThread(MainThread);
+        public void SuspendMainThread() => SuspendThread(MainThread);
 
         private void CommitSuspendThread(ThreadContext thread) => CommitSuspendThread(thread, TimeSpan.MaxValue);
         private void CommitSuspendThread(ThreadContext thread, TimeSpan timeout)

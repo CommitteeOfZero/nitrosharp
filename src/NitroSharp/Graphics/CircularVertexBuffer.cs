@@ -137,11 +137,11 @@ namespace NitroSharp.Graphics
                     }
 
                     commandList.CopyBuffer(
-                              source: _stagingBuffer,
-                              sourceOffset: stagingOffset,
-                              destination: _deviceBuffer,
-                              destinationOffset: batchStartIdx * _vertexSize,
-                              sizeInBytes: batchSizeInBytes);
+                        source: _stagingBuffer,
+                        sourceOffset: stagingOffset,
+                        destination: _deviceBuffer,
+                        destinationOffset: batchStartIdx * _vertexSize,
+                        sizeInBytes: batchSizeInBytes);
 
                     stagingOffset += batchSizeInBytes;
                 }

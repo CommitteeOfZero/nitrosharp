@@ -1,18 +1,20 @@
 ﻿using System;
+using System.Runtime.CompilerServices;
+using NitroSharp.Animation;
 using NitroSharp.Utilities;
 
 namespace NitroSharp.Animation
 {
-    internal abstract class AnimationBase : Component
+    internal abstract class AnimationBase : AttachedBehavior
     {
         private float _elapsed;
         private bool _initialized;
+        private bool _completed;
 
-        protected AnimationBase()
-        {
-        }
-
-        protected AnimationBase(TimeSpan duration, TimingFunction timingFunction = TimingFunction.Linear, bool repeat = false)
+        protected AnimationBase(
+            Entity entity, TimeSpan duration,
+            TimingFunction timingFunction = TimingFunction.Linear,
+            bool repeat = false) : base(entity)
         {
             Duration = duration;
             TimingFunction = timingFunction;
@@ -21,14 +23,15 @@ namespace NitroSharp.Animation
 
         public TimeSpan Duration { get; protected set; }
         public TimingFunction TimingFunction { get; }
+        public bool Repeat { get; }
+
+        public event Action Completed;
+
         protected float Elapsed => _elapsed;
         public float Progress => MathUtil.Clamp(_elapsed / (float)Duration.TotalMilliseconds, 0.0f, 1.0f);
         public bool HasCompleted => _elapsed >= Duration.TotalMilliseconds;
-        public bool Repeat { get; }
 
-        public event EventHandler Completed;
-
-        public virtual void Advance(float deltaMilliseconds)
+        public override void Update(World world, float deltaMilliseconds)
         {
             if (_initialized)
             {
@@ -38,9 +41,19 @@ namespace NitroSharp.Animation
             {
                 _initialized = true;
             }
+
+            if (!_completed)
+            {
+                Advance(world, deltaMilliseconds);
+                PostAdvance(world);
+            }
         }
 
-        protected void PostAdvance()
+        protected virtual void Advance(World world, float deltaMilliseconds)
+        {
+        }
+
+        private void PostAdvance(World world)
         {
             if (HasCompleted)
             {
@@ -51,12 +64,18 @@ namespace NitroSharp.Animation
                 }
                 else
                 {
-                    Completed?.Invoke(this, EventArgs.Empty);
-                    Entity.RemoveComponent(this);
+                    _completed = true;
+                    Completed?.Invoke();
+                    world.DeactivateBehavior(this);
                 }
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        protected float CalculateProgress(float elapsed, float duration)
+            => MathUtil.Clamp(elapsed / duration, 0.0f, 1.0f);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected float CalculateFactor(float progress, TimingFunction function)
         {
             switch (function)

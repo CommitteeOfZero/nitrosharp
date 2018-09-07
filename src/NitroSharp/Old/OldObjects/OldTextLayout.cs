@@ -9,7 +9,7 @@ using Veldrid;
 
 namespace NitroSharp.Graphics.Objects
 {
-    internal class TextLayout : Visual
+    internal class OldTextLayout : Visual
     {
         private readonly LayoutBuilder _builder;
         private readonly Size _bounds;
@@ -24,7 +24,7 @@ namespace NitroSharp.Graphics.Objects
         private NativeMemory _nativeBuffer;
         private readonly HashSet<uint> _glyphsToUpdate;
 
-        public TextLayout(uint initialGlyphCapacity, FontFamily fontFamily, in Size maxBounds)
+        public OldTextLayout(uint initialGlyphCapacity, FontFamily fontFamily, in Size maxBounds)
         {
             _bounds = maxBounds;
             _fontFamily = fontFamily;

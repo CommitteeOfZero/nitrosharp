@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using NitroSharp.Utilities;
 using Veldrid;
 
 namespace NitroSharp.Graphics
 {
+    [StructLayout(LayoutKind.Sequential)]
     internal ref struct RenderBucketSubmission<TVertex>
         where TVertex : unmanaged
     {
@@ -20,12 +22,14 @@ namespace NitroSharp.Graphics
         public ushort IndexCount;
     }
 
+    [StructLayout(LayoutKind.Sequential)]
     internal ref struct RenderBucketSubmission<TVertex, TInstanceData>
         where TVertex : unmanaged
         where TInstanceData : unmanaged
     {
         public VertexBuffer VertexBuffer;
         public DeviceBuffer IndexBuffer;
+        public VertexBuffer InstanceDataBuffer;
         public Pipeline Pipeline;
         public ResourceSet SharedResourceSet;
         public ResourceSet ObjectResourceSet;
@@ -33,25 +37,25 @@ namespace NitroSharp.Graphics
         public ushort VertexCount;
         public ushort IndexBase;
         public ushort IndexCount;
-        public VertexBuffer InstanceDataBuffer;
         public ushort InstanceBase;
     }
 
     internal sealed class RenderBucket
     {
+        [StructLayout(LayoutKind.Sequential)]
         private struct RenderItem
         {
             public ResourceSet ObjectResourceSet;
-            public byte SharedResourceSetId;
-            public byte PipelineId;
-            public byte VertexBuffer0;
-            public byte VertexBuffer1;
-            public byte IndexBuffer;
             public ushort VertexBase;
             public ushort VertexCount;
             public ushort IndexBase;
             public ushort IndexCount;
             public ushort InstanceBase;
+            public byte SharedResourceSetId;
+            public byte PipelineId;
+            public byte VertexBuffer0;
+            public byte VertexBuffer1;
+            public byte IndexBuffer;
         }
 
         private ArrayBuilder<RenderItem> _renderItems;

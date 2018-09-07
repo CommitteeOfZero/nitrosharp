@@ -4,7 +4,7 @@ namespace NitroSharp.NsScript
 {
     public abstract class EngineImplementationBase
     {
-        public virtual void BeginDialogue(string pxmlString) { }
+        public virtual void BeginDialogueLine(string pxmlString) { }
 
         public virtual int GetPlatformId() => throw new NotImplementedException();
         public virtual string GetCurrentModuleName() => throw new NotImplementedException();
@@ -54,6 +54,8 @@ namespace NitroSharp.NsScript
         public virtual void WaitPlay(string entityName) { }
 
         public virtual void LoadVideo(string entityName, int priority, NsCoordinate x, NsCoordinate y, bool loop, string fileName) { }
+
+        public virtual void CreateText(string entityName, int priority, NsCoordinate x, NsCoordinate y, string text) { }
 
         /// <summary>
         /// Original name: CreateColor.

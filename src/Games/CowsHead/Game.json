@@ -2,7 +2,7 @@
   "productName": "COWSHEAD_NOAH",
   "activeProfile": "Settings",
   "graphics.vsync": true,
-  "graphics.backend": "D3D11",
+  "graphics.backend": "Vulkan",
   "audio.backend": "XAudio2",
   "window.title": "COWS;HEAD NOAH",
   "window.width": 1280,
@@ -47,7 +47,7 @@
       "window.title": "Cows;Head",
       "window.width": 800,
       "window.height": 600,
-      "startupScript": "test.nss",
+      "startupScript": "boot.nss",
       "debug.contentRoot": "S:/ChaosContent/CH"
     }
   }

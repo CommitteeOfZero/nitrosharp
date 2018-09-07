@@ -22,7 +22,7 @@ namespace NitroSharp.Graphics
             _world = world;
             _quadBatcher = renderContext.QuadBatcher;
             _content = contentManager;
-            _textures = new AssetRef<BindableTexture>[256];
+            _textures = new AssetRef<BindableTexture>[World.InitialSpriteCount];
         }
 
         private void OnSpriteAdded(Entity entity)
@@ -30,21 +30,24 @@ namespace NitroSharp.Graphics
             ushort index = entity.Index;
             ArrayUtil.EnsureCapacity(ref _textures, index + 1);
 
-            SpriteComponent sprite = _world.Sprites.SpriteComponents.Get(entity);
-            _textures[index] = _content.Get<BindableTexture>(sprite.Image);
+            SpriteComponent sprite = _world.Sprites.SpriteComponents.GetValue(entity);
+            if (sprite.Image != null)
+            {
+                _textures[index] = _content.Get<BindableTexture>(sprite.Image);
+            }
         }
 
         private void OnSpriteRemoved(Entity entity)
         {
             ushort index = entity.Index;
             ref AssetRef<BindableTexture> assetRef = ref _textures[index];
-            assetRef.Dispose();
+            assetRef?.Dispose();
             assetRef = null;
         }
 
         public void ProcessSprites(Sprites spriteTable)
         {
-            TransformProcessor.ProcessTransforms(spriteTable);
+            TransformProcessor.ProcessTransforms(_world, spriteTable);
             ReadOnlySpan<Matrix4x4> transforms = spriteTable.TransformMatrices.Enumerate();
 
             Span<SpriteComponent> sprites = spriteTable.SpriteComponents.MutateAll();
@@ -56,7 +59,7 @@ namespace NitroSharp.Graphics
             {
                 SpriteComponent sprite = sprites[i];
                 int renderPriority = priorities[i];
-                if (renderPriority > 0)
+                if (renderPriority > 0 && colors[i].A > 0)
                 {
                     ref readonly Matrix4x4 transform = ref transforms[i];
                     AssetRef<BindableTexture> textureRef = _textures[i];

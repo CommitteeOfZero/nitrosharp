@@ -2,7 +2,7 @@
 
 namespace NitroSharp.Animation
 {
-    internal abstract class ComponentPropertyAnimation<TComponent, TProperty> : AnimationBase
+    internal abstract class ComponentPropertyAnimation<TComponent, TProperty> : OldAnimationBase
         where TComponent : Component
         where TProperty : struct
     {

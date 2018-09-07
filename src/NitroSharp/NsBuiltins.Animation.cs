@@ -6,6 +6,7 @@ using NitroSharp.Logic.Components;
 using NitroSharp.Primitives;
 using Veldrid;
 using NitroSharp.Graphics;
+using NitroSharp.NsScript.Execution;
 
 namespace NitroSharp
 {
@@ -15,35 +16,36 @@ namespace NitroSharp
             string entityName, TimeSpan duration, NsRational opacity,
             NsEasingFunction easingFunction, TimeSpan delay)
         {
+            FadeAnimation lastAnimation = null;
             foreach ((Entity entity, string name) in _world.Query(entityName))
             {
-                FadeCore(entity, duration, opacity, easingFunction);
+                lastAnimation = FadeCore(entity, duration, opacity, easingFunction);
             }
 
-            if (delay > TimeSpan.Zero)
+            if (delay > TimeSpan.Zero && lastAnimation != null)
             {
-                Interpreter.SuspendThread(CurrentThread, delay);
+                WaitForAnimation(CurrentThread, lastAnimation);
             }
         }
 
-        private void FadeCore(
+        private FadeAnimation FadeCore(
             Entity entity, TimeSpan duration, NsRational dstOpacity, NsEasingFunction easingFunction)
         {
-            if (entity.Kind == EntityKind.Thread) { return; }
             float adjustedOpacity = dstOpacity.Rebase(1.0f);
             Visuals table = _world.GetTable<Visuals>(entity);
             ref RgbaFloat color = ref table.Colors.Mutate(entity);
             if (duration > TimeSpan.Zero)
             {
-                ref FadeAnimation animation = ref _world.AttachFadeAnimation(entity);
+                var animation = new FadeAnimation(entity, duration, (TimingFunction)easingFunction);
                 animation.InitialOpacity = color.A;
                 animation.FinalOpacity = adjustedOpacity;
-                animation.Duration = (float)duration.TotalMilliseconds;
-                animation.TimingFunction = (TimingFunction)easingFunction;
+                _world.ActivateBehavior(animation);
+                return animation;
             }
             else
             {
                 color.SetAlpha(adjustedOpacity);
+                return null;
             }
         }
 
@@ -52,18 +54,19 @@ namespace NitroSharp
             NsCoordinate dstX, NsCoordinate dstY,
             NsEasingFunction easingFunction, TimeSpan delay)
         {
+            MoveAnimation lastAnimation = null;
             foreach ((Entity entity, string name) in _world.Query(entityName))
             {
-                MoveCore(entity, duration, dstX, dstY, easingFunction);
+                lastAnimation = MoveCore(entity, duration, dstX, dstY, easingFunction);
             }
 
-            if (delay > TimeSpan.Zero)
+            if (delay > TimeSpan.Zero && lastAnimation != null)
             {
-                Interpreter.SuspendThread(CurrentThread, delay);
+                WaitForAnimation(CurrentThread, lastAnimation);
             }
         }
 
-        private void MoveCore(
+        private MoveAnimation MoveCore(
             Entity entity, TimeSpan duration,
             NsCoordinate dstX, NsCoordinate dstY,
             NsEasingFunction easingFunction)
@@ -83,15 +86,16 @@ namespace NitroSharp
             var destination = new Vector3(targetX, targetY, 0);
             if (duration > TimeSpan.Zero)
             {
-                ref MoveAnimation animation = ref _world.AttachMoveAnimation(entity);
+                var animation = new MoveAnimation(entity, duration, (TimingFunction)easingFunction);
                 animation.StartPosition = position;
                 animation.Destination = destination;
-                animation.Duration = (float)duration.TotalMilliseconds;
-                animation.TimingFunction = (TimingFunction)easingFunction;
+                _world.ActivateBehavior(animation);
+                return animation;
             }
             else
             {
                 position = destination;
+                return null;
             }
         }
 
@@ -100,18 +104,19 @@ namespace NitroSharp
             NsRational dstScaleX, NsRational dstScaleY,
             NsEasingFunction easingFunction, TimeSpan delay)
         {
+            ZoomAnimation lastAnimation = null;
             foreach ((Entity entity, string name) in _world.Query(entityName))
             {
-                ZoomCore(entity, duration, dstScaleX, dstScaleY, easingFunction);
+                lastAnimation = ZoomCore(entity, duration, dstScaleX, dstScaleY, easingFunction);
             }
 
-            if (delay > TimeSpan.Zero)
+            if (delay > TimeSpan.Zero && lastAnimation != null)
             {
-                Interpreter.SuspendThread(CurrentThread, delay);
+                WaitForAnimation(CurrentThread, lastAnimation);
             }
         }
 
-        private void ZoomCore(
+        private ZoomAnimation ZoomCore(
             Entity entity, TimeSpan duration,
             NsRational dstScaleX, NsRational dstScaleY,
             NsEasingFunction easingFunction)
@@ -131,17 +136,26 @@ namespace NitroSharp
                     scale = Vector3.Zero;
                 }
 
-                var fn = (TimingFunction)easingFunction;
-                ref ZoomAnimation animation = ref _world.AttachZoomAnimation(entity);
+                var animation = new ZoomAnimation(entity, duration, (TimingFunction)easingFunction);
                 animation.InitialScale = scale;
                 animation.FinalScale = finalScale;
-                animation.Duration = (float)duration.TotalMilliseconds;
-                animation.TimingFunction = (TimingFunction)easingFunction;
+                _world.ActivateBehavior(animation);
+                return animation;
             }
             else
             {
                 scale = new Vector3(dstScaleX, dstScaleY, 1);
+                return null;
             }
+        }
+
+        private void WaitForAnimation(ThreadContext thread, AnimationBase animation)
+        {
+            Interpreter.SuspendThread(thread);
+            animation.Completed += () =>
+            {
+                Interpreter.ResumeThread(thread);
+            };
         }
 
         //public override void Rotate(

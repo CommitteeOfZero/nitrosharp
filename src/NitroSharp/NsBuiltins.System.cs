@@ -24,11 +24,6 @@ namespace NitroSharp
         private ContentManager Content => _game.Content;
         private bool IsAnimationInProgress => MainThread.SleepTimeout != TimeSpan.MaxValue;
 
-        public void InitializeResources()
-        {
-            LoadPageIndicator();
-        }
-
         private void SuspendMainThread()
         {
             Interpreter.SuspendThread(MainThread);
@@ -52,11 +47,14 @@ namespace NitroSharp
             foreach ((Entity entity, string name) in _world.Query(entityName))
             {
                 var table = _world.GetTable<EntityTable>(entity);
-                if (!table.IsLocked.Get(entity))
+                if (!table.IsLocked.GetValue(entity))
                 {
                     _entitiesToRemove.Enqueue(name);
                     var attachedThread = Interpreter.Threads.FirstOrDefault(x => entityName.StartsWith(x.Name));
-                    if (attachedThread != null) { Interpreter.TerminateThread(attachedThread); }
+                    if (attachedThread != null)
+                    {
+                        Interpreter.TerminateThread(attachedThread);
+                    }
                 }
             }
 
@@ -68,7 +66,7 @@ namespace NitroSharp
 
         public override void Delay(TimeSpan delay)
         {
-            Interpreter.SuspendThread(CurrentThread, TimeSpan.FromSeconds(delay.TotalSeconds));
+            Interpreter.SuspendThread(CurrentThread, delay);
         }
 
         public override void WaitForInput()

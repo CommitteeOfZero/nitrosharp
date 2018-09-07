@@ -1,7 +1,6 @@
 ﻿using NitroSharp.Content;
 using NitroSharp.Graphics;
 using NitroSharp.Graphics.Systems;
-using NitroSharp.Logic.Systems;
 using NitroSharp.Media;
 using NitroSharp.Media.Decoding;
 using NitroSharp.NsScript;
@@ -17,13 +16,15 @@ using System.Threading.Tasks;
 using Veldrid;
 using Veldrid.StartupUtilities;
 using System.Runtime.InteropServices;
+using NitroSharp.Dialogue;
+using System.Collections.Concurrent;
 
 namespace NitroSharp
 {
     public sealed class Game : IDisposable
     {
         private bool IsMultithreaded = true;
-        private bool UseWicOnWindows = false;
+        private bool UseWicOnWindows = true;
 
         private readonly Stopwatch _gameTimer;
         private readonly Configuration _configuration;
@@ -36,7 +37,8 @@ namespace NitroSharp
         private Swapchain _swapchain;
         private TaskCompletionSource<int> _initializingGraphics;
 
-        private InputSystem _inputHandler;
+        private InputTracker _inputTracker;
+        private DialogueSystem _dialogueSystem;
 
         private readonly string _nssFolder;
         private NsScriptInterpreter _nssInterpreter;
@@ -53,7 +55,7 @@ namespace NitroSharp
         private World _futureWorld;
 
         private RenderSystem _renderSystem;
-        private AnimationSystem _animationSystem;
+        private AttachedBehaviorProcessor _attachedBehaviorProcessor;
         private bool _syncToPresent;
 
         public Game(GameWindow window, Configuration configuration)
@@ -70,6 +72,8 @@ namespace NitroSharp
 
             _gameTimer = new Stopwatch();
             _builtinFunctions = new NsBuiltins(this);
+            _inputTracker = new InputTracker(window);
+            InterpreterLoopTasks = new ConcurrentQueue<Action>();
         }
 
         internal ContentManager Content { get; private set; }
@@ -78,19 +82,34 @@ namespace NitroSharp
         internal AudioDevice AudioDevice => _audioDevice;
         internal AudioSourcePool AudioSourcePool => _audioSourcePool;
 
+        internal ConcurrentQueue<Action> InterpreterLoopTasks { get; }
+
         public async Task Run(bool useDedicatedThread = false)
         {
-            var loadScriptTask = Task.Run((Action)LoadStartupScript);
-            var initializeAudio = Task.Run((Action)SetupAudio);
+            Task loadScriptTask = Task.Run((Action)LoadStartupScript);
+            Task initializeAudio = Task.Run((Action)SetupAudio);
 
             await Task.WhenAll(_initializingGraphics.Task, initializeAudio);
 
             CreateServices();
             CreateGameWorld();
             await loadScriptTask;
+
+            _dialogueSystem = new DialogueSystem(_presentWorld, _inputTracker, _nssInterpreter);
             StartInterpreter();
 
             await RunMainLoop(useDedicatedThread);
+        }
+
+        private void LoadStartupScript()
+        {
+            _nssInterpreter = new NsScriptInterpreter(LocateScript, _builtinFunctions);
+            ThreadContext mainThread = _nssInterpreter.CreateThread("__MAIN", _configuration.StartupScript, "main");
+        }
+
+        private Stream LocateScript(SourceFileReference fileRef)
+        {
+            return File.OpenRead(Path.Combine(_nssFolder, fileRef.FilePath.Replace("nss/", string.Empty)));
         }
 
         private void OnSurfaceCreated(SwapchainSource swapchainSource)
@@ -108,224 +127,6 @@ namespace NitroSharp
                 }
 
                 RunMainLoop(true);
-            }
-        }
-
-        private void CreateServices()
-        {
-            Content = CreateContentManager();
-            Content.SetGraphicsDevice(_graphicsDevice);
-            FontService = CreateFontService();
-        }
-
-        private ContentManager CreateContentManager()
-        {
-            var content = new ContentManager(_configuration.ContentRoot);
-            ContentLoader textureLoader = null;
-            ContentLoader textureDataLoader = null;
-
-            if (UseWicOnWindows && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                _wicFactory = new SharpDX.WIC.ImagingFactory();
-                textureLoader = new WicTextureLoader(content, _wicFactory);
-                textureDataLoader = new WicTextureDataLoader(content, _wicFactory);
-            }
-            else
-            {
-                textureLoader = new FFmpegTextureLoader(content);
-                textureDataLoader = new FFmpegTextureDataLoader(content);
-            }
-
-            content.RegisterContentLoader(typeof(BindableTexture), textureLoader);
-            content.RegisterContentLoader(typeof(TextureData), textureDataLoader);
-
-            _frameConverter = new VideoFrameConverter();
-            var mediaFileLoader = new MediaFileLoader(content, _frameConverter, _audioDevice.AudioParameters);
-            content.RegisterContentLoader(typeof(MediaPlaybackSession), mediaFileLoader);
-
-            return content;
-        }
-
-        private void SetupAudio()
-        {
-            var audioParameters = AudioParameters.Default;
-            var backend = _configuration.PreferredAudioBackend ?? AudioDevice.GetPlatformDefaultBackend();
-            _audioDevice = AudioDevice.Create(backend, audioParameters);
-            _audioSourcePool = new AudioSourcePool(_audioDevice);
-        }
-
-        private FontService CreateFontService()
-        {
-            var fontService = new FontService();
-            fontService.RegisterFonts(Directory.EnumerateFiles("Fonts"));
-            return fontService;
-        }
-
-        private void CreateGameWorld()
-        {
-            _presentWorld = new World();
-            _futureWorld = new World();
-
-            _animationSystem = new AnimationSystem(_presentWorld);
-            _renderSystem = new RenderSystem(_presentWorld,
-                _graphicsDevice, _swapchain,
-                Content, FontService, _configuration);
-
-            if (IsMultithreaded)
-            {
-                _builtinFunctions.SetWorld(_futureWorld);
-            }
-            else
-            {
-                _builtinFunctions.SetWorld(_presentWorld);
-            }
-
-            _inputHandler = new InputSystem(_window, _builtinFunctions);
-        }
-
-        private Task RunMainLoop(bool useDedicatedThread = false)
-        {
-            if (useDedicatedThread)
-            {
-                return Task.Factory.StartNew(MainLoop, TaskCreationOptions.LongRunning);
-            }
-            else
-            {
-                try
-                {
-                    MainLoop();
-                }
-                catch (TaskCanceledException)
-                {
-                }
-
-                return Task.FromResult(0);
-            }
-        }
-
-        private void LoadStartupScript()
-        {
-            _nssInterpreter = new NsScriptInterpreter(LocateScript, _builtinFunctions);
-            _nssInterpreter.CreateThread("__MAIN", _configuration.StartupScript, "main");
-        }
-
-        private Stream LocateScript(SourceFileReference fileRef)
-        {
-            return File.OpenRead(Path.Combine(_nssFolder, fileRef.FilePath.Replace("nss/", string.Empty)));
-        }
-
-        private void StartInterpreter()
-        {
-            if (IsMultithreaded)
-            {
-                _interpreterProc = Task.Factory.StartNew(InterpreterLoop, TaskCreationOptions.LongRunning);
-            }
-        }
-
-        private void MainLoop()
-        {
-            _gameTimer.Start();
-
-            float prevFrameTicks = 0.0f;
-            while (!_shutdownCancellation.IsCancellationRequested && _window.Exists)
-            {
-                if (_surfaceDestroyed)
-                {
-                    HandleSurfaceDestroyed();
-                    return;
-                }
-                if (_needsResize)
-                {
-                    Size newSize = _window.Size;
-                    _swapchain.Resize(newSize.Width, newSize.Height);
-                    _needsResize = false;
-                }
-
-                long currentFrameTicks = _gameTimer.ElapsedTicks;
-                float deltaMilliseconds = (currentFrameTicks - prevFrameTicks) / Stopwatch.Frequency * 1000.0f;
-                prevFrameTicks = currentFrameTicks;
-
-                Update(deltaMilliseconds);
-            }
-        }
-
-        private void Update(float deltaMilliseconds)
-        {
-            try
-            {
-                UpdateCore(deltaMilliseconds);
-            }
-            catch (OperationCanceledException)
-            {
-            }
-        }
-
-        private void UpdateCore(float deltaMilliseconds)
-        {
-            _inputHandler.Update(deltaMilliseconds);
-
-            if (IsMultithreaded)
-            {
-                if (_interpreterProc.IsFaulted)
-                {
-                    throw _interpreterProc.Exception.InnerException;
-                }
-                else if (_interpreterProc.IsCompleted)
-                {
-                    Exit();
-                }
-                if (_syncToFuture)
-                {
-
-                    _futureWorld.CopyChanges(_presentWorld);
-                    _syncToFuture = false;
-                }
-                else if (_syncToPresent)
-                {
-                    _presentWorld.CopyChanges(_futureWorld);
-                    _syncToPresent = false;
-                }
-            }
-            else
-            {
-                _nssInterpreter.RefreshThreadState();
-                _nssInterpreter.ProcessPendingThreadActions();
-                _nssInterpreter.Run(CancellationToken.None);
-            }
-
-            _animationSystem.Update(deltaMilliseconds);
-           _presentWorld.FlushDetachedBehaviors();
-
-            _renderSystem.Update(deltaMilliseconds);
-
-            if (_window.Exists)
-            {
-                _renderSystem.Present();
-            }
-        }
-
-        private void InterpreterLoop()
-        {
-            while (!_shutdownCancellation.IsCancellationRequested)
-            {
-                while (_syncToFuture || _syncToPresent)
-                {
-                    Thread.Sleep(5);
-                }
-
-                bool threadStateChanged = _nssInterpreter.RefreshThreadState();
-                if (threadStateChanged || _nssInterpreter.ProcessPendingThreadActions())
-                {
-                    _syncToPresent = true;
-                    continue;
-                }
-
-                if (_nssInterpreter.Run(CancellationToken.None))
-                {
-                    _syncToFuture = true;
-                }
-
-                if (!_nssInterpreter.Threads.Any()) { return; }
             }
         }
 
@@ -369,6 +170,228 @@ namespace NitroSharp
                     return GraphicsDevice.CreateMetal(options);
                 default:
                     return null;
+            }
+        }
+
+        private void SetupAudio()
+        {
+            var audioParameters = AudioParameters.Default;
+            var backend = _configuration.PreferredAudioBackend ?? AudioDevice.GetPlatformDefaultBackend();
+            _audioDevice = AudioDevice.Create(backend, audioParameters);
+            _audioSourcePool = new AudioSourcePool(_audioDevice);
+        }
+
+        private void CreateServices()
+        {
+            Content = CreateContentManager();
+            Content.SetGraphicsDevice(_graphicsDevice);
+            FontService = new FontService();
+            FontService.RegisterFonts(Directory.EnumerateFiles("Fonts"));
+        }
+
+        private ContentManager CreateContentManager()
+        {
+            var content = new ContentManager(_configuration.ContentRoot);
+            ContentLoader textureLoader = null;
+            ContentLoader textureDataLoader = null;
+
+            if (UseWicOnWindows && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                _wicFactory = new SharpDX.WIC.ImagingFactory();
+                textureLoader = new WicTextureLoader(content, _wicFactory);
+                textureDataLoader = new WicTextureDataLoader(content, _wicFactory);
+            }
+            else
+            {
+                textureLoader = new FFmpegTextureLoader(content);
+                textureDataLoader = new FFmpegTextureDataLoader(content);
+            }
+
+            content.RegisterContentLoader(typeof(BindableTexture), textureLoader);
+            content.RegisterContentLoader(typeof(TextureData), textureDataLoader);
+
+            _frameConverter = new VideoFrameConverter();
+            var mediaFileLoader = new MediaFileLoader(content, _frameConverter, _audioDevice.AudioParameters);
+            content.RegisterContentLoader(typeof(MediaPlaybackSession), mediaFileLoader);
+
+            return content;
+        }
+
+        private void CreateGameWorld()
+        {
+            _presentWorld = new World(WorldKind.Primary);
+            World scriptingWorld = _presentWorld;
+            if (IsMultithreaded)
+            {
+                _futureWorld = new World(WorldKind.Secondary);
+                scriptingWorld = _futureWorld;
+            }
+
+            _builtinFunctions.SetWorld(scriptingWorld);
+
+            _attachedBehaviorProcessor = new AttachedBehaviorProcessor(_presentWorld);
+            _renderSystem = new RenderSystem(
+                _presentWorld, _graphicsDevice, _swapchain,
+                Content, FontService, _configuration);
+        }
+
+        private void StartInterpreter()
+        {
+            if (IsMultithreaded)
+            {
+                _interpreterProc = Task.Factory.StartNew(InterpreterLoop, TaskCreationOptions.LongRunning);
+            }
+        }
+
+        private void InterpreterLoop()
+        {
+            while (!_shutdownCancellation.IsCancellationRequested)
+            {
+                while (_syncToFuture || _syncToPresent)
+                {
+                    Thread.Sleep(5);
+                }
+
+                Thread.Sleep(1);
+
+                bool threadStateChanged = _nssInterpreter.RefreshThreadState();
+                if (threadStateChanged || _nssInterpreter.ProcessPendingThreadActions())
+                {
+                    _syncToPresent = true;
+                    continue;
+                }
+
+                while (InterpreterLoopTasks.TryDequeue(out Action a))
+                {
+                    a.Invoke();
+                }
+
+                if (_nssInterpreter.Run(CancellationToken.None))
+                {
+                    _syncToFuture = true;
+                }
+
+                if (!_nssInterpreter.Threads.Any()) { return; }
+            }
+        }
+
+        private Task RunMainLoop(bool useDedicatedThread = false)
+        {
+            if (useDedicatedThread)
+            {
+                return Task.Factory.StartNew(MainLoop, TaskCreationOptions.LongRunning);
+            }
+            else
+            {
+                try
+                {
+                    MainLoop();
+                }
+                catch (TaskCanceledException)
+                {
+                }
+
+                return Task.FromResult(0);
+            }
+        }
+
+        private void MainLoop()
+        {
+            _gameTimer.Start();
+
+            float prevFrameTicks = 0.0f;
+            while (!_shutdownCancellation.IsCancellationRequested && _window.Exists)
+            {
+                if (_surfaceDestroyed)
+                {
+                    HandleSurfaceDestroyed();
+                    return;
+                }
+                if (_needsResize)
+                {
+                    Size newSize = _window.Size;
+                    _swapchain.Resize(newSize.Width, newSize.Height);
+                    _needsResize = false;
+                }
+
+                long currentFrameTicks = _gameTimer.ElapsedTicks;
+                float deltaMilliseconds = (currentFrameTicks - prevFrameTicks) / Stopwatch.Frequency * 1000.0f;
+                prevFrameTicks = currentFrameTicks;
+
+                Update(deltaMilliseconds);
+            }
+        }
+
+        private void Update(float deltaMilliseconds)
+        {
+            try
+            {
+                if (deltaMilliseconds > 20)
+                {
+                    Console.WriteLine(deltaMilliseconds);
+                }
+
+                UpdateCore(deltaMilliseconds);
+            }
+            catch (OperationCanceledException)
+            {
+            }
+        }
+
+        private void UpdateCore(float deltaMilliseconds)
+        {
+            _inputTracker.Update(deltaMilliseconds);
+
+            if (IsMultithreaded)
+            {
+                if (_interpreterProc.IsFaulted)
+                {
+                    throw _interpreterProc.Exception.InnerException;
+                }
+                else if (_interpreterProc.IsCompleted)
+                {
+                    Exit();
+                }
+                if (_syncToFuture)
+                {
+                    _futureWorld.CopyChanges(_presentWorld);
+                    _syncToFuture = false;
+                }
+                else if (_syncToPresent)
+                {
+                    _presentWorld.CopyChanges(_futureWorld);
+                    _syncToPresent = false;
+                }
+            }
+            else
+            {
+                _nssInterpreter.RefreshThreadState();
+                _nssInterpreter.ProcessPendingThreadActions();
+
+                while (InterpreterLoopTasks.TryDequeue(out Action a))
+                {
+                    a.Invoke();
+                }
+
+                _nssInterpreter.Run(CancellationToken.None);
+            }
+
+            _presentWorld.FlushDetachedBehaviors();
+            _attachedBehaviorProcessor.Update(deltaMilliseconds);
+
+            _dialogueSystem.Update(deltaMilliseconds);
+            _renderSystem.Update(deltaMilliseconds);
+
+            if (_window.Exists)
+            {
+                try
+                {
+                    _renderSystem.Present();
+                }
+                catch (VeldridException e) when (e.Message == "The Swapchain's underlying surface has been lost.")
+                {
+                    return;
+                }
             }
         }
 
