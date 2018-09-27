@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Numerics;
+using System.Runtime.CompilerServices;
 using NitroSharp.Primitives;
 using NitroSharp.Text;
 using NitroSharp.Utilities;
@@ -7,16 +8,17 @@ using Veldrid;
 
 namespace NitroSharp.Graphics.Renderers
 {
+    internal struct TextSystemData
+    {
+        public Texture StagingTexture;
+        public Texture LayoutTexture;
+        public TextureView TextureView;
+    }
+
     internal sealed class TextRenderer : IDisposable
     {
         private readonly World _world;
         private readonly RenderContext _renderContext;
-
-        private const ushort ArraySize = World.InitialTextLayoutCount;
-
-        private Texture[] _layoutTextures = new Texture[ArraySize];
-        private Texture[] _stagingTextures = new Texture[ArraySize];
-        private TextureView[] _textureViews = new TextureView[ArraySize];
 
         private NativeMemory _nativeBuffer = NativeMemory.Allocate(256 * 256 * 4);
 
@@ -24,54 +26,46 @@ namespace NitroSharp.Graphics.Renderers
         {
             _world = world;
             _renderContext = renderContext;
-            world.TextInstanceAdded += OnTextInstanceAdded;
-            world.TextInstanceRemoved += OnTextInstanceRemoved;
         }
 
-        private void OnTextInstanceAdded(Entity entity)
+        public void ProcessTextLayouts()
         {
-            int requiredCapacity = entity.Index + 1;
-            ArrayUtil.EnsureCapacity(ref _stagingTextures, requiredCapacity);
-            ArrayUtil.EnsureCapacity(ref _layoutTextures, requiredCapacity);
-            ArrayUtil.EnsureCapacity(ref _textureViews, requiredCapacity);
+            var textInstances = _world.TextInstances;
 
-            TextLayout layout = _world.TextInstances.Layouts.GetValue(entity);
             RgbaTexturePool texturePool = _renderContext.TexturePool;
-            _stagingTextures[entity.Index] = texturePool.RentStaging(layout.MaxBounds);
-            Texture sampled = texturePool.RentSampled(layout.MaxBounds);
-            _layoutTextures[entity.Index] = sampled;
-            _textureViews[entity.Index] = _renderContext.ResourceFactory.CreateTextureView(sampled);
-        }
+            var removed = textInstances.SystemData.RecycledComponents;
+            foreach (TextSystemData data in removed)
+            {
+                texturePool.Return(data.StagingTexture);
+                texturePool.Return(data.LayoutTexture);
+                _renderContext.Device.DisposeWhenIdle(data.TextureView);
+            }
 
-        private void OnTextInstanceRemoved(Entity entity)
-        {
-            RgbaTexturePool texturePool = _renderContext.TexturePool;
-            ref Texture staging = ref _stagingTextures[entity.Index];
-            ref Texture sampled = ref _layoutTextures[entity.Index];
-            texturePool.Return(staging);
-            texturePool.Return(sampled);
-            staging = null;
-            sampled = null;
+            var added = textInstances.AddedEntities;
+            foreach (Entity entity in added)
+            {
+                ref TextSystemData data = ref textInstances.SystemData.Mutate(entity);
+                TextLayout layout = textInstances.Layouts.GetValue(entity);
+                data.StagingTexture = texturePool.RentStaging(layout.MaxBounds);
+                Texture sampled = texturePool.RentSampled(layout.MaxBounds);
+                data.LayoutTexture = sampled;
+                data.TextureView = _renderContext.ResourceFactory.CreateTextureView(sampled);
+            }
 
-            ref TextureView view = ref _textureViews[entity.Index];
-            _renderContext.Device.DisposeWhenIdle(view);
-            view = null;
-        }
-
-        public void RenderTextLayouts(TextInstances textInstances)
-        {
             TransformProcessor.ProcessTransforms(_world, textInstances);
-            RenderTextLayouts(textInstances.Layouts.MutateAll(),
+            RenderTextLayouts(textInstances.Layouts.Enumerate(),
                 textInstances.ClearFlags.MutateAll(),
                 textInstances.RenderPriorities.Enumerate(),
-                textInstances.TransformMatrices.Enumerate());
+                textInstances.TransformMatrices.Enumerate(),
+                textInstances.SystemData.Enumerate());
         }
 
         public void RenderTextLayouts(
-            Span<TextLayout> layouts,
+            ReadOnlySpan<TextLayout> layouts,
             Span<bool> clearFlags,
             ReadOnlySpan<int> renderPriorities,
-            ReadOnlySpan<Matrix4x4> transforms)
+            ReadOnlySpan<Matrix4x4> transforms,
+            ReadOnlySpan<TextSystemData> systemData)
         {
             if (layouts.IsEmpty) { return; }
             GraphicsDevice device = _renderContext.Device;
@@ -82,13 +76,14 @@ namespace NitroSharp.Graphics.Renderers
             for (int i = 0; i < layouts.Length; i++)
             {
                 TextLayout layout = layouts[i];
-                if (layout == null) { continue; }
                 ref bool clear = ref clearFlags[i];
-                TextureView texView = _textureViews[i];
+                ref readonly TextSystemData sd = ref systemData[i];
+                TextureView texView = sd.TextureView;
+
                 if (layout.DirtyGlyphs.Count == 0 && !clear) { goto present; }
 
-                Texture staging = _stagingTextures[i];
-                Texture sampled = _layoutTextures[i];
+                Texture staging = sd.StagingTexture;
+                Texture sampled = sd.LayoutTexture;
                 
                 if (clear)
                 {
@@ -102,7 +97,7 @@ namespace NitroSharp.Graphics.Renderers
                     cl.Begin();
                     foreach (ushort index in layout.DirtyGlyphs)
                     {
-                        DrawGlyph(layout, i, cl, index, buffer, map);
+                        DrawGlyph(layout, i, cl, index, buffer, map, sd);
                     }
 
                     cl.End();
@@ -121,27 +116,26 @@ namespace NitroSharp.Graphics.Renderers
                 RgbaFloat color = RgbaFloat.White;
                 var dstRect = new RectangleF(0, 0, layout.MaxBounds.Width, layout.MaxBounds.Height);
                 batcher.SetTransform(transforms[i]);
-                batcher.DrawImage(texView, null, dstRect, ref color, renderPriorities[i]);
+                batcher.DrawImage(texView, dstRect, dstRect, ref color, renderPriorities[i]);
             }
 
             _renderContext.FreeCommandList(cl);
         }
-
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void DrawGlyph(
             TextLayout textLayout, int textureIndex,
             CommandList commandList, uint glyphIndex,
-            Span<byte> srcBuffer, MappedResourceView<RgbaByte> dstBuffer)
+            Span<byte> srcBuffer, MappedResourceView<RgbaByte> dstBuffer,
+            in TextSystemData systemData)
         {
             ref LayoutGlyph glyph = ref textLayout.Glyphs[glyphIndex];
-            if (glyph.Color.A == 0)
-            {
-                return;
-            }
+            if (glyph.Color.A == 0) { return; }
 
             FontFace font = textLayout.FontFamily.GetFace(glyph.FontStyle);
-            ref GlyphInfo glyphInfo = ref font.GetGlyphInfo(glyph.Char);
+            font.GetGlyphInfo(glyph.Char, out GlyphInfo glyphInfo);
 
-            GlyphBitmapInfo bitmapInfo = font.Rasterize(ref glyphInfo, srcBuffer);
+            GlyphBitmapInfo bitmapInfo = font.RasterizeGlyph(ref glyphInfo, srcBuffer);
             Size dimensions = bitmapInfo.Dimensions;
             if (dimensions.Width == 0)
             {
@@ -171,14 +165,14 @@ namespace NitroSharp.Graphics.Renderers
             }
 
             commandList.CopyTexture(
-                _stagingTextures[textureIndex], (uint)pos.X, (uint)pos.Y, 0, 0, 0, _layoutTextures[textureIndex],
+               systemData.StagingTexture, (uint)pos.X, (uint)pos.Y, 0, 0, 0, systemData.LayoutTexture,
                 (uint)pos.X, (uint)pos.Y, 0, 0, 0, dimensions.Width, dimensions.Height, 1, 1);
         }
 
         public void Dispose()
         {
             _nativeBuffer.Dispose();
-            ArrayUtil.DisposeElements(_textureViews);
+            //ArrayUtil.DisposeElements(_textureViews);
         }
     }
 }

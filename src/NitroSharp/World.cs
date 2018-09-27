@@ -1,11 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Numerics;
-using System.Runtime.CompilerServices;
 using NitroSharp.Animation;
+using NitroSharp.Content;
 using NitroSharp.Dialogue;
+using NitroSharp.Graphics;
+using NitroSharp.Media;
 using NitroSharp.Primitives;
 using NitroSharp.Text;
 using NitroSharp.Utilities;
@@ -21,16 +22,19 @@ namespace NitroSharp
 
     internal sealed class World
     {
-        public const ushort InitialCapacity = 512;
-        public const ushort InitialSpriteCount = 384;
-        public const ushort InitialRectangleCount = 16;
+        public const ushort InitialCapacity = 1024;
+        public const ushort InitialSpriteCount = 512;
+        public const ushort InitialRectangleCount = 32;
         public const ushort InitialTextLayoutCount = 32;
+        public const ushort InitialAudioClipCount = 64;
+        public const ushort InitialVideoClipCount = 4;
 
         private readonly Dictionary<string, Entity> _entities;
+        private readonly List<(string entity, string alias)> _aliases;
         private readonly List<EntityTable> _tables;
         private ArrayBuilder<EntityEvent> _entityEvents;
-        private uint _nextEntityId = 1;
-        
+        private ushort _nextEntityId = 1;
+
         private readonly Dictionary<BehaviorDictionaryKey, AttachedBehavior> _attachedBehaviors;
         private readonly List<(BehaviorDictionaryKey key, AttachedBehavior behavior)> _behaviorsToDetach;
         private readonly List<BehaviorEvent> _behaviorEvents;
@@ -38,18 +42,22 @@ namespace NitroSharp
         public DialogueState _dialogueState;
         public uint ActiveAnimationCount =>
             (uint)_attachedBehaviors.Count(x => x.Value is AnimationBase
-            && !(x.Value is TextRevealAnimation) && !(x.Value is RevealSkipAnimation));
+            && !(x.Value is TextRevealAnimation) && !(x.Value is RevealSkipAnimation) && !(x.Value is VolumeAnimation));
 
         public World(WorldKind kind)
         {
             Kind = kind;
             _entities = new Dictionary<string, Entity>(InitialCapacity);
+            _aliases = new List<(string entity, string alias)>();
             _entityEvents = new ArrayBuilder<EntityEvent>();
             _tables = new List<EntityTable>(8);
 
-            Sprites = RegisterTable(new Sprites(InitialSpriteCount));
-            Rectangles = RegisterTable(new Rectangles(InitialRectangleCount));
-            TextInstances = RegisterTable(new TextInstances(InitialTextLayoutCount));
+            Threads = RegisterTable(new ThreadTable(this, 32));
+            Sprites = RegisterTable(new SpriteTable(this, InitialSpriteCount));
+            Rectangles = RegisterTable(new RectangleTable(this, InitialRectangleCount));
+            TextInstances = RegisterTable(new TextInstanceTable(this, InitialTextLayoutCount));
+            AudioClips = RegisterTable(new AudioClipTable(this, InitialAudioClipCount));
+            VideoClips = RegisterTable(new VideoClipTable(this, InitialVideoClipCount));
 
             _attachedBehaviors = new Dictionary<BehaviorDictionaryKey, AttachedBehavior>();
             _behaviorsToDetach = new List<(BehaviorDictionaryKey key, AttachedBehavior behavior)>();
@@ -59,16 +67,14 @@ namespace NitroSharp
         public WorldKind Kind { get; }
         public bool IsPrimary => Kind == WorldKind.Primary;
 
-        public Sprites Sprites { get; }
-        public Rectangles Rectangles { get; }
-        public TextInstances TextInstances { get; }
+        public ThreadTable Threads { get; }
+        public SpriteTable Sprites { get; }
+        public RectangleTable Rectangles { get; }
+        public TextInstanceTable TextInstances { get; }
+        public AudioClipTable AudioClips { get; }
+        public VideoClipTable VideoClips { get; }
 
         public DialogueState DialogueState => _dialogueState;
-
-        public event Action<Entity> SpriteAdded;
-        public event Action<Entity> SpriteRemoved;
-        public event Action<Entity> TextInstanceAdded;
-        public event Action<Entity> TextInstanceRemoved;
 
         public Dictionary<string, Entity>.Enumerator EntityEnumerator => _entities.GetEnumerator();
         public Dictionary<BehaviorDictionaryKey, AttachedBehavior>.ValueCollection AttachedBehaviors
@@ -86,12 +92,29 @@ namespace NitroSharp
         public bool TryGetEntity(string name, out Entity entity)
             => _entities.TryGetValue(name, out entity);
 
+        public bool IsEntityAlive(Entity entity)
+        {
+            var table = GetTable<EntityTable>(entity);
+            return table.EntityExists(entity);
+        }
+
         public void SetAlias(string originalName, string alias)
         {
             if (TryGetEntity(originalName, out Entity entity))
             {
                 _entities[alias] = entity;
+                _aliases.Add((originalName, alias));
+                ref EntityEvent evt = ref _entityEvents.Add();
+                evt.EventKind = EntityEventKind.AliasAdded;
+                evt.Entity = entity;
+                evt.EntityName = originalName;
+                evt.Alias = alias;
             }
+        }
+
+        public Entity CreateThreadEntity(string name)
+        {
+            return CreateEntity(name, EntityKind.Thread);
         }
 
         public Entity CreateSprite(
@@ -99,18 +122,13 @@ namespace NitroSharp
             int renderPriority, SizeF size, ref RgbaFloat color)
         {
             Entity entity = CreateVisual(name, EntityKind.Sprite, renderPriority, size, ref color);
-            ref var meow = ref Sprites.SpriteComponents.Mutate(entity);
-            meow.Image = image;
-            meow.SourceRectangle = sourceRectangle;
-
-            RaiseEventIfPrimary(EntityEventKind.EntityAdded, entity);
+            Sprites.ImageSources.Set(entity, new ImageSource(image, sourceRectangle));
             return entity;
         }
 
         public Entity CreateRectangle(string name, int renderPriority, SizeF size, ref RgbaFloat color)
         {
             Entity entity = CreateVisual(name, EntityKind.Rectangle, renderPriority, size, ref color);
-            RaiseEventIfPrimary(EntityEventKind.EntityAdded, entity);
             return entity;
         }
 
@@ -120,8 +138,24 @@ namespace NitroSharp
             Entity entity = CreateVisual(name, EntityKind.Text, renderPriority, bounds, ref color);
             TextInstances.Layouts.Set(entity, ref layout);
             TextInstances.ClearFlags.Set(entity, true);
+            return entity;
+        }
 
-            RaiseEventIfPrimary(EntityEventKind.EntityAdded, entity);
+        public Entity CreateAudioClip(string name, AssetId asset, bool enableLooping)
+        {
+            Entity entity = CreateEntity(name, EntityKind.AudioClip);
+            AudioClips.Asset.Set(entity, asset);
+            AudioClips.LoopData.Set(entity, new MediaClipLoopData(enableLooping, null));
+            AudioClips.Volume.Set(entity, 1.0f);
+            return entity;
+        }
+
+        public Entity CreateVideoClip(string name, AssetId asset, bool enableLooping, int renderPriority, ref RgbaFloat color)
+        {
+            Entity entity = CreateVisual(name, EntityKind.VideoClip, renderPriority, default, ref color);
+            VideoClips.Asset.Set(entity, asset);
+            VideoClips.LoopData.Set(entity, new MediaClipLoopData(enableLooping, null));
+            VideoClips.Volume.Set(entity, 1.0f);
             return entity;
         }
 
@@ -130,11 +164,11 @@ namespace NitroSharp
             int renderPriority, SizeF size, ref RgbaFloat color)
         {
             Entity entity = CreateEntity(name, kind);
-            Visuals table = GetTable<Visuals>(entity);
+            VisualTable table = GetTable<VisualTable>(entity);
 
             if (renderPriority > 0)
             {
-                renderPriority += (int)entity.UniqueId;
+                renderPriority += entity.Id;
             }
 
             table.RenderPriorities.Set(entity, renderPriority);
@@ -178,9 +212,25 @@ namespace NitroSharp
             _behaviorsToDetach.Clear();
         }
 
+        public void FlushEvents()
+        {
+            foreach (EntityTable table in _tables)
+            {
+                table.BeginFrame();
+            }
+        }
+
         private Entity CreateEntity(string name, EntityKind kind)
         {
-            Entity handle = CreateEntityCore(name, kind);
+            if (_entities.TryGetValue(name, out Entity existing))
+            {
+                RemoveExisting(name, existing);
+            }
+
+            EntityTable table = _tables[(int)kind];
+            var handle = new Entity(_nextEntityId++, kind);
+            table.Insert(handle);
+            _entities[name] = handle;
             ref EntityEvent evt = ref _entityEvents.Add();
             evt.Entity = handle;
             evt.EntityName = name;
@@ -188,90 +238,85 @@ namespace NitroSharp
             return handle;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private Entity CreateEntityCore(string name, EntityKind kind, bool reserveColumn = true)
+        private void RemoveExisting(string name, Entity entity)
         {
-            EntityTable table = _tables[(int)kind];
-            ushort index = table.ReserveColumn();
-            var entity = new Entity(_nextEntityId++, kind, index);
-            _entities[name] = entity;
-            return entity;
+            var table = GetTable<EntityTable>(entity);
+            table.Remove(entity);
+            ref EntityEvent e = ref _entityEvents.Add();
+            e.EntityName = name;
+            e.Entity = entity;
+            e.EventKind = EntityEventKind.EntityRemoved;
         }
 
         public void RemoveEntity(string name)
         {
-            Entity e = RemoveEntityCore(name);
-            ref EntityEvent evt = ref _entityEvents.Add();
-            evt.EntityName = name;
-            evt.Entity = e;
-            evt.EventKind = EntityEventKind.EntityRemoved;
+            Entity entity = RemoveEntityCore(name);
+            if (entity.IsValid)
+            {
+                ref EntityEvent evt = ref _entityEvents.Add();
+                evt.EntityName = name;
+                evt.Entity = entity;
+                evt.EventKind = EntityEventKind.EntityRemoved;
+            }
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private Entity RemoveEntityCore(string name, bool eraseCells = true)
+        private Entity RemoveEntityCore(string name)
         {
             if (_entities.TryGetValue(name, out Entity entity))
             {
                 _entities.Remove(name);
+                for (int i = 0; i < _aliases.Count; i++)
+                {
+                    (string originalName, string alias) = _aliases[i];
+                    if (originalName == name || alias == name)
+                    {
+                        _entities.Remove(originalName);
+                        _entities.Remove(alias);
+                        _aliases.RemoveAt(i);
+                        break;
+                    }
+                }
+
                 var table = GetTable<EntityTable>(entity);
-                table.FreeColumn(entity, eraseCells);
-                RaiseEventIfPrimary(EntityEventKind.EntityRemoved, entity);
+                table.Remove(entity);
                 return entity;
             }
 
-            return default;
+            return Entity.Invalid;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void RaiseEventIfPrimary(EntityEventKind eventKind, Entity entity)
+        public void MergeChanges(World target)
         {
-            if (Kind == WorldKind.Primary)
+            if (_entityEvents.Count > 0 && target._entityEvents.Count > 0)
             {
-                if (eventKind == EntityEventKind.EntityAdded)
+                ThrowCannotMerge();
+            }
+
+            for (int i = 0; i < _entityEvents.Count; i++)
+            {
+                ref EntityEvent evt = ref _entityEvents[i];
+                var table = target.GetTable<EntityTable>(evt.Entity);
+                switch (evt.EventKind)
                 {
-                    RaiseEntityCreated(entity);
+                    case EntityEventKind.EntityAdded:
+                        table.Insert(evt.Entity);
+                        target._entities[evt.EntityName] = evt.Entity;
+                        target._nextEntityId++;
+                        break;
+                    case EntityEventKind.EntityRemoved:
+                        target.RemoveEntityCore(evt.EntityName);
+                        break;
+                    case EntityEventKind.AliasAdded:
+                        _entities[evt.Alias] = evt.Entity;
+                        _aliases.Add((evt.EntityName, evt.Alias));
+                        break;
                 }
-                else
-                {
-                    RaiseEntityRemoved(entity);
-                }
             }
-        }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void RaiseEntityCreated(Entity entity)
-        {
-            switch (entity.Kind)
-            {
-                case EntityKind.Sprite:
-                    SpriteAdded?.Invoke(entity);
-                    break;
-                case EntityKind.Text:
-                    TextInstanceAdded?.Invoke(entity);
-                    break;
-            }
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void RaiseEntityRemoved(Entity entity)
-        {
-            switch (entity.Kind)
-            {
-                case EntityKind.Sprite:
-                    SpriteRemoved?.Invoke(entity);
-                    break;
-                case EntityKind.Text:
-                    TextInstanceRemoved?.Invoke(entity);
-                    break;
-            }
-        }
-
-        public void CopyChanges(World anotherWorld)
-        {
-            Debug.Assert(_tables.Count == anotherWorld._tables.Count);
             for (int i = 0; i < _tables.Count; i++)
             {
-                _tables[i].CopyChanges(anotherWorld._tables[i]);
+                _tables[i].MergeChanges(target._tables[i], Kind == WorldKind.Primary);
+                EntityTable.Debug_CompareTables(_tables[i], target._tables[i]);
             }
 
             foreach (BehaviorEvent be in _behaviorEvents)
@@ -280,39 +325,27 @@ namespace NitroSharp
                 {
                     if (_attachedBehaviors.TryGetValue(be.Key, out AttachedBehavior behavior))
                     {
-                        anotherWorld._attachedBehaviors[be.Key] = behavior;
+                        target._attachedBehaviors[be.Key] = behavior;
                     }
                 }
                 else
                 {
-                    anotherWorld._attachedBehaviors.Remove(be.Key);
+                    target._attachedBehaviors.Remove(be.Key);
                 }
             }
 
             _behaviorEvents.Clear();
-
-            for (int i = 0; i < _entityEvents.Count; i++)
-            {
-                ref EntityEvent evt = ref _entityEvents[i];
-                if (evt.EventKind == EntityEventKind.EntityAdded)
-                {
-                    anotherWorld._entities[evt.EntityName] = evt.Entity;
-                }
-                else
-                {
-                    anotherWorld._entities.Remove(evt.EntityName);
-                }
-
-                anotherWorld.RaiseEventIfPrimary(evt.EventKind, evt.Entity);
-            }
-
             _entityEvents.Reset();
-            anotherWorld._dialogueState = _dialogueState;
+            target._dialogueState = _dialogueState;
         }
+
+        private void ThrowCannotMerge()
+            => throw new InvalidOperationException("Copies of the game state that have conflicting change sets cannot be merged.");
 
         private struct EntityEvent
         {
             public string EntityName;
+            public string Alias;
             public Entity Entity;
             public EntityEventKind EventKind;
         }
@@ -320,7 +353,8 @@ namespace NitroSharp
         private enum EntityEventKind
         {
             EntityAdded,
-            EntityRemoved
+            EntityRemoved,
+            AliasAdded
         }
 
         private readonly struct BehaviorEvent

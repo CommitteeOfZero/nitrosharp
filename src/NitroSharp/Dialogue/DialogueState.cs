@@ -25,6 +25,7 @@ namespace NitroSharp.Dialogue
 
         public CommandKind Command;
         public string LastBlockName;
+        internal string LastVoiceName;
 
         public bool CanAdvance
         {

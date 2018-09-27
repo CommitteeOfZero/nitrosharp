@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
-using System.Text;
 
 namespace NitroSharp.NsScript.Symbols
 {
@@ -119,20 +117,14 @@ namespace NitroSharp.NsScript.Symbols
         {
             string format = PopString(args);
 
-            var list = new List<int>();
+            var list = new List<object>();
             while (args.Count > 0)
             {
                 list.Add((int)PopNumeric(args, allowNull: true, allowTypeConversion: true));
             }
 
-            var builder = new StringBuilder();
-            swprintf(builder, format, list[0]);
-            return ConstantValue.Create(builder.ToString());
+            return implementation.FormatString(format, list.ToArray());
         }
-
-        [DllImport("msvcrt.Dll", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Unicode)]
-        static extern int swprintf([In, Out]StringBuilder buffer, String fmt, int arg1);
-
 
         private static ConstantValue ModuleFileName(EngineImplementationBase implementation, Stack<ConstantValue> args)
         {
@@ -420,13 +412,15 @@ namespace NitroSharp.NsScript.Symbols
         private static ConstantValue LoadText(EngineImplementationBase implementation, Stack<ConstantValue> args)
         {
             string unk = PopString(args, allowNull: true);
-            var boxName = PopArgument(args);
-            var someStr = PopArgument(args);
+            string boxName = EntityName(PopString(args));
+            string textName = EntityName(PopString(args));
 
             int maxWidth = (int)PopNumeric(args);
             int maxHeight = (int)PopNumeric(args);
             int letterSpacing = (int)PopNumeric(args);
             int lineSpacing = (int)PopNumeric(args);
+
+            implementation.LoadText(boxName, textName, maxWidth, maxHeight, letterSpacing, lineSpacing);
             return null;
         }
 
@@ -530,6 +524,9 @@ namespace NitroSharp.NsScript.Symbols
 
                 case BuiltInType.Null:
                     return allowNull ? NsNumeric.Zero : throw new InvalidOperationException();
+
+                case BuiltInType.String:
+                    return new NsNumeric(int.Parse(value.StringValue), false);
 
                 default:
                     return allowTypeConversion ? new NsNumeric(value.ConvertTo(BuiltInType.Double).DoubleValue, false) : throw new InvalidOperationException();

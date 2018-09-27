@@ -92,17 +92,6 @@ namespace NitroSharp.Utilities
             return copy;
         }
 
-        public void DeepCopy(ref ArrayBuilder<T> destination)
-        {
-            if (destination._elements == null || destination._elements.Length < _elements.Length)
-            {
-                destination._elements = new T[_elements.Length];
-            }
-
-            Array.Copy(_elements, 0, destination._elements, 0, Count);
-            destination.Count = Count;
-        }
-
         public Span<T> AsSpan() => new Span<T>(_elements, 0, (int)Count);
         public ReadOnlySpan<T> AsReadonlySpan() => new ReadOnlySpan<T>(_elements, 0, (int)Count);
 

@@ -5,30 +5,46 @@ namespace NitroSharp
 {
     internal readonly struct Entity : IEquatable<Entity>
     {
-        public bool IsValid => UniqueId > 0;
+        public bool IsValid => Id > 0;
 
-        public Entity(uint id, EntityKind kind, ushort column)
+        public static Entity Invalid => default;
+
+        public Entity(ushort id, EntityKind kind)
         {
-            UniqueId = id;
+            Id = id;
             Kind = kind;
-            Index = column;
         }
 
-        public readonly uint UniqueId;
+        public readonly ushort Id;
         public readonly EntityKind Kind;
-        public readonly ushort Index;
+
+        public bool IsVisual
+        {
+            get
+            {
+                switch (Kind)
+                {
+                    case EntityKind.Sprite:
+                    case EntityKind.Rectangle:
+                    case EntityKind.Text:
+                    case EntityKind.VideoClip:
+                        return true;
+
+                    default:
+                        return false;
+                }
+            }
+        }
 
         public override bool Equals(object obj) => obj is Entity other && Equals(other);
 
         public bool Equals(Entity other)
         {
-            return UniqueId == other.UniqueId
-                && Kind == other.Kind
-                && Index == other.Index;
+            return Id == other.Id;
         }
 
-        public override int GetHashCode() => HashHelper.Combine((int)UniqueId, (int)Kind, Index);
-        public override string ToString() => UniqueId > 0 ? $"Entity #{UniqueId.ToString()}" : "InvalidEntityHandle";
+        public override int GetHashCode() => HashHelper.Combine((int)Id, (int)Kind);
+        public override string ToString() => Id > 0 ? $"Entity #{Id.ToString()}" : "InvalidEntityHandle";
 
         public static bool operator ==(Entity left, Entity right) => left.Equals(right);
         public static bool operator !=(Entity left, Entity right) => !(left == right);

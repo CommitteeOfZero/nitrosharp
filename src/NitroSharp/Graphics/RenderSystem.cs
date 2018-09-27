@@ -2,6 +2,7 @@
 using System.Numerics;
 using NitroSharp.Content;
 using NitroSharp.Graphics.Renderers;
+using NitroSharp.Media;
 using NitroSharp.Primitives;
 using NitroSharp.Text;
 using NitroSharp.Utilities;
@@ -35,6 +36,7 @@ namespace NitroSharp.Graphics.Systems
         private readonly SpriteRenderer _spriteRenderer;
         private readonly RectangleRenderer _quadRenderer;
         private readonly TextRenderer _textRenderer;
+        private readonly VideoRenderer _videoRenderer;
         private readonly ResourceSetCache _resourceSetCache;
         private readonly ShaderLibrary _shaderLibrary;
         private readonly RgbaTexturePool _texturePool;
@@ -102,6 +104,8 @@ namespace NitroSharp.Graphics.Systems
             _spriteRenderer = new SpriteRenderer(world, _context, _content);
             _quadRenderer = new RectangleRenderer(world, _context);
             _textRenderer = new TextRenderer(world, _context);
+
+            _videoRenderer = new VideoRenderer(world, _context, _content);
         }
 
         private SizeF DesignResolution { get; }
@@ -140,9 +144,10 @@ namespace NitroSharp.Graphics.Systems
             _mainBucket.Begin();
             _quadGeometryStream.Begin();
 
-            _spriteRenderer.ProcessSprites(_world.Sprites);
+            _spriteRenderer.ProcessSprites();
             _quadRenderer.ProcessRectangles(_world.Rectangles);
-            _textRenderer.RenderTextLayouts(_world.TextInstances);
+            _textRenderer.ProcessTextLayouts();
+            _videoRenderer.ProcessVideoClips();
 
             _quadGeometryStream.End(_cl);
             _mainBucket.End(_cl);
@@ -159,6 +164,7 @@ namespace NitroSharp.Graphics.Systems
         public void Dispose()
         {
             _textRenderer.Dispose();
+            _videoRenderer.Dispose();
 
             _quadBatcher.Dispose();
             _quadGeometryStream.Dispose();

@@ -1,6 +1,6 @@
 ﻿{
   "productName": "COWSHEAD_NOAH",
-  "activeProfile": "Settings",
+  "activeProfile": "Phantasm",
   "graphics.vsync": true,
   "graphics.backend": "Vulkan",
   "audio.backend": "XAudio2",
@@ -28,7 +28,7 @@
     },
 
     "Test": {
-      "startupScript": "tests/simple.nss"
+      "startupScript": "tests/media.nss"
     },
 
     "CustomBoot": {

@@ -66,18 +66,8 @@ namespace NitroSharp
             //pageIndicator.Visual.IsEnabled = true;
         }
 
-        private void Voice(Voice voice)
+        public override void LoadText(string boxName, string textName, int maxWidth, int maxHeight, int letterSpacing, int lineSpacing)
         {
-            //_dialogueState.Voice = voice;
-            //if (voice.Action == VoiceAction.Play)
-            //{
-            //    var audio = new MediaComponent(Content.Get<MediaPlaybackSession>("voice/" + voice.FileName), AudioSourcePool);
-            //    _world.Create(VoiceEnityName, replace: true).WithComponent(audio);
-            //}
-            //else
-            //{
-            //    _world.Remove(voice.FileName);
-            //}
         }
     }
 }

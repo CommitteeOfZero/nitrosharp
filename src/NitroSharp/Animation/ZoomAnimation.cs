@@ -16,7 +16,7 @@ namespace NitroSharp.Logic.Components
         public Vector3 FinalScale;
 
         protected override ref Vector3 GetReference(World world)
-           => ref world.GetTable<Visuals>(Entity).TransformComponents.Mutate(Entity).Scale;
+           => ref world.GetTable<VisualTable>(Entity).TransformComponents.Mutate(Entity).Scale;
 
         protected override Vector3 InterpolateValue(float factor)
         {

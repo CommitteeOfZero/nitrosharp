@@ -82,11 +82,16 @@ namespace NitroSharp.NsScript
         public virtual void CreateThread(string name, string target) { }
         public virtual void Zoom(string entityName, TimeSpan duration, NsRational dstScaleX, NsRational dstScaleY, NsEasingFunction easingFunction, TimeSpan delay) { }
         public virtual void DrawTransition(string sourceEntityName, TimeSpan duration, NsRational initialOpacity, NsRational finalOpacity, NsRational feather, NsEasingFunction easingFunction, string maskFileName, TimeSpan delay) { }
+
+        public virtual ConstantValue FormatString(string format, object[] args) => throw new NotImplementedException();
+
         public virtual void CreateChoice(string entityName) { }
         public virtual void PlayCutscene(string entityName, int priority, bool loop, bool alpha, string fileName, bool enableAudio) { }
         public virtual void AddClippedTexture(string entityName, int priority, NsCoordinate x1, NsCoordinate y1, NsCoordinate x2, NsCoordinate y2, int width, int height, string srcEntityName) { }
 
         public virtual void Rotate(string entityName, TimeSpan duration, NsNumeric dstRotationX, NsNumeric dstRotationY, NsNumeric dstRotationZ, NsEasingFunction easingFunction, TimeSpan delay) { }
         public virtual void MoveCube(string entityName, TimeSpan duration, NsNumeric dstTranslationX, NsNumeric dstTranslationY, NsNumeric dstTranslationZ, NsEasingFunction easingFunction, TimeSpan delay) { }
+
+        public virtual void LoadText(string boxName, string textName, int maxWidth, int maxHeight, int letterSpacing, int lineSpacing) { }
     }
 }

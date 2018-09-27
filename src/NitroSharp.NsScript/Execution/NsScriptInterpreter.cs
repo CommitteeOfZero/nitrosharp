@@ -481,7 +481,7 @@ namespace NitroSharp.NsScript.Execution
 
         private void CommitResumeThread(ThreadContext thread)
         {
-            Debug.Assert(_threads.ContainsKey(thread.Name), "Attempt to resume a thread that's already been terminated.");
+            //Debug.Assert(_threads.ContainsKey(thread.Name), "Attempt to resume a thread that's already been terminated.");
 
             thread.IsSuspended = false;
             thread.SuspensionTime = TimeSpan.Zero;

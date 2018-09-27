@@ -57,7 +57,7 @@ namespace NitroSharp.Text
                 char c = text[stringPos];
                 bool isWhitespace = char.IsWhiteSpace(c);
 
-                ref GlyphInfo glyphInfo = ref font.GetGlyphInfo(c);
+                font.GetGlyphInfo(c, out GlyphInfo glyphInfo);
                 ref LayoutGlyph glyph = ref Glyphs.Count > glyphPos ? ref Glyphs[glyphPos] : ref Glyphs.Add();
                 glyph.Char = c;
                 glyph.Color = textRun.Color ?? RgbaFloat.White;

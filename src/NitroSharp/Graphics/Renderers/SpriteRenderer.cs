@@ -1,75 +1,79 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Numerics;
 using NitroSharp.Content;
-using NitroSharp.Graphics.Components;
 using NitroSharp.Primitives;
-using NitroSharp.Utilities;
 using Veldrid;
 
 namespace NitroSharp.Graphics
 {
+    internal struct SpriteSystemData
+    {
+        public AssetRef<BindableTexture> AssetRef;
+        public TextureView TextureView;
+    }
+
     internal class SpriteRenderer : GameSystem
     {
         private readonly World _world;
+        private readonly SpriteTable _sprites;
         private readonly QuadBatcher _quadBatcher;
         private readonly ContentManager _content;
-        private AssetRef<BindableTexture>[] _textures;
 
-        public SpriteRenderer(World world, RenderContext renderContext, ContentManager contentManager)
+        public SpriteRenderer(World world, RenderContext renderContext, ContentManager content)
         {
-            world.SpriteAdded += OnSpriteAdded;
-            world.SpriteRemoved += OnSpriteRemoved;
             _world = world;
+            _sprites = world.Sprites;
             _quadBatcher = renderContext.QuadBatcher;
-            _content = contentManager;
-            _textures = new AssetRef<BindableTexture>[World.InitialSpriteCount];
+            _content = content;
         }
 
-        private void OnSpriteAdded(Entity entity)
+        public void ProcessSprites()
         {
-            ushort index = entity.Index;
-            ArrayUtil.EnsureCapacity(ref _textures, index + 1);
+            SpriteTable sprites = _sprites;
 
-            SpriteComponent sprite = _world.Sprites.SpriteComponents.GetValue(entity);
-            if (sprite.Image != null)
+            var added = sprites.AddedEntities;
+            foreach (Entity e in added)
             {
-                _textures[index] = _content.Get<BindableTexture>(sprite.Image);
+                ImageSource source = sprites.ImageSources.GetValue(e);
+                var assetRef = _content.Get<BindableTexture>(source.Image);
+                ref SpriteSystemData data = ref sprites.SystemData.Mutate(e);
+                data.AssetRef = assetRef;
+                data.TextureView = assetRef.Asset.GetTextureView();
+
             }
-        }
 
-        private void OnSpriteRemoved(Entity entity)
-        {
-            ushort index = entity.Index;
-            ref AssetRef<BindableTexture> assetRef = ref _textures[index];
-            assetRef?.Dispose();
-            assetRef = null;
-        }
+            var toRecycle = sprites.SystemData.RecycledComponents;
+            foreach (SpriteSystemData data in toRecycle)
+            {
+                data.AssetRef.Dispose();
+            }
 
-        public void ProcessSprites(Sprites spriteTable)
-        {
-            TransformProcessor.ProcessTransforms(_world, spriteTable);
-            ReadOnlySpan<Matrix4x4> transforms = spriteTable.TransformMatrices.Enumerate();
+            TransformProcessor.ProcessTransforms(_world, sprites);
 
-            Span<SpriteComponent> sprites = spriteTable.SpriteComponents.MutateAll();
-            Span<RgbaFloat> colors = spriteTable.Colors.MutateAll();
-            Span<int> priorities = spriteTable.RenderPriorities.MutateAll();
+            ReadOnlySpan<ImageSource> sources = sprites.ImageSources.Enumerate();
+            ReadOnlySpan<Matrix4x4> transforms = sprites.TransformMatrices.Enumerate();
+            ReadOnlySpan<RgbaFloat> colors = sprites.Colors.Enumerate();
+            ReadOnlySpan<int> priorities = sprites.RenderPriorities.Enumerate();
+
+            ReadOnlySpan<SpriteSystemData> systemData = sprites.SystemData.Enumerate();
 
             QuadBatcher quadBatcher = _quadBatcher;
-            for (int i = 0; i < sprites.Length; i++)
+            for (int i = 0; i < sources.Length; i++)
             {
-                SpriteComponent sprite = sprites[i];
+                ImageSource source = sources[i];
                 int renderPriority = priorities[i];
                 if (renderPriority > 0 && colors[i].A > 0)
                 {
                     ref readonly Matrix4x4 transform = ref transforms[i];
-                    AssetRef<BindableTexture> textureRef = _textures[i];
-                    TextureView texView = textureRef.Asset.GetTextureView();
+                    TextureView texView = systemData[i].TextureView;
 
-                    ref RectangleF srcRect = ref sprite.SourceRectangle;
+                    ref readonly RectangleF srcRect = ref source.SourceRectangle;
                     var dstRect = new RectangleF(0, 0, srcRect.Width, srcRect.Height);
 
                     quadBatcher.SetTransform(transform);
-                    quadBatcher.DrawImage(texView, srcRect, dstRect, ref colors[i], renderPriority);
+                    RgbaFloat c = colors[i];
+                    quadBatcher.DrawImage(texView, srcRect, dstRect, ref c, renderPriority);
                 }
             }
         }

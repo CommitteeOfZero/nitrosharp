@@ -13,7 +13,14 @@
         {
             foreach (AttachedBehavior behavior in _world.AttachedBehaviors)
             {
-                behavior.Update(_world, deltaTime);
+                if (!_world.IsEntityAlive(behavior.Entity))
+                {
+                    _world.DeactivateBehavior(behavior);
+                }
+                else
+                {
+                    behavior.Update(_world, deltaTime);
+                }
             }
         }
     }

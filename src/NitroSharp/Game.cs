@@ -10,7 +10,6 @@ using NitroSharp.Text;
 using System;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Veldrid;
@@ -24,7 +23,7 @@ namespace NitroSharp
     public sealed class Game : IDisposable
     {
         private bool IsMultithreaded = true;
-        private bool UseWicOnWindows = true;
+        private bool UseWicOnWindows = false;
 
         private readonly Stopwatch _gameTimer;
         private readonly Configuration _configuration;
@@ -55,6 +54,7 @@ namespace NitroSharp
         private World _futureWorld;
 
         private RenderSystem _renderSystem;
+        private AudioSystem _audioSystem;
         private AttachedBehaviorProcessor _attachedBehaviorProcessor;
         private bool _syncToPresent;
 
@@ -86,6 +86,8 @@ namespace NitroSharp
 
         public async Task Run(bool useDedicatedThread = false)
         {
+            //Task.Factory.StartNew(WaitForFullGCProc, TaskCreationOptions.LongRunning);
+
             Task loadScriptTask = Task.Run((Action)LoadStartupScript);
             Task initializeAudio = Task.Run((Action)SetupAudio);
 
@@ -95,7 +97,7 @@ namespace NitroSharp
             CreateGameWorld();
             await loadScriptTask;
 
-            _dialogueSystem = new DialogueSystem(_presentWorld, _inputTracker, _nssInterpreter);
+            _dialogueSystem = new DialogueSystem(_presentWorld, _inputTracker, _nssInterpreter, Content);
             StartInterpreter();
 
             await RunMainLoop(useDedicatedThread);
@@ -211,7 +213,7 @@ namespace NitroSharp
             content.RegisterContentLoader(typeof(TextureData), textureDataLoader);
 
             _frameConverter = new VideoFrameConverter();
-            var mediaFileLoader = new MediaFileLoader(content, _frameConverter, _audioDevice.AudioParameters);
+            var mediaFileLoader = new MediaClipLoader(content, _frameConverter, _audioDevice.AudioParameters);
             content.RegisterContentLoader(typeof(MediaPlaybackSession), mediaFileLoader);
 
             return content;
@@ -233,6 +235,8 @@ namespace NitroSharp
             _renderSystem = new RenderSystem(
                 _presentWorld, _graphicsDevice, _swapchain,
                 Content, FontService, _configuration);
+
+            _audioSystem = new AudioSystem(_presentWorld, Content, _audioSourcePool);
         }
 
         private void StartInterpreter()
@@ -271,7 +275,7 @@ namespace NitroSharp
                     _syncToFuture = true;
                 }
 
-                if (!_nssInterpreter.Threads.Any()) { return; }
+                //if (!_nssInterpreter.Threads.Any()) { return; }
             }
         }
 
@@ -326,21 +330,29 @@ namespace NitroSharp
         {
             try
             {
-                if (deltaMilliseconds > 20)
-                {
-                    Console.WriteLine(deltaMilliseconds);
-                }
 
-                UpdateCore(deltaMilliseconds);
+                var values = UpdateCore(deltaMilliseconds);
+                double sum = values.sync + values.dialogue + values.audio + values.render;
+                if (sum >= 20)
+                {
+                    Console.WriteLine(string.Empty);
+                    Console.WriteLine($"Total: {sum}");
+                    Console.WriteLine($"Sync: {values.sync}");
+                    Console.WriteLine($"Dialogue: {values.dialogue}");
+                    Console.WriteLine($"Audio: {values.audio}");
+                    Console.WriteLine($"Render: {values.render}");
+                }
             }
             catch (OperationCanceledException)
             {
             }
         }
 
-        private void UpdateCore(float deltaMilliseconds)
+        private (double sync, double dialogue, double audio, double render) UpdateCore(float deltaMilliseconds)
         {
             _inputTracker.Update(deltaMilliseconds);
+
+            long start = _gameTimer.ElapsedTicks;
 
             if (IsMultithreaded)
             {
@@ -354,12 +366,13 @@ namespace NitroSharp
                 }
                 if (_syncToFuture)
                 {
-                    _futureWorld.CopyChanges(_presentWorld);
+                    _futureWorld.MergeChanges(_presentWorld);
+                    _futureWorld.FlushEvents();
                     _syncToFuture = false;
                 }
                 else if (_syncToPresent)
                 {
-                    _presentWorld.CopyChanges(_futureWorld);
+                    _presentWorld.MergeChanges(_futureWorld);
                     _syncToPresent = false;
                 }
             }
@@ -376,11 +389,25 @@ namespace NitroSharp
                 _nssInterpreter.Run(CancellationToken.None);
             }
 
+            long last = _gameTimer.ElapsedTicks;
+            double sync = to_ms(last - start);
+
             _presentWorld.FlushDetachedBehaviors();
             _attachedBehaviorProcessor.Update(deltaMilliseconds);
 
             _dialogueSystem.Update(deltaMilliseconds);
+            long @new = _gameTimer.ElapsedTicks;
+            double dialogue = to_ms(@new - last);
+            last = @new;
+            _audioSystem.Update();
+            @new = _gameTimer.ElapsedTicks;
+            double audio = to_ms(@new - last);
+            last = @new;
+            
             _renderSystem.Update(deltaMilliseconds);
+            @new = _gameTimer.ElapsedTicks;
+            double render = to_ms(@new - last);
+            last = @new;
 
             if (_window.Exists)
             {
@@ -390,9 +417,15 @@ namespace NitroSharp
                 }
                 catch (VeldridException e) when (e.Message == "The Swapchain's underlying surface has been lost.")
                 {
-                    return;
+                    return default;
                 }
             }
+
+            _presentWorld.FlushEvents();
+
+            return (sync, dialogue, audio, render);
+
+            double to_ms(long ticks) => ticks / (double)Stopwatch.Frequency * 1000.0d;
         }
 
         private void OnWindowResized()

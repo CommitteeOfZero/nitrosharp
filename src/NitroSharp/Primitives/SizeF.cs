@@ -4,7 +4,7 @@ using NitroSharp.Utilities;
 
 namespace NitroSharp.Primitives
 {
-    public readonly struct SizeF : IEquatable<Size>
+    public readonly struct SizeF : IEquatable<SizeF>
     {
         public static readonly SizeF Zero = new SizeF(0.0f, 0.0f);
 
@@ -24,8 +24,8 @@ namespace NitroSharp.Primitives
 
         public static SizeF FromVector(in Vector2 vector) => new SizeF(vector.X, vector.Y);
 
-        public bool Equals(Size other) => Width == other.Width && Height == other.Height;
-        public override bool Equals(object obj) => obj is Size size && Equals(size);
+        public bool Equals(SizeF other) => Width == other.Width && Height == other.Height;
+        public override bool Equals(object obj) => obj is SizeF size && Equals(size);
 
         public override int GetHashCode() => HashHelper.Combine(Width.GetHashCode(), Height.GetHashCode());
 

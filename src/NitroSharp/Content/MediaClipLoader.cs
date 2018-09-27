@@ -4,12 +4,12 @@ using NitroSharp.Media.Decoding;
 
 namespace NitroSharp.Content
 {
-    internal sealed class MediaFileLoader : ContentLoader
+    internal sealed class MediaClipLoader : ContentLoader
     {
         private readonly VideoFrameConverter _frameConverter;
         private readonly AudioParameters _outputAudioParameters;
 
-        public MediaFileLoader(ContentManager content, VideoFrameConverter frameConverter, in AudioParameters outputAudioParameters)
+        public MediaClipLoader(ContentManager content, VideoFrameConverter frameConverter, in AudioParameters outputAudioParameters)
             : base(content)
         {
             _frameConverter = frameConverter;

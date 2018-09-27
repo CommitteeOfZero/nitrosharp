@@ -4,6 +4,7 @@ using NitroSharp.NsScript.Execution;
 using NitroSharp.Content;
 using System.Collections.Generic;
 using System.Linq;
+using NitroSharp.Utilities;
 
 namespace NitroSharp
 {
@@ -38,6 +39,7 @@ namespace NitroSharp
         {
             if (entityName != alias)
             {
+                _world.SetAlias(alias, entityName);
                 _world.SetAlias(entityName, alias);
             }
         }
@@ -89,6 +91,7 @@ namespace NitroSharp
         {
             bool startImmediately = _world.Query(name + "*").Any();
             Interpreter.CreateThread(name, target, startImmediately);
+            _world.CreateThreadEntity(name);
         }
 
         public override void Request(string entityName, NsEntityAction action)
@@ -125,6 +128,12 @@ namespace NitroSharp
                     }
                     break;
             }
+        }
+
+        public override ConstantValue FormatString(string format, object[] args)
+        {
+            string s = CRuntime.sprintf(format, args);
+            return ConstantValue.Create(s);
         }
     }
 }

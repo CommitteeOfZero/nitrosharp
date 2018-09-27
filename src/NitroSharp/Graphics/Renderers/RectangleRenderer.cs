@@ -16,7 +16,7 @@ namespace NitroSharp.Graphics
             _quadBatcher = renderContext.QuadBatcher;
         }
 
-        public void ProcessRectangles(Rectangles rectangles)
+        public void ProcessRectangles(RectangleTable rectangles)
         {
             TransformProcessor.ProcessTransforms(_world, rectangles);
             ProcessRectangles(rectangles.Bounds.Enumerate(),

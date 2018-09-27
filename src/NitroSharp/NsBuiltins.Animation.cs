@@ -31,8 +31,9 @@ namespace NitroSharp
         private FadeAnimation FadeCore(
             Entity entity, TimeSpan duration, NsRational dstOpacity, NsEasingFunction easingFunction)
         {
+            if (!entity.IsVisual) { return null; }
+            VisualTable table = _world.GetTable<VisualTable>(entity);
             float adjustedOpacity = dstOpacity.Rebase(1.0f);
-            Visuals table = _world.GetTable<Visuals>(entity);
             ref RgbaFloat color = ref table.Colors.Mutate(entity);
             if (duration > TimeSpan.Zero)
             {
@@ -71,7 +72,7 @@ namespace NitroSharp
             NsCoordinate dstX, NsCoordinate dstY,
             NsEasingFunction easingFunction)
         {
-            Visuals table = _world.GetTable<Visuals>(entity);
+            VisualTable table = _world.GetTable<VisualTable>(entity);
             ref TransformComponents transform = ref table.TransformComponents.Mutate(entity);
             ref Vector3 position = ref transform.Position;
 
@@ -121,7 +122,7 @@ namespace NitroSharp
             NsRational dstScaleX, NsRational dstScaleY,
             NsEasingFunction easingFunction)
         {
-            Visuals table = _world.GetTable<Visuals>(entity);
+            VisualTable table = _world.GetTable<VisualTable>(entity);
             ref TransformComponents transform = ref table.TransformComponents.Mutate(entity);
             ref Vector3 scale = ref transform.Scale;
 

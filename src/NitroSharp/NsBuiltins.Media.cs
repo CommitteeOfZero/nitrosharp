@@ -1,10 +1,14 @@
 ﻿using NitroSharp.Media;
 using NitroSharp.NsScript;
 using System;
-using NitroSharp.Animation;
 using NitroSharp.Media.Decoding;
 using System.IO;
 using System.Linq;
+using NitroSharp.Content;
+using Veldrid;
+using NitroSharp.Animation;
+using System.Runtime.CompilerServices;
+using NitroSharp.Primitives;
 
 namespace NitroSharp
 {
@@ -12,11 +16,22 @@ namespace NitroSharp
     {
         private AudioSourcePool AudioSourcePool => _game.AudioSourcePool;
 
+        private AudioClipTable AudioClips => _world.AudioClips;
+        private VideoClipTable VideoClips => _world.VideoClips;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private MediaClipTable GetTable(Entity entity)
+        {
+            return entity.Kind == EntityKind.AudioClip
+                ? (MediaClipTable)_world.AudioClips
+                : _world.VideoClips;
+        }
+
         public override int GetSoundAmplitude(string characterName)
         {
             //if (_dialogueState?.Voice?.CharacterName == characterName)
             //{
-            //    if (_world.TryGet(VoiceEnityName, out var voiceEntity))
+            //    if (_world.TryGetEntity(VoiceEnityName, out var voiceEntity))
             //    {
             //        var sound = voiceEntity.GetComponent<MediaComponent>();
             //        return (int)sound.SoundAmplitude;
@@ -26,126 +41,137 @@ namespace NitroSharp
             return 0;
         }
 
-        //public override void LoadAudio(string entityName, NsAudioKind kind, string fileName)
-        //{
-        //    if (!Content.TryGet<MediaPlaybackSession>(fileName, out var session))
-        //    {
-        //        string directory = Path.GetDirectoryName(fileName);
-        //        string nameWithoutExtension = Path.GetFileNameWithoutExtension(fileName);
-        //        string searchPattern = nameWithoutExtension + "*";
-        //        var assetId = Content.Search(directory, searchPattern).First();
-        //        session = Content.Get<MediaPlaybackSession>(assetId);
-        //    }
+        public override void LoadAudio(string entityName, NsAudioKind kind, string fileName)
+        {
+            AssetId assetId = fileName;
+            if (!Content.TryGet<MediaPlaybackSession>(assetId, out var session))
+            {
+                string directory = Path.GetDirectoryName(fileName);
+                string nameWithoutExtension = Path.GetFileNameWithoutExtension(fileName);
+                string searchPattern = nameWithoutExtension + "*";
+                assetId = Content.Search(directory, searchPattern).First();
+                session = Content.Get<MediaPlaybackSession>(assetId);
+            }
 
-        //    var media = new MediaComponent(session, AudioSourcePool);
-        //    _world.Create(entityName, replace: true).WithComponent(media);
-        //}
+            RgbaFloat color = RgbaFloat.White;
+            Entity entity = _world.CreateAudioClip(entityName, assetId, false);
+            AudioClips.Duration.Set(entity, session.Asset.AudioStream.Duration);
+        }
 
-        //public override void LoadVideo(string entityName, int priority, NsCoordinate x, NsCoordinate y, bool loop, string fileName)
-        //{
-        //    var media = new MediaComponent(Content.Get<MediaPlaybackSession>(fileName), AudioSourcePool);
-        //    media.Opacity = 1.0f;
-        //    media.Priority = priority;
-        //    media.EnableLooping = loop;
+        public override void LoadVideo(string entityName, int priority, NsCoordinate x, NsCoordinate y, bool loop, string fileName)
+        {
+            AssetId assetId = fileName;
+            Content.TryGet<MediaPlaybackSession>(assetId, out var session);
+            RgbaFloat color = RgbaFloat.White;
+            Entity entity = _world.CreateVideoClip(entityName, assetId, loop, priority, ref color);
 
-        //    _world.Create(entityName, replace: true)
-        //        .WithComponent(media)
-        //        .WithPosition(x, y);
-        //}
+            VideoStream stream = session.Asset.VideoStream;
+            VideoClips.Duration.Set(entity, stream.Duration);
 
-        //public override void WaitPlay(string entityName)
-        //{
-        //    if (_world.TryGet(entityName, out OldEntity entity))
-        //    {
-        //        var media = entity.GetComponent<MediaComponent>();
-        //        Interpreter.SuspendThread(MainThread, media.Duration);
-        //    }
-        //}
+            var bounds = new SizeF(stream.Width, stream.Height);
+            VideoClips.Bounds.Set(entity, bounds);
+            //SetPosition(entity, x, y);
+        }
 
-        //public override void SetVolume(string entityName, TimeSpan duration, NsRational volume)
-        //{
-        //    foreach (var e in _world.Query(entityName))
-        //    {
-        //        SetVolumeCore(e, duration, volume);
-        //    }
-        //}
+        public override void WaitPlay(string entityName)
+        {
+            if (_world.TryGetEntity(entityName, out Entity entity))
+            {
+                MediaClipTable table = GetTable(entity);
+                TimeSpan duration = table.Duration.GetValue(entity);
+                Interpreter.SuspendThread(MainThread, duration);
+            }
+        }
 
-        //private void SetVolumeCore(OldEntity entity, TimeSpan duration, NsRational volume)
-        //{
-        //    var sound = entity.GetComponent<MediaComponent>();
-        //    volume = volume.Rebase(1.0f);
-        //    if (duration > TimeSpan.Zero)
-        //    {
-        //        Action<MediaComponent, float> setter = (s, v) => s.Volume = v;
-        //        var animation = new FloatAnimation<MediaComponent>(sound, setter, sound.Volume, volume, duration);
-        //        entity.AddComponent(animation);
-        //    }
-        //    else
-        //    {
-        //        sound.Volume = volume;
-        //    }
-        //}
+        public override void SetVolume(string entityName, TimeSpan duration, NsRational volume)
+        {
+            foreach ((Entity e, string name) in _world.Query(entityName))
+            {
+                SetVolumeCore(e, duration, volume);
+            }
+        }
 
-        //public override void ToggleLooping(string entityName, bool looping)
-        //{
-        //    foreach (var e in _world.Query(entityName))
-        //    {
-        //        ToggleLoopingCore(e, looping);
-        //    }
-        //}
+        private void SetVolumeCore(Entity entity, TimeSpan duration, NsRational finalVolume)
+        {
+            MediaClipTable table = GetTable(entity);
+            ref float actual = ref table.Volume.Mutate(entity);
+            finalVolume = finalVolume.Rebase(1.0f);
+            if (duration > TimeSpan.Zero)
+            {
+                var animation = new VolumeAnimation(entity, duration);
+                animation.InitialVolume = actual;
+                animation.FinalVolume = finalVolume;
+                _world.ActivateBehavior(animation);
+            }
+            else
+            {
+                actual = finalVolume;
+            }
+        }
 
-        //private void ToggleLoopingCore(OldEntity entity, bool looping)
-        //{
-        //    entity.GetComponent<MediaComponent>().EnableLooping = looping;
-        //}
+        public override void ToggleLooping(string entityName, bool looping)
+        {
+            foreach ((Entity e, string name) in _world.Query(entityName))
+            {
+                ToggleLoopingCore(e, looping);
+            }
+        }
 
-        //public override void SetLoopRegion(string entityName, TimeSpan loopStart, TimeSpan loopEnd)
-        //{
-        //    foreach (var e in _world.Query(entityName))
-        //    {
-        //        SetLoopRegionCore(e, loopStart, loopEnd);
-        //    }
-        //}
+        private void ToggleLoopingCore(Entity entity, bool looping)
+        {
+            MediaClipTable table = GetTable(entity);
+            table.LoopData.Mutate(entity).LoopingEnabled = looping;
+        }
 
-        //private void SetLoopRegionCore(OldEntity entity, TimeSpan loopStart, TimeSpan loopEnd)
-        //{
-        //    var sound = entity.GetComponent<MediaComponent>();
-        //    sound.SetLoopRegion(loopStart, loopEnd);
-        //    sound.EnableLooping = true;
-        //}
+        public override void SetLoopRegion(string entityName, TimeSpan loopStart, TimeSpan loopEnd)
+        {
+            foreach ((Entity e, string name) in _world.Query(entityName))
+            {
+                SetLoopRegionCore(e, loopStart, loopEnd);
+            }
+        }
+
+        private void SetLoopRegionCore(Entity entity, TimeSpan loopStart, TimeSpan loopEnd)
+        {
+            MediaClipTable table = GetTable(entity);
+            ref MediaClipLoopData data = ref table.LoopData.Mutate(entity);
+            data.LoopRegion = (loopStart, loopEnd);
+            data.LoopingEnabled = true;
+        }
 
         public override int GetSoundDuration(string entityName)
         {
-            //if (_world.TryGet(entityName, out var entity))
-            //{
-            //    var sound = entity.GetComponent<MediaComponent>();
-            //    return (int)sound.Duration.TotalMilliseconds;
-            //}
+            if (_world.TryGetEntity(entityName, out Entity entity))
+            {
+                MediaClipTable table = GetTable(entity);
+                return (int)table.Duration.GetValue(entity).TotalMilliseconds;
+            }
 
-            return 10000;
+            return 0;
         }
 
         public override int GetTimeElapsed(string entityName)
         {
-            //if (_world.TryGet(entityName, out var entity))
-            //{
-            //    var sound = entity.GetComponent<MediaComponent>();
-            //    return (int)sound.Elapsed.TotalMilliseconds;
-            //}
+            if (_world.TryGetEntity(entityName, out Entity entity))
+            {
+                MediaClipTable table = GetTable(entity);
+                return (int)table.Elapsed.GetValue(entity).TotalMilliseconds;
+            }
 
             return 0;
         }
 
         public override int GetTimeRemaining(string soundEntityName)
         {
-            //if (_world.TryGet(soundEntityName, out var entity))
-            //{
-            //    var sound = entity.GetComponent<MediaComponent>();
-            //    TimeSpan duration = sound.Duration;
-            //    return (int)(duration.TotalMilliseconds - sound.Elapsed.TotalMilliseconds);
-            //}
+            if (_world.TryGetEntity(soundEntityName, out Entity entity))
+            {
+                MediaClipTable table = GetTable(entity);
+                TimeSpan duration = table.Duration.GetValue(entity);
+                TimeSpan elapsed = table.Elapsed.GetValue(entity);
+                return (int)(duration.TotalMilliseconds - elapsed.TotalMilliseconds);
+            }
 
-            return 10000;
+            return 0;
         }
     }
 }

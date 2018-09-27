@@ -167,9 +167,9 @@ namespace NitroSharp.Graphics.Objects
             }
 
             FontFace font = _fontFamily.GetFace(glyph.FontStyle);
-            ref GlyphInfo glyphInfo = ref font.GetGlyphInfo(glyph.Char);
+            font.GetGlyphInfo(glyph.Char, out GlyphInfo glyphInfo);
 
-            GlyphBitmapInfo bitmapInfo = font.Rasterize(ref glyphInfo, srcBuffer);
+            GlyphBitmapInfo bitmapInfo = font.RasterizeGlyph(ref glyphInfo, srcBuffer);
             Size dimensions = bitmapInfo.Dimensions;
             if (dimensions.Width == 0)
             {

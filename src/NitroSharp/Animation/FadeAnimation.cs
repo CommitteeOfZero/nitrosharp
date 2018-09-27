@@ -15,7 +15,7 @@ namespace NitroSharp.Logic.Components
         public float FinalOpacity;
 
         protected override ref float GetReference(World world)
-            => ref world.GetTable<Visuals>(Entity).Colors.Mutate(Entity)._channels.W;
+            => ref world.GetTable<VisualTable>(Entity).Colors.Mutate(Entity)._channels.W;
 
         protected override float InterpolateValue(float factor)
         {

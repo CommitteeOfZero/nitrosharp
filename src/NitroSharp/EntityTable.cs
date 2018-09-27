@@ -1,192 +1,371 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 
 namespace NitroSharp
 {
     internal abstract class EntityTable
     {
         private readonly List<Row> _rows = new List<Row>(8);
-        private readonly Queue<ushort> _freeColumns = new Queue<ushort>();
+        internal readonly Dictionary<ushort, ushort> _idToIndex;
+        internal readonly Dictionary<ushort, ushort> _indexToId;
 
-        protected EntityTable(ushort columnCount)
+        private ushort _columnCount;
+        private ushort _nextFreeColumn;
+
+        public HashSet<Entity> AddedEntities = new HashSet<Entity>();
+
+        protected EntityTable(World world, ushort initialColumnCount)
         {
-            ColumnCount = columnCount;
+            World = world;
+            _columnCount = initialColumnCount;
             Parents = AddRow<Entity>();
             IsLocked = AddRow<bool>();
+            _idToIndex = new Dictionary<ushort, ushort>(initialColumnCount);
+            _indexToId = new Dictionary<ushort, ushort>(initialColumnCount);
         }
 
-        public ushort ColumnsUsed { get; private set; }
-        public ushort ColumnCount { get; private set; }
+        public World World { get; }
+
+        public ushort ColumnsUsed => _nextFreeColumn;
 
         public Row<bool> IsLocked { get; }
         public Row<Entity> Parents { get; }
 
+        public void BeginFrame()
+        {
+            AddedEntities.Clear();
+            foreach (Row row in _rows)
+            {
+                row.FlushEvents();
+            }
+        }
+
+        public bool TryLookupIndex(Entity entity, out ushort index)
+        {
+            return _idToIndex.TryGetValue(entity.Id, out index);
+        }
+
+        public ushort LookupIndex(Entity entity)
+        {
+            return _idToIndex[entity.Id];
+        }
+
         protected Row<T> AddRow<T>() where T : struct
         {
-            var row = new Row<T>(ColumnCount);
+            var row = new Row<T>(this, _columnCount);
+            _rows.Add(row);
+            return row;
+        }
+
+        protected SystemDataRow<T> AddSystemDataRow<T>() where T : struct
+        {
+            var row = new SystemDataRow<T>(this, _columnCount);
             _rows.Add(row);
             return row;
         }
 
         protected RefTypeRow<T> AddRefTypeRow<T>() where T : class
         {
-            var row = new RefTypeRow<T>(ColumnCount);
+            var row = new RefTypeRow<T>(this, _columnCount);
             _rows.Add(row);
             return row;
         }
 
-        internal ushort ReserveColumn()
+        internal void Insert(Entity entity)
         {
-            if (_freeColumns.Count > 0)
+            ushort index = _nextFreeColumn++;
+            if (index == _columnCount)
             {
-                return _freeColumns.Dequeue();
+                _columnCount *= 2;
+                ushort newSize = _columnCount;
+                foreach (Row row in _rows)
+                {
+                    row.Resize(newSize);
+                }
             }
 
-            foreach (Row row in _rows)
-            {
-                row.ReserveCell();
-            }
+            _idToIndex[entity.Id] = index;
+            _indexToId[index] = entity.Id;
 
-            return ColumnsUsed++;
+            if (World.Kind == WorldKind.Primary)
+            {
+                AddedEntities.Add(entity);
+            }
         }
 
-        internal void FreeColumn(Entity entity, bool eraseCells)
+        internal void Remove(Entity entity)
         {
-            _freeColumns.Enqueue(entity.Index);
-            if (eraseCells)
+            ushort index = _idToIndex[entity.Id];
+            ushort lastIndex = (ushort)(_nextFreeColumn - 1);
+
+            if (index < lastIndex)
+            {
+                ushort lastId = _indexToId[lastIndex];
+                _idToIndex[lastId] = index;
+                _indexToId[index] = lastId;
+
+                foreach (Row row in _rows)
+                {
+                    row.Move(srcIndex: lastIndex, dstIndex: index);
+                }
+            }
+            else
             {
                 foreach (Row row in _rows)
                 {
-                    row.EraseCell(entity);
+                    row.ResetValue(index);
                 }
+            }
+
+            _idToIndex.Remove(entity.Id);
+            _indexToId.Remove(lastIndex);
+            _nextFreeColumn--;
+
+            if (World.IsPrimary)
+            {
+                AddedEntities.Remove(entity);
             }
         }
 
-        public void CopyChanges(EntityTable other)
+        public void MergeChanges(EntityTable target, bool fromPrimary)
         {
-            Debug.Assert(_rows.Count == other._rows.Count);
             for (int i = 0; i < _rows.Count; i++)
             {
-                _rows[i].CopyChanges(other._rows[i]);
+                _rows[i].MergeChanges(target._rows[i]);
             }
 
-            other.ColumnsUsed = ColumnsUsed;
-            other._freeColumns.Clear();
-            foreach (ushort column in _freeColumns)
-            {
-                other._freeColumns.Enqueue(column);
-            }
+            Debug_CheckIdMaps();
+            target.Debug_CheckIdMaps();
+        }
+
+        internal bool EntityExists(Entity entity)
+        {
+            return _idToIndex.ContainsKey(entity.Id);
         }
 
         internal abstract class Row
         {
-            internal abstract void CopyChanges(Row dstRow);
-            internal abstract void ReserveCell();
-            internal abstract void EraseCell(Entity entity);
+            protected readonly EntityTable _table;
+
+            protected Row(EntityTable table)
+            {
+                _table = table;
+            }
+
+            internal abstract void FlushEvents();
+            internal abstract void MergeChanges(Row dstRow);
+            internal abstract void ResetValue(ushort index);
+            internal abstract void Move(ushort srcIndex, ushort dstIndex);
+            internal abstract void Resize(ushort newSize);
+
+            [Conditional("DEBUG")]
+            [DebuggerNonUserCode]
+            internal abstract void Debug_CompareTo(Row other);
         }
 
         internal abstract class RowBase<T> : Row
         {
             protected T[] _data;
-            protected readonly HashSet<(ushort start, ushort length)> _dirtyColumns;
+            protected readonly HashSet<ushort> _dirtyIds;
+            public bool _entireRowChanged;
 
-            protected RowBase(int initialColumnCount)
+            protected RowBase(EntityTable table, int initialColumnCount) : base(table)
             {
                 _data = new T[initialColumnCount];
-                _dirtyColumns = new HashSet<(ushort start, ushort length)>();
+                _dirtyIds = new HashSet<ushort>();
             }
 
-            public ushort ColumnsUsed { get; private set; }
+            public ushort CellsUsed => _table.ColumnsUsed;
 
-            public T GetValue(Entity key) => _data[key.Index];
-            public ref readonly T GetReadonlyRef(Entity entity) => ref _data[entity.Index];
-            public ReadOnlySpan<T> Enumerate() => new ReadOnlySpan<T>(_data, 0, ColumnsUsed);
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            protected ushort IndexOf(Entity entity) => _table.LookupIndex(entity);
 
-            public void Set(Entity key, T value)
+            public T GetValue(ushort index) => _data[index];
+            public T GetValue(Entity key) => _data[IndexOf(key)];
+            public ref readonly T GetReadonlyRef(Entity entity) => ref _data[IndexOf(entity)];
+            public ReadOnlySpan<T> Enumerate() => new ReadOnlySpan<T>(_data, 0, CellsUsed);
+
+            public virtual void Set(Entity key, T value)
             {
-                _dirtyColumns.Add((key.Index, 1));
-                _data[key.Index] = value;
+                ushort index = IndexOf(key);
+                _data[index] = value;
+                ValueChanged(key.Id);
             }
 
-            public void Set(Entity key, ref T value)
+            public virtual void Set(Entity key, ref T value)
             {
-                _dirtyColumns.Add((key.Index, 1));
-                _data[key.Index] = value;
+                ushort index = IndexOf(key);
+                _data[index] = value;
+                ValueChanged(key.Id);
             }
 
-            public ref T Mutate(Entity key)
+            public virtual ref T Mutate(Entity key)
             {
-                _dirtyColumns.Add((key.Index, 1));
-                return ref _data[key.Index];
+                ushort index = IndexOf(key);
+                ValueChanged(key.Id);
+                return ref _data[index];
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            private void ValueChanged(ushort id)
+            {
+                if (!_entireRowChanged)
+                {
+                    _dirtyIds.Add(id);
+                }
             }
 
             public Span<T> MutateAll()
             {
-                if (ColumnsUsed > 0)
+                if (CellsUsed > 0)
                 {
-                    _dirtyColumns.Add((0, ColumnsUsed));
+                    _entireRowChanged = true;
                 }
 
-                return new Span<T>(_data, 0, ColumnsUsed);
+                return new Span<T>(_data, 0, CellsUsed);
             }
 
-            internal override void CopyChanges(Row dstRow)
+            internal override void FlushEvents()
+            {
+            }
+
+            internal override void MergeChanges(Row dstRow)
             {
                 var other = (RowBase<T>)dstRow;
                 if (_data.Length == other._data.Length)
                 {
-                    foreach ((ushort start, ushort length) in _dirtyColumns)
+                    if (_entireRowChanged)
                     {
-                        if (length == 1)
+                        Array.Copy(_data, 0, other._data, 0, _data.Length);
+                    }
+                    else
+                    {
+                        var map = _table._idToIndex;
+                        foreach (ushort id in _dirtyIds)
                         {
-                            other._data[start] = _data[start];
-                        }
-                        else
-                        {
-                            Array.Copy(_data, start, other._data, start, length);
+                            if (map.TryGetValue(id, out ushort index))
+                            {
+                                other._data[index] = _data[index];
+                            }
                         }
                     }
                 }
                 else
                 {
-                    var newArray = new T[ColumnsUsed];
-                    Array.Copy(_data, 0, newArray, 0, ColumnsUsed);
+                    var newArray = new T[CellsUsed];
+                    Array.Copy(_data, 0, newArray, 0, CellsUsed);
                     other._data = newArray;
                 }
 
-                other.ColumnsUsed = ColumnsUsed;
-                _dirtyColumns.Clear();
+                _entireRowChanged = false;
+                _dirtyIds.Clear();
             }
 
-            internal override void ReserveCell()
+            internal override void ResetValue(ushort index)
             {
-                if (_data.Length == ColumnsUsed)
+                _data[index] = default;
+            }
+
+            internal override void Move(ushort srcIndex, ushort dstIndex)
+            {
+                ref T srcRef = ref _data[srcIndex];
+                _data[dstIndex] = srcRef;
+                srcRef = default;
+            }
+
+            internal override void Resize(ushort newSize)
+            {
+                Array.Resize(ref _data, newSize);
+            }
+
+            internal override void Debug_CompareTo(Row other)
+            {
+                var b = (RowBase<T>)other;
+                for (int i = 0; i < CellsUsed; i++)
                 {
-                    Array.Resize(ref _data, ColumnsUsed * 2);
+                    if (b._entireRowChanged || b._dirtyIds.Count > 0) { continue; }
+                    Debug.Assert(EqualityComparer<T>.Default.Equals(_data[i], b._data[i]));
                 }
-
-                ColumnsUsed++;
-            }
-
-            internal override void EraseCell(Entity entity)
-            {
-                _dirtyColumns.Add((entity.Index, 1));
-                _data[entity.Index] = default;
             }
         }
 
         internal sealed class Row<T> : RowBase<T> where T : struct
         {
-            public Row(int initialColumnCount) : base(initialColumnCount)
+            public Row(EntityTable table, int initialColumnCount)
+                : base(table, initialColumnCount)
+            {
+            }
+        }
+
+        internal sealed class SystemDataRow<T> : RowBase<T> where T : struct
+        {
+            public Span<T> RecycledComponents
+            {
+                get
+                {
+                    if (_recycledElements.Count == 0) { return default; }
+                    _recycledElements.CopyTo(_recycledElementsBackbuffer);
+                    int count = _recycledElements.Count;
+                    _recycledElements.Clear();
+                    return _recycledElementsBackbuffer.AsSpan(0, count);
+                }
+            }
+
+            private readonly List<T> _recycledElements = new List<T>();
+            private T[] _recycledElementsBackbuffer = new T[32];
+
+            public SystemDataRow(EntityTable table, int initialColumnCount)
+                : base(table, initialColumnCount)
+            {
+            }
+
+            internal override void ResetValue(ushort index)
+            {
+                _recycledElements.Add(_data[index]);
+                _data[index] = default;
+            }
+
+            internal override void Move(ushort srcIndex, ushort dstIndex)
+            {
+                _recycledElements.Add(_data[dstIndex]);
+                ref T srcRef = ref _data[srcIndex];
+                _data[dstIndex] = srcRef;
+                srcRef = default;
+            }
+
+            internal override void FlushEvents()
             {
             }
         }
 
         internal sealed class RefTypeRow<T> : RowBase<T> where T : class
         {
-            public RefTypeRow(int initialColumnCount) : base(initialColumnCount)
+            public RefTypeRow(EntityTable table, int initialColumnCount)
+                : base(table, initialColumnCount)
             {
+            }
+        }
+
+        [Conditional("DEBUG")]
+        [DebuggerNonUserCode]
+        internal static void Debug_CompareTables(EntityTable left, EntityTable right)
+        {
+            for (int i = 0; i < left._rows.Count; i++)
+            {
+                left._rows[i].Debug_CompareTo(right._rows[i]);
+            }
+        }
+
+        [Conditional("DEBUG")]
+        [DebuggerNonUserCode]
+        private void Debug_CheckIdMaps()
+        {
+            Debug.Assert(_idToIndex.Count == _indexToId.Count);
+            foreach (var kvp in _idToIndex)
+            {
+                Debug.Assert(_indexToId[kvp.Value] == kvp.Key);
             }
         }
     }

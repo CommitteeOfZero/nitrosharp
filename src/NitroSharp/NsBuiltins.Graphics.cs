@@ -91,9 +91,10 @@ namespace NitroSharp
             }
 
             string source = fileOrExistingEntityName;
+            if (source.ToUpperInvariant().Contains("COLOR")) { return; }
             if (_world.TryGetEntity(fileOrExistingEntityName, out Entity existingEnitity))
             {
-                source = _world.Sprites.SpriteComponents.GetValue(existingEnitity).Image;
+                source = _world.Sprites.ImageSources.GetValue(existingEnitity).Image;
             }
 
             var texture = Content.Get<BindableTexture>(source);
@@ -132,11 +133,16 @@ namespace NitroSharp
             //EntityHandle.Transform.TransformationOrder = TransformationOrder.ScaleTranslationRotation;
         }
 
+        public override void DrawTransition(string sourceEntityName, TimeSpan duration, NsRational initialOpacity, NsRational finalOpacity, NsRational feather, NsEasingFunction easingFunction, string maskFileName, TimeSpan delay)
+        {
+            Interpreter.SuspendThread(CurrentThread, duration);
+        }
+
         public override int GetWidth(string entityName)
         {
             if (_world.TryGetEntity(entityName, out Entity entity))
             {
-                return (int)_world.GetTable<Visuals>(entity).Bounds.GetValue(entity).Width;
+                return (int)_world.GetTable<VisualTable>(entity).Bounds.GetValue(entity).Width;
             }
 
             return 0;
@@ -146,7 +152,7 @@ namespace NitroSharp
         {
             if (_world.TryGetEntity(entityName, out Entity entity))
             {
-                return (int)_world.GetTable<Visuals>(entity).Bounds.GetValue(entity).Height;
+                return (int)_world.GetTable<VisualTable>(entity).Bounds.GetValue(entity).Height;
             }
 
             return 0;
@@ -156,7 +162,7 @@ namespace NitroSharp
         {
             SizeF parentBounds = new SizeF(1280, 720);
 
-            Visuals properties = _world.GetTable<Visuals>(entity);
+            VisualTable properties = _world.GetTable<VisualTable>(entity);
 
             ref TransformComponents transform = ref properties.TransformComponents.Mutate(entity);
             SizeF bounds = properties.Bounds.GetValue(entity);
@@ -164,7 +170,7 @@ namespace NitroSharp
             Entity parent = properties.Parents.GetValue(entity);
             if (parent.IsValid)
             {
-                parentBounds = _world.GetTable<Visuals>(parent).Bounds.GetValue(parent);
+                parentBounds = _world.GetTable<VisualTable>(parent).Bounds.GetValue(parent);
             }
 
             var value = new Vector2(

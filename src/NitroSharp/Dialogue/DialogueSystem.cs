@@ -1,4 +1,6 @@
 ﻿using System.Collections.Immutable;
+using NitroSharp.Content;
+using NitroSharp.Media.Decoding;
 using NitroSharp.NsScript.Execution;
 using NitroSharp.Text;
 using Veldrid;
@@ -12,22 +14,25 @@ namespace NitroSharp.Dialogue
         private readonly NsScriptInterpreter _scriptInterpreter;
 
         private readonly EntityTable.RefTypeRow<TextLayout> _textLayouts;
+        private readonly ContentManager _content;
 
-        public DialogueSystem(World world, InputTracker inputTracker, NsScriptInterpreter scriptInterpreter)
+        public DialogueSystem(World world, InputTracker inputTracker, NsScriptInterpreter scriptInterpreter, ContentManager content)
         {
             _world = world;
             _inputTracker = inputTracker;
             _scriptInterpreter = scriptInterpreter;
             _textLayouts = world.TextInstances.Layouts;
+            _content = content;
         }
 
         public void Update(float deltaTime)
         {
             if (_world.ActiveAnimationCount > 0) { return; }
             ref DialogueState state = ref _world._dialogueState;
+            if (!state.TextEntity.IsValid) { return; }
             if (state.Command != DialogueState.CommandKind.NoOp || ShouldAdvance())
             {
-                ref var textLayout = ref _textLayouts.Mutate(state.TextEntity);
+                TextLayout textLayout = _textLayouts.GetValue(state.TextEntity);
                 ref bool clearFlag = ref _world.TextInstances.ClearFlags.Mutate(state.TextEntity);
                 if (state.Command == DialogueState.CommandKind.Begin)
                 {
@@ -127,7 +132,7 @@ namespace NitroSharp.Dialogue
 
                     case DialogueLinePartKind.Voice:
                         var voicePart = (Voice)part;
-                        //Voice(voicePart);
+                        Voice(voicePart);
                         break;
 
                     case DialogueLinePartKind.Marker:
@@ -165,6 +170,29 @@ namespace NitroSharp.Dialogue
                     var skip = new RevealSkipAnimation(state.TextEntity, (ushort)(animation.Position + 1));
                     _world.ActivateBehavior(skip);
                 }
+            }
+        }
+
+        private void Voice(Voice voice)
+        {
+            ref DialogueState state = ref _world._dialogueState;
+            if (state.LastVoiceName != null)
+            {
+                _world.RemoveEntity(state.LastVoiceName);
+            }
+
+            if (voice.Action == VoiceAction.Play)
+            {
+                AssetId assetId = "voice/" + voice.FileName;
+                _content.TryGet<MediaPlaybackSession>(assetId, out var session);
+                Entity entity = _world.CreateAudioClip(voice.FileName, assetId, false);
+                _world.AudioClips.Duration.Set(entity, session.Asset.AudioStream.Duration);
+
+                state.LastVoiceName = voice.FileName;
+            }
+            else
+            {
+                _world.RemoveEntity(voice.FileName);
             }
         }
     }

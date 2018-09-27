@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using FreeTypeBindings;
 
 namespace NitroSharp.Text
@@ -55,8 +54,16 @@ namespace NitroSharp.Text
 
         public FontFace Find(string fontFamily, FontStyle fontStyle)
         {
-            var collection = _instances[fontFamily];
-            return collection.First(x => x.Style == fontStyle);
+            List<FontFace> collection = _instances[fontFamily];
+            foreach (FontFace font in collection)
+            {
+                if (font.Style == fontStyle)
+                {
+                    return font;
+                }
+            }
+
+            return ThrowNotFound(fontFamily, fontStyle);
         }
 
         private FontFace Load(string path)
@@ -82,5 +89,8 @@ namespace NitroSharp.Text
             _families.Clear();
             _freetype.Dispose();
         }
+
+        private FontFace ThrowNotFound(string fontFamily, FontStyle fontStyle)
+            => throw new ArgumentException($"Could not find font {{FontFamily = {fontFamily}, FontStyle = {fontStyle}}}.");
     }
 }
