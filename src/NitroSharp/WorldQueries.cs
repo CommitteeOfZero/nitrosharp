@@ -20,7 +20,7 @@ namespace NitroSharp
             }
 
             public QueryExecutor GetEnumerator() => new QueryExecutor(_world, _query);
-            public bool Any() => GetEnumerator().MoveNext() == true;
+            public bool Any() => GetEnumerator().MoveNext();
         }
 
         public struct QueryExecutor

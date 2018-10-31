@@ -211,10 +211,6 @@ namespace NitroSharp.Graphics
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private byte GetBufferId(DeviceBuffer buffer)
-            => GetResourceId(buffer, _indexBuffers, ref _lastIndexBuffer);
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private byte GetPipelineId(Pipeline pipeline)
             => GetResourceId(pipeline, _pipelines, ref _lastPipeline);
 

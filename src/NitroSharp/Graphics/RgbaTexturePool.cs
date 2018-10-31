@@ -8,16 +8,15 @@ namespace NitroSharp.Graphics
 {
     internal sealed class RgbaTexturePool : IDisposable
     {
-        private readonly GraphicsDevice _gd;
         private readonly Bucket _staging, _sampled;
         private object _stagingBucketLock = new object();
         private object _sampledBucketLock = new object();
 
         public RgbaTexturePool(GraphicsDevice graphicsDevice)
         {
-            _gd = graphicsDevice;
-            _staging = new Bucket(_gd.ResourceFactory, TextureUsage.Staging);
-            _sampled = new Bucket(_gd.ResourceFactory, TextureUsage.Sampled);
+            GraphicsDevice gd = graphicsDevice;
+            _staging = new Bucket(gd.ResourceFactory, TextureUsage.Staging);
+            _sampled = new Bucket(gd.ResourceFactory, TextureUsage.Sampled);
         }
 
         public Texture RentStaging(Size minimalSize)

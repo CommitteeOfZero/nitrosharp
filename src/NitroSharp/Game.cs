@@ -29,14 +29,14 @@ namespace NitroSharp
         private readonly Configuration _configuration;
         private readonly CancellationTokenSource _shutdownCancellation;
 
-        private GameWindow _window;
+        private readonly GameWindow _window;
         private volatile bool _needsResize;
         private volatile bool _surfaceDestroyed;
         private GraphicsDevice _graphicsDevice;
         private Swapchain _swapchain;
-        private TaskCompletionSource<int> _initializingGraphics;
+        private readonly TaskCompletionSource<int> _initializingGraphics;
 
-        private InputTracker _inputTracker;
+        private readonly InputTracker _inputTracker;
         private DialogueSystem _dialogueSystem;
 
         private readonly string _nssFolder;
@@ -86,8 +86,6 @@ namespace NitroSharp
 
         public async Task Run(bool useDedicatedThread = false)
         {
-            //Task.Factory.StartNew(WaitForFullGCProc, TaskCreationOptions.LongRunning);
-
             Task loadScriptTask = Task.Run((Action)LoadStartupScript);
             Task initializeAudio = Task.Run((Action)SetupAudio);
 
@@ -330,30 +328,16 @@ namespace NitroSharp
         {
             try
             {
-
-                var values = UpdateCore(deltaMilliseconds);
-                double sum = values.sync + values.dialogue + values.audio + values.render;
-                if (sum >= 20)
-                {
-                    Console.WriteLine(string.Empty);
-                    Console.WriteLine($"Total: {sum}");
-                    Console.WriteLine($"Sync: {values.sync}");
-                    Console.WriteLine($"Dialogue: {values.dialogue}");
-                    Console.WriteLine($"Audio: {values.audio}");
-                    Console.WriteLine($"Render: {values.render}");
-                }
+                UpdateCore(deltaMilliseconds);
             }
             catch (OperationCanceledException)
             {
             }
         }
 
-        private (double sync, double dialogue, double audio, double render) UpdateCore(float deltaMilliseconds)
+        private void UpdateCore(float deltaMilliseconds)
         {
             _inputTracker.Update(deltaMilliseconds);
-
-            long start = _gameTimer.ElapsedTicks;
-
             if (IsMultithreaded)
             {
                 if (_interpreterProc.IsFaulted)
@@ -389,26 +373,13 @@ namespace NitroSharp
                 _nssInterpreter.Run(CancellationToken.None);
             }
 
-            long last = _gameTimer.ElapsedTicks;
-            double sync = to_ms(last - start);
-
             _presentWorld.FlushDetachedBehaviors();
             _attachedBehaviorProcessor.Update(deltaMilliseconds);
 
             _dialogueSystem.Update(deltaMilliseconds);
-            long @new = _gameTimer.ElapsedTicks;
-            double dialogue = to_ms(@new - last);
-            last = @new;
             _audioSystem.Update();
-            @new = _gameTimer.ElapsedTicks;
-            double audio = to_ms(@new - last);
-            last = @new;
-            
             _renderSystem.Update(deltaMilliseconds);
-            @new = _gameTimer.ElapsedTicks;
-            double render = to_ms(@new - last);
-            last = @new;
-
+            
             if (_window.Exists)
             {
                 try
@@ -417,15 +388,11 @@ namespace NitroSharp
                 }
                 catch (VeldridException e) when (e.Message == "The Swapchain's underlying surface has been lost.")
                 {
-                    return default;
+                    return;
                 }
             }
 
             _presentWorld.FlushEvents();
-
-            return (sync, dialogue, audio, render);
-
-            double to_ms(long ticks) => ticks / (double)Stopwatch.Frequency * 1000.0d;
         }
 
         private void OnWindowResized()
@@ -477,7 +444,6 @@ namespace NitroSharp
         public void Dispose()
         {
             _renderSystem.Dispose();
-            //_systems.Dispose();
             Content.Dispose();
             FontService.Dispose();
             _wicFactory?.Dispose();

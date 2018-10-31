@@ -14,8 +14,6 @@ namespace NitroSharp.Graphics
 
     internal sealed class QuadBatcher : IDisposable
     {
-        private readonly GraphicsDevice _gd;
-        private readonly Framebuffer _frameBuffer;
         private readonly RenderBucket _renderBucket;
         private readonly QuadGeometryStream _quadGeometryStream;
         private readonly ViewProjection _viewProjection;
@@ -41,21 +39,20 @@ namespace NitroSharp.Graphics
             ShaderLibrary shaderLibrary,
             TextureView whiteTexture)
         {
-            _gd = graphicsDevice;
-            _frameBuffer = framebuffer;
+            GraphicsDevice gd = graphicsDevice;
             _viewProjection = viewProjection;
             _renderBucket = renderBucket;
             _quadGeometryStream = quadGeometryStream;
             _resourceSetCache = resourceSetCache;
             _whiteTextureView = whiteTexture;
 
-            ResourceFactory factory = _gd.ResourceFactory;
+            ResourceFactory factory = gd.ResourceFactory;
             _spriteResourceLayout = factory.CreateResourceLayout(new ResourceLayoutDescription(
                     new ResourceLayoutElementDescription("Texture", ResourceKind.TextureReadOnly, ShaderStages.Fragment),
                     new ResourceLayoutElementDescription("Sampler", ResourceKind.Sampler, ShaderStages.Fragment)));
 
             _spriteResourceSetDesc = new ResourceSetDescription(_spriteResourceLayout, new BindableResource[2]);
-            _spriteResourceSetDesc.BoundResources[1] = _gd.LinearSampler;
+            _spriteResourceSetDesc.BoundResources[1] = gd.LinearSampler;
 
             (Shader vs, Shader fs) = shaderLibrary.GetShaderSet("TexturedQuad");
             var shaderSetDesc = new ShaderSetDescription(
@@ -69,7 +66,7 @@ namespace NitroSharp.Graphics
                     PrimitiveTopology.TriangleList,
                     shaderSetDesc,
                     new[] { viewProjection.ResourceLayout, _spriteResourceLayout },
-                    _frameBuffer.OutputDescription);
+                    framebuffer.OutputDescription);
 
             _alphaBlendPipeline = factory.CreateGraphicsPipeline(ref pipelineDesc);
             pipelineDesc.BlendState = BlendStateDescription.SingleAdditiveBlend;

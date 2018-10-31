@@ -23,7 +23,6 @@ namespace NitroSharp
         public void SetWorld(World gameWorld) => _world = gameWorld;
 
         private ContentManager Content => _game.Content;
-        private bool IsAnimationInProgress => MainThread.SleepTimeout != TimeSpan.MaxValue;
 
         private void SuspendMainThread()
         {

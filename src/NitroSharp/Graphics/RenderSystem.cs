@@ -17,12 +17,8 @@ namespace NitroSharp.Graphics.Systems
         private readonly World _world;
         private readonly GraphicsDevice _gd;
         private readonly Swapchain _swapchain;
-        private readonly ContentManager _content;
-        private readonly Configuration _config;
-        private readonly FontService _fontService;
 
         private readonly CommandList _cl;
-        private readonly RenderContext _context;
 
         private readonly ResourceLayout _viewProjectionLayout;
         private readonly ResourceSet _viewProjectionSet;
@@ -51,11 +47,8 @@ namespace NitroSharp.Graphics.Systems
             _world = world;
             _gd = device;
             _swapchain = swapchain;
-            _content = content;
-            _fontService = fontService;
-            _config = gameConfiguration;
 
-            DesignResolution = new SizeF(_config.WindowWidth, _config.WindowHeight);
+            DesignResolution = new SizeF(gameConfiguration.WindowWidth, gameConfiguration.WindowHeight);
 
             ResourceFactory factory = _gd.ResourceFactory;
             _cl = factory.CreateCommandList();
@@ -80,7 +73,7 @@ namespace NitroSharp.Graphics.Systems
           
             CreateWhiteTexture(out _whiteTexture, out _whiteTextureView);
 
-            _context = new RenderContext
+            var context = new RenderContext
             {
                 Device = device,
                 ResourceFactory = factory,
@@ -98,18 +91,17 @@ namespace NitroSharp.Graphics.Systems
                 DesignResolution = new Size((uint)DesignResolution.Width, (uint)DesignResolution.Height)
             };
 
-            _context.QuadBatcher = _context.CreateQuadBatcher(_mainBucket, _swapchain.Framebuffer);
-            _quadBatcher = _context.QuadBatcher;
+            context.QuadBatcher = context.CreateQuadBatcher(_mainBucket, _swapchain.Framebuffer);
+            _quadBatcher = context.QuadBatcher;
 
-            _spriteRenderer = new SpriteRenderer(world, _context, _content);
-            _quadRenderer = new RectangleRenderer(world, _context);
-            _textRenderer = new TextRenderer(world, _context);
+            _spriteRenderer = new SpriteRenderer(world, context, content);
+            _quadRenderer = new RectangleRenderer(world, context);
+            _textRenderer = new TextRenderer(world, context);
 
-            _videoRenderer = new VideoRenderer(world, _context, _content);
+            _videoRenderer = new VideoRenderer(world, context, content);
         }
 
         private SizeF DesignResolution { get; }
-        public RenderContext Context => _context;
 
         private void CreateWhiteTexture(out Texture texture, out TextureView textureView)
         {
