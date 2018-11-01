@@ -4,6 +4,7 @@ using NitroSharp.Content;
 using NitroSharp.Graphics;
 using NitroSharp.Graphics.Renderers;
 using NitroSharp.Media;
+using NitroSharp.NsScript.Symbols;
 using NitroSharp.Primitives;
 using NitroSharp.Text;
 using Veldrid;
@@ -17,7 +18,8 @@ namespace NitroSharp
         Rectangle,
         Text,
         AudioClip,
-        VideoClip
+        VideoClip,
+        Choice
     }
 
     internal sealed class ThreadTable : EntityTable
@@ -25,31 +27,40 @@ namespace NitroSharp
         public ThreadTable(World world, ushort columnCount)
             : base(world, columnCount)
         {
+            Name = AddRefTypeRow<string>();
+            Module = AddRefTypeRow<MergedSourceFileSymbol>();
+            Target = AddRefTypeRow<string>();
         }
+
+        public RefTypeRow<string> Name { get; }
+        public RefTypeRow<string> Target { get; }
+        public RefTypeRow<MergedSourceFileSymbol> Module { get; }
     }
 
-    internal abstract class VisualTable : EntityTable
+    internal abstract class RenderItemTable : EntityTable
     {
-        public Row<int> RenderPriorities { get; }
+        public Row<RenderItemKey> SortKeys { get; }
         public Row<RgbaFloat> Colors { get; }
         public Row<SizeF> Bounds { get; }
         public Row<TransformComponents> TransformComponents { get; }
 
         public SystemDataRow<Matrix4x4> TransformMatrices { get; }
+        public SystemDataRow<RectangleF> WorldRects { get; }
 
-        public VisualTable(World world, ushort columnCount)
+        public RenderItemTable(World world, ushort columnCount)
             : base(world, columnCount)
         {
             TransformComponents = AddRow<TransformComponents>();
-            RenderPriorities = AddRow<int>();
+            SortKeys = AddRow<RenderItemKey>();
             Colors = AddRow<RgbaFloat>();
             Bounds = AddRow<SizeF>();
 
             TransformMatrices = AddSystemDataRow<Matrix4x4>();
+            WorldRects = AddSystemDataRow<RectangleF>();
         }
     }
 
-    internal sealed class SpriteTable : VisualTable
+    internal sealed class SpriteTable : RenderItemTable
     {
         public Row<ImageSource> ImageSources { get; }
         public SystemDataRow<SpriteSystemData> SystemData { get; }
@@ -62,7 +73,7 @@ namespace NitroSharp
         }
     }
 
-    internal sealed class RectangleTable : VisualTable
+    internal sealed class RectangleTable : RenderItemTable
     {
         public RectangleTable(World world, ushort rectCount)
             : base(world, rectCount)
@@ -70,7 +81,7 @@ namespace NitroSharp
         }
     }
 
-    internal sealed class TextInstanceTable : VisualTable
+    internal sealed class TextInstanceTable : RenderItemTable
     {
         public RefTypeRow<TextLayout> Layouts { get; }
         public SystemDataRow<bool> ClearFlags { get; }
@@ -123,7 +134,7 @@ namespace NitroSharp
         public SystemDataRow<AudioState> AudioState { get; }
     }
 
-    internal sealed class VideoClipTable : VisualTable, MediaClipTable
+    internal sealed class VideoClipTable : RenderItemTable, MediaClipTable
     {
         public Row<AssetId> Asset { get; }
         public Row<TimeSpan> Duration { get; }
@@ -147,5 +158,30 @@ namespace NitroSharp
             VideoState = AddSystemDataRow<VideoState>();
             AudioState = AddSystemDataRow<AudioState>();
         }
+    }
+
+    internal sealed class ChoiceTable : EntityTable
+    {
+        public ChoiceTable(World world, ushort columnCount)
+            : base(world, columnCount)
+        {
+            MouseUsualSprite = AddRow<Entity>();
+            MouseOverSprite = AddRow<Entity>();
+            MouseClickSprite = AddRow<Entity>();
+            MouseOverThread = AddRow<Entity>();
+            MouseLeaveThread = AddRow<Entity>();
+            State = AddRow<Interactivity.State>();
+            Rects = AddSystemDataRow<RectangleF>();
+        }
+
+        public Row<Entity> MouseUsualSprite { get; }
+        public Row<Entity> MouseOverSprite { get; }
+        public Row<Entity> MouseClickSprite { get; }
+
+        public Row<Entity> MouseOverThread { get; }
+        public Row<Entity> MouseLeaveThread { get; }
+        public Row<Interactivity.State> State { get; }
+
+        public SystemDataRow<RectangleF> Rects { get; }
     }
 }

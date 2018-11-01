@@ -12,6 +12,7 @@ namespace NitroSharp.NsScript.Execution
         {
             Name = name;
             EntryPoint = entryPoint;
+            EntryModule = module;
             Stack = new Stack<ConstantValue>();
             _callstack = new Stack<Frame>();
             _callstack.Push(new Frame(module, entryPoint));
@@ -19,6 +20,7 @@ namespace NitroSharp.NsScript.Execution
 
         public string Name { get; }
         public InvocableSymbol EntryPoint { get; }
+        public MergedSourceFileSymbol EntryModule { get; }
 
         public bool IsSuspended { get; internal set; }
         public TimeSpan SleepTimeout { get; internal set; }

@@ -24,6 +24,11 @@ namespace NitroSharp
 
         private ContentManager Content => _game.Content;
 
+        public override void CreateChoice(string entityName)
+        {
+            _world.CreateChoice(entityName);
+        }
+
         private void SuspendMainThread()
         {
             Interpreter.SuspendThread(MainThread);
@@ -88,8 +93,31 @@ namespace NitroSharp
         public override void CreateThread(string name, string target)
         {
             bool startImmediately = _world.Query(name + "*").Any();
-            Interpreter.CreateThread(name, target, startImmediately);
-            _world.CreateThreadEntity(name);
+            ThreadContext thread = Interpreter.CreateThread(name, target, startImmediately);
+            Entity threadEntity = _world.CreateThreadEntity(name, thread.EntryModule, target);
+
+            Entity parentEntity = default;
+            int idxSlash = name.IndexOf('/');
+            if (idxSlash > 0)
+            {
+                string parentEntityName = name.Substring(0, idxSlash);
+                _world.TryGetEntity(parentEntityName, out parentEntity);
+            }
+
+            if (parentEntity.IsValid)
+            {
+                if (parentEntity.Kind == EntityKind.Choice)
+                {
+                    if (name.Contains("MouseOver"))
+                    {
+                        _world.Choices.MouseOverThread.Set(parentEntity, threadEntity);
+                    }
+                    else if (name.Contains("MouseLeave"))
+                    {
+                        _world.Choices.MouseLeaveThread.Set(parentEntity, threadEntity);
+                    }
+                }
+            }
         }
 
         public override void Request(string entityName, NsEntityAction action)

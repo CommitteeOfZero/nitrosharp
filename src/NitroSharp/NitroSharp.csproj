@@ -8,6 +8,10 @@
   </PropertyGroup>
 
   <Import Project="..\..\OutputPath.props" />
+
+  <ItemGroup>
+    <Compile Remove="Old/**" />
+  </ItemGroup>
   
   <ItemGroup>
     <ProjectReference Include="..\NitroSharp.NsScript\NitroSharp.NsScript.csproj" />

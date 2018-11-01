@@ -21,14 +21,14 @@ namespace NitroSharp.Graphics
             TransformProcessor.ProcessTransforms(_world, rectangles);
             ProcessRectangles(rectangles.Bounds.Enumerate(),
                 rectangles.Colors.Enumerate(),
-                rectangles.RenderPriorities.Enumerate(),
+                rectangles.SortKeys.Enumerate(),
                 rectangles.TransformMatrices.Enumerate());
         }
 
         public void ProcessRectangles(
             ReadOnlySpan<SizeF> bounds,
             ReadOnlySpan<RgbaFloat> colors,
-            ReadOnlySpan<int> priorities,
+            ReadOnlySpan<RenderItemKey> priorities,
             ReadOnlySpan<Matrix4x4> transforms)
         {
             QuadBatcher quadBatcher = _quadBatcher;

@@ -86,7 +86,7 @@ namespace NitroSharp.Media
             ReadOnlySpan<SizeF> bounds = _videoClips.Bounds.Enumerate();
             ReadOnlySpan<Matrix4x4> transform = _videoClips.TransformMatrices.Enumerate();
             ReadOnlySpan<RgbaFloat> color = _videoClips.Colors.Enumerate();
-            ReadOnlySpan<int> renderPriority = _videoClips.RenderPriorities.Enumerate();
+            ReadOnlySpan<RenderItemKey> renderPriority = _videoClips.SortKeys.Enumerate();
             for (int i = 0; i < count; i++)
             {
                 DisplayCurrentFrame(
@@ -143,7 +143,7 @@ namespace NitroSharp.Media
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void DisplayCurrentFrame(
             ref VideoState videoState, SizeF bounds,
-            in Matrix4x4 transform, RgbaFloat color, int priority)
+            in Matrix4x4 transform, RgbaFloat color, RenderItemKey priority)
         {
             var rect = new RectangleF(Vector2.Zero, bounds);
             QuadBatcher batcher = _renderContext.QuadBatcher;

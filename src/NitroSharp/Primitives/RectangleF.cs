@@ -32,6 +32,14 @@ namespace NitroSharp.Primitives
             Height = size.Height;
         }
 
+        public bool Contains(Vector2 point)
+        {
+            return point.X >= X
+                && point.X <= Right
+                && point.Y >= Y
+                && point.Y <= Bottom;
+        }
+
         public override bool Equals(object obj) => obj is RectangleF rect && Equals(in rect);
         public bool Equals(in RectangleF other)
         {

@@ -39,7 +39,7 @@ namespace NitroSharp
             NsEasingFunction easingFunction, bool wait)
         {
             if (!entity.IsVisual) { return null; }
-            VisualTable table = _world.GetTable<VisualTable>(entity);
+            RenderItemTable table = _world.GetTable<RenderItemTable>(entity);
             float adjustedOpacity = dstOpacity.Rebase(1.0f);
             ref RgbaFloat color = ref table.Colors.Mutate(entity);
             if (duration > TimeSpan.Zero)
@@ -91,7 +91,7 @@ namespace NitroSharp
             NsCoordinate dstX, NsCoordinate dstY,
             NsEasingFunction easingFunction, bool wait)
         {
-            VisualTable table = _world.GetTable<VisualTable>(entity);
+            RenderItemTable table = _world.GetTable<RenderItemTable>(entity);
             ref TransformComponents transform = ref table.TransformComponents.Mutate(entity);
             ref Vector3 position = ref transform.Position;
 
@@ -151,7 +151,7 @@ namespace NitroSharp
             NsRational dstScaleX, NsRational dstScaleY,
             NsEasingFunction easingFunction, bool suspendThread)
         {
-            VisualTable table = _world.GetTable<VisualTable>(entity);
+            RenderItemTable table = _world.GetTable<RenderItemTable>(entity);
             ref TransformComponents transform = ref table.TransformComponents.Mutate(entity);
             ref Vector3 scale = ref transform.Scale;
 

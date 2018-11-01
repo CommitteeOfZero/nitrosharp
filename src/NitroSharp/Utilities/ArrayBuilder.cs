@@ -100,5 +100,10 @@ namespace NitroSharp.Utilities
         {
             Count = 0;
         }
+
+        internal void OrderBy()
+        {
+            throw new NotImplementedException();
+        }
     }
 }

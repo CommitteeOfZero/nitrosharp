@@ -14,7 +14,7 @@ namespace NitroSharp.Graphics
 
     internal sealed class QuadBatcher : IDisposable
     {
-        private readonly RenderBucket _renderBucket;
+        private readonly RenderBucket<RenderItemKey> _renderBucket;
         private readonly QuadGeometryStream _quadGeometryStream;
         private readonly ViewProjection _viewProjection;
         private readonly ResourceSetCache _resourceSetCache;
@@ -33,7 +33,7 @@ namespace NitroSharp.Graphics
             GraphicsDevice graphicsDevice,
             Framebuffer framebuffer,
             ViewProjection viewProjection,
-            RenderBucket renderBucket,
+            RenderBucket<RenderItemKey> renderBucket,
             QuadGeometryStream quadGeometryStream,
             ResourceSetCache resourceSetCache,
             ShaderLibrary shaderLibrary,
@@ -79,10 +79,10 @@ namespace NitroSharp.Graphics
             _transform = transform;
         }
 
-        public void FillRectangle(float x, float y, float width, float height, ref RgbaFloat fillColor, int renderPriority)
+        public void FillRectangle(float x, float y, float width, float height, ref RgbaFloat fillColor, RenderItemKey renderPriority)
             => FillRectangle(new RectangleF(x, y, width, height), ref fillColor, renderPriority);
 
-        public void FillRectangle(in RectangleF rect, ref RgbaFloat fillColor, int renderPriority)
+        public void FillRectangle(in RectangleF rect, ref RgbaFloat fillColor, RenderItemKey renderPriority)
             => DrawImage(_whiteTextureView, null, rect, ref fillColor, renderPriority);
 
         public void DrawImage(
@@ -90,7 +90,7 @@ namespace NitroSharp.Graphics
             in RectangleF? sourceRect,
             in RectangleF destinationRect,
             ref RgbaFloat color,
-            int renderPriority,
+            RenderItemKey renderPriority,
             BlendMode blendMode = BlendMode.Alpha)
         {
             var sourceRectangle = sourceRect ?? new RectangleF(

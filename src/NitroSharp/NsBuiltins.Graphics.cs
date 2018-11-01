@@ -110,7 +110,25 @@ namespace NitroSharp
             SetPosition(entity, x, y);
             if (parentEntity.IsValid)
             {
-                SetParent(entity, parentEntity);
+                if (parentEntity.Kind == EntityKind.Choice)
+                {
+                    if (entityName.Contains("MouseUsual"))
+                    {
+                        _world.Choices.MouseUsualSprite.Set(parentEntity, entity);
+                    }
+                    else if (entityName.Contains("MouseOver"))
+                    {
+                        _world.Choices.MouseOverSprite.Set(parentEntity, entity);
+                    }
+                    else if (entityName.Contains("MouseClick"))
+                    {
+                        _world.Choices.MouseClickSprite.Set(parentEntity, entity);
+                    }
+                }
+                else
+                {
+                    SetParent(entity, parentEntity);
+                }
             }
         }
 
@@ -142,7 +160,7 @@ namespace NitroSharp
         {
             if (_world.TryGetEntity(entityName, out Entity entity))
             {
-                return (int)_world.GetTable<VisualTable>(entity).Bounds.GetValue(entity).Width;
+                return (int)_world.GetTable<RenderItemTable>(entity).Bounds.GetValue(entity).Width;
             }
 
             return 0;
@@ -152,7 +170,7 @@ namespace NitroSharp
         {
             if (_world.TryGetEntity(entityName, out Entity entity))
             {
-                return (int)_world.GetTable<VisualTable>(entity).Bounds.GetValue(entity).Height;
+                return (int)_world.GetTable<RenderItemTable>(entity).Bounds.GetValue(entity).Height;
             }
 
             return 0;
@@ -162,7 +180,7 @@ namespace NitroSharp
         {
             SizeF parentBounds = new SizeF(1280, 720);
 
-            VisualTable properties = _world.GetTable<VisualTable>(entity);
+            RenderItemTable properties = _world.GetTable<RenderItemTable>(entity);
 
             ref TransformComponents transform = ref properties.TransformComponents.Mutate(entity);
             SizeF bounds = properties.Bounds.GetValue(entity);
@@ -170,7 +188,7 @@ namespace NitroSharp
             Entity parent = properties.Parents.GetValue(entity);
             if (parent.IsValid)
             {
-                parentBounds = _world.GetTable<VisualTable>(parent).Bounds.GetValue(parent);
+                parentBounds = _world.GetTable<RenderItemTable>(parent).Bounds.GetValue(parent);
             }
 
             var value = new Vector2(

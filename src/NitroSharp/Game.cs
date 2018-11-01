@@ -20,6 +20,7 @@ using System.Collections.Concurrent;
 using NitroSharp.Input;
 using System.Collections.Generic;
 using NitroSharp.Animation;
+using NitroSharp.Interactivity;
 
 namespace NitroSharp
 {
@@ -64,6 +65,8 @@ namespace NitroSharp
         private AnimationProcessor _animationProcessor;
         private bool _syncToPresent;
 
+        private ChoiceProcessor _choiceProcessor;
+
         public Game(GameWindow window, Configuration configuration)
         {
             _shutdownCancellation = new CancellationTokenSource();
@@ -105,6 +108,7 @@ namespace NitroSharp
 
             _dialogueSystem = new DialogueSystem(_presentWorld, _inputTracker, _nssInterpreter, Content);
             _animationProcessor = new AnimationProcessor(_presentWorld, _nssInterpreter);
+            _choiceProcessor = new ChoiceProcessor(_presentWorld, _inputTracker, _nssInterpreter);
             StartInterpreter();
 
             await RunMainLoop(useDedicatedThread);
@@ -216,6 +220,9 @@ namespace NitroSharp
             {
                 _dialogueSystemInput.Command = DialogueSystemCommand.HandleInput;
             }
+
+            _renderSystem.ProcessTransforms();
+            _choiceProcessor.ProcessChoices();
 
             _audioSystem.UpdateAudioSources();
             _renderSystem.Update(deltaMilliseconds);

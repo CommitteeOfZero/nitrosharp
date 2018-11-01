@@ -59,6 +59,14 @@ namespace NitroSharp.NsScript.Symbols
             Declare("WaitPlay", WaitPlay);
 
             Declare("CreateText", CreateText);
+            Declare("CreateChoice", CreateChoice);
+        }
+
+        private static ConstantValue CreateChoice(EngineImplementationBase impl, Stack<ConstantValue> args)
+        {
+            string name = EntityName(PopString(args));
+            impl.CreateChoice(name);
+            return null;
         }
 
         private static ConstantValue CreateText(EngineImplementationBase impl, Stack<ConstantValue> args)

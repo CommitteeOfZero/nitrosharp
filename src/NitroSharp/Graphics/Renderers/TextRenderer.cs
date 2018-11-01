@@ -54,7 +54,7 @@ namespace NitroSharp.Graphics.Renderers
             TransformProcessor.ProcessTransforms(_world, textInstances);
             RenderTextLayouts(textInstances.Layouts.Enumerate(),
                 textInstances.ClearFlags.MutateAll(),
-                textInstances.RenderPriorities.Enumerate(),
+                textInstances.SortKeys.Enumerate(),
                 textInstances.TransformMatrices.Enumerate(),
                 textInstances.SystemData.Enumerate());
         }
@@ -62,7 +62,7 @@ namespace NitroSharp.Graphics.Renderers
         public void RenderTextLayouts(
             ReadOnlySpan<TextLayout> layouts,
             Span<bool> clearFlags,
-            ReadOnlySpan<int> renderPriorities,
+            ReadOnlySpan<RenderItemKey> renderPriorities,
             ReadOnlySpan<Matrix4x4> transforms,
             ReadOnlySpan<TextSystemData> systemData)
         {

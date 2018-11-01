@@ -5,6 +5,7 @@ using NitroSharp.Animation;
 using NitroSharp.Content;
 using NitroSharp.Graphics;
 using NitroSharp.Media;
+using NitroSharp.NsScript.Symbols;
 using NitroSharp.Primitives;
 using NitroSharp.Text;
 using NitroSharp.Utilities;
@@ -33,8 +34,8 @@ namespace NitroSharp
         private ArrayBuilder<EntityEvent> _entityEvents;
         private ushort _nextEntityId = 1;
 
-        private readonly Dictionary<AnimationDictionaryKey, PropertyAnimation> _attachedAnimations;
-        private readonly List<(AnimationDictionaryKey key, PropertyAnimation anim)> _animationsToDetach;
+        private readonly Dictionary<AnimationDictionaryKey, PropertyAnimation> _activeAnimations;
+        private readonly List<(AnimationDictionaryKey key, PropertyAnimation anim)> _animationsToDeactivate;
         private readonly List<AnimationEvent> _animationEvents;
 
         public World(WorldKind kind)
@@ -51,9 +52,10 @@ namespace NitroSharp
             TextInstances = RegisterTable(new TextInstanceTable(this, InitialTextLayoutCount));
             AudioClips = RegisterTable(new AudioClipTable(this, InitialAudioClipCount));
             VideoClips = RegisterTable(new VideoClipTable(this, InitialVideoClipCount));
+            Choices = RegisterTable(new ChoiceTable(this, 32));
 
-            _attachedAnimations = new Dictionary<AnimationDictionaryKey, PropertyAnimation>();
-            _animationsToDetach = new List<(AnimationDictionaryKey key, PropertyAnimation anim)>();
+            _activeAnimations = new Dictionary<AnimationDictionaryKey, PropertyAnimation>();
+            _animationsToDeactivate = new List<(AnimationDictionaryKey key, PropertyAnimation anim)>();
             _animationEvents = new List<AnimationEvent>();
         }
 
@@ -66,10 +68,11 @@ namespace NitroSharp
         public TextInstanceTable TextInstances { get; }
         public AudioClipTable AudioClips { get; }
         public VideoClipTable VideoClips { get; }
+        public ChoiceTable Choices { get; }
 
         public Dictionary<string, Entity>.Enumerator EntityEnumerator => _entities.GetEnumerator();
         public Dictionary<AnimationDictionaryKey, PropertyAnimation>.ValueCollection AttachedAnimations
-            => _attachedAnimations.Values;
+            => _activeAnimations.Values;
 
         private T RegisterTable<T>(T table) where T : EntityTable
         {
@@ -103,9 +106,13 @@ namespace NitroSharp
             }
         }
 
-        public Entity CreateThreadEntity(string name)
+        public Entity CreateThreadEntity(string name, MergedSourceFileSymbol module, string target)
         {
-            return CreateEntity(name, EntityKind.Thread);
+            Entity entity = CreateEntity(name, EntityKind.Thread);
+            Threads.Name.Set(entity, name);
+            Threads.Module.Set(entity, module);
+            Threads.Target.Set(entity, target);
+            return entity;
         }
 
         public Entity CreateSprite(
@@ -150,19 +157,18 @@ namespace NitroSharp
             return entity;
         }
 
+        public Entity CreateChoice(string name)
+        {
+            return CreateEntity(name, EntityKind.Choice);
+        }
+
         private Entity CreateVisual(
             string name, EntityKind kind,
             int renderPriority, SizeF size, ref RgbaFloat color)
         {
             Entity entity = CreateEntity(name, kind);
-            VisualTable table = GetTable<VisualTable>(entity);
-
-            if (renderPriority > 0)
-            {
-                renderPriority += entity.Id;
-            }
-
-            table.RenderPriorities.Set(entity, renderPriority);
+            RenderItemTable table = GetTable<RenderItemTable>(entity);
+            table.SortKeys.Set(entity, new RenderItemKey((ushort)renderPriority, entity.Id));
             table.Bounds.Set(entity, size);
             table.Colors.Set(entity, ref color);
             table.TransformComponents.Mutate(entity).Scale = Vector3.One;
@@ -172,35 +178,35 @@ namespace NitroSharp
         public void ActivateAnimation<T>(T animation) where T : PropertyAnimation
         {
             var key = new AnimationDictionaryKey(animation.Entity, typeof(T));
-            _attachedAnimations[key] = animation;
+            _activeAnimations[key] = animation;
             _animationEvents.Add(new AnimationEvent(key, AnimationEventKind.AnimationActivated));
         }
 
         public void DeactivateAnimation(PropertyAnimation animation)
         {
             var key = new AnimationDictionaryKey(animation.Entity, animation.GetType());
-            _animationsToDetach.Add((key, animation));
+            _animationsToDeactivate.Add((key, animation));
             _animationEvents.Add(new AnimationEvent(key, AnimationEventKind.AnimationDeactivated));
         }
 
         public bool TryGetAnimation<T>(Entity entity, out T animation) where T : PropertyAnimation
         {
             var key = new AnimationDictionaryKey(entity, typeof(T));
-            bool result = _attachedAnimations.TryGetValue(key, out PropertyAnimation val);
+            bool result = _activeAnimations.TryGetValue(key, out PropertyAnimation val);
             animation = val as T;
             return result;
         }
 
         public void FlushDetachedAnimations()
         {
-            foreach ((var dictKey, var anim) in _animationsToDetach)
+            foreach ((var dictKey, var anim) in _animationsToDeactivate)
             {
-                if (_attachedAnimations.TryGetValue(dictKey, out var value) && value == anim)
+                if (_activeAnimations.TryGetValue(dictKey, out var value) && value == anim)
                 {
-                    _attachedAnimations.Remove(dictKey);
+                    _activeAnimations.Remove(dictKey);
                 }
             }
-            _animationsToDetach.Clear();
+            _animationsToDeactivate.Clear();
         }
 
         public void FlushEvents()
@@ -314,14 +320,14 @@ namespace NitroSharp
             {
                 if (ae.EventKind == AnimationEventKind.AnimationActivated)
                 {
-                    if (_attachedAnimations.TryGetValue(ae.Key, out PropertyAnimation animation))
+                    if (_activeAnimations.TryGetValue(ae.Key, out PropertyAnimation animation))
                     {
-                        target._attachedAnimations[ae.Key] = animation;
+                        target._activeAnimations[ae.Key] = animation;
                     }
                 }
                 else
                 {
-                    target._attachedAnimations.Remove(ae.Key);
+                    target._activeAnimations.Remove(ae.Key);
                 }
             }
 

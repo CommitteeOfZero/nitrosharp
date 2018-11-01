@@ -49,12 +49,12 @@ namespace NitroSharp.Graphics
                 data.AssetRef.Dispose();
             }
 
-            TransformProcessor.ProcessTransforms(_world, sprites);
+            
 
             ReadOnlySpan<ImageSource> sources = sprites.ImageSources.Enumerate();
             ReadOnlySpan<Matrix4x4> transforms = sprites.TransformMatrices.Enumerate();
             ReadOnlySpan<RgbaFloat> colors = sprites.Colors.Enumerate();
-            ReadOnlySpan<int> priorities = sprites.RenderPriorities.Enumerate();
+            ReadOnlySpan<RenderItemKey> priorities = sprites.SortKeys.Enumerate();
 
             ReadOnlySpan<SpriteSystemData> systemData = sprites.SystemData.Enumerate();
 
@@ -62,8 +62,8 @@ namespace NitroSharp.Graphics
             for (int i = 0; i < sources.Length; i++)
             {
                 ImageSource source = sources[i];
-                int renderPriority = priorities[i];
-                if (renderPriority > 0 && colors[i].A > 0)
+                RenderItemKey renderPriority = priorities[i];
+                if (renderPriority.Priority > 0 && colors[i].A > 0)
                 {
                     ref readonly Matrix4x4 transform = ref transforms[i];
                     TextureView texView = systemData[i].TextureView;

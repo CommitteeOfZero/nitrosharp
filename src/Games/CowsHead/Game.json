@@ -1,6 +1,6 @@
 ﻿{
   "productName": "COWSHEAD_NOAH",
-  "activeProfile": "CustomBoot",
+  "activeProfile": "Noah",
   "graphics.vsync": true,
   "graphics.backend": "Vulkan",
   "audio.backend": "XAudio2",
@@ -11,6 +11,10 @@
   "dev.enableDiagnostics": true,
 
   "profiles": {
+    "Noah": {
+      "startupScript": "boot.nss"
+    },
+
     "Settings": {
       "startupScript": "boot_settings.nss"
     },
@@ -48,7 +52,7 @@
       "window.width": 800,
       "window.height": 600,
       "startupScript": "boot.nss",
-      "debug.contentRoot": "S:/ChaosContent/CH"
+      "debug.contentRoot": "D:/CoZ/Games/Chaos;HEad"
     }
   }
 }

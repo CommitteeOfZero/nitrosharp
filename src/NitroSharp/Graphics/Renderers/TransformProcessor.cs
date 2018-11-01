@@ -6,7 +6,7 @@ namespace NitroSharp.Graphics
 {
     internal static class TransformProcessor
     {
-        public static void ProcessTransforms(World world, VisualTable table)
+        public static void ProcessTransforms(World world, RenderItemTable table)
             => ProcessTransforms(world,
                 table.Bounds.Enumerate(),
                 table.TransformComponents.Enumerate(),
@@ -49,7 +49,7 @@ namespace NitroSharp.Graphics
             Entity parent = parents[index];
             if (parent.IsValid)
             {
-                VisualTable table = world.GetTable<VisualTable>(parent);
+                RenderItemTable table = world.GetTable<RenderItemTable>(parent);
                 if (table.TryLookupIndex(parent, out ushort parentIdx))
                 {
                     Span<Matrix4x4> parentTableTransforms = table.TransformMatrices.MutateAll();

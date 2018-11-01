@@ -21,7 +21,7 @@ namespace NitroSharp.Graphics
         public FontService FontService { get; set; }
 
         public ViewProjection ViewProjection { get; set; }
-        public RenderBucket MainBucket { get; set; }
+        public RenderBucket<RenderItemKey> MainBucket { get; set; }
         public QuadGeometryStream QuadGeometryStream { get; set; }
         public QuadBatcher QuadBatcher { get; set; }
        
@@ -42,7 +42,7 @@ namespace NitroSharp.Graphics
             _commandListPool.Enqueue(commandList);
         }
 
-        public QuadBatcher CreateQuadBatcher(RenderBucket bucket, Framebuffer framebuffer)
+        public QuadBatcher CreateQuadBatcher(RenderBucket<RenderItemKey> bucket, Framebuffer framebuffer)
         {
             return new QuadBatcher(Device, framebuffer, ViewProjection, bucket,
                 QuadGeometryStream, ResourceSetCache, ShaderLibrary, WhiteTexture);

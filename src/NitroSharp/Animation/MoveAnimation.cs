@@ -16,7 +16,7 @@ namespace NitroSharp.Logic.Components
         }
 
         protected override ref Vector3 GetReference(World world)
-            => ref world.GetTable<VisualTable>(Entity).TransformComponents.Mutate(Entity).Position;
+            => ref world.GetTable<RenderItemTable>(Entity).TransformComponents.Mutate(Entity).Position;
 
         protected override Vector3 InterpolateValue(float factor)
         {

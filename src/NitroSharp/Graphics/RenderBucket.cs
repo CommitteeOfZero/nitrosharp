@@ -7,7 +7,7 @@ using Veldrid;
 
 namespace NitroSharp.Graphics
 {
-    [StructLayout(LayoutKind.Sequential)]
+    [StructLayout(LayoutKind.Auto)]
     internal ref struct RenderBucketSubmission<TVertex>
         where TVertex : unmanaged
     {
@@ -22,7 +22,7 @@ namespace NitroSharp.Graphics
         public ushort IndexCount;
     }
 
-    [StructLayout(LayoutKind.Sequential)]
+    [StructLayout(LayoutKind.Auto)]
     internal ref struct RenderBucketSubmission<TVertex, TInstanceData>
         where TVertex : unmanaged
         where TInstanceData : unmanaged
@@ -40,9 +40,8 @@ namespace NitroSharp.Graphics
         public ushort InstanceBase;
     }
 
-    internal sealed class RenderBucket
+    internal sealed class RenderBucket<TKey> where TKey : IComparable<TKey>
     {
-        [StructLayout(LayoutKind.Sequential)]
         private struct RenderItem
         {
             public ResourceSet ObjectResourceSet;
@@ -59,8 +58,7 @@ namespace NitroSharp.Graphics
         }
 
         private ArrayBuilder<RenderItem> _renderItems;
-        private ArrayBuilder<int> _keys;
-        private readonly KeyComparer _keyComparer;
+        private ArrayBuilder<TKey> _keys;
 
         private readonly List<VertexBuffer> _vertexBuffers;
         private (byte index, VertexBuffer buffer) _lastVertexBuffer0;
@@ -78,12 +76,11 @@ namespace NitroSharp.Graphics
         public RenderBucket(GraphicsDevice graphicsDevice, uint initialCapacity)
         {
             _renderItems = new ArrayBuilder<RenderItem>(initialCapacity);
-            _keys = new ArrayBuilder<int>(initialCapacity);
+            _keys = new ArrayBuilder<TKey>(initialCapacity);
             _vertexBuffers = new List<VertexBuffer>();
             _indexBuffers = new List<DeviceBuffer>();
             _pipelines = new List<Pipeline>();
             _sharedResourceSets = new List<ResourceSet>();
-            _keyComparer = new KeyComparer();
         }
 
         public void Begin()
@@ -101,7 +98,7 @@ namespace NitroSharp.Graphics
             _lastPipeline = default;
         }
 
-        public void Submit<TVertex>(ref RenderBucketSubmission<TVertex> submission, int key)
+        public void Submit<TVertex>(ref RenderBucketSubmission<TVertex> submission, TKey key)
             where TVertex : unmanaged
         {
             ref RenderItem renderItem = ref _renderItems.Add();
@@ -118,7 +115,7 @@ namespace NitroSharp.Graphics
             _keys.Add(key);
         }
 
-        public void Submit<TVertex, TInstanceData>(ref RenderBucketSubmission<TVertex, TInstanceData> submission, int key)
+        public void Submit<TVertex, TInstanceData>(ref RenderBucketSubmission<TVertex, TInstanceData> submission, TKey key)
             where TVertex : unmanaged
             where TInstanceData : unmanaged
         {
@@ -136,15 +133,6 @@ namespace NitroSharp.Graphics
             renderItem.InstanceBase = submission.InstanceBase;
 
             _keys.Add(key);
-        }
-
-        private sealed class KeyComparer : IComparer<int>
-        {
-            public int Compare(int x, int y)
-            {
-                if (x > y) { return -1; }
-                return x == y ? 0 : 1;
-            }
         }
 
         public void End(CommandList commandList)
@@ -235,5 +223,40 @@ namespace NitroSharp.Graphics
 
             return id;
         }
+
+        //private void Sort(int[] keys, RenderItem[] renderItems, int left, int right)
+        //{
+        //    if ((right - left) < 2) return;
+
+        //    int l = left;
+        //    int r = right;
+        //    int pivot = keys[(left + right) / 2];
+        //    while (l <= r)
+        //    {
+        //        while (keys[l] < pivot) { l++; }
+        //        while (keys[r] > pivot) { r--; }
+
+        //        if (l <= r)
+        //        {
+        //            ref int lKey = ref keys[l];
+        //            ref int rKey = ref keys[r];
+        //            int tmp = lKey;
+        //            lKey = rKey;
+        //            rKey = tmp;
+
+        //            ref var lItem = ref renderItems[l];
+        //            ref var rItem = ref renderItems[r];
+        //            RenderItem tmpItem = lItem;
+        //            lItem = rItem;
+        //            rItem = tmpItem;
+
+        //            l++;
+        //            r--;
+        //        }
+
+        //        if (left < r) { Sort(keys, renderItems, left, r); }
+        //        if (l < right) { Sort(keys, renderItems, l, right); }
+        //    }
+        //}
     }
 }

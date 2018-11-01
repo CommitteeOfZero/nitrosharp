@@ -79,7 +79,7 @@ namespace NitroSharp.NsScript.Execution
             return CreateThread(name, module, symbol, start);
         }
 
-        private ThreadContext CreateThread(string name, MergedSourceFileSymbol module, string symbol, bool start = true)
+        public ThreadContext CreateThread(string name, MergedSourceFileSymbol module, string symbol, bool start = true)
         {
             Debug.WriteLine($"Creating thread '{symbol}'");
             InvocableSymbol member = module.LookupMember(symbol);

@@ -26,7 +26,7 @@ namespace NitroSharp.Graphics.Systems
 
         private readonly Texture _whiteTexture;
         private readonly TextureView _whiteTextureView;
-        private readonly RenderBucket _mainBucket;
+        private readonly RenderBucket<RenderItemKey> _mainBucket;
         private readonly QuadGeometryStream _quadGeometryStream;
         private readonly QuadBatcher _quadBatcher;
         private readonly SpriteRenderer _spriteRenderer;
@@ -68,7 +68,7 @@ namespace NitroSharp.Graphics.Systems
             _viewProjectionSet = factory.CreateResourceSet(new ResourceSetDescription(_viewProjectionLayout, _viewProjectionBuffer));
             var viewProjection = new ViewProjection(_viewProjectionLayout, _viewProjectionSet, _viewProjectionBuffer);
 
-            _mainBucket = new RenderBucket(_gd, MainBucketSize);
+            _mainBucket = new RenderBucket<RenderItemKey>(_gd, MainBucketSize);
             _quadGeometryStream = new QuadGeometryStream(device);
           
             CreateWhiteTexture(out _whiteTexture, out _whiteTextureView);
@@ -123,6 +123,11 @@ namespace NitroSharp.Graphics.Systems
             _cl.End();
             _gd.SubmitCommands(_cl);
             _gd.DisposeWhenIdle(stagingWhite);
+        }
+
+        public void ProcessTransforms()
+        {
+            TransformProcessor.ProcessTransforms(_world, _world.Sprites);
         }
 
         public override void Update(float deltaTime)
