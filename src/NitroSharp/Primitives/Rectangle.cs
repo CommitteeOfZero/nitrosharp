@@ -3,9 +3,6 @@ using NitroSharp.Utilities;
 
 namespace NitroSharp.Primitives
 {
-    /// <summary>
-    /// A read-only rectangle struct. Meant to be used in conjuction with the 'in' modifier.
-    /// </summary>
     internal readonly struct Rectangle : IEquatable<Rectangle>
     {
         public readonly int X;
@@ -24,14 +21,6 @@ namespace NitroSharp.Primitives
             Y = y;
             Width = width;
             Height = height;
-        }
-
-        public bool Contains(in Point2D point)
-        {
-            return point.X >= X
-                && point.X <= Right
-                && point.Y >= Y
-                && point.Y <= Bottom;
         }
 
         public RectangleF ToRectangleF()

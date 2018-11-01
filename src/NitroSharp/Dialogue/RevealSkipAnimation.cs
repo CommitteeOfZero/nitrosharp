@@ -6,7 +6,7 @@ using NitroSharp.Text;
 
 namespace NitroSharp.Dialogue
 {
-    internal sealed class RevealSkipAnimation : AnimationBase
+    internal sealed class RevealSkipAnimation : PropertyAnimation
     {
         private readonly ushort _skipStart;
 

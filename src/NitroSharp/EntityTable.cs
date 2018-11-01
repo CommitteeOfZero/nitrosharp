@@ -129,7 +129,7 @@ namespace NitroSharp
             }
         }
 
-        public void MergeChanges(EntityTable target, bool fromPrimary)
+        public void MergeChanges(EntityTable target)
         {
             for (int i = 0; i < _rows.Count; i++)
             {

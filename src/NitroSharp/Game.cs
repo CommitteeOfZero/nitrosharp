@@ -17,15 +17,19 @@ using Veldrid.StartupUtilities;
 using System.Runtime.InteropServices;
 using NitroSharp.Dialogue;
 using System.Collections.Concurrent;
+using NitroSharp.Input;
+using System.Collections.Generic;
+using NitroSharp.Animation;
 
 namespace NitroSharp
 {
     public sealed class Game : IDisposable
     {
-        private bool IsMultithreaded = true;
+        private bool IsMultithreaded = false;
         private bool UseWicOnWindows = false;
 
         private readonly Stopwatch _gameTimer;
+        private readonly Queue<Message> _messageQueue;
         private readonly Configuration _configuration;
         private readonly CancellationTokenSource _shutdownCancellation;
 
@@ -37,7 +41,6 @@ namespace NitroSharp
         private readonly TaskCompletionSource<int> _initializingGraphics;
 
         private readonly InputTracker _inputTracker;
-        private DialogueSystem _dialogueSystem;
 
         private readonly string _nssFolder;
         private NsScriptInterpreter _nssInterpreter;
@@ -53,9 +56,12 @@ namespace NitroSharp
         private World _presentWorld;
         private World _futureWorld;
 
+        private DialogueSystem _dialogueSystem;
+        private DialogueSystemInput _dialogueSystemInput;
+
         private RenderSystem _renderSystem;
         private AudioSystem _audioSystem;
-        private AttachedBehaviorProcessor _attachedBehaviorProcessor;
+        private AnimationProcessor _animationProcessor;
         private bool _syncToPresent;
 
         public Game(GameWindow window, Configuration configuration)
@@ -71,11 +77,13 @@ namespace NitroSharp
             _window.Mobile_SurfaceDestroyed += OnSurfaceDestroyed;
 
             _gameTimer = new Stopwatch();
+            _messageQueue = new Queue<Message>();
             _builtinFunctions = new NsBuiltins(this);
             _inputTracker = new InputTracker(window);
             InterpreterLoopTasks = new ConcurrentQueue<Action>();
         }
 
+        internal Queue<Message> MessageQueue => _messageQueue;
         internal ContentManager Content { get; private set; }
         internal FontService FontService { get; private set; }
 
@@ -96,9 +104,193 @@ namespace NitroSharp
             await loadScriptTask;
 
             _dialogueSystem = new DialogueSystem(_presentWorld, _inputTracker, _nssInterpreter, Content);
+            _animationProcessor = new AnimationProcessor(_presentWorld, _nssInterpreter);
             StartInterpreter();
 
             await RunMainLoop(useDedicatedThread);
+        }
+
+        private Task RunMainLoop(bool useDedicatedThread = false)
+        {
+            if (useDedicatedThread)
+            {
+                return Task.Factory.StartNew(MainLoop, TaskCreationOptions.LongRunning);
+            }
+            else
+            {
+                try
+                {
+                    MainLoop();
+                }
+                catch (TaskCanceledException)
+                {
+                }
+
+                return Task.FromResult(0);
+            }
+        }
+
+        private void MainLoop()
+        {
+            _gameTimer.Start();
+
+            float prevFrameTicks = 0.0f;
+            while (!_shutdownCancellation.IsCancellationRequested && _window.Exists)
+            {
+                if (_surfaceDestroyed)
+                {
+                    HandleSurfaceDestroyed();
+                    return;
+                }
+                if (_needsResize)
+                {
+                    Size newSize = _window.Size;
+                    _swapchain.Resize(newSize.Width, newSize.Height);
+                    _needsResize = false;
+                }
+
+                long currentFrameTicks = _gameTimer.ElapsedTicks;
+                float deltaMilliseconds = (currentFrameTicks - prevFrameTicks) / Stopwatch.Frequency * 1000.0f;
+                prevFrameTicks = currentFrameTicks;
+
+                try
+                {
+                    Tick(deltaMilliseconds);
+                }
+                catch (OperationCanceledException)
+                {
+                }
+            }
+        }
+
+        private void Tick(float deltaMilliseconds)
+        {
+            bool mainThreadWaiting = false;
+            _inputTracker.Update(deltaMilliseconds);
+            if (IsMultithreaded)
+            {
+                if (_interpreterProc.IsFaulted)
+                {
+                    throw _interpreterProc.Exception.InnerException;
+                }
+                else if (_interpreterProc.IsCompleted)
+                {
+                    Exit();
+                }
+                if (_syncToFuture)
+                {
+                    _futureWorld.MergeChanges(_presentWorld);
+                    _futureWorld.FlushEvents();
+                    _syncToFuture = false;
+                    mainThreadWaiting = _nssInterpreter.MainThread.IsSuspended
+                        && _nssInterpreter.MainThread.SleepTimeout != TimeSpan.MaxValue;
+                    ProcessMessages();
+                }
+                else if (_syncToPresent)
+                {
+                    _presentWorld.MergeChanges(_futureWorld);
+                    _syncToPresent = false;
+                }
+            }
+            else
+            {
+                _nssInterpreter.RefreshThreadState();
+                _nssInterpreter.ProcessPendingThreadActions();
+
+                while (InterpreterLoopTasks.TryDequeue(out Action a))
+                {
+                    a.Invoke();
+                }
+
+                _nssInterpreter.Run(CancellationToken.None);
+                mainThreadWaiting = _nssInterpreter.MainThread.IsSuspended
+                    && _nssInterpreter.MainThread.SleepTimeout != TimeSpan.MaxValue;
+                ProcessMessages();
+            }
+
+            _presentWorld.FlushDetachedAnimations();
+            var animProcessorOutput = _animationProcessor.ProcessAnimations(deltaMilliseconds);
+            bool blockInput = mainThreadWaiting || animProcessorOutput.BlockingAnimationCount > 0;
+            _dialogueSystemInput.AcceptUserInput = !blockInput;
+            if (_dialogueSystem.AdvanceDialogueState(ref _dialogueSystemInput))
+            {
+                _dialogueSystemInput.Command = DialogueSystemCommand.HandleInput;
+            }
+
+            _audioSystem.UpdateAudioSources();
+            _renderSystem.Update(deltaMilliseconds);
+
+            if (_window.Exists)
+            {
+                try
+                {
+                    _renderSystem.Present();
+                }
+                catch (VeldridException e) when (e.Message == "The Swapchain's underlying surface has been lost.")
+                {
+                    return;
+                }
+            }
+
+            _presentWorld.FlushEvents();
+        }
+
+        private void ProcessMessages()
+        {
+            while (_messageQueue.Count > 0)
+            {
+                Message message = _messageQueue.Dequeue();
+                switch (message)
+                {
+                    case BeginDialogueBlockMessage beginBlockMsg:
+                        _dialogueSystemInput.TextEntity = beginBlockMsg.TextEntity;
+                        break;
+                    case BeginDialogueLineMessage beginLineMsg:
+                        _dialogueSystemInput.Command = DialogueSystemCommand.BeginDialogue;
+                        _dialogueSystemInput.DialogueLine = beginLineMsg.DialogueLine;
+                        break;
+                }
+            }
+        }
+
+        private void StartInterpreter()
+        {
+            if (IsMultithreaded)
+            {
+                _interpreterProc = Task.Factory.StartNew(InterpreterLoop, TaskCreationOptions.LongRunning);
+            }
+        }
+
+        private void InterpreterLoop()
+        {
+            while (!_shutdownCancellation.IsCancellationRequested)
+            {
+                while (_syncToFuture || _syncToPresent)
+                {
+                    Thread.Sleep(5);
+                }
+
+                Thread.Sleep(1);
+
+                bool threadStateChanged = _nssInterpreter.RefreshThreadState();
+                if (threadStateChanged || _nssInterpreter.ProcessPendingThreadActions())
+                {
+                    _syncToPresent = true;
+                    continue;
+                }
+
+                while (InterpreterLoopTasks.TryDequeue(out Action a))
+                {
+                    a.Invoke();
+                }
+
+                if (_nssInterpreter.Run(CancellationToken.None))
+                {
+                    _syncToFuture = true;
+                }
+
+                //if (!_nssInterpreter.Threads.Any()) { return; }
+            }
         }
 
         private void LoadStartupScript()
@@ -229,170 +421,12 @@ namespace NitroSharp
 
             _builtinFunctions.SetWorld(scriptingWorld);
 
-            _attachedBehaviorProcessor = new AttachedBehaviorProcessor(_presentWorld);
+
             _renderSystem = new RenderSystem(
                 _presentWorld, _graphicsDevice, _swapchain,
                 Content, FontService, _configuration);
 
             _audioSystem = new AudioSystem(_presentWorld, Content, _audioSourcePool);
-        }
-
-        private void StartInterpreter()
-        {
-            if (IsMultithreaded)
-            {
-                _interpreterProc = Task.Factory.StartNew(InterpreterLoop, TaskCreationOptions.LongRunning);
-            }
-        }
-
-        private void InterpreterLoop()
-        {
-            while (!_shutdownCancellation.IsCancellationRequested)
-            {
-                while (_syncToFuture || _syncToPresent)
-                {
-                    Thread.Sleep(5);
-                }
-
-                Thread.Sleep(1);
-
-                bool threadStateChanged = _nssInterpreter.RefreshThreadState();
-                if (threadStateChanged || _nssInterpreter.ProcessPendingThreadActions())
-                {
-                    _syncToPresent = true;
-                    continue;
-                }
-
-                while (InterpreterLoopTasks.TryDequeue(out Action a))
-                {
-                    a.Invoke();
-                }
-
-                if (_nssInterpreter.Run(CancellationToken.None))
-                {
-                    _syncToFuture = true;
-                }
-
-                //if (!_nssInterpreter.Threads.Any()) { return; }
-            }
-        }
-
-        private Task RunMainLoop(bool useDedicatedThread = false)
-        {
-            if (useDedicatedThread)
-            {
-                return Task.Factory.StartNew(MainLoop, TaskCreationOptions.LongRunning);
-            }
-            else
-            {
-                try
-                {
-                    MainLoop();
-                }
-                catch (TaskCanceledException)
-                {
-                }
-
-                return Task.FromResult(0);
-            }
-        }
-
-        private void MainLoop()
-        {
-            _gameTimer.Start();
-
-            float prevFrameTicks = 0.0f;
-            while (!_shutdownCancellation.IsCancellationRequested && _window.Exists)
-            {
-                if (_surfaceDestroyed)
-                {
-                    HandleSurfaceDestroyed();
-                    return;
-                }
-                if (_needsResize)
-                {
-                    Size newSize = _window.Size;
-                    _swapchain.Resize(newSize.Width, newSize.Height);
-                    _needsResize = false;
-                }
-
-                long currentFrameTicks = _gameTimer.ElapsedTicks;
-                float deltaMilliseconds = (currentFrameTicks - prevFrameTicks) / Stopwatch.Frequency * 1000.0f;
-                prevFrameTicks = currentFrameTicks;
-
-                Update(deltaMilliseconds);
-            }
-        }
-
-        private void Update(float deltaMilliseconds)
-        {
-            try
-            {
-                UpdateCore(deltaMilliseconds);
-            }
-            catch (OperationCanceledException)
-            {
-            }
-        }
-
-        private void UpdateCore(float deltaMilliseconds)
-        {
-            _inputTracker.Update(deltaMilliseconds);
-            if (IsMultithreaded)
-            {
-                if (_interpreterProc.IsFaulted)
-                {
-                    throw _interpreterProc.Exception.InnerException;
-                }
-                else if (_interpreterProc.IsCompleted)
-                {
-                    Exit();
-                }
-                if (_syncToFuture)
-                {
-                    _futureWorld.MergeChanges(_presentWorld);
-                    _futureWorld.FlushEvents();
-                    _syncToFuture = false;
-                }
-                else if (_syncToPresent)
-                {
-                    _presentWorld.MergeChanges(_futureWorld);
-                    _syncToPresent = false;
-                }
-            }
-            else
-            {
-                _nssInterpreter.RefreshThreadState();
-                _nssInterpreter.ProcessPendingThreadActions();
-
-                while (InterpreterLoopTasks.TryDequeue(out Action a))
-                {
-                    a.Invoke();
-                }
-
-                _nssInterpreter.Run(CancellationToken.None);
-            }
-
-            _presentWorld.FlushDetachedBehaviors();
-            _attachedBehaviorProcessor.Update(deltaMilliseconds);
-
-            _dialogueSystem.Update(deltaMilliseconds);
-            _audioSystem.Update();
-            _renderSystem.Update(deltaMilliseconds);
-            
-            if (_window.Exists)
-            {
-                try
-                {
-                    _renderSystem.Present();
-                }
-                catch (VeldridException e) when (e.Message == "The Swapchain's underlying surface has been lost.")
-                {
-                    return;
-                }
-            }
-
-            _presentWorld.FlushEvents();
         }
 
         private void OnWindowResized()

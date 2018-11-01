@@ -1,5 +1,6 @@
 ﻿using System.Collections.Immutable;
 using NitroSharp.Content;
+using NitroSharp.Input;
 using NitroSharp.Media.Decoding;
 using NitroSharp.NsScript.Execution;
 using NitroSharp.Text;
@@ -7,6 +8,20 @@ using Veldrid;
 
 namespace NitroSharp.Dialogue
 {
+    internal struct DialogueSystemInput
+    {
+        public bool AcceptUserInput;
+        public DialogueSystemCommand Command;
+        public Entity TextEntity;
+        public DialogueLine DialogueLine;
+    }
+
+    internal enum DialogueSystemCommand
+    {
+        HandleInput,
+        BeginDialogue
+    }
+
     internal sealed class DialogueSystem
     {
         private readonly World _world;
@@ -16,7 +31,15 @@ namespace NitroSharp.Dialogue
         private readonly EntityTable.RefTypeRow<TextLayout> _textLayouts;
         private readonly ContentManager _content;
 
-        public DialogueSystem(World world, InputTracker inputTracker, NsScriptInterpreter scriptInterpreter, ContentManager content)
+        private TextRevealAnimation _revealAnimation;
+        private RevealSkipAnimation _revealSkipAnimation;
+        private int _currentDialoguePart;
+        private bool _startFromNewLine;
+        private string _lastVoiceName;
+
+        public DialogueSystem(
+            World world, InputTracker inputTracker,
+            NsScriptInterpreter scriptInterpreter, ContentManager content)
         {
             _world = world;
             _inputTracker = inputTracker;
@@ -25,41 +48,54 @@ namespace NitroSharp.Dialogue
             _content = content;
         }
 
-        public void Update(float deltaTime)
+        private void ResetState()
         {
-            if (_world.ActiveAnimationCount > 0) { return; }
-            ref DialogueState state = ref _world._dialogueState;
-            if (!state.TextEntity.IsValid) { return; }
-            if (state.Command != DialogueState.CommandKind.NoOp || ShouldAdvance())
+            _revealAnimation = null;
+            _revealSkipAnimation = null;
+            _currentDialoguePart = 0;
+            _startFromNewLine = false;
+        }
+
+        public bool AdvanceDialogueState(ref DialogueSystemInput input)
+        {
+            if (input.Command == DialogueSystemCommand.BeginDialogue)
             {
-                TextLayout textLayout = _textLayouts.GetValue(state.TextEntity);
-                ref bool clearFlag = ref _world.TextInstances.ClearFlags.Mutate(state.TextEntity);
-                if (state.Command == DialogueState.CommandKind.Begin)
+                ResetState();
+                TextLayout textLayout = _textLayouts.GetValue(input.TextEntity);
+                textLayout.Clear();
+                _world.TextInstances.ClearFlags.Set(input.TextEntity, true);
+                AdvanceDialogue(ref input, textLayout);
+                return true;
+            }
+
+            if (input.AcceptUserInput &&
+                input.Command == DialogueSystemCommand.HandleInput
+                && GotUserInput())
+            {
+                if (!input.TextEntity.IsValid)
                 {
-                    textLayout.Clear();
-                    clearFlag = true;
-                    AdvanceDialogue(textLayout);
-                    state.Command = DialogueState.CommandKind.NoOp;
-                    return;
+                    _scriptInterpreter.ResumeMainThread();
+                    return true;
                 }
 
-                switch (GetStatus())
+                TextLayout textLayout = _textLayouts.GetValue(input.TextEntity);
+                switch (GetStatus(ref input))
                 {
                     case Status.LineNotLoaded:
                         _scriptInterpreter.ResumeMainThread();
                         break;
 
                     case Status.PlayingRevealAnimation:
-                        SkipTextRevealAnimation();
+                        SkipTextRevealAnimation(input.TextEntity);
                         break;
 
                     case Status.PlayingSkipAnimation:
                         break;
 
                     case Status.Waiting:
-                        if (_world._dialogueState.CanAdvance)
+                        if (_currentDialoguePart < input.DialogueLine.Parts.Length)
                         {
-                            AdvanceDialogue(textLayout);
+                            AdvanceDialogue(ref input, textLayout);
                         }
                         else
                         {
@@ -68,9 +104,11 @@ namespace NitroSharp.Dialogue
                         break;
                 }
             }
+
+            return false;
         }
 
-        private bool ShouldAdvance()
+        private bool GotUserInput()
         {
             InputTracker it = _inputTracker;
             return it.IsMouseButtonDownThisFrame(MouseButton.Left) || it.IsKeyDownThisFrame(Key.Space)
@@ -85,43 +123,41 @@ namespace NitroSharp.Dialogue
             Waiting
         }
 
-        public Status GetStatus()
+        private Status GetStatus(ref DialogueSystemInput input)
         {
-            ref DialogueState state = ref _world._dialogueState;
-            if (state.DialogueLine == null)
+            if (input.DialogueLine == null)
             {
                 return Status.LineNotLoaded;
             }
 
-            if (_world.TryGetBehavior<TextRevealAnimation>(state.TextEntity, out state.RevealAnimation))
+            if (_world.TryGetAnimation<TextRevealAnimation>(input.TextEntity, out _revealAnimation))
             {
-                state.RevealSkipAnimation = null;
+                _revealSkipAnimation = null;
                 return Status.PlayingRevealAnimation;
             }
-            if (_world.TryGetBehavior<RevealSkipAnimation>(state.TextEntity, out state.RevealSkipAnimation))
+            if (_world.TryGetAnimation<RevealSkipAnimation>(input.TextEntity, out _revealSkipAnimation))
             {
-                state.RevealAnimation = null;
+                _revealAnimation = null;
                 return Status.PlayingSkipAnimation;
             }
 
             return Status.Waiting;
         }
 
-        private void AdvanceDialogue(TextLayout textLayout)
+        private void AdvanceDialogue(ref DialogueSystemInput input, TextLayout textLayout)
         {
-            ref DialogueState state = ref _world._dialogueState;
-            ImmutableArray<DialogueLinePart> parts = state.DialogueLine.Parts;
+            ImmutableArray<DialogueLinePart> parts = input.DialogueLine.Parts;
 
-            if (state.StartFromNewLine)
+            if (_startFromNewLine)
             {
                 textLayout.StartNewLine();
-                state.StartFromNewLine = false;
+                _startFromNewLine = false;
             }
 
             uint revealStart = textLayout.Glyphs.Count;
-            for (int i = state.CurrentDialoguePart; i < parts.Length; i++)
+            for (int i = _currentDialoguePart; i < parts.Length; i++)
             {
-                state.CurrentDialoguePart++;
+                _currentDialoguePart++;
                 DialogueLinePart part = parts[i];
                 switch (part.PartKind)
                 {
@@ -140,12 +176,12 @@ namespace NitroSharp.Dialogue
                         switch (marker.MarkerKind)
                         {
                             case MarkerKind.Halt:
-                                state.StartFromNewLine = true;
+                                _startFromNewLine = true;
                                 _scriptInterpreter.SuspendMainThread();
                                 goto exit;
 
                             case MarkerKind.NoLinebreaks:
-                                state.StartFromNewLine = false;
+                                _startFromNewLine = false;
                                 break;
                         }
                         break;
@@ -153,32 +189,29 @@ namespace NitroSharp.Dialogue
             }
 
         exit:
-            var animation = new TextRevealAnimation(_world, state.TextEntity, (ushort)revealStart);
-            _world.ActivateBehavior(animation);
+            var animation = new TextRevealAnimation(_world, input.TextEntity, (ushort)revealStart);
+            _world.ActivateAnimation(animation);
         }
 
-        private void SkipTextRevealAnimation()
+        private void SkipTextRevealAnimation(Entity textEntity)
         {
-            ref DialogueState state = ref _world._dialogueState;
-            TextRevealAnimation animation = state.RevealAnimation;
-            Entity textEntity = state.TextEntity;
+            TextRevealAnimation animation = _revealAnimation;
             if (!animation.IsAllTextVisible)
             {
                 animation.Stop();
                 if (!animation.IsAllTextVisible)
                 {
-                    var skip = new RevealSkipAnimation(state.TextEntity, (ushort)(animation.Position + 1));
-                    _world.ActivateBehavior(skip);
+                    var skip = new RevealSkipAnimation(textEntity, (ushort)(animation.Position + 1));
+                    _world.ActivateAnimation(skip);
                 }
             }
         }
 
         private void Voice(Voice voice)
         {
-            ref DialogueState state = ref _world._dialogueState;
-            if (state.LastVoiceName != null)
+            if (_lastVoiceName != null)
             {
-                _world.RemoveEntity(state.LastVoiceName);
+                _world.RemoveEntity(_lastVoiceName);
             }
 
             if (voice.Action == VoiceAction.Play)
@@ -188,7 +221,7 @@ namespace NitroSharp.Dialogue
                 Entity entity = _world.CreateAudioClip(voice.FileName, assetId, false);
                 _world.AudioClips.Duration.Set(entity, session.Asset.AudioStream.Duration);
 
-                state.LastVoiceName = voice.FileName;
+                _lastVoiceName = voice.FileName;
             }
             else
             {

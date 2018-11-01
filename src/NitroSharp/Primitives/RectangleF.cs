@@ -4,11 +4,7 @@ using NitroSharp.Utilities;
 
 namespace NitroSharp.Primitives
 {
-    /// <summary>
-    /// A read-only rectangle struct that uses floating-point numbers to represent the location and size.
-    /// Meant to be used in conjuction with the 'in' modifier.
-    /// </summary>
-    public readonly struct RectangleF : IEquatable<RectangleF>
+    internal readonly struct RectangleF : IEquatable<RectangleF>
     {
         public readonly float X;
         public readonly float Y;
@@ -26,14 +22,6 @@ namespace NitroSharp.Primitives
             Y = y;
             Width = width;
             Height = height;
-        }
-
-        public bool Contains(in Point2D point)
-        {
-            return point.X >= X
-                && point.X <= Right
-                && point.Y >= Y
-                && point.Y <= Bottom;
         }
 
         public RectangleF(in Vector2 position, in SizeF size)

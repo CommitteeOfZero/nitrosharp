@@ -2,7 +2,7 @@
 
 namespace NitroSharp.Animation
 {
-    internal abstract class LerpAnimation<T> : AnimationBase where T : unmanaged
+    internal abstract class LerpAnimation<T> : PropertyAnimation where T : unmanaged
     {
         protected LerpAnimation(
             Entity entity, TimeSpan duration,

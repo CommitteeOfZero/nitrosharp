@@ -2,7 +2,7 @@
 using System.Numerics;
 using Veldrid;
 
-namespace NitroSharp
+namespace NitroSharp.Input
 {
     internal sealed class InputTracker
     {

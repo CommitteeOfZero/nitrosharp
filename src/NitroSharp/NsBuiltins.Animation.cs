@@ -6,7 +6,6 @@ using NitroSharp.Logic.Components;
 using NitroSharp.Primitives;
 using Veldrid;
 using NitroSharp.Graphics;
-using NitroSharp.NsScript.Execution;
 
 namespace NitroSharp
 {
@@ -16,20 +15,28 @@ namespace NitroSharp
             string entityName, TimeSpan duration, NsRational opacity,
             NsEasingFunction easingFunction, TimeSpan delay)
         {
-            FadeAnimation lastAnimation = null;
+            bool wait = delay == duration;
             foreach ((Entity entity, string name) in _world.Query(entityName))
             {
-                lastAnimation = FadeCore(entity, duration, opacity, easingFunction);
+                FadeCore(entity, duration, opacity, easingFunction, wait);
             }
 
-            if (delay > TimeSpan.Zero && lastAnimation != null)
+            if (delay > TimeSpan.Zero)
             {
-                WaitForAnimation(CurrentThread, lastAnimation);
+                if (wait)
+                {
+                    Interpreter.SuspendThread(CurrentThread);
+                }
+                else
+                {
+                    Interpreter.SuspendThread(CurrentThread, delay);
+                }
             }
         }
 
         private FadeAnimation FadeCore(
-            Entity entity, TimeSpan duration, NsRational dstOpacity, NsEasingFunction easingFunction)
+            Entity entity, TimeSpan duration, NsRational dstOpacity,
+            NsEasingFunction easingFunction, bool wait)
         {
             if (!entity.IsVisual) { return null; }
             VisualTable table = _world.GetTable<VisualTable>(entity);
@@ -40,7 +47,12 @@ namespace NitroSharp
                 var animation = new FadeAnimation(entity, duration, (TimingFunction)easingFunction);
                 animation.InitialOpacity = color.A;
                 animation.FinalOpacity = adjustedOpacity;
-                _world.ActivateBehavior(animation);
+                animation.IsBlocking = CurrentThread == MainThread;
+                if (wait)
+                {
+                    animation.WaitingThread = CurrentThread;
+                }
+                _world.ActivateAnimation(animation);
                 return animation;
             }
             else
@@ -55,22 +67,29 @@ namespace NitroSharp
             NsCoordinate dstX, NsCoordinate dstY,
             NsEasingFunction easingFunction, TimeSpan delay)
         {
-            MoveAnimation lastAnimation = null;
+            bool wait = delay == duration;
             foreach ((Entity entity, string name) in _world.Query(entityName))
             {
-                lastAnimation = MoveCore(entity, duration, dstX, dstY, easingFunction);
+                MoveCore(entity, duration, dstX, dstY, easingFunction, wait);
             }
 
-            if (delay > TimeSpan.Zero && lastAnimation != null)
+            if (delay > TimeSpan.Zero)
             {
-                WaitForAnimation(CurrentThread, lastAnimation);
+                if (wait)
+                {
+                    Interpreter.SuspendThread(CurrentThread);
+                }
+                else
+                {
+                    Interpreter.SuspendThread(CurrentThread, delay);
+                }
             }
         }
 
-        private MoveAnimation MoveCore(
+        private void MoveCore(
             Entity entity, TimeSpan duration,
             NsCoordinate dstX, NsCoordinate dstY,
-            NsEasingFunction easingFunction)
+            NsEasingFunction easingFunction, bool wait)
         {
             VisualTable table = _world.GetTable<VisualTable>(entity);
             ref TransformComponents transform = ref table.TransformComponents.Mutate(entity);
@@ -90,13 +109,16 @@ namespace NitroSharp
                 var animation = new MoveAnimation(entity, duration, (TimingFunction)easingFunction);
                 animation.StartPosition = position;
                 animation.Destination = destination;
-                _world.ActivateBehavior(animation);
-                return animation;
+                animation.IsBlocking = CurrentThread == MainThread;
+                if (wait)
+                {
+                    animation.WaitingThread = CurrentThread;
+                }
+                _world.ActivateAnimation(animation);
             }
             else
             {
                 position = destination;
-                return null;
             }
         }
 
@@ -105,22 +127,29 @@ namespace NitroSharp
             NsRational dstScaleX, NsRational dstScaleY,
             NsEasingFunction easingFunction, TimeSpan delay)
         {
-            ZoomAnimation lastAnimation = null;
+            bool wait = delay == duration;
             foreach ((Entity entity, string name) in _world.Query(entityName))
             {
-                lastAnimation = ZoomCore(entity, duration, dstScaleX, dstScaleY, easingFunction);
+                ZoomCore(entity, duration, dstScaleX, dstScaleY, easingFunction, wait);
             }
 
-            if (delay > TimeSpan.Zero && lastAnimation != null)
+            if (delay > TimeSpan.Zero)
             {
-                WaitForAnimation(CurrentThread, lastAnimation);
+                if (wait)
+                {
+                    Interpreter.SuspendThread(CurrentThread);
+                }
+                else
+                {
+                    Interpreter.SuspendThread(CurrentThread, delay);
+                }
             }
         }
 
-        private ZoomAnimation ZoomCore(
+        private void ZoomCore(
             Entity entity, TimeSpan duration,
             NsRational dstScaleX, NsRational dstScaleY,
-            NsEasingFunction easingFunction)
+            NsEasingFunction easingFunction, bool suspendThread)
         {
             VisualTable table = _world.GetTable<VisualTable>(entity);
             ref TransformComponents transform = ref table.TransformComponents.Mutate(entity);
@@ -140,24 +169,27 @@ namespace NitroSharp
                 var animation = new ZoomAnimation(entity, duration, (TimingFunction)easingFunction);
                 animation.InitialScale = scale;
                 animation.FinalScale = finalScale;
-                _world.ActivateBehavior(animation);
-                return animation;
+                animation.IsBlocking = CurrentThread == MainThread;
+                if (suspendThread)
+                {
+                    animation.WaitingThread = CurrentThread;
+                }
+                _world.ActivateAnimation(animation);
             }
             else
             {
                 scale = new Vector3(dstScaleX, dstScaleY, 1);
-                return null;
             }
         }
 
-        private void WaitForAnimation(ThreadContext thread, AnimationBase animation)
-        {
-            Interpreter.SuspendThread(thread);
-            animation.Completed += () =>
-            {
-                Interpreter.ResumeThread(thread);
-            };
-        }
+        //private void WaitForAnimation(ThreadContext thread, PropertyAnimation animation)
+        //{
+        //    Interpreter.SuspendThread(thread);
+        //    animation.Completed += () =>
+        //    {
+        //        Interpreter.ResumeThread(thread);
+        //    };
+        //}
 
         //public override void Rotate(
         //    string entityName, TimeSpan duration,

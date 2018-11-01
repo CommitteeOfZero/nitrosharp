@@ -1,29 +1,34 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
-using NitroSharp.Animation;
+using NitroSharp.NsScript.Execution;
 using NitroSharp.Utilities;
 
 namespace NitroSharp.Animation
 {
-    internal abstract class AnimationBase : AttachedBehavior
+    internal abstract class PropertyAnimation
     {
         private float _elapsed;
         private bool _initialized;
         private bool _completed;
 
-        protected AnimationBase(
+        protected PropertyAnimation(
             Entity entity, TimeSpan duration,
             TimingFunction timingFunction = TimingFunction.Linear,
-            bool repeat = false) : base(entity)
+            bool repeat = false)
         {
+            Entity = entity;
             Duration = duration;
             TimingFunction = timingFunction;
             Repeat = repeat;
         }
 
+        public Entity Entity { get; }
         public TimeSpan Duration { get; protected set; }
         public TimingFunction TimingFunction { get; }
         public bool Repeat { get; }
+
+        public bool IsBlocking { get; set; }
+        public ThreadContext WaitingThread { get; set; }
 
         public event Action Completed;
 
@@ -31,7 +36,7 @@ namespace NitroSharp.Animation
         public float Progress => MathUtil.Clamp(_elapsed / (float)Duration.TotalMilliseconds, 0.0f, 1.0f);
         public bool HasCompleted => _elapsed >= Duration.TotalMilliseconds;
 
-        public override void Update(World world, float deltaMilliseconds)
+        public bool Update(World world, float deltaMilliseconds)
         {
             if (_initialized)
             {
@@ -46,7 +51,10 @@ namespace NitroSharp.Animation
             {
                 Advance(world, deltaMilliseconds);
                 PostAdvance(world);
+                return !_completed;
             }
+
+            return false;
         }
 
         protected virtual void Advance(World world, float deltaMilliseconds)
@@ -66,7 +74,7 @@ namespace NitroSharp.Animation
                 {
                     _completed = true;
                     Completed?.Invoke();
-                    world.DeactivateBehavior(this);
+                    world.DeactivateAnimation(this);
                 }
             }
         }

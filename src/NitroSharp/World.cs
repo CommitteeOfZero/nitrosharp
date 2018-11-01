@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Numerics;
 using NitroSharp.Animation;
 using NitroSharp.Content;
-using NitroSharp.Dialogue;
 using NitroSharp.Graphics;
 using NitroSharp.Media;
 using NitroSharp.Primitives;
@@ -35,14 +33,9 @@ namespace NitroSharp
         private ArrayBuilder<EntityEvent> _entityEvents;
         private ushort _nextEntityId = 1;
 
-        private readonly Dictionary<BehaviorDictionaryKey, AttachedBehavior> _attachedBehaviors;
-        private readonly List<(BehaviorDictionaryKey key, AttachedBehavior behavior)> _behaviorsToDetach;
-        private readonly List<BehaviorEvent> _behaviorEvents;
-
-        public DialogueState _dialogueState;
-        public uint ActiveAnimationCount =>
-            (uint)_attachedBehaviors.Count(x => x.Value is AnimationBase
-            && !(x.Value is TextRevealAnimation) && !(x.Value is RevealSkipAnimation) && !(x.Value is VolumeAnimation));
+        private readonly Dictionary<AnimationDictionaryKey, PropertyAnimation> _attachedAnimations;
+        private readonly List<(AnimationDictionaryKey key, PropertyAnimation anim)> _animationsToDetach;
+        private readonly List<AnimationEvent> _animationEvents;
 
         public World(WorldKind kind)
         {
@@ -59,9 +52,9 @@ namespace NitroSharp
             AudioClips = RegisterTable(new AudioClipTable(this, InitialAudioClipCount));
             VideoClips = RegisterTable(new VideoClipTable(this, InitialVideoClipCount));
 
-            _attachedBehaviors = new Dictionary<BehaviorDictionaryKey, AttachedBehavior>();
-            _behaviorsToDetach = new List<(BehaviorDictionaryKey key, AttachedBehavior behavior)>();
-            _behaviorEvents = new List<BehaviorEvent>();
+            _attachedAnimations = new Dictionary<AnimationDictionaryKey, PropertyAnimation>();
+            _animationsToDetach = new List<(AnimationDictionaryKey key, PropertyAnimation anim)>();
+            _animationEvents = new List<AnimationEvent>();
         }
 
         public WorldKind Kind { get; }
@@ -74,11 +67,9 @@ namespace NitroSharp
         public AudioClipTable AudioClips { get; }
         public VideoClipTable VideoClips { get; }
 
-        public DialogueState DialogueState => _dialogueState;
-
         public Dictionary<string, Entity>.Enumerator EntityEnumerator => _entities.GetEnumerator();
-        public Dictionary<BehaviorDictionaryKey, AttachedBehavior>.ValueCollection AttachedBehaviors
-            => _attachedBehaviors.Values;
+        public Dictionary<AnimationDictionaryKey, PropertyAnimation>.ValueCollection AttachedAnimations
+            => _attachedAnimations.Values;
 
         private T RegisterTable<T>(T table) where T : EntityTable
         {
@@ -178,38 +169,38 @@ namespace NitroSharp
             return entity;
         }
 
-        public void ActivateBehavior<T>(T behavior) where T : AttachedBehavior
+        public void ActivateAnimation<T>(T animation) where T : PropertyAnimation
         {
-            var key = new BehaviorDictionaryKey(behavior.Entity, typeof(T));
-            _attachedBehaviors[key] = behavior;
-            _behaviorEvents.Add(new BehaviorEvent(key, BehaviorEvenKind.BehaviorActivated));
+            var key = new AnimationDictionaryKey(animation.Entity, typeof(T));
+            _attachedAnimations[key] = animation;
+            _animationEvents.Add(new AnimationEvent(key, AnimationEventKind.AnimationActivated));
         }
 
-        public void DeactivateBehavior(AttachedBehavior behavior)
+        public void DeactivateAnimation(PropertyAnimation animation)
         {
-            var key = new BehaviorDictionaryKey(behavior.Entity, behavior.GetType());
-            _behaviorsToDetach.Add((key, behavior));
-            _behaviorEvents.Add(new BehaviorEvent(key, BehaviorEvenKind.BehaviorDeactivated));
+            var key = new AnimationDictionaryKey(animation.Entity, animation.GetType());
+            _animationsToDetach.Add((key, animation));
+            _animationEvents.Add(new AnimationEvent(key, AnimationEventKind.AnimationDeactivated));
         }
 
-        public bool TryGetBehavior<T>(Entity entity, out T behavior) where T : AttachedBehavior
+        public bool TryGetAnimation<T>(Entity entity, out T animation) where T : PropertyAnimation
         {
-            var key = new BehaviorDictionaryKey(entity, typeof(T));
-            bool result = _attachedBehaviors.TryGetValue(key, out AttachedBehavior val);
-            behavior = val as T;
+            var key = new AnimationDictionaryKey(entity, typeof(T));
+            bool result = _attachedAnimations.TryGetValue(key, out PropertyAnimation val);
+            animation = val as T;
             return result;
         }
 
-        public void FlushDetachedBehaviors()
+        public void FlushDetachedAnimations()
         {
-            foreach ((var dictKey, var behavior) in _behaviorsToDetach)
+            foreach ((var dictKey, var anim) in _animationsToDetach)
             {
-                if (_attachedBehaviors.TryGetValue(dictKey, out var value) && value == behavior)
+                if (_attachedAnimations.TryGetValue(dictKey, out var value) && value == anim)
                 {
-                    _attachedBehaviors.Remove(dictKey);
+                    _attachedAnimations.Remove(dictKey);
                 }
             }
-            _behaviorsToDetach.Clear();
+            _animationsToDetach.Clear();
         }
 
         public void FlushEvents()
@@ -315,28 +306,27 @@ namespace NitroSharp
 
             for (int i = 0; i < _tables.Count; i++)
             {
-                _tables[i].MergeChanges(target._tables[i], Kind == WorldKind.Primary);
+                _tables[i].MergeChanges(target._tables[i]);
                 EntityTable.Debug_CompareTables(_tables[i], target._tables[i]);
             }
 
-            foreach (BehaviorEvent be in _behaviorEvents)
+            foreach (AnimationEvent ae in _animationEvents)
             {
-                if (be.EventKind == BehaviorEvenKind.BehaviorActivated)
+                if (ae.EventKind == AnimationEventKind.AnimationActivated)
                 {
-                    if (_attachedBehaviors.TryGetValue(be.Key, out AttachedBehavior behavior))
+                    if (_attachedAnimations.TryGetValue(ae.Key, out PropertyAnimation animation))
                     {
-                        target._attachedBehaviors[be.Key] = behavior;
+                        target._attachedAnimations[ae.Key] = animation;
                     }
                 }
                 else
                 {
-                    target._attachedBehaviors.Remove(be.Key);
+                    target._attachedAnimations.Remove(ae.Key);
                 }
             }
 
-            _behaviorEvents.Clear();
+            _animationEvents.Clear();
             _entityEvents.Reset();
-            target._dialogueState = _dialogueState;
         }
 
         private void ThrowCannotMerge()
@@ -357,40 +347,40 @@ namespace NitroSharp
             AliasAdded
         }
 
-        private readonly struct BehaviorEvent
+        private readonly struct AnimationEvent
         {
-            public BehaviorEvent(BehaviorDictionaryKey key, BehaviorEvenKind kind)
+            public AnimationEvent(AnimationDictionaryKey key, AnimationEventKind kind)
             {
                 Key = key;
                 EventKind = kind;
             }
 
-            public readonly BehaviorDictionaryKey Key;
-            public readonly BehaviorEvenKind EventKind;
+            public readonly AnimationDictionaryKey Key;
+            public readonly AnimationEventKind EventKind;
         }
 
-        private enum BehaviorEvenKind
+        private enum AnimationEventKind
         {
-            BehaviorActivated,
-            BehaviorDeactivated
+            AnimationActivated,
+            AnimationDeactivated
         }
 
-        internal readonly struct BehaviorDictionaryKey : IEquatable<BehaviorDictionaryKey>
+        internal readonly struct AnimationDictionaryKey : IEquatable<AnimationDictionaryKey>
         {
             public readonly Entity Entity;
             public readonly Type RuntimeType;
 
-            public BehaviorDictionaryKey(Entity entity, Type runtimeType)
+            public AnimationDictionaryKey(Entity entity, Type runtimeType)
             {
                 Entity = entity;
                 RuntimeType = runtimeType;
             }
 
-            public bool Equals(BehaviorDictionaryKey other)
+            public bool Equals(AnimationDictionaryKey other)
                 => Entity.Equals(other.Entity) && RuntimeType.Equals(other.RuntimeType);
 
             public override bool Equals(object obj)
-                => obj is BehaviorDictionaryKey other && Equals(other);
+                => obj is AnimationDictionaryKey other && Equals(other);
 
             public override int GetHashCode()
                 => HashHelper.Combine(Entity.GetHashCode(), RuntimeType.GetHashCode());

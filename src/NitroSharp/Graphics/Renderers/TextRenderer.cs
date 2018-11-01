@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Numerics;
-using System.Runtime.CompilerServices;
 using NitroSharp.Primitives;
 using NitroSharp.Text;
 using NitroSharp.Utilities;
@@ -122,7 +121,6 @@ namespace NitroSharp.Graphics.Renderers
             _renderContext.FreeCommandList(cl);
         }
         
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void DrawGlyph(
             TextLayout textLayout, int textureIndex,
             CommandList commandList, uint glyphIndex,
@@ -172,7 +170,10 @@ namespace NitroSharp.Graphics.Renderers
         public void Dispose()
         {
             _nativeBuffer.Dispose();
-            //ArrayUtil.DisposeElements(_textureViews);
+            foreach (TextSystemData sd in _world.TextInstances.SystemData.Enumerate())
+            {
+                sd.TextureView?.Dispose();
+            }
         }
     }
 }

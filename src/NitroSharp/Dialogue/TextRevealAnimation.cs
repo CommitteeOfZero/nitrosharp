@@ -6,7 +6,7 @@ using NitroSharp.Text;
 
 namespace NitroSharp.Dialogue
 {
-    internal sealed class TextRevealAnimation : AnimationBase
+    internal sealed class TextRevealAnimation : PropertyAnimation
     {
         private const float GlyphTime = 50;
 
@@ -78,7 +78,7 @@ namespace NitroSharp.Dialogue
             Reveal(ref glyph);
             IsAllTextVisible = Position == (layout.Glyphs.Count - 1);
 
-            _world.DeactivateBehavior(this);
+            _world.DeactivateAnimation(this);
         }
     }
 }

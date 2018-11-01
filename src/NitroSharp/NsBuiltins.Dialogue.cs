@@ -10,7 +10,9 @@ namespace NitroSharp
 {
     internal sealed partial class NsBuiltins
     {
-        private ref DialogueState _dialogueState => ref _world._dialogueState;
+        private string _lastDialogueBlockName;
+        private FontFamily _fontFamily;
+
         private FontService FontService => _game.FontService;
 
         public override void CreateDialogueBox(
@@ -25,39 +27,43 @@ namespace NitroSharp
             SetPosition(box, x, y);
 
             // TODO: move this line to SetFont.
-            _dialogueState.FontFamily = FontService.GetFontFamily("Noto Sans CJK JP");
+            _fontFamily = FontService.GetFontFamily("Noto Sans CJK JP");
         }
 
         protected override void BeginDialogueBlock(DialogueBlockSymbol dialogueBlock)
         {
-            ref DialogueState state = ref _dialogueState;
-            state.DialogueBlock = dialogueBlock;
             if (_world.TryGetEntity(dialogueBlock.AssociatedBox, out Entity dialogueBox))
             {
-                if (state.LastBlockName != null)
+                if (_lastDialogueBlockName != null)
                 {
-                    _world.RemoveEntity(state.LastBlockName);
+                    _world.RemoveEntity(_lastDialogueBlockName);
                 }
 
                 SizeF boxSize = _world.Rectangles.Bounds.GetValue(dialogueBox);
                 const float TextRightMargin = 200;
                 var layoutBounds = new Size((uint)boxSize.Width - (uint)TextRightMargin, (uint)boxSize.Height);
-                var textLayout = new TextLayout(state.FontFamily, layoutBounds, 256);
+                var textLayout = new TextLayout(_fontFamily, layoutBounds, 256);
 
                 RgbaFloat color = RgbaFloat.White;
-                string name = state.DialogueBlock.Identifier;
-                state.LastBlockName = name;
+                string name = dialogueBlock.Identifier;
+                _lastDialogueBlockName = name;
                 Entity text = _world.CreateTextInstance(name, textLayout, 99999, ref color);
                 SetParent(text, dialogueBox);
-                state.TextEntity = text;
+
+                _game.MessageQueue.Enqueue(new BeginDialogueBlockMessage
+                {
+                    DialogueBlock = dialogueBlock,
+                    TextEntity = text
+                });
             }
         }
 
         public override void BeginDialogueLine(string pxmlString)
         {
-            ref DialogueState state = ref _dialogueState;
-            state.Reset();
-            state.DialogueLine = DialogueLine.Parse(pxmlString);
+            _game.MessageQueue.Enqueue(new BeginDialogueLineMessage
+            {
+                DialogueLine = DialogueLine.Parse(pxmlString)
+            });
 
             //double iconX = Interpreter.Globals.Get("SYSTEM_position_x_text_icon").DoubleValue;
             //double iconY = Interpreter.Globals.Get("SYSTEM_position_y_text_icon").DoubleValue;

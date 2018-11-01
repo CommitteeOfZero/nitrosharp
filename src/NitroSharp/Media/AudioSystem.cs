@@ -19,7 +19,7 @@ namespace NitroSharp.Media
             _videoClips = world.VideoClips;
         }
 
-        public void Update()
+        public void UpdateAudioSources()
         {
             var added = _audioClips.AddedEntities;
             foreach (Entity e in added)
