@@ -64,6 +64,7 @@ namespace NitroSharp.NsScript.Syntax.PXml
                     break;
 
                 case "pre":
+                case "PRE":
                     node = ParsePlainText();
                     ParsePXmlTag();
                     break;
@@ -228,16 +229,15 @@ namespace NitroSharp.NsScript.Syntax.PXml
             string key = GetCurrentLexeme();
 
             EatChar('=');
-            EatChar('"');
+            TryEatChar('"');
 
             StartScanning();
-            while ((c = PeekChar()) != '"')
+            while ((c = PeekChar()) != '"' && c != '>' && c != ' ')
             {
                 AdvanceChar();
             }
             string value = GetCurrentLexeme();
-            EatChar('"');
-
+            TryEatChar('"');
             return new KeyValuePair<string, string>(key, value);
         }
 

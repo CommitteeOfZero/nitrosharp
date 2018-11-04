@@ -31,6 +31,7 @@ namespace NitroSharp
 
         private readonly Stopwatch _gameTimer;
         private readonly Queue<Message> _messageQueue;
+        private readonly Queue<Message> _messagesForInterpreter = new Queue<Message>();
         private readonly Configuration _configuration;
         private readonly CancellationTokenSource _shutdownCancellation;
 
@@ -66,6 +67,7 @@ namespace NitroSharp
         private bool _syncToPresent;
 
         private ChoiceProcessor _choiceProcessor;
+        public ThreadContext ThreadAwaitingSelect { get; set; }
 
         public Game(GameWindow window, Configuration configuration)
         {
@@ -188,13 +190,16 @@ namespace NitroSharp
                     _syncToFuture = false;
                     mainThreadWaiting = _nssInterpreter.MainThread.IsSuspended
                         && _nssInterpreter.MainThread.SleepTimeout != TimeSpan.MaxValue;
-                    ProcessMessages();
+                    ProcessMessagesForPresenter();
                 }
                 else if (_syncToPresent)
                 {
                     _presentWorld.MergeChanges(_futureWorld);
+                    ProcessMessagesForInterpreter();
                     _syncToPresent = false;
                 }
+
+                ProcessMessagesForInterpreter();
             }
             else
             {
@@ -206,15 +211,16 @@ namespace NitroSharp
                     a.Invoke();
                 }
 
+                ProcessMessagesForInterpreter();
                 _nssInterpreter.Run(CancellationToken.None);
                 mainThreadWaiting = _nssInterpreter.MainThread.IsSuspended
                     && _nssInterpreter.MainThread.SleepTimeout != TimeSpan.MaxValue;
-                ProcessMessages();
+                ProcessMessagesForPresenter();
             }
 
             _presentWorld.FlushDetachedAnimations();
             var animProcessorOutput = _animationProcessor.ProcessAnimations(deltaMilliseconds);
-            bool blockInput = mainThreadWaiting || animProcessorOutput.BlockingAnimationCount > 0;
+            bool blockInput = mainThreadWaiting || ThreadAwaitingSelect != null || animProcessorOutput.BlockingAnimationCount > 0;
             _dialogueSystemInput.AcceptUserInput = !blockInput;
             if (_dialogueSystem.AdvanceDialogueState(ref _dialogueSystemInput))
             {
@@ -222,7 +228,14 @@ namespace NitroSharp
             }
 
             _renderSystem.ProcessTransforms();
-            _choiceProcessor.ProcessChoices();
+            ChoiceProcessorOutput choiceProcessorOutput = _choiceProcessor.ProcessChoices();
+            if (choiceProcessorOutput.SelectedChoice != null)
+            {
+                _messagesForInterpreter.Enqueue(new ChoiceSelectedMessage
+                {
+                    ChoiceName = choiceProcessorOutput.SelectedChoice
+                });
+            }
 
             _audioSystem.UpdateAudioSources();
             _renderSystem.Update(deltaMilliseconds);
@@ -242,7 +255,7 @@ namespace NitroSharp
             _presentWorld.FlushEvents();
         }
 
-        private void ProcessMessages()
+        private void ProcessMessagesForPresenter()
         {
             while (_messageQueue.Count > 0)
             {
@@ -255,6 +268,25 @@ namespace NitroSharp
                     case BeginDialogueLineMessage beginLineMsg:
                         _dialogueSystemInput.Command = DialogueSystemCommand.BeginDialogue;
                         _dialogueSystemInput.DialogueLine = beginLineMsg.DialogueLine;
+                        break;
+                    case SelectChoiceMessage selectChoiceMsg:
+                        ThreadAwaitingSelect = selectChoiceMsg.WaitingThread;
+                        break;
+                }
+            }
+        }
+
+        private void ProcessMessagesForInterpreter()
+        {
+            while (_messagesForInterpreter.Count > 0)
+            {
+                Message message = _messagesForInterpreter.Dequeue();
+                switch (message)
+                {
+                    case ChoiceSelectedMessage choiceSelectedMsg:
+                        _nssInterpreter.ResumeThread(ThreadAwaitingSelect);
+                        ThreadAwaitingSelect = null;
+                        _builtinFunctions.SelectedChoice = choiceSelectedMsg.ChoiceName;
                         break;
                 }
             }

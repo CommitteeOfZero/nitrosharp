@@ -55,7 +55,7 @@ namespace NitroSharp.NsScript
 
         public virtual void LoadVideo(string entityName, int priority, NsCoordinate x, NsCoordinate y, bool loop, string fileName) { }
 
-        public virtual void CreateText(string entityName, int priority, NsCoordinate x, NsCoordinate y, string text) { }
+        public virtual void CreateText(string entityName, int priority, NsCoordinate x, NsCoordinate y, int width, int height, string text) { }
 
         /// <summary>
         /// Original name: CreateColor.
@@ -93,5 +93,8 @@ namespace NitroSharp.NsScript
         public virtual void MoveCube(string entityName, TimeSpan duration, NsNumeric dstTranslationX, NsNumeric dstTranslationY, NsNumeric dstTranslationZ, NsEasingFunction easingFunction, TimeSpan delay) { }
 
         public virtual void LoadText(string boxName, string textName, int maxWidth, int maxHeight, int letterSpacing, int lineSpacing) { }
+
+        public virtual void Select() { }
+        public virtual string GetSelectedChoice() => throw new NotImplementedException();
     }
 }

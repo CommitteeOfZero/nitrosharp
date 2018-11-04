@@ -24,9 +24,26 @@ namespace NitroSharp
 
         private ContentManager Content => _game.Content;
 
+        public string SelectedChoice { get; set; }
+
         public override void CreateChoice(string entityName)
         {
             _world.CreateChoice(entityName);
+        }
+
+        public override string GetSelectedChoice()
+        {
+            return SelectedChoice;
+        }
+
+        public override void Select()
+        {
+            _game.MessageQueue.Enqueue(new SelectChoiceMessage
+            {
+                WaitingThread = CurrentThread
+            });
+
+            Interpreter.SuspendThread(CurrentThread);
         }
 
         private void SuspendMainThread()

@@ -22,7 +22,7 @@ namespace NitroSharp
     internal sealed class World
     {
         public const ushort InitialCapacity = 1024;
-        public const ushort InitialSpriteCount = 512;
+        public const ushort InitialSpriteCount = 768;
         public const ushort InitialRectangleCount = 32;
         public const ushort InitialTextLayoutCount = 32;
         public const ushort InitialAudioClipCount = 64;
@@ -159,7 +159,9 @@ namespace NitroSharp
 
         public Entity CreateChoice(string name)
         {
-            return CreateEntity(name, EntityKind.Choice);
+            Entity entity = CreateEntity(name, EntityKind.Choice);
+            Choices.Name.Set(entity, name);
+            return entity;
         }
 
         private Entity CreateVisual(
@@ -221,7 +223,7 @@ namespace NitroSharp
         {
             if (_entities.TryGetValue(name, out Entity existing))
             {
-                RemoveExisting(name, existing);
+                RemoveEntity(name);
             }
 
             EntityTable table = _tables[(int)kind];
@@ -235,15 +237,15 @@ namespace NitroSharp
             return handle;
         }
 
-        private void RemoveExisting(string name, Entity entity)
-        {
-            var table = GetTable<EntityTable>(entity);
-            table.Remove(entity);
-            ref EntityEvent e = ref _entityEvents.Add();
-            e.EntityName = name;
-            e.Entity = entity;
-            e.EventKind = EntityEventKind.EntityRemoved;
-        }
+        //private void RemoveExisting(string name, Entity entity)
+        //{
+        //    var table = GetTable<EntityTable>(entity);
+        //    table.Remove(entity);
+        //    ref EntityEvent e = ref _entityEvents.Add();
+        //    e.EntityName = name;
+        //    e.Entity = entity;
+        //    e.EventKind = EntityEventKind.EntityRemoved;
+        //}
 
         public void RemoveEntity(string name)
         {

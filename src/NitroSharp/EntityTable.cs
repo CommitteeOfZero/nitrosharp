@@ -1,4 +1,5 @@
-﻿using System;
+﻿using NitroSharp.Utilities;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
@@ -306,6 +307,7 @@ namespace NitroSharp
                 get
                 {
                     if (_recycledElements.Count == 0) { return default; }
+                    ArrayUtil.EnsureCapacity(ref _recycledElementsBackbuffer, _recycledElements.Count);
                     _recycledElements.CopyTo(_recycledElementsBackbuffer);
                     int count = _recycledElements.Count;
                     _recycledElements.Clear();

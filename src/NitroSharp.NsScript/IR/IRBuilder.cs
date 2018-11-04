@@ -21,6 +21,7 @@ namespace NitroSharp.NsScript.IR
             public InstructionBlock Build(InvocableSymbol symbol)
             {
                 _instructions.Clear();
+                _insertBreaksAt.Clear();
                 var declaration = (MemberDeclaration)symbol.Declaration;
                 Visit(declaration.Body);
 
@@ -234,6 +235,22 @@ namespace NitroSharp.NsScript.IR
             public override void VisitPXmlLineSeparator(PXmlLineSeparator pxmlLineSeparator)
             {
                 _instructions.Add(Instructions.WaitForInput(pxmlLineSeparator));
+            }
+
+            public override void VisitSelectStatement(SelectStatement selectStatement)
+            {
+                _instructions.Add(Instructions.Select());
+                VisitBlock(selectStatement.Body);
+            }
+
+            public override void VisitSelectSection(SelectSection selectSection)
+            {
+                _instructions.Add(Instructions.GetSelectedChoice());
+                var label = ConstantValue.Create(selectSection.Label.Name);
+                int insertJumpAt = _instructions.Count;
+                _instructions.Add(Instructions.Nop());
+                VisitBlock(selectSection.Body);
+                _instructions[insertJumpAt] = Instructions.JumpIfNotEquals(label, _instructions.Count);
             }
         }
     }

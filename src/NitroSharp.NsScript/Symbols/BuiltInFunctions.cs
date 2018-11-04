@@ -76,12 +76,22 @@ namespace NitroSharp.NsScript.Symbols
             NsCoordinate x = PopCoordinate(args);
             NsCoordinate y = PopCoordinate(args);
 
-            PopArgument(args);
-            PopArgument(args);
+            int width = 0;
+            int height = 0;
+            var w = PopArgument(args);
+            var h = PopArgument(args);
+            if (w.Type == BuiltInType.Double)
+            {
+                width = (int)w.DoubleValue;
+            }
+            if (h.Type == BuiltInType.Double)
+            {
+                height = (int)h.DoubleValue;
+            }
 
             string text = PopString(args);
 
-            impl.CreateText(entityName, priority, x, y, text);
+            impl.CreateText(entityName, priority, x, y, width, height, text);
 
             return null;
         }
@@ -569,6 +579,9 @@ namespace NitroSharp.NsScript.Symbols
 
                 case BuiltInType.EnumValue:
                     return NsCoordinate.FromEnumValue(value.EnumValue);
+
+                case BuiltInType.String:
+                    return default;
 
                 default:
                     throw new InvalidOperationException();

@@ -183,6 +183,7 @@ namespace NitroSharp.NsScript.Execution
                 case Opcode.Say:
                 case Opcode.WaitForInput:
                 case Opcode.Return:
+                case Opcode.Select:
                     return true;
 
                 default:
@@ -253,9 +254,21 @@ namespace NitroSharp.NsScript.Execution
                 case Opcode.JumpIfEquals:
                     return !JumpIfEquals(ref instruction);
 
+                case Opcode.JumpIfNotEquals:
+                    return !JumpIfNotEquals(ref instruction);
+
                 case Opcode.Return:
                     CurrentThread.PopFrame();
                     return false;
+
+                case Opcode.Select:
+                    _engineImplementation.Select();
+                    break;
+
+                case Opcode.GetSelectedChoice:
+                    string choice = _engineImplementation.GetSelectedChoice();
+                    PushValue(ConstantValue.Create(choice));
+                    break;
             }
 
             return true;
@@ -335,6 +348,19 @@ namespace NitroSharp.NsScript.Execution
             var value = (ConstantValue)instruction.Operand1;
             int targetInstrIndex = (int)instruction.Operand2;
             bool branchTaken = (PopValue() == value).BooleanValue;
+            if (branchTaken)
+            {
+                CurrentFrame.Jump(targetInstrIndex);
+            }
+
+            return branchTaken;
+        }
+
+        private bool JumpIfNotEquals(ref Instruction instruction)
+        {
+            var value = (ConstantValue)instruction.Operand1;
+            int targetInstrIndex = (int)instruction.Operand2;
+            bool branchTaken = (PopValue() != value).BooleanValue;
             if (branchTaken)
             {
                 CurrentFrame.Jump(targetInstrIndex);

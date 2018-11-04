@@ -37,7 +37,12 @@ namespace NitroSharp.NsScript.IR
         public static Instruction Jump(int targetInstructionIndex) => new Instruction(Opcode.Jump, targetInstructionIndex);
         public static Instruction JumpIfEquals(ConstantValue value, int targetInstructionIndex)
             => new Instruction(Opcode.JumpIfEquals, value, targetInstructionIndex);
+        public static Instruction JumpIfNotEquals(ConstantValue value, int targetInstructionIndex)
+            => new Instruction(Opcode.JumpIfNotEquals, value, targetInstructionIndex);
 
         public static Instruction Return() => new Instruction(Opcode.Return);
+
+        public static Instruction Select() => new Instruction(Opcode.Select);
+        public static Instruction GetSelectedChoice() => new Instruction(Opcode.GetSelectedChoice);
     }
 }

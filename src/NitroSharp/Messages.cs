@@ -1,4 +1,5 @@
 ﻿using NitroSharp.Dialogue;
+using NitroSharp.NsScript.Execution;
 using NitroSharp.NsScript.Symbols;
 
 namespace NitroSharp
@@ -16,5 +17,15 @@ namespace NitroSharp
     internal sealed class BeginDialogueLineMessage : Message
     {
         public DialogueLine DialogueLine { get; set; }
+    }
+
+    internal sealed class SelectChoiceMessage : Message
+    {
+        public ThreadContext WaitingThread { get; set; }
+    }
+
+    internal sealed class ChoiceSelectedMessage : Message
+    {
+        public string ChoiceName { get; set; }
     }
 }

@@ -22,6 +22,9 @@
         JumpIfEquals,
         Nop,
         Jump,
-        Return
+        Return,
+        GetSelectedChoice,
+        JumpIfNotEquals,
+        Select
     }
 }

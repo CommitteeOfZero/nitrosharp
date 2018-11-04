@@ -18,7 +18,10 @@ namespace NitroSharp
             bool wait = delay == duration;
             foreach ((Entity entity, string name) in _world.Query(entityName))
             {
-                FadeCore(entity, duration, opacity, easingFunction, wait);
+                if (entity.IsVisual)
+                {
+                    FadeCore(entity, duration, opacity, easingFunction, wait);
+                }
             }
 
             if (delay > TimeSpan.Zero)
@@ -70,7 +73,10 @@ namespace NitroSharp
             bool wait = delay == duration;
             foreach ((Entity entity, string name) in _world.Query(entityName))
             {
-                MoveCore(entity, duration, dstX, dstY, easingFunction, wait);
+                if (entity.IsVisual)
+                {
+                    MoveCore(entity, duration, dstX, dstY, easingFunction, wait);
+                }
             }
 
             if (delay > TimeSpan.Zero)
@@ -130,7 +136,10 @@ namespace NitroSharp
             bool wait = delay == duration;
             foreach ((Entity entity, string name) in _world.Query(entityName))
             {
-                ZoomCore(entity, duration, dstScaleX, dstScaleY, easingFunction, wait);
+                if (entity.IsVisual)
+                {
+                    ZoomCore(entity, duration, dstScaleX, dstScaleY, easingFunction, wait);
+                }
             }
 
             if (delay > TimeSpan.Zero)

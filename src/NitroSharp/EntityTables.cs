@@ -165,6 +165,7 @@ namespace NitroSharp
         public ChoiceTable(World world, ushort columnCount)
             : base(world, columnCount)
         {
+            Name = AddRefTypeRow<string>();
             MouseUsualSprite = AddRow<Entity>();
             MouseOverSprite = AddRow<Entity>();
             MouseClickSprite = AddRow<Entity>();
@@ -174,6 +175,7 @@ namespace NitroSharp
             Rects = AddSystemDataRow<RectangleF>();
         }
 
+        public RefTypeRow<string> Name { get; }
         public Row<Entity> MouseUsualSprite { get; }
         public Row<Entity> MouseOverSprite { get; }
         public Row<Entity> MouseClickSprite { get; }
