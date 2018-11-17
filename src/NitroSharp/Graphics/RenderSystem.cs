@@ -10,7 +10,7 @@ using Veldrid;
 
 namespace NitroSharp.Graphics.Systems
 {
-    internal sealed class RenderSystem : GameSystem, IDisposable
+    internal sealed class RenderSystem : IDisposable
     {
         private const ushort MainBucketSize = 512;
 
@@ -130,10 +130,8 @@ namespace NitroSharp.Graphics.Systems
             TransformProcessor.ProcessTransforms(_world, _world.Sprites);
         }
 
-        public override void Update(float deltaTime)
+        public void ExecutePipeline(float deltaTime)
         {
-            base.Update(deltaTime);
-
             _cl.Begin();
             _cl.SetFramebuffer(_swapchain.Framebuffer);
             _cl.ClearColorTarget(0, RgbaFloat.Black);

@@ -1,6 +1,4 @@
 ﻿using NitroSharp.Input;
-using NitroSharp.NsScript.Execution;
-using NitroSharp.NsScript.Symbols;
 using NitroSharp.Primitives;
 using System.Numerics;
 using Veldrid;
@@ -17,17 +15,15 @@ namespace NitroSharp.Interactivity
         }
     }
 
-    internal sealed class ChoiceProcessor
+    internal sealed class ChoiceProcessor : GameSystem
     {
         private readonly World _world;
         private readonly InputTracker _inputTracker;
-        private readonly NsScriptInterpreter _interpreter;
 
-        public ChoiceProcessor(World world, InputTracker inputTracker, NsScriptInterpreter interpreter)
+        public ChoiceProcessor(Game.Presenter presenter) : base(presenter)
         {
-            _world = world;
-            _inputTracker = inputTracker;
-            _interpreter = interpreter;
+            _world = presenter.World;
+            _inputTracker = presenter.InputTracker;
         }
 
         public ChoiceProcessorOutput ProcessChoices()
@@ -39,7 +35,7 @@ namespace NitroSharp.Interactivity
             var mouseOverSprite = choices.MouseOverSprite.Enumerate();
             var mouseOverThread = choices.MouseOverThread.Enumerate();
             var mouseLeaveThread = choices.MouseLeaveThread.Enumerate();
-            var threadNames = _world.Threads.Name.Enumerate();
+            var threadInfos = _world.Threads.Infos.Enumerate();
             var choiceRects = choices.Rects.MutateAll();
             var state = choices.State.MutateAll();
 
@@ -155,33 +151,22 @@ namespace NitroSharp.Interactivity
 
         private void StartThread(ThreadTable threads, Entity threadEntity)
         {
-            (string threadName, MergedSourceFileSymbol module, string target) = GetThread(threads, threadEntity);
-            if (_interpreter.TryGetThread(threadName, out ThreadContext thread))
+            InterpreterThreadInfo threadInfo = threads.Infos.GetValue(threadEntity);
+            PostMessage(new Game.ThreadActionMessage
             {
-                _interpreter.ResumeThread(thread);
-            }
-            else
-            {
-                _interpreter.CreateThread(threadName, module, target, start: true);
-            }
+                ThreadInfo = threadInfo,
+                Action = Game.ThreadActionMessage.ActionKind.StartOrResume
+            });
         }
 
         private void TerminateThread(ThreadTable threads, Entity threadEntity)
         {
-            (string threadName, MergedSourceFileSymbol module, string target) = GetThread(threads, threadEntity);
-            if (_interpreter.TryGetThread(threadName, out ThreadContext thread))
+            InterpreterThreadInfo threadInfo = threads.Infos.GetValue(threadEntity);
+            PostMessage(new Game.ThreadActionMessage
             {
-                _interpreter.TerminateThread(thread);
-            }
-        }
-
-        private (string name, MergedSourceFileSymbol module, string target) GetThread(ThreadTable threads, Entity threadEntity)
-        {
-            ushort threadIndex = threads.LookupIndex(threadEntity);
-            string threadName = threads.Name.GetValue(threadIndex);
-            MergedSourceFileSymbol module = threads.Module.GetValue(threadIndex);
-            string target = threads.Target.GetValue(threadIndex);
-            return (threadName, module, target);
+                ThreadInfo = threadInfo,
+                Action = Game.ThreadActionMessage.ActionKind.Terminate
+            });
         }
     }
 }

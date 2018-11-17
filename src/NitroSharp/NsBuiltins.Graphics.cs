@@ -1,10 +1,12 @@
-﻿using NitroSharp.Dialogue;
+﻿using NitroSharp.Content;
+using NitroSharp.Dialogue;
 using NitroSharp.Graphics;
 using NitroSharp.NsScript;
 using NitroSharp.Primitives;
 using NitroSharp.Text;
 using System;
 using System.Collections.Immutable;
+using System.IO;
 using System.Numerics;
 using Veldrid;
 
@@ -134,7 +136,15 @@ namespace NitroSharp
                 source = _world.Sprites.ImageSources.GetValue(existingEnitity).Image;
             }
 
-            var texture = Content.Get<BindableTexture>(source);
+            AssetRef<BindableTexture> texture;
+            try
+            {
+                texture = Content.Get<BindableTexture>(source);
+            }
+            catch (FileNotFoundException)
+            {
+                return;
+            }
 
             RgbaFloat color = RgbaFloat.White;
             var bounds = new Vector2(texture.Asset.Width, texture.Asset.Height);

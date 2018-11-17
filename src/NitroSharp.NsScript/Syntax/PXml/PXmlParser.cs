@@ -74,6 +74,7 @@ namespace NitroSharp.NsScript.Syntax.PXml
                     break;
 
                 case "k":
+                case "K":
                     return new HaltElement();
                 case "?":
                     return new NoLinebreaksElement();

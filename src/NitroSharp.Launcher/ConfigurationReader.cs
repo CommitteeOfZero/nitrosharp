@@ -79,6 +79,10 @@ namespace NitroSharp.Launcher
                 case "dev.enableDiagnostics":
                     configuration.EnableDiagnostics = property.Value.Value<bool>();
                     break;
+
+                case "dev.useDedicatedInterpreterThread":
+                    configuration.UseDedicatedInterpreterThread = property.Value.Value<bool>();
+                    break;
             }
         }
 

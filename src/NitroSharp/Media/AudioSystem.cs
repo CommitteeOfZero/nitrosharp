@@ -4,7 +4,7 @@ using NitroSharp.Media.Decoding;
 
 namespace NitroSharp.Media
 {
-    internal sealed class AudioSystem : GameSystem
+    internal sealed class AudioSystem
     {
         private readonly AudioClipTable _audioClips;
         private readonly VideoClipTable _videoClips;

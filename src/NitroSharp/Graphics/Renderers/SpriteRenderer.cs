@@ -13,7 +13,7 @@ namespace NitroSharp.Graphics
         public TextureView TextureView;
     }
 
-    internal class SpriteRenderer : GameSystem
+    internal class SpriteRenderer
     {
         private readonly World _world;
         private readonly SpriteTable _sprites;

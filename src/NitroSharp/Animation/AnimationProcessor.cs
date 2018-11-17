@@ -1,21 +1,17 @@
-﻿using NitroSharp.NsScript.Execution;
-
-namespace NitroSharp.Animation
+﻿namespace NitroSharp.Animation
 {
     internal struct AnimationProcessorOutput
     {
         public uint BlockingAnimationCount;
     }
 
-    internal sealed class AnimationProcessor
+    internal sealed class AnimationProcessor : GameSystem
     {
         private readonly World _world;
-        private readonly NsScriptInterpreter _interpreter;
 
-        public AnimationProcessor(World world, NsScriptInterpreter interpreter)
+        public AnimationProcessor(Game.Presenter presenter) : base(presenter)
         {
-            _world = world;
-            _interpreter = interpreter;
+            _world = presenter.World;
         }
 
         public AnimationProcessorOutput ProcessAnimations(float deltaTime)
@@ -26,10 +22,14 @@ namespace NitroSharp.Animation
                 if (!_world.IsEntityAlive(anim.Entity))
                 {
                     _world.DeactivateAnimation(anim);
-                    if (anim.WaitingThread != null)
+                    PostMessage(new Game.AnimationCompletedMessage
                     {
-                        _interpreter.ResumeThread(anim.WaitingThread);
-                    }
+                        Animation = anim
+                    });
+                    //if (anim.WaitingThread != null)
+                    //{
+                    //    _interpreter.ResumeThread(anim.WaitingThread);
+                    //}
                 }
                 else
                 {
@@ -42,10 +42,10 @@ namespace NitroSharp.Animation
                     }
                     else
                     {
-                        if (anim.WaitingThread != null)
+                        PostMessage(new Game.AnimationCompletedMessage
                         {
-                            _interpreter.ResumeThread(anim.WaitingThread);
-                        }
+                            Animation = anim
+                        });
                     }
                 }
             }

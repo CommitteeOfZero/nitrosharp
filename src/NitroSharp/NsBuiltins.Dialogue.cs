@@ -1,5 +1,7 @@
 ﻿using System;
+using NitroSharp.Content;
 using NitroSharp.Dialogue;
+using NitroSharp.Media.Decoding;
 using NitroSharp.NsScript;
 using NitroSharp.NsScript.Symbols;
 using NitroSharp.Primitives;
@@ -12,6 +14,7 @@ namespace NitroSharp
     {
         private string _lastDialogueBlockName;
         private FontFamily _fontFamily;
+        private string _lastVoiceName;
 
         private FontService FontService => _game.FontService;
 
@@ -50,7 +53,7 @@ namespace NitroSharp
                 Entity text = _world.CreateTextInstance(name, textLayout, 99999, ref color);
                 SetParent(text, dialogueBox);
 
-                _game.MessageQueue.Enqueue(new BeginDialogueBlockMessage
+                _messageQueue.Enqueue(new Game.BeginDialogueBlockMessage
                 {
                     DialogueBlock = dialogueBlock,
                     TextEntity = text
@@ -60,9 +63,15 @@ namespace NitroSharp
 
         public override void BeginDialogueLine(string pxmlString)
         {
-            _game.MessageQueue.Enqueue(new BeginDialogueLineMessage
+            var dialogueLine = DialogueLine.Parse(pxmlString);
+            if (dialogueLine.Voice != null)
             {
-                DialogueLine = DialogueLine.Parse(pxmlString)
+                HandleVoice(dialogueLine.Voice);
+            }
+
+            _messageQueue.Enqueue(new Game.BeginDialogueLineMessage
+            {
+                DialogueLine = dialogueLine
             });
 
             //double iconX = Interpreter.Globals.Get("SYSTEM_position_x_text_icon").DoubleValue;
@@ -70,6 +79,27 @@ namespace NitroSharp
             //OldEntity pageIndicator = state.PageIndicator;
             //pageIndicator.Transform.Position = new Vector3((float)iconX, (float)iconY, 0);
             //pageIndicator.Visual.IsEnabled = true;
+        }
+
+        private void HandleVoice(Voice voice)
+        {
+            if (_lastVoiceName != null)
+            {
+                _world.RemoveEntity(_lastVoiceName);
+            }
+
+            if (voice.Action == VoiceAction.Play)
+            {
+                AssetId assetId = "voice/" + voice.FileName;
+                Content.TryGet<MediaPlaybackSession>(assetId, out var session);
+                Entity entity = _world.CreateAudioClip(voice.FileName, assetId, false);
+                _world.AudioClips.Duration.Set(entity, session.Asset.AudioStream.Duration);
+                _lastVoiceName = voice.FileName;
+            }
+            else
+            {
+                _world.RemoveEntity(voice.FileName);
+            }
         }
 
         public override void LoadText(string boxName, string textName, int maxWidth, int maxHeight, int letterSpacing, int lineSpacing)

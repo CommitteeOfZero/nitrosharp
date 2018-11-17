@@ -11,13 +11,15 @@ namespace NitroSharp.Dialogue
     {
         private static readonly PXmlTreeVisitor s_treeVisitor = new PXmlTreeVisitor();
 
-        public DialogueLine(ImmutableArray<DialogueLinePart> parts, uint textLength)
+        public DialogueLine(ImmutableArray<DialogueLinePart> parts, Voice voice, uint textLength)
         {
             Parts = parts;
+            Voice = voice;
             TextLength = textLength;
         }
 
         public ImmutableArray<DialogueLinePart> Parts { get; }
+        public Voice Voice { get; }
         public uint TextLength { get; }
         public bool IsEmpty => Parts.Length == 0;
 
@@ -40,6 +42,7 @@ namespace NitroSharp.Dialogue
             private readonly ImmutableArray<DialogueLinePart>.Builder _parts;
             private TextParams _textParams;
             private uint _textLength;
+            private Voice _voice;
 
             public PXmlTreeVisitor()
             {
@@ -50,13 +53,15 @@ namespace NitroSharp.Dialogue
             {
                 _parts.Clear();
                 _textLength = 0;
+                _voice = null;
                 Visit(treeRoot);
-                return new DialogueLine(_parts.ToImmutable(), _textLength);
+                return new DialogueLine(_parts.ToImmutable(), _voice, _textLength);
             }
 
             public override void VisitVoiceElement(VoiceElement node)
             {
-                _parts.Add(new Voice(node.CharacterName, node.FileName, (VoiceAction)node.Action));
+                _voice = new Voice(node.CharacterName, node.FileName, (VoiceAction)node.Action);
+                _parts.Add(_voice);
             }
 
             public override void VisitContent(PXmlContent content)

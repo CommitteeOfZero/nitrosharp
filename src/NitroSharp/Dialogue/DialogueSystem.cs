@@ -1,8 +1,5 @@
 ﻿using System.Collections.Immutable;
-using NitroSharp.Content;
 using NitroSharp.Input;
-using NitroSharp.Media.Decoding;
-using NitroSharp.NsScript.Execution;
 using NitroSharp.Text;
 using Veldrid;
 
@@ -22,14 +19,12 @@ namespace NitroSharp.Dialogue
         BeginDialogue
     }
 
-    internal sealed class DialogueSystem
+    internal sealed class DialogueSystem : GameSystem
     {
         private readonly World _world;
         private readonly InputTracker _inputTracker;
-        private readonly NsScriptInterpreter _scriptInterpreter;
 
         private readonly EntityTable.RefTypeRow<TextLayout> _textLayouts;
-        private readonly ContentManager _content;
 
         private TextRevealAnimation _revealAnimation;
         private RevealSkipAnimation _revealSkipAnimation;
@@ -37,15 +32,12 @@ namespace NitroSharp.Dialogue
         private bool _startFromNewLine;
         private string _lastVoiceName;
 
-        public DialogueSystem(
-            World world, InputTracker inputTracker,
-            NsScriptInterpreter scriptInterpreter, ContentManager content)
+        public DialogueSystem(Game.Presenter presenter, InputTracker inputTracker)
+            : base(presenter)
         {
-            _world = world;
+            _world = presenter.World;
             _inputTracker = inputTracker;
-            _scriptInterpreter = scriptInterpreter;
-            _textLayouts = world.TextInstances.Layouts;
-            _content = content;
+            _textLayouts = _world.TextInstances.Layouts;
         }
 
         private void ResetState()
@@ -74,7 +66,7 @@ namespace NitroSharp.Dialogue
             {
                 if (!input.TextEntity.IsValid)
                 {
-                    _scriptInterpreter.ResumeMainThread();
+                    PostMessage(new Game.SimpleMessage(Game.MessageKind.ResumeMainThread));
                     return true;
                 }
 
@@ -82,7 +74,7 @@ namespace NitroSharp.Dialogue
                 switch (GetStatus(ref input))
                 {
                     case Status.LineNotLoaded:
-                        _scriptInterpreter.ResumeMainThread();
+                        PostMessage(new Game.SimpleMessage(Game.MessageKind.ResumeMainThread));
                         break;
 
                     case Status.PlayingRevealAnimation:
@@ -99,7 +91,7 @@ namespace NitroSharp.Dialogue
                         }
                         else
                         {
-                            _scriptInterpreter.ResumeMainThread();
+                            PostMessage(new Game.SimpleMessage(Game.MessageKind.ResumeMainThread));
                         }
                         break;
                 }
@@ -166,18 +158,13 @@ namespace NitroSharp.Dialogue
                         textLayout.Append(textPart.Text, display: false);
                         break;
 
-                    case DialogueLinePartKind.Voice:
-                        var voicePart = (Voice)part;
-                        Voice(voicePart);
-                        break;
-
                     case DialogueLinePartKind.Marker:
                         var marker = (Marker)part;
                         switch (marker.MarkerKind)
                         {
                             case MarkerKind.Halt:
                                 _startFromNewLine = true;
-                                _scriptInterpreter.SuspendMainThread();
+                                PostMessage(new Game.SimpleMessage(Game.MessageKind.SuspendMainThread));
                                 goto exit;
 
                             case MarkerKind.NoLinebreaks:
@@ -205,28 +192,6 @@ namespace NitroSharp.Dialogue
                     _world.ActivateAnimation(skip);
                 }
             }
-        }
-
-        private void Voice(Voice voice)
-        {
-            if (_lastVoiceName != null)
-            {
-                _world.RemoveEntity(_lastVoiceName);
-            }
-
-            if (voice.Action == VoiceAction.Play)
-            {
-                AssetId assetId = "voice/" + voice.FileName;
-                _content.TryGet<MediaPlaybackSession>(assetId, out var session);
-                Entity entity = _world.CreateAudioClip(voice.FileName, assetId, false);
-                _world.AudioClips.Duration.Set(entity, session.Asset.AudioStream.Duration);
-
-                _lastVoiceName = voice.FileName;
-            }
-            else
-            {
-                _world.RemoveEntity(voice.FileName);
-            }
-        }
+        } 
     }
 }

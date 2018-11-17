@@ -27,14 +27,10 @@ namespace NitroSharp
         public ThreadTable(World world, ushort columnCount)
             : base(world, columnCount)
         {
-            Name = AddRefTypeRow<string>();
-            Module = AddRefTypeRow<MergedSourceFileSymbol>();
-            Target = AddRefTypeRow<string>();
+            Infos = AddRow<InterpreterThreadInfo>();
         }
 
-        public RefTypeRow<string> Name { get; }
-        public RefTypeRow<string> Target { get; }
-        public RefTypeRow<MergedSourceFileSymbol> Module { get; }
+        public Row<InterpreterThreadInfo> Infos { get; }
     }
 
     internal abstract class RenderItemTable : EntityTable

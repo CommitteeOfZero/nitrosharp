@@ -5,7 +5,7 @@ using Veldrid;
 
 namespace NitroSharp.Graphics
 {
-    internal sealed class RectangleRenderer : GameSystem
+    internal sealed class RectangleRenderer
     {
         private readonly World _world;
         private readonly QuadBatcher _quadBatcher;

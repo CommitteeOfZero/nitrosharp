@@ -14,17 +14,18 @@ namespace NitroSharp
         private readonly Game _game;
 
         private readonly Queue<string> _entitiesToRemove = new Queue<string>();
+        private readonly Queue<Game.Message> _messageQueue = new Queue<Game.Message>();
 
         public NsBuiltins(Game game)
         {
             _game = game;
         }
 
-        public void SetWorld(World gameWorld) => _world = gameWorld;
-
         private ContentManager Content => _game.Content;
-
+        public Queue<Game.Message> MessagesForPresenter => _messageQueue;
         public string SelectedChoice { get; set; }
+
+        public void SetWorld(World gameWorld) => _world = gameWorld;
 
         public override void CreateChoice(string entityName)
         {
@@ -38,10 +39,10 @@ namespace NitroSharp
 
         public override void Select()
         {
-            _game.MessageQueue.Enqueue(new SelectChoiceMessage
-            {
-                WaitingThread = CurrentThread
-            });
+            //_game.MessageQueue.Enqueue(new SelectChoiceMessage
+            //{
+            //    WaitingThread = CurrentThread
+            //});
 
             Interpreter.SuspendThread(CurrentThread);
         }
@@ -94,11 +95,6 @@ namespace NitroSharp
 
         public override void WaitForInput()
         {
-            //if (_dialogueState.DialogueLine?.IsEmpty == true)
-            //{
-            //    return;
-            //}
-
             Interpreter.SuspendThread(CurrentThread);
         }
 
@@ -111,7 +107,8 @@ namespace NitroSharp
         {
             bool startImmediately = _world.Query(name + "*").Any();
             ThreadContext thread = Interpreter.CreateThread(name, target, startImmediately);
-            Entity threadEntity = _world.CreateThreadEntity(name, thread.EntryModule, target);
+            var info = new InterpreterThreadInfo(name, thread.EntryModule.Symbol.Name, target);
+            Entity threadEntity = _world.CreateThreadEntity(info);
 
             Entity parentEntity = default;
             int idxSlash = name.IndexOf('/');

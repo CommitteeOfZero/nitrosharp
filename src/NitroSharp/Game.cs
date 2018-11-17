@@ -1,37 +1,25 @@
 ﻿using NitroSharp.Content;
 using NitroSharp.Graphics;
-using NitroSharp.Graphics.Systems;
 using NitroSharp.Media;
 using NitroSharp.Media.Decoding;
-using NitroSharp.NsScript;
-using NitroSharp.NsScript.Execution;
 using NitroSharp.Primitives;
 using NitroSharp.Text;
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Veldrid;
 using Veldrid.StartupUtilities;
-using System.Runtime.InteropServices;
-using NitroSharp.Dialogue;
-using System.Collections.Concurrent;
-using NitroSharp.Input;
-using System.Collections.Generic;
-using NitroSharp.Animation;
-using NitroSharp.Interactivity;
 
 namespace NitroSharp
 {
-    public sealed class Game : IDisposable
+    public partial class Game : IDisposable
     {
-        private bool IsMultithreaded = false;
         private bool UseWicOnWindows = false;
 
         private readonly Stopwatch _gameTimer;
-        private readonly Queue<Message> _messageQueue;
-        private readonly Queue<Message> _messagesForInterpreter = new Queue<Message>();
         private readonly Configuration _configuration;
         private readonly CancellationTokenSource _shutdownCancellation;
 
@@ -42,32 +30,16 @@ namespace NitroSharp
         private Swapchain _swapchain;
         private readonly TaskCompletionSource<int> _initializingGraphics;
 
-        private readonly InputTracker _inputTracker;
-
-        private readonly string _nssFolder;
-        private NsScriptInterpreter _nssInterpreter;
-        private readonly NsBuiltins _builtinFunctions;
-        private Task _interpreterProc;
-        private volatile bool _syncToFuture;
-
         private VideoFrameConverter _frameConverter;
         private SharpDX.WIC.ImagingFactory _wicFactory;
         private AudioDevice _audioDevice;
         private AudioSourcePool _audioSourcePool;
 
-        private World _presentWorld;
-        private World _futureWorld;
+        private World _presenterWorld;
+        private World _scriptingWorld;
 
-        private DialogueSystem _dialogueSystem;
-        private DialogueSystemInput _dialogueSystemInput;
-
-        private RenderSystem _renderSystem;
-        private AudioSystem _audioSystem;
-        private AnimationProcessor _animationProcessor;
-        private bool _syncToPresent;
-
-        private ChoiceProcessor _choiceProcessor;
-        public ThreadContext ThreadAwaitingSelect { get; set; }
+        private Presenter _presenter;
+        private ScriptRunner _scriptRunner;
 
         public Game(GameWindow window, Configuration configuration)
         {
@@ -75,44 +47,37 @@ namespace NitroSharp
             _initializingGraphics = new TaskCompletionSource<int>();
 
             _configuration = configuration;
-            _nssFolder = Path.Combine(configuration.ContentRoot, "nss");
             _window = window;
             _window.Mobile_SurfaceCreated += OnSurfaceCreated;
             _window.Resized += OnWindowResized;
             _window.Mobile_SurfaceDestroyed += OnSurfaceDestroyed;
 
             _gameTimer = new Stopwatch();
-            _messageQueue = new Queue<Message>();
-            _builtinFunctions = new NsBuiltins(this);
-            _inputTracker = new InputTracker(window);
-            InterpreterLoopTasks = new ConcurrentQueue<Action>();
+
+            _presenterWorld = _scriptingWorld = new World(WorldKind.Primary);
+            World scriptingWorld = _presenterWorld;
+            if (_configuration.UseDedicatedInterpreterThread)
+            {
+                _scriptingWorld = new World(WorldKind.Secondary);
+                scriptingWorld = _scriptingWorld;
+            }
         }
 
-        internal Queue<Message> MessageQueue => _messageQueue;
         internal ContentManager Content { get; private set; }
         internal FontService FontService { get; private set; }
-
         internal AudioDevice AudioDevice => _audioDevice;
         internal AudioSourcePool AudioSourcePool => _audioSourcePool;
 
-        internal ConcurrentQueue<Action> InterpreterLoopTasks { get; }
-
         public async Task Run(bool useDedicatedThread = false)
         {
-            Task loadScriptTask = Task.Run((Action)LoadStartupScript);
-            Task initializeAudio = Task.Run((Action)SetupAudio);
-
-            await Task.WhenAll(_initializingGraphics.Task, initializeAudio);
-
+            var initializeAudio = Task.Run((Action)SetupAudio);
+            await Task.WhenAll(new[] { _initializingGraphics.Task, initializeAudio });
             CreateServices();
-            CreateGameWorld();
+            _scriptRunner = new ScriptRunner(this, _scriptingWorld);
+            var loadScriptTask = Task.Run((Action)_scriptRunner.LoadStartupScript);
+            _presenter = new Presenter(this, _presenterWorld);
             await loadScriptTask;
-
-            _dialogueSystem = new DialogueSystem(_presentWorld, _inputTracker, _nssInterpreter, Content);
-            _animationProcessor = new AnimationProcessor(_presentWorld, _nssInterpreter);
-            _choiceProcessor = new ChoiceProcessor(_presentWorld, _inputTracker, _nssInterpreter);
-            StartInterpreter();
-
+            _scriptRunner.StartInterpreter();
             await RunMainLoop(useDedicatedThread);
         }
 
@@ -120,7 +85,7 @@ namespace NitroSharp
         {
             if (useDedicatedThread)
             {
-                return Task.Factory.StartNew(MainLoop, TaskCreationOptions.LongRunning);
+                return Task.Factory.StartNew((Action)MainLoop, TaskCreationOptions.LongRunning);
             }
             else
             {
@@ -171,176 +136,23 @@ namespace NitroSharp
 
         private void Tick(float deltaMilliseconds)
         {
-            bool mainThreadWaiting = false;
-            _inputTracker.Update(deltaMilliseconds);
-            if (IsMultithreaded)
+            var scriptRunnerStatus = _scriptRunner.Tick();
+            switch (scriptRunnerStatus)
             {
-                if (_interpreterProc.IsFaulted)
-                {
-                    throw _interpreterProc.Exception.InnerException;
-                }
-                else if (_interpreterProc.IsCompleted)
-                {
-                    Exit();
-                }
-                if (_syncToFuture)
-                {
-                    _futureWorld.MergeChanges(_presentWorld);
-                    _futureWorld.FlushEvents();
-                    _syncToFuture = false;
-                    mainThreadWaiting = _nssInterpreter.MainThread.IsSuspended
-                        && _nssInterpreter.MainThread.SleepTimeout != TimeSpan.MaxValue;
-                    ProcessMessagesForPresenter();
-                }
-                else if (_syncToPresent)
-                {
-                    _presentWorld.MergeChanges(_futureWorld);
-                    ProcessMessagesForInterpreter();
-                    _syncToPresent = false;
-                }
-
-                ProcessMessagesForInterpreter();
-            }
-            else
-            {
-                _nssInterpreter.RefreshThreadState();
-                _nssInterpreter.ProcessPendingThreadActions();
-
-                while (InterpreterLoopTasks.TryDequeue(out Action a))
-                {
-                    a.Invoke();
-                }
-
-                ProcessMessagesForInterpreter();
-                _nssInterpreter.Run(CancellationToken.None);
-                mainThreadWaiting = _nssInterpreter.MainThread.IsSuspended
-                    && _nssInterpreter.MainThread.SleepTimeout != TimeSpan.MaxValue;
-                ProcessMessagesForPresenter();
+                case ScriptRunner.Status.AwaitingPresenterState:
+                    _scriptRunner.SyncTo(_presenter);
+                    _scriptRunner.Resume();
+                    break;
+                case ScriptRunner.Status.NewStateReady:
+                    _presenter.SyncTo(_scriptRunner);
+                    _scriptRunner.Resume();
+                    break;
+                case ScriptRunner.Status.Running:
+                default:
+                    break;
             }
 
-            _presentWorld.FlushDetachedAnimations();
-            var animProcessorOutput = _animationProcessor.ProcessAnimations(deltaMilliseconds);
-            bool blockInput = mainThreadWaiting || ThreadAwaitingSelect != null || animProcessorOutput.BlockingAnimationCount > 0;
-            _dialogueSystemInput.AcceptUserInput = !blockInput;
-            if (_dialogueSystem.AdvanceDialogueState(ref _dialogueSystemInput))
-            {
-                _dialogueSystemInput.Command = DialogueSystemCommand.HandleInput;
-            }
-
-            _renderSystem.ProcessTransforms();
-            ChoiceProcessorOutput choiceProcessorOutput = _choiceProcessor.ProcessChoices();
-            if (choiceProcessorOutput.SelectedChoice != null)
-            {
-                _messagesForInterpreter.Enqueue(new ChoiceSelectedMessage
-                {
-                    ChoiceName = choiceProcessorOutput.SelectedChoice
-                });
-            }
-
-            _audioSystem.UpdateAudioSources();
-            _renderSystem.Update(deltaMilliseconds);
-
-            if (_window.Exists)
-            {
-                try
-                {
-                    _renderSystem.Present();
-                }
-                catch (VeldridException e) when (e.Message == "The Swapchain's underlying surface has been lost.")
-                {
-                    return;
-                }
-            }
-
-            _presentWorld.FlushEvents();
-        }
-
-        private void ProcessMessagesForPresenter()
-        {
-            while (_messageQueue.Count > 0)
-            {
-                Message message = _messageQueue.Dequeue();
-                switch (message)
-                {
-                    case BeginDialogueBlockMessage beginBlockMsg:
-                        _dialogueSystemInput.TextEntity = beginBlockMsg.TextEntity;
-                        break;
-                    case BeginDialogueLineMessage beginLineMsg:
-                        _dialogueSystemInput.Command = DialogueSystemCommand.BeginDialogue;
-                        _dialogueSystemInput.DialogueLine = beginLineMsg.DialogueLine;
-                        break;
-                    case SelectChoiceMessage selectChoiceMsg:
-                        ThreadAwaitingSelect = selectChoiceMsg.WaitingThread;
-                        break;
-                }
-            }
-        }
-
-        private void ProcessMessagesForInterpreter()
-        {
-            while (_messagesForInterpreter.Count > 0)
-            {
-                Message message = _messagesForInterpreter.Dequeue();
-                switch (message)
-                {
-                    case ChoiceSelectedMessage choiceSelectedMsg:
-                        _nssInterpreter.ResumeThread(ThreadAwaitingSelect);
-                        ThreadAwaitingSelect = null;
-                        _builtinFunctions.SelectedChoice = choiceSelectedMsg.ChoiceName;
-                        break;
-                }
-            }
-        }
-
-        private void StartInterpreter()
-        {
-            if (IsMultithreaded)
-            {
-                _interpreterProc = Task.Factory.StartNew(InterpreterLoop, TaskCreationOptions.LongRunning);
-            }
-        }
-
-        private void InterpreterLoop()
-        {
-            while (!_shutdownCancellation.IsCancellationRequested)
-            {
-                while (_syncToFuture || _syncToPresent)
-                {
-                    Thread.Sleep(5);
-                }
-
-                Thread.Sleep(1);
-
-                bool threadStateChanged = _nssInterpreter.RefreshThreadState();
-                if (threadStateChanged || _nssInterpreter.ProcessPendingThreadActions())
-                {
-                    _syncToPresent = true;
-                    continue;
-                }
-
-                while (InterpreterLoopTasks.TryDequeue(out Action a))
-                {
-                    a.Invoke();
-                }
-
-                if (_nssInterpreter.Run(CancellationToken.None))
-                {
-                    _syncToFuture = true;
-                }
-
-                //if (!_nssInterpreter.Threads.Any()) { return; }
-            }
-        }
-
-        private void LoadStartupScript()
-        {
-            _nssInterpreter = new NsScriptInterpreter(LocateScript, _builtinFunctions);
-            ThreadContext mainThread = _nssInterpreter.CreateThread("__MAIN", _configuration.StartupScript, "main");
-        }
-
-        private Stream LocateScript(SourceFileReference fileRef)
-        {
-            return File.OpenRead(Path.Combine(_nssFolder, fileRef.FilePath.Replace("nss/", string.Empty)));
+            _presenter.Tick(deltaMilliseconds);
         }
 
         private void OnSurfaceCreated(SwapchainSource swapchainSource)
@@ -448,26 +260,6 @@ namespace NitroSharp
             return content;
         }
 
-        private void CreateGameWorld()
-        {
-            _presentWorld = new World(WorldKind.Primary);
-            World scriptingWorld = _presentWorld;
-            if (IsMultithreaded)
-            {
-                _futureWorld = new World(WorldKind.Secondary);
-                scriptingWorld = _futureWorld;
-            }
-
-            _builtinFunctions.SetWorld(scriptingWorld);
-
-
-            _renderSystem = new RenderSystem(
-                _presentWorld, _graphicsDevice, _swapchain,
-                Content, FontService, _configuration);
-
-            _audioSystem = new AudioSystem(_presentWorld, Content, _audioSourcePool);
-        }
-
         private void OnWindowResized()
         {
             _needsResize = true;
@@ -500,12 +292,10 @@ namespace NitroSharp
         private void RecreateGraphicsResources()
         {
             Content.ReloadTextures();
-            // _renderSystem.CreateDeviceResources(_graphicsDevice, _swapchain);
         }
 
         private void DestroyDeviceResources()
         {
-            // _renderSystem.DestroyDeviceResources();
             Content.DestroyTextures();
         }
 
@@ -516,7 +306,6 @@ namespace NitroSharp
 
         public void Dispose()
         {
-            _renderSystem.Dispose();
             Content.Dispose();
             FontService.Dispose();
             _wicFactory?.Dispose();

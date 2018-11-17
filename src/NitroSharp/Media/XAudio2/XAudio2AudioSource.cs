@@ -42,7 +42,11 @@ namespace NitroSharp.Media.XAudio2
 
         public override float Volume
         {
-            get => _sourceVoice.Volume;
+            get
+            {
+                _sourceVoice.GetVolume(out float vol);
+                return vol;
+            }
             set => _sourceVoice.SetVolume(value);
         }
 

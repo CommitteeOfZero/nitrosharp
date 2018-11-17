@@ -106,12 +106,10 @@ namespace NitroSharp
             }
         }
 
-        public Entity CreateThreadEntity(string name, MergedSourceFileSymbol module, string target)
+        public Entity CreateThreadEntity(in InterpreterThreadInfo threadInfo)
         {
-            Entity entity = CreateEntity(name, EntityKind.Thread);
-            Threads.Name.Set(entity, name);
-            Threads.Module.Set(entity, module);
-            Threads.Target.Set(entity, target);
+            Entity entity = CreateEntity(threadInfo.Name, EntityKind.Thread);
+            Threads.Infos.Set(entity, threadInfo);
             return entity;
         }
 
@@ -237,16 +235,6 @@ namespace NitroSharp
             return handle;
         }
 
-        //private void RemoveExisting(string name, Entity entity)
-        //{
-        //    var table = GetTable<EntityTable>(entity);
-        //    table.Remove(entity);
-        //    ref EntityEvent e = ref _entityEvents.Add();
-        //    e.EntityName = name;
-        //    e.Entity = entity;
-        //    e.EventKind = EntityEventKind.EntityRemoved;
-        //}
-
         public void RemoveEntity(string name)
         {
             Entity entity = RemoveEntityCore(name);
@@ -284,7 +272,7 @@ namespace NitroSharp
             return Entity.Invalid;
         }
 
-        public void MergeChanges(World target)
+        public void MergeChangesInto(World target)
         {
             if (_entityEvents.Count > 0 && target._entityEvents.Count > 0)
             {
