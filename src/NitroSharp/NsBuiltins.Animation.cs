@@ -44,7 +44,7 @@ namespace NitroSharp
             if (!entity.IsVisual) { return null; }
             RenderItemTable table = _world.GetTable<RenderItemTable>(entity);
             float adjustedOpacity = dstOpacity.Rebase(1.0f);
-            ref RgbaFloat color = ref table.Colors.Mutate(entity);
+            RgbaFloat color = table.Colors.GetValue(entity);
             if (duration > TimeSpan.Zero)
             {
                 var animation = new FadeAnimation(entity, duration, (TimingFunction)easingFunction);
@@ -61,6 +61,7 @@ namespace NitroSharp
             else
             {
                 color.SetAlpha(adjustedOpacity);
+                table.Colors.Set(entity, ref color);
                 return null;
             }
         }

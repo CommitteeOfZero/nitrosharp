@@ -8,7 +8,7 @@
   "window.width": 1280,
   "window.height": 720,
   "dev.contentRoot": "S:/ChaosContent/Noah",
-  "dev.enableDiagnostics": true,
+  "dev.useDedicatedInterpreterThread": true,
 
   "profiles": {
     "Noah": {

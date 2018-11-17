@@ -78,8 +78,6 @@ namespace NitroSharp
                         Thread.Sleep(5);
                     }
 
-                    Thread.Sleep(1);
-
                     _status = Run();
                 }
             }

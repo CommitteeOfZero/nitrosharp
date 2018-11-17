@@ -61,7 +61,6 @@ namespace NitroSharp
         {
             if (entityName != alias)
             {
-                _world.SetAlias(alias, entityName);
                 _world.SetAlias(entityName, alias);
             }
         }

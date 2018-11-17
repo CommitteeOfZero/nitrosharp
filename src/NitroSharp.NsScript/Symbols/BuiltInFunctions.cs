@@ -516,7 +516,7 @@ namespace NitroSharp.NsScript.Symbols
             return args.Pop();
         }
 
-        private static string PopString(Stack<ConstantValue> args, bool allowNull = false, bool allowTypeConversion = false)
+        private static string PopString(Stack<ConstantValue> args, bool allowNull = false, bool allowTypeConversion = true)
         {
             var value = PopArgument(args);
             switch (value.Type)

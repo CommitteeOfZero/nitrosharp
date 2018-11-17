@@ -35,9 +35,12 @@ namespace NitroSharp.Graphics.Renderers
             var removed = textInstances.SystemData.RecycledComponents;
             foreach (TextSystemData data in removed)
             {
-                texturePool.Return(data.StagingTexture);
-                texturePool.Return(data.LayoutTexture);
-                _renderContext.Device.DisposeWhenIdle(data.TextureView);
+                if (data.LayoutTexture != null)
+                {
+                    texturePool.Return(data.StagingTexture);
+                    texturePool.Return(data.LayoutTexture);
+                    _renderContext.Device.DisposeWhenIdle(data.TextureView);
+                }
             }
 
             var added = textInstances.AddedEntities;

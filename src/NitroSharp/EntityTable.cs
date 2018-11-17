@@ -137,8 +137,7 @@ namespace NitroSharp
                 _rows[i].MergeChanges(target._rows[i]);
             }
 
-            Debug_CheckIdMaps();
-            target.Debug_CheckIdMaps();
+            Debug_CompareIdMaps(this, target);
         }
 
         internal bool EntityExists(Entity entity)
@@ -235,6 +234,11 @@ namespace NitroSharp
             internal override void MergeChanges(Row dstRow)
             {
                 var other = (RowBase<T>)dstRow;
+                if (_entireRowChanged && other._dirtyIds.Count > 0)
+                {
+                    other._dirtyIds.Clear();
+                }
+
                 if (_data.Length == other._data.Length)
                 {
                     if (_entireRowChanged)
@@ -362,12 +366,30 @@ namespace NitroSharp
 
         [Conditional("DEBUG")]
         [DebuggerNonUserCode]
-        private void Debug_CheckIdMaps()
+        private static void Debug_CompareIdMaps(EntityTable left, EntityTable right)
         {
-            Debug.Assert(_idToIndex.Count == _indexToId.Count);
-            foreach (var kvp in _idToIndex)
+            validateMaps(left);
+            validateMaps(right);
+
+            compareMaps(left._idToIndex, right._idToIndex);
+            compareMaps(left._indexToId, right._indexToId);
+
+            void validateMaps(EntityTable table)
             {
-                Debug.Assert(_indexToId[kvp.Value] == kvp.Key);
+                Debug.Assert(table._idToIndex.Count == table._indexToId.Count);
+                foreach (var kvp in table._idToIndex)
+                {
+                    Debug.Assert(table._indexToId[kvp.Value] == kvp.Key);
+                }
+            }
+
+            void compareMaps<K, V>(Dictionary<K, V> l, Dictionary<K, V> r) where V : IEquatable<V>
+            {
+                Debug.Assert(l.Count == r.Count);
+                foreach (var kvp in l)
+                {
+                    Debug.Assert(r.ContainsKey(kvp.Key) && r[kvp.Key].Equals(kvp.Value));
+                }
             }
         }
     }

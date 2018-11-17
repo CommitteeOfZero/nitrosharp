@@ -46,7 +46,7 @@ namespace NitroSharp.Graphics
             var toRecycle = sprites.SystemData.RecycledComponents;
             foreach (SpriteSystemData data in toRecycle)
             {
-                data.AssetRef.Dispose();
+                data.AssetRef?.Dispose();
             }
 
             

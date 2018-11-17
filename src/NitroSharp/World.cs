@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Numerics;
 using NitroSharp.Animation;
 using NitroSharp.Content;
 using NitroSharp.Graphics;
 using NitroSharp.Media;
-using NitroSharp.NsScript.Symbols;
 using NitroSharp.Primitives;
 using NitroSharp.Text;
 using NitroSharp.Utilities;
@@ -29,7 +29,7 @@ namespace NitroSharp
         public const ushort InitialVideoClipCount = 4;
 
         private readonly Dictionary<string, Entity> _entities;
-        private readonly List<(string entity, string alias)> _aliases;
+        private readonly Dictionary<string, string> _aliases;
         private readonly List<EntityTable> _tables;
         private ArrayBuilder<EntityEvent> _entityEvents;
         private ushort _nextEntityId = 1;
@@ -42,7 +42,7 @@ namespace NitroSharp
         {
             Kind = kind;
             _entities = new Dictionary<string, Entity>(InitialCapacity);
-            _aliases = new List<(string entity, string alias)>();
+            _aliases = new Dictionary<string, string>();
             _entityEvents = new ArrayBuilder<EntityEvent>();
             _tables = new List<EntityTable>(8);
 
@@ -92,16 +92,18 @@ namespace NitroSharp
             return table.EntityExists(entity);
         }
 
-        public void SetAlias(string originalName, string alias)
+        public void SetAlias(string name, string alias)
         {
-            if (TryGetEntity(originalName, out Entity entity))
+            if (TryGetEntity(name, out Entity entity) || TryGetEntity(alias, out entity))
             {
+                _entities[name] = entity;
                 _entities[alias] = entity;
-                _aliases.Add((originalName, alias));
+                _aliases[name] = alias;
+                _aliases[alias] = name;
                 ref EntityEvent evt = ref _entityEvents.Add();
                 evt.EventKind = EntityEventKind.AliasAdded;
                 evt.Entity = entity;
-                evt.EntityName = originalName;
+                evt.EntityName = name;
                 evt.Alias = alias;
             }
         }
@@ -252,16 +254,11 @@ namespace NitroSharp
             if (_entities.TryGetValue(name, out Entity entity))
             {
                 _entities.Remove(name);
-                for (int i = 0; i < _aliases.Count; i++)
+                if (_aliases.TryGetValue(name, out string alias))
                 {
-                    (string originalName, string alias) = _aliases[i];
-                    if (originalName == name || alias == name)
-                    {
-                        _entities.Remove(originalName);
-                        _entities.Remove(alias);
-                        _aliases.RemoveAt(i);
-                        break;
-                    }
+                    _entities.Remove(alias);
+                    _aliases.Remove(name);
+                    _aliases.Remove(alias);
                 }
 
                 var table = GetTable<EntityTable>(entity);
@@ -294,8 +291,10 @@ namespace NitroSharp
                         target.RemoveEntityCore(evt.EntityName);
                         break;
                     case EntityEventKind.AliasAdded:
-                        _entities[evt.Alias] = evt.Entity;
-                        _aliases.Add((evt.EntityName, evt.Alias));
+                        target._entities[evt.Alias] = evt.Entity;
+                        target._entities[evt.EntityName] = evt.Entity;
+                        target._aliases[evt.EntityName] = evt.Alias;
+                        target._aliases[evt.Alias] = evt.EntityName;
                         break;
                 }
             }
@@ -321,12 +320,53 @@ namespace NitroSharp
                 }
             }
 
+            Debug_EnsureMergedCorrectly(this, target);
+
             _animationEvents.Clear();
             _entityEvents.Reset();
         }
 
-        private void ThrowCannotMerge()
-            => throw new InvalidOperationException("Copies of the game state that have conflicting change sets cannot be merged.");
+        [Conditional("DEBUG")]
+        private static void Debug_EnsureMergedCorrectly(World src, World target)
+        {
+            validateEntities(src);
+            validateEntities(target);
+
+            if (src._entityEvents.Count > 0)
+            {
+                if (src._entities.Count != target._entities.Count)
+                {
+                    var exclusiveToSource = new HashSet<string>(src._entities.Keys);
+                    exclusiveToSource.ExceptWith(target._entities.Keys);
+                    var exclusiveToTarget = new HashSet<string>(target._entities.Keys);
+                    exclusiveToTarget.ExceptWith(src._entities.Keys);
+
+                    Debug.Assert(src._entities.Count == target._entities.Count);
+                    Debug.Assert(src._nextEntityId == target._nextEntityId);
+                }
+            }
+
+            void validateEntities(World world)
+            {
+                foreach (var kvp in world._entities)
+                {
+                    Debug.Assert(world.IsEntityAlive(kvp.Value));
+                }
+            }
+        }
+
+        [Conditional("DEBUG")]
+        private void Debug_ValidateEntities()
+        {
+            foreach (var kvp in _entities)
+            {
+                 Debug.Assert(IsEntityAlive(kvp.Value));
+            }
+        }
+
+        private static void ThrowCannotMerge()
+            => throw new InvalidOperationException(
+                "Instances of game state that have conflicting change sets cannot be merged. This is likely a bug.");
 
         private struct EntityEvent
         {
