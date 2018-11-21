@@ -94,7 +94,7 @@ namespace NitroSharp.NsScript
         public virtual bool IsDeltaValue => throw new InvalidOperationException();
         public virtual BuiltInEnumValue EnumValue => throw new InvalidOperationException();
 
-        protected abstract bool TryConvertTo(BuiltInType targetType, out ConstantValue result);
+        public abstract bool TryConvertTo(BuiltInType targetType, out ConstantValue result);
         public ConstantValue ConvertTo(BuiltInType targetType)
         {
             return TryConvertTo(targetType, out var result)
@@ -409,7 +409,7 @@ namespace NitroSharp.NsScript
                 return DoubleValue == other.DoubleValue && IsDeltaValue == other.IsDeltaValue;
             }
 
-            protected override bool TryConvertTo(BuiltInType targetType, out ConstantValue result)
+            public override bool TryConvertTo(BuiltInType targetType, out ConstantValue result)
             {
                 switch (targetType)
                 {
@@ -459,7 +459,7 @@ namespace NitroSharp.NsScript
                 return BooleanValue == other.BooleanValue;
             }
 
-            protected override bool TryConvertTo(BuiltInType targetType, out ConstantValue result)
+            public override bool TryConvertTo(BuiltInType targetType, out ConstantValue result)
             {
                 switch (targetType)
                 {
@@ -504,7 +504,7 @@ namespace NitroSharp.NsScript
                 return StringValue.Equals(other.StringValue, StringComparison.Ordinal);
             }
 
-            protected override bool TryConvertTo(BuiltInType targetType, out ConstantValue result)
+            public override bool TryConvertTo(BuiltInType targetType, out ConstantValue result)
             {
                 switch (targetType)
                 {
@@ -560,7 +560,7 @@ namespace NitroSharp.NsScript
                 return EnumValue == other.EnumValue;
             }
 
-            protected override bool TryConvertTo(BuiltInType targetType, out ConstantValue result)
+            public override bool TryConvertTo(BuiltInType targetType, out ConstantValue result)
             {
                 switch (targetType)
                 {
@@ -596,7 +596,7 @@ namespace NitroSharp.NsScript
             public override string StringValue => string.Empty;
             public override double DoubleValue => 0.0d;
 
-            protected override bool TryConvertTo(BuiltInType targetType, out ConstantValue result)
+            public override bool TryConvertTo(BuiltInType targetType, out ConstantValue result)
             {
                 result = Default(targetType);
                 return true;

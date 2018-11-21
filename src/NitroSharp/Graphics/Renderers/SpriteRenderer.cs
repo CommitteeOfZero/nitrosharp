@@ -59,7 +59,8 @@ namespace NitroSharp.Graphics
             ReadOnlySpan<SpriteSystemData> systemData = sprites.SystemData.Enumerate();
 
             QuadBatcher quadBatcher = _quadBatcher;
-            for (int i = 0; i < sources.Length; i++)
+            int len = sources.Length;
+            for (int i = 0; i < len; i++)
             {
                 ImageSource source = sources[i];
                 RenderItemKey renderPriority = priorities[i];

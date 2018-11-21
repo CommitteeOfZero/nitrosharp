@@ -57,7 +57,10 @@ namespace NitroSharp.Media
                 videoState.StagingTexture = texturePool.RentStaging(size);
                 videoState.TextureView = _renderContext.ResourceFactory.CreateTextureView(videoState.VideoTexture);
 
-                session.Start();
+                if (!session.IsRunning)
+                {
+                    session.Start();
+                }
                 playbackState.Stopwatch.Start();
             }
         }

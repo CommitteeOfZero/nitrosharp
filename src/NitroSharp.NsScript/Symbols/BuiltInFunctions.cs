@@ -281,7 +281,7 @@ namespace NitroSharp.NsScript.Symbols
             NsCoordinate y = PopCoordinate(args);
             string fileOrEntityName = EntityName(PopString(args, allowNull: false, allowTypeConversion: true));
 
-            implementation.AddTexture(entityName, priority, x, y, fileOrEntityName);
+            implementation.CreateSprite(entityName, priority, x, y, fileOrEntityName);
             return null;
         }
 
@@ -297,7 +297,7 @@ namespace NitroSharp.NsScript.Symbols
             int height = (int)PopNumeric(args);
             string srcEntityName = PopString(args);
 
-            implementation.AddClippedTexture(entityName, priority, x1, y1, x2, y2, width, height, srcEntityName);
+            implementation.CreateSpriteEx(entityName, priority, x1, y1, x2, y2, width, height, srcEntityName);
             return null;
         }
 

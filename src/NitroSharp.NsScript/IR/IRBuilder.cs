@@ -246,7 +246,7 @@ namespace NitroSharp.NsScript.IR
             public override void VisitSelectSection(SelectSection selectSection)
             {
                 _instructions.Add(Instructions.GetSelectedChoice());
-                var label = ConstantValue.Create(selectSection.Label.Name);
+                var label = ConstantValue.Create(selectSection.Label.Name.Replace("@", ""));
                 int insertJumpAt = _instructions.Count;
                 _instructions.Add(Instructions.Nop());
                 VisitBlock(selectSection.Body);

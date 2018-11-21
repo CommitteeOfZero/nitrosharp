@@ -45,7 +45,7 @@ namespace NitroSharp.NsScript
         /// <summary>
         /// Original name: CreateTexture.
         /// </summary>
-        public virtual void AddTexture(string entityName, int priority, NsCoordinate x, NsCoordinate y, string fileOrExistingEntityName) { }
+        public virtual void CreateSprite(string entityName, int priority, NsCoordinate x, NsCoordinate y, string fileOrExistingEntityName) { }
 
         public virtual void SetFieldOfView(string unk1, double unk2) { }
 
@@ -87,7 +87,7 @@ namespace NitroSharp.NsScript
 
         public virtual void CreateChoice(string entityName) { }
         public virtual void PlayCutscene(string entityName, int priority, bool loop, bool alpha, string fileName, bool enableAudio) { }
-        public virtual void AddClippedTexture(string entityName, int priority, NsCoordinate x1, NsCoordinate y1, NsCoordinate x2, NsCoordinate y2, int width, int height, string srcEntityName) { }
+        public virtual void CreateSpriteEx(string entityName, int priority, NsCoordinate x1, NsCoordinate y1, NsCoordinate x2, NsCoordinate y2, int width, int height, string srcEntityName) { }
 
         public virtual void Rotate(string entityName, TimeSpan duration, NsNumeric dstRotationX, NsNumeric dstRotationY, NsNumeric dstRotationZ, NsEasingFunction easingFunction, TimeSpan delay) { }
         public virtual void MoveCube(string entityName, TimeSpan duration, NsNumeric dstTranslationX, NsNumeric dstTranslationY, NsNumeric dstTranslationZ, NsEasingFunction easingFunction, TimeSpan delay) { }

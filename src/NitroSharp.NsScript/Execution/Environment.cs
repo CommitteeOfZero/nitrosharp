@@ -27,10 +27,20 @@ namespace NitroSharp.NsScript.Execution
         public bool TryGetValue(string identifier, out ConstantValue value) => _map.TryGetValue(identifier, out value);
         public bool Contains(string identifier) => _map.ContainsKey(identifier);
 
-        internal void Set(string identifier, ConstantValue value)
+        internal void Set(string identifier, ConstantValue newValue)
         {
-            Debug.Assert(!ReferenceEquals(value, null));
-            _map[identifier] = value;
+            Debug.Assert(!ReferenceEquals(newValue, null));
+            if (_map.TryGetValue(identifier, out ConstantValue oldValue) && !(oldValue is null))
+            {
+                if (oldValue.Type != BuiltInType.Null
+                    && (oldValue.Type == BuiltInType.String
+                    || newValue.Type != BuiltInType.String))
+                {
+                    newValue.TryConvertTo(oldValue.Type, out newValue);
+                }
+            }
+
+            _map[identifier] = newValue;
         }
     }
 }

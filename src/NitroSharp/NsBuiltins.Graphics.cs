@@ -87,7 +87,7 @@ namespace NitroSharp
             _world.CreateSprite(entityName, fileName, default, 0, default, ref white);
         }
 
-        public override void AddTexture(
+        public override void CreateSprite(
             string entityName, int priority,
             NsCoordinate x, NsCoordinate y,
             string fileOrExistingEntityName)
@@ -98,7 +98,7 @@ namespace NitroSharp
             }
             else
             {
-                AddTextureCore(entityName, fileOrExistingEntityName, x, y, priority);
+                CreateSpriteCore(entityName, fileOrExistingEntityName, x, y, priority);
             }
         }
 
@@ -106,17 +106,17 @@ namespace NitroSharp
         {
         }
 
-        public override void AddClippedTexture(
+        public override void CreateSpriteEx(
             string entityName, int priority,
             NsCoordinate dstX, NsCoordinate dstY,
             NsCoordinate srcX, NsCoordinate srcY,
             int width, int height, string srcEntityName)
         {
             var srcRectangle = new RectangleF(srcX.Value, srcY.Value, width, height);
-            AddTextureCore(entityName, srcEntityName, dstX, dstY, priority, srcRectangle);
+            CreateSpriteCore(entityName, srcEntityName, dstX, dstY, priority, srcRectangle);
         }
 
-        private void AddTextureCore(
+        private void CreateSpriteCore(
             string entityName, string fileOrExistingEntityName,
             NsCoordinate x, NsCoordinate y,
             int priority, RectangleF? srcRect = null)
