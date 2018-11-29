@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>netcoreapp2.1</TargetFrameworks>
+    <TargetFrameworks>netcoreapp2.2</TargetFrameworks>
     <AssemblyName>NitroSharp.NsScriptCompiler</AssemblyName>
     <RootNamespace>NitroSharp.NsScriptNew</RootNamespace>
   </PropertyGroup>
@@ -11,8 +11,6 @@
   <ItemGroup>
     <Compile Include="..\Common\ArrayBuilder.cs" Link="Utilities\ArrayBuilder.cs" />
     <Compile Include="..\Common\HashHelper.cs" Link="Utilities\HashHelper.cs" />
-
-    <!--<Compile Remove="Syntax/Parser.cs" />-->
   </ItemGroup>
 
   <ItemGroup>
@@ -20,8 +18,6 @@
     <PackageReference Include="System.Memory" Version="4.5.1" />
     <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="4.5.2" />
     <PackageReference Include="System.Text.Encoding.CodePages" Version="4.5.0" />
-    <!--<PackageReference Include="System.Memory" Version="4.5.1" />
-    <PackageReference Include="System.Text.Encoding.CodePages" Version="4.5.0" />-->
   </ItemGroup>
 
   <ItemGroup>

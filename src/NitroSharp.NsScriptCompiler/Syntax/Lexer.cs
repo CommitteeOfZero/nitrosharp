@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using NitroSharp.NsScriptNew.Text;
 using System.Runtime.CompilerServices;
 using System;
-using System.Diagnostics;
 
 namespace NitroSharp.NsScriptNew.Syntax
 {
@@ -139,8 +138,7 @@ namespace NitroSharp.NsScriptNew.Syntax
                     if (!SyntaxFacts.IsSigil(PeekChar(1)))
                     {
                         ScanStringLiteralOrQuotedIdentifier(ref token, out TextSpan valueSpan);
-                        Debug.Assert(token.Kind == SyntaxTokenKind.StringLiteral);
-                        ReadOnlySpan<char> value = SourceText.GetSlice(valueSpan);
+                        ReadOnlySpan<char> value = SourceText.GetCharacterSpan(valueSpan);
                         // Certain keywords can appear in quotes
                         if (SyntaxFacts.TryGetKeywordKind(value, out SyntaxTokenKind keywordKind))
                         {
@@ -205,15 +203,14 @@ namespace NitroSharp.NsScriptNew.Syntax
                         AdvanceChar(3);
                         token.Kind = SyntaxTokenKind.AtArrow;
                     }
-                    else if (next == '+' || next == '-' || SyntaxFacts.IsDecDigit(next) || SyntaxFacts.IsSigil(next))
+                    else if (ScanIdentifier(ref token))
                     {
-                        AdvanceChar();
-                        token.Kind = SyntaxTokenKind.At;
+                        token.Kind = SyntaxTokenKind.Identifier;
                     }
                     else
                     {
-                        ScanIdentifier(ref token);
-                        token.Kind = SyntaxTokenKind.Identifier;
+                        AdvanceChar();
+                        token.Kind = SyntaxTokenKind.At;
                     }
                     break;
 
@@ -433,7 +430,7 @@ namespace NitroSharp.NsScriptNew.Syntax
                     bool success = ScanIdentifier(ref token);
                     if (success)
                     {
-                        ReadOnlySpan<char> text = SourceText.GetSlice(CurrentLexemeSpan);
+                        ReadOnlySpan<char> text = SourceText.GetCharacterSpan(CurrentLexemeSpan);
                         if (SyntaxFacts.TryGetKeywordKind(text, out SyntaxTokenKind keywordKind))
                         {
                             token.Kind = keywordKind;
@@ -511,9 +508,8 @@ namespace NitroSharp.NsScriptNew.Syntax
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private bool ScanSigil(ref MutableToken token)
+        private void ScanSigil(ref MutableToken token)
         {
-            bool consumed = true;
             switch (PeekChar())
             {
                 case '$':
@@ -528,20 +524,14 @@ namespace NitroSharp.NsScriptNew.Syntax
                     AdvanceChar();
                     token.Flags |= SyntaxTokenFlags.HasAtPrefix;
                     break;
-
-                default:
-                    consumed = false;
-                    break;
             }
-
-            return consumed;
         }
 
         private void ScanStringLiteralOrQuotedIdentifier(ref MutableToken token, out TextSpan valueSpan)
         {
             int start = Position;
             EatChar('"');
-            bool hasSigil = ScanSigil(ref token);
+            ScanSigil(ref token);
 
             char c;
             while ((c = PeekChar()) != '"' && c != EofCharacter)
@@ -556,10 +546,7 @@ namespace NitroSharp.NsScriptNew.Syntax
             }
 
             token.Flags |= SyntaxTokenFlags.IsQuoted;
-            token.Kind = hasSigil
-                ? SyntaxTokenKind.StringLiteralOrQuotedIdentifier
-                : SyntaxTokenKind.StringLiteral;
-
+            token.Kind = SyntaxTokenKind.StringLiteralOrQuotedIdentifier;
             int valueStart = start + 1;
             valueSpan = new TextSpan(valueStart, valueEnd - valueStart);
         }
@@ -579,21 +566,21 @@ namespace NitroSharp.NsScriptNew.Syntax
             }
 
             TextSpan valueSpan = CurrentLexemeSpan;
-#if NETCOREAPP2_1
-            ReadOnlySpan<char> stringValue = SourceText.GetSlice(valueSpan);
+#if NETCOREAPP2_2
+            ReadOnlySpan<char> valueText = SourceText.GetCharacterSpan(valueSpan);
 #else
-            string stringValue = SourceText.GetText(valueSpan).AsSpan().ToString();
+            string valueText = SourceText.GetCharacterSpan(valueSpan).ToString();
 #endif
 
             bool valid;
             if (!isFloat)
             {
-                valid = int.TryParse(stringValue, out _);
+                valid = int.TryParse(valueText, out _);
             }
             else
             {
                 valid = float.TryParse(
-                    stringValue, NumberStyles.AllowDecimalPoint,
+                    valueText, NumberStyles.AllowDecimalPoint,
                     CultureInfo.InvariantCulture, out _);
             }
 

@@ -53,7 +53,6 @@ namespace NitroSharp.Utilities
 
         // same as above but for users that go directly with unbuffered shared cache.
         private static int s_sharedRandom = Environment.TickCount;
-        private int _count;
 
         public string Add(ReadOnlySpan<char> span)
         {

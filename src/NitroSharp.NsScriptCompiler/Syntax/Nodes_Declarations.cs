@@ -2,31 +2,35 @@
 
 namespace NitroSharp.NsScriptNew.Syntax
 {
-    public abstract class Declaration : Statement
+    public abstract class MemberDeclarationSyntax : SyntaxNode
     {
-        protected Declaration(string name)
+        protected MemberDeclarationSyntax(Spanned<string> name, BlockSyntax body)
         {
             Name = name;
-        }
-
-        public string Name { get; }
-    }
-
-    public abstract class MemberDeclaration : Declaration
-    {
-        protected MemberDeclaration(string name, Block body) : base(name)
-        {
             Body = body;
         }
 
-        public Block Body { get; }
+        public Spanned<string> Name { get; }
+        public BlockSyntax Body { get; }
+
+        public override SyntaxNode GetNodeSlot(int index)
+        {
+            switch (index)
+            {
+                case 0: return Body;
+                default: return null;
+            }
+        }
     }
 
-    public sealed class Chapter : MemberDeclaration
+    public sealed class ChapterDeclarationSyntax : MemberDeclarationSyntax
     {
-        internal Chapter(string name, Block body) : base(name, body) { }
+        internal ChapterDeclarationSyntax(Spanned<string> name, BlockSyntax body)
+            : base(name, body)
+        {
+        }
 
-        public override SyntaxNodeKind Kind => SyntaxNodeKind.Chapter;
+        public override SyntaxNodeKind Kind => SyntaxNodeKind.ChapterDeclaration;
 
         public override void Accept(SyntaxVisitor visitor)
         {
@@ -39,11 +43,14 @@ namespace NitroSharp.NsScriptNew.Syntax
         }
     }
 
-    public sealed class Scene : MemberDeclaration
+    public sealed class SceneDeclarationSyntax : MemberDeclarationSyntax
     {
-        internal Scene(string name, Block body) : base(name, body) { }
+        internal SceneDeclarationSyntax(Spanned<string> name, BlockSyntax body)
+            : base(name, body)
+        {
+        }
 
-        public override SyntaxNodeKind Kind => SyntaxNodeKind.Scene;
+        public override SyntaxNodeKind Kind => SyntaxNodeKind.SceneDeclaration;
 
         public override void Accept(SyntaxVisitor visitor)
         {
@@ -56,15 +63,17 @@ namespace NitroSharp.NsScriptNew.Syntax
         }
     }
 
-    public sealed class Function : MemberDeclaration
+    public sealed class FunctionDeclarationSyntax : MemberDeclarationSyntax
     {
-        internal Function(string name, ImmutableArray<Parameter> parameters, Block body)
-            : base(name, body)
+        internal FunctionDeclarationSyntax(
+            Spanned<string> name,
+            ImmutableArray<ParameterSyntax> parameters,
+            BlockSyntax body) : base(name, body)
         {
             Parameters = parameters;
         }
 
-        public ImmutableArray<Parameter> Parameters { get; }
+        public ImmutableArray<ParameterSyntax> Parameters { get; }
         public override SyntaxNodeKind Kind => SyntaxNodeKind.Function;
 
         public override void Accept(SyntaxVisitor visitor)
@@ -78,10 +87,14 @@ namespace NitroSharp.NsScriptNew.Syntax
         }
     }
 
-    public sealed class Parameter : Declaration
+    public sealed class ParameterSyntax : SyntaxNode
     {
-        internal Parameter(string name) : base(name) { }
+        internal ParameterSyntax(Spanned<string> name)
+        {
+            Name = name;
+        }
 
+        public Spanned<string> Name { get; }
         public override SyntaxNodeKind Kind => SyntaxNodeKind.Parameter;
 
         public override void Accept(SyntaxVisitor visitor)
@@ -95,18 +108,21 @@ namespace NitroSharp.NsScriptNew.Syntax
         }
     }
 
-    /// <summary>
-    /// Also known as a &lt;PRE&gt; element.
-    /// </summary>
-    public sealed class DialogueBlock : MemberDeclaration
+    public sealed class DialogueBlockSyntax : StatementSyntax
     {
-        internal DialogueBlock(string name, string associatedBox, Block body)
-            : base(name, body)
+        internal DialogueBlockSyntax(
+            string name, string associatedBox,
+            ImmutableArray<StatementSyntax> parts)
         {
+            Name = name;
             AssociatedBox = associatedBox;
+            Parts = parts;
         }
 
+        public string Name { get; }
         public string AssociatedBox { get; }
+        public ImmutableArray<StatementSyntax> Parts { get; }
+
         public override SyntaxNodeKind Kind => SyntaxNodeKind.DialogueBlock;
 
         public override void Accept(SyntaxVisitor visitor)

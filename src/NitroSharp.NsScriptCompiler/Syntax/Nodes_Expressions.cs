@@ -3,24 +3,20 @@ using System.Collections.Immutable;
 
 namespace NitroSharp.NsScriptNew.Syntax
 {
-    public abstract class Expression : SyntaxNode
+    public abstract class ExpressionSyntax : SyntaxNode
     {
     }
 
-    public sealed class Literal : Expression
+    public sealed class LiteralExpressionSyntax : ExpressionSyntax
     {
-        internal static readonly Literal Null = new Literal(ConstantValue.Null);
-        internal static readonly Literal True = new Literal(ConstantValue.True);
-        internal static readonly Literal False = new Literal(ConstantValue.False);
-
-        internal Literal(ConstantValue value)
+        internal LiteralExpressionSyntax(Spanned<ConstantValue> value)
         {
             Value = value;
         }
 
-        public ConstantValue Value { get; }
+        public Spanned<ConstantValue> Value { get; }
         
-        public override SyntaxNodeKind Kind => SyntaxNodeKind.Literal;
+        public override SyntaxNodeKind Kind => SyntaxNodeKind.LiteralExpression;
 
         public override void Accept(SyntaxVisitor visitor)
         {
@@ -33,16 +29,16 @@ namespace NitroSharp.NsScriptNew.Syntax
         }
     }
 
-    public sealed class Identifier : Expression
+    public sealed class NameSyntax : ExpressionSyntax
     {
-        internal Identifier(string name)
+        internal NameSyntax(Spanned<string> name)
         {
             Name = name;
         }
 
-        public string Name { get; }
+        public Spanned<string> Name { get; }
 
-        public override SyntaxNodeKind Kind => SyntaxNodeKind.Identifier;
+        public override SyntaxNodeKind Kind => SyntaxNodeKind.NameExpression;
 
         public override void Accept(SyntaxVisitor visitor)
         {
@@ -56,18 +52,29 @@ namespace NitroSharp.NsScriptNew.Syntax
         }
     }
 
-    public sealed class UnaryExpression : Expression
+    public sealed class UnaryExpressionSyntax : ExpressionSyntax
     {
-        internal UnaryExpression(Expression operand, UnaryOperatorKind operatorKind)
+        internal UnaryExpressionSyntax(
+            ExpressionSyntax operand,
+            Spanned<UnaryOperatorKind> operatorKind)
         {
             Operand = operand;
             OperatorKind = operatorKind;
         }
 
-        public Expression Operand { get; }
-        public UnaryOperatorKind OperatorKind { get; }
+        public ExpressionSyntax Operand { get; }
+        public Spanned<UnaryOperatorKind> OperatorKind { get; }
 
         public override SyntaxNodeKind Kind => SyntaxNodeKind.UnaryExpression;
+
+        public override SyntaxNode GetNodeSlot(int index)
+        {
+            switch (index)
+            {
+                case 0: return Operand;
+                default: return null;
+            }
+        }
 
         public override void Accept(SyntaxVisitor visitor)
         {
@@ -80,20 +87,33 @@ namespace NitroSharp.NsScriptNew.Syntax
         }
     }
 
-    public sealed class BinaryExpression : Expression
+    public sealed class BinaryExpressionSyntax : ExpressionSyntax
     {
-        internal BinaryExpression(Expression left, BinaryOperatorKind operatorKind, Expression right)
+        internal BinaryExpressionSyntax(
+            ExpressionSyntax left,
+            Spanned<BinaryOperatorKind> operatorKind,
+            ExpressionSyntax right)
         {
             Left = left;
             OperatorKind = operatorKind;
             Right = right;
         }
 
-        public Expression Left { get; }
-        public BinaryOperatorKind OperatorKind { get; }
-        public Expression Right { get; }
+        public ExpressionSyntax Left { get; }
+        public Spanned<BinaryOperatorKind> OperatorKind { get; }
+        public ExpressionSyntax Right { get; }
 
         public override SyntaxNodeKind Kind => SyntaxNodeKind.BinaryExpression;
+
+        public override SyntaxNode GetNodeSlot(int index)
+        {
+            switch (index)
+            {
+                case 0: return Left;
+                case 1: return Right;
+                default: return null;
+            }
+        }
 
         public override void Accept(SyntaxVisitor visitor)
         {
@@ -106,20 +126,33 @@ namespace NitroSharp.NsScriptNew.Syntax
         }
     }
 
-    public sealed class AssignmentExpression : Expression
+    public sealed class AssignmentExpressionSyntax : ExpressionSyntax
     {
-        internal AssignmentExpression(Expression target, AssignmentOperatorKind operatorKind, Expression value)
+        internal AssignmentExpressionSyntax(
+            ExpressionSyntax target,
+            Spanned<AssignmentOperatorKind> operatorKind,
+            ExpressionSyntax value)
         {
             Target = target;
             OperatorKind = operatorKind;
             Value = value;
         }
 
-        public Expression Target { get; }
-        public AssignmentOperatorKind OperatorKind { get; }
-        public Expression Value { get; }
+        public ExpressionSyntax Target { get; }
+        public Spanned<AssignmentOperatorKind> OperatorKind { get; }
+        public ExpressionSyntax Value { get; }
 
         public override SyntaxNodeKind Kind => SyntaxNodeKind.AssignmentExpression;
+
+        public override SyntaxNode GetNodeSlot(int index)
+        {
+            switch (index)
+            {
+                case 0: return Target;
+                case 1: return Value;
+                default: return null;
+            }
+        }
 
         public override void Accept(SyntaxVisitor visitor)
         {
@@ -132,15 +165,24 @@ namespace NitroSharp.NsScriptNew.Syntax
         }
     }
 
-    public sealed class DeltaExpression : Expression
+    public sealed class DeltaExpressionSyntax : ExpressionSyntax
     {
-        internal DeltaExpression(Expression expression)
+        internal DeltaExpressionSyntax(ExpressionSyntax expression)
         {
             Expression = expression;
         }
 
-        public Expression Expression { get; }
+        public ExpressionSyntax Expression { get; }
         public override SyntaxNodeKind Kind => SyntaxNodeKind.DeltaExpression;
+
+        public override SyntaxNode GetNodeSlot(int index)
+        {
+            switch (index)
+            {
+                case 0: return Expression;
+                default: return null;
+            }
+        }
 
         public override void Accept(SyntaxVisitor visitor)
         {
@@ -153,16 +195,18 @@ namespace NitroSharp.NsScriptNew.Syntax
         }
     }
 
-    public sealed class FunctionCall : Expression
+    public sealed class FunctionCallSyntax : ExpressionSyntax
     {
-        internal FunctionCall(string targetName, ImmutableArray<Expression> arguments)
+        internal FunctionCallSyntax(
+            Spanned<string> targetName,
+            ImmutableArray<ExpressionSyntax> arguments)
         {
-            Target = targetName;
+            TargetName = targetName;
             Arguments = arguments;
         }
 
-        public string Target { get; }
-        public ImmutableArray<Expression> Arguments { get; }
+        public Spanned<string> TargetName { get; }
+        public ImmutableArray<ExpressionSyntax> Arguments { get; }
 
         public override SyntaxNodeKind Kind => SyntaxNodeKind.FunctionCall;
 

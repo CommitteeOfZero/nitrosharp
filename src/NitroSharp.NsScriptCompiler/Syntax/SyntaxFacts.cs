@@ -119,7 +119,7 @@ namespace NitroSharp.NsScriptNew.Syntax
             }
         }
 
-        public static bool IsStatementExpression(Expression expression)
+        public static bool IsStatementExpression(ExpressionSyntax expression)
         {
             var kind = expression.Kind;
             return kind == SyntaxNodeKind.AssignmentExpression || kind == SyntaxNodeKind.FunctionCall;
@@ -241,6 +241,8 @@ namespace NitroSharp.NsScriptNew.Syntax
                     return "$";
                 case SyntaxTokenKind.Hash:
                     return "#";
+                case SyntaxTokenKind.At:
+                    return "@";
                 case SyntaxTokenKind.Exclamation:
                     return "!";
                 case SyntaxTokenKind.Ampersand:
@@ -336,6 +338,8 @@ namespace NitroSharp.NsScriptNew.Syntax
                     return "case";
                 case SyntaxTokenKind.BreakKeyword:
                     return "break";
+                case SyntaxTokenKind.ReturnKeyword:
+                    return "return";
 
                 case SyntaxTokenKind.IncludeDirective:
                     return "#include";

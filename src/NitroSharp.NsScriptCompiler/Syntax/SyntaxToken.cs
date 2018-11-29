@@ -26,13 +26,13 @@ namespace NitroSharp.NsScriptNew.Syntax
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ReadOnlySpan<char> GetText(SourceText sourceText)
         {
-            return sourceText.GetSlice(TextSpan);
+            return sourceText.GetCharacterSpan(TextSpan);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ReadOnlySpan<char> GetValueText(SourceText sourceText)
         {
-            return sourceText.GetSlice(GetValueSpan());
+            return sourceText.GetCharacterSpan(GetValueSpan());
         }
 
         public TextSpan GetValueSpan()

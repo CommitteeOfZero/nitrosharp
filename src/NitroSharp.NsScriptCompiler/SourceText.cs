@@ -65,7 +65,7 @@ namespace NitroSharp.NsScriptNew.Text
         public string GetText(TextSpan textSpan) => _source.Substring(textSpan.Start, textSpan.Length);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ReadOnlySpan<char> GetSlice(TextSpan textSpan)
+        public ReadOnlySpan<char> GetCharacterSpan(TextSpan textSpan)
             => _source.AsSpan().Slice(textSpan.Start, textSpan.Length);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

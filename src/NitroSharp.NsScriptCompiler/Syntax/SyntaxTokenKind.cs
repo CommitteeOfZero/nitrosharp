@@ -10,7 +10,6 @@
 
         Identifier,
         NumericLiteral,
-        StringLiteral,
         StringLiteralOrQuotedIdentifier,
 
         // Punctuation

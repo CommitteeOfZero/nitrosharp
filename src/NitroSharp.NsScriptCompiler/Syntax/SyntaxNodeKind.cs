@@ -4,8 +4,8 @@
     {
         SourceFile,
 
-        Chapter,
-        Scene,
+        ChapterDeclaration,
+        SceneDeclaration,
         Function,
         Parameter,
 
@@ -21,8 +21,8 @@
         CallChapterStatement,
         BreakStatement,
 
-        Identifier,
-        Literal,
+        NameExpression,
+        LiteralExpression,
         UnaryExpression,
         BinaryExpression,
         AssignmentExpression,

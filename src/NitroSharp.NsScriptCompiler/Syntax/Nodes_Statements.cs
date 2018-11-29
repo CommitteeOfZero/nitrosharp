@@ -3,18 +3,18 @@ using System.Collections.Immutable;
 
 namespace NitroSharp.NsScriptNew.Syntax
 {
-    public abstract class Statement : SyntaxNode
+    public abstract class StatementSyntax : SyntaxNode
     {
     }
 
-    public sealed class Block : Statement
+    public sealed class BlockSyntax : StatementSyntax
     {
-        internal Block(ImmutableArray<Statement> statements)
+        internal BlockSyntax(ImmutableArray<StatementSyntax> statements)
         {
             Statements = statements;
         }
 
-        public ImmutableArray<Statement> Statements { get; }
+        public ImmutableArray<StatementSyntax> Statements { get; }
         public override SyntaxNodeKind Kind => SyntaxNodeKind.Block;
 
         public override void Accept(SyntaxVisitor visitor)
@@ -28,14 +28,14 @@ namespace NitroSharp.NsScriptNew.Syntax
         }
     }
 
-    public class ExpressionStatement : Statement
+    public class ExpressionStatementSyntax : StatementSyntax
     {
-        internal ExpressionStatement(Expression expression)
+        internal ExpressionStatementSyntax(ExpressionSyntax expression)
         {
             Expression = expression;
         }
 
-        public Expression Expression { get; }
+        public ExpressionSyntax Expression { get; }
         public override SyntaxNodeKind Kind => SyntaxNodeKind.ExpressionStatement;
 
         public override void Accept(SyntaxVisitor visitor)
@@ -49,20 +49,34 @@ namespace NitroSharp.NsScriptNew.Syntax
         }
     }
 
-    public sealed class IfStatement : Statement
+    public sealed class IfStatementSyntax : StatementSyntax
     {
-        internal IfStatement(Expression condition, Statement ifTrueStatement, Statement ifFalseStatement)
+        internal IfStatementSyntax(
+            ExpressionSyntax condition,
+            StatementSyntax ifTrueStatement,
+            StatementSyntax ifFalseStatement)
         {
             Condition = condition;
             IfTrueStatement = ifTrueStatement;
             IfFalseStatement = ifFalseStatement;
         }
 
-        public Expression Condition { get; }
-        public Statement IfTrueStatement { get; }
-        public Statement IfFalseStatement { get; }
+        public ExpressionSyntax Condition { get; }
+        public StatementSyntax IfTrueStatement { get; }
+        public StatementSyntax IfFalseStatement { get; }
 
         public override SyntaxNodeKind Kind => SyntaxNodeKind.IfStatement;
+
+        public override SyntaxNode GetNodeSlot(int index)
+        {
+            switch (index)
+            {
+                case 0: return Condition;
+                case 1: return IfTrueStatement;
+                case 2: return IfFalseStatement;
+                default: return null;
+            }
+        }
 
         public override void Accept(SyntaxVisitor visitor)
         {
@@ -75,7 +89,7 @@ namespace NitroSharp.NsScriptNew.Syntax
         }
     }
 
-    public sealed class BreakStatement : Statement
+    public sealed class BreakStatementSyntax : StatementSyntax
     {
         public override SyntaxNodeKind Kind => SyntaxNodeKind.BreakStatement;
 
@@ -90,16 +104,16 @@ namespace NitroSharp.NsScriptNew.Syntax
         }
     }
 
-    public sealed class WhileStatement : Statement
+    public sealed class WhileStatementSyntax : StatementSyntax
     {
-        internal WhileStatement(Expression condition, Statement body)
+        internal WhileStatementSyntax(ExpressionSyntax condition, StatementSyntax body)
         {
             Condition = condition;
             Body = body;
         }
 
-        public Expression Condition { get; }
-        public Statement Body { get; }
+        public ExpressionSyntax Condition { get; }
+        public StatementSyntax Body { get; }
 
         public override SyntaxNodeKind Kind => SyntaxNodeKind.WhileStatement;
 
@@ -114,7 +128,7 @@ namespace NitroSharp.NsScriptNew.Syntax
         }
     }
 
-    public sealed class ReturnStatement : Statement
+    public sealed class ReturnStatementSyntax : StatementSyntax
     {
         public override SyntaxNodeKind Kind => SyntaxNodeKind.ReturnStatement;
 
@@ -129,14 +143,14 @@ namespace NitroSharp.NsScriptNew.Syntax
         }
     }
 
-    public sealed class SelectStatement : Statement
+    public sealed class SelectStatementSyntax : StatementSyntax
     {
-        internal SelectStatement(Block body)
+        internal SelectStatementSyntax(BlockSyntax body)
         {
             Body = body;
         }
 
-        public Block Body { get; }
+        public BlockSyntax Body { get; }
         public override SyntaxNodeKind Kind => SyntaxNodeKind.SelectStatement;
 
         public override void Accept(SyntaxVisitor visitor)
@@ -150,16 +164,16 @@ namespace NitroSharp.NsScriptNew.Syntax
         }
     }
 
-    public sealed class SelectSection : Statement
+    public sealed class SelectSectionSyntax : StatementSyntax
     {
-        internal SelectSection(string label, Block body)
+        internal SelectSectionSyntax(Spanned<string> label, BlockSyntax body)
         {
             Label = label;
             Body = body;
         }
 
-        public string Label { get; }
-        public Block Body { get; }
+        public Spanned<string> Label { get; }
+        public BlockSyntax Body { get; }
 
         public override SyntaxNodeKind Kind => SyntaxNodeKind.SelectSection;
 
@@ -174,14 +188,14 @@ namespace NitroSharp.NsScriptNew.Syntax
         }
     }
 
-    public sealed class CallChapterStatement : Statement
+    public sealed class CallChapterStatementSyntax : StatementSyntax
     {
-        internal CallChapterStatement(SourceFileReference target)
+        internal CallChapterStatementSyntax(Spanned<string> targetName)
         {
-            Target = target;
+            TargetName = targetName;
         }
 
-        public SourceFileReference Target { get; }
+        public Spanned<string> TargetName { get; }
         public override SyntaxNodeKind Kind => SyntaxNodeKind.CallChapterStatement;
 
         public override void Accept(SyntaxVisitor visitor)
@@ -196,16 +210,16 @@ namespace NitroSharp.NsScriptNew.Syntax
         }
     }
 
-    public sealed class CallSceneStatement : Statement
+    public sealed class CallSceneStatementSyntax : StatementSyntax
     {
-        internal CallSceneStatement(SourceFileReference targetFile, string sceneName)
+        internal CallSceneStatementSyntax(Spanned<string>? targetFile, Spanned<string> targetScene)
         {
             TargetFile = targetFile;
-            SceneName = sceneName;
+            TargetScene = targetScene;
         }
 
-        public SourceFileReference TargetFile { get; }
-        public string SceneName { get; }
+        public Spanned<string>? TargetFile { get; }
+        public Spanned<string> TargetScene { get; }
         public override SyntaxNodeKind Kind => SyntaxNodeKind.CallSceneStatement;
 
         public override void Accept(SyntaxVisitor visitor)
@@ -219,7 +233,7 @@ namespace NitroSharp.NsScriptNew.Syntax
         }
     }
 
-    public sealed class PXmlString : Statement
+    public sealed class PXmlString : StatementSyntax
     {
         internal PXmlString(string text)
         {
@@ -240,7 +254,7 @@ namespace NitroSharp.NsScriptNew.Syntax
         }
     }
 
-    public sealed class PXmlLineSeparator : Statement
+    public sealed class PXmlLineSeparator : StatementSyntax
     {
         public override SyntaxNodeKind Kind => SyntaxNodeKind.PXmlLineSeparator;
 

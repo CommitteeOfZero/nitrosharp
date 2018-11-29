@@ -20,12 +20,12 @@ namespace NitroSharp.NsScriptNew
 
         public ReadOnlySpan<char> GetText(in SyntaxToken token)
         {
-            return _sourceText.GetSlice(token.TextSpan);
+            return _sourceText.GetCharacterSpan(token.TextSpan);
         }
 
         public ReadOnlySpan<char> GetValueText(in SyntaxToken token)
         {
-            return _sourceText.GetSlice(token.GetValueSpan());
+            return _sourceText.GetCharacterSpan(token.GetValueSpan());
         }
     }
 }
