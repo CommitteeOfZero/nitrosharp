@@ -49,6 +49,11 @@
     <EmbeddedResource Include="Graphics\Shaders\Generated\**">
     </EmbeddedResource>
   </ItemGroup>
+  
+  
+  <ItemGroup>
+    <Compile Include="../Common/HashHelper.cs" Link="Utilities/HashHelper.cs" />
+  </ItemGroup>
 
   <Target Name="EmbedGeneratedShaderContent" AfterTargets="AssignTargetPaths">
     <ItemGroup>

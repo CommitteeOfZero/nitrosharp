@@ -1,0 +1,42 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>netcoreapp2.1</TargetFrameworks>
+    <AssemblyName>NitroSharp.NsScriptCompiler</AssemblyName>
+    <RootNamespace>NitroSharp.NsScriptNew</RootNamespace>
+  </PropertyGroup>
+
+  <Import Project="..\..\OutputPath.props" />
+
+  <ItemGroup>
+    <Compile Include="..\Common\ArrayBuilder.cs" Link="Utilities\ArrayBuilder.cs" />
+    <Compile Include="..\Common\HashHelper.cs" Link="Utilities\HashHelper.cs" />
+
+    <!--<Compile Remove="Syntax/Parser.cs" />-->
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Collections.Immutable" Version="1.5.0" />
+    <PackageReference Include="System.Memory" Version="4.5.1" />
+    <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="4.5.2" />
+    <PackageReference Include="System.Text.Encoding.CodePages" Version="4.5.0" />
+    <!--<PackageReference Include="System.Memory" Version="4.5.1" />
+    <PackageReference Include="System.Text.Encoding.CodePages" Version="4.5.0" />-->
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="Resources.Designer.cs">
+      <DependentUpon>Resources.resx</DependentUpon>
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+    </Compile>
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Update="Resources.resx">
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+      <Generator>ResXFileCodeGenerator</Generator>
+    </EmbeddedResource>
+  </ItemGroup>
+
+</Project>
