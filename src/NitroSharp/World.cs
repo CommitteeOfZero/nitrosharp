@@ -355,15 +355,6 @@ namespace NitroSharp
             }
         }
 
-        [Conditional("DEBUG")]
-        private void Debug_ValidateEntities()
-        {
-            foreach (var kvp in _entities)
-            {
-                 Debug.Assert(IsEntityAlive(kvp.Value));
-            }
-        }
-
         private static void ThrowCannotMerge()
             => throw new InvalidOperationException(
                 "Instances of game state that have conflicting change sets cannot be merged. This is likely a bug.");

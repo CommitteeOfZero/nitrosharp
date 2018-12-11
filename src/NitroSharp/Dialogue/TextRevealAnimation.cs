@@ -13,6 +13,7 @@ namespace NitroSharp.Dialogue
         private readonly ushort _startIndex;
         private ushort _offset;
         private World _world;
+        private EntityTable.RefTypeRow<TextLayout> _textLayouts;
 
         public TextRevealAnimation(World world, Entity textEntity, ushort startPosition)
             : base(textEntity, CalculateDuration(world.TextInstances.Layouts.Mutate(textEntity), startPosition))
@@ -29,9 +30,14 @@ namespace NitroSharp.Dialogue
             return TimeSpan.FromMilliseconds(GlyphTime * (textLayout.Glyphs.Count - start));
         }
 
-        protected override void Advance(World world, float deltaMilliseconds)
+        protected override void Setup(World world)
         {
-            TextLayout textLayout = world.TextInstances.Layouts.GetValue(Entity);
+            _textLayouts = world.TextInstances.Layouts;
+        }
+
+        protected override void Advance(float deltaMilliseconds)
+        {
+            TextLayout textLayout = _textLayouts.GetValue(Entity);
 
             // First, we need to catch up (i.e. fully reveal the glyphs
             // that come before the one we're supposed to be animating at this time).

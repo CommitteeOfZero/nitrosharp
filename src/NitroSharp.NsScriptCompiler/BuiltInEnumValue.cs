@@ -1,4 +1,4 @@
-﻿namespace NitroSharp.NsScript
+﻿namespace NitroSharp.NsScriptNew
 {
     public enum BuiltInEnumValue
     {

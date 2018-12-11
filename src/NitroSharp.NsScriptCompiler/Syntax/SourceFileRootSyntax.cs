@@ -2,20 +2,20 @@
 
 namespace NitroSharp.NsScriptNew.Syntax
 {
-    public sealed class SourceFile : SyntaxNode
+    public sealed class SourceFileRootSyntax : SyntaxNode
     {
-        internal SourceFile(
-            ImmutableArray<MemberDeclarationSyntax> members,
+        internal SourceFileRootSyntax(
+            ImmutableArray<MemberDeclarationSyntax> memberDeclarations,
             ImmutableArray<Spanned<string>> fileReferences)
         {
-            MemberDeclarations = members;
+            MemberDeclarations = memberDeclarations;
             FileReferences = fileReferences;
         }
 
         public ImmutableArray<MemberDeclarationSyntax> MemberDeclarations { get; }
         public ImmutableArray<Spanned<string>> FileReferences { get; }
 
-        public override SyntaxNodeKind Kind => SyntaxNodeKind.SourceFile;
+        public override SyntaxNodeKind Kind => SyntaxNodeKind.SourceFileRoot;
 
         public override void Accept(SyntaxVisitor visitor)
         {

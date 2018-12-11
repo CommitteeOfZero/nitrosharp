@@ -74,7 +74,7 @@ namespace NitroSharp.NsScriptNew.Syntax
         }
 
         public ImmutableArray<ParameterSyntax> Parameters { get; }
-        public override SyntaxNodeKind Kind => SyntaxNodeKind.Function;
+        public override SyntaxNodeKind Kind => SyntaxNodeKind.FunctionDeclaration;
 
         public override void Accept(SyntaxVisitor visitor)
         {

@@ -40,8 +40,6 @@ namespace NitroSharp.NsScriptNew.Syntax
 
         protected TextSpan CurrentSpanStart => new TextSpan(CurrentLexemeSpan.Start, 0);
 
-        private int CurrentLexemeLength => _position - _lexemeStart;
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected char PeekChar() => PeekChar(0);
 

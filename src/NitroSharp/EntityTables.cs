@@ -4,7 +4,6 @@ using NitroSharp.Content;
 using NitroSharp.Graphics;
 using NitroSharp.Graphics.Renderers;
 using NitroSharp.Media;
-using NitroSharp.NsScript.Symbols;
 using NitroSharp.Primitives;
 using NitroSharp.Text;
 using Veldrid;

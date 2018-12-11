@@ -68,7 +68,7 @@ namespace NitroSharp.Graphics.Systems
             _viewProjectionSet = factory.CreateResourceSet(new ResourceSetDescription(_viewProjectionLayout, _viewProjectionBuffer));
             var viewProjection = new ViewProjection(_viewProjectionLayout, _viewProjectionSet, _viewProjectionBuffer);
 
-            _mainBucket = new RenderBucket<RenderItemKey>(_gd, MainBucketSize);
+            _mainBucket = new RenderBucket<RenderItemKey>(MainBucketSize);
             _quadGeometryStream = new QuadGeometryStream(device);
           
             CreateWhiteTexture(out _whiteTexture, out _whiteTextureView);

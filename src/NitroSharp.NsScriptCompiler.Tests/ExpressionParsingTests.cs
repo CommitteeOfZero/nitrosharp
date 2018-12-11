@@ -28,7 +28,7 @@ namespace NitroSharp.NsScriptCompiler.Tests
         [InlineData("Foo()", "Foo")]
         public void FunctionCall_Parses_Correctly(string text, string functionName)
         {
-            var invocation = AssertExpression<FunctionCallSyntax>(text, SyntaxNodeKind.FunctionCall);
+            var invocation = AssertExpression<FunctionCallExpressionSyntax>(text, SyntaxNodeKind.FunctionCallExpression);
             Common.AssertSpannedText(text, functionName, invocation.TargetName);
         }
 

@@ -79,7 +79,7 @@ namespace NitroSharp.NsScriptNew.Syntax
             return DefaultVisitNode(deltaExpression);
         }
 
-        public virtual TResult VisitFunctionCall(FunctionCallSyntax functionCall)
+        public virtual TResult VisitFunctionCall(FunctionCallExpressionSyntax functionCall)
         {
             return DefaultVisitNode(functionCall);
         }

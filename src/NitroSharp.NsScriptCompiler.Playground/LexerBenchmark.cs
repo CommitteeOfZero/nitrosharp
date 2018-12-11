@@ -2,7 +2,7 @@
 using NitroSharp.NsScriptNew;
 using System.IO;
 
-namespace NitroSharp.NsScriptCompiler.Benchmarks
+namespace NitroSharp.NsScriptCompiler.Playground
 {
     [MemoryDiagnoser]
     public class LexerBenchmark

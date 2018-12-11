@@ -110,5 +110,10 @@ namespace NitroSharp.Utilities
             DisposeCollector.Add(sc);
             return sc;
         }
+
+        protected override Texture CreateTextureCore(ulong nativeTexture, ref TextureDescription description)
+        {
+            throw new System.NotImplementedException();
+        }
     }
 }

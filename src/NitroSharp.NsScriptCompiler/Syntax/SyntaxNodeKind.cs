@@ -2,17 +2,17 @@
 {
     public enum SyntaxNodeKind
     {
-        SourceFile,
+        SourceFileRoot,
 
         ChapterDeclaration,
         SceneDeclaration,
-        Function,
+        FunctionDeclaration,
         Parameter,
 
         Block,
         IfStatement,
         WhileStatement,
-        FunctionCall,
+        FunctionCallExpression,
         ExpressionStatement,
         ReturnStatement,
         SelectStatement,

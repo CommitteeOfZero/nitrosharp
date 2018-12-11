@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using NitroSharp.NsScriptNew.Text;
 using System.Runtime.CompilerServices;
 using System;
+using System.Runtime.InteropServices;
 
 namespace NitroSharp.NsScriptNew.Syntax
 {
@@ -14,6 +15,7 @@ namespace NitroSharp.NsScriptNew.Syntax
 
     internal sealed class Lexer : TextScanner
     {
+        [StructLayout(LayoutKind.Sequential)]
         private struct MutableToken
         {
             public TextSpan TextSpan;
@@ -197,7 +199,6 @@ namespace NitroSharp.NsScriptNew.Syntax
                     break;
 
                 case '@':
-                    char next = PeekChar(1);
                     if (PeekChar(1) == '-' && PeekChar(2) == '>')
                     {
                         AdvanceChar(3);

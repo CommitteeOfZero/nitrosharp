@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.27130.2020
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.28315.86
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NitroSharp.NsScript", "src\NitroSharp.NsScript\NitroSharp.NsScript.csproj", "{D141E5DC-81DB-4352-8BAE-E3772BDC23DE}"
 EndProject
@@ -46,7 +46,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Common", "Common", "{913892
 		src\Common\HashHelper.cs = src\Common\HashHelper.cs
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NitroSharp.NsScriptCompiler.Benchmarks", "src\NitroSharp.NsScriptCompiler.Benchmarks\NitroSharp.NsScriptCompiler.Benchmarks.csproj", "{B8E63AB4-1244-4CEB-8358-57894F8CA668}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NitroSharp.NsScriptCompiler.Playground", "src\NitroSharp.NsScriptCompiler.Playground\NitroSharp.NsScriptCompiler.Playground.csproj", "{B8E63AB4-1244-4CEB-8358-57894F8CA668}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

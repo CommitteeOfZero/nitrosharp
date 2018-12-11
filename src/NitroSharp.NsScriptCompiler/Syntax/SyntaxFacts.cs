@@ -11,10 +11,6 @@ namespace NitroSharp.NsScriptNew.Syntax
         private const char EofCharacter = char.MaxValue;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool IsLetter(char c) => char.IsLetter(c);
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool IsLatinLetter(char c) => c >= 'A' && c <= 'z';
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool IsDecDigit(char c) => c >= '0' && c <= '9';
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool IsHexDigit(char c)
@@ -122,7 +118,7 @@ namespace NitroSharp.NsScriptNew.Syntax
         public static bool IsStatementExpression(ExpressionSyntax expression)
         {
             var kind = expression.Kind;
-            return kind == SyntaxNodeKind.AssignmentExpression || kind == SyntaxNodeKind.FunctionCall;
+            return kind == SyntaxNodeKind.AssignmentExpression || kind == SyntaxNodeKind.FunctionCallExpression;
         }
 
         public static bool TryGetUnaryOperatorKind(SyntaxTokenKind operatorTokenKind, out UnaryOperatorKind kind)
@@ -140,7 +136,7 @@ namespace NitroSharp.NsScriptNew.Syntax
                     break;
 
                 default:
-                    kind = default(UnaryOperatorKind);
+                    kind = default;
                     return false;
             }
 
@@ -192,7 +188,7 @@ namespace NitroSharp.NsScriptNew.Syntax
                     break;
 
                 default:
-                    kind = default(BinaryOperatorKind);
+                    kind = default;
                     return false;
             }
 
@@ -226,7 +222,7 @@ namespace NitroSharp.NsScriptNew.Syntax
                     break;
 
                 default:
-                    kind = default(AssignmentOperatorKind);
+                    kind = default;
                     return false;
             }
 
@@ -354,7 +350,7 @@ namespace NitroSharp.NsScriptNew.Syntax
             }
         }
 
-        internal static class KeywordScanner
+        private static class KeywordScanner
         {
             private const int ChapterKeywordHash = 703916114;
             private const int FunctionKeywordHash = -1630125495;

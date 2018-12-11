@@ -96,7 +96,7 @@ namespace NitroSharp.NsScriptNew.Syntax
             DefaultVisitNode(deltaExpression);
         }
 
-        public virtual void VisitFunctionCall(FunctionCallSyntax functionCall)
+        public virtual void VisitFunctionCall(FunctionCallExpressionSyntax functionCall)
         {
             DefaultVisitNode(functionCall);
         }

@@ -29,9 +29,9 @@ namespace NitroSharp.NsScriptNew.Syntax
         }
     }
 
-    public sealed class NameSyntax : ExpressionSyntax
+    public sealed class NameExpressionSyntax : ExpressionSyntax
     {
-        internal NameSyntax(Spanned<string> name)
+        internal NameExpressionSyntax(Spanned<string> name)
         {
             Name = name;
         }
@@ -195,9 +195,9 @@ namespace NitroSharp.NsScriptNew.Syntax
         }
     }
 
-    public sealed class FunctionCallSyntax : ExpressionSyntax
+    public sealed class FunctionCallExpressionSyntax : ExpressionSyntax
     {
-        internal FunctionCallSyntax(
+        internal FunctionCallExpressionSyntax(
             Spanned<string> targetName,
             ImmutableArray<ExpressionSyntax> arguments)
         {
@@ -208,7 +208,7 @@ namespace NitroSharp.NsScriptNew.Syntax
         public Spanned<string> TargetName { get; }
         public ImmutableArray<ExpressionSyntax> Arguments { get; }
 
-        public override SyntaxNodeKind Kind => SyntaxNodeKind.FunctionCall;
+        public override SyntaxNodeKind Kind => SyntaxNodeKind.FunctionCallExpression;
 
         public override void Accept(SyntaxVisitor visitor)
         {

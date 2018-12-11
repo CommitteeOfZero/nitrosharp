@@ -73,7 +73,7 @@ namespace NitroSharp.Graphics
         private readonly List<ResourceSet> _sharedResourceSets;
         private (byte index, ResourceSet pipeline) _lastSharedResourceSet;
 
-        public RenderBucket(GraphicsDevice graphicsDevice, uint initialCapacity)
+        public RenderBucket(uint initialCapacity)
         {
             _renderItems = new ArrayBuilder<RenderItem>(initialCapacity);
             _keys = new ArrayBuilder<TKey>(initialCapacity);

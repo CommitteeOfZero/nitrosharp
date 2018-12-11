@@ -93,24 +93,12 @@ namespace NitroSharp.NsScriptNew.Syntax
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private ReadOnlySpan<char> GetCharSpan(in SyntaxToken token)
-            => SourceText.GetCharacterSpan(token.TextSpan);
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private ReadOnlySpan<char> GetValueCharSpan(in SyntaxToken token)
-            => SourceText.GetCharacterSpan(token.GetValueSpan());
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private string GetText(in SyntaxToken token)
             => SourceText.GetText(token.TextSpan);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private string GetValueText(in SyntaxToken token)
             => SourceText.GetText(token.GetValueSpan());
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private string InternText(in SyntaxToken token)
-            => _internTable.Add(SourceText.GetCharacterSpan(token.TextSpan));
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private string InternValueText(in SyntaxToken token)
@@ -155,7 +143,7 @@ namespace NitroSharp.NsScriptNew.Syntax
             }
         }
 
-        public SourceFile ParseSourceFile()
+        public SourceFileRootSyntax ParseSourceFile()
         {
             var fileReferences = ImmutableArray.CreateBuilder<Spanned<string>>();
             SyntaxTokenKind tk;
@@ -204,7 +192,7 @@ namespace NitroSharp.NsScriptNew.Syntax
                 }
             }
 
-            return new SourceFile(members.ToImmutable(), fileReferences.ToImmutable());
+            return new SourceFileRootSyntax(members.ToImmutable(), fileReferences.ToImmutable());
         }
 
         public MemberDeclarationSyntax ParseMemberDeclaration()
@@ -355,7 +343,10 @@ namespace NitroSharp.NsScriptNew.Syntax
                     EatToken();
                     return new PXmlLineSeparator();
                 case SyntaxTokenKind.LessThan:
-                    if (SkipStrayPXmlElement()) { return null; }
+                    if (SkipStrayPXmlElementIfApplicable())
+                    {
+                        return null;
+                    }
                     goto default;
                 case SyntaxTokenKind.Dot:
                     SkipToNextLine();
@@ -374,7 +365,7 @@ namespace NitroSharp.NsScriptNew.Syntax
             }
         }
 
-        private bool SkipStrayPXmlElement()
+        private bool SkipStrayPXmlElementIfApplicable()
         {
             Debug.Assert(CurrentToken.Kind == SyntaxTokenKind.LessThan);
             int currentLine = GetLineNumber();
@@ -424,7 +415,7 @@ namespace NitroSharp.NsScriptNew.Syntax
 
         private ExpressionStatementSyntax ParseFunctionCallWithOmittedParentheses()
         {
-            FunctionCallSyntax call = ParseFunctionCall();
+            FunctionCallExpressionSyntax call = ParseFunctionCall();
             EatStatementTerminator();
             return new ExpressionStatementSyntax(call);
         }
@@ -648,12 +639,12 @@ namespace NitroSharp.NsScriptNew.Syntax
             }
         }
 
-        private NameSyntax ParseNameSyntax(bool isFunctionName = false)
+        private NameExpressionSyntax ParseNameSyntax(bool isFunctionName = false)
         {
             Debug.Assert(CurrentToken.Kind == SyntaxTokenKind.Identifier
                       || CurrentToken.Kind == SyntaxTokenKind.StringLiteralOrQuotedIdentifier);
 
-            return new NameSyntax(ParseIdentifier());
+            return new NameExpressionSyntax(ParseIdentifier());
         }
 
         private bool IsFunctionCall()
@@ -705,12 +696,12 @@ namespace NitroSharp.NsScriptNew.Syntax
             }
         }
 
-        private FunctionCallSyntax ParseFunctionCall()
+        private FunctionCallExpressionSyntax ParseFunctionCall()
         {
             Spanned<string> targetName = ParseIdentifier();
             ImmutableArray<ExpressionSyntax>? args = ParseArgumentList();
             if (!args.HasValue) { return null; }
-            return new FunctionCallSyntax(targetName, args.Value);
+            return new FunctionCallExpressionSyntax(targetName, args.Value);
         }
 
         private ImmutableArray<ExpressionSyntax>? ParseArgumentList()
@@ -900,6 +891,7 @@ namespace NitroSharp.NsScriptNew.Syntax
             string extractBlockName(in SyntaxToken identifierToken)
             {
                 ReadOnlySpan<char> span = SourceText.GetCharacterSpan(identifierToken.TextSpan);
+                Debug.Assert(span.Length >= 3);
                 return span.Slice(1, span.Length - 2).ToString();
             }
 

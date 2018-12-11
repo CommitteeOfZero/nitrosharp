@@ -1,9 +1,11 @@
 ﻿using System;
+using System.Numerics;
 using NitroSharp.Animation;
+using Veldrid;
 
 namespace NitroSharp.Logic.Components
 {
-    internal sealed class FadeAnimation : LerpAnimation<float>
+    internal sealed class FadeAnimation : LerpAnimation<RgbaFloat>
     {
         public FadeAnimation(Entity entity, TimeSpan duration,
             TimingFunction timingFunction = TimingFunction.Linear, bool repeat = false)
@@ -14,13 +16,18 @@ namespace NitroSharp.Logic.Components
         public float InitialOpacity;
         public float FinalOpacity;
 
-        protected override ref float GetReference(World world)
-            => ref world.GetTable<RenderItemTable>(Entity).Colors.Mutate(Entity)._channels.W;
-
-        protected override float InterpolateValue(float factor)
+        protected override EntityTable.Row<RgbaFloat> GetPropertyRow(World world)
         {
+            var table = world.GetTable<RenderItemTable>(Entity);
+            return table.Colors;
+        }
+
+        protected override void InterpolateValue(ref RgbaFloat value, float factor)
+        {
+            var channels = value.ToVector4();
             float delta = FinalOpacity - InitialOpacity;
-            return InitialOpacity + delta * factor;
+            channels.W = InitialOpacity + delta * factor;
+            value = new RgbaFloat(channels);
         }
     }
 }

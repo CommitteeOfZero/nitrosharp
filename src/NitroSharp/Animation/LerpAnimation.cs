@@ -2,7 +2,8 @@
 
 namespace NitroSharp.Animation
 {
-    internal abstract class LerpAnimation<T> : PropertyAnimation where T : unmanaged
+    internal abstract class LerpAnimation<T> : PropertyAnimation
+        where T : unmanaged
     {
         protected LerpAnimation(
             Entity entity, TimeSpan duration,
@@ -11,13 +12,20 @@ namespace NitroSharp.Animation
         {
         }
 
-        protected override void Advance(World world, float deltaMilliseconds)
+        protected EntityTable.Row<T> PropertyRow { get; private set; }
+
+        protected override void Setup(World world)
         {
-            T newValue = InterpolateValue(CalculateFactor(Progress, TimingFunction));
-            GetReference(world) = newValue;
+            PropertyRow = GetPropertyRow(world);
         }
 
-        protected abstract ref T GetReference(World world);
-        protected abstract T InterpolateValue(float factor);
+        protected abstract EntityTable.Row<T> GetPropertyRow(World world);
+
+        protected override void Advance(float deltaMilliseconds)
+        {
+            InterpolateValue(ref PropertyRow.Mutate(Entity), CalculateFactor(Progress, TimingFunction));
+        }
+
+        protected abstract void InterpolateValue(ref T value, float factor);
     }
 }

@@ -26,10 +26,6 @@
                     {
                         Animation = anim
                     });
-                    //if (anim.WaitingThread != null)
-                    //{
-                    //    _interpreter.ResumeThread(anim.WaitingThread);
-                    //}
                 }
                 else
                 {

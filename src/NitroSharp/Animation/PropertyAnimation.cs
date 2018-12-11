@@ -44,12 +44,13 @@ namespace NitroSharp.Animation
             }
             else
             {
+                Setup(world);
                 _initialized = true;
             }
 
             if (!_completed)
             {
-                Advance(world, deltaMilliseconds);
+                Advance(deltaMilliseconds);
                 PostAdvance(world);
                 return !_completed;
             }
@@ -57,7 +58,11 @@ namespace NitroSharp.Animation
             return false;
         }
 
-        protected virtual void Advance(World world, float deltaMilliseconds)
+        protected virtual void Setup(World world)
+        {
+        }
+
+        protected virtual void Advance(float deltaMilliseconds)
         {
         }
 

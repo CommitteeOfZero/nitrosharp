@@ -1,10 +1,11 @@
 ﻿using System;
 using System.Numerics;
 using NitroSharp.Animation;
+using NitroSharp.Graphics;
 
 namespace NitroSharp.Logic.Components
 {
-    internal sealed class MoveAnimation : LerpAnimation<Vector3>
+    internal sealed class MoveAnimation : LerpAnimation<TransformComponents>
     {
         public Vector3 StartPosition;
         public Vector3 Destination;
@@ -15,13 +16,16 @@ namespace NitroSharp.Logic.Components
         {
         }
 
-        protected override ref Vector3 GetReference(World world)
-            => ref world.GetTable<RenderItemTable>(Entity).TransformComponents.Mutate(Entity).Position;
+        protected override EntityTable.Row<TransformComponents> GetPropertyRow(World world)
+        {
+            var table = world.GetTable<RenderItemTable>(Entity);
+            return table.TransformComponents;
+        }
 
-        protected override Vector3 InterpolateValue(float factor)
+        protected override void InterpolateValue(ref TransformComponents value, float factor)
         {
             Vector3 delta = Destination - StartPosition;
-            return StartPosition + delta * factor;
+            value.Position = StartPosition + delta * factor;
         }
     }
 }

@@ -13,13 +13,16 @@ namespace NitroSharp.Animation
         public float InitialVolume;
         public float FinalVolume;
 
-        protected override ref float GetReference(World world)
-            => ref world.AudioClips.Volume.Mutate(Entity);
+        protected override EntityTable.Row<float> GetPropertyRow(World world)
+        {
+            var table = world.GetTable<AudioClipTable>(Entity);
+            return table.Volume;
+        }
 
-        protected override float InterpolateValue(float factor)
+        protected override void InterpolateValue(ref float value, float factor)
         {
             float delta = FinalVolume - InitialVolume;
-            return InitialVolume + delta * factor;
+            value = InitialVolume + delta * factor;
         }
     }
 }
