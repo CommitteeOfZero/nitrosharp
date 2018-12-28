@@ -1,10 +1,12 @@
 ﻿using System.Collections.Immutable;
+using NitroSharp.NsScriptNew.Text;
 
 namespace NitroSharp.NsScriptNew.Syntax
 {
     public abstract class MemberDeclarationSyntax : SyntaxNode
     {
-        protected MemberDeclarationSyntax(Spanned<string> name, BlockSyntax body)
+        protected MemberDeclarationSyntax(Spanned<string> name, BlockSyntax body, TextSpan span)
+            : base(span)
         {
             Name = name;
             Body = body;
@@ -25,8 +27,8 @@ namespace NitroSharp.NsScriptNew.Syntax
 
     public sealed class ChapterDeclarationSyntax : MemberDeclarationSyntax
     {
-        internal ChapterDeclarationSyntax(Spanned<string> name, BlockSyntax body)
-            : base(name, body)
+        internal ChapterDeclarationSyntax(Spanned<string> name, BlockSyntax body, TextSpan span)
+            : base(name, body, span)
         {
         }
 
@@ -45,8 +47,8 @@ namespace NitroSharp.NsScriptNew.Syntax
 
     public sealed class SceneDeclarationSyntax : MemberDeclarationSyntax
     {
-        internal SceneDeclarationSyntax(Spanned<string> name, BlockSyntax body)
-            : base(name, body)
+        internal SceneDeclarationSyntax(Spanned<string> name, BlockSyntax body, TextSpan span)
+            : base(name, body, span)
         {
         }
 
@@ -66,9 +68,8 @@ namespace NitroSharp.NsScriptNew.Syntax
     public sealed class FunctionDeclarationSyntax : MemberDeclarationSyntax
     {
         internal FunctionDeclarationSyntax(
-            Spanned<string> name,
-            ImmutableArray<ParameterSyntax> parameters,
-            BlockSyntax body) : base(name, body)
+            Spanned<string> name, ImmutableArray<ParameterSyntax> parameters,
+            BlockSyntax body, TextSpan span) : base(name, body, span)
         {
             Parameters = parameters;
         }
@@ -89,12 +90,12 @@ namespace NitroSharp.NsScriptNew.Syntax
 
     public sealed class ParameterSyntax : SyntaxNode
     {
-        internal ParameterSyntax(Spanned<string> name)
+        internal ParameterSyntax(string name, TextSpan span) : base(span)
         {
             Name = name;
         }
 
-        public Spanned<string> Name { get; }
+        public string Name { get; }
         public override SyntaxNodeKind Kind => SyntaxNodeKind.Parameter;
 
         public override void Accept(SyntaxVisitor visitor)
@@ -112,7 +113,8 @@ namespace NitroSharp.NsScriptNew.Syntax
     {
         internal DialogueBlockSyntax(
             string name, string associatedBox,
-            ImmutableArray<StatementSyntax> parts)
+            ImmutableArray<StatementSyntax> parts,
+            TextSpan span) : base(span)
         {
             Name = name;
             AssociatedBox = associatedBox;

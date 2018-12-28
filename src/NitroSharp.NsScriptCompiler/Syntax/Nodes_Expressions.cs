@@ -1,21 +1,24 @@
 ﻿using System;
 using System.Collections.Immutable;
+using NitroSharp.NsScriptNew.Text;
 
 namespace NitroSharp.NsScriptNew.Syntax
 {
     public abstract class ExpressionSyntax : SyntaxNode
     {
+        protected ExpressionSyntax(TextSpan span) : base(span)
+        {
+        }
     }
 
     public sealed class LiteralExpressionSyntax : ExpressionSyntax
     {
-        internal LiteralExpressionSyntax(Spanned<ConstantValue> value)
+        internal LiteralExpressionSyntax(in ConstantValue value, TextSpan span) : base(span)
         {
             Value = value;
         }
 
-        public Spanned<ConstantValue> Value { get; }
-        
+        public ConstantValue Value { get; }
         public override SyntaxNodeKind Kind => SyntaxNodeKind.LiteralExpression;
 
         public override void Accept(SyntaxVisitor visitor)
@@ -31,13 +34,12 @@ namespace NitroSharp.NsScriptNew.Syntax
 
     public sealed class NameExpressionSyntax : ExpressionSyntax
     {
-        internal NameExpressionSyntax(Spanned<string> name)
+        internal NameExpressionSyntax(string name, TextSpan span) : base(span)
         {
             Name = name;
         }
 
-        public Spanned<string> Name { get; }
-
+        public string Name { get; }
         public override SyntaxNodeKind Kind => SyntaxNodeKind.NameExpression;
 
         public override void Accept(SyntaxVisitor visitor)
@@ -56,7 +58,8 @@ namespace NitroSharp.NsScriptNew.Syntax
     {
         internal UnaryExpressionSyntax(
             ExpressionSyntax operand,
-            Spanned<UnaryOperatorKind> operatorKind)
+            Spanned<UnaryOperatorKind> operatorKind,
+            TextSpan span) : base(span)
         {
             Operand = operand;
             OperatorKind = operatorKind;
@@ -92,7 +95,8 @@ namespace NitroSharp.NsScriptNew.Syntax
         internal BinaryExpressionSyntax(
             ExpressionSyntax left,
             Spanned<BinaryOperatorKind> operatorKind,
-            ExpressionSyntax right)
+            ExpressionSyntax right,
+            TextSpan span) : base(span)
         {
             Left = left;
             OperatorKind = operatorKind;
@@ -131,7 +135,8 @@ namespace NitroSharp.NsScriptNew.Syntax
         internal AssignmentExpressionSyntax(
             ExpressionSyntax target,
             Spanned<AssignmentOperatorKind> operatorKind,
-            ExpressionSyntax value)
+            ExpressionSyntax value,
+            TextSpan span) : base(span)
         {
             Target = target;
             OperatorKind = operatorKind;
@@ -167,7 +172,8 @@ namespace NitroSharp.NsScriptNew.Syntax
 
     public sealed class DeltaExpressionSyntax : ExpressionSyntax
     {
-        internal DeltaExpressionSyntax(ExpressionSyntax expression)
+        internal DeltaExpressionSyntax(ExpressionSyntax expression, TextSpan span)
+            : base(span)
         {
             Expression = expression;
         }
@@ -199,7 +205,8 @@ namespace NitroSharp.NsScriptNew.Syntax
     {
         internal FunctionCallExpressionSyntax(
             Spanned<string> targetName,
-            ImmutableArray<ExpressionSyntax> arguments)
+            ImmutableArray<ExpressionSyntax> arguments,
+            TextSpan span) : base(span)
         {
             TargetName = targetName;
             Arguments = arguments;

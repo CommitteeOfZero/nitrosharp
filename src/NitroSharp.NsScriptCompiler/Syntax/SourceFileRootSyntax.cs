@@ -1,4 +1,5 @@
 ﻿using System.Collections.Immutable;
+using NitroSharp.NsScriptNew.Text;
 
 namespace NitroSharp.NsScriptNew.Syntax
 {
@@ -6,7 +7,8 @@ namespace NitroSharp.NsScriptNew.Syntax
     {
         internal SourceFileRootSyntax(
             ImmutableArray<MemberDeclarationSyntax> memberDeclarations,
-            ImmutableArray<Spanned<string>> fileReferences)
+            ImmutableArray<Spanned<string>> fileReferences,
+            TextSpan span) : base(span)
         {
             MemberDeclarations = memberDeclarations;
             FileReferences = fileReferences;

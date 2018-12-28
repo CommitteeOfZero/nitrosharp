@@ -197,7 +197,7 @@ namespace NitroSharp.NsScriptNew.Symbols
                 var builder = ImmutableArray.CreateBuilder<ParameterSymbol>(paramCount);
                 foreach (ParameterSyntax paramSyntax in declaration.Parameters)
                 {
-                    var parameter = new ParameterSymbol(this, paramSyntax.Name.Value);
+                    var parameter = new ParameterSymbol(this, paramSyntax.Name);
                     builder.Add(parameter);
                 }
 

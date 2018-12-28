@@ -140,7 +140,7 @@ namespace NitroSharp.NsScriptNew.Binding
 
         private AssignmentOperation BindAssignmentExpression(AssignmentExpressionSyntax expression)
         {
-            string targetName = (expression.Target as NameExpressionSyntax).Name.Value;
+            string targetName = (expression.Target as NameExpressionSyntax).Name;
             return new AssignmentOperation(
                 targetName,
                 BindExpression(expression.Value));
@@ -163,7 +163,7 @@ namespace NitroSharp.NsScriptNew.Binding
 
         private BoundExpression BindNameExpression(NameExpressionSyntax nameExpression)
         {
-            string name = nameExpression.Name.Value;
+            string name = nameExpression.Name;
             ParameterSymbol parameter = LookupParameter(name);
             if (parameter != null)
             {
@@ -175,7 +175,7 @@ namespace NitroSharp.NsScriptNew.Binding
 
         private Literal BindLiteral(LiteralExpressionSyntax expression)
         {
-            ConstantValue value = expression.Value.Value;
+            ConstantValue value = expression.Value;
             if (value.Type == BuiltInType.String)
             {
                 string stringValue = value.StringValue;

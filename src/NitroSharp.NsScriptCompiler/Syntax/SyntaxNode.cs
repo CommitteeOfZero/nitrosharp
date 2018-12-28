@@ -1,11 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
+using NitroSharp.NsScriptNew.Text;
 
 namespace NitroSharp.NsScriptNew.Syntax
 {
     public abstract class SyntaxNode
     {
+        protected SyntaxNode(TextSpan span)
+        {
+            Span = span;
+        }
+
         public abstract SyntaxNodeKind Kind { get; }
+        public TextSpan Span { get; }
 
         public abstract void Accept(SyntaxVisitor visitor);
         public abstract TResult Accept<TResult>(SyntaxVisitor<TResult> visitor);
