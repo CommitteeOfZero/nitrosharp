@@ -29,6 +29,7 @@ namespace NitroSharp.NsScriptNew.Syntax
                 case '\r':
                 case '\n':
                 case '\t':
+                case (char)12288:
                     return true;
 
                 default:

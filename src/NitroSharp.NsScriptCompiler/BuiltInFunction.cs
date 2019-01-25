@@ -1,6 +1,6 @@
 ﻿namespace NitroSharp.NsScriptNew
 {
-    public enum BuiltInFunction
+    public enum BuiltInFunction : byte
     {
         Wait,
         WaitKey,
@@ -39,16 +39,76 @@
         ModuleFileName,
         String,
         Time,
+        Integer,
+        DateTime,
+        CursorPosition,
+
+        SetFont,
+        SetNextFocus,
+        Position,
+        MoveCursor,
 
         CreateCube,
         SetFov,
-
         CreateMovie,
         WaitPlay,
 
+        WaitAction,
+        WaitMove,
+        LoadFont,
+        LoadColor,
+        
         CreateText,
         CreateChoice,
+        CreateMask,
+        CreateName,
+        LoadFile,
+        UnloadFile,
 
-        XBOX360_LockVideo
+        Shake,
+        SetBlur,
+        CreateEffect,
+        SetTone,
+        SetShade,
+
+        Save,
+        Load,
+        ExistSave,
+        ClearScore,
+        Reset,
+        DeleteSaveFile,
+        MountSavedata,
+        AvailableFile,
+        Escape,
+        CreateBacklog,
+        SetBacklog,
+        EnableBacklog,
+        ClearBacklog,
+
+        CreateScrollbar,
+        SetScrollbar,
+        ScrollbarValue,
+        SetScrollSpeed,
+
+        SetFrequency,
+        SetPan,
+        Draw,
+        SetVertex,
+        SetStream,
+        Exit,
+
+        XBOX360_LockVideo,
+        XBOX360_Presence,
+        XBOX360_AwardGameIcon,
+        XBOX360_Achieved,
+        XBOX360_InitUser,
+        XBOX360_IsSignin,
+        XBOX360_CheckStorage,
+        XBOX360_SelectStorage,
+        XBOX360_ExistContent,
+        XBOX360_StorageSize,
+        XBOX360_UserIndex,
+        XBOX360_PadTrigger,
+        XBOX360_CurrentStorage,
     }
 }

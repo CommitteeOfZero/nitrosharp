@@ -85,7 +85,7 @@ namespace NitroSharp.NsScriptNew.Text
                 {
                     return index;
                 }
-                else if (start > position)
+                if (start > position)
                 {
                     upper = index - 1;
                 }

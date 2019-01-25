@@ -42,7 +42,7 @@ namespace NitroSharp.NsScriptNew
 
             var parser = new Parser(new Lexer(sourceText));
             var root = parser.ParseSourceFile();
-            return SyntaxTree.Create(sourceText, root, parser.DiagnosticBuilder);
+            return new SyntaxTree(sourceText, root, parser.DiagnosticBuilder);
         }
 
         public static SyntaxTree ParseText(Stream stream, string filePath, Encoding encoding = null)
@@ -65,7 +65,7 @@ namespace NitroSharp.NsScriptNew
             var sourceText = SourceText.From(text);
             var parser = new Parser(new Lexer(sourceText));
             var root = parseFunc(parser);
-            return SyntaxTree.Create(sourceText, root, parser.DiagnosticBuilder);
+            return new SyntaxTree(sourceText, root, parser.DiagnosticBuilder);
         }
     }
 }

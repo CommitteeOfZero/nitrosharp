@@ -19,7 +19,12 @@ namespace NitroSharp.NsScriptNew
         MissingStatementTerminator,
         InvalidExpressionTerm,
         InvalidExpressionStatement,
-        StrayPXmlElement
+        StrayPXmlElement,
+
+        UnresolvedIdentifier,
+        BadAssignmentTarget,
+        ExternalModuleNotFound,
+        ChapterMainNotFound
     }
 
     public enum DiagnosticSeverity

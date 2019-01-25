@@ -6,6 +6,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="..\Common\ArrayBuilder.cs" Link="Utilities\ArrayBuilder.cs" />
+    <Compile Include="..\Common\HashHelper.cs" Link="Utilities\HashHelper.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Content Include="boot.nss">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
@@ -13,12 +18,16 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="BenchmarkDotNet" Version="0.11.3" />
+    <RdXmlFile Include="rd.xml" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!--<PackageReference Include="BenchmarkDotNet" Version="0.11.3" />-->
+    <PackageReference Include="Microsoft.DotNet.ILCompiler" Version="1.0.0-alpha-27304-02" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\NitroSharp.NsScriptCompiler\NitroSharp.NsScriptCompiler.csproj" />
-    <ProjectReference Include="..\NitroSharp.NsScript\NitroSharp.NsScript.csproj" />
   </ItemGroup>
 
 </Project>

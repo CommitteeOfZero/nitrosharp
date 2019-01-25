@@ -74,7 +74,7 @@ namespace NitroSharp.NsScriptCompiler.Tests
         {
             string text = $"call_chapter {filePath}";
             var callChapterStmt = AssertStatement<CallChapterStatementSyntax>(text, SyntaxNodeKind.CallChapterStatement);
-            Common.AssertSpannedText(text, filePath, callChapterStmt.TargetName);
+            Common.AssertSpannedText(text, filePath, callChapterStmt.TargetModule);
         }
 
         [Theory]

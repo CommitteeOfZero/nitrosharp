@@ -22,7 +22,7 @@
     <ProjectReference Include="..\..\..\SomeAnonDev\veldrid\src\Veldrid.StartupUtilities\Veldrid.StartupUtilities.csproj" />
     <ProjectReference Include="..\..\..\SomeAnonDev\veldrid\src\Veldrid\Veldrid.csproj" />-->
     
-    <PackageReference Include="NitroSharp.Dependencies.FFmpeg" Version="0.4.0.12" />
+    <PackageReference Include="NitroSharp.Dependencies.FFmpeg" Version="0.4.0.13" />
     <PackageReference Include="NitroSharp.Dependencies.FreeType" Version="0.2.903" />
     <PackageReference Include="NitroSharp.Dependencies.OpenALSoft" Version="1.18.2" />
     <PackageReference Include="NitroSharp.Fonts" Version="0.1.1" />

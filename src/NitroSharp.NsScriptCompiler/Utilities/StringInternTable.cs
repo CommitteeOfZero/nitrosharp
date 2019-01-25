@@ -1,6 +1,7 @@
 ﻿// Essentially a trimmed-down version of https://github.com/dotnet/roslyn/blob/master/src/Compilers/Core/Portable/InternalUtilities/StringTable.cs
 // Roslyn is an open-source project by Microsoft licensed under the Apache License, Version 2.0
 // See https://github.com/dotnet/roslyn/blob/master/License.txt
+// Modifications made by: @SomeAnonDev.
 
 using System;
 using System.Threading;
@@ -31,7 +32,7 @@ namespace NitroSharp.Utilities
         private const int SharedBucketSizeMask = SharedBucketSize - 1;
 
         // local (L1) cache
-        // simple fast and not threadsafe cache 
+        // simple fast and not threadsafe cache
         // with limited size and "last add wins" expiration policy
         //
         // The main purpose of the local cache is to use in long lived
@@ -46,13 +47,10 @@ namespace NitroSharp.Utilities
         // writes to local cache will update shared cache as well.
         private static readonly Entry[] s_sharedTable = new Entry[SharedSize];
 
-        // essentially a random number 
+        // essentially a random number
         // the usage pattern will randomly use and increment this
         // the counter is not static to avoid interlocked operations and cross-thread traffic
         private int _localRandom = Environment.TickCount;
-
-        // same as above but for users that go directly with unbuffered shared cache.
-        private static int s_sharedRandom = Environment.TickCount;
 
         public string Add(ReadOnlySpan<char> span)
         {
@@ -119,7 +117,7 @@ namespace NitroSharp.Utilities
 
             return e;
         }
-       
+
         private string AddItem(ReadOnlySpan<char> span, int hashCode)
         {
             string text = span.ToString();
@@ -183,11 +181,6 @@ namespace NitroSharp.Utilities
         private int LocalNextRandom()
         {
             return _localRandom++;
-        }
-
-        private static int SharedNextRandom()
-        {
-            return Interlocked.Increment(ref s_sharedRandom);
         }
 
         internal static bool TextEquals(string array, ReadOnlySpan<char> text)

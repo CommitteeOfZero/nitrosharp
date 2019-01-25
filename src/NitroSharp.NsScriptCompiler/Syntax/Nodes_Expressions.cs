@@ -34,12 +34,14 @@ namespace NitroSharp.NsScriptNew.Syntax
 
     public sealed class NameExpressionSyntax : ExpressionSyntax
     {
-        internal NameExpressionSyntax(string name, TextSpan span) : base(span)
+        internal NameExpressionSyntax(string name, bool hasSigil, TextSpan span) : base(span)
         {
             Name = name;
+            HasSigil = hasSigil;
         }
 
         public string Name { get; }
+        public bool HasSigil { get; }
         public override SyntaxNodeKind Kind => SyntaxNodeKind.NameExpression;
 
         public override void Accept(SyntaxVisitor visitor)

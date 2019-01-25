@@ -5,15 +5,17 @@ namespace NitroSharp.NsScriptNew.Syntax
 {
     public abstract class MemberDeclarationSyntax : SyntaxNode
     {
-        protected MemberDeclarationSyntax(Spanned<string> name, BlockSyntax body, TextSpan span)
-            : base(span)
+        protected MemberDeclarationSyntax(Spanned<string> name, BlockSyntax body,
+            ImmutableArray<DialogueBlockSyntax> dialogueBlocks, TextSpan span) : base(span)
         {
             Name = name;
             Body = body;
+            DialogueBlocks = dialogueBlocks;
         }
 
         public Spanned<string> Name { get; }
         public BlockSyntax Body { get; }
+        public ImmutableArray<DialogueBlockSyntax> DialogueBlocks { get; }
 
         public override SyntaxNode GetNodeSlot(int index)
         {
@@ -27,8 +29,9 @@ namespace NitroSharp.NsScriptNew.Syntax
 
     public sealed class ChapterDeclarationSyntax : MemberDeclarationSyntax
     {
-        internal ChapterDeclarationSyntax(Spanned<string> name, BlockSyntax body, TextSpan span)
-            : base(name, body, span)
+        internal ChapterDeclarationSyntax(Spanned<string> name, BlockSyntax body,
+            ImmutableArray<DialogueBlockSyntax> dialogueBlocks, TextSpan span)
+            : base(name, body, dialogueBlocks, span)
         {
         }
 
@@ -47,8 +50,9 @@ namespace NitroSharp.NsScriptNew.Syntax
 
     public sealed class SceneDeclarationSyntax : MemberDeclarationSyntax
     {
-        internal SceneDeclarationSyntax(Spanned<string> name, BlockSyntax body, TextSpan span)
-            : base(name, body, span)
+        internal SceneDeclarationSyntax(Spanned<string> name, BlockSyntax body,
+            ImmutableArray<DialogueBlockSyntax> dialogueBlocks, TextSpan span)
+            : base(name, body, dialogueBlocks, span)
         {
         }
 
@@ -69,7 +73,8 @@ namespace NitroSharp.NsScriptNew.Syntax
     {
         internal FunctionDeclarationSyntax(
             Spanned<string> name, ImmutableArray<ParameterSyntax> parameters,
-            BlockSyntax body, TextSpan span) : base(name, body, span)
+            BlockSyntax body, ImmutableArray<DialogueBlockSyntax> dialogueBlocks,
+            TextSpan span) : base(name, body, dialogueBlocks, span)
         {
             Parameters = parameters;
         }

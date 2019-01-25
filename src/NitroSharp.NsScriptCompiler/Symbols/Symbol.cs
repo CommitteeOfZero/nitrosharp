@@ -2,7 +2,9 @@
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
+using System.IO;
 using NitroSharp.NsScriptNew.Syntax;
+using NitroSharp.Utilities;
 
 namespace NitroSharp.NsScriptNew.Symbols
 {
@@ -23,41 +25,58 @@ namespace NitroSharp.NsScriptNew.Symbols
         DialogueBlock
     }
 
-    public sealed class ModuleSymbol : Symbol
+    public abstract class NamedSymbol : Symbol
     {
-        internal ModuleSymbol(ImmutableArray<SyntaxTree> syntaxTrees)
+        protected NamedSymbol(string name)
+        {
+            Name = name;
+        }
+
+        public string Name { get; }
+    }
+
+    public sealed class SourceModuleSymbol : Symbol
+    {
+        public SourceModuleSymbol(Compilation compilation, ImmutableArray<SyntaxTree> syntaxTrees)
         {
             Debug.Assert(syntaxTrees.Length > 0);
-            SourceFile = MakeSourceFileSymbol(syntaxTrees[0]);
+            Compilation = compilation;
+            RootSourceFile = MakeSourceFileSymbol(syntaxTrees[0]);
 
             if (syntaxTrees.Length > 1)
             {
                 var builder = ImmutableArray.CreateBuilder<SourceFileSymbol>(syntaxTrees.Length - 1);
                 for (int i = 1; i < syntaxTrees.Length; i++)
                 {
-                    builder.Add(MakeSourceFileSymbol(syntaxTrees[i]));
+                    SourceFileSymbol sourceFile = MakeSourceFileSymbol(syntaxTrees[i]);
+                    builder.Add(sourceFile);
                 }
 
                 ReferencedSourceFiles = builder.ToImmutable();
             }
+            else
+            {
+                ReferencedSourceFiles = ImmutableArray<SourceFileSymbol>.Empty;
+            }
         }
 
-        public SourceFileSymbol SourceFile { get; }
+        public Compilation Compilation { get; }
+        public SourceFileSymbol RootSourceFile { get; }
         public ImmutableArray<SourceFileSymbol> ReferencedSourceFiles { get; }
 
         private SourceFileSymbol MakeSourceFileSymbol(SyntaxTree syntaxTree)
         {
             Debug.Assert(syntaxTree.Root is SourceFileRootSyntax);
-            return new SourceFileSymbol(this,
-                syntaxTree.SourceText.FilePath,
-                (SourceFileRootSyntax)syntaxTree.Root);
+            string rawPath = syntaxTree.SourceText.FilePath;
+            ResolvedPath canonicalPath = Compilation.SourceReferenceResolver.ResolvePath(rawPath);
+            return new SourceFileSymbol(this, canonicalPath, (SourceFileRootSyntax)syntaxTree.Root);
         }
 
         public override SymbolKind Kind => SymbolKind.Module;
 
         public ChapterSymbol LookupChapter(string name)
         {
-            ChapterSymbol chapter = SourceFile.LookupChapter(name);
+            ChapterSymbol chapter = RootSourceFile.LookupChapter(name);
             if (chapter != null) { return chapter; }
 
             foreach (SourceFileSymbol file in ReferencedSourceFiles)
@@ -71,7 +90,7 @@ namespace NitroSharp.NsScriptNew.Symbols
 
         public SceneSymbol LookupScene(string name)
         {
-            SceneSymbol scene = SourceFile.LookupScene(name);
+            SceneSymbol scene = RootSourceFile.LookupScene(name);
             if (scene != null) { return scene; }
 
             foreach (SourceFileSymbol file in ReferencedSourceFiles)
@@ -85,7 +104,7 @@ namespace NitroSharp.NsScriptNew.Symbols
 
         public FunctionSymbol LookupFunction(string name)
         {
-            FunctionSymbol function = SourceFile.LookupFunction(name);
+            FunctionSymbol function = RootSourceFile.LookupFunction(name);
             if (function != null) { return function; }
 
             foreach (SourceFileSymbol file in ReferencedSourceFiles)
@@ -97,26 +116,34 @@ namespace NitroSharp.NsScriptNew.Symbols
             return function;
         }
 
-        public override string ToString() => $"Module '{SourceFile.Name}'";
+        public override string ToString() => $"Module '{RootSourceFile.Name}'";
     }
 
-    public sealed class SourceFileSymbol : NamedSymbol
+    public sealed class SourceFileSymbol : NamedSymbol, IEquatable<SourceFileSymbol>
     {
         private readonly Dictionary<string, ChapterSymbol> _chapterMap;
         private readonly Dictionary<string, SceneSymbol> _sceneMap;
         private readonly Dictionary<string, FunctionSymbol> _functionMap;
 
-        internal SourceFileSymbol(ModuleSymbol module, string name, SourceFileRootSyntax syntax)
-            : base(name)
+        internal SourceFileSymbol(
+            SourceModuleSymbol module, ResolvedPath filePath, SourceFileRootSyntax syntax)
+            : base(Path.GetFileName(filePath.Value))
         {
             Module = module;
-            _chapterMap = new Dictionary<string, ChapterSymbol>();
-            _sceneMap = new Dictionary<string, SceneSymbol>();
-            _functionMap = new Dictionary<string, FunctionSymbol>();
+            FilePath = filePath;
 
-            var chapters = ImmutableArray.CreateBuilder<ChapterSymbol>();
-            var scenes = ImmutableArray.CreateBuilder<SceneSymbol>();
-            var functions = ImmutableArray.CreateBuilder<FunctionSymbol>();
+            (int chapterCount, int sceneCount, int functionCount) =
+                ((int)syntax.ChapterCount,
+                (int)syntax.SceneCount,
+                (int)syntax.FunctionCount);
+
+            _chapterMap = new Dictionary<string, ChapterSymbol>(chapterCount);
+            _sceneMap = new Dictionary<string, SceneSymbol>(sceneCount);
+            _functionMap = new Dictionary<string, FunctionSymbol>(functionCount);
+
+            var chapters = ImmutableArray.CreateBuilder<ChapterSymbol>(chapterCount);
+            var scenes = ImmutableArray.CreateBuilder<SceneSymbol>(sceneCount);
+            var functions = ImmutableArray.CreateBuilder<FunctionSymbol>(functionCount);
 
             foreach (MemberDeclarationSyntax decl in syntax.MemberDeclarations)
             {
@@ -147,15 +174,19 @@ namespace NitroSharp.NsScriptNew.Symbols
             Chapters = chapters.ToImmutable();
             Functions = functions.ToImmutable();
             Scenes = scenes.ToImmutable();
+            MemberCount = (uint)(chapters.Count + functions.Count + scenes.Count);
         }
 
         public override SymbolKind Kind => SymbolKind.SourceFile;
 
-        public ModuleSymbol Module { get; }
+        public SourceModuleSymbol Module { get; }
+        public ResolvedPath FilePath { get; }
 
         public ImmutableArray<ChapterSymbol> Chapters { get; }
         public ImmutableArray<FunctionSymbol> Functions { get; }
         public ImmutableArray<SceneSymbol> Scenes { get; }
+
+        public uint MemberCount { get; }
 
         public ChapterSymbol LookupChapter(string name)
             => LookupMember(_chapterMap, name);
@@ -170,35 +201,74 @@ namespace NitroSharp.NsScriptNew.Symbols
             => map.TryGetValue(name, out T symbol) ? symbol : null;
 
         public override string ToString() => $"SourceFile '{Name}'";
+
+        public bool Equals(SourceFileSymbol other) => Name.Equals(other.Name);
+        public override bool Equals(object obj) => obj is SourceFileSymbol other && Name.Equals(other.Name);
+
+        public override int GetHashCode()
+            => HashHelper.Combine(Name.GetHashCode(), (int)MemberCount);
     }
 
     public abstract class MemberSymbol : NamedSymbol
     {
-        protected MemberSymbol(SourceFileSymbol declaringSourceFile, string name,
-            MemberDeclarationSyntax declaration) : base(name)
+        private readonly Dictionary<string, DialogueBlockSymbol> _dialogueBlockMap;
+
+        protected MemberSymbol(
+            SourceFileSymbol declaringSourceFile, string name, MemberDeclarationSyntax declaration)
+            : base(name)
         {
             DeclaringSourceFile = declaringSourceFile;
             Declaration = declaration;
+
+            DialogueBlocks = ImmutableArray<DialogueBlockSymbol>.Empty;
+            ImmutableArray<DialogueBlockSyntax> blockSyntaxNodes = declaration.DialogueBlocks;
+            if (blockSyntaxNodes.Length > 0)
+            {
+                var builder = ImmutableArray.CreateBuilder<DialogueBlockSymbol>(blockSyntaxNodes.Length);
+                _dialogueBlockMap = new Dictionary<string, DialogueBlockSymbol>(blockSyntaxNodes.Length);
+                foreach (DialogueBlockSyntax syntax in declaration.DialogueBlocks)
+                {
+                    var symbol = new DialogueBlockSymbol(this, syntax.Name, syntax);
+                    builder.Add(symbol);
+                    _dialogueBlockMap[syntax.Name] = symbol;
+                    // TODO: error reporting
+                }
+                DialogueBlocks = builder.ToImmutable();
+            }
         }
 
         public SourceFileSymbol DeclaringSourceFile { get; }
         public MemberDeclarationSyntax Declaration { get; }
+        public ImmutableArray<DialogueBlockSymbol> DialogueBlocks { get; }
+
+        public virtual ParameterSymbol LookupParameter(string name) => null;
+        public DialogueBlockSymbol LookupDialogueBlock(string name)
+        {
+            if (_dialogueBlockMap == null) { return null; }
+            return _dialogueBlockMap.TryGetValue(name, out DialogueBlockSymbol symbol)
+               ? symbol : null;
+        }
     }
 
     public sealed class FunctionSymbol : MemberSymbol
     {
-        internal FunctionSymbol(SourceFileSymbol declaringSourceFile, string name,
-            FunctionDeclarationSyntax declaration) : base(declaringSourceFile, name, declaration)
+        private readonly Dictionary<string, ParameterSymbol> _parameterMap;
+
+        internal FunctionSymbol(
+            SourceFileSymbol declaringSourceFile, string name, FunctionDeclarationSyntax declaration)
+            : base(declaringSourceFile, name, declaration)
         {
             var parameters = ImmutableArray<ParameterSymbol>.Empty;
             int paramCount = declaration.Parameters.Length;
             if (paramCount > 0)
             {
                 var builder = ImmutableArray.CreateBuilder<ParameterSymbol>(paramCount);
+                _parameterMap = new Dictionary<string, ParameterSymbol>();
                 foreach (ParameterSyntax paramSyntax in declaration.Parameters)
                 {
                     var parameter = new ParameterSymbol(this, paramSyntax.Name);
                     builder.Add(parameter);
+                    _parameterMap.Add(parameter.Name, parameter);
                 }
 
                 parameters = builder.ToImmutable();
@@ -212,6 +282,12 @@ namespace NitroSharp.NsScriptNew.Symbols
 
         public new FunctionDeclarationSyntax Declaration { get; }
         public ImmutableArray<ParameterSymbol> Parameters { get; }
+
+        public override ParameterSymbol LookupParameter(string name)
+        {
+            if (_parameterMap == null) { return null; }
+            return _parameterMap.TryGetValue(name, out ParameterSymbol symbol) ? symbol : null;
+        }
 
         public override string ToString() => $"Function '{Name}'";
     }
@@ -232,8 +308,9 @@ namespace NitroSharp.NsScriptNew.Symbols
 
     public sealed class ChapterSymbol : MemberSymbol
     {
-        internal ChapterSymbol(SourceFileSymbol declaringSourceFile, string name,
-            ChapterDeclarationSyntax declaration) : base(declaringSourceFile, name, declaration)
+        internal ChapterSymbol(
+            SourceFileSymbol declaringSourceFile, string name, ChapterDeclarationSyntax declaration)
+            : base(declaringSourceFile, name, declaration)
         {
             Declaration = declaration;
         }
@@ -241,13 +318,14 @@ namespace NitroSharp.NsScriptNew.Symbols
         public override SymbolKind Kind => SymbolKind.Chapter;
         public new ChapterDeclarationSyntax Declaration { get; }
 
-        public override string ToString() => $"Function '{Name}'";
+        public override string ToString() => $"Chapter '{Name}'";
     }
 
     public sealed class SceneSymbol : MemberSymbol
     {
-        internal SceneSymbol(SourceFileSymbol declaringSourceFile, string name,
-            SceneDeclarationSyntax declaration) : base(declaringSourceFile, name, declaration)
+        internal SceneSymbol(
+            SourceFileSymbol declaringSourceFile, string name, SceneDeclarationSyntax declaration)
+            : base(declaringSourceFile, name, declaration)
         {
             Declaration = declaration;
         }
@@ -256,5 +334,20 @@ namespace NitroSharp.NsScriptNew.Symbols
         public new SceneDeclarationSyntax Declaration { get; }
 
         public override string ToString() => $"Scene '{Name}'";
+    }
+
+    public sealed class DialogueBlockSymbol : NamedSymbol
+    {
+        public DialogueBlockSymbol(
+            MemberSymbol containingMember, string name, DialogueBlockSyntax syntax)
+            : base(name)
+        {
+            ContainingMember = containingMember;
+            Syntax = syntax;
+        }
+
+        public override SymbolKind Kind => SymbolKind.DialogueBlock;
+        public MemberSymbol ContainingMember { get; }
+        public DialogueBlockSyntax Syntax { get; }
     }
 }

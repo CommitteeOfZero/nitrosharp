@@ -9,25 +9,7 @@ namespace NitroSharp.NsScriptNew
         private readonly DiagnosticBuilder _diagnosticBuilder;
         private DiagnosticBag _diagnostics;
 
-        internal static SyntaxTree Create(SourceText sourceText, SyntaxNode root, DiagnosticBuilder diagnosticBuilder)
-        {
-            if (sourceText == null)
-            {
-                throw new ArgumentNullException(nameof(sourceText));
-            }
-            if (root == null)
-            {
-                throw new ArgumentNullException(nameof(root));
-            }
-            if (diagnosticBuilder == null)
-            {
-                throw new ArgumentNullException(nameof(diagnosticBuilder));
-            }
-
-            return new SyntaxTree(sourceText, root, diagnosticBuilder);
-        }
-
-        private SyntaxTree(SourceText sourceText, SyntaxNode root, DiagnosticBuilder diagnosticBuilder)
+        internal SyntaxTree(SourceText sourceText, SyntaxNode root, DiagnosticBuilder diagnosticBuilder)
         {
             SourceText = sourceText;
             Root = root;

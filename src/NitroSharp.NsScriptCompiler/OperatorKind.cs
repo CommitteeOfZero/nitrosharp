@@ -1,15 +1,15 @@
 ﻿namespace NitroSharp.NsScriptNew
 {
-    public enum UnaryOperatorKind
+    public enum UnaryOperatorKind : byte
     {
-        Not,
+        Not = 0,
         Plus,
         Minus
     }
 
-    public enum BinaryOperatorKind
+    public enum BinaryOperatorKind : byte
     {
-        Multiply,
+        Multiply = 0,
         Divide,
         Remainder,
         Add,
@@ -24,9 +24,9 @@
         Or
     }
 
-    public enum AssignmentOperatorKind
+    public enum AssignmentOperatorKind : byte
     {
-        Assign,
+        Assign = 0,
         AddAssign,
         SubtractAssign,
         MultiplyAssign,

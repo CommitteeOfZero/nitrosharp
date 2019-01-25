@@ -4,6 +4,7 @@ using NitroSharp.NsScriptNew.Text;
 using System.Runtime.CompilerServices;
 using System;
 using System.Runtime.InteropServices;
+using System.Diagnostics;
 
 namespace NitroSharp.NsScriptNew.Syntax
 {
@@ -94,6 +95,7 @@ namespace NitroSharp.NsScriptNew.Syntax
                 if (PeekChar() != '{' && !Match("</pre>"))
                 {
                     LexPXmlToken(ref mutableTk);
+                    Debug.Assert(tk.Kind != SyntaxTokenKind.None);
                     return tk;
                 }
             }
@@ -124,6 +126,7 @@ namespace NitroSharp.NsScriptNew.Syntax
                     break;
             }
 
+            Debug.Assert(tk.Kind != SyntaxTokenKind.None);
             return tk;
         }
 
@@ -650,7 +653,7 @@ namespace NitroSharp.NsScriptNew.Syntax
                         preNestingLevel++;
                         continue;
                     }
-                    else if (Match(PRE_EndTag))
+                    if (Match(PRE_EndTag))
                     {
                         if (preNestingLevel == 0)
                         {

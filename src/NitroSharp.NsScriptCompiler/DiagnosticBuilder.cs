@@ -3,11 +3,11 @@ using System.Collections.Immutable;
 
 namespace NitroSharp.NsScriptNew
 {
-    internal sealed class DiagnosticBuilder
+    public sealed class DiagnosticBuilder
     {
         private readonly ImmutableArray<Diagnostic>.Builder _diagnostics;
 
-        internal DiagnosticBuilder()
+        public DiagnosticBuilder()
         {
             _diagnostics = ImmutableArray.CreateBuilder<Diagnostic>();
         }

@@ -210,13 +210,13 @@ namespace NitroSharp.NsScriptNew.Syntax
 
     public sealed class CallChapterStatementSyntax : StatementSyntax
     {
-        internal CallChapterStatementSyntax(Spanned<string> targetName, TextSpan span)
+        internal CallChapterStatementSyntax(Spanned<string> targetModule, TextSpan span)
             : base(span)
         {
-            TargetName = targetName;
+            TargetModule = targetModule;
         }
 
-        public Spanned<string> TargetName { get; }
+        public Spanned<string> TargetModule { get; }
         public override SyntaxNodeKind Kind => SyntaxNodeKind.CallChapterStatement;
 
         public override void Accept(SyntaxVisitor visitor)

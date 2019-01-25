@@ -23,6 +23,11 @@ namespace NitroSharp.NsScriptNew.Syntax
         public bool IsHexTriplet =>
             (Flags & SyntaxTokenFlags.IsHexTriplet) == SyntaxTokenFlags.IsHexTriplet;
 
+        public bool HasSigil =>
+            (Flags & SyntaxTokenFlags.HasDollarPrefix) == SyntaxTokenFlags.HasDollarPrefix ||
+            (Flags & SyntaxTokenFlags.HasHashPrefix) == SyntaxTokenFlags.HasHashPrefix ||
+            (Flags & SyntaxTokenFlags.HasAtPrefix) == SyntaxTokenFlags.HasAtPrefix;
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ReadOnlySpan<char> GetText(SourceText sourceText)
         {
