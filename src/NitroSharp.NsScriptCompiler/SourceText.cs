@@ -21,7 +21,7 @@ namespace NitroSharp.NsScriptNew.Text
 
         private SourceText(string text, string filePath)
         {
-            _source = text ?? throw new ArgumentNullException(nameof(text));
+            _source = text;
             FilePath = filePath;
             _lines = GetLines();
         }
@@ -34,12 +34,8 @@ namespace NitroSharp.NsScriptNew.Text
         internal List<TextSpan> Lines => _lines;
 
         public static SourceText From(string text) => new SourceText(text, string.Empty);
-        public static SourceText From(Stream stream, string filePath, Encoding encoding = null)
+        public static SourceText From(Stream stream, string filePath, Encoding? encoding = null)
         {
-            if (stream == null)
-            {
-                throw new ArgumentNullException(nameof(stream));
-            }
             if (!stream.CanRead)
             {
                 throw new ArgumentException("Stream must support read operation.", nameof(stream));

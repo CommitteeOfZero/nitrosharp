@@ -17,7 +17,7 @@ namespace NitroSharp.NsScriptNew.Syntax
         public BlockSyntax Body { get; }
         public ImmutableArray<DialogueBlockSyntax> DialogueBlocks { get; }
 
-        public override SyntaxNode GetNodeSlot(int index)
+        public override SyntaxNode? GetNodeSlot(int index)
         {
             switch (index)
             {

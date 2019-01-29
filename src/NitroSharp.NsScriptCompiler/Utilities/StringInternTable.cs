@@ -68,7 +68,7 @@ namespace NitroSharp.Utilities
                 }
             }
 
-            string shared = FindSharedEntry(span, hashCode);
+            string? shared = FindSharedEntry(span, hashCode);
             if (shared != null)
             {
                 // PERF: the following code does element-wise assignment of a struct
@@ -83,12 +83,12 @@ namespace NitroSharp.Utilities
             return AddItem(span, hashCode);
         }
 
-        private static string FindSharedEntry(ReadOnlySpan<char> span, int hashCode)
+        private static string? FindSharedEntry(ReadOnlySpan<char> span, int hashCode)
         {
             Entry[] arr = s_sharedTable;
             int idx = SharedIdxFromHash(hashCode);
 
-            string e = null;
+            string? e = null;
             // we use quadratic probing here
             // bucket positions are (n^2 + n)/2 relative to the masked hashcode
             for (int i = 1; i < SharedBucketSize + 1; i++)

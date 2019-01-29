@@ -72,7 +72,7 @@ namespace NitroSharp.NsScriptNew.Syntax
 
         public override SyntaxNodeKind Kind => SyntaxNodeKind.UnaryExpression;
 
-        public override SyntaxNode GetNodeSlot(int index)
+        public override SyntaxNode? GetNodeSlot(int index)
         {
             switch (index)
             {
@@ -111,7 +111,7 @@ namespace NitroSharp.NsScriptNew.Syntax
 
         public override SyntaxNodeKind Kind => SyntaxNodeKind.BinaryExpression;
 
-        public override SyntaxNode GetNodeSlot(int index)
+        public override SyntaxNode? GetNodeSlot(int index)
         {
             switch (index)
             {
@@ -151,7 +151,7 @@ namespace NitroSharp.NsScriptNew.Syntax
 
         public override SyntaxNodeKind Kind => SyntaxNodeKind.AssignmentExpression;
 
-        public override SyntaxNode GetNodeSlot(int index)
+        public override SyntaxNode? GetNodeSlot(int index)
         {
             switch (index)
             {
@@ -183,7 +183,7 @@ namespace NitroSharp.NsScriptNew.Syntax
         public ExpressionSyntax Expression { get; }
         public override SyntaxNodeKind Kind => SyntaxNodeKind.DeltaExpression;
 
-        public override SyntaxNode GetNodeSlot(int index)
+        public override SyntaxNode? GetNodeSlot(int index)
         {
             switch (index)
             {

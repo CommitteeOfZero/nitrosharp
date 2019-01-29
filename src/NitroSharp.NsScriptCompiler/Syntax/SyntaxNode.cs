@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using NitroSharp.NsScriptNew.Text;
 
 namespace NitroSharp.NsScriptNew.Syntax
@@ -17,7 +18,7 @@ namespace NitroSharp.NsScriptNew.Syntax
         public abstract void Accept(SyntaxVisitor visitor);
         public abstract TResult Accept<TResult>(SyntaxVisitor<TResult> visitor);
 
-        public virtual SyntaxNode GetNodeSlot(int index)
+        public virtual SyntaxNode? GetNodeSlot(int index)
         {
             return null;
         }
@@ -45,15 +46,15 @@ namespace NitroSharp.NsScriptNew.Syntax
             public ChildrenEnumerator GetEnumerator()
                 => new ChildrenEnumerator(_node);
 
-            public SyntaxNode[] ToArray()
+            public SyntaxNode?[] ToArray()
             {
                 if (_node.GetNodeSlot(0) == null)
                 {
                     return Array.Empty<SyntaxNode>();
                 }
 
-                var list = new List<SyntaxNode>();
-                foreach (SyntaxNode child in this)
+                var list = new List<SyntaxNode?>();
+                foreach (SyntaxNode? child in this)
                 {
                     list.Add(child);
                 }
@@ -65,7 +66,7 @@ namespace NitroSharp.NsScriptNew.Syntax
         public struct ChildrenEnumerator
         {
             private readonly SyntaxNode _node;
-            private SyntaxNode _current;
+            private SyntaxNode? _current;
             private int _index;
 
             public ChildrenEnumerator(SyntaxNode node)
@@ -75,7 +76,7 @@ namespace NitroSharp.NsScriptNew.Syntax
                 _current = null;
             }
 
-            public SyntaxNode Current => _current;
+            public SyntaxNode? Current => _current;
 
             public bool MoveNext()
             {

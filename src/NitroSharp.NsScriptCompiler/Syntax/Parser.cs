@@ -320,7 +320,7 @@ namespace NitroSharp.NsScriptNew.Syntax
             while ((tk = CurrentToken.Kind) != SyntaxTokenKind.CloseBrace
                    && tk != SyntaxTokenKind.EndOfFileToken)
             {
-                StatementSyntax statement = ParseStatement();
+                StatementSyntax? statement = ParseStatement();
                 if (statement != null)
                 {
                     statements.Add(statement);
@@ -334,9 +334,9 @@ namespace NitroSharp.NsScriptNew.Syntax
             return statements.ToImmutable();
         }
 
-        internal StatementSyntax ParseStatement()
+        internal StatementSyntax? ParseStatement()
         {
-            StatementSyntax statement = null;
+            StatementSyntax? statement = null;
             do
             {
                 statement = ParseStatementCore();
@@ -351,7 +351,7 @@ namespace NitroSharp.NsScriptNew.Syntax
             return statement;
         }
 
-        private StatementSyntax ParseStatementCore()
+        private StatementSyntax? ParseStatementCore()
         {
             switch (CurrentToken.Kind)
             {
@@ -433,9 +433,9 @@ namespace NitroSharp.NsScriptNew.Syntax
             return false;
         }
 
-        private ExpressionStatementSyntax ParseExpressionStatement()
+        private ExpressionStatementSyntax? ParseExpressionStatement()
         {
-            ExpressionSyntax expr = ParseExpression();
+            ExpressionSyntax? expr = ParseExpression();
             if (expr == null) { return null; }
 
             if (!SyntaxFacts.IsStatementExpression(expr))
@@ -449,15 +449,15 @@ namespace NitroSharp.NsScriptNew.Syntax
             return new ExpressionStatementSyntax(expr, SpanFrom(expr));
         }
 
-        private ExpressionStatementSyntax ParseFunctionCallWithOmittedParentheses()
+        private ExpressionStatementSyntax? ParseFunctionCallWithOmittedParentheses()
         {
-            FunctionCallExpressionSyntax call = ParseFunctionCall();
+            FunctionCallExpressionSyntax? call = ParseFunctionCall();
             if (call == null) { return null; }
             EatStatementTerminator();
             return new ExpressionStatementSyntax(call, SpanFrom(call));
         }
 
-        internal ExpressionSyntax ParseExpression()
+        internal ExpressionSyntax? ParseExpression()
         {
             return ParseSubExpression(Precedence.Expression);
         }
@@ -506,9 +506,9 @@ namespace NitroSharp.NsScriptNew.Syntax
             }
         }
 
-        private ExpressionSyntax ParseSubExpression(Precedence minPrecedence)
+        private ExpressionSyntax? ParseSubExpression(Precedence minPrecedence)
         {
-            ExpressionSyntax leftOperand;
+            ExpressionSyntax? leftOperand;
             Precedence newPrecedence;
 
             SyntaxTokenKind tk = CurrentToken.Kind;
@@ -517,7 +517,7 @@ namespace NitroSharp.NsScriptNew.Syntax
             {
                 EatToken();
                 newPrecedence = Precedence.Unary;
-                ExpressionSyntax operand = ParseSubExpression(newPrecedence);
+                ExpressionSyntax? operand = ParseSubExpression(newPrecedence);
                 if (operand == null) { return null; }
                 var fullSpan = TextSpan.FromBounds(tkSpan.Start, operand.Span.End);
                 leftOperand = new UnaryExpressionSyntax(
@@ -563,7 +563,7 @@ namespace NitroSharp.NsScriptNew.Syntax
 
                 bool hasRightOperand = assignOpKind != AssignmentOperatorKind.Increment
                                        && assignOpKind != AssignmentOperatorKind.Decrement;
-                ExpressionSyntax rightOperand = hasRightOperand
+                ExpressionSyntax? rightOperand = hasRightOperand
                     ? ParseSubExpression(newPrecedence)
                     : leftOperand;
 
@@ -583,15 +583,19 @@ namespace NitroSharp.NsScriptNew.Syntax
             return leftOperand;
         }
 
-        private ExpressionSyntax ParseTerm(Precedence precedence)
+        private ExpressionSyntax? ParseTerm(Precedence precedence)
         {
             switch (CurrentToken.Kind)
             {
                 case SyntaxTokenKind.Identifier:
-                    return IsFunctionCall() ? (ExpressionSyntax)ParseFunctionCall() : ParseNameExpression();
+                    return IsFunctionCall()
+                        ? (ExpressionSyntax?)ParseFunctionCall()
+                        : ParseNameExpression();
 
                 case SyntaxTokenKind.StringLiteralOrQuotedIdentifier:
-                    return IsParameter() ? (ExpressionSyntax)ParseNameExpression() : ParseLiteral();
+                    return IsParameter()
+                        ? (ExpressionSyntax)ParseNameExpression()
+                        : ParseLiteral();
 
                 case SyntaxTokenKind.NumericLiteral:
                 case SyntaxTokenKind.NullKeyword:
@@ -601,7 +605,7 @@ namespace NitroSharp.NsScriptNew.Syntax
 
                 case SyntaxTokenKind.OpenParen:
                     EatToken(SyntaxTokenKind.OpenParen);
-                    ExpressionSyntax expr = ParseSubExpression(Precedence.Expression);
+                    ExpressionSyntax? expr = ParseSubExpression(Precedence.Expression);
                     if (expr == null) { return null; }
                     EatToken(SyntaxTokenKind.CloseParen);
                     return expr;
@@ -616,10 +620,10 @@ namespace NitroSharp.NsScriptNew.Syntax
             }
         }
 
-        private DeltaExpressionSyntax ParseDeltaExpression(Precedence precedence)
+        private DeltaExpressionSyntax? ParseDeltaExpression(Precedence precedence)
         {
             SyntaxToken atToken = EatToken(SyntaxTokenKind.At);
-            ExpressionSyntax expr = ParseSubExpression(precedence);
+            ExpressionSyntax? expr = ParseSubExpression(precedence);
             if (expr == null) { return null; }
             return new DeltaExpressionSyntax(expr, SpanFrom(atToken));
         }
@@ -662,7 +666,7 @@ namespace NitroSharp.NsScriptNew.Syntax
 
                 default:
                     ExceptionUtils.Unreachable();
-                    return null;
+                    return null!;
             }
 
             return new LiteralExpressionSyntax(value, token.TextSpan);
@@ -739,7 +743,7 @@ namespace NitroSharp.NsScriptNew.Syntax
             }
         }
 
-        private FunctionCallExpressionSyntax ParseFunctionCall()
+        private FunctionCallExpressionSyntax? ParseFunctionCall()
         {
             Spanned<string> targetName = ParseIdentifier();
             ImmutableArray<ExpressionSyntax>? args = ParseArgumentList();
@@ -771,7 +775,9 @@ namespace NitroSharp.NsScriptNew.Syntax
                     case SyntaxTokenKind.NullKeyword:
                     case SyntaxTokenKind.TrueKeyword:
                     case SyntaxTokenKind.FalseKeyword:
-                        _arguments.Add(ParseExpression());
+                        ExpressionSyntax? arg = ParseExpression();
+                        if (arg == null) { return null; }
+                        _arguments.Add(arg);
                         break;
 
                     case SyntaxTokenKind.Comma:
@@ -782,7 +788,7 @@ namespace NitroSharp.NsScriptNew.Syntax
                         break;
 
                     default:
-                        ExpressionSyntax expr = ParseExpression();
+                        ExpressionSyntax? expr = ParseExpression();
                         if (expr == null) { return null; }
                         _arguments.Add(expr);
                         break;
@@ -793,16 +799,17 @@ namespace NitroSharp.NsScriptNew.Syntax
             return _arguments.ToImmutable();
         }
 
-        private IfStatementSyntax ParseIfStatement()
+        private IfStatementSyntax? ParseIfStatement()
         {
             SyntaxToken ifKeyword = EatToken(SyntaxTokenKind.IfKeyword);
             EatToken(SyntaxTokenKind.OpenParen);
-            ExpressionSyntax condition = ParseExpression();
+            ExpressionSyntax? condition = ParseExpression();
             if (condition == null) { return null; }
             EatToken(SyntaxTokenKind.CloseParen);
 
-            StatementSyntax ifTrue = ParseStatement();
-            StatementSyntax ifFalse = null;
+            StatementSyntax? ifTrue = ParseStatement();
+            if (ifTrue == null) { return null; }
+            StatementSyntax? ifFalse = null;
             if (CurrentToken.Kind == SyntaxTokenKind.ElseKeyword)
             {
                 EatToken();
@@ -819,14 +826,15 @@ namespace NitroSharp.NsScriptNew.Syntax
             return new BreakStatementSyntax(SpanFrom(keyword));
         }
 
-        private WhileStatementSyntax ParseWhileStatement()
+        private WhileStatementSyntax? ParseWhileStatement()
         {
             SyntaxToken keyword = EatToken(SyntaxTokenKind.WhileKeyword);
             EatToken(SyntaxTokenKind.OpenParen);
-            ExpressionSyntax condition = ParseExpression();
+            ExpressionSyntax? condition = ParseExpression();
             if (condition == null) { return null; }
             EatToken(SyntaxTokenKind.CloseParen);
-            StatementSyntax body = ParseStatement();
+            StatementSyntax? body = ParseStatement();
+            if (body == null) { return null; }
             return new WhileStatementSyntax(condition, body, SpanFrom(keyword));
         }
 
@@ -947,7 +955,7 @@ namespace NitroSharp.NsScriptNew.Syntax
             var statements = ImmutableArray.CreateBuilder<StatementSyntax>();
             while (CurrentToken.Kind != SyntaxTokenKind.DialogueBlockEndTag)
             {
-                StatementSyntax statement = ParseStatement();
+                StatementSyntax? statement = ParseStatement();
                 if (statement != null)
                 {
                     statements.Add(statement);

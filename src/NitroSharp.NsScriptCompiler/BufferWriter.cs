@@ -186,7 +186,7 @@ namespace NitroSharp.NsScriptCompiler.Playground
         public void Dispose()
         {
             ArrayPool<byte>.Shared.Return(_buffer);
-            _buffer = null;
+            _buffer = null!;
         }
     }
 }

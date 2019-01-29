@@ -74,9 +74,9 @@ namespace NitroSharp.NsScriptNew.Symbols
 
         public override SymbolKind Kind => SymbolKind.Module;
 
-        public ChapterSymbol LookupChapter(string name)
+        public ChapterSymbol? LookupChapter(string name)
         {
-            ChapterSymbol chapter = RootSourceFile.LookupChapter(name);
+            ChapterSymbol? chapter = RootSourceFile.LookupChapter(name);
             if (chapter != null) { return chapter; }
 
             foreach (SourceFileSymbol file in ReferencedSourceFiles)
@@ -88,9 +88,9 @@ namespace NitroSharp.NsScriptNew.Symbols
             return chapter;
         }
 
-        public SceneSymbol LookupScene(string name)
+        public SceneSymbol? LookupScene(string name)
         {
-            SceneSymbol scene = RootSourceFile.LookupScene(name);
+            SceneSymbol? scene = RootSourceFile.LookupScene(name);
             if (scene != null) { return scene; }
 
             foreach (SourceFileSymbol file in ReferencedSourceFiles)
@@ -102,9 +102,9 @@ namespace NitroSharp.NsScriptNew.Symbols
             return scene;
         }
 
-        public FunctionSymbol LookupFunction(string name)
+        public FunctionSymbol? LookupFunction(string name)
         {
-            FunctionSymbol function = RootSourceFile.LookupFunction(name);
+            FunctionSymbol? function = RootSourceFile.LookupFunction(name);
             if (function != null) { return function; }
 
             foreach (SourceFileSymbol file in ReferencedSourceFiles)
@@ -188,16 +188,16 @@ namespace NitroSharp.NsScriptNew.Symbols
 
         public uint MemberCount { get; }
 
-        public ChapterSymbol LookupChapter(string name)
+        public ChapterSymbol? LookupChapter(string name)
             => LookupMember(_chapterMap, name);
 
-        public SceneSymbol LookupScene(string name)
+        public SceneSymbol? LookupScene(string name)
             => LookupMember(_sceneMap, name);
 
-        public FunctionSymbol LookupFunction(string name)
+        public FunctionSymbol? LookupFunction(string name)
             => LookupMember(_functionMap, name);
 
-        private T LookupMember<T>(Dictionary<string, T> map, string name) where T : MemberSymbol
+        private T? LookupMember<T>(Dictionary<string, T> map, string name) where T : MemberSymbol
             => map.TryGetValue(name, out T symbol) ? symbol : null;
 
         public override string ToString() => $"SourceFile '{Name}'";
@@ -211,7 +211,7 @@ namespace NitroSharp.NsScriptNew.Symbols
 
     public abstract class MemberSymbol : NamedSymbol
     {
-        private readonly Dictionary<string, DialogueBlockSymbol> _dialogueBlockMap;
+        private readonly Dictionary<string, DialogueBlockSymbol>? _dialogueBlockMap;
 
         protected MemberSymbol(
             SourceFileSymbol declaringSourceFile, string name, MemberDeclarationSyntax declaration)
@@ -241,8 +241,8 @@ namespace NitroSharp.NsScriptNew.Symbols
         public MemberDeclarationSyntax Declaration { get; }
         public ImmutableArray<DialogueBlockSymbol> DialogueBlocks { get; }
 
-        public virtual ParameterSymbol LookupParameter(string name) => null;
-        public DialogueBlockSymbol LookupDialogueBlock(string name)
+        public virtual ParameterSymbol? LookupParameter(string name) => null;
+        public DialogueBlockSymbol? LookupDialogueBlock(string name)
         {
             if (_dialogueBlockMap == null) { return null; }
             return _dialogueBlockMap.TryGetValue(name, out DialogueBlockSymbol symbol)
@@ -252,7 +252,7 @@ namespace NitroSharp.NsScriptNew.Symbols
 
     public sealed class FunctionSymbol : MemberSymbol
     {
-        private readonly Dictionary<string, ParameterSymbol> _parameterMap;
+        private readonly Dictionary<string, ParameterSymbol>? _parameterMap;
 
         internal FunctionSymbol(
             SourceFileSymbol declaringSourceFile, string name, FunctionDeclarationSyntax declaration)
@@ -283,7 +283,7 @@ namespace NitroSharp.NsScriptNew.Symbols
         public new FunctionDeclarationSyntax Declaration { get; }
         public ImmutableArray<ParameterSymbol> Parameters { get; }
 
-        public override ParameterSymbol LookupParameter(string name)
+        public override ParameterSymbol? LookupParameter(string name)
         {
             if (_parameterMap == null) { return null; }
             return _parameterMap.TryGetValue(name, out ParameterSymbol symbol) ? symbol : null;

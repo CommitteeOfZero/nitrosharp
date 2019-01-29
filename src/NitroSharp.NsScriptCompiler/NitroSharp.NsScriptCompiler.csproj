@@ -2,6 +2,9 @@
 
   <PropertyGroup>
     <TargetFrameworks>netcoreapp2.2</TargetFrameworks>
+    <LangVersion>8.0</LangVersion>
+    <NullableContextOptions>enable</NullableContextOptions>
+    <WarningsAsErrors>NU1605;CS8625;CS8600;CS8603</WarningsAsErrors>
     <AssemblyName>NitroSharp.NsScriptCompiler</AssemblyName>
     <RootNamespace>NitroSharp.NsScriptNew</RootNamespace>
   </PropertyGroup>

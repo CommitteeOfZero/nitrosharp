@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
 namespace NitroSharp.NsScriptNew
@@ -16,7 +17,7 @@ namespace NitroSharp.NsScriptNew
     public readonly struct ConstantValue
     {
         private readonly int _numericValue;
-        private readonly string _stringValue;
+        private readonly string? _stringValue;
 
         public readonly BuiltInType Type;
 
@@ -130,6 +131,7 @@ namespace NitroSharp.NsScriptNew
                     ThrowNotString();
                 }
 
+                Debug.Assert(_stringValue != null);
                 return _stringValue;
             }
         }

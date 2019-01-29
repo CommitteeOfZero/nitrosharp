@@ -54,7 +54,7 @@ namespace NitroSharp.NsScriptNew
         private sealed class DiagnosticWithArguments : Diagnostic
         {
             private readonly object[] _arguments;
-            private string _message;
+            private string? _message;
 
             public DiagnosticWithArguments(TextSpan span, DiagnosticId id, params object[] arguments) : base(span, id)
             {

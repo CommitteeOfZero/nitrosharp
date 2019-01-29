@@ -35,17 +35,12 @@ namespace NitroSharp.NsScriptNew
         public static SyntaxTree ParseText(string text) => ParseText(SourceText.From(text));
         public static SyntaxTree ParseText(SourceText sourceText)
         {
-            if (sourceText == null)
-            {
-                throw new ArgumentNullException(nameof(sourceText));
-            }
-
             var parser = new Parser(new Lexer(sourceText));
             var root = parser.ParseSourceFile();
             return new SyntaxTree(sourceText, root, parser.DiagnosticBuilder);
         }
 
-        public static SyntaxTree ParseText(Stream stream, string filePath, Encoding encoding = null)
+        public static SyntaxTree ParseText(Stream stream, string filePath, Encoding? encoding = null)
         {
             var sourceText = SourceText.From(stream, filePath, encoding);
             return ParseText(sourceText);
@@ -55,13 +50,8 @@ namespace NitroSharp.NsScriptNew
         public static SyntaxTree ParseStatement(string statement) => ParseString(statement, p => p.ParseStatement());
         public static SyntaxTree ParseMemberDeclaration(string text) => ParseString(text, p => p.ParseMemberDeclaration());
 
-        private static SyntaxTree ParseString(string text, Func<Parser, SyntaxNode> parseFunc)
+        private static SyntaxTree ParseString(string text, Func<Parser, SyntaxNode?> parseFunc)
         {
-            if (text == null)
-            {
-                throw new ArgumentNullException(nameof(text));
-            }
-
             var sourceText = SourceText.From(text);
             var parser = new Parser(new Lexer(sourceText));
             var root = parseFunc(parser);

@@ -7,7 +7,6 @@ using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Text;
 using NitroSharp.NsScriptCompiler.Playground;
 using NitroSharp.NsScriptNew.CodeGen;
 using NitroSharp.NsScriptNew.Symbols;
@@ -261,49 +260,42 @@ namespace NitroSharp.NsScriptNew
             }
         }
 
-        private static (BufferWriter buffer, int[] memberOffsetPlaceholders) BuildMemberTable(
-            ReadOnlySpan<MemberSymbol> members)
-        {
-            var writer = new BufferWriter(4096);
-            var offsetPlaceholders = new int[members.Length];
-            writer.WriteStringAsUtf8("MEM\0");
-            writer.WriteUInt16LE((ushort)members.Length);
-            for (int i = 0; i < members.Length; i++)
-            {
-                MemberSymbol member = members[i];
-                byte kind = 0;
-                switch (member.Kind)
-                {
-                    case SymbolKind.Chapter:
-                        kind = 0x00;
-                        break;
-                    case SymbolKind.Scene:
-                        kind = 0x01;
-                        break;
-                    case SymbolKind.Function:
-                        kind = 0x02;
-                        break;
-                }
+        //private static (BufferWriter buffer, int[] memberOffsetPlaceholders) BuildMemberTable(
+        //    ReadOnlySpan<MemberSymbol> members)
+        //{
+        //    var writer = new BufferWriter(4096);
+        //    var offsetPlaceholders = new int[members.Length];
+        //    writer.WriteStringAsUtf8("MEM\0");
+        //    writer.WriteUInt16LE((ushort)members.Length);
+        //    for (int i = 0; i < members.Length; i++)
+        //    {
+        //        MemberSymbol member = members[i];
+        //        byte kind = member.Kind switch
+        //        {
+        //            SymbolKind.Chapter => (byte)0x00,
+        //            SymbolKind.Scene => (byte)0x01,
+        //            SymbolKind.Function => (byte)0x02
+        //        };
 
-                writer.WriteByte(kind);
+        //        writer.WriteByte(kind);
 
-                offsetPlaceholders[i] = writer.WrittenCount;
-                writer.WriteInt32LE(0);
+        //        offsetPlaceholders[i] = writer.WrittenCount;
+        //        writer.WriteInt32LE(0);
 
-                writer.WriteStringAsUtf8(member.Name);
-                if (member is FunctionSymbol function && function.Parameters.Length > 0)
-                {
-                    ImmutableArray<ParameterSymbol> parameters = function.Parameters;
-                    writer.WriteByte((byte)parameters.Length);
-                    foreach (ParameterSymbol parameter in parameters)
-                    {
-                        writer.WriteStringAsUtf8(parameter.Name);
-                    }
-                }
-            }
+        //        writer.WriteStringAsUtf8(member.Name);
+        //        if (member is FunctionSymbol function && function.Parameters.Length > 0)
+        //        {
+        //            ImmutableArray<ParameterSymbol> parameters = function.Parameters;
+        //            writer.WriteByte((byte)parameters.Length);
+        //            foreach (ParameterSymbol parameter in parameters)
+        //            {
+        //                writer.WriteStringAsUtf8(parameter.Name);
+        //            }
+        //        }
+        //    }
 
-            return (writer, offsetPlaceholders);
-        }
+        //    return (writer, offsetPlaceholders);
+        //}
 
         public void Dispose()
         {
@@ -479,7 +471,7 @@ namespace NitroSharp.NsScriptNew
             return LookupResult.Empty;
         }
 
-        public ChapterSymbol ResolveCallChapterTarget(CallChapterStatementSyntax callChapterStmt)
+        public ChapterSymbol? ResolveCallChapterTarget(CallChapterStatementSyntax callChapterStmt)
         {
             string modulePath = callChapterStmt.TargetModule.Value;
             SourceModuleSymbol targetSourceModule;
@@ -487,7 +479,7 @@ namespace NitroSharp.NsScriptNew
             {
                 targetSourceModule = _compilation.GetSourceModule(modulePath);
                 SourceFileSymbol rootSourceFile = targetSourceModule.RootSourceFile;
-                ChapterSymbol chapter = targetSourceModule.LookupChapter("main");
+                ChapterSymbol? chapter = targetSourceModule.LookupChapter("main");
                 if (chapter == null)
                 {
                     Report(callChapterStmt.TargetModule, DiagnosticId.ChapterMainNotFound);
@@ -508,7 +500,7 @@ namespace NitroSharp.NsScriptNew
         public LookupResult LookupNonInvocableSymbol(Spanned<string> identifier, bool isVariable)
         {
             string name = identifier.Value;
-            ParameterSymbol parameter = _member.LookupParameter(name);
+            ParameterSymbol? parameter = _member.LookupParameter(name);
             if (parameter != null)
             {
                 return new LookupResult(parameter);
@@ -538,7 +530,7 @@ namespace NitroSharp.NsScriptNew
                 return new LookupResult(builtInFunction.Value);
             }
 
-            FunctionSymbol function = _module.LookupFunction(name);
+            FunctionSymbol? function = _module.LookupFunction(name);
             if (function != null)
             {
                 return new LookupResult(function);
@@ -548,18 +540,18 @@ namespace NitroSharp.NsScriptNew
             return LookupResult.Empty;
         }
 
-        public ChapterSymbol LookupChapter(Spanned<string> identifier)
+        public ChapterSymbol? LookupChapter(Spanned<string> identifier)
         {
-            ChapterSymbol chapter = _module.LookupChapter(identifier.Value);
+            ChapterSymbol? chapter = _module.LookupChapter(identifier.Value);
             if (chapter != null) { return chapter; }
 
             ReportUnresolvedIdentifier(identifier);
             return null;
         }
 
-        public SceneSymbol LookupScene(Spanned<string> identifier)
+        public SceneSymbol? LookupScene(Spanned<string> identifier)
         {
-            SceneSymbol scene = _module.LookupScene(identifier.Value);
+            SceneSymbol? scene = _module.LookupScene(identifier.Value);
             if (scene != null) { return scene; }
 
             ReportUnresolvedIdentifier(identifier);
@@ -600,7 +592,7 @@ namespace NitroSharp.NsScriptNew
         private readonly SourceModuleSymbol _sourceModule;
         private BufferWriter _code;
 
-        private readonly TokenMap<ParameterSymbol> _parameters;
+        private readonly TokenMap<ParameterSymbol>? _parameters;
 
         private readonly Queue<int> _insertBreaksAt;
 
@@ -612,7 +604,7 @@ namespace NitroSharp.NsScriptNew
             _compilation = module.Compilation;
             _sourceModule = _member.DeclaringSourceFile.Module;
             _code = new BufferWriter(256);
-            _parameters = default;
+            _parameters = null;
             if (member is FunctionSymbol function && function.Parameters.Length > 0)
             {
                 _parameters = new TokenMap<ParameterSymbol>();
@@ -708,6 +700,7 @@ namespace NitroSharp.NsScriptNew
                     EmitLoadImm(ConstantValue.BuiltInConstant(lookupResult.BuiltInConstant));
                     break;
                 case LookupResultDiscriminator.Parameter:
+                    Debug.Assert(_parameters != null);
                     ushort slot = _parameters.GetOrAddToken(lookupResult.Parameter);
                     EmitLoadArg(slot);
                     break;
@@ -749,6 +742,7 @@ namespace NitroSharp.NsScriptNew
             VariableKind variableKind;
             if (target.Discriminator == LookupResultDiscriminator.Parameter)
             {
+                Debug.Assert(_parameters != null);
                 token = _parameters.GetOrAddToken(target.Parameter);
                 variableKind = VariableKind.Parameter;
             }
@@ -832,7 +826,7 @@ namespace NitroSharp.NsScriptNew
 
         private void EmitCallChapter(CallChapterStatementSyntax statement)
         {
-            ChapterSymbol chapter = _checker.ResolveCallChapterTarget(statement);
+            ChapterSymbol? chapter = _checker.ResolveCallChapterTarget(statement);
             if (chapter == null) { return; }
 
             EmitOpcode(Opcode.CallFar);
@@ -1104,25 +1098,14 @@ namespace NitroSharp.NsScriptNew
 
         private void EmitLoadArg(ushort slot)
         {
-            Opcode opcode;
-            switch (slot)
+            Opcode opcode = slot switch
             {
-                case 0:
-                    opcode = Opcode.LoadArg0;
-                    break;
-                case 1:
-                    opcode = Opcode.LoadArg1;
-                    break;
-                case 2:
-                    opcode = Opcode.LoadArg2;
-                    break;
-                case 3:
-                    opcode = Opcode.LoadArg3;
-                    break;
-                default:
-                    opcode = Opcode.LoadArg;
-                    break;
-            }
+                0 => Opcode.LoadArg0,
+                1 => Opcode.LoadArg1,
+                2 => Opcode.LoadArg2,
+                3 => Opcode.LoadArg3,
+                _ => Opcode.LoadArg
+            };
 
             EmitOpcode(opcode);
             if (slot > 3)
@@ -1133,25 +1116,14 @@ namespace NitroSharp.NsScriptNew
 
         private void EmitStoreArg(ushort slot)
         {
-            Opcode opcode;
-            switch (slot)
+            Opcode opcode = slot switch
             {
-                case 0:
-                    opcode = Opcode.StoreArg0;
-                    break;
-                case 1:
-                    opcode = Opcode.StoreArg1;
-                    break;
-                case 2:
-                    opcode = Opcode.StoreArg2;
-                    break;
-                case 3:
-                    opcode = Opcode.StoreArg3;
-                    break;
-                default:
-                    opcode = Opcode.StoreArg;
-                    break;
-            }
+                0 => Opcode.StoreArg0,
+                1 => Opcode.StoreArg1,
+                2 => Opcode.StoreArg2,
+                3 => Opcode.StoreArg3,
+                _ => Opcode.StoreArg
+            };
 
             EmitOpcode(opcode);
             if (slot > 3)

@@ -17,7 +17,7 @@ namespace NitroSharp.NsScriptNew.Syntax
             }
         }
 
-        private TResult DefaultVisitNode(SyntaxNode node) => default(TResult);
+        private TResult DefaultVisitNode(SyntaxNode node) => default(TResult)!;
 
         //public virtual TResult VisitSourceFile(SourceFile sourceFile)
         //{

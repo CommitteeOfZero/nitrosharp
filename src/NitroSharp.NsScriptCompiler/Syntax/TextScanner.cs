@@ -16,7 +16,7 @@ namespace NitroSharp.NsScriptNew.Syntax
 
         protected TextScanner(string text)
         {
-            _text = text ?? throw new ArgumentNullException(nameof(text));
+            _text = text;
         }
 
         protected int Position => _position;

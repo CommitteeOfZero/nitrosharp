@@ -60,7 +60,7 @@ namespace NitroSharp.NsScriptNew.Syntax
         internal IfStatementSyntax(
             ExpressionSyntax condition,
             StatementSyntax ifTrueStatement,
-            StatementSyntax ifFalseStatement,
+            StatementSyntax? ifFalseStatement,
             TextSpan span) : base(span)
         {
             Condition = condition;
@@ -70,11 +70,11 @@ namespace NitroSharp.NsScriptNew.Syntax
 
         public ExpressionSyntax Condition { get; }
         public StatementSyntax IfTrueStatement { get; }
-        public StatementSyntax IfFalseStatement { get; }
+        public StatementSyntax? IfFalseStatement { get; }
 
         public override SyntaxNodeKind Kind => SyntaxNodeKind.IfStatement;
 
-        public override SyntaxNode GetNodeSlot(int index)
+        public override SyntaxNode? GetNodeSlot(int index)
         {
             switch (index)
             {
