@@ -14,6 +14,18 @@ namespace NitroSharp.NsScriptCompiler.Playground
     {
         static void Main(string[] args)
         {
+            //RunDebuggerUI();
+            RunCompiler();
+        }
+
+        static void RunDebuggerUI()
+        {
+            var debugger = new DebuggerUI();
+            debugger.Run();
+        }
+
+        static void RunCompiler()
+        {
             //bool s = GC.TryStartNoGCRegion(125829120);
             var sw = Stopwatch.StartNew();
             var compilation = new Compilation("S:/ChaosContent/Noah/nss");
