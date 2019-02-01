@@ -1,34 +1,99 @@
 ﻿using System;
 using System.Buffers;
 using System.Buffers.Binary;
-using System.Buffers.Text;
 using System.Runtime.CompilerServices;
 using System.Text;
 
 namespace NitroSharp.NsScriptCompiler.Playground
 {
-    public struct BufferWriter : IDisposable
+    internal interface IBuffer<T> : IDisposable
     {
-        private byte[] _buffer;
-        private int _written;
+        uint Length { get; }
+        Span<T> AsSpan();
+        void Resize(uint newSize);
+    }
 
-        public BufferWriter(uint minimumCapacity)
+    internal sealed class HeapAllocBuffer<T> : IBuffer<T>
+    {
+        private T[] _array;
+
+        private HeapAllocBuffer(T[] array)
         {
-            //_buffer = new byte[minimumCapacity];
-            _buffer = ArrayPool<byte>.Shared.Rent((int)minimumCapacity);
-            _written = 0;
+            _array = array;
         }
 
-        public Span<byte> Free => _buffer.AsSpan(_written);
-        public Span<byte> Written => _buffer.AsSpan(0, _written);
+        public uint Length => (uint)_array.Length;
 
-        public int WrittenCount
+        public static HeapAllocBuffer<T> Allocate(uint minimumSize)
+            => new HeapAllocBuffer<T>(new T[minimumSize]);
+
+        public void Resize(uint newSize)
+            => Array.Resize(ref _array, (int)newSize);
+
+        public Span<T> AsSpan()
+            => _array.AsSpan();
+
+        public void Dispose()
         {
-            get => _written;
+        }
+    }
+
+    internal sealed class PooledBuffer<T> : IBuffer<T>
+    {
+        private T[] _pooledArray;
+        private uint _size;
+
+        private PooledBuffer(T[] pooledArray, uint size)
+        {
+            _pooledArray = pooledArray;
+            _size = size;
+        }
+
+        public uint Length => (uint)_pooledArray.Length;
+
+        public static PooledBuffer<T> Allocate(uint minimumSize)
+            => new PooledBuffer<T>(
+                ArrayPool<T>.Shared.Rent((int)minimumSize), minimumSize);
+
+        public void Resize(uint newSize)
+        {
+            T[] newArray = ArrayPool<T>.Shared.Rent((int)newSize);
+            Array.Copy(_pooledArray, newArray, (int)_size);
+            ArrayPool<T>.Shared.Return(_pooledArray);
+            _pooledArray = newArray;
+            _size = newSize;
+        }
+
+        public Span<T> AsSpan()
+            => _pooledArray.AsSpan(0, (int)_size);
+
+        public void Dispose()
+            => ArrayPool<T>.Shared.Return(_pooledArray);
+    }
+
+    internal ref struct BufferWriter
+    {
+        private IBuffer<byte> _buffer;
+        private Span<byte> _span;
+        private int _position;
+
+        public BufferWriter(IBuffer<byte> buffer)
+        {
+            _buffer = buffer;
+            _span = buffer.AsSpan();
+            _position = 0;
+        }
+
+        public Span<byte> Free => _span.Slice(_position);
+        public Span<byte> Written => _span.Slice(0, _position);
+
+        public int Position
+        {
+            get => _position;
             set
             {
-                while (value > _buffer.Length) Resize(value);
-                _written = value;
+                while (value > _buffer.Length) Resize((uint)value);
+                _position = value;
             }
         }
 
@@ -44,14 +109,13 @@ namespace NitroSharp.NsScriptCompiler.Playground
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WriteBytes(ReadOnlySpan<byte> bytes)
         {
-            Span<byte> free = Free;
-            if (free.Length < bytes.Length)
+            if (Free.Length < bytes.Length)
             {
-                Resize(_buffer.Length + bytes.Length);
+                Resize((uint)(_buffer.Length + bytes.Length));
             }
 
             bytes.CopyTo(Free);
-            _written += bytes.Length;
+            _position += bytes.Length;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -91,48 +155,40 @@ namespace NitroSharp.NsScriptCompiler.Playground
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void WriteStringAsUtf8(string text)
+        public void WriteLengthPrefixedUtf8String(string text)
         {
-            while (!TryWriteUtf8String(text))
-            {
-                Resize();
-            }
+            WriteUInt16LE((ushort)text.Length);
+            WriteUtf8String(text);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private bool TryWriteUtf8String(string text)
+        public void WriteUtf8String(string text)
         {
-            Span<byte> free = Free;
-            if (free.Length == 0) { return false; }
-            try
+            int sz = Encoding.UTF8.GetByteCount(text);
+            if (sz > Free.Length)
             {
-                _written += Encoding.UTF8.GetBytes(text, free);
-                return true;
+                Resize((uint)(_buffer.Length + sz));
             }
-            catch (ArgumentException)
-            {
-                return false;
-            }
+
+            Encoding.UTF8.GetBytes(text, Free);
+            _position += sz;
         }
 
-        public void Clear() => _written = 0;
+        public void Clear() => _position = 0;
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        private void Resize(int desiredSize = 0)
+        private void Resize(uint desiredSize = 0)
         {
-            int newSize = Math.Max(desiredSize, _buffer.Length * 2);
-            //var newBuffer = new byte[newSize];
-            var newBuffer = ArrayPool<byte>.Shared.Rent(newSize);
-            Written.CopyTo(newBuffer);
-            ArrayPool<byte>.Shared.Return(_buffer);
-            _buffer = newBuffer;
+            uint newSize = Math.Max(desiredSize, _buffer.Length * 2);
+            _buffer.Resize(newSize);
+            _span = _buffer.AsSpan();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private bool TryWriteByte(byte value)
         {
-            if (_written == _buffer.Length) { return false; }
-            _buffer[_written++] = value;
+            if (_position == _buffer.Length) { return false; }
+            _span[_position++] = value;
             return true;
         }
 
@@ -141,7 +197,7 @@ namespace NitroSharp.NsScriptCompiler.Playground
         {
             if (BinaryPrimitives.TryWriteInt16LittleEndian(Free, value))
             {
-                _written += sizeof(short);
+                _position += sizeof(short);
                 return true;
             }
 
@@ -153,7 +209,7 @@ namespace NitroSharp.NsScriptCompiler.Playground
         {
             if (BinaryPrimitives.TryWriteUInt16LittleEndian(Free, value))
             {
-                _written += sizeof(ushort);
+                _position += sizeof(ushort);
                 return true;
             }
 
@@ -165,7 +221,7 @@ namespace NitroSharp.NsScriptCompiler.Playground
         {
             if (BinaryPrimitives.TryWriteInt32LittleEndian(Free, value))
             {
-                _written += sizeof(int);
+                _position += sizeof(int);
                 return true;
             }
 
@@ -175,18 +231,7 @@ namespace NitroSharp.NsScriptCompiler.Playground
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private bool TryWriteSingle(float value)
         {
-            if (!Utf8Formatter.TryFormat(value, Free, out int written))
-            {
-                return false;
-            }
-            _written += written;
-            return true;
-        }
-
-        public void Dispose()
-        {
-            ArrayPool<byte>.Shared.Return(_buffer);
-            _buffer = null!;
+            return TryWriteInt32LE(Unsafe.As<float, int>(ref value));
         }
     }
 }

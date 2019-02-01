@@ -25,8 +25,8 @@ namespace NitroSharp.NsScriptNew
                     return "Stray token '{0}'.";
                 case DiagnosticId.MisplacedSemicolon:
                     return "Unexpected ';'.";
-                case DiagnosticId.ExpectedMemberDeclaration:
-                    return "Expected a member declaration.";
+                case DiagnosticId.ExpectedSubroutineDeclaration:
+                    return "Expected a subroutine declaration.";
                 case DiagnosticId.InvalidExpressionStatement:
                     return "Only assignment, call, increment and decrement expressions can be used as a statement.";
                 case DiagnosticId.InvalidExpressionTerm:
@@ -60,7 +60,7 @@ namespace NitroSharp.NsScriptNew
                 case DiagnosticId.TokenExpected:
                 case DiagnosticId.InvalidExpressionStatement:
                 case DiagnosticId.InvalidExpressionTerm:
-                case DiagnosticId.ExpectedMemberDeclaration:
+                case DiagnosticId.ExpectedSubroutineDeclaration:
                 case DiagnosticId.UnresolvedIdentifier:
                 case DiagnosticId.BadAssignmentTarget:
                 case DiagnosticId.ExternalModuleNotFound:

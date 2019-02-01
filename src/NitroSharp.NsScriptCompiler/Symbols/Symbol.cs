@@ -4,7 +4,6 @@ using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO;
 using NitroSharp.NsScriptNew.Syntax;
-using NitroSharp.Utilities;
 
 namespace NitroSharp.NsScriptNew.Symbols
 {
@@ -20,9 +19,7 @@ namespace NitroSharp.NsScriptNew.Symbols
         Chapter,
         Scene,
         Function,
-        Parameter,
-        BuiltInFunction,
-        DialogueBlock
+        Parameter
     }
 
     public abstract class NamedSymbol : Symbol
@@ -119,7 +116,7 @@ namespace NitroSharp.NsScriptNew.Symbols
         public override string ToString() => $"Module '{RootSourceFile.Name}'";
     }
 
-    public sealed class SourceFileSymbol : NamedSymbol, IEquatable<SourceFileSymbol>
+    public sealed class SourceFileSymbol : NamedSymbol
     {
         private readonly Dictionary<string, ChapterSymbol> _chapterMap;
         private readonly Dictionary<string, SceneSymbol> _sceneMap;
@@ -145,7 +142,7 @@ namespace NitroSharp.NsScriptNew.Symbols
             var scenes = ImmutableArray.CreateBuilder<SceneSymbol>(sceneCount);
             var functions = ImmutableArray.CreateBuilder<FunctionSymbol>(functionCount);
 
-            foreach (MemberDeclarationSyntax decl in syntax.MemberDeclarations)
+            foreach (SubroutineDeclarationSyntax decl in syntax.SubroutineDeclarations)
             {
                 string declName = decl.Name.Value;
                 switch (decl.Kind)
@@ -174,7 +171,7 @@ namespace NitroSharp.NsScriptNew.Symbols
             Chapters = chapters.ToImmutable();
             Functions = functions.ToImmutable();
             Scenes = scenes.ToImmutable();
-            MemberCount = (uint)(chapters.Count + functions.Count + scenes.Count);
+            SubroutineCount = (uint)(chapters.Count + functions.Count + scenes.Count);
         }
 
         public override SymbolKind Kind => SymbolKind.SourceFile;
@@ -186,71 +183,48 @@ namespace NitroSharp.NsScriptNew.Symbols
         public ImmutableArray<FunctionSymbol> Functions { get; }
         public ImmutableArray<SceneSymbol> Scenes { get; }
 
-        public uint MemberCount { get; }
+        public uint SubroutineCount { get; }
 
         public ChapterSymbol? LookupChapter(string name)
-            => LookupMember(_chapterMap, name);
+            => LookupSubroutine(_chapterMap, name);
 
         public SceneSymbol? LookupScene(string name)
-            => LookupMember(_sceneMap, name);
+            => LookupSubroutine(_sceneMap, name);
 
         public FunctionSymbol? LookupFunction(string name)
-            => LookupMember(_functionMap, name);
+            => LookupSubroutine(_functionMap, name);
 
-        private T? LookupMember<T>(Dictionary<string, T> map, string name) where T : MemberSymbol
+        private T? LookupSubroutine<T>(Dictionary<string, T> map, string name) where T : SubroutineSymbol
             => map.TryGetValue(name, out T symbol) ? symbol : null;
 
         public override string ToString() => $"SourceFile '{Name}'";
-
-        public bool Equals(SourceFileSymbol other) => Name.Equals(other.Name);
-        public override bool Equals(object obj) => obj is SourceFileSymbol other && Name.Equals(other.Name);
-
-        public override int GetHashCode()
-            => HashHelper.Combine(Name.GetHashCode(), (int)MemberCount);
     }
 
-    public abstract class MemberSymbol : NamedSymbol
+    public abstract class SubroutineSymbol : NamedSymbol, IEquatable<SubroutineSymbol>
     {
-        private readonly Dictionary<string, DialogueBlockSymbol>? _dialogueBlockMap;
-
-        protected MemberSymbol(
-            SourceFileSymbol declaringSourceFile, string name, MemberDeclarationSyntax declaration)
+        protected SubroutineSymbol(
+            SourceFileSymbol declaringSourceFile, string name, SubroutineDeclarationSyntax declaration)
             : base(name)
         {
             DeclaringSourceFile = declaringSourceFile;
             Declaration = declaration;
-
-            DialogueBlocks = ImmutableArray<DialogueBlockSymbol>.Empty;
-            ImmutableArray<DialogueBlockSyntax> blockSyntaxNodes = declaration.DialogueBlocks;
-            if (blockSyntaxNodes.Length > 0)
-            {
-                var builder = ImmutableArray.CreateBuilder<DialogueBlockSymbol>(blockSyntaxNodes.Length);
-                _dialogueBlockMap = new Dictionary<string, DialogueBlockSymbol>(blockSyntaxNodes.Length);
-                foreach (DialogueBlockSyntax syntax in declaration.DialogueBlocks)
-                {
-                    var symbol = new DialogueBlockSymbol(this, syntax.Name, syntax);
-                    builder.Add(symbol);
-                    _dialogueBlockMap[syntax.Name] = symbol;
-                    // TODO: error reporting
-                }
-                DialogueBlocks = builder.ToImmutable();
-            }
         }
 
         public SourceFileSymbol DeclaringSourceFile { get; }
-        public MemberDeclarationSyntax Declaration { get; }
-        public ImmutableArray<DialogueBlockSymbol> DialogueBlocks { get; }
+        public SubroutineDeclarationSyntax Declaration { get; }
 
         public virtual ParameterSymbol? LookupParameter(string name) => null;
-        public DialogueBlockSymbol? LookupDialogueBlock(string name)
-        {
-            if (_dialogueBlockMap == null) { return null; }
-            return _dialogueBlockMap.TryGetValue(name, out DialogueBlockSymbol symbol)
-               ? symbol : null;
-        }
+
+        public bool Equals(SubroutineSymbol other)
+            => ReferenceEquals(Declaration, other.Declaration);
+
+        public override bool Equals(object obj)
+            => obj is SubroutineSymbol other && ReferenceEquals(Declaration, other.Declaration);
+
+        public override int GetHashCode() => Declaration.GetHashCode();
     }
 
-    public sealed class FunctionSymbol : MemberSymbol
+    public sealed class FunctionSymbol : SubroutineSymbol, IEquatable<FunctionSymbol>
     {
         private readonly Dictionary<string, ParameterSymbol>? _parameterMap;
 
@@ -289,6 +263,8 @@ namespace NitroSharp.NsScriptNew.Symbols
             return _parameterMap.TryGetValue(name, out ParameterSymbol symbol) ? symbol : null;
         }
 
+        public bool Equals(FunctionSymbol other) => ReferenceEquals(Declaration, other.Declaration);
+        public override int GetHashCode() => Declaration.GetHashCode();
         public override string ToString() => $"Function '{Name}'";
     }
 
@@ -306,7 +282,7 @@ namespace NitroSharp.NsScriptNew.Symbols
         public override string ToString() => $"Parameter '{Name}'";
     }
 
-    public sealed class ChapterSymbol : MemberSymbol
+    public sealed class ChapterSymbol : SubroutineSymbol, IEquatable<ChapterSymbol>
     {
         internal ChapterSymbol(
             SourceFileSymbol declaringSourceFile, string name, ChapterDeclarationSyntax declaration)
@@ -318,10 +294,12 @@ namespace NitroSharp.NsScriptNew.Symbols
         public override SymbolKind Kind => SymbolKind.Chapter;
         public new ChapterDeclarationSyntax Declaration { get; }
 
+        public bool Equals(ChapterSymbol other) => ReferenceEquals(Declaration, other.Declaration);
+        public override int GetHashCode() => Declaration.GetHashCode();
         public override string ToString() => $"Chapter '{Name}'";
     }
 
-    public sealed class SceneSymbol : MemberSymbol
+    public sealed class SceneSymbol : SubroutineSymbol, IEquatable<SceneSymbol>
     {
         internal SceneSymbol(
             SourceFileSymbol declaringSourceFile, string name, SceneDeclarationSyntax declaration)
@@ -333,21 +311,8 @@ namespace NitroSharp.NsScriptNew.Symbols
         public override SymbolKind Kind => SymbolKind.Scene;
         public new SceneDeclarationSyntax Declaration { get; }
 
+        public bool Equals(SceneSymbol other) => ReferenceEquals(Declaration, other.Declaration);
+        public override int GetHashCode() => Declaration.GetHashCode();
         public override string ToString() => $"Scene '{Name}'";
-    }
-
-    public sealed class DialogueBlockSymbol : NamedSymbol
-    {
-        public DialogueBlockSymbol(
-            MemberSymbol containingMember, string name, DialogueBlockSyntax syntax)
-            : base(name)
-        {
-            ContainingMember = containingMember;
-            Syntax = syntax;
-        }
-
-        public override SymbolKind Kind => SymbolKind.DialogueBlock;
-        public MemberSymbol ContainingMember { get; }
-        public DialogueBlockSyntax Syntax { get; }
     }
 }

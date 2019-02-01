@@ -162,7 +162,7 @@ namespace NitroSharp.NsScriptNew.Syntax
         public SourceFileRootSyntax ParseSourceFile()
         {
             var fileReferences = ImmutableArray.CreateBuilder<Spanned<string>>();
-            (uint chapterCount, uint sceneCount, uint functionCount) memberCounts = default;
+            (uint chapterCount, uint sceneCount, uint functionCount) subroutineCounts = default;
             SyntaxTokenKind tk;
             while ((tk = CurrentToken.Kind) != SyntaxTokenKind.EndOfFileToken
                    && !SyntaxFacts.CanStartDeclaration(tk))
@@ -186,23 +186,23 @@ namespace NitroSharp.NsScriptNew.Syntax
                 }
             }
 
-            var members = ImmutableArray.CreateBuilder<MemberDeclarationSyntax>();
+            var subrotuines = ImmutableArray.CreateBuilder<SubroutineDeclarationSyntax>();
             while (CurrentToken.Kind != SyntaxTokenKind.EndOfFileToken)
             {
                 _dialogueBlocks.Clear();
                 switch (CurrentToken.Kind)
                 {
                     case SyntaxTokenKind.ChapterKeyword:
-                        members.Add(ParseChapterDeclaration());
-                        memberCounts.chapterCount++;
+                        subrotuines.Add(ParseChapterDeclaration());
+                        subroutineCounts.chapterCount++;
                         break;
                     case SyntaxTokenKind.SceneKeyword:
-                        members.Add(ParseSceneDeclaration());
-                        memberCounts.sceneCount++;
+                        subrotuines.Add(ParseSceneDeclaration());
+                        subroutineCounts.sceneCount++;
                         break;
                     case SyntaxTokenKind.FunctionKeyword:
-                        members.Add(ParseFunctionDeclaration());
-                        memberCounts.functionCount++;
+                        subrotuines.Add(ParseFunctionDeclaration());
+                        subroutineCounts.functionCount++;
                         break;
 
                     // Lines starting with a '.' are treated as comments.
@@ -214,7 +214,7 @@ namespace NitroSharp.NsScriptNew.Syntax
                         break;
 
                     default:
-                        Report(DiagnosticId.ExpectedMemberDeclaration, GetText(CurrentToken));
+                        Report(DiagnosticId.ExpectedSubroutineDeclaration, GetText(CurrentToken));
                         SkipToNextLine();
                         break;
                 }
@@ -222,10 +222,10 @@ namespace NitroSharp.NsScriptNew.Syntax
 
             var span = new TextSpan(0, SourceText.Length);
             return new SourceFileRootSyntax(
-                members.ToImmutable(), fileReferences.ToImmutable(), memberCounts, span);
+                subrotuines.ToImmutable(), fileReferences.ToImmutable(), subroutineCounts, span);
         }
 
-        public MemberDeclarationSyntax ParseMemberDeclaration()
+        public SubroutineDeclarationSyntax ParseSubroutineDeclaration()
         {
             _dialogueBlocks.Clear();
             switch (CurrentToken.Kind)

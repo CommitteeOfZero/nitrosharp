@@ -6,17 +6,17 @@ namespace NitroSharp.NsScriptNew.Syntax
     public sealed class SourceFileRootSyntax : SyntaxNode
     {
         internal SourceFileRootSyntax(
-            ImmutableArray<MemberDeclarationSyntax> memberDeclarations,
+            ImmutableArray<SubroutineDeclarationSyntax> subroutineDeclarations,
             ImmutableArray<Spanned<string>> fileReferences,
-            (uint chapterCount, uint sceneCount, uint functionCount) memberCounts,
+            (uint chapterCount, uint sceneCount, uint functionCount) subroutineCounts,
             TextSpan span) : base(span)
         {
-            MemberDeclarations = memberDeclarations;
+            SubroutineDeclarations = subroutineDeclarations;
             FileReferences = fileReferences;
-            (ChapterCount, SceneCount, FunctionCount) = memberCounts;
+            (ChapterCount, SceneCount, FunctionCount) = subroutineCounts;
         }
 
-        public ImmutableArray<MemberDeclarationSyntax> MemberDeclarations { get; }
+        public ImmutableArray<SubroutineDeclarationSyntax> SubroutineDeclarations { get; }
         public ImmutableArray<Spanned<string>> FileReferences { get; }
 
         public uint ChapterCount { get; }

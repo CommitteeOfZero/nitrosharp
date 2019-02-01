@@ -28,7 +28,7 @@ namespace NitroSharp.NsScriptNew.Syntax
             }
         }
 
-        protected void VisitArray(ImmutableArray<MemberDeclarationSyntax> list)
+        protected void VisitArray(ImmutableArray<SubroutineDeclarationSyntax> list)
         {
             foreach (var node in list)
             {

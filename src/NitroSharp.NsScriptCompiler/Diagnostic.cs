@@ -15,7 +15,7 @@ namespace NitroSharp.NsScriptNew
         TokenExpected,
         StrayToken,
         MisplacedSemicolon,
-        ExpectedMemberDeclaration,
+        ExpectedSubroutineDeclaration,
         MissingStatementTerminator,
         InvalidExpressionTerm,
         InvalidExpressionStatement,

@@ -18,6 +18,8 @@ namespace NitroSharp.NsScriptNew
 {
     public class Compilation
     {
+        private static ReadOnlySpan<byte> CRLF => new byte[] { 0x0D, 0x0A };
+
         private readonly SourceReferenceResolver _sourceReferenceResolver;
         private readonly Dictionary<ResolvedPath, SyntaxTree> _syntaxTrees;
         private readonly Dictionary<SyntaxTree, SourceModuleSymbol> _sourceModuleSymbols;
@@ -55,24 +57,32 @@ namespace NitroSharp.NsScriptNew
                     if (!compiledSourceFiles.Contains(kvp.Key))
                     {
                         NsxModuleBuilder moduleBuilder = kvp.Value;
-                        moduleBuilder.RealizeAll();
+                        NsxModuleAssembler.WriteModule(moduleBuilder);
                         compiledSourceFiles.Add(kvp.Key);
                         filesCompiled++;
                     }
                 }
             } while (filesCompiled > 0);
-        }
 
-        public BufferWriter CompileMember<T>(T member) where T : MemberSymbol
-        {
-            NsxModuleBuilder nsxBuilder = GetNsxModuleBuilder(member.DeclaringSourceFile);
-            return nsxBuilder.Emit(member);
+            //using (FileStream file = File.OpenWrite("S:/globals"))
+            //{
+            //    foreach (string variable in _globals.GetAll())
+            //    {
+            //        int sz = Encoding.UTF8.GetByteCount(variable);
+            //        Span<byte> utf8Bytes = sz <= 256
+            //            ? stackalloc byte[sz]
+            //            : new byte[sz];
+            //        Encoding.UTF8.GetBytes(variable, utf8Bytes);
+            //        file.Write(utf8Bytes);
+            //        file.Write(CRLF);
+            //    }
+            //}
         }
 
         private void EmitCore(SourceFileSymbol sourceFile, HashSet<ResolvedPath> compiledFiles)
         {
             NsxModuleBuilder nsxBuilder = GetNsxModuleBuilder(sourceFile);
-            nsxBuilder.RealizeAll();
+            NsxModuleAssembler.WriteModule(nsxBuilder);
             compiledFiles.Add(sourceFile.FilePath);
         }
 
@@ -159,158 +169,168 @@ namespace NitroSharp.NsScriptNew
         }
     }
 
-    class NsxModuleWriter : IDisposable
+    static class NsxModuleAssembler
     {
         private static ReadOnlySpan<byte> NsxMagic => new byte[] { 0x4E, 0x53, 0x58, 0x00 };
-        private static ReadOnlySpan<byte> MemTableMarker => new byte[] { 0x4D, 0x45, 0x4D, 0x00 };
+        private static ReadOnlySpan<byte> SubTableMarker => new byte[] { 0x53, 0x55, 0x42, 0x00 };
         private static ReadOnlySpan<byte> StringTableMarker => new byte[] { 0x53, 0x54, 0x52, 0x00 };
+        private static ReadOnlySpan<byte> TableEndMarker => new byte[] { 0xFF, 0xFF, 0xFF, 0xFF };
 
-        private readonly NsxModuleBuilder _builder;
-        private readonly FileStream _fileStream;
-        private BufferWriter _smallBuffer;
-
-        public NsxModuleWriter(NsxModuleBuilder builder)
+        public static void WriteModule(NsxModuleBuilder builder)
         {
-            _builder = builder;
-            _fileStream = File.Create($"S:/ChaosContent/Noah/nsx/{Path.ChangeExtension(_builder.SourceFile.Name, "nsx")}");
-            _smallBuffer = new BufferWriter(16);
-        }
+            const int nsxHeaderSize = 20;
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void Skip(int nbBytes)
-        {
-            _fileStream.Seek(nbBytes, SeekOrigin.Current);
-        }
+            SourceFileSymbol sourceFile = builder.SourceFile;
+            ReadOnlySpan<SubroutineSymbol> subroutines = builder.Subroutines;
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void WriteUInt16(ushort value)
-        {
-            _smallBuffer.WrittenCount = 0;
-            _smallBuffer.WriteUInt16LE(value);
-            _fileStream.Write(_smallBuffer.Written);
-        }
+            // Compile subroutines
+            var codeBuffer = PooledBuffer<byte>.Allocate(64 * 1024);
+            var codeWriter = new BufferWriter(codeBuffer);
+            var subroutineOffsets = new List<int>(subroutines.Length);
+            CompileSubroutines(builder, sourceFile.Chapters, ref codeWriter, subroutineOffsets);
+            CompileSubroutines(builder, sourceFile.Scenes, ref codeWriter, subroutineOffsets);
+            CompileSubroutines(builder, sourceFile.Functions, ref codeWriter, subroutineOffsets);
+            codeWriter.WriteBytes(TableEndMarker);
 
-        public void Write()
-        {
-            _fileStream.Write(NsxMagic);
-            Skip(16);
+            ReadOnlySpan<string> stringHeap = builder.StringHeap;
+            int subTableSize = subroutines.Length * sizeof(int) + 10;
+            int stringTableSize = stringHeap.Length * sizeof(int) + 10;
 
-            // Reserve space for the member table
-            int memberTableSize = _builder.Members.Length * 4 + 8;
-            int memberTableOffset = (int)_fileStream.Position;
-            Skip(memberTableSize);
+            // Build the runtime information table (RTI)
+            int rtiTableOffset = nsxHeaderSize + subTableSize;
+            using var rtiBuffer = PooledBuffer<byte>.Allocate(4096);
+            var rtiWriter = new BufferWriter(rtiBuffer);
+            rtiWriter.WriteUtf8String("RTI\0");
+            WriteRuntimeInformation(sourceFile.Chapters, ref rtiWriter);
+            WriteRuntimeInformation(sourceFile.Scenes, ref rtiWriter);
+            WriteRuntimeInformation(sourceFile.Functions, ref rtiWriter);
+            rtiWriter.WriteBytes(TableEndMarker);
 
-            // Reserve space for the string table
-            int stringTableOffset = (int)_fileStream.Position;
-            int stringTableSize = _builder.StringHeap.Length * 4 + 8;
-            Skip(stringTableSize);
+            int strTableOffset = rtiTableOffset + rtiWriter.Position;
+            int codeStart = strTableOffset + stringTableSize;
 
-            var memberOffsets = new BufferWriter((uint)memberTableSize);
-            SourceFileSymbol sourceFile = _builder.SourceFile;
-            WriteMemberBodies(sourceFile.Chapters, ref memberOffsets);
-            WriteMemberBodies(sourceFile.Scenes, ref memberOffsets);
-            WriteMemberBodies(sourceFile.Functions, ref memberOffsets);
-
-            var stringOffsets = new BufferWriter((uint)stringTableSize);
-            WriteStringHeap(ref stringOffsets);
-
-            _fileStream.Seek(memberTableOffset, SeekOrigin.Begin);
-            _fileStream.Write(MemTableMarker);
-            WriteUInt16((ushort)_builder.Members.Length);
-            using (memberOffsets)
+            // Build the subroutine offset table (SUB)
+            using var subTable = PooledBuffer<byte>.Allocate((uint)subTableSize);
+            var subWriter = new BufferWriter(subTable);
+            subWriter.WriteBytes(SubTableMarker); // SUB\0
+            subWriter.WriteUInt16LE((ushort)subroutines.Length);
+            for (int i = 0; i < subroutines.Length; i++)
             {
-                _fileStream.Write(memberOffsets.Written);
+                subWriter.WriteInt32LE(subroutineOffsets[i] + codeStart);
             }
+            subWriter.WriteBytes(TableEndMarker);
 
-            _fileStream.Seek(stringTableOffset, SeekOrigin.Begin);
-            _fileStream.Write(StringTableMarker);
-            WriteUInt16((ushort)_builder.StringHeap.Length);
-            using (stringOffsets)
+            // Encode strings and build the offset table (STR)
+            int stringHeapStart = codeStart + codeWriter.Position;
+            using var stringHeapBuffer = PooledBuffer<byte>.Allocate(64 * 1024);
+            using var stringOffsetTable = PooledBuffer<byte>.Allocate((uint)stringTableSize);
+            var strTableWriter = new BufferWriter(stringOffsetTable);
+            strTableWriter.WriteBytes(StringTableMarker); // STR\0
+            strTableWriter.WriteUInt16LE((ushort)stringHeap.Length);
+
+            var stringWriter = new BufferWriter(stringHeapBuffer);
+            foreach (string s in stringHeap)
             {
-                _fileStream.Write(stringOffsets.Written);
+                strTableWriter.WriteInt32LE(stringHeapStart + stringWriter.Position);
+                stringWriter.WriteLengthPrefixedUtf8String(s);
             }
+            strTableWriter.WriteBytes(TableEndMarker);
+
+            // Build the NSX header
+            using var headerBuffer = PooledBuffer<byte>.Allocate(nsxHeaderSize);
+            var headerWriter = new BufferWriter(headerBuffer);
+            headerWriter.WriteBytes(NsxMagic);
+            headerWriter.WriteInt32LE(rtiTableOffset);
+            headerWriter.WriteInt32LE(strTableOffset);
+            headerWriter.Position += 8;
+
+            // --- Write everything to the stream ---
+            using FileStream fileStream = File.Create($"S:/ChaosContent/Noah/nsx/{Path.ChangeExtension(sourceFile.Name, "nsx")}");
+            fileStream.Write(headerWriter.Written);
+            fileStream.Write(subWriter.Written);
+            fileStream.Write(rtiWriter.Written);
+            fileStream.Write(strTableWriter.Written);
+            fileStream.Write(codeWriter.Written);
+            fileStream.Write(stringWriter.Written);
         }
 
-        private void WriteMemberBodies<T>(ImmutableArray<T> members, ref BufferWriter offsetTable)
-            where T : MemberSymbol
+        private static void CompileSubroutines<T>(
+            NsxModuleBuilder moduleBuilder, ImmutableArray<T> subroutines,
+            ref BufferWriter writer, List<int> subroutineOffsets)
+            where T : SubroutineSymbol
         {
-            foreach (T member in members)
+            if (subroutines.Length == 0) { return; }
+            var dialogueBlockOffsets = new List<int>();
+            foreach (T subroutine in subroutines)
             {
-                var emitter = new Emitter<T>(_builder, member);
-                using (BufferWriter bytecode = emitter.Emit())
+                SubroutineDeclarationSyntax decl = subroutine.Declaration;
+                int dialogueBlockCount = decl.DialogueBlocks.Length;
+                int headerOffset = writer.Position;
+                int headerSize = dialogueBlockCount * sizeof(ushort) + 2;
+                writer.Position += headerSize;
+                dialogueBlockOffsets.Clear();
+
+                subroutineOffsets.Add(writer.Position);
+                Emitter<T>.CompileSubroutine(moduleBuilder, subroutine, ref writer, dialogueBlockOffsets);
+
+                int oldPosition = writer.Position;
+                writer.Position = headerOffset;
+                writer.WriteUInt16LE((ushort)dialogueBlockCount);
+                for (int i = 0; i < dialogueBlockCount; i++)
                 {
-                    offsetTable.WriteInt32LE((int)_fileStream.Position);
-                    _fileStream.Write(bytecode.Written);
+                    writer.WriteUInt16LE((ushort)(dialogueBlockOffsets[i] + headerSize));
+                }
+
+                writer.Position = oldPosition;
+            }
+        }
+
+        private static void WriteRuntimeInformation<T>(
+            ImmutableArray<T> subroutines, ref BufferWriter writer)
+            where T : SubroutineSymbol
+        {
+            if (subroutines.Length == 0) { return; }
+            foreach (T subroutine in subroutines)
+            {
+                byte kind = subroutine.Kind switch
+                {
+                    SymbolKind.Chapter => (byte)0x00,
+                    SymbolKind.Scene => (byte)0x01,
+                    SymbolKind.Function => (byte)0x02,
+                    _ => ExceptionUtils.Unreachable<byte>()
+                };
+
+                writer.WriteByte(kind);
+                writer.WriteLengthPrefixedUtf8String(subroutine.Name);
+
+                if (typeof(T) == typeof(FunctionSymbol))
+                {
+                    var function = subroutine as FunctionSymbol;
+                    Debug.Assert(function != null);
+                    writer.WriteByte((byte)function.Parameters.Length);
+                    foreach (ParameterSymbol parameter in function.Parameters)
+                    {
+                        writer.WriteLengthPrefixedUtf8String(parameter.Name);
+                    }
+                }
+
+                SubroutineDeclarationSyntax decl = subroutine.Declaration;
+                writer.WriteUInt16LE((ushort)decl.DialogueBlocks.Length);
+                foreach (DialogueBlockSyntax dialogueBlock in decl.DialogueBlocks)
+                {
+                    writer.WriteLengthPrefixedUtf8String(dialogueBlock.Name);
                 }
             }
-        }
-
-        private void WriteStringHeap(ref BufferWriter offsetTable)
-        {
-            int heapStart = (int)_fileStream.Position;
-            using (var buffer = new BufferWriter(4096))
-            {
-                foreach (string s in _builder.StringHeap)
-                {
-                    offsetTable.WriteInt32LE(heapStart + buffer.WrittenCount);
-                    buffer.WriteStringAsUtf8(s);
-                }
-
-                _fileStream.Write(buffer.Written);
-            }
-        }
-
-        //private static (BufferWriter buffer, int[] memberOffsetPlaceholders) BuildMemberTable(
-        //    ReadOnlySpan<MemberSymbol> members)
-        //{
-        //    var writer = new BufferWriter(4096);
-        //    var offsetPlaceholders = new int[members.Length];
-        //    writer.WriteStringAsUtf8("MEM\0");
-        //    writer.WriteUInt16LE((ushort)members.Length);
-        //    for (int i = 0; i < members.Length; i++)
-        //    {
-        //        MemberSymbol member = members[i];
-        //        byte kind = member.Kind switch
-        //        {
-        //            SymbolKind.Chapter => (byte)0x00,
-        //            SymbolKind.Scene => (byte)0x01,
-        //            SymbolKind.Function => (byte)0x02
-        //        };
-
-        //        writer.WriteByte(kind);
-
-        //        offsetPlaceholders[i] = writer.WrittenCount;
-        //        writer.WriteInt32LE(0);
-
-        //        writer.WriteStringAsUtf8(member.Name);
-        //        if (member is FunctionSymbol function && function.Parameters.Length > 0)
-        //        {
-        //            ImmutableArray<ParameterSymbol> parameters = function.Parameters;
-        //            writer.WriteByte((byte)parameters.Length);
-        //            foreach (ParameterSymbol parameter in parameters)
-        //            {
-        //                writer.WriteStringAsUtf8(parameter.Name);
-        //            }
-        //        }
-        //    }
-
-        //    return (writer, offsetPlaceholders);
-        //}
-
-        public void Dispose()
-        {
-            _smallBuffer.Dispose();
-            _fileStream.Dispose();
         }
     }
 
-    class NsxModuleBuilder
+    sealed class NsxModuleBuilder
     {
         private readonly Compilation _compilation;
         private readonly SourceFileSymbol _sourceFile;
         private readonly DiagnosticBuilder _diagnostics;
 
-        private readonly TokenMap<MemberSymbol> _members;
+        private readonly TokenMap<SubroutineSymbol> _subroutines;
         private readonly TokenMap<SourceFileSymbol> _externalSourceFiles;
         private readonly TokenMap<string> _stringHeap;
 
@@ -320,60 +340,30 @@ namespace NitroSharp.NsScriptNew
             _sourceFile = sourceFile;
             _diagnostics = new DiagnosticBuilder();
             _stringHeap = new TokenMap<string>(512);
-            _members = new TokenMap<MemberSymbol>(sourceFile.MemberCount);
-            ConstructMemberMap(sourceFile);
-            _externalSourceFiles = new TokenMap<SourceFileSymbol>(8);
+            _subroutines = new TokenMap<SubroutineSymbol>(sourceFile.SubroutineCount);
+            ConstructSubroutineMap(sourceFile);
+            _externalSourceFiles = new TokenMap<SourceFileSymbol>();
         }
 
         public Compilation Compilation => _compilation;
         public SourceFileSymbol SourceFile => _sourceFile;
-        public ReadOnlySpan<MemberSymbol> Members => _members.GetAll();
-        public ReadOnlySpan<string> StringHeap => _stringHeap.GetAll();
         public DiagnosticBuilder Diagnostics => _diagnostics;
+        public ReadOnlySpan<SubroutineSymbol> Subroutines => _subroutines.AsSpan();
+        public ReadOnlySpan<string> StringHeap => _stringHeap.AsSpan();
 
-        private void ConstructMemberMap(SourceFileSymbol sourceFile)
+        private void ConstructSubroutineMap(SourceFileSymbol sourceFile)
         {
             foreach (ChapterSymbol chapter in sourceFile.Chapters)
             {
-                _members.GetOrAddToken(chapter);
+                _subroutines.GetOrAddToken(chapter);
             }
             foreach (SceneSymbol scene in sourceFile.Scenes)
             {
-                _members.GetOrAddToken(scene);
+                _subroutines.GetOrAddToken(scene);
             }
             foreach (FunctionSymbol function in sourceFile.Functions)
             {
-                _members.GetOrAddToken(function);
-            }
-        }
-
-        public BufferWriter Emit<T>(T symbol) where T : MemberSymbol
-        {
-            var emitter = new Emitter<T>(this, symbol);
-            return emitter.Emit();
-        }
-
-        public void RealizeAll()
-        {
-            foreach (ChapterSymbol chapter in _sourceFile.Chapters)
-            {
-                var chapterEmitter = new Emitter<ChapterSymbol>(this, chapter);
-                chapterEmitter.Emit();
-            }
-            foreach (SceneSymbol scene in _sourceFile.Scenes)
-            {
-                var sceneEmitter = new Emitter<SceneSymbol>(this, scene);
-                sceneEmitter.Emit();
-            }
-            foreach (FunctionSymbol function in _sourceFile.Functions)
-            {
-                var functionEmitter = new Emitter<FunctionSymbol>(this, function);
-                functionEmitter.Emit();
-            }
-
-            using (var writer = new NsxModuleWriter(this))
-            {
-                writer.Write();
+                _subroutines.GetOrAddToken(function);
             }
         }
 
@@ -382,9 +372,9 @@ namespace NitroSharp.NsScriptNew
             return _externalSourceFiles.GetOrAddToken(sourceFile);
         }
 
-        public ushort GetMemberToken(MemberSymbol member)
+        public ushort GetSubroutineToken(SubroutineSymbol subroutine)
         {
-            return _members.GetOrAddToken(member);
+            return _subroutines.GetOrAddToken(subroutine);
         }
 
         public ushort GetStringToken(string s)
@@ -396,7 +386,7 @@ namespace NitroSharp.NsScriptNew
     internal enum LookupResultDiscriminator : byte
     {
         Empty = 0,
-        Member,
+        Subroutine,
         Parameter,
         BuiltInFunction,
         BuiltInConstant,
@@ -416,7 +406,7 @@ namespace NitroSharp.NsScriptNew
         public readonly BuiltInConstant BuiltInConstant;
 
         [FieldOffset(8)]
-        public readonly MemberSymbol Member;
+        public readonly SubroutineSymbol Subroutine;
 
         [FieldOffset(8)]
         public readonly ParameterSymbol Parameter;
@@ -424,8 +414,8 @@ namespace NitroSharp.NsScriptNew
         [FieldOffset(8)]
         public readonly string GlobalVariable;
 
-        public LookupResult(MemberSymbol member) : this()
-            => (Discriminator, Member) = (LookupResultDiscriminator.Member, member);
+        public LookupResult(SubroutineSymbol subroutine) : this()
+            => (Discriminator, Subroutine) = (LookupResultDiscriminator.Subroutine, subroutine);
 
         public LookupResult(ParameterSymbol parameter) : this()
             => (Discriminator, Parameter) = (LookupResultDiscriminator.Parameter, parameter);
@@ -444,17 +434,17 @@ namespace NitroSharp.NsScriptNew
         public bool IsEmpty => Discriminator == LookupResultDiscriminator.Empty;
     }
 
-    struct Checker<T> where T : MemberSymbol
+    struct Checker<T> where T : SubroutineSymbol
     {
-        private readonly T _member;
+        private readonly T _subroutine;
         private readonly SourceModuleSymbol _module;
         private readonly Compilation _compilation;
         private readonly DiagnosticBuilder _diagnostics;
 
-        public Checker(T member, DiagnosticBuilder diagnostics)
+        public Checker(T subroutine, DiagnosticBuilder diagnostics)
         {
-            _member = member;
-            _module = member.DeclaringSourceFile.Module;
+            _subroutine = subroutine;
+            _module = subroutine.DeclaringSourceFile.Module;
             _compilation = _module.Compilation;
             _diagnostics = diagnostics;
         }
@@ -500,7 +490,7 @@ namespace NitroSharp.NsScriptNew
         public LookupResult LookupNonInvocableSymbol(Spanned<string> identifier, bool isVariable)
         {
             string name = identifier.Value;
-            ParameterSymbol? parameter = _member.LookupParameter(name);
+            ParameterSymbol? parameter = _subroutine.LookupParameter(name);
             if (parameter != null)
             {
                 return new LookupResult(parameter);
@@ -560,7 +550,7 @@ namespace NitroSharp.NsScriptNew
 
         private void ReportUnresolvedIdentifier(Spanned<string> identifier)
         {
-            Debug.WriteLine($"{_member.DeclaringSourceFile.Name}: {identifier.Value}");
+            Debug.WriteLine($"{_subroutine.DeclaringSourceFile.Name}: {identifier.Value}");
             _diagnostics.Add(
                 Diagnostic.Create(identifier.Span, DiagnosticId.UnresolvedIdentifier, identifier.Value));
         }
@@ -581,12 +571,22 @@ namespace NitroSharp.NsScriptNew
         }
     }
 
-    struct Emitter<T> where T : MemberSymbol
+    internal readonly ref struct EmitResult
+    {
+        public readonly ReadOnlySpan<ushort> DialogueBlockOffsets;
+
+        public EmitResult(ReadOnlySpan<ushort> dialogueBlockOffsets)
+        {
+            DialogueBlockOffsets = dialogueBlockOffsets;
+        }
+    }
+
+    ref struct Emitter<T> where T : SubroutineSymbol
     {
         private const int JumpInstrSize = sizeof(Opcode) + sizeof(ushort);
 
         private readonly NsxModuleBuilder _module;
-        private readonly T _member;
+        private readonly T _subrotuine;
         private Checker<T> _checker;
         private readonly Compilation _compilation;
         private readonly SourceModuleSymbol _sourceModule;
@@ -596,21 +596,21 @@ namespace NitroSharp.NsScriptNew
 
         private readonly Queue<int> _insertBreaksAt;
 
-        public Emitter(NsxModuleBuilder module, T member)
+        public Emitter(NsxModuleBuilder moduleBuilder, T subroutine)
         {
-            _module = module;
-            _member = member;
-            _checker = new Checker<T>(member, module.Diagnostics);
-            _compilation = module.Compilation;
-            _sourceModule = _member.DeclaringSourceFile.Module;
-            _code = new BufferWriter(256);
+            _module = moduleBuilder;
+            _subrotuine = subroutine;
+            _checker = new Checker<T>(subroutine, moduleBuilder.Diagnostics);
+            _compilation = moduleBuilder.Compilation;
+            _sourceModule = _subrotuine.DeclaringSourceFile.Module;
             _parameters = null;
-            if (member is FunctionSymbol function && function.Parameters.Length > 0)
+            if (subroutine is FunctionSymbol function && function.Parameters.Length > 0)
             {
                 _parameters = new TokenMap<ParameterSymbol>();
             }
 
             _insertBreaksAt = new Queue<int>();
+            _code = default;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -621,10 +621,24 @@ namespace NitroSharp.NsScriptNew
         private ushort GetGlobalVarToken(string variableName)
             => _compilation.GetGlobalVarToken(variableName);
 
-        public BufferWriter Emit()
+        public static void CompileSubroutine(
+            NsxModuleBuilder moduleBuilder, T subroutine,
+            ref BufferWriter codeBuffer, List<int> dialogueBlockOffsets)
         {
-            EmitStatement(_member.Declaration.Body);
-            return _code;
+            Debug.Assert(dialogueBlockOffsets.Count == 0);
+            int start = codeBuffer.Position;
+            var emitter = new Emitter<T>(moduleBuilder, subroutine);
+            emitter._code = codeBuffer;
+            emitter.EmitStatement(subroutine.Declaration.Body);
+
+            SubroutineDeclarationSyntax decl = subroutine.Declaration;
+            ImmutableArray<DialogueBlockSyntax> dialogueBlocks = decl.DialogueBlocks;
+            foreach (DialogueBlockSyntax dialogueBlock in dialogueBlocks)
+            {
+                dialogueBlockOffsets.Add(emitter._code.Position - start);
+                emitter.EmitDialogueBlock(dialogueBlock);
+            }
+            codeBuffer = emitter._code;
         }
 
         private void EmitUnary(UnaryOperatorKind opKind)
@@ -648,7 +662,6 @@ namespace NitroSharp.NsScriptNew
                 case BinaryOperatorKind.NotEquals:
                     EmitOpcode(Opcode.NotEqual);
                     break;
-
                 default:
                     EmitOpcode(Opcode.Binary);
                     _code.WriteByte((byte)opKind);
@@ -807,11 +820,11 @@ namespace NitroSharp.NsScriptNew
             }
             else
             {
-                var function = (FunctionSymbol)lookupResult.Member;
-                if (ReferenceEquals(function.DeclaringSourceFile, _member.DeclaringSourceFile))
+                var function = (FunctionSymbol)lookupResult.Subroutine;
+                if (ReferenceEquals(function.DeclaringSourceFile, _subrotuine.DeclaringSourceFile))
                 {
                     EmitOpcode(Opcode.Call);
-                    _code.WriteUInt16LE(_module.GetMemberToken(function));
+                    _code.WriteUInt16LE(_module.GetSubroutineToken(function));
                 }
                 else
                 {
@@ -819,7 +832,7 @@ namespace NitroSharp.NsScriptNew
                     SourceFileSymbol externalSourceFile = function.DeclaringSourceFile;
                     NsxModuleBuilder externalNsxBuilder = _compilation.GetNsxModuleBuilder(externalSourceFile);
                     _code.WriteUInt16LE(_module.GetExternalModuleToken(externalSourceFile));
-                    _code.WriteUInt16LE(externalNsxBuilder.GetMemberToken(function));
+                    _code.WriteUInt16LE(externalNsxBuilder.GetSubroutineToken(function));
                 }
             }
         }
@@ -833,7 +846,7 @@ namespace NitroSharp.NsScriptNew
             SourceFileSymbol externalSourceFile = chapter.DeclaringSourceFile;
             NsxModuleBuilder externalNsxBuilder = _compilation.GetNsxModuleBuilder(externalSourceFile);
             _code.WriteUInt16LE(_module.GetExternalModuleToken(externalSourceFile));
-            _code.WriteUInt16LE(externalNsxBuilder.GetMemberToken(chapter));
+            _code.WriteUInt16LE(externalNsxBuilder.GetSubroutineToken(chapter));
         }
 
         private void EmitStatement(StatementSyntax statement)
@@ -868,9 +881,20 @@ namespace NitroSharp.NsScriptNew
                     EmitSelectSection((SelectSectionSyntax)statement);
                     break;
                 case SyntaxNodeKind.DialogueBlock:
-                    EmitDialogueBlock((DialogueBlockSyntax)statement);
+                    break;
+                case SyntaxNodeKind.PXmlString:
+                    EmitDialogue((PXmlString)statement);
+                    break;
+                case SyntaxNodeKind.PXmlLineSeparator:
+                    EmitOpcode(Opcode.AwaitInput);
                     break;
             }
+        }
+
+        private void EmitDialogue(PXmlString textNode)
+        {
+            EmitOpcode(Opcode.PresentText);
+            _code.WriteUInt16LE(_module.GetStringToken(textNode.Text));
         }
 
         private void EmitSelectSection(SelectSectionSyntax statement)
@@ -913,14 +937,14 @@ namespace NitroSharp.NsScriptNew
                 // <consequence>
                 // end:
 
-                int jmpInstrOffset = _code.WrittenCount;
-                _code.WrittenCount += JumpInstrSize;
+                int jmpInstrOffset = _code.Position;
+                _code.Position += JumpInstrSize;
                 EmitStatement(ifStmt.IfTrueStatement);
-                int end = _code.WrittenCount;
-                _code.WrittenCount = jmpInstrOffset;
+                int end = _code.Position;
+                _code.Position = jmpInstrOffset;
                 EmitOpcode(Opcode.JumpIfFalse);
                 _code.WriteInt16LE((short)(end - jmpInstrOffset));
-                _code.WrittenCount = end;
+                _code.Position = end;
             }
             else
             {
@@ -938,27 +962,27 @@ namespace NitroSharp.NsScriptNew
                 // <alternative>
                 // end:
 
-                int firstJmpInstrOffset = _code.WrittenCount;
-                _code.WrittenCount += JumpInstrSize;
+                int firstJmpInstrOffset = _code.Position;
+                _code.Position += JumpInstrSize;
 
                 EmitStatement(ifStmt.IfTrueStatement);
 
-                int secondJmpInstrOffset = _code.WrittenCount;
-                _code.WrittenCount += JumpInstrSize;
-                int alternativePos = _code.WrittenCount;
+                int secondJmpInstrOffset = _code.Position;
+                _code.Position += JumpInstrSize;
+                int alternativePos = _code.Position;
 
                 EmitStatement(ifStmt.IfFalseStatement);
 
-                int end = _code.WrittenCount;
+                int end = _code.Position;
                 int secondJmpTargetOffset = end - secondJmpInstrOffset;
-                _code.WrittenCount = secondJmpInstrOffset;
+                _code.Position = secondJmpInstrOffset;
                 EmitOpcode(Opcode.Jump);
                 _code.WriteInt16LE((short)secondJmpTargetOffset);
 
-                _code.WrittenCount = firstJmpInstrOffset;
+                _code.Position = firstJmpInstrOffset;
                 EmitOpcode(Opcode.JumpIfFalse);
                 _code.WriteInt16LE((short)(alternativePos - firstJmpInstrOffset));
-                _code.WrittenCount = end;
+                _code.Position = end;
             }
         }
 
@@ -980,35 +1004,35 @@ namespace NitroSharp.NsScriptNew
             // Jump <condition>
             // exit:
 
-            int conditionPos = _code.WrittenCount;
+            int conditionPos = _code.Position;
             EmitExpression(whileStmt.Condition);
-            int firstJmpOffset = _code.WrittenCount;
-            _code.WrittenCount += JumpInstrSize;
+            int firstJmpOffset = _code.Position;
+            _code.Position += JumpInstrSize;
 
             EmitStatement(whileStmt.Body);
             EmitOpcode(Opcode.Jump);
-            _code.WriteInt16LE((short)(conditionPos - _code.WrittenCount));
-            int exit = _code.WrittenCount;
+            _code.WriteInt16LE((short)(conditionPos - _code.Position));
+            int exit = _code.Position;
 
-            _code.WrittenCount = firstJmpOffset;
+            _code.Position = firstJmpOffset;
             EmitOpcode(Opcode.JumpIfFalse);
             _code.WriteInt16LE((short)(exit - firstJmpOffset));
-            _code.WrittenCount = exit;
+            _code.Position = exit;
 
             while (_insertBreaksAt.Count > 0)
             {
                 int pos = _insertBreaksAt.Dequeue();
-                _code.WrittenCount = pos;
+                _code.Position = pos;
                 _code.WriteInt16LE((short)(exit - pos));
             }
 
-            _code.WrittenCount = exit;
+            _code.Position = exit;
         }
 
         private void EmitBreakStatement(BreakStatementSyntax statement)
         {
-            _insertBreaksAt.Enqueue(_code.WrittenCount);
-            _code.WrittenCount += JumpInstrSize;
+            _insertBreaksAt.Enqueue(_code.Position);
+            _code.Position += JumpInstrSize;
         }
 
         private void EmitLoadVariable(VariableKind variableKind, ushort token)
@@ -1134,7 +1158,10 @@ namespace NitroSharp.NsScriptNew
 
         private void EmitDialogueBlock(DialogueBlockSyntax dialogueBlock)
         {
-
+            foreach (StatementSyntax statement in dialogueBlock.Parts)
+            {
+                EmitStatement(statement);
+            }
         }
     }
 
@@ -1149,7 +1176,7 @@ namespace NitroSharp.NsScriptNew
             _items = new ArrayBuilder<T>(initialCapacity);
         }
 
-        public ReadOnlySpan<T> GetAll() => _items.AsReadonlySpan();
+        public ReadOnlySpan<T> AsSpan() => _items.AsReadonlySpan();
 
         public ushort GetOrAddToken(T item)
         {

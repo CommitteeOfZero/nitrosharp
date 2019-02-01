@@ -3,9 +3,9 @@ using NitroSharp.NsScriptNew.Text;
 
 namespace NitroSharp.NsScriptNew.Syntax
 {
-    public abstract class MemberDeclarationSyntax : SyntaxNode
+    public abstract class SubroutineDeclarationSyntax : SyntaxNode
     {
-        protected MemberDeclarationSyntax(Spanned<string> name, BlockSyntax body,
+        protected SubroutineDeclarationSyntax(Spanned<string> name, BlockSyntax body,
             ImmutableArray<DialogueBlockSyntax> dialogueBlocks, TextSpan span) : base(span)
         {
             Name = name;
@@ -27,7 +27,7 @@ namespace NitroSharp.NsScriptNew.Syntax
         }
     }
 
-    public sealed class ChapterDeclarationSyntax : MemberDeclarationSyntax
+    public sealed class ChapterDeclarationSyntax : SubroutineDeclarationSyntax
     {
         internal ChapterDeclarationSyntax(Spanned<string> name, BlockSyntax body,
             ImmutableArray<DialogueBlockSyntax> dialogueBlocks, TextSpan span)
@@ -48,7 +48,7 @@ namespace NitroSharp.NsScriptNew.Syntax
         }
     }
 
-    public sealed class SceneDeclarationSyntax : MemberDeclarationSyntax
+    public sealed class SceneDeclarationSyntax : SubroutineDeclarationSyntax
     {
         internal SceneDeclarationSyntax(Spanned<string> name, BlockSyntax body,
             ImmutableArray<DialogueBlockSyntax> dialogueBlocks, TextSpan span)
@@ -69,7 +69,7 @@ namespace NitroSharp.NsScriptNew.Syntax
         }
     }
 
-    public sealed class FunctionDeclarationSyntax : MemberDeclarationSyntax
+    public sealed class FunctionDeclarationSyntax : SubroutineDeclarationSyntax
     {
         internal FunctionDeclarationSyntax(
             Spanned<string> name, ImmutableArray<ParameterSyntax> parameters,

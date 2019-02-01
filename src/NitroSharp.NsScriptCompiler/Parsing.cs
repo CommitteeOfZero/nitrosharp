@@ -46,9 +46,14 @@ namespace NitroSharp.NsScriptNew
             return ParseText(sourceText);
         }
 
-        public static SyntaxTree ParseExpression(string expression) => ParseString(expression, p => p.ParseExpression());
-        public static SyntaxTree ParseStatement(string statement) => ParseString(statement, p => p.ParseStatement());
-        public static SyntaxTree ParseMemberDeclaration(string text) => ParseString(text, p => p.ParseMemberDeclaration());
+        public static SyntaxTree ParseExpression(string expression)
+            => ParseString(expression, p => p.ParseExpression());
+
+        public static SyntaxTree ParseStatement(string statement)
+            => ParseString(statement, p => p.ParseStatement());
+
+        public static SyntaxTree ParseSubroutineDeclaration(string text)
+            => ParseString(text, p => p.ParseSubroutineDeclaration());
 
         private static SyntaxTree ParseString(string text, Func<Parser, SyntaxNode?> parseFunc)
         {
