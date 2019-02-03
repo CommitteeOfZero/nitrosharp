@@ -1,21 +1,57 @@
 ﻿using NitroSharp.NsScriptNew;
 using NitroSharp.NsScriptNew.Symbols;
 using System;
-using System.Buffers.Binary;
 using System.Buffers.Text;
 using System.Diagnostics;
 using System.IO;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 namespace NitroSharp.NsScriptCompiler.Playground
 {
-    class Program
+    partial class Program
     {
         static void Main(string[] args)
         {
-            //RunDebuggerUI();
             RunCompiler();
+            RunDisasm();
+        }
+
+        static void RunDisasm()
+        {
+            using var script = File.OpenRead("S:/ChaosContent/Noah/nsx/boot.nsx");
+            var boot = NsxModule.LoadModule(script);
+
+            foreach (string import in boot.Imports)
+            {
+                Console.WriteLine(import);
+            }
+
+            ref readonly SubroutineRuntimeInformation srti =
+                ref boot.GetSubroutineRuntimeInformation(1);
+
+
+
+            //var someFunc = boot.GetSubroutine(0);
+            //var disasm = new BodyDisassembler(someFunc.Code);
+
+            //var sw = Stopwatch.StartNew();
+            //for (int i = 0; i < boot.StringCount; i++)
+            //{
+            //    boot.GetString((ushort)i);
+            //}
+            //sw.Stop();
+            //Console.WriteLine(sw.ElapsedMilliseconds);
+
+            //Opcode opcode = Opcode.Nop;
+            //int n = 0;
+            //do
+            //{
+            //    opcode = disasm.NextOpcode();
+            //    disasm.SkipOperands();
+
+            //    Console.WriteLine(opcode.ToString());
+            //    n++;
+            //} while (opcode != Opcode.Return);
         }
 
         static void RunDebuggerUI()
@@ -31,135 +67,13 @@ namespace NitroSharp.NsScriptCompiler.Playground
             var compilation = new Compilation("S:/ChaosContent/Noah/nss");
             SourceModuleSymbol boot = compilation.GetSourceModule("boot.nss");
             compilation.Emit(boot);
-
-            //var buffer = compilation.CompileMember(boot.LookupChapter("main"));
-            //var disassember = new BodyDisassembler(buffer.Written);
-
-            //Opcode opcode = Opcode.Nop;
-            //int n = 0;
-            //do
-            //{
-            //    //if (n == 21)
-            //    //{
-            //    //    Debugger.Break();
-            //    //}
-
-            //    opcode = disassember.NextOpcode();
-            //    disassember.SkipOperands();
-
-            //    Console.WriteLine(opcode.ToString());
-            //    n++;
-            //} while (opcode != Opcode.Nop);
-
             sw.Stop();
             Console.WriteLine(sw.Elapsed.TotalSeconds);
             //GC.EndNoGCRegion();
         }
 
-        private ref struct BufferReader
-        {
-            private readonly ReadOnlySpan<byte> _buffer;
-            private int _position;
-
-            public BufferReader(ReadOnlySpan<byte> buffer)
-            {
-                _buffer = buffer;
-                _position = 0;
-            }
-
-            public ReadOnlySpan<byte> Consumed => _buffer.Slice(0, _position);
-            public ReadOnlySpan<byte> Unconsumed => _buffer.Slice(_position);
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public byte ReadByte()
-                => TryReadByte(out byte value) ? value : ThrowNoData<byte>();
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public int ReadInt32LE()
-                => TryReadInt32LE(out int value) ? value : ThrowNoData<int>();
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public short ReadInt16LE()
-                => TryReadInt16LE(out short value) ? value : ThrowNoData<short>();
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public ushort ReadUInt16LE()
-                => TryReadUInt16LE(out ushort value) ? value : ThrowNoData<ushort>();
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public float ReadSingle()
-                => TryReadSingle(out float value) ? value : ThrowNoData<float>();
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public bool TryReadByte(out byte value)
-            {
-                if (_position < _buffer.Length)
-                {
-                    value = _buffer[_position];
-                    _position++;
-                    return true;
-                }
-
-                value = 0;
-                return false;
-            }
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public bool TryReadInt32LE(out int value)
-            {
-                if (BinaryPrimitives.TryReadInt32LittleEndian(Unconsumed, out value))
-                {
-                    _position += sizeof(int);
-                    return true;
-                }
-
-                return false;
-            }
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public bool TryReadInt16LE(out short value)
-            {
-                if (BinaryPrimitives.TryReadInt16LittleEndian(Unconsumed, out value))
-                {
-                    _position += sizeof(short);
-                    return true;
-                }
-
-                return false;
-            }
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public bool TryReadUInt16LE(out ushort value)
-            {
-                if (BinaryPrimitives.TryReadUInt16LittleEndian(Unconsumed, out value))
-                {
-                    _position += sizeof(ushort);
-                    return true;
-                }
-
-                return false;
-            }
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public bool TryReadSingle(out float value)
-            {
-                if (BinaryPrimitives.TryReadInt32LittleEndian(Unconsumed, out int intValue))
-                {
-                    value = Unsafe.As<int, float>(ref intValue);
-                    _position += sizeof(float);
-                    return true;
-                }
-
-                value = default;
-                return false;
-            }
-
-            private T ThrowNoData<T>() where T : unmanaged
-                => throw new InvalidOperationException("There is no more data in the buffer.");
-        }
-
         [StructLayout(LayoutKind.Explicit)]
-        private readonly struct Immediate
+        public readonly struct Immediate
         {
             [FieldOffset(0)]
             public readonly BuiltInType Type;
@@ -217,6 +131,7 @@ namespace NitroSharp.NsScriptCompiler.Playground
                     case Opcode.StoreArg:
                     case Opcode.StoreVar:
                     case Opcode.Call:
+                    case Opcode.PresentText:
                         DecodeToken();
                         break;
 
@@ -251,22 +166,19 @@ namespace NitroSharp.NsScriptCompiler.Playground
             public short DecodeOffset()
                 => _reader.ReadInt16LE();
 
+
+            /// <exception cref="InvalidDataException" />
             public Immediate DecodeImmediateValue()
             {
                 var type = (BuiltInType)_reader.ReadByte();
-                switch (type)
+                return type switch
                 {
-                    case BuiltInType.Integer:
-                        return new Immediate(_reader.ReadInt32LE());
-                    case BuiltInType.Float:
-                        return new Immediate(_reader.ReadSingle());
-                    case BuiltInType.String:
-                        return new Immediate(_reader.ReadUInt16LE());
-                    case BuiltInType.BuiltInConstant:
-                        return new Immediate((BuiltInConstant)_reader.ReadByte());
-                    default:
-                        throw new InvalidDataException("Unexpected immediate value type.");
-                }
+                    BuiltInType.Integer => new Immediate(_reader.ReadInt32LE()),
+                    BuiltInType.Float => new Immediate(_reader.ReadSingle()),
+                    BuiltInType.String => new Immediate(_reader.ReadUInt16LE()),
+                    BuiltInType.BuiltInConstant => new Immediate((BuiltInConstant)_reader.ReadByte()),
+                    _ => ThrowHelper.InvalidData<Immediate>("Unexpected immediate value type.")
+                };
             }
 
             public static bool HasOperands(Opcode opcode)
@@ -282,6 +194,7 @@ namespace NitroSharp.NsScriptCompiler.Playground
                     case Opcode.JumpIfFalse:
                     case Opcode.Call:
                     case Opcode.CallFar:
+                    case Opcode.PresentText:
                         return true;
                     default:
                         return false;

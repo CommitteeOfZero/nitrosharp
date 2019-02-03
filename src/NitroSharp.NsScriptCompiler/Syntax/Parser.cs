@@ -502,7 +502,7 @@ namespace NitroSharp.NsScriptNew.Syntax
                     return Precedence.Logical;
 
                 default:
-                    throw ExceptionUtils.UnexpectedValue(nameof(operatorKind));
+                    throw ThrowHelper.UnexpectedValue(nameof(operatorKind));
             }
         }
 
@@ -665,7 +665,7 @@ namespace NitroSharp.NsScriptNew.Syntax
                     break;
 
                 default:
-                    ExceptionUtils.Unreachable();
+                    ThrowHelper.Unreachable();
                     return null!;
             }
 

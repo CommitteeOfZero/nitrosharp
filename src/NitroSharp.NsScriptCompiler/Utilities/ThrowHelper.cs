@@ -1,8 +1,9 @@
 ﻿using System;
+using System.IO;
 
 namespace NitroSharp.NsScriptNew
 {
-    internal static class ExceptionUtils
+    public static class ThrowHelper
     {
         public static T IllegalValue<T>(string message)
             => throw new ArgumentException(message);
@@ -18,5 +19,8 @@ namespace NitroSharp.NsScriptNew
 
         public static Exception UnexpectedValue(string paramName)
             => new ArgumentException("Unexpected value.", paramName);
+
+        public static T InvalidData<T>(string message)
+            => throw new InvalidDataException(message);
     }
 }

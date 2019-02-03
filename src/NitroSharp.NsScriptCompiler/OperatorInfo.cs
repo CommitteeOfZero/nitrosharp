@@ -34,7 +34,7 @@
                     return "||";
 
                 default:
-                    throw ExceptionUtils.UnexpectedValue(nameof(operatorKind));
+                    throw ThrowHelper.UnexpectedValue(nameof(operatorKind));
             }
         }
 
@@ -58,7 +58,7 @@
                     return "--";
 
                 default:
-                    throw ExceptionUtils.UnexpectedValue(nameof(operatorKind));
+                    throw ThrowHelper.UnexpectedValue(nameof(operatorKind));
             }
         }
 
@@ -74,7 +74,7 @@
                     return "-";
 
                 default:
-                    throw ExceptionUtils.UnexpectedValue(nameof(operatorKind));
+                    throw ThrowHelper.UnexpectedValue(nameof(operatorKind));
             }
         }
     }

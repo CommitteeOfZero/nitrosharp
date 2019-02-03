@@ -16,6 +16,13 @@ using NitroSharp.Utilities;
 
 namespace NitroSharp.NsScriptNew
 {
+    public enum SubroutineKind : byte
+    {
+        Chapter = 0,
+        Scene = 1,
+        Function = 2
+    }
+
     public class Compilation
     {
         private static ReadOnlySpan<byte> CRLF => new byte[] { 0x0D, 0x0A };
@@ -169,17 +176,23 @@ namespace NitroSharp.NsScriptNew
         }
     }
 
+    public static class NsxConstants
+    {
+        public const int NsxHeaderSize = 20;
+        public const int TableHeaderSize = 6;
+
+        public static ReadOnlySpan<byte> NsxMagic => new byte[] { 0x4E, 0x53, 0x58, 0x00 };
+        public static ReadOnlySpan<byte> SubTableMarker => new byte[] { 0x53, 0x55, 0x42, 0x00 };
+        public static ReadOnlySpan<byte> RtiTableMarker => new byte[] { 0x52, 0x54, 0x49, 0x00 };
+        public static ReadOnlySpan<byte> ImportTableMarker => new byte[] { 0x49, 0x4D, 0x50, 0x00 };
+        public static ReadOnlySpan<byte> StringTableMarker => new byte[] { 0x53, 0x54, 0x52, 0x00 };
+        public static ReadOnlySpan<byte> TableEndMarker => new byte[] { 0xFF, 0xFF, 0xFF, 0xFF };
+    }
+
     static class NsxModuleAssembler
     {
-        private static ReadOnlySpan<byte> NsxMagic => new byte[] { 0x4E, 0x53, 0x58, 0x00 };
-        private static ReadOnlySpan<byte> SubTableMarker => new byte[] { 0x53, 0x55, 0x42, 0x00 };
-        private static ReadOnlySpan<byte> StringTableMarker => new byte[] { 0x53, 0x54, 0x52, 0x00 };
-        private static ReadOnlySpan<byte> TableEndMarker => new byte[] { 0xFF, 0xFF, 0xFF, 0xFF };
-
         public static void WriteModule(NsxModuleBuilder builder)
         {
-            const int nsxHeaderSize = 20;
-
             SourceFileSymbol sourceFile = builder.SourceFile;
             ReadOnlySpan<SubroutineSymbol> subroutines = builder.Subroutines;
 
@@ -187,45 +200,81 @@ namespace NitroSharp.NsScriptNew
             var codeBuffer = PooledBuffer<byte>.Allocate(64 * 1024);
             var codeWriter = new BufferWriter(codeBuffer);
             var subroutineOffsets = new List<int>(subroutines.Length);
-            CompileSubroutines(builder, sourceFile.Chapters, ref codeWriter, subroutineOffsets);
-            CompileSubroutines(builder, sourceFile.Scenes, ref codeWriter, subroutineOffsets);
-            CompileSubroutines(builder, sourceFile.Functions, ref codeWriter, subroutineOffsets);
-            codeWriter.WriteBytes(TableEndMarker);
+            CompileSubroutines(
+                builder, sourceFile.Chapters.As<SubroutineSymbol>(), ref codeWriter, subroutineOffsets);
+            CompileSubroutines(
+                builder, sourceFile.Scenes.As<SubroutineSymbol>(), ref codeWriter, subroutineOffsets);
+            CompileSubroutines(
+                builder, sourceFile.Functions.As<SubroutineSymbol>(), ref codeWriter, subroutineOffsets);
+            codeWriter.WriteBytes(NsxConstants.TableEndMarker);
 
             ReadOnlySpan<string> stringHeap = builder.StringHeap;
-            int subTableSize = subroutines.Length * sizeof(int) + 10;
-            int stringTableSize = stringHeap.Length * sizeof(int) + 10;
+            int subTableSize = NsxConstants.TableHeaderSize + 6 + subroutines.Length * sizeof(int);
+            int stringTableSize = NsxConstants.TableHeaderSize + 6 + stringHeap.Length * sizeof(int);
 
             // Build the runtime information table (RTI)
-            int rtiTableOffset = nsxHeaderSize + subTableSize;
+            int rtiTableOffset = NsxConstants.NsxHeaderSize + subTableSize;
             using var rtiBuffer = PooledBuffer<byte>.Allocate(4096);
             var rtiWriter = new BufferWriter(rtiBuffer);
-            rtiWriter.WriteUtf8String("RTI\0");
-            WriteRuntimeInformation(sourceFile.Chapters, ref rtiWriter);
-            WriteRuntimeInformation(sourceFile.Scenes, ref rtiWriter);
-            WriteRuntimeInformation(sourceFile.Functions, ref rtiWriter);
-            rtiWriter.WriteBytes(TableEndMarker);
+            uint rtiOffsetBlockSize = sourceFile.SubroutineCount * sizeof(ushort);
+            using var rtiEntryOffsets = PooledBuffer<byte>.Allocate(rtiOffsetBlockSize);
+            var rtiOffsetWriter = new BufferWriter(rtiEntryOffsets);
 
-            int strTableOffset = rtiTableOffset + rtiWriter.Position;
+            WriteRuntimeInformation(
+                sourceFile.Chapters.As<SubroutineSymbol>(), ref rtiWriter, ref rtiOffsetWriter);
+            WriteRuntimeInformation(
+                sourceFile.Scenes.As<SubroutineSymbol>(), ref rtiWriter, ref rtiOffsetWriter);
+            WriteRuntimeInformation(
+                sourceFile.Functions.As<SubroutineSymbol>(), ref rtiWriter, ref rtiOffsetWriter);
+            rtiWriter.WriteBytes(NsxConstants.TableEndMarker);
+
+            int rtiSize = NsxConstants.TableHeaderSize + rtiOffsetWriter.Position + rtiWriter.Position;
+            Span<byte> rtiHeader = stackalloc byte[NsxConstants.TableHeaderSize];
+            var rtiHeaderWriter = new BufferWriter(rtiHeader);
+            rtiHeaderWriter.WriteBytes(NsxConstants.RtiTableMarker);
+            rtiHeaderWriter.WriteUInt16LE((ushort)(rtiSize - NsxConstants.TableHeaderSize));
+
+            int strTableOffset = rtiTableOffset + rtiSize;
             int codeStart = strTableOffset + stringTableSize;
 
             // Build the subroutine offset table (SUB)
             using var subTable = PooledBuffer<byte>.Allocate((uint)subTableSize);
             var subWriter = new BufferWriter(subTable);
-            subWriter.WriteBytes(SubTableMarker); // SUB\0
             subWriter.WriteUInt16LE((ushort)subroutines.Length);
             for (int i = 0; i < subroutines.Length; i++)
             {
                 subWriter.WriteInt32LE(subroutineOffsets[i] + codeStart);
             }
-            subWriter.WriteBytes(TableEndMarker);
+            subWriter.WriteBytes(NsxConstants.TableEndMarker);
 
-            // Encode strings and build the offset table (STR)
+            Span<byte> subHeader = stackalloc byte[NsxConstants.TableHeaderSize];
+            var subHeaderWriter = new BufferWriter(subHeader);
+            subHeaderWriter.WriteBytes(NsxConstants.SubTableMarker);
+            subHeaderWriter.WriteUInt16LE((ushort)subWriter.Position);
+
+            // Build the import table
+            ReadOnlySpan<SourceFileSymbol> imports = builder.Imports;
+            using var importTable = PooledBuffer<byte>.Allocate(1024);
+            var impTableWriter = new BufferWriter(importTable);
+            impTableWriter.WriteUInt16LE((ushort)imports.Length);
+            for (int i = 0; i < imports.Length; i++)
+            {
+                impTableWriter.WriteLengthPrefixedUtf8String(
+                    imports[i].NameWithoutExtension);
+            }
+            impTableWriter.WriteBytes(NsxConstants.TableEndMarker);
+            int impTableSize = impTableWriter.Position;
+
+            Span<byte> impHeader = stackalloc byte[NsxConstants.TableHeaderSize];
+            var impHeaderWriter = new BufferWriter(impHeader);
+            impHeaderWriter.WriteBytes(NsxConstants.ImportTableMarker);
+            impHeaderWriter.WriteUInt16LE((ushort)impTableSize);
+
+            // Encode the strings and build the offset table (STR)
             int stringHeapStart = codeStart + codeWriter.Position;
             using var stringHeapBuffer = PooledBuffer<byte>.Allocate(64 * 1024);
             using var stringOffsetTable = PooledBuffer<byte>.Allocate((uint)stringTableSize);
             var strTableWriter = new BufferWriter(stringOffsetTable);
-            strTableWriter.WriteBytes(StringTableMarker); // STR\0
             strTableWriter.WriteUInt16LE((ushort)stringHeap.Length);
 
             var stringWriter = new BufferWriter(stringHeapBuffer);
@@ -234,91 +283,116 @@ namespace NitroSharp.NsScriptNew
                 strTableWriter.WriteInt32LE(stringHeapStart + stringWriter.Position);
                 stringWriter.WriteLengthPrefixedUtf8String(s);
             }
-            strTableWriter.WriteBytes(TableEndMarker);
+            strTableWriter.WriteBytes(NsxConstants.TableEndMarker);
+
+            int strTableSize = strTableWriter.Position;
+            Span<byte> strTableHeader = stackalloc byte[NsxConstants.TableHeaderSize];
+            var strTableHeaderWriter = new BufferWriter(strTableHeader);
+            strTableHeaderWriter.WriteBytes(NsxConstants.StringTableMarker);
+            strTableHeaderWriter.WriteUInt16LE((ushort)strTableSize);
 
             // Build the NSX header
-            using var headerBuffer = PooledBuffer<byte>.Allocate(nsxHeaderSize);
+            using var headerBuffer = PooledBuffer<byte>.Allocate(NsxConstants.NsxHeaderSize);
             var headerWriter = new BufferWriter(headerBuffer);
-            headerWriter.WriteBytes(NsxMagic);
+            headerWriter.WriteBytes(NsxConstants.NsxMagic);
             headerWriter.WriteInt32LE(rtiTableOffset);
             headerWriter.WriteInt32LE(strTableOffset);
-            headerWriter.Position += 8;
+            headerWriter.WriteInt32LE(codeStart);
+            headerWriter.Position += 4;
 
             // --- Write everything to the stream ---
             using FileStream fileStream = File.Create($"S:/ChaosContent/Noah/nsx/{Path.ChangeExtension(sourceFile.Name, "nsx")}");
             fileStream.Write(headerWriter.Written);
+
+            fileStream.Write(subHeaderWriter.Written);
             fileStream.Write(subWriter.Written);
+
+            fileStream.Write(rtiHeader);
+            fileStream.Write(rtiOffsetWriter.Written);
             fileStream.Write(rtiWriter.Written);
+
+            fileStream.Write(impHeaderWriter.Written);
+            fileStream.Write(impTableWriter.Written);
+
+            fileStream.Write(strTableHeaderWriter.Written);
             fileStream.Write(strTableWriter.Written);
+
             fileStream.Write(codeWriter.Written);
             fileStream.Write(stringWriter.Written);
         }
 
-        private static void CompileSubroutines<T>(
-            NsxModuleBuilder moduleBuilder, ImmutableArray<T> subroutines,
+        private static void CompileSubroutines(
+            NsxModuleBuilder moduleBuilder, ImmutableArray<SubroutineSymbol> subroutines,
             ref BufferWriter writer, List<int> subroutineOffsets)
-            where T : SubroutineSymbol
         {
             if (subroutines.Length == 0) { return; }
             var dialogueBlockOffsets = new List<int>();
-            foreach (T subroutine in subroutines)
+            foreach (SubroutineSymbol subroutine in subroutines)
             {
+                subroutineOffsets.Add(writer.Position);
+
                 SubroutineDeclarationSyntax decl = subroutine.Declaration;
                 int dialogueBlockCount = decl.DialogueBlocks.Length;
-                int headerOffset = writer.Position;
-                int headerSize = dialogueBlockCount * sizeof(ushort) + 2;
-                writer.Position += headerSize;
+                int start = writer.Position;
+                int offsetBlockSize = sizeof(ushort) + dialogueBlockCount * sizeof(ushort);
+                writer.Position += 2 + offsetBlockSize;
                 dialogueBlockOffsets.Clear();
 
-                subroutineOffsets.Add(writer.Position);
-                Emitter<T>.CompileSubroutine(moduleBuilder, subroutine, ref writer, dialogueBlockOffsets);
+                int codeStart = writer.Position;
+                Emitter.CompileSubroutine(moduleBuilder, subroutine, ref writer, dialogueBlockOffsets);
+                int codeEnd = writer.Position;
 
-                int oldPosition = writer.Position;
-                writer.Position = headerOffset;
+                int codeSize = codeEnd - codeStart;
+                writer.Position = start;
+                writer.WriteUInt16LE((ushort)(offsetBlockSize + codeSize));
+
                 writer.WriteUInt16LE((ushort)dialogueBlockCount);
                 for (int i = 0; i < dialogueBlockCount; i++)
                 {
-                    writer.WriteUInt16LE((ushort)(dialogueBlockOffsets[i] + headerSize));
+                    writer.WriteUInt16LE((ushort)(dialogueBlockOffsets[i] - codeStart));
                 }
 
-                writer.Position = oldPosition;
+                writer.Position = codeEnd;
             }
         }
 
-        private static void WriteRuntimeInformation<T>(
-            ImmutableArray<T> subroutines, ref BufferWriter writer)
-            where T : SubroutineSymbol
+        private static void WriteRuntimeInformation(
+            ImmutableArray<SubroutineSymbol> subroutines,
+            ref BufferWriter rtiWriter,
+            ref BufferWriter offsetWriter)
         {
             if (subroutines.Length == 0) { return; }
-            foreach (T subroutine in subroutines)
+            foreach (SubroutineSymbol subroutine in subroutines)
             {
+                offsetWriter.WriteUInt16LE((ushort)rtiWriter.Position);
+
                 byte kind = subroutine.Kind switch
                 {
                     SymbolKind.Chapter => (byte)0x00,
                     SymbolKind.Scene => (byte)0x01,
                     SymbolKind.Function => (byte)0x02,
-                    _ => ExceptionUtils.Unreachable<byte>()
+                    _ => ThrowHelper.Unreachable<byte>()
                 };
 
-                writer.WriteByte(kind);
-                writer.WriteLengthPrefixedUtf8String(subroutine.Name);
-
-                if (typeof(T) == typeof(FunctionSymbol))
-                {
-                    var function = subroutine as FunctionSymbol;
-                    Debug.Assert(function != null);
-                    writer.WriteByte((byte)function.Parameters.Length);
-                    foreach (ParameterSymbol parameter in function.Parameters)
-                    {
-                        writer.WriteLengthPrefixedUtf8String(parameter.Name);
-                    }
-                }
+                rtiWriter.WriteByte(kind);
+                rtiWriter.WriteLengthPrefixedUtf8String(subroutine.Name);
 
                 SubroutineDeclarationSyntax decl = subroutine.Declaration;
-                writer.WriteUInt16LE((ushort)decl.DialogueBlocks.Length);
+                rtiWriter.WriteUInt16LE((ushort)decl.DialogueBlocks.Length);
                 foreach (DialogueBlockSyntax dialogueBlock in decl.DialogueBlocks)
                 {
-                    writer.WriteLengthPrefixedUtf8String(dialogueBlock.Name);
+                    rtiWriter.WriteLengthPrefixedUtf8String(dialogueBlock.Name);
+                }
+
+                if (subroutine.Kind == SymbolKind.Function)
+                {
+                    var function = (FunctionSymbol)subroutine;
+                    Debug.Assert(function != null);
+                    rtiWriter.WriteByte((byte)function.Parameters.Length);
+                    foreach (ParameterSymbol parameter in function.Parameters)
+                    {
+                        rtiWriter.WriteLengthPrefixedUtf8String(parameter.Name);
+                    }
                 }
             }
         }
@@ -349,6 +423,7 @@ namespace NitroSharp.NsScriptNew
         public SourceFileSymbol SourceFile => _sourceFile;
         public DiagnosticBuilder Diagnostics => _diagnostics;
         public ReadOnlySpan<SubroutineSymbol> Subroutines => _subroutines.AsSpan();
+        public ReadOnlySpan<SourceFileSymbol> Imports => _externalSourceFiles.AsSpan();
         public ReadOnlySpan<string> StringHeap => _stringHeap.AsSpan();
 
         private void ConstructSubroutineMap(SourceFileSymbol sourceFile)
@@ -434,14 +509,14 @@ namespace NitroSharp.NsScriptNew
         public bool IsEmpty => Discriminator == LookupResultDiscriminator.Empty;
     }
 
-    struct Checker<T> where T : SubroutineSymbol
+    struct Checker
     {
-        private readonly T _subroutine;
+        private readonly SubroutineSymbol _subroutine;
         private readonly SourceModuleSymbol _module;
         private readonly Compilation _compilation;
         private readonly DiagnosticBuilder _diagnostics;
 
-        public Checker(T subroutine, DiagnosticBuilder diagnostics)
+        public Checker(SubroutineSymbol subroutine, DiagnosticBuilder diagnostics)
         {
             _subroutine = subroutine;
             _module = subroutine.DeclaringSourceFile.Module;
@@ -581,13 +656,13 @@ namespace NitroSharp.NsScriptNew
         }
     }
 
-    ref struct Emitter<T> where T : SubroutineSymbol
+    ref struct Emitter
     {
         private const int JumpInstrSize = sizeof(Opcode) + sizeof(ushort);
 
         private readonly NsxModuleBuilder _module;
-        private readonly T _subrotuine;
-        private Checker<T> _checker;
+        private readonly SubroutineSymbol _subrotuine;
+        private Checker _checker;
         private readonly Compilation _compilation;
         private readonly SourceModuleSymbol _sourceModule;
         private BufferWriter _code;
@@ -596,11 +671,11 @@ namespace NitroSharp.NsScriptNew
 
         private readonly Queue<int> _insertBreaksAt;
 
-        public Emitter(NsxModuleBuilder moduleBuilder, T subroutine)
+        public Emitter(NsxModuleBuilder moduleBuilder, SubroutineSymbol subroutine)
         {
             _module = moduleBuilder;
             _subrotuine = subroutine;
-            _checker = new Checker<T>(subroutine, moduleBuilder.Diagnostics);
+            _checker = new Checker(subroutine, moduleBuilder.Diagnostics);
             _compilation = moduleBuilder.Compilation;
             _sourceModule = _subrotuine.DeclaringSourceFile.Module;
             _parameters = null;
@@ -622,14 +697,15 @@ namespace NitroSharp.NsScriptNew
             => _compilation.GetGlobalVarToken(variableName);
 
         public static void CompileSubroutine(
-            NsxModuleBuilder moduleBuilder, T subroutine,
+            NsxModuleBuilder moduleBuilder, SubroutineSymbol subroutine,
             ref BufferWriter codeBuffer, List<int> dialogueBlockOffsets)
         {
             Debug.Assert(dialogueBlockOffsets.Count == 0);
             int start = codeBuffer.Position;
-            var emitter = new Emitter<T>(moduleBuilder, subroutine);
+            var emitter = new Emitter(moduleBuilder, subroutine);
             emitter._code = codeBuffer;
             emitter.EmitStatement(subroutine.Declaration.Body);
+            emitter.EmitOpcode(Opcode.Return);
 
             SubroutineDeclarationSyntax decl = subroutine.Declaration;
             ImmutableArray<DialogueBlockSyntax> dialogueBlocks = decl.DialogueBlocks;

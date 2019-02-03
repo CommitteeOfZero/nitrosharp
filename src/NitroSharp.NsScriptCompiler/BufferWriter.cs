@@ -6,14 +6,14 @@ using System.Text;
 
 namespace NitroSharp.NsScriptCompiler.Playground
 {
-    internal interface IBuffer<T> : IDisposable
+    public interface IBuffer<T> : IDisposable
     {
         uint Length { get; }
         Span<T> AsSpan();
         void Resize(uint newSize);
     }
 
-    internal sealed class HeapAllocBuffer<T> : IBuffer<T>
+    public sealed class HeapAllocBuffer<T> : IBuffer<T>
     {
         private T[] _array;
 
@@ -38,7 +38,7 @@ namespace NitroSharp.NsScriptCompiler.Playground
         }
     }
 
-    internal sealed class PooledBuffer<T> : IBuffer<T>
+    public sealed class PooledBuffer<T> : IBuffer<T>
     {
         private T[] _pooledArray;
         private uint _size;
@@ -73,14 +73,21 @@ namespace NitroSharp.NsScriptCompiler.Playground
 
     internal ref struct BufferWriter
     {
-        private IBuffer<byte> _buffer;
+        private IBuffer<byte>? _resizableBuffer;
         private Span<byte> _span;
         private int _position;
 
-        public BufferWriter(IBuffer<byte> buffer)
+        public BufferWriter(IBuffer<byte> resizableBuffer)
         {
-            _buffer = buffer;
-            _span = buffer.AsSpan();
+            _resizableBuffer = resizableBuffer;
+            _span = resizableBuffer.AsSpan();
+            _position = 0;
+        }
+
+        public BufferWriter(Span<byte> buffer)
+        {
+            _resizableBuffer = null;
+            _span = buffer;
             _position = 0;
         }
 
@@ -92,7 +99,10 @@ namespace NitroSharp.NsScriptCompiler.Playground
             get => _position;
             set
             {
-                while (value > _buffer.Length) Resize((uint)value);
+                while (value > _span.Length)
+                {
+                    Resize((uint)value);
+                }
                 _position = value;
             }
         }
@@ -111,7 +121,7 @@ namespace NitroSharp.NsScriptCompiler.Playground
         {
             if (Free.Length < bytes.Length)
             {
-                Resize((uint)(_buffer.Length + bytes.Length));
+                Resize((uint)(_span.Length + bytes.Length));
             }
 
             bytes.CopyTo(Free);
@@ -157,8 +167,15 @@ namespace NitroSharp.NsScriptCompiler.Playground
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WriteLengthPrefixedUtf8String(string text)
         {
-            WriteUInt16LE((ushort)text.Length);
-            WriteUtf8String(text);
+            int sz = Encoding.UTF8.GetByteCount(text);
+            WriteUInt16LE((ushort)sz);
+            if (sz > Free.Length)
+            {
+                Resize((uint)(_span.Length + sz));
+            }
+
+            Encoding.UTF8.GetBytes(text, Free);
+            _position += sz;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -167,7 +184,7 @@ namespace NitroSharp.NsScriptCompiler.Playground
             int sz = Encoding.UTF8.GetByteCount(text);
             if (sz > Free.Length)
             {
-                Resize((uint)(_buffer.Length + sz));
+                Resize((uint)(_span.Length + sz));
             }
 
             Encoding.UTF8.GetBytes(text, Free);
@@ -179,15 +196,22 @@ namespace NitroSharp.NsScriptCompiler.Playground
         [MethodImpl(MethodImplOptions.NoInlining)]
         private void Resize(uint desiredSize = 0)
         {
-            uint newSize = Math.Max(desiredSize, _buffer.Length * 2);
-            _buffer.Resize(newSize);
-            _span = _buffer.AsSpan();
+            if (_resizableBuffer != null)
+            {
+                uint newSize = Math.Max(desiredSize, _resizableBuffer.Length * 2);
+                _resizableBuffer.Resize(newSize);
+                _span = _resizableBuffer.AsSpan();
+            }
+            else
+            {
+                throw new InvalidOperationException("The underlying buffer is not expandable.");
+            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private bool TryWriteByte(byte value)
         {
-            if (_position == _buffer.Length) { return false; }
+            if (_position == _span.Length) { return false; }
             _span[_position++] = value;
             return true;
         }

@@ -128,6 +128,7 @@ namespace NitroSharp.NsScriptNew.Symbols
         {
             Module = module;
             FilePath = filePath;
+            NameWithoutExtension = Path.GetFileNameWithoutExtension(Name);
 
             (int chapterCount, int sceneCount, int functionCount) =
                 ((int)syntax.ChapterCount,
@@ -178,6 +179,7 @@ namespace NitroSharp.NsScriptNew.Symbols
 
         public SourceModuleSymbol Module { get; }
         public ResolvedPath FilePath { get; }
+        public string NameWithoutExtension { get; }
 
         public ImmutableArray<ChapterSymbol> Chapters { get; }
         public ImmutableArray<FunctionSymbol> Functions { get; }

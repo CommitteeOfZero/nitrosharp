@@ -50,7 +50,7 @@ namespace NitroSharp.NsScriptNew.Text
         {
             if (position < 0 || position >= Length)
             {
-                ExceptionUtils.ThrowOutOfRange(nameof(position));
+                ThrowHelper.ThrowOutOfRange(nameof(position));
             }
 
             int lineNumber = GetLineNumberFromPosition(position);

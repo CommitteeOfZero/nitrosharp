@@ -44,7 +44,7 @@ namespace NitroSharp.NsScriptNew
                     return "The target module of a call_chapter expression does not have chapter 'main'.";
 
                 default:
-                    throw ExceptionUtils.UnexpectedValue(nameof(id));
+                    throw ThrowHelper.UnexpectedValue(nameof(id));
             }
         }
 
@@ -76,7 +76,7 @@ namespace NitroSharp.NsScriptNew
                     return DiagnosticSeverity.Info;
 
                 default:
-                    throw ExceptionUtils.UnexpectedValue(nameof(diagnosticId));
+                    throw ThrowHelper.UnexpectedValue(nameof(diagnosticId));
             }
         }
     }
