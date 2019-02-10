@@ -7,22 +7,14 @@ using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using NitroSharp.NsScriptCompiler.Playground;
 using NitroSharp.NsScriptNew.CodeGen;
-using NitroSharp.NsScriptNew.Symbols;
 using NitroSharp.NsScriptNew.Syntax;
 using NitroSharp.NsScriptNew.Text;
+using NitroSharp.NsScriptNew.Utilities;
 using NitroSharp.Utilities;
 
-namespace NitroSharp.NsScriptNew
+namespace NitroSharp.NsScriptNew.Compiler
 {
-    public enum SubroutineKind : byte
-    {
-        Chapter = 0,
-        Scene = 1,
-        Function = 2
-    }
-
     public class Compilation
     {
         private static ReadOnlySpan<byte> CRLF => new byte[] { 0x0D, 0x0A };
@@ -176,20 +168,7 @@ namespace NitroSharp.NsScriptNew
         }
     }
 
-    public static class NsxConstants
-    {
-        public const int NsxHeaderSize = 20;
-        public const int TableHeaderSize = 6;
-
-        public static ReadOnlySpan<byte> NsxMagic => new byte[] { 0x4E, 0x53, 0x58, 0x00 };
-        public static ReadOnlySpan<byte> SubTableMarker => new byte[] { 0x53, 0x55, 0x42, 0x00 };
-        public static ReadOnlySpan<byte> RtiTableMarker => new byte[] { 0x52, 0x54, 0x49, 0x00 };
-        public static ReadOnlySpan<byte> ImportTableMarker => new byte[] { 0x49, 0x4D, 0x50, 0x00 };
-        public static ReadOnlySpan<byte> StringTableMarker => new byte[] { 0x53, 0x54, 0x52, 0x00 };
-        public static ReadOnlySpan<byte> TableEndMarker => new byte[] { 0xFF, 0xFF, 0xFF, 0xFF };
-    }
-
-    static class NsxModuleAssembler
+    internal static class NsxModuleAssembler
     {
         public static void WriteModule(NsxModuleBuilder builder)
         {
@@ -214,7 +193,7 @@ namespace NitroSharp.NsScriptNew
 
             // Build the runtime information table (RTI)
             int rtiTableOffset = NsxConstants.NsxHeaderSize + subTableSize;
-            using var rtiBuffer = PooledBuffer<byte>.Allocate(4096);
+            using var rtiBuffer = PooledBuffer<byte>.Allocate(8 * 1024);
             var rtiWriter = new BufferWriter(rtiBuffer);
             uint rtiOffsetBlockSize = sourceFile.SubroutineCount * sizeof(ushort);
             using var rtiEntryOffsets = PooledBuffer<byte>.Allocate(rtiOffsetBlockSize);
@@ -234,8 +213,27 @@ namespace NitroSharp.NsScriptNew
             rtiHeaderWriter.WriteBytes(NsxConstants.RtiTableMarker);
             rtiHeaderWriter.WriteUInt16LE((ushort)(rtiSize - NsxConstants.TableHeaderSize));
 
-            int strTableOffset = rtiTableOffset + rtiSize;
-            int codeStart = strTableOffset + stringTableSize;
+            int imtTableOffset = rtiTableOffset + rtiSize;
+
+            // Build the import table
+            ReadOnlySpan<SourceFileSymbol> imports = builder.Imports;
+            using var importTable = PooledBuffer<byte>.Allocate(2048);
+            var impTableWriter = new BufferWriter(importTable);
+            impTableWriter.WriteUInt16LE((ushort)imports.Length);
+            for (int i = 0; i < imports.Length; i++)
+            {
+                impTableWriter.WriteLengthPrefixedUtf8String(
+                    imports[i].NameWithoutExtension);
+            }
+            impTableWriter.WriteBytes(NsxConstants.TableEndMarker);
+
+            Span<byte> impHeader = stackalloc byte[NsxConstants.TableHeaderSize];
+            var impHeaderWriter = new BufferWriter(impHeader);
+            impHeaderWriter.WriteBytes(NsxConstants.ImportTableMarker);
+            impHeaderWriter.WriteUInt16LE((ushort)impTableWriter.Position);
+
+            int impTableSize = impHeaderWriter.Position + impTableWriter.Position;
+            int codeStart = imtTableOffset + impTableSize  + stringTableSize;
 
             // Build the subroutine offset table (SUB)
             using var subTable = PooledBuffer<byte>.Allocate((uint)subTableSize);
@@ -251,24 +249,6 @@ namespace NitroSharp.NsScriptNew
             var subHeaderWriter = new BufferWriter(subHeader);
             subHeaderWriter.WriteBytes(NsxConstants.SubTableMarker);
             subHeaderWriter.WriteUInt16LE((ushort)subWriter.Position);
-
-            // Build the import table
-            ReadOnlySpan<SourceFileSymbol> imports = builder.Imports;
-            using var importTable = PooledBuffer<byte>.Allocate(1024);
-            var impTableWriter = new BufferWriter(importTable);
-            impTableWriter.WriteUInt16LE((ushort)imports.Length);
-            for (int i = 0; i < imports.Length; i++)
-            {
-                impTableWriter.WriteLengthPrefixedUtf8String(
-                    imports[i].NameWithoutExtension);
-            }
-            impTableWriter.WriteBytes(NsxConstants.TableEndMarker);
-            int impTableSize = impTableWriter.Position;
-
-            Span<byte> impHeader = stackalloc byte[NsxConstants.TableHeaderSize];
-            var impHeaderWriter = new BufferWriter(impHeader);
-            impHeaderWriter.WriteBytes(NsxConstants.ImportTableMarker);
-            impHeaderWriter.WriteUInt16LE((ushort)impTableSize);
 
             // Encode the strings and build the offset table (STR)
             int stringHeapStart = codeStart + codeWriter.Position;
@@ -296,12 +276,12 @@ namespace NitroSharp.NsScriptNew
             var headerWriter = new BufferWriter(headerBuffer);
             headerWriter.WriteBytes(NsxConstants.NsxMagic);
             headerWriter.WriteInt32LE(rtiTableOffset);
-            headerWriter.WriteInt32LE(strTableOffset);
+            headerWriter.WriteInt32LE(imtTableOffset);
             headerWriter.WriteInt32LE(codeStart);
             headerWriter.Position += 4;
 
             // --- Write everything to the stream ---
-            using FileStream fileStream = File.Create($"S:/ChaosContent/Noah/nsx/{Path.ChangeExtension(sourceFile.Name, "nsx")}");
+            using FileStream fileStream = File.Create($"S:/ChaosContent/Noah/tests/{Path.ChangeExtension(sourceFile.Name, "nsx")}");
             fileStream.Write(headerWriter.Written);
 
             fileStream.Write(subHeaderWriter.Written);
@@ -349,7 +329,7 @@ namespace NitroSharp.NsScriptNew
                 writer.WriteUInt16LE((ushort)dialogueBlockCount);
                 for (int i = 0; i < dialogueBlockCount; i++)
                 {
-                    writer.WriteUInt16LE((ushort)(dialogueBlockOffsets[i] - codeStart));
+                    writer.WriteUInt16LE((ushort)(dialogueBlockOffsets[i]));
                 }
 
                 writer.Position = codeEnd;
@@ -398,7 +378,7 @@ namespace NitroSharp.NsScriptNew
         }
     }
 
-    sealed class NsxModuleBuilder
+    internal sealed class NsxModuleBuilder
     {
         private readonly Compilation _compilation;
         private readonly SourceFileSymbol _sourceFile;
@@ -509,7 +489,7 @@ namespace NitroSharp.NsScriptNew
         public bool IsEmpty => Discriminator == LookupResultDiscriminator.Empty;
     }
 
-    struct Checker
+    internal struct Checker
     {
         private readonly SubroutineSymbol _subroutine;
         private readonly SourceModuleSymbol _module;
@@ -656,7 +636,7 @@ namespace NitroSharp.NsScriptNew
         }
     }
 
-    ref struct Emitter
+    internal ref struct Emitter
     {
         private const int JumpInstrSize = sizeof(Opcode) + sizeof(ushort);
 
@@ -893,6 +873,7 @@ namespace NitroSharp.NsScriptNew
             {
                 EmitOpcode(Opcode.Dispatch);
                 _code.WriteByte((byte)lookupResult.BuiltInFunction);
+                _code.WriteByte((byte)callExpression.Arguments.Length);
             }
             else
             {
@@ -901,6 +882,7 @@ namespace NitroSharp.NsScriptNew
                 {
                     EmitOpcode(Opcode.Call);
                     _code.WriteUInt16LE(_module.GetSubroutineToken(function));
+                    _code.WriteByte((byte)callExpression.Arguments.Length);
                 }
                 else
                 {
@@ -909,6 +891,7 @@ namespace NitroSharp.NsScriptNew
                     NsxModuleBuilder externalNsxBuilder = _compilation.GetNsxModuleBuilder(externalSourceFile);
                     _code.WriteUInt16LE(_module.GetExternalModuleToken(externalSourceFile));
                     _code.WriteUInt16LE(externalNsxBuilder.GetSubroutineToken(function));
+                    _code.WriteByte((byte)callExpression.Arguments.Length);
                 }
             }
         }
@@ -923,6 +906,7 @@ namespace NitroSharp.NsScriptNew
             NsxModuleBuilder externalNsxBuilder = _compilation.GetNsxModuleBuilder(externalSourceFile);
             _code.WriteUInt16LE(_module.GetExternalModuleToken(externalSourceFile));
             _code.WriteUInt16LE(externalNsxBuilder.GetSubroutineToken(chapter));
+            _code.WriteByte(0);
         }
 
         private void EmitStatement(StatementSyntax statement)
@@ -1144,7 +1128,7 @@ namespace NitroSharp.NsScriptNew
             switch (value.Type)
             {
                 case BuiltInType.Integer:
-                    int num = value.IntegerValue;
+                    int num = value.AsInteger()!.Value;
                     switch (num)
                     {
                         case 0:
@@ -1161,7 +1145,7 @@ namespace NitroSharp.NsScriptNew
                     }
                     break;
                 case BuiltInType.Boolean:
-                    Opcode opcode = value.BooleanValue
+                    Opcode opcode = value.AsBool()!.Value
                         ? Opcode.LoadImmTrue
                         : Opcode.LoadImmFalse;
                     EmitOpcode(opcode);
@@ -1169,10 +1153,10 @@ namespace NitroSharp.NsScriptNew
                 case BuiltInType.Float:
                     EmitOpcode(Opcode.LoadImm);
                     _code.WriteByte((byte)value.Type);
-                    _code.WriteSingle(value.FloatValue);
+                    _code.WriteSingle(value.AsFloat()!.Value);
                     break;
                 case BuiltInType.String:
-                    string str = value.StringValue;
+                    string str = value.AsString()!;
                     if (string.IsNullOrEmpty(str))
                     {
                         EmitOpcode(Opcode.LoadImmEmptyStr);
@@ -1181,14 +1165,14 @@ namespace NitroSharp.NsScriptNew
                     {
                         EmitOpcode(Opcode.LoadImm);
                         _code.WriteByte((byte)value.Type);
-                        ushort token = _module.GetStringToken(value.StringValue);
+                        ushort token = _module.GetStringToken(str);
                         _code.WriteUInt16LE(token);
                     }
                     break;
                 case BuiltInType.BuiltInConstant:
                     EmitOpcode(Opcode.LoadImm);
                     _code.WriteByte((byte)value.Type);
-                    _code.WriteByte((byte)value.BuiltInConstantValue);
+                    _code.WriteByte((byte)value.AsInteger()!.Value);
                     break;
                 case BuiltInType.Null:
                     EmitOpcode(Opcode.LoadImmNull);
@@ -1241,7 +1225,7 @@ namespace NitroSharp.NsScriptNew
         }
     }
 
-    class TokenMap<T> where T : class
+    internal class TokenMap<T> where T : class
     {
         private readonly Dictionary<T, ushort> _itemToToken;
         private ArrayBuilder<T> _items;

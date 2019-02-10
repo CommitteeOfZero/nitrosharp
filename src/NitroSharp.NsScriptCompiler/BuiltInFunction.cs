@@ -110,5 +110,11 @@
         XBOX360_UserIndex,
         XBOX360_PadTrigger,
         XBOX360_CurrentStorage,
+
+        log,
+        assert,
+        asserteq,
+        fail,
+        fail_msg
     }
 }

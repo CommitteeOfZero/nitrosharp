@@ -1,6 +1,6 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using NitroSharp.Utilities;
 
 namespace NitroSharp.NsScriptNew
 {
@@ -14,7 +14,7 @@ namespace NitroSharp.NsScriptNew
         BuiltInConstant
     }
 
-    public readonly struct ConstantValue
+    public readonly struct ConstantValue : IEquatable<ConstantValue>
     {
         private readonly int _numericValue;
         private readonly string? _stringValue;
@@ -29,6 +29,8 @@ namespace NitroSharp.NsScriptNew
         public static ConstantValue Integer(int value) => new ConstantValue(value);
         public static ConstantValue Float(float value) => new ConstantValue(value);
         public static ConstantValue String(string value) => new ConstantValue(value);
+        public static ConstantValue Boolean(bool value) => value ? True : False;
+
         public static ConstantValue BuiltInConstant(BuiltInConstant value)
             => new ConstantValue(value);
 
@@ -68,87 +70,246 @@ namespace NitroSharp.NsScriptNew
         }
 
         public bool IsNull => Type == BuiltInType.Null;
+        public bool IsString => Type == BuiltInType.String;
+        public bool IsZero => Type == BuiltInType.Integer && _numericValue == 0;
+        public bool IsEmptyString => Type == BuiltInType.String && _stringValue == string.Empty;
 
-        public BuiltInConstant BuiltInConstantValue
+        public int? AsInteger()
         {
-            get
+            switch (Type)
             {
-                if (Type != BuiltInType.BuiltInConstant)
-                {
-                    ThrowNotBuiltInConstant();
-                }
-
-                return (BuiltInConstant)_numericValue;
+                case BuiltInType.Integer:
+                case BuiltInType.Boolean:
+                case BuiltInType.BuiltInConstant:
+                    return _numericValue;
+                case BuiltInType.String:
+                    return _stringValue == string.Empty
+                        ? 0 : (int?)null;
+                default:
+                    return null;
             }
         }
 
-        public int IntegerValue
+        public float? AsFloat()
         {
-            get
+            if (Type == BuiltInType.Float)
             {
-                if (Type != BuiltInType.Integer)
-                {
-                    ThrowNotInteger();
-                }
-
-                return _numericValue;
-            }
-        }
-
-        public bool BooleanValue
-        {
-            get
-            {
-                if (Type != BuiltInType.Boolean)
-                {
-                    ThrowNotBoolean();
-                }
-
-                return (uint)_numericValue > 0u;
-            }
-        }
-
-        public float FloatValue
-        {
-            get
-            {
-                if (Type != BuiltInType.Float)
-                {
-                    ThrowNotFloat();
-                }
-
                 int value = _numericValue;
                 return Unsafe.As<int, float>(ref value);
             }
+
+            return null;
         }
 
-        public string StringValue
+        public bool? AsBool()
+            => Type == BuiltInType.Boolean ? _numericValue > 0 : (bool?)null;
+
+        public string? AsString()
+            => Type == BuiltInType.String ? _stringValue : null;
+
+        public BuiltInConstant? AsBuiltInConstant()
+            => Type == BuiltInType.BuiltInConstant
+                ? (BuiltInConstant)_numericValue
+                : (BuiltInConstant?)null;
+
+        private static bool Equals(ConstantValue left, ConstantValue right)
         {
-            get
+            bool equal;
+            (int? leftNum, int? rightNum) = (left.AsInteger(), right.AsInteger());
+            if (leftNum.HasValue && rightNum.HasValue)
             {
-                if (Type != BuiltInType.String)
-                {
-                    ThrowNotString();
-                }
-
-                Debug.Assert(_stringValue != null);
-                return _stringValue;
+                equal = leftNum.Value == rightNum.Value;
             }
+            else if (left.IsString && right.IsString)
+            {
+                equal = left._stringValue!.Equals(right._stringValue!);
+            }
+            else
+            {
+                equal = left.IsNull && right.IsNull;
+            }
+
+            return equal;
         }
 
-        private void ThrowNotInteger()
-            => throw new InvalidOperationException("Value is not an integer.");
+        public string ConvertToString() => Type switch
+        {
+            BuiltInType.String => _stringValue!,
+            BuiltInType.Boolean => _numericValue > 0 ? "true" : "false",
+            BuiltInType.Integer => _numericValue.ToString(),
+            BuiltInType.Float => AsFloat()!.Value!.ToString(),
+            BuiltInType.BuiltInConstant => ((BuiltInConstant)_numericValue).ToString(),
+            BuiltInType.Null => "null",
+            _ => ThrowHelper.Unreachable<string>()
+        };
 
-        private void ThrowNotBoolean()
-            => throw new InvalidOperationException("Value is not a boolean.");
+        public static ConstantValue operator ==(in ConstantValue left, in ConstantValue right)
+            => Boolean(Equals(left, right));
 
-        private void ThrowNotFloat()
-            => throw new InvalidOperationException("Value is not a float.");
+        public static ConstantValue operator !=(in ConstantValue left, in ConstantValue right)
+            => Boolean(!Equals(left, right));
 
-        private void ThrowNotString()
-            => throw new InvalidOperationException("Value is not a string.");
+        public static ConstantValue operator +(in ConstantValue left, in ConstantValue right)
+        {
+            return (left.Type, right.Type) switch
+            {
+                (BuiltInType.Integer, BuiltInType.Integer) =>
+                    Integer(left.AsInteger()!.Value + right.AsInteger()!.Value),
+                (BuiltInType.Float, BuiltInType.Float) =>
+                    Float(left.AsFloat()!.Value + right.AsFloat()!.Value),
+                _ => String(left.ConvertToString() + right.ConvertToString())
+            };
+        }
 
-        private void ThrowNotBuiltInConstant()
-            => throw new InvalidOperationException("Value is not a built-in constant.");
+        public static ConstantValue operator -(in ConstantValue left, in ConstantValue right)
+        {
+            return (left.Type, right.Type) switch
+            {
+                (BuiltInType.Integer, BuiltInType.Integer) =>
+                    Integer(left.AsInteger()!.Value - right.AsInteger()!.Value),
+                (BuiltInType.Float, BuiltInType.Float) =>
+                    Float(left.AsFloat()!.Value - right.AsFloat()!.Value),
+                _ => InvalidBinOp("-", left.Type, right.Type)
+            };
+        }
+
+        public static ConstantValue operator *(in ConstantValue left, in ConstantValue right)
+        {
+            return (left.Type, right.Type) switch
+            {
+                (BuiltInType.Integer, BuiltInType.Integer) =>
+                    Integer(left.AsInteger()!.Value * right.AsInteger()!.Value),
+                (BuiltInType.Float, BuiltInType.Float) =>
+                    Float(left.AsFloat()!.Value * right.AsFloat()!.Value),
+                _ => InvalidBinOp("*", left.Type, right.Type)
+            };
+        }
+
+        public static ConstantValue operator /(in ConstantValue left, in ConstantValue right)
+        {
+            return (left.Type, right.Type) switch
+            {
+                (BuiltInType.Integer, BuiltInType.Integer) =>
+                    Integer(left.AsInteger()!.Value / right.AsInteger()!.Value),
+                (BuiltInType.Float, BuiltInType.Float) =>
+                    Float(left.AsFloat()!.Value / right.AsFloat()!.Value),
+                _ => InvalidBinOp("/", left.Type, right.Type)
+            };
+        }
+
+        public static ConstantValue operator<(in ConstantValue left, in ConstantValue right)
+        {
+            return (left.Type, right.Type) switch
+            {
+                (BuiltInType.Integer, BuiltInType.Integer) =>
+                    Boolean(left.AsInteger()!.Value < right.AsInteger()!.Value),
+                (BuiltInType.Float, BuiltInType.Float) =>
+                    Boolean(left.AsFloat()!.Value < right.AsFloat()!.Value),
+                _ => InvalidBinOp("<", left.Type, right.Type)
+            };
+        }
+
+        public static ConstantValue operator <=(in ConstantValue left, in ConstantValue right)
+        {
+            return (left.Type, right.Type) switch
+            {
+                (BuiltInType.Integer, BuiltInType.Integer) =>
+                    Boolean(left.AsInteger()!.Value <= right.AsInteger()!.Value),
+                (BuiltInType.Float, BuiltInType.Float) =>
+                    Boolean(left.AsFloat()!.Value <= right.AsFloat()!.Value),
+                _ => InvalidBinOp("<=", left.Type, right.Type)
+            };
+        }
+
+        public static ConstantValue operator >(in ConstantValue left, in ConstantValue right)
+        {
+            return (left.Type, right.Type) switch
+            {
+                (BuiltInType.Integer, BuiltInType.Integer) =>
+                    Boolean(left.AsInteger()!.Value > right.AsInteger()!.Value),
+                (BuiltInType.Float, BuiltInType.Float) =>
+                    Boolean(left.AsFloat()!.Value > right.AsFloat()!.Value),
+                _ => InvalidBinOp(">", left.Type, right.Type)
+            };
+        }
+
+        public static ConstantValue operator >=(in ConstantValue left, in ConstantValue right)
+        {
+            return (left.Type, right.Type) switch
+            {
+                (BuiltInType.Integer, BuiltInType.Integer) =>
+                    Boolean(left.AsInteger()!.Value >= right.AsInteger()!.Value),
+                (BuiltInType.Float, BuiltInType.Float) =>
+                    Boolean(left.AsFloat()!.Value >= right.AsFloat()!.Value),
+                _ => InvalidBinOp(">=", left.Type, right.Type)
+            };
+        }
+
+        public static ConstantValue operator ++(in ConstantValue value)
+        {
+            return value.Type switch
+            {
+                BuiltInType.Integer => Integer(value._numericValue + 1),
+                BuiltInType.Float => Float(value.AsFloat()!.Value + 1),
+                _ => InvalidOp("++", value.Type)
+            };
+        }
+
+        public static ConstantValue operator --(ConstantValue value)
+        {
+            return value.Type switch
+            {
+                BuiltInType.Integer => Integer(value._numericValue - 1),
+                BuiltInType.Float => Float(value.AsFloat()!.Value - 1),
+                _ => InvalidOp("++", value.Type)
+            };
+        }
+
+        public static ConstantValue operator &(in ConstantValue left, in ConstantValue right)
+        {
+            (bool? leftBool, bool? rightBool) = (left.AsBool(), right.AsBool());
+            if (leftBool.HasValue && rightBool.HasValue)
+            {
+                return Boolean(leftBool.Value && rightBool.Value);
+            }
+
+            return InvalidBinOp("&&", left.Type, right.Type);
+        }
+
+        public static ConstantValue operator |(in ConstantValue left, in ConstantValue right)
+        {
+            (bool? leftBool, bool? rightBool) = (left.AsBool(), right.AsBool());
+            if (leftBool.HasValue && rightBool.HasValue)
+            {
+                return Boolean(leftBool.Value || rightBool.Value);
+            }
+
+            return InvalidBinOp("||", left.Type, right.Type);
+        }
+
+        public static bool operator true(in ConstantValue value)
+            => value.AsBool() ?? false;
+
+        public static bool operator false(ConstantValue value)
+            => !(value.AsBool() ?? false);
+
+        public override string ToString() => ConvertToString();
+        public bool Equals(ConstantValue other) => Equals(this, other);
+
+        public override bool Equals(object obj)
+            => obj is ConstantValue other && Equals(this, other);
+
+        public override int GetHashCode()
+        {
+            return Type != BuiltInType.String
+                ? HashHelper.Combine((int)Type, _numericValue)
+                : HashHelper.Combine((int)Type, _stringValue!.GetHashCode());
+        }
+
+        private static ConstantValue InvalidOp(string op, BuiltInType type)
+            => throw new InvalidOperationException($"Operator '{op}' cannot be applied to operand of type '{type.ToString()}'.");
+
+        private static ConstantValue InvalidBinOp(string op, BuiltInType leftType, BuiltInType rightType)
+            => throw new InvalidOperationException($"Operator '{op}' cannot be applied to operands of type '{leftType.ToString()}' and '{rightType.ToString()}'.");
     }
 }

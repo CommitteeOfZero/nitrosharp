@@ -5,7 +5,7 @@ using System.Diagnostics;
 using System.IO;
 using NitroSharp.NsScriptNew.Syntax;
 
-namespace NitroSharp.NsScriptNew.Symbols
+namespace NitroSharp.NsScriptNew.Compiler
 {
     public abstract class Symbol
     {

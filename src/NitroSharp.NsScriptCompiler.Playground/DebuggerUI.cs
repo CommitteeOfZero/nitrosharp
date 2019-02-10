@@ -50,14 +50,19 @@ namespace NitroSharp.NsScriptCompiler.Playground
                 _gd, _gd.MainSwapchain.Framebuffer.OutputDescription,
                 _window.Width, _window.Height);
 
-            _imguiRenderer.CreateDeviceResources(_gd, _gd.MainSwapchain.Framebuffer.OutputDescription);
+            ImGui.EndFrame();
+
+            //_imguiRenderer.CreateDeviceResources(_gd, _gd.MainSwapchain.Framebuffer.OutputDescription);
 
             ImGuiIOPtr io = ImGui.GetIO();
+            io.Fonts.Clear();
+
             ImFontPtr font = io.Fonts.AddFontFromFileTTF(
-                 "C:/Windows/Fonts/ArialUni.ttf",
-                12, null, io.Fonts.GetGlyphRangesDefault());
+                 "S:/NotoSansCJKtc-Regular.ttf",
+                22, null, io.Fonts.GetGlyphRangesJapanese());
 
             _imguiRenderer.RecreateFontDeviceTexture(_gd);
+            ImGui.NewFrame();
 
             //io.Fonts.AddFontDefault(font.ConfigData);
 

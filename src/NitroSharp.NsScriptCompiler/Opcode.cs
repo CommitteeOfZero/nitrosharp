@@ -33,13 +33,13 @@
         Jump = 0x30,            // <short offset>
         JumpIfTrue = 0x31,      // <short offset>
         JumpIfFalse = 0x32,     // <short offset>
-        Dispatch = 0x33,        // <byte function>
-        Call = 0x34,            // <ushort subroutine>
-        CallFar = 0x35,         // <ushort module> <ushort subroutine>
+        Dispatch = 0x33,        // <byte function> <byte argCount>
+        Call = 0x34,            // <ushort subroutine> <byte argCount>
+        CallFar = 0x35,         // <ushort module> <ushort subroutine> <byte argCount>
         Return = 0x36,          // <>
         Select = 0x37,          // <>,
 
-        PresentText = 0x40,     // <ushort token>,
+        PresentText = 0x40,     // <ushort token>
         AwaitInput = 0x41,      // <>
     }
 }

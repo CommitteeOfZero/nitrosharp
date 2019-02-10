@@ -3,6 +3,22 @@ using System.IO;
 
 namespace NitroSharp.NsScriptNew
 {
+    public sealed class DependencyResolutionException : Exception
+    {
+        public DependencyResolutionException()
+        {
+        }
+
+        public DependencyResolutionException(string message) : base(message)
+        {
+        }
+
+        public DependencyResolutionException(string message, Exception innerException)
+            : base(message, innerException)
+        {
+        }
+    }
+
     public static class ThrowHelper
     {
         public static T IllegalValue<T>(string message)

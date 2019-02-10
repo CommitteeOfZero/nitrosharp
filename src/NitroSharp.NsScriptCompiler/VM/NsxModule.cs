@@ -5,10 +5,46 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Text;
-using NitroSharp.NsScriptNew;
+using NitroSharp.NsScriptNew.Utilities;
 
-namespace NitroSharp.NsScriptCompiler.Playground
+namespace NitroSharp.NsScriptNew.VM
 {
+    public readonly struct Subroutine
+    {
+        private readonly byte[] _bytes;
+        private readonly int _codeStart;
+        private readonly int _codeSize;
+
+        public readonly int Index;
+        public bool IsEmpty => _bytes == null;
+        public readonly int[] DialogueBlockOffsets;
+
+        public Subroutine(int index, byte[] bytes)
+        {
+            Index = index;
+            _bytes = bytes;
+            var reader = new BufferReader(bytes);
+            int dialogoueBlockCount = reader.ReadUInt16LE();
+            DialogueBlockOffsets = Array.Empty<int>();
+            _codeSize = bytes.Length - 2;
+            if (dialogoueBlockCount > 0)
+            {
+                DialogueBlockOffsets = new int[dialogoueBlockCount];
+                for (int i = 0; i < dialogoueBlockCount; i++)
+                {
+                    DialogueBlockOffsets[i] = reader.ReadUInt16LE();
+                }
+
+                _codeSize = DialogueBlockOffsets[0];
+            }
+
+            _codeStart = reader.Position;
+        }
+
+        public ReadOnlySpan<byte> Code
+            => new ReadOnlySpan<byte>(_bytes, _codeStart, _codeSize);
+    }
+
     public struct SubroutineRuntimeInformation
     {
         private readonly int _offset;
@@ -76,12 +112,8 @@ namespace NitroSharp.NsScriptCompiler.Playground
     {
         private readonly string?[] _stringHeap;
 
-        public int StringCount { get; }
-
         private readonly Stream _stream;
         private readonly int[] _subroutineOffsets;
-
-        public string[] Imports { get; }
 
         private readonly byte[] _rtiTable;
         private readonly int[] _stringOffsets;
@@ -89,9 +121,10 @@ namespace NitroSharp.NsScriptCompiler.Playground
         private readonly SubroutineRuntimeInformation[] _srti;
         private readonly Dictionary<string, int> _subroutineMap;
 
-        public NsxModule(Stream stream, int[] subroutineOffsets, byte[] rtiTable, string[] imports, int[] stringOffsets)
+        public NsxModule(Stream stream, string name, int[] subroutineOffsets, byte[] rtiTable, string[] imports, int[] stringOffsets)
         {
             _stream = stream;
+            Name = name;
             _subroutineOffsets = subroutineOffsets;
             Imports = imports;
             _stringOffsets = stringOffsets;
@@ -120,6 +153,10 @@ namespace NitroSharp.NsScriptCompiler.Playground
                 _subroutineMap[rti.SubroutineName] = i;
             }
         }
+
+        public string Name { get; }
+        public string[] Imports { get; }
+        public int StringCount { get; }
 
         public Subroutine GetSubroutine(int index)
         {
@@ -183,50 +220,13 @@ namespace NitroSharp.NsScriptCompiler.Playground
             return BinaryPrimitives.ReadUInt16LittleEndian(bytes);
         }
 
-        public readonly struct Subroutine
-        {
-            private readonly byte[] _bytes;
-            private readonly int _codeStart;
-            private readonly int _codeSize;
-            private readonly int[] _dialogueBlockOffsets;
-
-            public readonly int Index;
-            public bool IsEmpty => _bytes == null;
-
-            public Subroutine(int index, byte[] bytes)
-            {
-                Index = index;
-                _bytes = bytes;
-                var reader = new BufferReader(bytes);
-                int dialogoueBlockCount = reader.ReadUInt16LE();
-                _dialogueBlockOffsets = Array.Empty<int>();
-                int codeEnd = bytes.Length;
-                if (dialogoueBlockCount > 0)
-                {
-                    _dialogueBlockOffsets = new int[dialogoueBlockCount];
-                    for (int i = 0; i < dialogoueBlockCount; i++)
-                    {
-                        _dialogueBlockOffsets[i] = reader.ReadUInt16LE();
-                    }
-
-                    codeEnd = _dialogueBlockOffsets[0];
-                }
-
-                _codeStart = reader.Position;
-                _codeSize = codeEnd - _codeStart;
-            }
-
-            public ReadOnlySpan<byte> Code
-                => new ReadOnlySpan<byte>(_bytes, _codeStart, _codeSize);
-        }
-
         private unsafe struct TableHeader
         {
             public fixed byte Marker[4];
             public int TableSize; 
         }
 
-        public static NsxModule LoadModule(Stream stream)
+        public static NsxModule LoadModule(Stream stream, string name)
         {
             static unsafe TableHeader readTableHeader(Stream stream)
             {
@@ -241,9 +241,6 @@ namespace NitroSharp.NsScriptCompiler.Playground
 
             static unsafe void assertMarker(ref TableHeader header, ReadOnlySpan<byte> expected)
             {
-                //Span<byte> correct = stackalloc byte[4];
-                //Encoding.UTF8.GetBytes(marker, correct);
-
                 fixed (byte* pMarker = &header.Marker[0])
                 {
                     var bytes = new Span<byte>(pMarker, 4);
@@ -257,8 +254,6 @@ namespace NitroSharp.NsScriptCompiler.Playground
             var reader = new BufferReader(header);
             ReadOnlySpan<byte> magic = reader.Consume(4);
             int rtiTableOffset = reader.ReadInt32LE();
-            int stringTableOffset = reader.ReadInt32LE();
-            int codeOffset = reader.ReadInt32LE();
 
             TableHeader subHeader = readTableHeader(stream);
             assertMarker(ref subHeader, NsxConstants.SubTableMarker);
@@ -302,7 +297,7 @@ namespace NitroSharp.NsScriptCompiler.Playground
                 stringOffsets[i] = reader.ReadInt32LE();
             }
 
-            return new NsxModule(stream, subroutineOffsets, rtiBytes, imports, stringOffsets);
+            return new NsxModule(stream, name, subroutineOffsets, rtiBytes, imports, stringOffsets);
         }
     }
 }
