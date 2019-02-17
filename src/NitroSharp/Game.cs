@@ -70,6 +70,15 @@ namespace NitroSharp
 
         public async Task Run(bool useDedicatedThread = false)
         {
+            // Blocking the main thread here so that the main loop wouldn't get executed
+            // on a thread pool thread.
+            // Reasoning: desktop platforms require it to be executed on the main thread.
+            Initialize().Wait();
+            await RunMainLoop(useDedicatedThread);
+        }
+
+        private async Task Initialize()
+        {
             var initializeAudio = Task.Run((Action)SetupAudio);
             await Task.WhenAll(new[] { _initializingGraphics.Task, initializeAudio });
             CreateServices();
@@ -78,7 +87,6 @@ namespace NitroSharp
             _presenter = new Presenter(this, _presenterWorld);
             await loadScriptTask;
             _scriptRunner.StartInterpreter();
-            await RunMainLoop(useDedicatedThread);
         }
 
         private Task RunMainLoop(bool useDedicatedThread = false)
