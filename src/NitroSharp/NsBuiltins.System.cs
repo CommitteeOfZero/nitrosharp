@@ -1,14 +1,14 @@
 ﻿using System;
 using NitroSharp.NsScript;
-using NitroSharp.NsScript.Execution;
 using NitroSharp.Content;
 using System.Collections.Generic;
 using System.Linq;
 using NitroSharp.Utilities;
+using NitroSharp.NsScript.VM;
 
 namespace NitroSharp
 {
-    internal sealed partial class NsBuiltins : EngineImplementation
+    internal sealed partial class NsBuiltins : BuiltInFunctions
     {
         private World _world;
         private readonly Game _game;
@@ -106,7 +106,7 @@ namespace NitroSharp
         {
             bool startImmediately = _world.Query(name + "*").Any();
             ThreadContext thread = Interpreter.CreateThread(name, target, startImmediately);
-            var info = new InterpreterThreadInfo(name, thread.EntryModule.Symbol.Name, target);
+            var info = new InterpreterThreadInfo(name, thread.EntryModule, target);
             Entity threadEntity = _world.CreateThreadEntity(info);
 
             Entity parentEntity = default;
@@ -172,7 +172,7 @@ namespace NitroSharp
         public override ConstantValue FormatString(string format, object[] args)
         {
             string s = CRuntime.sprintf(format, args);
-            return ConstantValue.Create(s);
+            return ConstantValue.String(s);
         }
     }
 }

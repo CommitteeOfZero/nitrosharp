@@ -1,6 +1,6 @@
-﻿using NitroSharp.NsScriptNew.Text;
+﻿using NitroSharp.NsScript.Text;
 
-namespace NitroSharp.NsScriptNew.Syntax
+namespace NitroSharp.NsScript.Syntax
 {
     public readonly struct Spanned<T>
     {

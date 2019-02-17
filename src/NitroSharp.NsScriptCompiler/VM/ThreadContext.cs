@@ -1,11 +1,13 @@
-﻿using NitroSharp.NsScriptNew.Utilities;
+﻿using NitroSharp.NsScript.Utilities;
 
-namespace NitroSharp.NsScriptNew.VM
+namespace NitroSharp.NsScript.VM
 {
     public sealed class ThreadContext
     {
         internal ValueStack<CallFrame> CallFrameStack;
         internal ValueStack<ConstantValue> EvalStack;
+        internal long? SuspensionTime;
+        internal long? SleepTimeout;
 
         internal ThreadContext(string name, ref CallFrame frame)
         {
@@ -13,13 +15,12 @@ namespace NitroSharp.NsScriptNew.VM
             CallFrameStack = new ValueStack<CallFrame>(4);
             CallFrameStack.Push(ref frame);
             EvalStack = new ValueStack<ConstantValue>(8);
+            EntryModule = frame.Module.Name;
         }
 
         public string Name { get; }
+        public string EntryModule { get; }
         public bool DoneExecuting => CallFrameStack.Count == 0;
-        internal long? SuspensionTime;
-        internal long? SleepTimeout;
-
         public bool IsActive => SuspensionTime == null;
 
         internal ref CallFrame CurrentFrame => ref CallFrameStack.Peek();

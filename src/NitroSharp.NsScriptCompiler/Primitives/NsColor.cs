@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Globalization;
 
-namespace NitroSharp.NsScriptNew
+namespace NitroSharp.NsScript
 {
     public readonly struct NsColor
     {
@@ -30,7 +30,7 @@ namespace NitroSharp.NsScriptNew
             return new NsColor(r, g, b);
         }
 
-        public static NsColor FromEnumValue(BuiltInConstant constant)
+        public static NsColor FromConstant(BuiltInConstant constant)
         {
             switch (constant)
             {
@@ -47,19 +47,18 @@ namespace NitroSharp.NsScriptNew
 
         public static NsColor FromString(string colorString)
         {
-            bool isHexString = colorString[0] == '#';
-            if (isHexString)
+            ReadOnlySpan<char> codeStr = colorString.StartsWith('#')
+                ? colorString.AsSpan(1)
+                : colorString;
+            if (int.TryParse(codeStr, NumberStyles.HexNumber, null, out int colorCode))
             {
-                if (int.TryParse(colorString.Substring(1), NumberStyles.HexNumber, null, out int colorCode))
-                {
-                    return FromRgb(colorCode);
-                }
+                return FromRgb(colorCode);
             }
             else
             {
                 if (Enum.TryParse<BuiltInConstant>(colorString, true, out var enumValue))
                 {
-                    return FromEnumValue(enumValue);
+                    return FromConstant(enumValue);
                 }
             }
 

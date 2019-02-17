@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
+    <TargetFramework>netcoreapp2.2</TargetFramework>
     <ShaderOutputPath>$(BaseIntermediateOutputPath)\Shaders.Generated</ShaderOutputPath>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <NoWarn>1701;1702;CA1063</NoWarn>
@@ -14,13 +14,13 @@
   </ItemGroup>
   
   <ItemGroup>
-    <ProjectReference Include="..\NitroSharp.NsScript\NitroSharp.NsScript.csproj" />
     <ProjectReference Include="..\FreeTypeBindings\FreeTypeBindings.csproj" />
 
     <!--<ProjectReference Include="..\..\..\SomeAnonDev\veldrid\src\Veldrid.OpenGLBindings\Veldrid.OpenGLBindings.csproj" />
     <ProjectReference Include="..\..\..\SomeAnonDev\veldrid\src\Veldrid.SDL2\Veldrid.SDL2.csproj" />
     <ProjectReference Include="..\..\..\SomeAnonDev\veldrid\src\Veldrid.StartupUtilities\Veldrid.StartupUtilities.csproj" />
     <ProjectReference Include="..\..\..\SomeAnonDev\veldrid\src\Veldrid\Veldrid.csproj" />-->
+    <ProjectReference Include="..\NitroSharp.NsScriptCompiler\NitroSharp.NsScriptCompiler.csproj" />
     
     <PackageReference Include="NitroSharp.Dependencies.FFmpeg" Version="0.4.0.13" />
     <PackageReference Include="NitroSharp.Dependencies.FreeType" Version="0.2.903" />

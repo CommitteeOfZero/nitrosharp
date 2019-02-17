@@ -1,4 +1,4 @@
-﻿namespace NitroSharp.NsScriptNew
+﻿namespace NitroSharp.NsScript
 {
     public enum BuiltInFunction : byte
     {
@@ -97,19 +97,19 @@
         SetStream,
         Exit,
 
-        XBOX360_LockVideo,
-        XBOX360_Presence,
-        XBOX360_AwardGameIcon,
-        XBOX360_Achieved,
-        XBOX360_InitUser,
-        XBOX360_IsSignin,
-        XBOX360_CheckStorage,
-        XBOX360_SelectStorage,
-        XBOX360_ExistContent,
-        XBOX360_StorageSize,
-        XBOX360_UserIndex,
-        XBOX360_PadTrigger,
-        XBOX360_CurrentStorage,
+        //XBOX360_LockVideo,
+        //XBOX360_Presence,
+        //XBOX360_AwardGameIcon,
+        //XBOX360_Achieved,
+        //XBOX360_InitUser,
+        //XBOX360_IsSignin,
+        //XBOX360_CheckStorage,
+        //XBOX360_SelectStorage,
+        //XBOX360_ExistContent,
+        //XBOX360_StorageSize,
+        //XBOX360_UserIndex,
+        //XBOX360_PadTrigger,
+        //XBOX360_CurrentStorage,
 
         log,
         assert,

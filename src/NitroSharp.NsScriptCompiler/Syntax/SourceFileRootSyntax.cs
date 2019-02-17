@@ -1,7 +1,7 @@
 ﻿using System.Collections.Immutable;
-using NitroSharp.NsScriptNew.Text;
+using NitroSharp.NsScript.Text;
 
-namespace NitroSharp.NsScriptNew.Syntax
+namespace NitroSharp.NsScript.Syntax
 {
     public sealed class SourceFileRootSyntax : SyntaxNode
     {

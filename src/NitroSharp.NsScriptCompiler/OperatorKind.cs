@@ -1,10 +1,11 @@
-﻿namespace NitroSharp.NsScriptNew
+﻿namespace NitroSharp.NsScript
 {
     public enum UnaryOperatorKind : byte
     {
         Not = 0,
         Plus,
-        Minus
+        Minus,
+        Delta
     }
 
     public enum BinaryOperatorKind : byte

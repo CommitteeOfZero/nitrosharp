@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
-using NitroSharp.NsScriptNew.Utilities;
+using NitroSharp.NsScript.Utilities;
 
-namespace NitroSharp.NsScriptNew.VM
+namespace NitroSharp.NsScript.VM
 {
     public sealed class VirtualMachine
     {
@@ -43,7 +43,41 @@ namespace NitroSharp.NsScriptNew.VM
             }
         }
 
+        class SystemVariables
+        {
+            private readonly VirtualMachine _vm;
+            private readonly ConstantValue[] _globals;
+            private readonly GlobalVarLookupTable _nameLookup;
+
+            public readonly int PresentPreprocess;
+            public readonly int PresentText;
+            public readonly int PresentProcess;
+
+            public SystemVariables(VirtualMachine vm)
+            {
+                _vm = vm;
+                _globals = vm._globals;
+                _nameLookup = vm._globalVarLookup;
+                PresentPreprocess = Lookup("SYSTEM_present_preprocess");
+                PresentText = Lookup("SYSTEM_present_text");
+                PresentProcess = Lookup("SYSTEM_present_process");
+            }
+
+            private int Lookup(string name)
+            {
+                _nameLookup.TryLookupSystemVariable(name, out int index);
+                return index;
+            }
+
+            public ref ConstantValue CurrentSubroutineName => ref Var(PresentProcess);
+            public ref ConstantValue CurrentBoxName => ref Var(PresentPreprocess);
+            public ref ConstantValue CurrentTextName => ref Var(PresentText);
+
+            private ref ConstantValue Var(int index) => ref _vm.GetGlobalVar(index);
+        }
+
         private readonly NsxModuleLocator _moduleLocator;
+        private readonly BuiltInFunctions _builtInFuncImpl;
         private readonly Dictionary<string, NsxModule> _loadedModules;
         private readonly BuiltInFunctionDispatcher _builtInCallDispatcher;
         private readonly List<ThreadContext> _threads;
@@ -51,24 +85,46 @@ namespace NitroSharp.NsScriptNew.VM
         private readonly Queue<ThreadAction> _pendingThreadActions;
         private readonly Stopwatch _timer;
         private readonly ConstantValue[] _globals;
+        private readonly GlobalVarLookupTable _globalVarLookup;
+        private readonly SystemVariables _systemVariables;
 
         public ThreadContext? MainThread { get; internal set; }
         public ThreadContext? CurrentThread { get; internal set; }
 
-        public VirtualMachine(NsxModuleLocator moduleLocator, BuiltInFunctions builtInFunctionsImpl)
+        public VirtualMachine(
+            NsxModuleLocator moduleLocator,
+            Stream globalVarLookupTableStream,
+            BuiltInFunctions builtInFunctionsImpl)
         {
             _loadedModules = new Dictionary<string, NsxModule>(16);
             _moduleLocator = moduleLocator;
+            _builtInFuncImpl = builtInFunctionsImpl;
             _builtInCallDispatcher = new BuiltInFunctionDispatcher(builtInFunctionsImpl);
             _threads = new List<ThreadContext>();
             _threadMap = new Dictionary<string, ThreadContext>();
             _pendingThreadActions = new Queue<ThreadAction>();
             _timer = Stopwatch.StartNew();
-            _globals = new ConstantValue[4096];
+            _globals = new ConstantValue[5000];
+            _globalVarLookup = GlobalVarLookupTable.Load(globalVarLookupTableStream);
             builtInFunctionsImpl._vm = this;
+            _systemVariables = new SystemVariables(this);
         }
 
-        public void CreateThread(string name, string moduleName, string symbol)
+        public IReadOnlyList<ThreadContext> Threads => _threads;
+
+        public ThreadContext CreateThread(string name, string symbol, bool start = false)
+            => CreateThread(name, CurrentThread!.CurrentFrame.Module.Name, symbol, start);
+
+        public void ActivateDialogueBlock(in DialogueBlockToken blockToken)
+        {
+            var frame = new CallFrame(
+                blockToken.Module, (ushort)blockToken.SubroutineIndex, 0, 0);
+            frame.ProgramCounter = blockToken.Offset;
+
+            CurrentThread!.CallFrameStack.Push(frame);
+        }
+
+        public ThreadContext CreateThread(string name, string moduleName, string symbol, bool start = true)
         {
             NsxModule module = GetModule(moduleName);
             ushort subIndex = (ushort)module.LookupSubroutineIndex(symbol);
@@ -79,6 +135,13 @@ namespace NitroSharp.NsScriptNew.VM
             {
                 MainThread = thread;
             }
+
+            if (!start)
+            {
+                CommitSuspendThread(thread, null);
+            }
+
+            return thread;
         }
 
         public NsxModule GetModule(string name)
@@ -108,6 +171,18 @@ namespace NitroSharp.NsScriptNew.VM
             _pendingThreadActions.Enqueue(ThreadAction.Terminate(thread));
         }
 
+        public void SuspendMainThread()
+        {
+            Debug.Assert(MainThread != null);
+            SuspendThread(MainThread);
+        }
+
+        public void ResumeMainThread()
+        {
+            Debug.Assert(MainThread != null);
+            ResumeThread(MainThread);
+        }
+
         public bool RefreshThreadState()
         {
             int nbResumed = 0;
@@ -134,6 +209,11 @@ namespace NitroSharp.NsScriptNew.VM
                 }
             }
             return nbResumed > 0;
+        }
+
+        public bool TryGetThread(string name, out ThreadContext thread)
+        {
+            return _threadMap.TryGetValue(name, out thread);
         }
 
         public bool Run(CancellationToken cancellationToken)
@@ -177,9 +257,11 @@ namespace NitroSharp.NsScriptNew.VM
                 switch (action.Kind)
                 {
                     case ThreadAction.ActionKind.Create:
-                        _threads.Add(thread);
-                        _threadMap.Add(thread.Name, thread);
-                        result = true;
+                        if (_threadMap.TryAdd(thread.Name, thread))
+                        {
+                            _threads.Add(thread);
+                            result = true;
+                        }
                         break;
                     case ThreadAction.ActionKind.Terminate:
                         CommitTerminateThread(thread);
@@ -221,9 +303,19 @@ namespace NitroSharp.NsScriptNew.VM
         private static long TicksFromTimeSpan(TimeSpan timespan)
             => (long)(timespan.TotalSeconds * Stopwatch.Frequency);
 
+        private ref ConstantValue GetGlobalVar(int index)
+        {
+            ref ConstantValue val = ref _globals[index];
+            if (val.Type == BuiltInType.Uninitialized)
+            {
+                val = ConstantValue.Integer(0);
+            }
+
+            return ref val;
+        }
+
         private void Tick(ThreadContext thread)
         {
-        new_frame:
             if (thread.CallFrameStack.Count == 0)
             {
                 return;
@@ -238,6 +330,7 @@ namespace NitroSharp.NsScriptNew.VM
             while (true)
             {
                 Opcode opcode = program.NextOpcode();
+                ushort varToken = 0;
                 ConstantValue? imm = opcode switch
                 {
                     Opcode.LoadImm => readConst(ref program, thisModule),
@@ -247,7 +340,7 @@ namespace NitroSharp.NsScriptNew.VM
                     Opcode.LoadImmFalse => ConstantValue.False,
                     Opcode.LoadImmNull => ConstantValue.Null,
                     Opcode.LoadImmEmptyStr => ConstantValue.EmptyString,
-                    Opcode.LoadVar => _globals[program.DecodeToken()],
+                    Opcode.LoadVar => GetGlobalVar((varToken = program.DecodeToken())),
                     Opcode.LoadArg0 => stack[frame.ArgStart + 0],
                     Opcode.LoadArg1 => stack[frame.ArgStart + 1],
                     Opcode.LoadArg2 => stack[frame.ArgStart + 2],
@@ -258,6 +351,12 @@ namespace NitroSharp.NsScriptNew.VM
 
                 if (imm.HasValue)
                 {
+                    if (varToken != 0 && varToken == _systemVariables.PresentProcess)
+                    {
+                        string subName = thisModule.GetSubroutineName(frame.SubroutineIndex);
+                        imm = _globals[varToken] = ConstantValue.String(subName);
+                    }
+
                     ConstantValue value = imm.Value;
                     stack.Push(ref value);
                     continue;
@@ -267,7 +366,7 @@ namespace NitroSharp.NsScriptNew.VM
                 {
                     case Opcode.StoreVar:
                         int index = program.DecodeToken();
-                        _globals[index] = stack.Pop();
+                        GetGlobalVar(index) = stack.Pop();
                         break;
                     case Opcode.StoreArg0:
                         stack[frame.ArgStart + 0] = stack.Pop();
@@ -307,8 +406,8 @@ namespace NitroSharp.NsScriptNew.VM
                         ref ConstantValue val = ref stack.Peek();
                         val = val.Type switch
                         {
-                            BuiltInType.Boolean => ConstantValue.Boolean(!val.AsBool()!.Value),
                             BuiltInType.Integer => ConstantValue.Integer(-val.AsInteger()!.Value),
+                            BuiltInType.Float => ConstantValue.Float(-val.AsFloat()!.Value),
                             _ => ThrowHelper.Unreachable<ConstantValue>()
                         };
                         break;
@@ -322,6 +421,16 @@ namespace NitroSharp.NsScriptNew.VM
                         Debug.Assert(val.Type == BuiltInType.Integer); // TODO: runtime error
                         val = ConstantValue.Integer(val.AsInteger()!.Value - 1);
                         break;
+                    case Opcode.Delta:
+                        val = ref stack.Peek();
+                        Debug.Assert(val.Type == BuiltInType.Integer);
+                        val = ConstantValue.Delta(val.AsInteger()!.Value);
+                        break;
+                    case Opcode.Invert:
+                        val = ref stack.Peek();
+                        Debug.Assert(val.AsBool() != null);
+                        val = ConstantValue.Boolean(!val.AsBool()!.Value);
+                        break;
 #pragma warning restore IDE0059
 
                     case Opcode.Call:
@@ -331,7 +440,15 @@ namespace NitroSharp.NsScriptNew.VM
                         frame.ProgramCounter = program.Position;
                         var newFrame = new CallFrame(frame.Module, subroutineToken, argStart, argCount);
                         thread.CallFrameStack.Push(newFrame);
-                        //goto new_frame;
+                        if (CurrentThread == MainThread)
+                        {
+                            string name = thisModule.GetSubroutineRuntimeInformation(subroutineToken).SubroutineName;
+                            for (int i = 0; i < thread.CallFrameStack.Count; i++)
+                            {
+                                Console.Write(" ");
+                            }
+                            Console.WriteLine("near: " + name);
+                        }
                         return;
                     case Opcode.CallFar:
                         ushort importTableIndex = program.DecodeToken();
@@ -343,7 +460,15 @@ namespace NitroSharp.NsScriptNew.VM
                         newFrame = new CallFrame(externalModule, subroutineToken, argStart, argCount);
                         thread.CallFrameStack.Push(newFrame);
                         frame.ProgramCounter = program.Position;
-                        //goto new_frame;
+                        if (CurrentThread == MainThread)
+                        {
+                            string name = externalModule.GetSubroutineRuntimeInformation(subroutineToken).SubroutineName;
+                            for (int i = 0; i < thread.CallFrameStack.Count; i++)
+                            {
+                                Console.Write(" ");
+                            }
+                            Console.WriteLine("far: " + name);
+                        }
                         return;
                     case Opcode.Jump:
                         int @base = program.Position - 1;
@@ -364,7 +489,6 @@ namespace NitroSharp.NsScriptNew.VM
                         @base = program.Position - 1;
                         condition = stack.Pop();
                         offset = program.DecodeOffset();
-                        Debug.Assert(condition.Type == BuiltInType.Boolean);
                         if (!condition.AsBool()!.Value)
                         {
                             program.Position = @base + offset;
@@ -373,19 +497,29 @@ namespace NitroSharp.NsScriptNew.VM
                     case Opcode.Return:
                         if (thread.CallFrameStack.Count == 0) { return; }
                         thread.CallFrameStack.Pop();
-                        //goto new_frame;
                         return;
                     case Opcode.Dispatch:
                         var func = (BuiltInFunction)program.ReadByte();
                         argCount = program.ReadByte();
-                        ReadOnlySpan<ConstantValue> args = stack
-                            .AsSpan(stack.Count - argCount, argCount);
-
+                        ReadOnlySpan<ConstantValue> args = stack.AsSpan(stack.Count - argCount, argCount);
                         switch (func)
                         {
                             default:
-                                _builtInCallDispatcher.Dispatch(func, args);
+                                if (CurrentThread == MainThread)
+                                {
+                                    Console.Write($"Built-in: {func.ToString()}(");
+                                    foreach (ref readonly ConstantValue cv in args)
+                                    {
+                                        Console.Write(cv.ConvertToString() + ", ");
+                                    }
+                                    Console.Write(")\r\n");
+                                }
+                                ConstantValue? result = _builtInCallDispatcher.Dispatch(func, args);
                                 stack.Pop(argCount);
+                                if (result != null)
+                                {
+                                    stack.Push(result.Value);
+                                }
                                 break;
 
                             case BuiltInFunction.log:
@@ -423,6 +557,32 @@ namespace NitroSharp.NsScriptNew.VM
                                 Console.WriteLine($"{subName} + {program.Position - 1}: {message.ToString()}.");
                                 break;
                         }
+                        frame.ProgramCounter = program.Position;
+                        return;
+
+                    case Opcode.ActivateText:
+                        ushort textId = program.DecodeToken();
+                        ref readonly var srti = ref thisModule.GetSubroutineRuntimeInformation(
+                            frame.SubroutineIndex);
+                        (string box, string textName) = srti.DialogueBlockInfos[textId];
+                        _systemVariables.CurrentBoxName = ConstantValue.String(box);
+                        _systemVariables.CurrentTextName = ConstantValue.String(textName);
+                        break;
+
+                    case Opcode.Select:
+                        _builtInFuncImpl.Select();
+                        frame.ProgramCounter = program.Position;
+                        return;
+                    case Opcode.GetSelChoice:
+                        string choice = _builtInFuncImpl.GetSelectedChoice() ?? string.Empty;
+                        stack.Push(ConstantValue.String(choice));
+                        break;
+                    case Opcode.PresentText:
+                        string text = thisModule.GetString(program.DecodeToken());
+                        _builtInFuncImpl.BeginDialogueLine(text);
+                        break;
+                    case Opcode.AwaitInput:
+                        _builtInFuncImpl.WaitForInput();
                         break;
                 }
             }
@@ -433,6 +593,7 @@ namespace NitroSharp.NsScriptNew.VM
                 return imm.Type switch
                 {
                     BuiltInType.Integer => ConstantValue.Integer(imm.IntegerValue),
+                    BuiltInType.DeltaInteger => ConstantValue.Delta(imm.IntegerValue),
                     BuiltInType.BuiltInConstant => ConstantValue.BuiltInConstant(imm.Constant),
                     BuiltInType.String => ConstantValue.String(module.GetString(imm.StringToken)),
                     _ => ThrowHelper.Unreachable<ConstantValue>()

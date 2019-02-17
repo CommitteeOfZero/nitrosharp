@@ -1,4 +1,4 @@
-﻿namespace NitroSharp.NsScriptNew.Primitives
+﻿namespace NitroSharp.NsScript.Primitives
 {
     public enum NsCoordinateOrigin
     {

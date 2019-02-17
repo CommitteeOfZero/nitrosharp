@@ -1,6 +1,6 @@
 ﻿using System.IO;
 
-namespace NitroSharp.NsScriptNew.VM
+namespace NitroSharp.NsScript.VM
 {
     public abstract class NsxModuleLocator
     {

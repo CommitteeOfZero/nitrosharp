@@ -1,4 +1,4 @@
-namespace NitroSharp.NsScriptNew
+namespace NitroSharp.NsScript
 {
     public static class DiagnosticInfo
     {

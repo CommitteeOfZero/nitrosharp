@@ -1,9 +1,11 @@
-using NitroSharp.NsScriptNew;
-using NitroSharp.NsScriptNew.Compiler;
-using NitroSharp.NsScriptNew.VM;
+using NitroSharp.NsScript;
+using NitroSharp.NsScript.Compiler;
+using NitroSharp.NsScript.VM;
 using System;
 using System.Diagnostics;
+using System.IO;
 using System.Runtime.CompilerServices;
+using System.Threading;
 
 namespace NitroSharp.NsScriptCompiler.Playground
 {
@@ -13,6 +15,11 @@ namespace NitroSharp.NsScriptCompiler.Playground
         {
             base.SetAlias(entityName, alias);
         }
+
+        public override void WaitForInput()
+        {
+            Console.ReadLine();
+        }
     }
 
     partial class Program
@@ -21,15 +28,18 @@ namespace NitroSharp.NsScriptCompiler.Playground
 
         static void Main(string[] args)
         {
-            RunCompiler();
-            RunVM();
+            var list = GlobalVarLookupTable.Load(File.OpenRead("S:/globals"));
+            list.TryLookupSystemVariable("SYSTEM_present_preprocess", out int index);
+            //RunCompiler();
+            //RunVM();
         }
 
         static void RunVM()
         {
             var impl = new FuncImpl();
             var vm = new VirtualMachine(new FileSystemNsxModuleLocator(ScriptFolder), impl);
-            vm.CreateThread("test", "main");
+            vm.CreateThread("sampletext", "test", "main", true);
+            vm.Run(CancellationToken.None);
             //vm.Tick(ref thread);
         }
 

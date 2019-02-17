@@ -1,11 +1,20 @@
 ﻿using System;
-using NitroSharp.NsScriptNew.Primitives;
+using NitroSharp.NsScript.Primitives;
 
-namespace NitroSharp.NsScriptNew.VM
+namespace NitroSharp.NsScript.VM
 {
     public abstract class BuiltInFunctions
     {
+        protected BuiltInFunctions()
+        {
+            _randomGen = new Random();
+        }
+
+        public virtual int GenerateRandomNumber(int max) => _randomGen.Next(max);
+
         internal VirtualMachine? _vm;
+        private readonly Random _randomGen;
+
         public VirtualMachine Interpreter => _vm!;
 
         public ThreadContext? MainThread => Interpreter.MainThread;
@@ -13,9 +22,9 @@ namespace NitroSharp.NsScriptNew.VM
 
         public virtual void BeginDialogueLine(string pxmlString) { }
 
-        public virtual int GetPlatformId() => throw new NotImplementedException();
+        public virtual int GetPlatformId() => 0;
         public virtual string GetCurrentModuleName() => throw new NotImplementedException();
-        public virtual int GenerateRandomNumber(int max) => throw new NotImplementedException();
+        //public virtual int GenerateRandomNumber(int max) => throw new NotImplementedException();
         public virtual int GetSoundAmplitude(string characterName) => throw new NotImplementedException();
         public virtual int GetHeight(string entityName) => throw new NotImplementedException();
         public virtual int GetWidth(string entityName) => throw new NotImplementedException();
@@ -99,7 +108,7 @@ namespace NitroSharp.NsScriptNew.VM
         public virtual void Rotate(string entityName, TimeSpan duration, NsNumeric dstRotationX, NsNumeric dstRotationY, NsNumeric dstRotationZ, NsEasingFunction easingFunction, TimeSpan delay) { }
         public virtual void MoveCube(string entityName, TimeSpan duration, NsNumeric dstTranslationX, NsNumeric dstTranslationY, NsNumeric dstTranslationZ, NsEasingFunction easingFunction, TimeSpan delay) { }
 
-        public virtual void LoadText(string boxName, string textName, int maxWidth, int maxHeight, int letterSpacing, int lineSpacing) { }
+        public virtual void LoadText(in DialogueBlockToken token, int maxWidth, int maxHeight, int letterSpacing, int lineSpacing) { }
 
         public virtual void Select() { }
         public virtual string GetSelectedChoice() => throw new NotImplementedException();

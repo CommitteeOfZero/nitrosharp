@@ -1,4 +1,4 @@
-﻿namespace NitroSharp.NsScriptNew
+﻿namespace NitroSharp.NsScript
 {
     public readonly struct NsRational
     {

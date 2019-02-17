@@ -7,24 +7,24 @@ using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using NitroSharp.NsScriptNew.CodeGen;
-using NitroSharp.NsScriptNew.Syntax;
-using NitroSharp.NsScriptNew.Text;
-using NitroSharp.NsScriptNew.Utilities;
+using System.Text;
+using NitroSharp.NsScript.CodeGen;
+using NitroSharp.NsScript.Syntax;
+using NitroSharp.NsScript.Text;
+using NitroSharp.NsScript.Utilities;
 using NitroSharp.Utilities;
 
-namespace NitroSharp.NsScriptNew.Compiler
+namespace NitroSharp.NsScript.Compiler
 {
     public class Compilation
     {
-        private static ReadOnlySpan<byte> CRLF => new byte[] { 0x0D, 0x0A };
-
         private readonly SourceReferenceResolver _sourceReferenceResolver;
         private readonly Dictionary<ResolvedPath, SyntaxTree> _syntaxTrees;
         private readonly Dictionary<SyntaxTree, SourceModuleSymbol> _sourceModuleSymbols;
 
         private readonly Dictionary<ResolvedPath, NsxModuleBuilder> _nsxModuleBuilders;
         private readonly TokenMap<string> _globals = new TokenMap<string>(4096);
+        private readonly List<string> _systemVariables = new List<string>();
 
         public Compilation(string rootSourceDirectory)
             : this(new DefaultSourceReferenceResolver(rootSourceDirectory))
@@ -63,19 +63,37 @@ namespace NitroSharp.NsScriptNew.Compiler
                 }
             } while (filesCompiled > 0);
 
-            //using (FileStream file = File.OpenWrite("S:/globals"))
-            //{
-            //    foreach (string variable in _globals.GetAll())
-            //    {
-            //        int sz = Encoding.UTF8.GetByteCount(variable);
-            //        Span<byte> utf8Bytes = sz <= 256
-            //            ? stackalloc byte[sz]
-            //            : new byte[sz];
-            //        Encoding.UTF8.GetBytes(variable, utf8Bytes);
-            //        file.Write(utf8Bytes);
-            //        file.Write(CRLF);
-            //    }
-            //}
+            using (FileStream file = File.Create("S:/globals"))
+            {
+                uint offsetTableSize = _globals.Count * 4 + 2;
+                using var offsetTableBuffer = PooledBuffer<byte>.Allocate(offsetTableSize);
+                var offsetWriter = new BufferWriter(offsetTableBuffer);
+                offsetWriter.WriteUInt16LE((ushort)_globals.Count);
+
+                uint sysVarListSize = (uint)(_systemVariables.Count * 2 + 4);
+                using var sysVarList = PooledBuffer<byte>.Allocate(sysVarListSize);
+                var sysVarListWriter = new BufferWriter(sysVarList);
+                sysVarListWriter.WriteUInt16LE((ushort)_systemVariables.Count);
+
+                using var nameHeapBuffer = PooledBuffer<byte>.Allocate(32 * 1024);
+                var nameWriter = new BufferWriter(nameHeapBuffer);
+                ReadOnlySpan<string> variables = _globals.AsSpan();
+                for (int i = 0; i < variables.Length; i++)
+                {
+                    string var = variables[i];
+                    offsetWriter.WriteInt32LE(nameWriter.Position);
+                    if (var.StartsWith("SYSTEM"))
+                    {
+                        sysVarListWriter.WriteUInt16LE((ushort)i);
+                    }
+
+                    nameWriter.WriteLengthPrefixedUtf8String(var);
+                }
+
+                file.Write(offsetWriter.Written);
+                file.Write(sysVarListWriter.Written);
+                file.Write(nameWriter.Written);
+            }
         }
 
         private void EmitCore(SourceFileSymbol sourceFile, HashSet<ResolvedPath> compiledFiles)
@@ -164,7 +182,16 @@ namespace NitroSharp.NsScriptNew.Compiler
 
         internal ushort GetGlobalVarToken(string variableName)
         {
-            return _globals.GetOrAddToken(variableName);
+            if (!_globals.TryGetToken(variableName, out ushort token))
+            {
+                token = _globals.AddToken(variableName);
+                if (variableName.StartsWith("SYSTEM"))
+                {
+                    _systemVariables.Add(variableName);
+                }
+            }
+
+            return token;
         }
     }
 
@@ -281,7 +308,7 @@ namespace NitroSharp.NsScriptNew.Compiler
             headerWriter.Position += 4;
 
             // --- Write everything to the stream ---
-            using FileStream fileStream = File.Create($"S:/ChaosContent/Noah/tests/{Path.ChangeExtension(sourceFile.Name, "nsx")}");
+            using FileStream fileStream = File.Create($"S:/ChaosContent/Noah/nsx/{Path.ChangeExtension(sourceFile.Name, "nsx")}");
             fileStream.Write(headerWriter.Written);
 
             fileStream.Write(subHeaderWriter.Written);
@@ -361,6 +388,7 @@ namespace NitroSharp.NsScriptNew.Compiler
                 rtiWriter.WriteUInt16LE((ushort)decl.DialogueBlocks.Length);
                 foreach (DialogueBlockSyntax dialogueBlock in decl.DialogueBlocks)
                 {
+                    rtiWriter.WriteLengthPrefixedUtf8String(dialogueBlock.AssociatedBox);
                     rtiWriter.WriteLengthPrefixedUtf8String(dialogueBlock.Name);
                 }
 
@@ -519,16 +547,14 @@ namespace NitroSharp.NsScriptNew.Compiler
         public ChapterSymbol? ResolveCallChapterTarget(CallChapterStatementSyntax callChapterStmt)
         {
             string modulePath = callChapterStmt.TargetModule.Value;
-            SourceModuleSymbol targetSourceModule;
             try
             {
-                targetSourceModule = _compilation.GetSourceModule(modulePath);
+                SourceModuleSymbol targetSourceModule = _compilation.GetSourceModule(modulePath);
                 SourceFileSymbol rootSourceFile = targetSourceModule.RootSourceFile;
                 ChapterSymbol? chapter = targetSourceModule.LookupChapter("main");
                 if (chapter == null)
                 {
                     Report(callChapterStmt.TargetModule, DiagnosticId.ChapterMainNotFound);
-                    return null;
                 }
 
                 return chapter;
@@ -538,6 +564,35 @@ namespace NitroSharp.NsScriptNew.Compiler
             {
                 string moduleName = callChapterStmt.TargetModule.Value;
                 Report(callChapterStmt.TargetModule, DiagnosticId.ExternalModuleNotFound, moduleName);
+                return null;
+            }
+        }
+
+        public SceneSymbol? ResolveCallSceneTarget(CallSceneStatementSyntax callSceneStmt)
+        {
+            if (callSceneStmt.TargetModule == null)
+            {
+                return LookupScene(callSceneStmt.TargetScene);
+            }
+
+            Spanned<string> targetModule = callSceneStmt.TargetModule.Value;
+            string modulePath = targetModule.Value;
+            try
+            {
+                SourceModuleSymbol targetSourceModule = _compilation.GetSourceModule(modulePath);
+                SourceFileSymbol rootSourceFile = targetSourceModule.RootSourceFile;
+                SceneSymbol? scene = targetSourceModule.LookupScene(callSceneStmt.TargetScene.Value);
+                if (scene == null)
+                {
+                    ReportUnresolvedIdentifier(callSceneStmt.TargetScene);
+                }
+
+                return scene;
+            }
+            catch (FileNotFoundException)
+            {
+                string moduleName = targetModule.Value;
+                Report(targetModule, DiagnosticId.ExternalModuleNotFound, moduleName);
                 return null;
             }
         }
@@ -626,16 +681,6 @@ namespace NitroSharp.NsScriptNew.Compiler
         }
     }
 
-    internal readonly ref struct EmitResult
-    {
-        public readonly ReadOnlySpan<ushort> DialogueBlockOffsets;
-
-        public EmitResult(ReadOnlySpan<ushort> dialogueBlockOffsets)
-        {
-            DialogueBlockOffsets = dialogueBlockOffsets;
-        }
-    }
-
     internal ref struct Emitter
     {
         private const int JumpInstrSize = sizeof(Opcode) + sizeof(ushort);
@@ -646,10 +691,12 @@ namespace NitroSharp.NsScriptNew.Compiler
         private readonly Compilation _compilation;
         private readonly SourceModuleSymbol _sourceModule;
         private BufferWriter _code;
-
+        private int _textId;
         private readonly TokenMap<ParameterSymbol>? _parameters;
 
         private readonly Queue<int> _insertBreaksAt;
+
+        private bool _supressConstantLookup;
 
         public Emitter(NsxModuleBuilder moduleBuilder, SubroutineSymbol subroutine)
         {
@@ -661,11 +708,18 @@ namespace NitroSharp.NsScriptNew.Compiler
             _parameters = null;
             if (subroutine is FunctionSymbol function && function.Parameters.Length > 0)
             {
-                _parameters = new TokenMap<ParameterSymbol>();
+                ImmutableArray<ParameterSymbol> parameters = function.Parameters;
+                _parameters = new TokenMap<ParameterSymbol>((uint)parameters.Length);
+                foreach (ParameterSymbol param in parameters)
+                {
+                    _parameters.GetOrAddToken(param);
+                }
             }
 
             _insertBreaksAt = new Queue<int>();
             _code = default;
+            _textId = 0;
+            _supressConstantLookup = false;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -702,8 +756,13 @@ namespace NitroSharp.NsScriptNew.Compiler
             switch (opKind)
             {
                 case UnaryOperatorKind.Not:
+                    EmitOpcode(Opcode.Invert);
+                    break;
                 case UnaryOperatorKind.Minus:
                     EmitOpcode(Opcode.Neg);
+                    break;
+                case UnaryOperatorKind.Delta:
+                    EmitOpcode(Opcode.Delta);
                     break;
             }
         }
@@ -744,9 +803,6 @@ namespace NitroSharp.NsScriptNew.Compiler
                 case SyntaxNodeKind.AssignmentExpression:
                     EmitAssignmentExpression((AssignmentExpressionSyntax)expression);
                     break;
-                case SyntaxNodeKind.DeltaExpression:
-                    EmitDeltaExpression((DeltaExpressionSyntax)expression);
-                    break;
                 case SyntaxNodeKind.FunctionCallExpression:
                     EmitFunctionCall((FunctionCallExpressionSyntax)expression);
                     break;
@@ -755,7 +811,18 @@ namespace NitroSharp.NsScriptNew.Compiler
 
         private void EmitLiteral(LiteralExpressionSyntax literal)
         {
-            EmitLoadImm(literal.Value);
+            ConstantValue value = literal.Value;
+            if (value.Type == BuiltInType.String && !_supressConstantLookup)
+            {
+                string strValue = value.AsString()!;
+                BuiltInConstant? constant = WellKnownSymbols.LookupBuiltInConstant(strValue);
+                if (constant.HasValue)
+                {
+                    value = ConstantValue.BuiltInConstant(constant.Value);
+                }
+            }
+
+            EmitLoadImm(value);
         }
 
         private void EmitNameExpression(NameExpressionSyntax expression)
@@ -855,18 +922,20 @@ namespace NitroSharp.NsScriptNew.Compiler
             EmitStoreOp(variableKind, token);
         }
 
-        private void EmitDeltaExpression(DeltaExpressionSyntax expression)
-        {
-        }
-
         private void EmitFunctionCall(FunctionCallExpressionSyntax callExpression)
         {
             LookupResult lookupResult = _checker.LookupFunction(callExpression.TargetName);
             if (lookupResult.IsEmpty) { return; }
 
-            foreach (ExpressionSyntax argument in callExpression.Arguments)
+            ImmutableArray<ExpressionSyntax> arguments = callExpression.Arguments;
+            for (int i = 0; i < arguments.Length; i++)
             {
-                EmitExpression(argument);
+                // Assumption: the first argument is never a built-in constant
+                // Even if it looks like one (e.g. "Black"), it should be treated
+                // as a string literal, not as a built-in constant.
+                // Reasoning: "Black" and "White" are sometimes used as entity names.
+                _supressConstantLookup = i == 0;
+                EmitExpression(arguments[i]);
             }
 
             if (lookupResult.Discriminator == LookupResultDiscriminator.BuiltInFunction)
@@ -899,13 +968,28 @@ namespace NitroSharp.NsScriptNew.Compiler
         private void EmitCallChapter(CallChapterStatementSyntax statement)
         {
             ChapterSymbol? chapter = _checker.ResolveCallChapterTarget(statement);
-            if (chapter == null) { return; }
+            if (chapter != null)
+            {
+                EmitCallFar(chapter);
+            }
+        }
 
+        private void EmitCallScene(CallSceneStatementSyntax statement)
+        {
+            SceneSymbol? scene = _checker.ResolveCallSceneTarget(statement);
+            if (scene != null)
+            {
+                EmitCallFar(scene);
+            }
+        }
+
+        private void EmitCallFar(SubroutineSymbol subroutine)
+        {
             EmitOpcode(Opcode.CallFar);
-            SourceFileSymbol externalSourceFile = chapter.DeclaringSourceFile;
+            SourceFileSymbol externalSourceFile = subroutine.DeclaringSourceFile;
             NsxModuleBuilder externalNsxBuilder = _compilation.GetNsxModuleBuilder(externalSourceFile);
             _code.WriteUInt16LE(_module.GetExternalModuleToken(externalSourceFile));
-            _code.WriteUInt16LE(externalNsxBuilder.GetSubroutineToken(chapter));
+            _code.WriteUInt16LE(externalNsxBuilder.GetSubroutineToken(subroutine));
             _code.WriteByte(0);
         }
 
@@ -934,6 +1018,9 @@ namespace NitroSharp.NsScriptNew.Compiler
                 case SyntaxNodeKind.CallChapterStatement:
                     EmitCallChapter((CallChapterStatementSyntax)statement);
                     break;
+                case SyntaxNodeKind.CallSceneStatement:
+                    EmitCallScene((CallSceneStatementSyntax)statement);
+                    break;
                 case SyntaxNodeKind.SelectStatement:
                     EmitSelect((SelectStatementSyntax)statement);
                     break;
@@ -941,6 +1028,7 @@ namespace NitroSharp.NsScriptNew.Compiler
                     EmitSelectSection((SelectSectionSyntax)statement);
                     break;
                 case SyntaxNodeKind.DialogueBlock:
+                    EmitActivateText((DialogueBlockSyntax)statement);
                     break;
                 case SyntaxNodeKind.PXmlString:
                     EmitDialogue((PXmlString)statement);
@@ -951,15 +1039,33 @@ namespace NitroSharp.NsScriptNew.Compiler
             }
         }
 
+        private void EmitActivateText(DialogueBlockSyntax block)
+        {
+            EmitOpcode(Opcode.ActivateText);
+            _code.WriteUInt16LE((ushort)_textId++);
+        }
+
         private void EmitDialogue(PXmlString textNode)
         {
             EmitOpcode(Opcode.PresentText);
             _code.WriteUInt16LE(_module.GetStringToken(textNode.Text));
         }
 
-        private void EmitSelectSection(SelectSectionSyntax statement)
+        private void EmitSelectSection(SelectSectionSyntax section)
         {
-            EmitStatement(statement.Body);
+            EmitOpcode(Opcode.GetSelChoice);
+            EmitLoadImm(ConstantValue.String(section.Label.Value));
+            EmitBinary(BinaryOperatorKind.Equals);
+            int jumpPos = _code.Position;
+            _code.Position += JumpInstrSize;
+
+            EmitStatement(section.Body);
+            int end = _code.Position;
+
+            _code.Position = jumpPos;
+            EmitOpcode(Opcode.JumpIfFalse);
+            _code.WriteInt16LE((short)(end - jumpPos));
+            _code.Position = end;
         }
 
         private void EmitSelect(SelectStatementSyntax selectStmt)
@@ -997,13 +1103,13 @@ namespace NitroSharp.NsScriptNew.Compiler
                 // <consequence>
                 // end:
 
-                int jmpInstrOffset = _code.Position;
+                int jmpInstrPos = _code.Position;
                 _code.Position += JumpInstrSize;
                 EmitStatement(ifStmt.IfTrueStatement);
                 int end = _code.Position;
-                _code.Position = jmpInstrOffset;
+                _code.Position = jmpInstrPos;
                 EmitOpcode(Opcode.JumpIfFalse);
-                _code.WriteInt16LE((short)(end - jmpInstrOffset));
+                _code.WriteInt16LE((short)(end - jmpInstrPos));
                 _code.Position = end;
             }
             else
@@ -1022,26 +1128,25 @@ namespace NitroSharp.NsScriptNew.Compiler
                 // <alternative>
                 // end:
 
-                int firstJmpInstrOffset = _code.Position;
+                int firstJmpInstrPos = _code.Position;
                 _code.Position += JumpInstrSize;
 
                 EmitStatement(ifStmt.IfTrueStatement);
 
-                int secondJmpInstrOffset = _code.Position;
+                int secondJmpInstrPos = _code.Position;
                 _code.Position += JumpInstrSize;
                 int alternativePos = _code.Position;
 
                 EmitStatement(ifStmt.IfFalseStatement);
 
                 int end = _code.Position;
-                int secondJmpTargetOffset = end - secondJmpInstrOffset;
-                _code.Position = secondJmpInstrOffset;
+                _code.Position = secondJmpInstrPos;
                 EmitOpcode(Opcode.Jump);
-                _code.WriteInt16LE((short)secondJmpTargetOffset);
+                _code.WriteInt16LE((short)(end - secondJmpInstrPos));
 
-                _code.Position = firstJmpInstrOffset;
+                _code.Position = firstJmpInstrPos;
                 EmitOpcode(Opcode.JumpIfFalse);
-                _code.WriteInt16LE((short)(alternativePos - firstJmpInstrOffset));
+                _code.WriteInt16LE((short)(alternativePos - firstJmpInstrPos));
                 _code.Position = end;
             }
         }
@@ -1066,18 +1171,18 @@ namespace NitroSharp.NsScriptNew.Compiler
 
             int conditionPos = _code.Position;
             EmitExpression(whileStmt.Condition);
-            int firstJmpOffset = _code.Position;
+            int firstJmpPos = _code.Position;
             _code.Position += JumpInstrSize;
 
             EmitStatement(whileStmt.Body);
+            int secondJumpPos = _code.Position;
             EmitOpcode(Opcode.Jump);
-            _code.WriteInt16LE((short)(conditionPos - _code.Position));
+            _code.WriteInt16LE((short)(conditionPos - secondJumpPos));
             int exit = _code.Position;
 
-            _code.Position = firstJmpOffset;
+            _code.Position = firstJmpPos;
             EmitOpcode(Opcode.JumpIfFalse);
-            _code.WriteInt16LE((short)(exit - firstJmpOffset));
-            _code.Position = exit;
+            _code.WriteInt16LE((short)(exit - firstJmpPos));
 
             while (_insertBreaksAt.Count > 0)
             {
@@ -1143,6 +1248,11 @@ namespace NitroSharp.NsScriptNew.Compiler
                             _code.WriteInt32LE(num);
                             break;
                     }
+                    break;
+                case BuiltInType.DeltaInteger:
+                    EmitOpcode(Opcode.LoadImm);
+                    _code.WriteByte((byte)value.Type);
+                    _code.WriteInt32LE(value.AsDelta()!.Value);
                     break;
                 case BuiltInType.Boolean:
                     Opcode opcode = value.AsBool()!.Value
@@ -1222,6 +1332,7 @@ namespace NitroSharp.NsScriptNew.Compiler
             {
                 EmitStatement(statement);
             }
+            EmitOpcode(Opcode.Return);
         }
     }
 
@@ -1236,17 +1347,27 @@ namespace NitroSharp.NsScriptNew.Compiler
             _items = new ArrayBuilder<T>(initialCapacity);
         }
 
+        public uint Count => _items.Count;
         public ReadOnlySpan<T> AsSpan() => _items.AsReadonlySpan();
 
         public ushort GetOrAddToken(T item)
         {
-            if (!_itemToToken.TryGetValue(item, out ushort token))
+            if (!TryGetToken(item, out ushort token))
             {
-                token = (ushort)_items.Count;
-                _items.Add(item);
-                _itemToToken.Add(item, token);
+                token = AddToken(item);
             }
 
+            return token;
+        }
+
+        public bool TryGetToken(T item, out ushort token)
+            => _itemToToken.TryGetValue(item, out token);
+
+        public ushort AddToken(T item)
+        {
+            ushort token = (ushort)_items.Count;
+            _items.Add(item);
+            _itemToToken.Add(item, token);
             return token;
         }
     }

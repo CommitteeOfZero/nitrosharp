@@ -1,6 +1,5 @@
 ﻿using NitroSharp.Animation;
 using NitroSharp.Dialogue;
-using NitroSharp.NsScript.Symbols;
 using System.Collections.Generic;
 
 namespace NitroSharp
@@ -96,7 +95,7 @@ namespace NitroSharp
         internal sealed class BeginDialogueBlockMessage : Message
         {
             public override MessageKind Kind => MessageKind.BeginDialogueBlock;
-            public DialogueBlockSymbol DialogueBlock { get; set; }
+            //public DialogueBlockSymbol DialogueBlock { get; set; }
             public Entity TextEntity { get; set; }
         }
 

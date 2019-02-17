@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace NitroSharp.NsScriptNew.Syntax
+namespace NitroSharp.NsScript.Syntax
 {
     public abstract class SyntaxVisitor<TResult>
     {
@@ -72,11 +72,6 @@ namespace NitroSharp.NsScriptNew.Syntax
         public virtual TResult VisitAssignmentExpression(AssignmentExpressionSyntax assignmentExpression)
         {
             return DefaultVisitNode(assignmentExpression);
-        }
-
-        public virtual TResult VisitDeltaExpression(DeltaExpressionSyntax deltaExpression)
-        {
-            return DefaultVisitNode(deltaExpression);
         }
 
         public virtual TResult VisitFunctionCall(FunctionCallExpressionSyntax functionCall)

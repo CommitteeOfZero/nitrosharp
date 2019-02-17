@@ -1,9 +1,9 @@
-﻿using NitroSharp.NsScriptNew.Text;
+﻿using NitroSharp.NsScript.Text;
 using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
-namespace NitroSharp.NsScriptNew.Syntax
+namespace NitroSharp.NsScript.Syntax
 {
     internal abstract class TextScanner
     {
@@ -19,6 +19,7 @@ namespace NitroSharp.NsScriptNew.Syntax
             _text = text;
         }
 
+        public string Text => _text;
         protected int Position => _position;
         protected int LexemeStart => _lexemeStart;
 

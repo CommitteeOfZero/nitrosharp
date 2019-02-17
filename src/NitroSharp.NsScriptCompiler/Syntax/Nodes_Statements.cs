@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Immutable;
-using NitroSharp.NsScriptNew.Text;
+using NitroSharp.NsScript.Text;
 
-namespace NitroSharp.NsScriptNew.Syntax
+namespace NitroSharp.NsScript.Syntax
 {
     public abstract class StatementSyntax : SyntaxNode
     {
@@ -238,11 +238,11 @@ namespace NitroSharp.NsScriptNew.Syntax
             Spanned<string> targetScene,
             TextSpan span) : base(span)
         {
-            TargetFile = targetFile;
+            TargetModule = targetFile;
             TargetScene = targetScene;
         }
 
-        public Spanned<string>? TargetFile { get; }
+        public Spanned<string>? TargetModule { get; }
         public Spanned<string> TargetScene { get; }
         public override SyntaxNodeKind Kind => SyntaxNodeKind.CallSceneStatement;
 

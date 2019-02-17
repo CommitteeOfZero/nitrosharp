@@ -5,110 +5,11 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Text;
-using NitroSharp.NsScriptNew.Utilities;
+using NitroSharp.NsScript.Utilities;
 
-namespace NitroSharp.NsScriptNew.VM
+namespace NitroSharp.NsScript.VM
 {
-    public readonly struct Subroutine
-    {
-        private readonly byte[] _bytes;
-        private readonly int _codeStart;
-        private readonly int _codeSize;
-
-        public readonly int Index;
-        public bool IsEmpty => _bytes == null;
-        public readonly int[] DialogueBlockOffsets;
-
-        public Subroutine(int index, byte[] bytes)
-        {
-            Index = index;
-            _bytes = bytes;
-            var reader = new BufferReader(bytes);
-            int dialogoueBlockCount = reader.ReadUInt16LE();
-            DialogueBlockOffsets = Array.Empty<int>();
-            _codeSize = bytes.Length - 2;
-            if (dialogoueBlockCount > 0)
-            {
-                DialogueBlockOffsets = new int[dialogoueBlockCount];
-                for (int i = 0; i < dialogoueBlockCount; i++)
-                {
-                    DialogueBlockOffsets[i] = reader.ReadUInt16LE();
-                }
-
-                _codeSize = DialogueBlockOffsets[0];
-            }
-
-            _codeStart = reader.Position;
-        }
-
-        public ReadOnlySpan<byte> Code
-            => new ReadOnlySpan<byte>(_bytes, _codeStart, _codeSize);
-    }
-
-    public struct SubroutineRuntimeInformation
-    {
-        private readonly int _offset;
-        private readonly int _parameterInfoOffset;
-        private string[]? _parameterNames;
-
-        public readonly SubroutineKind SubroutineKind;
-        public readonly string SubroutineName;
-        public readonly string[] DialogueBlockNames;
-
-        internal SubroutineRuntimeInformation(ref BufferReader reader)
-        {
-            _offset = reader.Position;
-            SubroutineKind = (SubroutineKind)reader.ReadByte();
-            SubroutineName = reader.ReadLengthPrefixedUtf8String();
-            int dialogueBlockCount = reader.ReadUInt16LE();
-            DialogueBlockNames = dialogueBlockCount > 0
-                ? new string[dialogueBlockCount]
-                : Array.Empty<string>();
-
-            for (int i = 0; i < dialogueBlockCount; i++)
-            {
-                DialogueBlockNames[i] = reader.ReadLengthPrefixedUtf8String();
-            }
-
-            _parameterInfoOffset = reader.Position;
-            _parameterNames = null;
-        }
-
-        internal string[] GetParameterNames(byte[] rtiTable)
-        {
-            if (SubroutineKind != SubroutineKind.Function)
-            {
-                return Array.Empty<string>();
-            }
-
-            if (_parameterNames == null)
-            {
-                DecodeParameterNames(rtiTable);
-                Debug.Assert(_parameterNames != null);
-            }
-
-            return _parameterNames;
-        }
-
-        private void DecodeParameterNames(byte[] rtiTable)
-        {
-            Debug.Assert(SubroutineKind == SubroutineKind.Function);
-            var reader = new BufferReader(rtiTable);
-            int parameterCount = reader.ReadByte();
-            _parameterNames = parameterCount > 0
-                ? new string[parameterCount]
-                : Array.Empty<string>();
-            for (int i = 0; i < parameterCount; i++)
-            {
-                _parameterNames[i] = reader.ReadLengthPrefixedUtf8String();
-            }
-        }
-
-        public override string ToString()
-            => $"SRTI '{SubroutineName}'";
-    }
-
-    public class NsxModule
+    public sealed class NsxModule
     {
         private readonly string?[] _stringHeap;
 
@@ -158,7 +59,7 @@ namespace NitroSharp.NsScriptNew.VM
         public string[] Imports { get; }
         public int StringCount { get; }
 
-        public Subroutine GetSubroutine(int index)
+        internal Subroutine GetSubroutine(int index)
         {
             ref Subroutine subroutine = ref _subroutines[index];
             if (subroutine.IsEmpty)
@@ -174,6 +75,9 @@ namespace NitroSharp.NsScriptNew.VM
         {
             return ref _srti[subroutineIndex];
         }
+
+        public string GetSubroutineName(int subroutineIndex)
+            => _srti[subroutineIndex].SubroutineName;
 
         public string[] GetParameterNames(int subroutineIndex)
         {
@@ -299,5 +203,120 @@ namespace NitroSharp.NsScriptNew.VM
 
             return new NsxModule(stream, name, subroutineOffsets, rtiBytes, imports, stringOffsets);
         }
+    }
+
+    internal readonly struct Subroutine
+    {
+        private readonly byte[] _bytes;
+        private readonly int _codeStart;
+        private readonly int _codeSize;
+
+        public readonly int Index;
+        public bool IsEmpty => _bytes == null;
+        public readonly int[] DialogueBlockOffsets;
+
+        public Subroutine(int index, byte[] bytes)
+        {
+            Index = index;
+            _bytes = bytes;
+            var reader = new BufferReader(bytes);
+            int dialogoueBlockCount = reader.ReadUInt16LE();
+            DialogueBlockOffsets = Array.Empty<int>();
+            _codeSize = bytes.Length - 2;
+            if (dialogoueBlockCount > 0)
+            {
+                DialogueBlockOffsets = new int[dialogoueBlockCount];
+                for (int i = 0; i < dialogoueBlockCount; i++)
+                {
+                    DialogueBlockOffsets[i] = reader.ReadUInt16LE();
+                }
+
+                //_codeSize = DialogueBlockOffsets[0];
+            }
+
+            _codeStart = reader.Position;
+        }
+
+        public ReadOnlySpan<byte> Code
+            => new ReadOnlySpan<byte>(_bytes, _codeStart, _bytes.Length - _codeStart);
+    }
+
+    public struct SubroutineRuntimeInformation
+    {
+        private readonly int _offset;
+        private readonly int _parameterInfoOffset;
+        private string[]? _parameterNames;
+        private readonly Dictionary<string, int>? _dialogueBlockMap;
+
+        public readonly SubroutineKind SubroutineKind;
+        public readonly string SubroutineName;
+        public readonly (string box, string name)[] DialogueBlockInfos;
+
+        internal SubroutineRuntimeInformation(ref BufferReader reader)
+        {
+            _offset = reader.Position;
+            SubroutineKind = (SubroutineKind)reader.ReadByte();
+            SubroutineName = reader.ReadLengthPrefixedUtf8String();
+            int dialogueBlockCount = reader.ReadUInt16LE();
+            DialogueBlockInfos = dialogueBlockCount > 0
+                ? new (string, string)[dialogueBlockCount]
+                : Array.Empty<(string, string)>();
+
+            _dialogueBlockMap = null;
+            if (dialogueBlockCount > 0)
+            {
+                _dialogueBlockMap = new Dictionary<string, int>(dialogueBlockCount);
+                for (int i = 0; i < dialogueBlockCount; i++)
+                {
+                    (string box, string name) info =
+                        (reader.ReadLengthPrefixedUtf8String(),
+                         reader.ReadLengthPrefixedUtf8String());
+                    DialogueBlockInfos[i] = info;
+                    _dialogueBlockMap[info.name] = i;
+                }
+            }
+
+            _parameterInfoOffset = reader.Position;
+            _parameterNames = null;
+        }
+
+        internal int LookupDialogueBlockIndex(string dialogueBlockName)
+        {
+            Debug.Assert(_dialogueBlockMap != null);
+            return _dialogueBlockMap[dialogueBlockName];
+        }
+
+        internal string[] GetParameterNames(byte[] rtiTable)
+        {
+            if (SubroutineKind != SubroutineKind.Function)
+            {
+                return Array.Empty<string>();
+            }
+
+            if (_parameterNames == null)
+            {
+                DecodeParameterNames(rtiTable);
+                Debug.Assert(_parameterNames != null);
+            }
+
+            return _parameterNames;
+        }
+
+        private void DecodeParameterNames(byte[] rtiTable)
+        {
+            Debug.Assert(SubroutineKind == SubroutineKind.Function);
+            var reader = new BufferReader(rtiTable);
+            int parameterCount = reader.ReadByte();
+            _parameterNames = parameterCount > 0
+                ? new string[parameterCount]
+                : Array.Empty<string>();
+            for (int i = 0; i < parameterCount; i++)
+            {
+                _parameterNames[i] = reader.ReadLengthPrefixedUtf8String();
+            }
+        }
+
+        public override string ToString()
+            => $"SRTI '{SubroutineName}'";
     }
 }

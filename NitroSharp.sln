@@ -29,7 +29,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Veldrid.StartupUtilities", 
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Veldrid.SDL2", "..\SomeAnonDev\veldrid\src\Veldrid.SDL2\Veldrid.SDL2.csproj", "{4032037C-C856-4562-AA9A-A3CF5A9524DD}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NitroSharp.ShaderCompiler", "src\NitroSharp.ShaderCompiler\NitroSharp.ShaderCompiler.csproj", "{046954EC-04C3-4FB6-BFF5-B9E86C81ACD8}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NitroSharp.ShaderCompiler", "src\NitroSharp.ShaderCompiler\NitroSharp.ShaderCompiler.csproj", "{046954EC-04C3-4FB6-BFF5-B9E86C81ACD8}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{038539A7-2A54-4373-AF19-7C255D8DC349}"
 	ProjectSection(SolutionItems) = preProject
@@ -47,6 +47,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Common", "Common", "{913892
 	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NitroSharp.NsScriptCompiler.Playground", "src\NitroSharp.NsScriptCompiler.Playground\NitroSharp.NsScriptCompiler.Playground.csproj", "{B8E63AB4-1244-4CEB-8358-57894F8CA668}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Veldrid.ImGui", "..\SomeAnonDev\veldrid\src\Veldrid.ImGui\Veldrid.ImGui.csproj", "{EB07CDE1-1BA8-4D60-BCCC-FAF0944EBBC4}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -300,6 +302,22 @@ Global
 		{B8E63AB4-1244-4CEB-8358-57894F8CA668}.Release|x64.Build.0 = Release|Any CPU
 		{B8E63AB4-1244-4CEB-8358-57894F8CA668}.Release|x86.ActiveCfg = Release|Any CPU
 		{B8E63AB4-1244-4CEB-8358-57894F8CA668}.Release|x86.Build.0 = Release|Any CPU
+		{EB07CDE1-1BA8-4D60-BCCC-FAF0944EBBC4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EB07CDE1-1BA8-4D60-BCCC-FAF0944EBBC4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EB07CDE1-1BA8-4D60-BCCC-FAF0944EBBC4}.Debug|ARM.ActiveCfg = Debug|Any CPU
+		{EB07CDE1-1BA8-4D60-BCCC-FAF0944EBBC4}.Debug|ARM.Build.0 = Debug|Any CPU
+		{EB07CDE1-1BA8-4D60-BCCC-FAF0944EBBC4}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{EB07CDE1-1BA8-4D60-BCCC-FAF0944EBBC4}.Debug|x64.Build.0 = Debug|Any CPU
+		{EB07CDE1-1BA8-4D60-BCCC-FAF0944EBBC4}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{EB07CDE1-1BA8-4D60-BCCC-FAF0944EBBC4}.Debug|x86.Build.0 = Debug|Any CPU
+		{EB07CDE1-1BA8-4D60-BCCC-FAF0944EBBC4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EB07CDE1-1BA8-4D60-BCCC-FAF0944EBBC4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EB07CDE1-1BA8-4D60-BCCC-FAF0944EBBC4}.Release|ARM.ActiveCfg = Release|Any CPU
+		{EB07CDE1-1BA8-4D60-BCCC-FAF0944EBBC4}.Release|ARM.Build.0 = Release|Any CPU
+		{EB07CDE1-1BA8-4D60-BCCC-FAF0944EBBC4}.Release|x64.ActiveCfg = Release|Any CPU
+		{EB07CDE1-1BA8-4D60-BCCC-FAF0944EBBC4}.Release|x64.Build.0 = Release|Any CPU
+		{EB07CDE1-1BA8-4D60-BCCC-FAF0944EBBC4}.Release|x86.ActiveCfg = Release|Any CPU
+		{EB07CDE1-1BA8-4D60-BCCC-FAF0944EBBC4}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -311,6 +329,7 @@ Global
 		{206883CF-6A53-4046-930C-068D63B4C2AE} = {CEB218FE-4BD1-4C10-9AAF-1AF2697ADDBA}
 		{F98097A9-F00A-46AA-9D47-BEEFB0951368} = {CEB218FE-4BD1-4C10-9AAF-1AF2697ADDBA}
 		{4032037C-C856-4562-AA9A-A3CF5A9524DD} = {CEB218FE-4BD1-4C10-9AAF-1AF2697ADDBA}
+		{EB07CDE1-1BA8-4D60-BCCC-FAF0944EBBC4} = {CEB218FE-4BD1-4C10-9AAF-1AF2697ADDBA}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {2D3D7AAF-758C-459D-889B-46BFFA173E42}

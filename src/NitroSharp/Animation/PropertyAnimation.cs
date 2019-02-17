@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
-using NitroSharp.NsScript.Execution;
+using NitroSharp.NsScript.VM;
 using NitroSharp.Utilities;
 
 namespace NitroSharp.Animation

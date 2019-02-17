@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using NitroSharp.NsScriptNew.Text;
+using NitroSharp.NsScript.Text;
 
-namespace NitroSharp.NsScriptNew.Syntax
+namespace NitroSharp.NsScript.Syntax
 {
     public abstract class SyntaxNode
     {

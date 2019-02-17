@@ -1,6 +1,6 @@
-﻿using NitroSharp.NsScriptNew;
-using NitroSharp.NsScriptNew.Syntax;
-using NitroSharp.NsScriptNew.Text;
+﻿using NitroSharp.NsScript;
+using NitroSharp.NsScript.Syntax;
+using NitroSharp.NsScript.Text;
 using System.Collections.Generic;
 using Xunit;
 
@@ -87,8 +87,8 @@ namespace NitroSharp.NsScriptCompiler.Tests
             var callSceneStmt = AssertStatement<CallSceneStatementSyntax>(text, SyntaxNodeKind.CallSceneStatement);
             if (!string.IsNullOrEmpty(file))
             {
-                Assert.True(callSceneStmt.TargetFile.HasValue);
-                Common.AssertSpannedText(text, file, callSceneStmt.TargetFile.Value);
+                Assert.True(callSceneStmt.TargetModule.HasValue);
+                Common.AssertSpannedText(text, file, callSceneStmt.TargetModule.Value);
             }
 
             Common.AssertSpannedText(text, scene, callSceneStmt.TargetScene);

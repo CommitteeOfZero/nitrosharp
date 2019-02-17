@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
 
-namespace NitroSharp.NsScriptNew.Utilities
+namespace NitroSharp.NsScript.Utilities
 {
     public struct ValueStack<T> where T : struct
     {

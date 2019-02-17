@@ -1,4 +1,4 @@
-﻿namespace NitroSharp.NsScriptNew
+﻿namespace NitroSharp.NsScript
 {
     public enum Opcode : byte
     {
@@ -26,9 +26,11 @@
         Inc = 0x23,             // <>
         Dec = 0x24,             // <>
         Neg = 0x25,             // <>
-        Equal = 0x26,           // <>
-        NotEqual = 0x27,        // <>
-        Binary = 0x28,          // <byte operator>
+        Invert = 0x26,          // <>
+        Delta = 0x27,           // <>
+        Equal = 0x28,           // <>
+        NotEqual = 0x29,        // <>
+        Binary = 0x2A,          // <byte operator>
 
         Jump = 0x30,            // <short offset>
         JumpIfTrue = 0x31,      // <short offset>
@@ -37,9 +39,11 @@
         Call = 0x34,            // <ushort subroutine> <byte argCount>
         CallFar = 0x35,         // <ushort module> <ushort subroutine> <byte argCount>
         Return = 0x36,          // <>
-        Select = 0x37,          // <>,
+        Select = 0x37,          // <>
+        GetSelChoice = 0x38,    // <>
 
-        PresentText = 0x40,     // <ushort token>
-        AwaitInput = 0x41,      // <>
+        ActivateText = 0x40,    // <ushort id>
+        PresentText = 0x41,     // <ushort token>
+        AwaitInput = 0x42,      // <>
     }
 }

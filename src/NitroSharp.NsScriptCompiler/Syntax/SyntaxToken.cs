@@ -1,8 +1,8 @@
-﻿using NitroSharp.NsScriptNew.Text;
+﻿using NitroSharp.NsScript.Text;
 using System;
 using System.Runtime.CompilerServices;
 
-namespace NitroSharp.NsScriptNew.Syntax
+namespace NitroSharp.NsScript.Syntax
 {
     public readonly struct SyntaxToken
     {

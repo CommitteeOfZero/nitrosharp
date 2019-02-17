@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using NitroSharp.NsScriptNew.Syntax;
+using NitroSharp.NsScript.Syntax;
 using Xunit;
 
 namespace NitroSharp.NsScriptCompiler.Tests

@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO;
-using NitroSharp.NsScriptNew.Syntax;
+using NitroSharp.NsScript.Syntax;
 
-namespace NitroSharp.NsScriptNew.Compiler
+namespace NitroSharp.NsScript.Compiler
 {
     public abstract class Symbol
     {

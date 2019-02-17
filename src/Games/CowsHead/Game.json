@@ -1,7 +1,7 @@
 ﻿{
   "productName": "COWSHEAD_NOAH",
   "activeProfile": "Noah",
-  "graphics.vsync": false,
+  "graphics.vsync": true,
   "graphics.backend": "Vulkan",
   "audio.backend": "XAudio2",
   "window.title": "COWS;HEAD NOAH",
@@ -11,6 +11,10 @@
   "dev.useDedicatedInterpreterThread": true,
 
   "profiles": {
+    "NewVM": {
+      "startupScript": "boot-phantasm.nss"
+    },
+
     "Noah": {
       "startupScript": "boot.nss"
     },

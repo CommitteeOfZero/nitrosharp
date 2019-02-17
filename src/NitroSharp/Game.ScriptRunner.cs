@@ -1,6 +1,7 @@
 ﻿using NitroSharp.Animation;
 using NitroSharp.NsScript;
-using NitroSharp.NsScript.Execution;
+using NitroSharp.NsScript.Compiler;
+using NitroSharp.NsScript.VM;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -24,7 +25,7 @@ namespace NitroSharp
             private readonly bool _usingDedicatedThread;
             private readonly CancellationTokenSource _shutdownCancellation;
             private readonly string _nssFolder;
-            private readonly NsScriptInterpreter _nssInterpreter;
+            private VirtualMachine _nssInterpreter;
             private readonly NsBuiltins _builtinFunctions;
 
             private volatile Status _status;
@@ -37,7 +38,7 @@ namespace NitroSharp
                 _nssFolder = Path.Combine(_configuration.ContentRoot, "nss");
                 _builtinFunctions = new NsBuiltins(game);
                 _builtinFunctions.SetWorld(world);
-                _nssInterpreter = new NsScriptInterpreter(LocateScript, _builtinFunctions);
+                
                 _shutdownCancellation = new CancellationTokenSource();
             }
 
@@ -53,7 +54,13 @@ namespace NitroSharp
 
             public void LoadStartupScript()
             {
-                ThreadContext mainThread = _nssInterpreter.CreateThread("__MAIN", _configuration.StartupScript, "main");
+                var compilation = new Compilation(new DefaultSourceReferenceResolver(_nssFolder));
+                compilation.Emit(compilation.GetSourceModule(_configuration.StartupScript));
+
+                _nssInterpreter = new VirtualMachine(new FileSystemNsxModuleLocator(_nssFolder.Replace("nss", "nsx")), File.OpenRead("S:/globals"), _builtinFunctions);
+
+                ThreadContext mainThread = _nssInterpreter
+                    .CreateThread("__MAIN", _configuration.StartupScript.Replace(".nss", string.Empty), "main");
             }
 
             public void StartInterpreter()
@@ -62,11 +69,6 @@ namespace NitroSharp
                 {
                     _interpreterProc = Task.Factory.StartNew((Action)InterpreterLoop, TaskCreationOptions.LongRunning);
                 }
-            }
-
-            private Stream LocateScript(SourceFileReference fileRef)
-            {
-                return File.OpenRead(Path.Combine(_nssFolder, fileRef.FilePath.Replace("nss/", string.Empty)));
             }
 
             private void InterpreterLoop()

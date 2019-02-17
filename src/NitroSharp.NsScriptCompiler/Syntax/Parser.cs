@@ -1,5 +1,5 @@
-﻿using NitroSharp.NsScriptNew.CodeGen;
-using NitroSharp.NsScriptNew.Text;
+﻿using NitroSharp.NsScript.CodeGen;
+using NitroSharp.NsScript.Text;
 using NitroSharp.Utilities;
 using System;
 using System.Collections.Generic;
@@ -8,7 +8,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 
-namespace NitroSharp.NsScriptNew.Syntax
+namespace NitroSharp.NsScript.Syntax
 {
     internal sealed class Parser
     {
@@ -593,7 +593,7 @@ namespace NitroSharp.NsScriptNew.Syntax
                         : ParseNameExpression();
 
                 case SyntaxTokenKind.StringLiteralOrQuotedIdentifier:
-                    return IsParameter()
+                    return IsParameter() || (CurrentToken.Flags & SyntaxTokenFlags.HasDollarPrefix) == SyntaxTokenFlags.HasDollarPrefix
                         ? (ExpressionSyntax)ParseNameExpression()
                         : ParseLiteral();
 
@@ -610,22 +610,11 @@ namespace NitroSharp.NsScriptNew.Syntax
                     EatToken(SyntaxTokenKind.CloseParen);
                     return expr;
 
-                case SyntaxTokenKind.At:
-                    return ParseDeltaExpression(precedence);
-
                 default:
                     Report(DiagnosticId.InvalidExpressionTerm, GetText(CurrentToken));
                     EatToken();
                     return null;
             }
-        }
-
-        private DeltaExpressionSyntax? ParseDeltaExpression(Precedence precedence)
-        {
-            SyntaxToken atToken = EatToken(SyntaxTokenKind.At);
-            ExpressionSyntax? expr = ParseSubExpression(precedence);
-            if (expr == null) { return null; }
-            return new DeltaExpressionSyntax(expr, SpanFrom(atToken));
         }
 
         private LiteralExpressionSyntax ParseLiteral()
@@ -648,10 +637,10 @@ namespace NitroSharp.NsScriptNew.Syntax
 
                 case SyntaxTokenKind.StringLiteralOrQuotedIdentifier:
                     string str = InternValueText(token);
-                    BuiltInConstant? constant = WellKnownSymbols.LookupBuiltInConstant(str);
-                    value = constant.HasValue
-                        ? ConstantValue.BuiltInConstant(constant.Value)
-                        : ConstantValue.String(str);
+                    //BuiltInConstant? constant = WellKnownSymbols.LookupBuiltInConstant(str);
+                    //value = constant.HasValue
+                    //    ? ConstantValue.BuiltInConstant(constant.Value)
+                    value = ConstantValue.String(str);
                     break;
 
                 case SyntaxTokenKind.NullKeyword:
@@ -969,7 +958,7 @@ namespace NitroSharp.NsScriptNew.Syntax
 
         private int GetLineNumber()
             => SourceText.GetLineNumberFromPosition(CurrentToken.TextSpan.Start);
-        
+
         private int GetLineNumber(SyntaxToken token)
             => SourceText.GetLineNumberFromPosition(token.TextSpan.Start);
 

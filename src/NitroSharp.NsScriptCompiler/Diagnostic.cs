@@ -1,7 +1,7 @@
-﻿using NitroSharp.NsScriptNew.Text;
+﻿using NitroSharp.NsScript.Text;
 using System.Globalization;
 
-namespace NitroSharp.NsScriptNew
+namespace NitroSharp.NsScript
 {
     public enum DiagnosticId
     {

@@ -2,10 +2,12 @@
 using NitroSharp.Dialogue;
 using NitroSharp.Graphics;
 using NitroSharp.NsScript;
+using NitroSharp.NsScript.Primitives;
 using NitroSharp.Primitives;
 using NitroSharp.Text;
 using System;
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.IO;
 using System.Numerics;
 using Veldrid;
@@ -121,6 +123,7 @@ namespace NitroSharp
             NsCoordinate x, NsCoordinate y,
             int priority, RectangleF? srcRect = null)
         {
+            Console.WriteLine($"Loading sprite: {fileOrExistingEntityName}");
             Entity parentEntity = default;
             int idxSlash = entityName.IndexOf('/');
             if (idxSlash > 0)

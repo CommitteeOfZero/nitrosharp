@@ -9,6 +9,7 @@ using Veldrid;
 using NitroSharp.Animation;
 using System.Runtime.CompilerServices;
 using NitroSharp.Primitives;
+using NitroSharp.NsScript.Primitives;
 
 namespace NitroSharp
 {
@@ -53,7 +54,6 @@ namespace NitroSharp
                 session = Content.Get<MediaPlaybackSession>(assetId);
             }
 
-            RgbaFloat color = RgbaFloat.White;
             Entity entity = _world.CreateAudioClip(entityName, assetId, false);
             AudioClips.Duration.Set(entity, session.Asset.AudioStream.Duration);
         }

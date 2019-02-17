@@ -1,5 +1,5 @@
-﻿using NitroSharp.NsScriptNew;
-using NitroSharp.NsScriptNew.Syntax;
+﻿using NitroSharp.NsScript;
+using NitroSharp.NsScript.Syntax;
 using Xunit;
 
 namespace NitroSharp.NsScriptCompiler.Tests
@@ -13,12 +13,31 @@ namespace NitroSharp.NsScriptCompiler.Tests
             return result;
         }
 
+        [Fact]
+        public void HexTriplets_Parse_Correctly()
+        {
+            var literal = AssertExpression<LiteralExpressionSyntax>("#000000", SyntaxNodeKind.LiteralExpression);
+            Assert.Equal(ConstantValue.Integer(0), literal.Value);
+
+            //literal = AssertExpression<LiteralExpressionSyntax>("#FFFFFF", SyntaxNodeKind.LiteralExpression);
+            //Assert.Equal(ConstantValue.Integer(0x00FFFFFF), literal.Value);
+        }
+
+        [Fact]
+        public void DeltaValues_Parse_Correctly()
+        {
+            var expr = AssertExpression<UnaryExpressionSyntax>("@42", SyntaxNodeKind.UnaryExpression);
+            Assert.Equal(UnaryOperatorKind.Delta, expr.OperatorKind.Value);
+            var operand = Assert.IsType<LiteralExpressionSyntax>(expr.Operand);
+            Assert.Equal(ConstantValue.Integer(42), operand.Value);
+        }
+
         //[Theory]
-        //[InlineData("\"foo\"", SyntaxNodeKind.Literal, ConstantValue.String("foo"))]
-        //[InlineData("42", SyntaxNodeKind.Literal, ConstantValue.Integer(42))]
-        //[InlineData("true", SyntaxNodeKind.Literal, ConstantValue.True)]
-        //[InlineData("false", SyntaxNodeKind.Literal)]
-        //[InlineData("null", SyntaxNodeKind.Literal)]
+        //[InlineData("\"foo\"", SyntaxNodeKind.LiteralExpression, ConstantValue.String("foo"))]
+        //[InlineData("42", SyntaxNodeKind.LiteralExpression, ConstantValue.Integer(42))]
+        //[InlineData("true", SyntaxNodeKind.LiteralExpression, ConstantValue.True)]
+        //[InlineData("false", SyntaxNodeKind.LiteralExpression, ConstantValue.False)]
+        //[InlineData("null", SyntaxNodeKind.LiteralExpression, ConstantValue.True)]
         //public void Literals_Parse_Correctly(string text, SyntaxNodeKind expectedKind, ConstantValue expectedValue)
         //{
 

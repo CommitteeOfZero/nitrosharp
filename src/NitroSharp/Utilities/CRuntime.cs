@@ -3,6 +3,7 @@
 // Contains modifications by @SomeAnonDev.
 
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -93,59 +94,25 @@ namespace NitroSharp.Utilities
             }
         }
 
-        private static object ToInteger(object value, bool round)
-        {
-            switch (Type.GetTypeCode(value.GetType()))
-            {
-                case TypeCode.SByte:
-                    return value;
-                case TypeCode.Int16:
-                    return value;
-                case TypeCode.Int32:
-                    return value;
-                case TypeCode.Int64:
-                    return value;
-
-                case TypeCode.Byte:
-                    return value;
-                case TypeCode.UInt16:
-                    return value;
-                case TypeCode.UInt32:
-                    return value;
-                case TypeCode.UInt64:
-                    return value;
-
-                case TypeCode.Single:
-                    return (round ? (int)Math.Round((float)value) : (int)((float)value));
-                case TypeCode.Double:
-                    return (round ? (long)Math.Round((double)value) : (long)((double)value));
-                case TypeCode.Decimal:
-                    return (round ? Math.Round((decimal)value) : (decimal)value);
-
-                default:
-                    return null;
-            }
-        }
-
         private static long UnboxToLong(object value, bool round)
         {
             switch (Type.GetTypeCode(value.GetType()))
             {
                 case TypeCode.SByte:
-                    return (long)((sbyte)value);
+                    return (sbyte)value;
                 case TypeCode.Int16:
-                    return (long)((short)value);
+                    return (short)value;
                 case TypeCode.Int32:
-                    return (long)((int)value);
+                    return (int)value;
                 case TypeCode.Int64:
                     return (long)value;
 
                 case TypeCode.Byte:
-                    return (long)((byte)value);
+                    return (byte)value;
                 case TypeCode.UInt16:
-                    return (long)((ushort)value);
+                    return (ushort)value;
                 case TypeCode.UInt32:
-                    return (long)((uint)value);
+                    return (uint)value;
                 case TypeCode.UInt64:
                     return (long)((ulong)value);
 
@@ -173,8 +140,8 @@ namespace NitroSharp.Utilities
 
         public static string sprintf(string format, params object[] args)
         {
-            StringBuilder f = new StringBuilder();
-            Regex r = new Regex(@"\%([\'\#\-\+ ]*)(\d*)(?:\.(\d+))?([hl])?([dioxXucsfeEgGpn%])");
+            var f = new StringBuilder();
+            var r = new Regex(@"\%([\'\#\-\+ ]*)(\d*)(?:\.(\d+))?([hl])?([dioxXucsfeEgGpn%])");
             Match m = null;
             string w = string.Empty;
             long i = 0;
@@ -604,7 +571,7 @@ namespace NitroSharp.Utilities
                     {
                         w = (positiveSign ?
                                 "+" : (positiveSpace ?
-                                        " " : (fieldLength != int.MinValue ?
+                                        " " : (fieldLength != int.MinValue && w.Length < fieldLength ?
                                                 padding.ToString() : string.Empty))) + w;
                     }
                     else

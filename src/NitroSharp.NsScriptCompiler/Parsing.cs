@@ -1,10 +1,11 @@
-﻿using NitroSharp.NsScriptNew.Syntax;
-using NitroSharp.NsScriptNew.Text;
+﻿using NitroSharp.NsScript.Syntax;
+using NitroSharp.NsScript.Syntax.PXml;
+using NitroSharp.NsScript.Text;
 using System;
 using System.IO;
 using System.Text;
 
-namespace NitroSharp.NsScriptNew
+namespace NitroSharp.NsScript
 {
     public static class Parsing
     {
@@ -61,6 +62,12 @@ namespace NitroSharp.NsScriptNew
             var parser = new Parser(new Lexer(sourceText));
             var root = parseFunc(parser);
             return new SyntaxTree(sourceText, root, parser.DiagnosticBuilder);
+        }
+
+        public static PXmlContent ParsePXmlString(string text)
+        {
+            var parser = new PXmlParser(text);
+            return parser.Parse();
         }
     }
 }

@@ -1,12 +1,12 @@
 ﻿using System.Globalization;
 using System.Collections.Generic;
-using NitroSharp.NsScriptNew.Text;
+using NitroSharp.NsScript.Text;
 using System.Runtime.CompilerServices;
 using System;
 using System.Runtime.InteropServices;
 using System.Diagnostics;
 
-namespace NitroSharp.NsScriptNew.Syntax
+namespace NitroSharp.NsScript.Syntax
 {
     public enum LexingMode
     {
@@ -491,6 +491,13 @@ namespace NitroSharp.NsScriptNew.Syntax
             int start = Position;
             ScanSigil(ref token);
 
+            if (!SyntaxFacts.IsIdentifierStartCharacter(PeekChar()))
+            {
+                token.Flags = SyntaxTokenFlags.Empty;
+                SetPosition(start);
+                return false;
+            }
+
             int valueStart = Position;
             while (SyntaxFacts.IsIdentifierPartCharacter(PeekChar()))
             {
@@ -535,7 +542,10 @@ namespace NitroSharp.NsScriptNew.Syntax
         {
             int start = Position;
             EatChar('"');
-            ScanSigil(ref token);
+            if (PeekChar(1) != '"')
+            {
+                ScanSigil(ref token);
+            }
 
             char c;
             while ((c = PeekChar()) != '"' && c != EofCharacter)

@@ -4,7 +4,7 @@ using System.Buffers.Binary;
 using System.Runtime.CompilerServices;
 using System.Text;
 
-namespace NitroSharp.NsScriptNew.Utilities
+namespace NitroSharp.NsScript.Utilities
 {
     public interface IBuffer<T> : IDisposable
     {

@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace NitroSharp.NsScriptNew
+namespace NitroSharp.NsScript
 {
     public readonly struct ResolvedPath : IEquatable<ResolvedPath>
     {

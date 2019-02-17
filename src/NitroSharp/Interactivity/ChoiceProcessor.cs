@@ -137,6 +137,8 @@ namespace NitroSharp.Interactivity
                         TerminateThread(threads, mouseOverThread[i]);
                     }
 
+                    //PostMessage(new Game.SimpleMessage(Game.MessageKind.ResumeMainThread));
+
                     int priority = mouseOverTable.SortKeys.GetValue(mouseOverEntity).Priority;
                     if (priority > maxPriority)
                     {

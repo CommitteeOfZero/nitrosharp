@@ -1,4 +1,4 @@
-﻿namespace NitroSharp.NsScriptNew.Syntax
+﻿namespace NitroSharp.NsScript.Syntax
 {
     public enum SyntaxTokenKind : byte
     {

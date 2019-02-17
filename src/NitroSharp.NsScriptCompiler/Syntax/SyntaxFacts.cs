@@ -4,7 +4,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 
-namespace NitroSharp.NsScriptNew.Syntax
+namespace NitroSharp.NsScript.Syntax
 {
     public static class SyntaxFacts
     {
@@ -55,6 +55,9 @@ namespace NitroSharp.NsScriptNew.Syntax
 
         public static SyntaxTokenKind GetKeywordKind(ReadOnlySpan<char> text)
             => KeywordScanner.RecognizeKeyword(text);
+
+        public static bool IsIdentifierStartCharacter(char c)
+            => IsIdentifierPartCharacter(c) && !IsDecDigit(c);
 
         public static bool IsIdentifierStopCharacter(char c) => !IsIdentifierPartCharacter(c);
         public static bool IsIdentifierPartCharacter(char c)
@@ -134,6 +137,9 @@ namespace NitroSharp.NsScriptNew.Syntax
                     break;
                 case SyntaxTokenKind.Minus:
                     kind = UnaryOperatorKind.Minus;
+                    break;
+                case SyntaxTokenKind.At:
+                    kind = UnaryOperatorKind.Delta;
                     break;
 
                 default:

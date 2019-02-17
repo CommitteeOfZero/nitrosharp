@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using NitroSharp.NsScriptNew.Text;
+using NitroSharp.NsScript.Text;
 
-namespace NitroSharp.NsScriptNew
+namespace NitroSharp.NsScript
 {
     public abstract class SourceReferenceResolver
     {

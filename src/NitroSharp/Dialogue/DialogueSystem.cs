@@ -70,7 +70,6 @@ namespace NitroSharp.Dialogue
                     return true;
                 }
 
-                TextLayout textLayout = _textLayouts.GetValue(input.TextEntity);
                 switch (GetStatus(ref input))
                 {
                     case Status.LineNotLoaded:
@@ -87,6 +86,7 @@ namespace NitroSharp.Dialogue
                     case Status.Waiting:
                         if (_currentDialoguePart < input.DialogueLine.Parts.Length)
                         {
+                            TextLayout textLayout = _textLayouts.GetValue(input.TextEntity);
                             AdvanceDialogue(ref input, textLayout);
                         }
                         else

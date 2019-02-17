@@ -1,6 +1,6 @@
-﻿using NitroSharp.NsScriptNew;
-using NitroSharp.NsScriptNew.Syntax;
-using NitroSharp.NsScriptNew.Text;
+﻿using NitroSharp.NsScript;
+using NitroSharp.NsScript.Syntax;
+using NitroSharp.NsScript.Text;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,6 +10,19 @@ namespace NitroSharp.NsScriptCompiler.Tests
 {
     public class LexerTests
     {
+        [Theory]
+        [InlineData(SyntaxTokenKind.At, "@")]
+        [InlineData(SyntaxTokenKind.Dollar, "$")]
+        [InlineData(SyntaxTokenKind.Hash, "#")]
+        public void Regression_Is_Fixed(SyntaxTokenKind kind, string text)
+        {
+            (SyntaxToken token, LexingContext ctx) = LexToken(text);
+            Assert.Equal(kind, token.Kind);
+            Assert.Equal(text, SyntaxFacts.GetText(kind));
+            Assert.Equal(text, ctx.GetText(token).ToString(), ignoreCase: true);
+            Assert.Equal(SyntaxTokenFlags.Empty, token.Flags);
+        }
+
         [Theory]
         [InlineData("\"foo", DiagnosticId.UnterminatedString, 0, 0)]
         [InlineData("<PRE box00", DiagnosticId.UnterminatedDialogueBlockStartTag, 0, 0)]
@@ -92,6 +105,7 @@ namespace NitroSharp.NsScriptCompiler.Tests
         [InlineData("42.2", SyntaxTokenKind.NumericLiteral, "42.2", SyntaxTokenFlags.HasDecimalPoint)]
         [InlineData("#FFFFFF", SyntaxTokenKind.NumericLiteral, "FFFFFF", SyntaxTokenFlags.IsHexTriplet)]
         [InlineData("\"foo\"", SyntaxTokenKind.StringLiteralOrQuotedIdentifier, "foo", SyntaxTokenFlags.IsQuoted)]
+        [InlineData("\"@\"", SyntaxTokenKind.StringLiteralOrQuotedIdentifier, "@", SyntaxTokenFlags.IsQuoted)]
         public void Lexer_Recognizes_Literals(string text, SyntaxTokenKind tokenKind, string valueText,
             SyntaxTokenFlags flags = SyntaxTokenFlags.Empty)
         {

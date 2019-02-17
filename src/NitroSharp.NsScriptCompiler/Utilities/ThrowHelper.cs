@@ -1,7 +1,7 @@
 ﻿using System;
 using System.IO;
 
-namespace NitroSharp.NsScriptNew
+namespace NitroSharp.NsScript
 {
     public sealed class DependencyResolutionException : Exception
     {

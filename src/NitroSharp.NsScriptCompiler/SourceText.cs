@@ -4,7 +4,7 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using System.Text;
 
-namespace NitroSharp.NsScriptNew.Text
+namespace NitroSharp.NsScript.Text
 {
     public sealed class SourceText
     {

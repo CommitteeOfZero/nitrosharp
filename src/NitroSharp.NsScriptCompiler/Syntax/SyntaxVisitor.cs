@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Collections.Immutable;
 
-namespace NitroSharp.NsScriptNew.Syntax
+namespace NitroSharp.NsScript.Syntax
 {
     public abstract class SyntaxVisitor
     {
@@ -89,11 +89,6 @@ namespace NitroSharp.NsScriptNew.Syntax
         public virtual void VisitAssignmentExpression(AssignmentExpressionSyntax assignmentExpression)
         {
             DefaultVisitNode(assignmentExpression);
-        }
-
-        public virtual void VisitDeltaExpression(DeltaExpressionSyntax deltaExpression)
-        {
-            DefaultVisitNode(deltaExpression);
         }
 
         public virtual void VisitFunctionCall(FunctionCallExpressionSyntax functionCall)

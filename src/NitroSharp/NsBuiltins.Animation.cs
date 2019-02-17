@@ -6,6 +6,7 @@ using NitroSharp.Logic.Components;
 using NitroSharp.Primitives;
 using Veldrid;
 using NitroSharp.Graphics;
+using NitroSharp.NsScript.Primitives;
 
 namespace NitroSharp
 {

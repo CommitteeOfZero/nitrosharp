@@ -3,7 +3,7 @@ using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
-namespace NitroSharp.NsScriptNew.Text
+namespace NitroSharp.NsScript.Text
 {
     public readonly struct TextSpan : IEquatable<TextSpan>, IComparable<TextSpan>
     {

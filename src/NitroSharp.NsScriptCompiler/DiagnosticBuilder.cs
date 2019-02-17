@@ -1,7 +1,7 @@
-﻿using NitroSharp.NsScriptNew.Text;
+﻿using NitroSharp.NsScript.Text;
 using System.Collections.Immutable;
 
-namespace NitroSharp.NsScriptNew
+namespace NitroSharp.NsScript
 {
     public sealed class DiagnosticBuilder
     {

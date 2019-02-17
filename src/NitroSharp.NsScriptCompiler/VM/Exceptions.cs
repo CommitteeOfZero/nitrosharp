@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace NitroSharp.NsScriptNew.VM
+namespace NitroSharp.NsScript.VM
 {
     public sealed class NsxCallDispatchException : Exception
     {

@@ -1,8 +1,8 @@
-﻿using NitroSharp.NsScriptNew.Syntax;
-using NitroSharp.NsScriptNew.Text;
+﻿using NitroSharp.NsScript.Syntax;
+using NitroSharp.NsScript.Text;
 using System;
 
-namespace NitroSharp.NsScriptNew
+namespace NitroSharp.NsScript
 {
     public readonly struct LexingContext
     {

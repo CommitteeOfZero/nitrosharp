@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Immutable;
-using NitroSharp.NsScriptNew.Text;
+using NitroSharp.NsScript.Text;
 
-namespace NitroSharp.NsScriptNew.Syntax
+namespace NitroSharp.NsScript.Syntax
 {
     public abstract class ExpressionSyntax : SyntaxNode
     {
@@ -169,37 +169,6 @@ namespace NitroSharp.NsScriptNew.Syntax
         public override TResult Accept<TResult>(SyntaxVisitor<TResult> visitor)
         {
             return visitor.VisitAssignmentExpression(this);
-        }
-    }
-
-    public sealed class DeltaExpressionSyntax : ExpressionSyntax
-    {
-        internal DeltaExpressionSyntax(ExpressionSyntax expression, TextSpan span)
-            : base(span)
-        {
-            Expression = expression;
-        }
-
-        public ExpressionSyntax Expression { get; }
-        public override SyntaxNodeKind Kind => SyntaxNodeKind.DeltaExpression;
-
-        public override SyntaxNode? GetNodeSlot(int index)
-        {
-            switch (index)
-            {
-                case 0: return Expression;
-                default: return null;
-            }
-        }
-
-        public override void Accept(SyntaxVisitor visitor)
-        {
-            visitor.VisitDeltaExpression(this);
-        }
-
-        public override TResult Accept<TResult>(SyntaxVisitor<TResult> visitor)
-        {
-            return visitor.VisitDeltaExpression(this);
         }
     }
 
