@@ -845,6 +845,10 @@ namespace NitroSharp.NsScript.Compiler
                     EmitOpcode(Opcode.LoadVar);
                     _code.WriteUInt16LE(varToken);
                     break;
+                case LookupResultDiscriminator.Empty:
+                    var literal = ConstantValue.String(expression.Name);
+                    EmitLoadImm(literal);
+                    break;
             }
         }
 

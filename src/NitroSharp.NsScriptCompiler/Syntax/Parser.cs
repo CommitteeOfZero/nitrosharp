@@ -1,5 +1,4 @@
-﻿using NitroSharp.NsScript.CodeGen;
-using NitroSharp.NsScript.Text;
+﻿using NitroSharp.NsScript.Text;
 using NitroSharp.Utilities;
 using System;
 using System.Collections.Generic;
@@ -33,7 +32,6 @@ namespace NitroSharp.NsScript.Syntax
         private readonly DiagnosticBuilder _diagnostics;
 
         private readonly ImmutableArray<ParameterSyntax>.Builder _parameters;
-        private readonly ImmutableArray<ExpressionSyntax>.Builder _arguments;
         private readonly ImmutableArray<DialogueBlockSyntax>.Builder _dialogueBlocks;
 
         public Parser(Lexer lexer)
@@ -44,7 +42,6 @@ namespace NitroSharp.NsScript.Syntax
             _tokens = Lex();
             _parameterMap = new Dictionary<string, ParameterSyntax>();
             _parameters = ImmutableArray.CreateBuilder<ParameterSyntax>();
-            _arguments = ImmutableArray.CreateBuilder<ExpressionSyntax>();
             _dialogueBlocks = ImmutableArray.CreateBuilder<DialogueBlockSyntax>();
             if (_tokens.Length > 0)
             {
@@ -637,9 +634,6 @@ namespace NitroSharp.NsScript.Syntax
 
                 case SyntaxTokenKind.StringLiteralOrQuotedIdentifier:
                     string str = InternValueText(token);
-                    //BuiltInConstant? constant = WellKnownSymbols.LookupBuiltInConstant(str);
-                    //value = constant.HasValue
-                    //    ? ConstantValue.BuiltInConstant(constant.Value)
                     value = ConstantValue.String(str);
                     break;
 
@@ -749,9 +743,14 @@ namespace NitroSharp.NsScript.Syntax
             }
 
             EatToken(SyntaxTokenKind.OpenParen);
+            SyntaxTokenKind tk = CurrentToken.Kind;
+            if (tk == SyntaxTokenKind.CloseParen)
+            {
+                EatToken();
+                return ImmutableArray<ExpressionSyntax>.Empty;
+            }
 
-            _arguments.Clear();
-            SyntaxTokenKind tk;
+            var arguments = ImmutableArray.CreateBuilder<ExpressionSyntax>();
             while ((tk = CurrentToken.Kind) != SyntaxTokenKind.CloseParen
                    && tk != SyntaxTokenKind.Semicolon
                    && tk != SyntaxTokenKind.EndOfFileToken)
@@ -766,7 +765,7 @@ namespace NitroSharp.NsScript.Syntax
                     case SyntaxTokenKind.FalseKeyword:
                         ExpressionSyntax? arg = ParseExpression();
                         if (arg == null) { return null; }
-                        _arguments.Add(arg);
+                        arguments.Add(arg);
                         break;
 
                     case SyntaxTokenKind.Comma:
@@ -779,13 +778,13 @@ namespace NitroSharp.NsScript.Syntax
                     default:
                         ExpressionSyntax? expr = ParseExpression();
                         if (expr == null) { return null; }
-                        _arguments.Add(expr);
+                        arguments.Add(expr);
                         break;
                 }
             }
 
             EatToken(SyntaxTokenKind.CloseParen);
-            return _arguments.ToImmutable();
+            return arguments.ToImmutable();
         }
 
         private IfStatementSyntax? ParseIfStatement()

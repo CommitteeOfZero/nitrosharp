@@ -46,7 +46,6 @@ namespace NitroSharp.NsScript.VM
         class SystemVariables
         {
             private readonly VirtualMachine _vm;
-            private readonly ConstantValue[] _globals;
             private readonly GlobalVarLookupTable _nameLookup;
 
             public readonly int PresentPreprocess;
@@ -56,7 +55,6 @@ namespace NitroSharp.NsScript.VM
             public SystemVariables(VirtualMachine vm)
             {
                 _vm = vm;
-                _globals = vm._globals;
                 _nameLookup = vm._globalVarLookup;
                 PresentPreprocess = Lookup("SYSTEM_present_preprocess");
                 PresentText = Lookup("SYSTEM_present_text");
@@ -583,7 +581,8 @@ namespace NitroSharp.NsScript.VM
                         break;
                     case Opcode.AwaitInput:
                         _builtInFuncImpl.WaitForInput();
-                        break;
+                        frame.ProgramCounter = program.Position;
+                        return;
                 }
             }
 

@@ -34,14 +34,14 @@ namespace NitroSharp.NsScriptCompiler.Playground
             //RunVM();
         }
 
-        static void RunVM()
-        {
-            var impl = new FuncImpl();
-            var vm = new VirtualMachine(new FileSystemNsxModuleLocator(ScriptFolder), impl);
-            vm.CreateThread("sampletext", "test", "main", true);
-            vm.Run(CancellationToken.None);
-            //vm.Tick(ref thread);
-        }
+        //static void RunVM()
+        //{
+        //    var impl = new FuncImpl();
+        //    var vm = new VirtualMachine(new FileSystemNsxModuleLocator(ScriptFolder), impl);
+        //    vm.CreateThread("sampletext", "test", "main", true);
+        //    vm.Run(CancellationToken.None);
+        //    //vm.Tick(ref thread);
+        //}
 
         static void RunDisasm()
         {
