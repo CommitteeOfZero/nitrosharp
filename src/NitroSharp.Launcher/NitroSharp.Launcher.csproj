@@ -2,13 +2,14 @@
 
   <PropertyGroup>
     <TargetFramework>netcoreapp2.2</TargetFramework>
+    <LangVersion>8.0</LangVersion>
   </PropertyGroup>
 
   <Import Project="..\..\OutputPath.props" />
 
   <ItemGroup>
     <ProjectReference Include="..\NitroSharp\NitroSharp.csproj" />
-    <PackageReference Include="Newtonsoft.Json" Version="11.0.2" />
+    <PackageReference Include="System.Json" Version="4.5.0" />
   </ItemGroup>
 
 </Project>

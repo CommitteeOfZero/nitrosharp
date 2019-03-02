@@ -1,87 +1,82 @@
-﻿using Newtonsoft.Json.Linq;
-using NitroSharp.Media;
-using System;
+﻿using System.Collections.Generic;
 using System.IO;
-using System.Text;
+using System.Json;
+using NitroSharp.Media;
 using Veldrid;
 
 namespace NitroSharp.Launcher
 {
-    public static class ConfigurationReader
+    internal sealed class ConfigurationReader
     {
         public static Configuration Read(string configPath)
         {
             var configuration = new Configuration();
             configuration.ContentRoot = "Content";
 
-            string json = File.ReadAllText(configPath, Encoding.UTF8);
-            var root = JObject.Parse(json);
-
-            foreach (JProperty property in root.AsJEnumerable())
+            using (FileStream stream = File.OpenRead(configPath))
             {
-                SetProperty(configuration, property);
+                var root = JsonValue.Load(stream);
+                foreach (KeyValuePair<string, JsonValue> property in root)
+                {
+                    SetProperty(configuration, property);
+                }
+
+                string profileName = root["activeProfile"];
+                JsonValue profile = root["profiles"][profileName];
+                foreach (KeyValuePair<string, JsonValue> property in profile)
+                {
+                    SetProperty(configuration, property);
+                }
+
+                return configuration;
             }
-
-            string profileName = root["activeProfile"].ToString();
-            var profile = root["profiles"][profileName];
-
-            foreach (JProperty property in profile)
-            {
-                SetProperty(configuration, property);
-            }
-
-            return configuration;
         }
 
-        private static void SetProperty(Configuration configuration, JProperty property)
+        private static void SetProperty(Configuration configuration, KeyValuePair<string, JsonValue> property)
         {
-            switch (property.Name)
+            switch (property.Key)
             {
                 case "productName":
-                    configuration.ProductName = property.Value.Value<string>();
+                    configuration.ProductName = property.Value;
                     break;
-
                 case "window.width":
-                    configuration.WindowWidth = property.Value.Value<int>();
+                    configuration.WindowWidth = property.Value;
                     break;
-
                 case "window.height":
-                    configuration.WindowHeight = property.Value.Value<int>();
+                    configuration.WindowHeight = property.Value;
                     break;
-
                 case "window.title":
-                    configuration.WindowTitle = property.Value.Value<string>();
+                    configuration.WindowTitle = property.Value;
                     break;
 
                 case "startupScript":
-                    configuration.StartupScript = property.Value.Value<string>();
+                    configuration.StartupScript = property.Value;
                     break;
 
                 case "graphics.vsync":
-                    configuration.EnableVSync = property.Value.Value<bool>();
+                    configuration.EnableVSync = property.Value;
                     break;
-
                 case "graphics.backend":
-                    string name = property.Value.Value<string>().ToUpperInvariant();
+                    string name = property.Value;
+                    name = name.ToUpperInvariant();
                     configuration.PreferredGraphicsBackend = GetGraphicsBackend(name);
                     break;
 
                 case "audio.backend":
-                    name = property.Value.Value<string>().ToUpperInvariant();
+                    name = property.Value;
+                    name = name.ToUpperInvariant();
                     configuration.PreferredAudioBackend = GetAudioBackend(name);
                     break;
 
                 case "dev.contentRoot":
                 case "debug.contentRoot":
-                    configuration.ContentRoot = property.Value.Value<string>();
+                    configuration.ContentRoot = property.Value;
                     break;
-
                 case "dev.enableDiagnostics":
-                    configuration.EnableDiagnostics = property.Value.Value<bool>();
+                    configuration.EnableDiagnostics = property.Value;
                     break;
-
                 case "dev.useDedicatedInterpreterThread":
-                    configuration.UseDedicatedInterpreterThread = property.Value.Value<bool>();
+                    configuration.UseDedicatedInterpreterThread = property.Value;
                     break;
             }
         }
@@ -133,6 +128,5 @@ namespace NitroSharp.Launcher
                     return null;
             }
         }
-
     }
 }
