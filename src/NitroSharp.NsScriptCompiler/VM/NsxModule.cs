@@ -22,10 +22,13 @@ namespace NitroSharp.NsScript.VM
         private readonly SubroutineRuntimeInformation[] _srti;
         private readonly Dictionary<string, int> _subroutineMap;
 
-        public NsxModule(Stream stream, string name, int[] subroutineOffsets, byte[] rtiTable, string[] imports, int[] stringOffsets)
+        public NsxModule(
+            Stream stream, string name, DateTimeOffset sourceModificationTime,
+            int[] subroutineOffsets, byte[] rtiTable, string[] imports, int[] stringOffsets)
         {
             _stream = stream;
             Name = name;
+            SourceModificationTime = sourceModificationTime;
             _subroutineOffsets = subroutineOffsets;
             Imports = imports;
             _stringOffsets = stringOffsets;
@@ -58,6 +61,7 @@ namespace NitroSharp.NsScript.VM
         public string Name { get; }
         public string[] Imports { get; }
         public int StringCount { get; }
+        public DateTimeOffset SourceModificationTime { get; }
 
         internal Subroutine GetSubroutine(int index)
         {
@@ -130,6 +134,16 @@ namespace NitroSharp.NsScript.VM
             public int TableSize; 
         }
 
+        public static long GetSourceModificationTime(Stream stream)
+        {
+            Debug.Assert(stream.Position == 0);
+            Span<byte> nsxHeader = stackalloc byte[NsxConstants.NsxHeaderSize];
+            stream.Read(nsxHeader);
+            var headerReader = new BufferReader(nsxHeader);
+            headerReader.Position += 4;
+            return headerReader.ReadInt64LE();
+        }
+
         public static NsxModule LoadModule(Stream stream, string name)
         {
             static unsafe TableHeader readTableHeader(Stream stream)
@@ -152,11 +166,14 @@ namespace NitroSharp.NsScript.VM
                 }
             }
 
-            Span<byte> header = stackalloc byte[20];
+            Span<byte> header = stackalloc byte[NsxConstants.NsxHeaderSize];
             stream.Read(header);
 
             var reader = new BufferReader(header);
             ReadOnlySpan<byte> magic = reader.Consume(4);
+            long unixTimestamp = reader.ReadInt64LE();
+            var modificationTime = DateTimeOffset.FromUnixTimeSeconds(unixTimestamp);
+            _ = reader.ReadInt32LE();
             int rtiTableOffset = reader.ReadInt32LE();
 
             TableHeader subHeader = readTableHeader(stream);
@@ -201,7 +218,9 @@ namespace NitroSharp.NsScript.VM
                 stringOffsets[i] = reader.ReadInt32LE();
             }
 
-            return new NsxModule(stream, name, subroutineOffsets, rtiBytes, imports, stringOffsets);
+            return new NsxModule(
+                stream, name, modificationTime, subroutineOffsets,
+                rtiBytes, imports, stringOffsets);
         }
     }
 
@@ -209,7 +228,6 @@ namespace NitroSharp.NsScript.VM
     {
         private readonly byte[] _bytes;
         private readonly int _codeStart;
-        private readonly int _codeSize;
 
         public readonly int Index;
         public bool IsEmpty => _bytes == null;
@@ -222,7 +240,6 @@ namespace NitroSharp.NsScript.VM
             var reader = new BufferReader(bytes);
             int dialogoueBlockCount = reader.ReadUInt16LE();
             DialogueBlockOffsets = Array.Empty<int>();
-            _codeSize = bytes.Length - 2;
             if (dialogoueBlockCount > 0)
             {
                 DialogueBlockOffsets = new int[dialogoueBlockCount];
@@ -230,8 +247,6 @@ namespace NitroSharp.NsScript.VM
                 {
                     DialogueBlockOffsets[i] = reader.ReadUInt16LE();
                 }
-
-                //_codeSize = DialogueBlockOffsets[0];
             }
 
             _codeStart = reader.Position;
@@ -243,8 +258,6 @@ namespace NitroSharp.NsScript.VM
 
     public struct SubroutineRuntimeInformation
     {
-        private readonly int _offset;
-        private readonly int _parameterInfoOffset;
         private string[]? _parameterNames;
         private readonly Dictionary<string, int>? _dialogueBlockMap;
 
@@ -254,7 +267,6 @@ namespace NitroSharp.NsScript.VM
 
         internal SubroutineRuntimeInformation(ref BufferReader reader)
         {
-            _offset = reader.Position;
             SubroutineKind = (SubroutineKind)reader.ReadByte();
             SubroutineName = reader.ReadLengthPrefixedUtf8String();
             int dialogueBlockCount = reader.ReadUInt16LE();
@@ -276,7 +288,6 @@ namespace NitroSharp.NsScript.VM
                 }
             }
 
-            _parameterInfoOffset = reader.Position;
             _parameterNames = null;
         }
 
@@ -316,7 +327,6 @@ namespace NitroSharp.NsScript.VM
             }
         }
 
-        public override string ToString()
-            => $"SRTI '{SubroutineName}'";
+        public override string ToString() => $"SRTI '{SubroutineName}'";
     }
 }

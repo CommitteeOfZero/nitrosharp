@@ -62,6 +62,10 @@ namespace NitroSharp.NsScript.Utilities
             => TryReadInt32LE(out int value) ? value : ThrowNoData<int>();
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public long ReadInt64LE()
+            => TryReadInt64LE(out long value) ? value : ThrowNoData<long>();
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public short ReadInt16LE()
             => TryReadInt16LE(out short value) ? value : ThrowNoData<short>();
 
@@ -97,6 +101,18 @@ namespace NitroSharp.NsScript.Utilities
             if (BinaryPrimitives.TryReadInt32LittleEndian(Unconsumed, out value))
             {
                 _position += sizeof(int);
+                return true;
+            }
+
+            return false;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool TryReadInt64LE(out long value)
+        {
+            if (BinaryPrimitives.TryReadInt64LittleEndian(Unconsumed, out value))
+            {
+                _position += sizeof(long);
                 return true;
             }
 

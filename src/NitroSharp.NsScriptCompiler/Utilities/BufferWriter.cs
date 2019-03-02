@@ -138,6 +138,15 @@ namespace NitroSharp.NsScript.Utilities
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void WriteInt64LE(long value)
+        {
+            while (!TryWriteInt64LE(value))
+            {
+                Resize();
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WriteInt16LE(short value)
         {
             while (!TryWriteInt16LE(value))
@@ -246,6 +255,18 @@ namespace NitroSharp.NsScript.Utilities
             if (BinaryPrimitives.TryWriteInt32LittleEndian(Free, value))
             {
                 _position += sizeof(int);
+                return true;
+            }
+
+            return false;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private bool TryWriteInt64LE(long value)
+        {
+            if (BinaryPrimitives.TryWriteInt64LittleEndian(Free, value))
+            {
+                _position += sizeof(long);
                 return true;
             }
 

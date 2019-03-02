@@ -7,7 +7,6 @@ using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Text;
 using NitroSharp.NsScript.CodeGen;
 using NitroSharp.NsScript.Syntax;
 using NitroSharp.NsScript.Text;
@@ -16,9 +15,11 @@ using NitroSharp.Utilities;
 
 namespace NitroSharp.NsScript.Compiler
 {
-    public class Compilation
+    public sealed class Compilation
     {
         private readonly SourceReferenceResolver _sourceReferenceResolver;
+        private readonly string _outputDirectory;
+        private readonly string _globalsFileName;
         private readonly Dictionary<ResolvedPath, SyntaxTree> _syntaxTrees;
         private readonly Dictionary<SyntaxTree, SourceModuleSymbol> _sourceModuleSymbols;
 
@@ -26,20 +27,25 @@ namespace NitroSharp.NsScript.Compiler
         private readonly TokenMap<string> _globals = new TokenMap<string>(4096);
         private readonly List<string> _systemVariables = new List<string>();
 
-        public Compilation(string rootSourceDirectory)
-            : this(new DefaultSourceReferenceResolver(rootSourceDirectory))
+        public Compilation(string rootSourceDirectory, string outputDirectory, string globalsFileName)
+            : this(new DefaultSourceReferenceResolver(rootSourceDirectory), outputDirectory, globalsFileName)
         {
         }
 
-        public Compilation(SourceReferenceResolver sourceReferenceResolver)
+        public Compilation(SourceReferenceResolver sourceReferenceResolver,
+                           string outputDirectory,
+                           string globalsFileName)
         {
             _sourceReferenceResolver = sourceReferenceResolver;
+            _outputDirectory = outputDirectory;
+            _globalsFileName = globalsFileName;
             _syntaxTrees = new Dictionary<ResolvedPath, SyntaxTree>();
             _sourceModuleSymbols = new Dictionary<SyntaxTree, SourceModuleSymbol>();
             _nsxModuleBuilders = new Dictionary<ResolvedPath, NsxModuleBuilder>();
         }
 
         public SourceReferenceResolver SourceReferenceResolver => _sourceReferenceResolver;
+        public string OutputDirectory => _outputDirectory;
 
         public void Emit(SourceModuleSymbol mainModule)
         {
@@ -63,7 +69,8 @@ namespace NitroSharp.NsScript.Compiler
                 }
             } while (filesCompiled > 0);
 
-            using (FileStream file = File.Create("S:/globals"))
+            string globalsFileName = Path.Combine(_outputDirectory, _globalsFileName);
+            using (FileStream file = File.Create(globalsFileName))
             {
                 uint offsetTableSize = _globals.Count * 4 + 2;
                 using var offsetTableBuffer = PooledBuffer<byte>.Allocate(offsetTableSize);
@@ -200,10 +207,11 @@ namespace NitroSharp.NsScript.Compiler
         public static void WriteModule(NsxModuleBuilder builder)
         {
             SourceFileSymbol sourceFile = builder.SourceFile;
+            Compilation compilation = builder.Compilation;
             ReadOnlySpan<SubroutineSymbol> subroutines = builder.Subroutines;
 
             // Compile subroutines
-            var codeBuffer = PooledBuffer<byte>.Allocate(64 * 1024);
+            using var codeBuffer = PooledBuffer<byte>.Allocate(64 * 1024);
             var codeWriter = new BufferWriter(codeBuffer);
             var subroutineOffsets = new List<int>(subroutines.Length);
             CompileSubroutines(
@@ -215,6 +223,7 @@ namespace NitroSharp.NsScript.Compiler
             codeWriter.WriteBytes(NsxConstants.TableEndMarker);
 
             ReadOnlySpan<string> stringHeap = builder.StringHeap;
+            int subTableOffset = NsxConstants.NsxHeaderSize;
             int subTableSize = NsxConstants.TableHeaderSize + 6 + subroutines.Length * sizeof(int);
             int stringTableSize = NsxConstants.TableHeaderSize + 6 + stringHeap.Length * sizeof(int);
 
@@ -240,7 +249,7 @@ namespace NitroSharp.NsScript.Compiler
             rtiHeaderWriter.WriteBytes(NsxConstants.RtiTableMarker);
             rtiHeaderWriter.WriteUInt16LE((ushort)(rtiSize - NsxConstants.TableHeaderSize));
 
-            int imtTableOffset = rtiTableOffset + rtiSize;
+            int impTableOffset = rtiTableOffset + rtiSize;
 
             // Build the import table
             ReadOnlySpan<SourceFileSymbol> imports = builder.Imports;
@@ -260,7 +269,8 @@ namespace NitroSharp.NsScript.Compiler
             impHeaderWriter.WriteUInt16LE((ushort)impTableWriter.Position);
 
             int impTableSize = impHeaderWriter.Position + impTableWriter.Position;
-            int codeStart = imtTableOffset + impTableSize  + stringTableSize;
+            int stringTableOffset = impTableOffset + impTableSize;
+            int codeStart = stringTableOffset  + stringTableSize;
 
             // Build the subroutine offset table (SUB)
             using var subTable = PooledBuffer<byte>.Allocate((uint)subTableSize);
@@ -292,23 +302,29 @@ namespace NitroSharp.NsScript.Compiler
             }
             strTableWriter.WriteBytes(NsxConstants.TableEndMarker);
 
-            int strTableSize = strTableWriter.Position;
             Span<byte> strTableHeader = stackalloc byte[NsxConstants.TableHeaderSize];
             var strTableHeaderWriter = new BufferWriter(strTableHeader);
             strTableHeaderWriter.WriteBytes(NsxConstants.StringTableMarker);
-            strTableHeaderWriter.WriteUInt16LE((ushort)strTableSize);
-
+            strTableHeaderWriter.WriteUInt16LE((ushort)stringTableSize);
+            
             // Build the NSX header
             using var headerBuffer = PooledBuffer<byte>.Allocate(NsxConstants.NsxHeaderSize);
             var headerWriter = new BufferWriter(headerBuffer);
+            long modificationTime = compilation.SourceReferenceResolver
+                .GetModificationTimestamp(sourceFile.FilePath);
             headerWriter.WriteBytes(NsxConstants.NsxMagic);
+            headerWriter.WriteInt64LE(modificationTime);
+            headerWriter.WriteInt32LE(subTableOffset);
             headerWriter.WriteInt32LE(rtiTableOffset);
-            headerWriter.WriteInt32LE(imtTableOffset);
+            headerWriter.WriteInt32LE(impTableOffset);
+            headerWriter.WriteInt32LE(stringTableOffset);
             headerWriter.WriteInt32LE(codeStart);
-            headerWriter.Position += 4;
 
             // --- Write everything to the stream ---
-            using FileStream fileStream = File.Create($"S:/ChaosContent/Noah/nsx/{Path.ChangeExtension(sourceFile.Name, "nsx")}");
+            string path = Path.Combine(
+                compilation.OutputDirectory,
+                Path.ChangeExtension(sourceFile.Name, "nsx"));
+            using FileStream fileStream = File.Create(path);
             fileStream.Write(headerWriter.Written);
 
             fileStream.Write(subHeaderWriter.Written);
@@ -611,7 +627,6 @@ namespace NitroSharp.NsScript.Compiler
                 BuiltInConstant? builtInConstant = WellKnownSymbols.LookupBuiltInConstant(name);
                 if (!builtInConstant.HasValue)
                 {
-                    ReportUnresolvedIdentifier(identifier);
                     return LookupResult.Empty;
                 }
 
@@ -660,7 +675,6 @@ namespace NitroSharp.NsScript.Compiler
 
         private void ReportUnresolvedIdentifier(Spanned<string> identifier)
         {
-            Debug.WriteLine($"{_subroutine.DeclaringSourceFile.Name}: {identifier.Value}");
             _diagnostics.Add(
                 Diagnostic.Create(identifier.Span, DiagnosticId.UnresolvedIdentifier, identifier.Value));
         }

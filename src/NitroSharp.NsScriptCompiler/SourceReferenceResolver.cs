@@ -9,8 +9,8 @@ namespace NitroSharp.NsScript
     {
         /// <exception cref="FileNotFoundException" />
         public abstract ResolvedPath ResolvePath(string path);
-
         public abstract SourceText ReadText(ResolvedPath path);
+        public abstract long GetModificationTimestamp(ResolvedPath path);
     }
 
     public sealed class DefaultSourceReferenceResolver : SourceReferenceResolver
@@ -53,6 +53,12 @@ namespace NitroSharp.NsScript
             return _canonicalPaths.TryGetValue(fullPath.ToUpperInvariant(), out string actualPath)
                 ? new ResolvedPath(actualPath)
                 : throw new FileNotFoundException($"File '{fullPath}' does not exist.", fullPath);
+        }
+
+        public override long GetModificationTimestamp(ResolvedPath path)
+        {
+            return new DateTimeOffset(File.GetLastWriteTimeUtc(path.Value), TimeSpan.Zero)
+                .ToUnixTimeSeconds();
         }
 
         private static ReadOnlySpan<char> GetFirstPathSegment(string path)

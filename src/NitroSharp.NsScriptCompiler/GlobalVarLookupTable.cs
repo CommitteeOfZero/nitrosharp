@@ -7,11 +7,10 @@ using NitroSharp.NsScript.Utilities;
 
 namespace NitroSharp.NsScript
 {
-    public sealed class GlobalVarLookupTable
+    internal sealed class GlobalVarLookupTable
     {
         private readonly Stream _stream;
         private readonly int[] _nameOffsets;
-        private readonly int[] _systemVarIndices;
         private readonly int _nameHeapStart;
         private readonly Dictionary<string, int> _systemVariables;
 
@@ -19,7 +18,6 @@ namespace NitroSharp.NsScript
         {
             _stream = stream;
             _nameOffsets = nameOffsets;
-            _systemVarIndices = systemVarIndices;
             _nameHeapStart = nameHeapStart;
             _systemVariables = new Dictionary<string, int>(systemVarIndices.Length);
             foreach (int idx in systemVarIndices)

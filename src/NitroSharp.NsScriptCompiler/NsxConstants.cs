@@ -4,7 +4,7 @@ namespace NitroSharp.NsScript
 {
     internal static class NsxConstants
     {
-        public const int NsxHeaderSize = 20;
+        public const int NsxHeaderSize = 32;
         public const int TableHeaderSize = 6;
 
         public static ReadOnlySpan<byte> NsxMagic => new byte[] { 0x4E, 0x53, 0x58, 0x00 };

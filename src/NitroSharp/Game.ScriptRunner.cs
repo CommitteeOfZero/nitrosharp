@@ -1,5 +1,4 @@
 ﻿using NitroSharp.Animation;
-using NitroSharp.NsScript;
 using NitroSharp.NsScript.Compiler;
 using NitroSharp.NsScript.VM;
 using System;
@@ -54,20 +53,56 @@ namespace NitroSharp
 
             public void LoadStartupScript()
             {
-                var compilation = new Compilation(new DefaultSourceReferenceResolver(_nssFolder));
-                compilation.Emit(compilation.GetSourceModule(_configuration.StartupScript));
+                const string globalsFileName = "_globals";
+                string bytecodeCacheDir = _nssFolder.Replace("nss", "nsx");
+                string globalsPath = Path.Combine(bytecodeCacheDir, globalsFileName);
+                if (!File.Exists(globalsPath) || !ValidateBytecodeCache())
+                {
+                    var compilation = new Compilation(_nssFolder, bytecodeCacheDir, globalsFileName);
+                    compilation.Emit(compilation.GetSourceModule(_configuration.StartupScript));
+                }
 
-                _nssInterpreter = new VirtualMachine(new FileSystemNsxModuleLocator(_nssFolder.Replace("nss", "nsx")), File.OpenRead("S:/globals"), _builtinFunctions);
+                var nsxLocator = new FileSystemNsxModuleLocator(bytecodeCacheDir);
+                _nssInterpreter = new VirtualMachine(nsxLocator, File.OpenRead(globalsPath), _builtinFunctions);
+                _nssInterpreter.CreateThread(
+                    "__MAIN",
+                    _configuration.StartupScript.Replace(".nss", string.Empty), "main");
+            }
 
-                ThreadContext mainThread = _nssInterpreter
-                    .CreateThread("__MAIN", _configuration.StartupScript.Replace(".nss", string.Empty), "main");
+            private bool ValidateBytecodeCache()
+            {
+                foreach (string nssFile in Directory.EnumerateFiles(_nssFolder))
+                {
+                    string nsxFile = nssFile.Replace("nss", "nsx");
+                    try
+                    {
+                        using (FileStream nsxStream = File.OpenRead(nsxFile))
+                        {
+                            long nsxTimestamp = NsxModule.GetSourceModificationTime(nsxStream);
+                            long nssTimestamp = new DateTimeOffset(File.GetLastWriteTimeUtc(nssFile))
+                                .ToUnixTimeSeconds();
+                            if (nsxTimestamp != nssTimestamp)
+                            {
+                                return false;
+                            }
+                        }
+
+                    }
+                    catch (FileNotFoundException)
+                    {
+                        continue;
+                    }
+                }
+
+                return true;
             }
 
             public void StartInterpreter()
             {
                 if (_usingDedicatedThread)
                 {
-                    _interpreterProc = Task.Factory.StartNew((Action)InterpreterLoop, TaskCreationOptions.LongRunning);
+                    _interpreterProc = Task.Factory.StartNew(
+                        (Action)InterpreterLoop, TaskCreationOptions.LongRunning);
                 }
             }
 

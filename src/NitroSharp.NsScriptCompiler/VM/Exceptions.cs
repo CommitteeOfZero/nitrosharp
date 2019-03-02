@@ -5,17 +5,15 @@ namespace NitroSharp.NsScript.VM
     public sealed class NsxCallDispatchException : Exception
     {
         public NsxCallDispatchException(
-            int invalidArgumentIndex, BuiltInType expectedArgType, BuiltInType actualArgType)
+            int invalidArgumentIndex, BuiltInType providedArgType)
             : base("Error while dispatching a built-in function call: unexpected argument type.")
         {
             InvalidArgumentIndex = invalidArgumentIndex;
-            ExpectedArgumentType = expectedArgType;
-            ActualArgumentType = actualArgType;
+            ProvidedArgumentType = providedArgType;
         }
 
         public int InvalidArgumentIndex { get; }
-        public BuiltInType ExpectedArgumentType { get; }
-        public BuiltInType ActualArgumentType { get; }
+        public BuiltInType ProvidedArgumentType { get; }
     }
 
     public sealed class NsxRuntimeException : Exception

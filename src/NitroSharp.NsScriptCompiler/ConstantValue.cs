@@ -329,7 +329,9 @@ namespace NitroSharp.NsScript
         public static bool operator false(ConstantValue value)
             => !(value.AsBool() ?? false);
 
-        public override string ToString() => ConvertToString();
+        public override string ToString()
+            => !IsString ? ConvertToString() : $"\"{ConvertToString()}\"";
+
         public bool Equals(ConstantValue other) => Equals(this, other);
 
         public override bool Equals(object obj)
