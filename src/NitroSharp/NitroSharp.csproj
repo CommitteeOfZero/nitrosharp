@@ -44,12 +44,9 @@
     <Compile Remove="Content/ImageSharpTextureLoader.cs" />
   </ItemGroup>
   
-  
   <ItemGroup>
-    <EmbeddedResource Include="Graphics\Shaders\Generated\**">
-    </EmbeddedResource>
+    <EmbeddedResource Include="Graphics\Shaders\Generated\**" />
   </ItemGroup>
-  
   
   <ItemGroup>
     <Compile Include="../Common/HashHelper.cs" Link="Utilities/HashHelper.cs" />

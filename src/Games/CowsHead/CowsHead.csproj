@@ -6,13 +6,16 @@
     <ApplicationIcon>hoppygirl_fA5_icon.ico</ApplicationIcon>
     <PlatformTarget>x64</PlatformTarget>
     <DebugType>pdbonly</DebugType>
+    <RootAllApplicationAssemblies>false</RootAllApplicationAssemblies>
+    <IlcGenerateCompleteTypeMetadata>false</IlcGenerateCompleteTypeMetadata>
+    <IlcGenerateStackTraceData>false</IlcGenerateStackTraceData>
   </PropertyGroup>
 
   <Import Project="..\..\..\OutputPath.props" />
 
-  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+  <!--<PropertyGroup Condition="'$(Configuration)' == 'Release'">
     <OutputType>WinExe</OutputType>
-  </PropertyGroup>
+  </PropertyGroup>-->
   
   <ItemGroup>
     <Content Include="Game.json" CopyToOutputDirectory="PreserveNewest" />
@@ -27,7 +30,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Condition="'$(Native)' == 'true'" Include="Microsoft.DotNet.ILCompiler" Version="1.0.0-alpha-27304-02" />
+    <PackageReference Condition="'$(Native)' == 'true'" Include="Microsoft.DotNet.ILCompiler" Version="1.0.0-alpha-27502-01" />
   </ItemGroup>
   
 </Project>

@@ -1,9 +1,5 @@
 ﻿<Directives>
   <Application>
-    <Assembly Name="NitroSharp.NsScript">
-      <Type Name="NitroSharp.NsScript.BuiltInEnumValue[]" Dynamic="Required All" />
-    </Assembly>
-
     <Assembly Name="SharpDX">
       <Type Name="SharpDX.ShadowAttribute" Dynamic="Required All" />
       <Type Name="SharpDX.ShadowContainer" Dynamic="Required All" />
