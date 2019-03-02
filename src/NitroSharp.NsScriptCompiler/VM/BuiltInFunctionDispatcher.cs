@@ -8,7 +8,6 @@ namespace NitroSharp.NsScript.VM
 {
     public class BuiltInFunctionDispatcher
     {
-        private readonly ConstantValue[] _argBuffer = new ConstantValue[16];
         private readonly BuiltInFunctions _impl;
         private ConstantValue? _result;
 
@@ -23,111 +22,114 @@ namespace NitroSharp.NsScript.VM
             _result = value;
         }
 
-        public ConstantValue? Dispatch(BuiltInFunction function, ReadOnlySpan<ConstantValue> args)
+        public ConstantValue? Dispatch(BuiltInFunction function, ReadOnlySpan<ConstantValue> cvs)
         {
+            var args = new ArgConsumer(cvs);
             switch (function)
             {
                 case BuiltInFunction.CreateChoice:
-                    CreateChoice(args);
+                    CreateChoice(ref args);
                     break;
                 case BuiltInFunction.SetAlias:
-                    SetAlias(args);
+                    SetAlias(ref args);
                     break;
                 case BuiltInFunction.Request:
-                    Request(args);
+                    Request(ref args);
                     break;
                 case BuiltInFunction.Delete:
-                    Delete(args);
+                    Delete(ref args);
                     break;
                 case BuiltInFunction.CreateProcess:
-                    CreateProcess(args);
+                    CreateProcess(ref args);
                     break;
                 case BuiltInFunction.Wait:
-                    Wait(args);
+                    Wait(ref args);
                     break;
                 case BuiltInFunction.WaitKey:
-                    WaitKey(args);
+                    WaitKey(ref args);
                     break;
 
                 case BuiltInFunction.CreateColor:
-                    CreateColor(args);
+                    CreateColor(ref args);
                     break;
                 case BuiltInFunction.LoadImage:
-                    LoadImage(args);
+                    LoadImage(ref args);
                     break;
                 case BuiltInFunction.CreateTexture:
-                    CreateTexture(args);
+                    CreateTexture(ref args);
                     break;
                 case BuiltInFunction.CreateClipTexture:
-                    CreateClipTexture(args);
+                    CreateClipTexture(ref args);
                     break;
 
                 case BuiltInFunction.Fade:
-                    Fade(args);
+                    Fade(ref args);
                     break;
                 case BuiltInFunction.Move:
-                    Move(args);
+                    Move(ref args);
                     break;
                 case BuiltInFunction.Zoom:
-                    Zoom(args);
+                    Zoom(ref args);
                     break;
 
                 case BuiltInFunction.CreateWindow:
-                    CreateWindow(args);
+                    CreateWindow(ref args);
                     break;
                 case BuiltInFunction.LoadText:
-                    LoadText(args);
+                    LoadText(ref args);
                     break;
                 case BuiltInFunction.WaitText:
-                    WaitText(args);
+                    WaitText(ref args);
                     break;
 
                 case BuiltInFunction.CreateSound:
-                    CreateSound(args);
+                    CreateSound(ref args);
                     break;
                 case BuiltInFunction.SetVolume:
-                    SetVolume(args);
+                    SetVolume(ref args);
                     break;
                 case BuiltInFunction.SetLoop:
-                    SetLoop(args);
+                    SetLoop(ref args);
                     break;
                 case BuiltInFunction.SetLoopPoint:
-                    SetLoopPoint(args);
+                    SetLoopPoint(ref args);
                     break;
-
 
                 case BuiltInFunction.DurationTime:
-                    DurationTime(args);
+                    DurationTime(ref args);
                     break;
                 case BuiltInFunction.PassageTime:
-                    PassageTime(args);
+                    PassageTime(ref args);
                     break;
                 case BuiltInFunction.RemainTime:
-                    RemainTime(args);
+                    RemainTime(ref args);
                     break;
                 case BuiltInFunction.ImageHorizon:
-                    ImageHorizon(args);
+                    ImageHorizon(ref args);
                     break;
                 case BuiltInFunction.ImageVertical:
-                    ImageVertical(args);
+                    ImageVertical(ref args);
                     break;
                 case BuiltInFunction.Random:
-                    Random(args);
+                    Random(ref args);
                     break;
                 case BuiltInFunction.SoundAmplitude:
-                    SoundAmplitude(args);
+                    SoundAmplitude(ref args);
                     break;
                 case BuiltInFunction.Platform:
-                    Platform(args);
+                    Platform();
                     break;
                 case BuiltInFunction.ModuleFileName:
-                    ModuleFileName(args);
+                    ModuleFileName();
                     break;
                 case BuiltInFunction.String:
-                    String(args);
+                    String(ref args);
+                    break;
+                case BuiltInFunction.Integer:
+                    Integer(ref args);
                     break;
                 case BuiltInFunction.Time:
-                    Time(args);
+                    Time(ref args);
                     break;
             }
 
@@ -136,34 +138,49 @@ namespace NitroSharp.NsScript.VM
             return result;
         }
 
-        private void CreateWindow(ReadOnlySpan<ConstantValue> args)
+        private void Integer(ref ArgConsumer args)
         {
-            args = AssertArgs(args, 6);
-            string entityName = EntityName(args, 0);
-            int priority = AssertInteger(args, 1);
-            NsCoordinate x = AssertCoordinate(args, 2);
-            NsCoordinate y = AssertCoordinate(args, 3);
-            int width = AssertInteger(args, 4);
-            int height = AssertInteger(args, 5);
-            _impl.CreateDialogueBox(entityName, priority, x, y, width, height);
+            ConstantValue value = args.TakeOpt(ConstantValue.Null);
+            switch (value.Type)
+            {
+                case BuiltInType.Integer:
+                    break;
+                case BuiltInType.Float:
+                    value = ConstantValue.Integer((int)value.AsFloat()!.Value);
+                    break;
+                //default:
+                //    UnexpectedArgType<ConstantValue>(0, BuiltInType.Integer, value.Type);
+                //    break;
+            }
+
+            SetResult(value);
         }
 
-        private void WaitText(ReadOnlySpan<ConstantValue> args)
+        private void CreateWindow(ref ArgConsumer args)
         {
-            args = AssertArgs(args, 2);
+            _impl.CreateDialogueBox(
+                args.TakeEntityName(),
+                priority: args.TakeInt(),
+                x: args.TakeCoordinate(),
+                y: args.TakeCoordinate(),
+                width: args.TakeInt(),
+                height: args.TakeInt());
+        }
+
+        private void WaitText(ref ArgConsumer args)
+        {
             _impl.WaitText(string.Empty, default);
         }
 
-        private void LoadText(ReadOnlySpan<ConstantValue> args)
+        private void LoadText(ref ArgConsumer args)
         {
-            args = AssertArgs(args, countRequired: 7);
-            string subroutineName = AssertString(args, 0);
-            string boxName = AssertString(args, 1);
-            string textName = AssertString(args, 2);
-            int maxWidth = AssertInteger(args, 3);
-            int maxHeight = AssertInteger(args, 4);
-            int letterSpacing = AssertInteger(args, 5);
-            int lineSpacing = AssertInteger(args, 6);
+            string subroutineName = args.TakeString();
+            string boxName = args.TakeString();
+            string textName = args.TakeString();
+            int maxWidth = args.TakeInt();
+            int maxHeight = args.TakeInt();
+            int letterSpacing = args.TakeInt();
+            int lineSpacing = args.TakeInt();
 
             NsxModule module = _impl.Interpreter.CurrentThread!.CallFrameStack.Peek(1).Module;
             int subroutineIdx = module.LookupSubroutineIndex(subroutineName);
@@ -175,35 +192,27 @@ namespace NitroSharp.NsScript.VM
             _impl.LoadText(token, maxWidth, maxHeight, letterSpacing, lineSpacing);
         }
 
-        private void SetVolume(ReadOnlySpan<ConstantValue> args)
+        private void SetVolume(ref ArgConsumer args)
         {
-            args = AssertArgs(args, countRequired: 3);
-            string entityName = EntityName(args, 0);
-            TimeSpan duration = Time(AssertInteger(args, 1));
-            var volume = new NsRational(AssertInteger(args, 2), 1000);
-            _impl.SetVolume(entityName, duration, volume);
+            _impl.SetVolume(
+                args.TakeEntityName(),
+                duration: args.TakeTimeSpan(),
+                volume: args.TakeRational());
         }
 
-        private string EntityName(ReadOnlySpan<ConstantValue> args, int index)
+        private void CreateSound(ref ArgConsumer args)
         {
-            string name = AssertString(args, index);
-            return name.StartsWith("@") ? name.Substring(1) : name;
+            _impl.LoadAudio(
+                args.TakeEntityName(),
+                kind: args.TakeAudioKind(),
+                fileName: args.TakeString());
         }
 
-        private void CreateSound(ReadOnlySpan<ConstantValue> args)
+        private void WaitKey(ref ArgConsumer args)
         {
-            args = AssertArgs(args, countRequired: 3);
-            string entityName = EntityName(args, 0);
-            NsAudioKind kind = EnumConversions.ToAudioKind(AssertBuiltInConstant(args, 1));
-            string fileName = AssertString(args, 2);
-            _impl.LoadAudio(entityName, kind, fileName);
-        }
-
-        private void WaitKey(ReadOnlySpan<ConstantValue> args)
-        {
-            if (args.Length > 0)
+            if (args.Count > 0)
             {
-                TimeSpan timeout = Time(AssertInteger(args, 0));
+                TimeSpan timeout = args.TakeTimeSpan();
                 _impl.WaitForInput(timeout);
             }
             else
@@ -212,217 +221,170 @@ namespace NitroSharp.NsScript.VM
             }
         }
 
-        private void Wait(ReadOnlySpan<ConstantValue> args)
+        private void Wait(ref ArgConsumer args)
         {
-            TimeSpan delay = Time(AssertInteger(args, 0));
-            _impl.Delay(delay);
+            _impl.Delay(args.TakeTimeSpan());
         }
 
-        private void SetLoopPoint(ReadOnlySpan<ConstantValue> args)
+        private void SetLoopPoint(ref ArgConsumer args)
         {
-            args = AssertArgs(args, countRequired: 3);
-            string entityName = EntityName(args, 0);
-            TimeSpan loopStart = Time(AssertInteger(args, 1));
-            TimeSpan loopEnd = Time(AssertInteger(args, 2));
-            _impl.SetLoopRegion(entityName, loopStart, loopEnd);
+            _impl.SetLoopRegion(
+                args.TakeEntityName(),
+                loopStart: args.TakeTimeSpan(),
+                loopEnd: args.TakeTimeSpan());
         }
 
-        private void SetLoop(ReadOnlySpan<ConstantValue> args)
+        private void SetLoop(ref ArgConsumer args)
         {
-            args = AssertArgs(args, countRequired: 2);
-            string entityName = EntityName(args, 0);
-            bool looping = AssertBool(args, 1);
-            _impl.ToggleLooping(entityName, looping);
+            _impl.ToggleLooping(
+                args.TakeEntityName(),
+                looping: args.TakeBool());
         }
 
-        private void Zoom(ReadOnlySpan<ConstantValue> args)
+        private void Zoom(ref ArgConsumer args)
         {
-            args = AssertArgs(args, countRequired: 6);
-            string entityName = EntityName(args, 0);
-            TimeSpan duration = Time(AssertInteger(args, 1));
-            var dstScaleX = new NsRational(AssertInteger(args, 2), 1000);
-            var dstScaleY = new NsRational(AssertInteger(args, 3), 1000);
-            NsEasingFunction easingFn = AssertEasingFunction(args, 4);
-            int delayArg = AssertInteger(args, 5);
-            TimeSpan delay = delayArg == 1 ? duration : Time(delayArg);
-            _impl.Zoom(entityName, duration, dstScaleX, dstScaleY, easingFn, delay);
+            string entityName = args.TakeEntityName();
+            TimeSpan duration = args.TakeTimeSpan();
+            _impl.Zoom(
+                entityName,
+                duration,
+                dstScaleX: args.TakeRational(),
+                dstScaleY: args.TakeRational(),
+                easingFunction: args.TakeEasingFunction(),
+                args.TakeAnimDelay(duration));
         }
 
-        private void Move(ReadOnlySpan<ConstantValue> args)
+        private void Move(ref ArgConsumer args)
         {
-            args = AssertArgs(args, countRequired: 6);
-            string entityName = EntityName(args, 0);
-            TimeSpan duration = Time(AssertInteger(args, 1));
-            NsCoordinate dstX = AssertCoordinate(args, 2);
-            NsCoordinate dstY = AssertCoordinate(args, 3);
-            NsEasingFunction easingFn = AssertEasingFunction(args, 4);
-            int delayArg = AssertInteger(args, 5);
-            TimeSpan delay = delayArg == 1 ? duration : Time(delayArg);
-            _impl.Move(entityName, duration, dstX, dstY, easingFn, delay);
+            string entityName = args.TakeEntityName();
+            TimeSpan duration = args.TakeTimeSpan();
+            _impl.Move(
+                entityName,
+                duration,
+                dstX: args.TakeCoordinate(),
+                dstY: args.TakeCoordinate(),
+                easingFunction: args.TakeEasingFunction(),
+                delay: args.TakeAnimDelay(duration));
         }
 
-        private TimeSpan Time(int ms) => TimeSpan.FromMilliseconds(ms);
-
-        private NsCoordinate AssertCoordinate(ReadOnlySpan<ConstantValue> args, int index)
+        private void Fade(ref ArgConsumer args)
         {
-            ref readonly ConstantValue val = ref args[index];
-            return val.Type switch
-            {
-                BuiltInType.Integer
-                    => new NsCoordinate(val.AsInteger()!.Value, NsCoordinateOrigin.Zero, 0),
-                BuiltInType.DeltaInteger
-                    => new NsCoordinate(val.AsDelta()!.Value, NsCoordinateOrigin.CurrentValue, 0),
-                BuiltInType.BuiltInConstant
-                    => NsCoordinate.FromEnumValue(val.AsBuiltInConstant()!.Value),
-
-                _ => UnexpectedArgType<NsCoordinate>(index, BuiltInType.Integer, val.Type)
-            };
+            string entityName = args.TakeEntityName();
+            TimeSpan duration = args.TakeTimeSpan();
+            _impl.Fade(
+                entityName,
+                duration,
+                dstOpacity: args.TakeRational(),
+                easingFunction: args.TakeEasingFunction(),
+                args.TakeAnimDelay(duration));
         }
 
-        private NsEasingFunction AssertEasingFunction(ReadOnlySpan<ConstantValue> args, int index)
+        private void SetAlias(ref ArgConsumer args)
         {
-            ref readonly ConstantValue val = ref args[index];
-            if (val.Type == BuiltInType.BuiltInConstant)
-            {
-                return EnumConversions.ToEasingFunction(val.AsBuiltInConstant()!.Value);
-            }
-            else if (val.Type == BuiltInType.Null)
-            {
-                return NsEasingFunction.None;
-            }
-
-            return UnexpectedArgType<NsEasingFunction>(
-                index, BuiltInType.BuiltInConstant, val.Type);
+            _impl.SetAlias(
+                args.TakeEntityName(),
+                alias: args.TakeString());
         }
 
-        private void Fade(ReadOnlySpan<ConstantValue> args)
+        private void Request(ref ArgConsumer args)
         {
-            args = AssertArgs(args, countRequired: 5);
-            string entityName = EntityName(args, 0);
-            TimeSpan duration = Time(AssertInteger(args, 1));
-            var dstOpacity = new NsRational(AssertInteger(args, 2), 1000);
-            NsEasingFunction easingFn = AssertEasingFunction(args, 3);
-            int delayArg = AssertInteger(args, 4);
-            TimeSpan delay = delayArg == 1 ? duration : Time(delayArg);
-            _impl.Fade(entityName, duration, dstOpacity, easingFn, delay);
+            _impl.Request(args.TakeEntityName(), args.TakeEntityAction());
         }
 
-        private void SetAlias(ReadOnlySpan<ConstantValue> args)
+        private void Delete(ref ArgConsumer args)
         {
-            args = AssertArgs(args, countRequired: 2);
-            string entityName = EntityName(args, 0);
-            string alias = AssertString(args, 1);
-            _impl.SetAlias(entityName, alias);
+            _impl.RemoveEntity(args.TakeEntityName());
         }
 
-        private void Request(ReadOnlySpan<ConstantValue> args)
+        private void CreateProcess(ref ArgConsumer args)
         {
-            args = AssertArgs(args, countRequired: 2);
-            string entityName = EntityName(args, 0);
-            BuiltInConstant constant = AssertBuiltInConstant(args, 1);
-            NsEntityAction action = EnumConversions.ToEntityAction(constant);
-            _impl.Request(entityName, action);
-        }
-
-        private void Delete(ReadOnlySpan<ConstantValue> args)
-        {
-            args = AssertArgs(args, countRequired: 1);
-            string entityName = EntityName(args, 0);
-            _impl.RemoveEntity(entityName);
-        }
-
-        private void CreateProcess(ReadOnlySpan<ConstantValue> args)
-        {
-            args = AssertArgs(args, countRequired: 5);
-            string name = AssertString(args, 0);
-            string target = AssertString(args, 4);
+            string name = args.TakeString();
+            args.Skip();
+            args.Skip();
+            args.Skip();
+            string target = args.TakeString();
             _impl.CreateThread(name, target);
         }
 
-        private void CreateChoice(ReadOnlySpan<ConstantValue> args)
+        private void CreateChoice(ref ArgConsumer args)
         {
-            args = AssertArgs(args, countRequired: 1);
-            string entityName = EntityName(args, 0);
-            _impl.CreateChoice(entityName);
+            _impl.CreateChoice(args.TakeEntityName());
         }
 
-        private void CreateColor(ReadOnlySpan<ConstantValue> args)
+        private void CreateColor(ref ArgConsumer args)
         {
-            args = AssertArgs(args, countRequired: 7);
-            string entityName = EntityName(args, 0);
-            int priority = AssertInteger(args, 1);
-            NsCoordinate x = AssertCoordinate(args, 2);
-            NsCoordinate y = AssertCoordinate(args, 3);
-            int width = AssertInteger(args, 4);
-            int height = AssertInteger(args, 5);
-            NsColor color = AssertColor(args, 6);
-            _impl.FillRectangle(entityName, priority, x, y, width, height, color);
-        }
-
-        private NsColor AssertColor(ReadOnlySpan<ConstantValue> args, int index)
-        {
-            ref readonly ConstantValue val = ref args[index];
-            return val.Type switch
+            static NsColor takeColor(ref ArgConsumer args)
             {
-                BuiltInType.String => NsColor.FromString(val.AsString()!),
-                BuiltInType.Integer => NsColor.FromRgb(val.AsInteger()!.Value),
-                BuiltInType.BuiltInConstant => NsColor.FromConstant(val.AsBuiltInConstant()!.Value),
-                _ => UnexpectedArgType<NsColor>(index, BuiltInType.Null, val.Type)
-            };
+                // Special case:
+                // CreateColor("back05", 100, 0, 0, 1280, 720, null, "Black");
+                //                                             ^^^^
+                if (args.Count == 8)
+                {
+                    args.Skip();
+                }
+
+                return args.TakeColor();
+            }
+
+            _impl.FillRectangle(
+                args.TakeEntityName(),
+                priority: args.TakeInt(),
+                x: args.TakeCoordinate(),
+                y: args.TakeCoordinate(),
+                width: args.TakeInt(),
+                height: args.TakeInt(),
+                color: takeColor(ref args));
         }
 
-        private void LoadImage(ReadOnlySpan<ConstantValue> args)
+        private void LoadImage(ref ArgConsumer args)
         {
-            args = AssertArgs(args, countRequired: 2);
-            string entityName = EntityName(args, 0);
-            string fileName = AssertString(args, 1);
-            _impl.LoadImage(entityName, fileName);
+            _impl.LoadImage(
+                args.TakeEntityName(),
+                fileName: args.TakeString());
         }
 
-        private void CreateTexture(ReadOnlySpan<ConstantValue> args)
+        private void CreateTexture(ref ArgConsumer args)
         {
-            args = AssertArgs(args, countRequired: 5);
-            string entityName = EntityName(args, 0);
-            int priority = AssertInteger(args, 1);
-            NsCoordinate x = AssertCoordinate(args, 2);
-            NsCoordinate y = AssertCoordinate(args, 3);
+            string entityName = args.TakeEntityName();
+            int priority = args.TakeInt();
+            NsCoordinate x = args.TakeCoordinate();
+            NsCoordinate y = args.TakeCoordinate();
 
-            ref readonly ConstantValue arg4 = ref args[4];
+            ConstantValue arg4 = args.TakeOpt(ConstantValue.Null);
             string fileOrEntityName = arg4.Type switch
             {
-                BuiltInType.String => EntityName(args, 4),
+                BuiltInType.String => ArgConsumer.EntityName(arg4.AsString()!),
                 BuiltInType.BuiltInConstant => arg4.ConvertToString(),
-                _ => UnexpectedArgType<string>(4, BuiltInType.String, arg4.Type)
+                _ => args.UnexpectedType<string>(arg4.Type)
             };
 
             _impl.CreateSprite(entityName, priority, x, y, fileOrEntityName);
         }
 
-        private void CreateClipTexture(ReadOnlySpan<ConstantValue> args)
+        private void CreateClipTexture(ref ArgConsumer args)
         {
-            args = AssertArgs(args, countRequired: 9);
-            string entityName = EntityName(args, 0);
-            int priority = AssertInteger(args, 1);
-            NsCoordinate x1 = AssertCoordinate(args, 2);
-            NsCoordinate y1 = AssertCoordinate(args, 3);
-            NsCoordinate x2 = AssertCoordinate(args, 4);
-            NsCoordinate y2 = AssertCoordinate(args, 5);
-            int width = AssertInteger(args, 6);
-            int height = AssertInteger(args, 7);
-            string srcEntityName = AssertString(args, 8);
-            _impl.CreateSpriteEx(entityName, priority, x1, y1, x2, y2, width, height, srcEntityName);
+            _impl.CreateSpriteEx(
+                args.TakeEntityName(),
+                priority: args.TakeInt(),
+                x1: args.TakeCoordinate(),
+                y1: args.TakeCoordinate(),
+                x2: args.TakeCoordinate(),
+                y2: args.TakeCoordinate(),
+                width: args.TakeInt(),
+                height: args.TakeInt(),
+                args.TakeEntityName());
         }
 
-        private void Time(ReadOnlySpan<ConstantValue> args)
+        private void Time(ref ArgConsumer args)
         {
             SetResult(ConstantValue.Integer(0));
         }
 
-        private void String(ReadOnlySpan<ConstantValue> args)
+        private void String(ref ArgConsumer args)
         {
-            string format = AssertString(args, 0);
+            string format = args.TakeString();
             var list = new List<object>();
-            foreach (ref readonly ConstantValue arg in args.Slice(1))
+            foreach (ref readonly ConstantValue arg in args.AsSpan(1))
             {
                 int? num = arg.AsInteger();
                 if (num != null)
@@ -435,131 +397,59 @@ namespace NitroSharp.NsScript.VM
                 }
             }
 
-            ConstantValue f = _impl.FormatString(format, list.ToArray());
-            Console.WriteLine(f.AsString()!);
-            Console.WriteLine(list[0].ToString());
-            SetResult(f);
+            SetResult(_impl.FormatString(format, list.ToArray()));
         }
 
-        private void ModuleFileName(ReadOnlySpan<ConstantValue> args)
+        private void ModuleFileName()
         {
             SetResult(ConstantValue.String(_impl.GetCurrentModuleName()));
         }
 
-        private void Platform(ReadOnlySpan<ConstantValue> args)
+        private void Platform()
         {
             SetResult(ConstantValue.Integer(_impl.GetPlatformId()));
         }
 
-        private void SoundAmplitude(ReadOnlySpan<ConstantValue> args)
+        private void SoundAmplitude(ref ArgConsumer args)
         {
-            args = AssertArgs(args, countRequired: 1);
-            string characterName = AssertString(args, 0);
+            string characterName = args.TakeString();
             SetResult(ConstantValue.Integer(_impl.GetSoundAmplitude(characterName)));
         }
 
-        private void Random(ReadOnlySpan<ConstantValue> args)
+        private void Random(ref ArgConsumer args)
         {
-            args = AssertArgs(args, countRequired: 1);
-            int max = AssertInteger(args, 0);
+            int max = args.TakeInt();
             SetResult(ConstantValue.Integer(_impl.GenerateRandomNumber(max)));
         }
 
-        private void ImageHorizon(ReadOnlySpan<ConstantValue> args)
+        private void ImageHorizon(ref ArgConsumer args)
         {
-            args = AssertArgs(args, countRequired: 1);
-            string entityName = EntityName(args, 0);
+            string entityName = args.TakeEntityName();
             SetResult(ConstantValue.Integer(_impl.GetWidth(entityName)));
         }
 
-        private void ImageVertical(ReadOnlySpan<ConstantValue> args)
+        private void ImageVertical(ref ArgConsumer args)
         {
-            args = AssertArgs(args, countRequired: 1);
-            string entityName = EntityName(args, 0);
+            string entityName = args.TakeEntityName();
             SetResult(ConstantValue.Integer(_impl.GetHeight(entityName)));
         }
 
-        private void RemainTime(ReadOnlySpan<ConstantValue> args)
+        private void RemainTime(ref ArgConsumer args)
         {
-            args = AssertArgs(args, countRequired: 1);
-            string entityName = EntityName(args, 0);
+            string entityName = args.TakeEntityName();
             SetResult(ConstantValue.Integer(_impl.GetTimeRemaining(entityName)));
         }
 
-        private void PassageTime(ReadOnlySpan<ConstantValue> args)
+        private void PassageTime(ref ArgConsumer args)
         {
-            int a = -+-+-+1;
-            args = AssertArgs(args, countRequired: 1);
-            string entityName = EntityName(args, 0);
+            string entityName = args.TakeEntityName();
             SetResult(ConstantValue.Integer(_impl.GetTimeElapsed(entityName)));
         }
 
-        private void DurationTime(ReadOnlySpan<ConstantValue> args)
+        private void DurationTime(ref ArgConsumer args)
         {
-            args = AssertArgs(args, countRequired: 1);
-            string entityName = EntityName(args, 0);
+            string entityName = args.TakeEntityName();
             SetResult(ConstantValue.Integer(_impl.GetSoundDuration(entityName)));
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private string AssertString(ReadOnlySpan<ConstantValue> args, int index)
-        {
-            ref readonly ConstantValue arg = ref args[index];
-            return arg.AsString()
-                ?? UnexpectedArgType<string>(index, BuiltInType.String, arg.Type);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private int AssertInteger(ReadOnlySpan<ConstantValue> args, int index)
-        {
-            ref readonly ConstantValue arg = ref args[index];
-            return arg.AsInteger()
-                ?? UnexpectedArgType<int>(index, BuiltInType.Integer, arg.Type);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private bool AssertBool(ReadOnlySpan<ConstantValue> args, int index)
-        {
-            ref readonly ConstantValue arg = ref args[index];
-            return arg.AsBool()
-                ?? UnexpectedArgType<bool>(index, BuiltInType.Boolean, arg.Type);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private BuiltInConstant AssertBuiltInConstant(ReadOnlySpan<ConstantValue> args, int index)
-        {
-            ref readonly ConstantValue arg = ref args[index];
-            return arg.AsBuiltInConstant()
-                ?? UnexpectedArgType<BuiltInConstant>(
-                    index, BuiltInType.BuiltInConstant, arg.Type);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private ReadOnlySpan<ConstantValue> AssertArgs(
-            ReadOnlySpan<ConstantValue> providedArgs, int countRequired)
-        {
-            return providedArgs.Length == countRequired
-                ? providedArgs
-                : handleRareCase(providedArgs, countRequired);
-
-            ReadOnlySpan<ConstantValue> handleRareCase(
-                ReadOnlySpan<ConstantValue> providedArgs, int countRequired)
-            {
-                if (providedArgs.Length > countRequired)
-                {
-                    return providedArgs.Slice(0, countRequired);
-                }
-                else
-                {
-                    providedArgs.CopyTo(_argBuffer);
-                    for (int i = providedArgs.Length; i < countRequired; i++)
-                    {
-                        _argBuffer[i] = ConstantValue.Integer(0);
-                    }
-
-                    return _argBuffer.AsSpan(0, countRequired);
-                }
-            }
         }
 
         private void Fail()
@@ -567,21 +457,158 @@ namespace NitroSharp.NsScript.VM
             throw new NotImplementedException();
         }
 
-        private void AssertEq(ReadOnlySpan<ConstantValue> args)
+        private void AssertEq(ref ArgConsumer args)
         {
             throw new NotImplementedException();
         }
 
-        private void Assert(ReadOnlySpan<ConstantValue> args)
+        private void Assert(ref ArgConsumer args)
         {
         }
 
-        private void Log(ReadOnlySpan<ConstantValue> args)
+        private void Log(ref ArgConsumer args)
         {
             throw new NotImplementedException();
         }
 
-        private T UnexpectedArgType<T>(int index, BuiltInType expectedType, BuiltInType actualType)
-            => throw new NsxCallDispatchException(index, expectedType, actualType);
+        private ref struct ArgConsumer
+        {
+            private readonly ReadOnlySpan<ConstantValue> _args;
+            private int _pos;
+
+            public ArgConsumer(ReadOnlySpan<ConstantValue> args)
+            {
+                _args = args;
+                _pos = 0;
+            }
+
+            public static string EntityName(string rawEntityName)
+            {
+                return rawEntityName.StartsWith("@")
+                    ? rawEntityName.Substring(1)
+                    : rawEntityName;
+            }
+
+            public static TimeSpan Time(int ms) => TimeSpan.FromMilliseconds(ms);
+
+            public int Count => _args.Length;
+
+            public ReadOnlySpan<ConstantValue> AsSpan(int start) => _args.Slice(start);
+            public void Skip() => _pos++;
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ConstantValue TakeOpt(in ConstantValue defaultValue)
+            {
+                return _pos < _args.Length
+                    ? _args[_pos++]
+                    : defaultValue;
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public string TakeEntityName()
+            {
+                return EntityName(TakeString());
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public string TakeString()
+            {
+                ConstantValue arg = TakeOpt(ConstantValue.EmptyString);
+                return arg.AsString()!;
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public int TakeInt()
+            {
+                ConstantValue arg = TakeOpt(ConstantValue.Integer(0));
+                return arg.AsInteger()!.Value;
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public TimeSpan TakeTimeSpan()
+            {
+                return Time(TakeInt());
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public bool TakeBool()
+            {
+                ConstantValue arg = TakeOpt(ConstantValue.False);
+                return arg.AsBool()!.Value;
+            }
+
+            public NsColor TakeColor()
+            {
+                ConstantValue val = TakeOpt(ConstantValue.Null);
+                return val.Type switch
+                {
+                    BuiltInType.String => NsColor.FromString(val.AsString()!),
+                    BuiltInType.Integer => NsColor.FromRgb(val.AsInteger()!.Value),
+                    BuiltInType.BuiltInConstant => NsColor.FromConstant(val.AsBuiltInConstant()!.Value),
+                    _ => UnexpectedType<NsColor>(val.Type)
+                };
+            }
+
+            public NsCoordinate TakeCoordinate()
+            {
+                ConstantValue val = TakeOpt(ConstantValue.Integer(0));
+                return val.Type switch
+                {
+                    BuiltInType.Integer
+                        => new NsCoordinate(val.AsInteger()!.Value, NsCoordinateOrigin.Zero, 0),
+                    BuiltInType.DeltaInteger
+                        => new NsCoordinate(val.AsDelta()!.Value, NsCoordinateOrigin.CurrentValue, 0),
+                    BuiltInType.BuiltInConstant
+                        => NsCoordinate.FromEnumValue(val.AsBuiltInConstant()!.Value),
+
+                    _ => UnexpectedType<NsCoordinate>(val.Type)
+                };
+            }
+
+            public NsEasingFunction TakeEasingFunction()
+            {
+                ConstantValue val = TakeOpt(ConstantValue.Null);
+                if (val.Type == BuiltInType.BuiltInConstant)
+                {
+                    return EnumConversions.ToEasingFunction(val.AsBuiltInConstant()!.Value);
+                }
+                else if (val.Type == BuiltInType.Null)
+                {
+                    return NsEasingFunction.None;
+                }
+
+                return UnexpectedType<NsEasingFunction>(val.Type);
+            }
+
+            public NsAudioKind TakeAudioKind()
+            {
+                ConstantValue val = TakeOpt(ConstantValue.Null);
+                return val.Type == BuiltInType.BuiltInConstant
+                    ? EnumConversions.ToAudioKind(val.AsBuiltInConstant()!.Value)
+                    : UnexpectedType<NsAudioKind>(val.Type);
+            }
+
+            public NsEntityAction TakeEntityAction()
+            {
+                ConstantValue val = TakeOpt(ConstantValue.Null);
+                return val.Type == BuiltInType.BuiltInConstant
+                    ? EnumConversions.ToEntityAction(val.AsBuiltInConstant()!.Value)
+                    : UnexpectedType<NsEntityAction>(val.Type);
+            }
+
+            public NsRational TakeRational(float denominator = 1000.0f)
+            {
+                return new NsRational(TakeInt(), denominator);
+            }
+
+            public TimeSpan TakeAnimDelay(TimeSpan animDuration)
+            {
+                int delayArg = TakeInt();
+                return delayArg == 1 ? animDuration : TimeSpan.FromMilliseconds(delayArg);
+            }
+
+            public T UnexpectedType<T>(BuiltInType type)
+                => throw new NsxCallDispatchException(_pos - 1, type);
+        }
     }
 }
