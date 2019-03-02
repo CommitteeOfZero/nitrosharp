@@ -7,6 +7,7 @@ using NitroSharp.Primitives;
 using Veldrid;
 using NitroSharp.Graphics;
 using NitroSharp.NsScript.Primitives;
+using System.Diagnostics;
 
 namespace NitroSharp
 {
@@ -17,7 +18,7 @@ namespace NitroSharp
             NsEasingFunction easingFunction, TimeSpan delay)
         {
             bool wait = delay == duration;
-            foreach ((Entity entity, string name) in _world.Query(entityName))
+            foreach ((Entity entity, _) in _world.Query(entityName))
             {
                 if (entity.IsVisual)
                 {
@@ -38,11 +39,11 @@ namespace NitroSharp
             }
         }
 
-        private FadeAnimation FadeCore(
+        private void FadeCore(
             Entity entity, TimeSpan duration, NsRational dstOpacity,
             NsEasingFunction easingFunction, bool wait)
         {
-            if (!entity.IsVisual) { return null; }
+            if (!entity.IsVisual) { return; }
             RenderItemTable table = _world.GetTable<RenderItemTable>(entity);
             float adjustedOpacity = dstOpacity.Rebase(1.0f);
             RgbaFloat color = table.Colors.GetValue(entity);
@@ -57,13 +58,11 @@ namespace NitroSharp
                     animation.WaitingThread = CurrentThread;
                 }
                 _world.ActivateAnimation(animation);
-                return animation;
             }
             else
             {
                 color.SetAlpha(adjustedOpacity);
                 table.Colors.Set(entity, ref color);
-                return null;
             }
         }
 
@@ -73,7 +72,7 @@ namespace NitroSharp
             NsEasingFunction easingFunction, TimeSpan delay)
         {
             bool wait = delay == duration;
-            foreach ((Entity entity, string name) in _world.Query(entityName))
+            foreach ((Entity entity, _) in _world.Query(entityName))
             {
                 if (entity.IsVisual)
                 {
@@ -171,7 +170,7 @@ namespace NitroSharp
 
             if (duration > TimeSpan.Zero)
             {
-                Vector3 finalScale = new Vector3(dstScaleX, dstScaleY, 1);
+                var finalScale = new Vector3(dstScaleX, dstScaleY, 1);
                 if (scale == finalScale)
                 {
                     scale = Vector3.Zero;

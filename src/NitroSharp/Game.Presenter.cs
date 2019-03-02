@@ -1,4 +1,5 @@
-﻿using NitroSharp.Animation;
+﻿using System.Collections.Generic;
+using NitroSharp.Animation;
 using NitroSharp.Dialogue;
 using NitroSharp.Graphics.Systems;
 using NitroSharp.Input;
@@ -83,7 +84,7 @@ namespace NitroSharp
                 _world.FlushEvents();
             }
 
-            protected override void HandleMessages<T>(T messages)
+            protected override void HandleMessages(Queue<Message> messages)
             {
                 foreach (Message message in messages)
                 {

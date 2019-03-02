@@ -73,7 +73,14 @@ namespace NitroSharp
             // Blocking the main thread here so that the main loop wouldn't get executed
             // on a thread pool thread.
             // Reasoning: desktop platforms require it to be executed on the main thread.
-            Initialize().Wait();
+            try
+            {
+                Initialize().Wait();
+            }
+            catch (AggregateException aex)
+            {
+                throw aex.Flatten();
+            }
             await RunMainLoop(useDedicatedThread);
         }
 

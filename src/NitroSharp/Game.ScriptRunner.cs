@@ -77,7 +77,7 @@ namespace NitroSharp
                 {
                     while (_status != Status.Running)
                     {
-                        Thread.Sleep(5);
+                        Thread.Sleep(1);
                     }
 
                     _status = Run();
@@ -106,7 +106,7 @@ namespace NitroSharp
                 return ranAnyCode ? Status.NewStateReady : Status.AwaitingPresenterState;
             }
 
-            protected override void HandleMessages<T>(T messages)
+            protected override void HandleMessages(Queue<Message> messages)
             {
                 foreach (Message message in messages)
                 {

@@ -23,7 +23,7 @@ namespace NitroSharp
                 _messageQueue.Enqueue(message);
             }
 
-            protected abstract void HandleMessages<T>(T messages) where T : IEnumerable<Message>;
+            protected abstract void HandleMessages(Queue<Message> messages);
 
             public void SyncTo(Actor actor)
             {
@@ -95,7 +95,6 @@ namespace NitroSharp
         internal sealed class BeginDialogueBlockMessage : Message
         {
             public override MessageKind Kind => MessageKind.BeginDialogueBlock;
-            //public DialogueBlockSymbol DialogueBlock { get; set; }
             public Entity TextEntity { get; set; }
         }
 
