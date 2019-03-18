@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
 namespace NitroSharp.Utilities
@@ -59,6 +60,41 @@ namespace NitroSharp.Utilities
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Insert(int index, T item)
+        {
+            Debug.Assert(index < Count);
+            if (Count == _elements.Length)
+            {
+                Array.Resize(ref _elements, _elements.Length * 2);
+            }
+
+            if (index < Count)
+            {
+                Array.Copy(_elements, index, _elements, index + 1, Count - index);
+            }
+
+            _elements[index] = item;
+            Count++;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Remove(int index)
+        {
+            Debug.Assert(index < Count);
+            Count--;
+            if (index < Count)
+            {
+                Array.Copy(_elements, index + 1, _elements, index, Count - index);
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Clear()
+        {
+            Count = 0;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void AddRange(ReadOnlySpan<T> items)
         {
             if (_elements == null)
@@ -93,17 +129,13 @@ namespace NitroSharp.Utilities
         }
 
         public Span<T> AsSpan() => new Span<T>(_elements, 0, (int)Count);
+        public Span<T> AsSpan(int start, int length) => new Span<T>(_elements, start, length);
         public ReadOnlySpan<T> AsReadonlySpan() => new ReadOnlySpan<T>(_elements, 0, (int)Count);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Reset()
         {
             Count = 0;
-        }
-
-        internal void OrderBy()
-        {
-            throw new NotImplementedException();
         }
     }
 }

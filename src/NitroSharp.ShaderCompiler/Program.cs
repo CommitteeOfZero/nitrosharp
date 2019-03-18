@@ -74,7 +74,7 @@ namespace NitroSharp.ShaderCompiler
                 File.WriteAllBytes(outputBase + "-vertex.450.glsl.spv", vsSpvReleaseOutput.SpirvBytes);
                 File.WriteAllBytes(outputBase + "-fragment.450.glsl.spv", fsSpvDebugOutput.SpirvBytes);
 
-                var glCompileOptions = new CrossCompileOptions(fixClipSpaceZ: false, invertVertexOutputY: false);
+                var glCompileOptions = new CrossCompileOptions(fixClipSpaceZ: true, invertVertexOutputY: false);
                 var glslResult = SpirvCompilation.CompileVertexFragment(
                     vsSpvDebugOutput.SpirvBytes,
                     fsSpvDebugOutput.SpirvBytes,
@@ -121,7 +121,7 @@ namespace NitroSharp.ShaderCompiler
                 profile,
                 flags);
 
-            if (result.ResultCode.Failure)
+            if (result.ResultCode.Failure || result.Bytecode == null)
             {
                 Console.WriteLine($"Failed to compile HLSL code: {result.Message}");
                 return Array.Empty<byte>();

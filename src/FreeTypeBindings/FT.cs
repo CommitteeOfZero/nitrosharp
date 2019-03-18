@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 namespace FreeTypeBindings
@@ -8,13 +9,17 @@ namespace FreeTypeBindings
         private const string FreetypeDll = "libfreetype";
         private const CallingConvention CallConvention = CallingConvention.Cdecl;
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void CheckResult(Error error)
         {
             if (error != Error.Ok)
             {
-                throw new FreeTypeException(error);
+                ThrowException(error);
             }
         }
+
+        private static void ThrowException(Error error)
+            => throw new FreeTypeException(error);
 
         [DllImport(FreetypeDll, CallingConvention = CallConvention)]
         public static extern Error FT_Init_FreeType(out IntPtr alibrary);
@@ -97,7 +102,7 @@ namespace FreeTypeBindings
 
         [DllImport(FreetypeDll, CallingConvention = CallConvention)]
         public static extern void FT_Done_Glyph(Glyph* glyph);
-        
+
 
         [DllImport(FreetypeDll, CallingConvention = CallConvention)]
         public static extern void FT_Vector_Transform(ref FTVector vec, ref FTMatrix matrix);
@@ -110,5 +115,27 @@ namespace FreeTypeBindings
 
         [DllImport(FreetypeDll, CallingConvention = CallConvention)]
         public static extern void FT_Vector_Rotate(ref FTVector vec, IntPtr angle);
+
+
+        [DllImport(FreetypeDll, CallingConvention = CallConvention)]
+        public static extern Error FT_Outline_New(IntPtr library, uint numPoints, int numContours, out Outline outline);
+
+        [DllImport(FreetypeDll, CallingConvention = CallConvention)]
+        public static extern Error FT_Outline_Copy(ref Outline source, ref Outline target);
+
+        [DllImport(FreetypeDll, CallingConvention = CallConvention)]
+        public static extern void FT_Outline_Translate(ref Outline outline, IntPtr xOffset, IntPtr yOffset);
+
+        [DllImport(FreetypeDll, CallingConvention = CallConvention)]
+        public static extern Error FT_Outline_Get_Bitmap(IntPtr library, ref Outline outline, ref Bitmap bitmap);
+
+        [DllImport(FreetypeDll, CallingConvention = CallConvention)]
+        public static extern Error FT_Outline_Render(IntPtr library, ref Outline outline, ref RasterParams @params);
+
+        [DllImport(FreetypeDll, CallingConvention = CallConvention)]
+        public static extern Error FT_Outline_Done(IntPtr library, ref Outline outline);
+
+        [DllImport(FreetypeDll, CallingConvention = CallConvention)]
+        public static extern void FT_Bitmap_Init(out Bitmap bitmap);
     }
 }

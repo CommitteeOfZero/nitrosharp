@@ -50,6 +50,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NitroSharp.NsScriptCompiler
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Veldrid.ImGui", "..\SomeAnonDev\veldrid\src\Veldrid.ImGui\Veldrid.ImGui.csproj", "{EB07CDE1-1BA8-4D60-BCCC-FAF0944EBBC4}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NitroSharp.FreeTypePlayground", "src\NitroSharp.FreeTypePlayground\NitroSharp.FreeTypePlayground.csproj", "{A4560E1E-3B2A-4ABE-8427-1F86FDF3ABD6}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -318,6 +320,22 @@ Global
 		{EB07CDE1-1BA8-4D60-BCCC-FAF0944EBBC4}.Release|x64.Build.0 = Release|Any CPU
 		{EB07CDE1-1BA8-4D60-BCCC-FAF0944EBBC4}.Release|x86.ActiveCfg = Release|Any CPU
 		{EB07CDE1-1BA8-4D60-BCCC-FAF0944EBBC4}.Release|x86.Build.0 = Release|Any CPU
+		{A4560E1E-3B2A-4ABE-8427-1F86FDF3ABD6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A4560E1E-3B2A-4ABE-8427-1F86FDF3ABD6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A4560E1E-3B2A-4ABE-8427-1F86FDF3ABD6}.Debug|ARM.ActiveCfg = Debug|Any CPU
+		{A4560E1E-3B2A-4ABE-8427-1F86FDF3ABD6}.Debug|ARM.Build.0 = Debug|Any CPU
+		{A4560E1E-3B2A-4ABE-8427-1F86FDF3ABD6}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{A4560E1E-3B2A-4ABE-8427-1F86FDF3ABD6}.Debug|x64.Build.0 = Debug|Any CPU
+		{A4560E1E-3B2A-4ABE-8427-1F86FDF3ABD6}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{A4560E1E-3B2A-4ABE-8427-1F86FDF3ABD6}.Debug|x86.Build.0 = Debug|Any CPU
+		{A4560E1E-3B2A-4ABE-8427-1F86FDF3ABD6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A4560E1E-3B2A-4ABE-8427-1F86FDF3ABD6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A4560E1E-3B2A-4ABE-8427-1F86FDF3ABD6}.Release|ARM.ActiveCfg = Release|Any CPU
+		{A4560E1E-3B2A-4ABE-8427-1F86FDF3ABD6}.Release|ARM.Build.0 = Release|Any CPU
+		{A4560E1E-3B2A-4ABE-8427-1F86FDF3ABD6}.Release|x64.ActiveCfg = Release|Any CPU
+		{A4560E1E-3B2A-4ABE-8427-1F86FDF3ABD6}.Release|x64.Build.0 = Release|Any CPU
+		{A4560E1E-3B2A-4ABE-8427-1F86FDF3ABD6}.Release|x86.ActiveCfg = Release|Any CPU
+		{A4560E1E-3B2A-4ABE-8427-1F86FDF3ABD6}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

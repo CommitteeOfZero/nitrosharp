@@ -2,7 +2,7 @@
   "profiles": {
     "NitroSharp.ShaderCompiler": {
       "commandName": "Project",
-      "commandLineArgs": "../../../../NitroSharp/Graphics/Shaders"
+      "commandLineArgs": "../../../../NitroSharp.FreeTypePlayground/Graphics/Shaders"
     }
   }
 }
