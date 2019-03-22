@@ -74,8 +74,6 @@ namespace NitroSharp.Text
             }
         }
 
-        public FontFamily GetFontFamily(string familyName) => _families[familyName];
-
         public FontFace Find(string fontFamily, FontStyle fontStyle)
         {
             List<FontFace> collection = _instances[fontFamily];

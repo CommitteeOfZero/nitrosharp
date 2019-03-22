@@ -77,22 +77,6 @@ namespace NitroSharp.FreeTypePlayground
             }
         }
 
-        public bool TryPackRect(uint width, uint height, out Rectangle rect)
-        {
-            uint arrayLayer = _currentLayer;
-            do
-            {
-                if (_layers[arrayLayer].Bin.TryPackRect((int)width, (int)height, out rect))
-                {
-                    return true;
-                }
-
-                arrayLayer++;
-            } while (arrayLayer < _layers.Length);
-
-            return false;
-        }
-
         public unsafe bool TryPackSprite<T>(
             ReadOnlySpan<T> pixelData,
             uint width,

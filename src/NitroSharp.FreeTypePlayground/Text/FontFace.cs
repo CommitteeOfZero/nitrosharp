@@ -182,7 +182,6 @@ namespace NitroSharp.Text
         }
 
         internal IntPtr Library => _ftInstance;
-        internal Face* FTFace => _face;
 
         public string FontFamily { get; }
         public FontStyle Style { get; }

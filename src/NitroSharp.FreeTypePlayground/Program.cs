@@ -24,7 +24,7 @@ namespace NitroSharp.FreeTypePlayground
             VeldridStartup.CreateWindowAndGraphicsDevice(
                 new WindowCreateInfo(50, 50, 1280, 720, WindowState.Normal, "Sample Text"),
                 options,
-                GraphicsBackend.Direct3D11,
+                GraphicsBackend.OpenGL,
                 out Sdl2Window window,
                 out GraphicsDevice gd);
 
@@ -35,27 +35,42 @@ namespace NitroSharp.FreeTypePlayground
             var fontLib = new FontLibrary();
             FontFamily fontFamily = fontLib.RegisterFont("Fonts/NotoSansCJKjp-Regular.otf");
             //FontFamily fontFamily = fontService.RegisterFont("C:/Windows/Fonts/Arial.ttf");
-            FontFace face = fontFamily.GetFace(FontStyle.Regular);
+            FontFace font = fontFamily.GetFace(FontStyle.Regular);
 
             var bigFontSize = 40;
             var meowColor = new RgbaFloat(253 / 255.0f, 149 / 255.0f, 89 / 255.0f, 1.0f);
+
+            var blue = new RgbaFloat(6 / 255.0f, 67 / 255.0f, 94 / 255.0f, 1.0f);
             var layout = new TextLayout(
                 new[]
                 {
-                    TextRun.MakeRegular("meow".AsMemory(), face, bigFontSize, meowColor),
-                    TextRun.MakeRegular(" is a game about ".AsMemory(), face, FontSize, RgbaFloat.Black),
-                    TextRun.MakeRegular("Increasing The Cats".AsMemory(), face, bigFontSize, RgbaFloat.Black),
-                    TextRun.MakeRegular(".\nyou can summon as many cats as you want and watch them bounce and roll around and ".AsMemory(), face, FontSize, RgbaFloat.Black),
-                    TextRun.MakeRegular("meow".AsMemory(), face, bigFontSize, meowColor),
-                    TextRun.MakeRegular(" at you.\nplease enjoy your cat friends".AsMemory(), face, FontSize, RgbaFloat.Black)
+                    TextRun.Regular("meow".AsMemory(), font, bigFontSize, meowColor),
+                    TextRun.Regular(" is a game about ".AsMemory(), font, FontSize, RgbaFloat.Black),
+                    TextRun.Regular("Increasing The Cats".AsMemory(), font, bigFontSize, RgbaFloat.Black),
+                    TextRun.Regular(".\nyou can summon as many cats as you want and watch them bounce and roll around and ".AsMemory(), font, FontSize, RgbaFloat.Black),
+                    TextRun.Regular("meow".AsMemory(), font, bigFontSize, meowColor),
+                    TextRun.Regular(" at you.\nplease enjoy your cat friends".AsMemory(), font, FontSize, RgbaFloat.Black)
                 },
                 new Size(400, 400)
             );
 
-            layout.EndLine(face);
+            //var layout = new TextLayout(
+            //    new[]
+            //    {
+            //        TextRun.MakeRegular("This text is rasterized with ".AsMemory(), font, FontSize, RgbaFloat.Black),
+            //        TextRun.MakeRegular("FreeType".AsMemory(), font, bigFontSize, blue),
+            //        TextRun.MakeRegular("\nGlyph images are cached on the GPU as needed\n".AsMemory(), font, FontSize, RgbaFloat.White),
+            //        TextRun.MakeRegular("Only ".AsMemory(), font, FontSize, RgbaFloat.Yellow),
+            //        TextRun.MakeRegular("one".AsMemory(), font, bigFontSize, meowColor),
+            //        TextRun.MakeRegular(" draw call is required to render this text".AsMemory(), font, FontSize, RgbaFloat.Yellow)
+            //    },
+            //    new Size(400, 400)
+            //);
+
+            layout.EndLine(font);
 
             //string charset = File.ReadAllText("S:/noah-charset.utf8");
-            string charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz .,'";
+            string charset = " ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz ., \n'";
 
             var factory = gd.ResourceFactory;
             var shaderLibrary = new ShaderLibrary(gd);
@@ -117,11 +132,11 @@ namespace NitroSharp.FreeTypePlayground
             {
                 for (int i = start; i < start + charset.Length; i++)
                 {
-                    Glyph glyph = face.GetGlyph(charset[i - start], fontSize);
+                    Glyph glyph = font.GetGlyph(charset[i - start], fontSize);
                     Size dimensions = glyph.BitmapSize;
-                    if (dimensions.Width > 0)
+                    if (dimensions.Height > 0)
                     {
-                        glyph.Rasterize(face, pixels);
+                        glyph.Rasterize(font, pixels);
                         atlas.TryPackSprite<byte>(
                             pixels,
                             dimensions.Width,
@@ -143,7 +158,7 @@ namespace NitroSharp.FreeTypePlayground
                 }
             }
 
-            face.Dispose();
+            font.Dispose();
 
             gd.Unmap(rectsStaging);
             gd.Unmap(layersStaging);
@@ -178,13 +193,17 @@ namespace NitroSharp.FreeTypePlayground
             var ib = gd.CreateStaticBuffer(new ushort[] { 0, 1, 2, 2, 1, 3 }, BufferUsage.IndexBuffer);
 
             var pgs = layout.Glyphs;
-            var glyphs = new ArrayBuilder<InstanceData>(pgs.Length);
+            var glyphs = new ArrayBuilder<InstanceData>(100);
             for (int i = 0; i < layout.Glyphs.Length; i++)
             {
                 ref readonly PositionedGlyph pg = ref pgs[i];
-                ref readonly RegularTextRun run = ref layout.TextRuns[pg.TextRunIndex].Regular;
-                ref InstanceData data = ref glyphs.Add();
+                if (char.IsWhiteSpace(pg.Character))
+                {
+                    continue;
+                }
 
+                ref readonly TextRun run = ref layout.TextRuns[pg.TextRunIndex];
+                ref InstanceData data = ref glyphs.Add();
                 int fontSize = run.FontSize;
                 var key = new GlyphCacheKey(pg.Character, fontSize);
                 int idx = glyphMap[key];
@@ -214,8 +233,6 @@ namespace NitroSharp.FreeTypePlayground
                     SharedResourceSet = vsResourceSet,
                     ObjectResourceSet = fsResourceSet,
                     VertexBuffer = vb,
-                    VertexBase = 0,
-                    VertexCount = 4,
                     IndexBuffer = ib,
                     IndexBase = 0,
                     IndexCount = 6,

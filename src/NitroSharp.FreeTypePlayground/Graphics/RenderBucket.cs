@@ -17,7 +17,6 @@ namespace NitroSharp.Graphics
         public ResourceSet SharedResourceSet;
         public ResourceSet ObjectResourceSet;
         public ushort VertexBase;
-        public ushort VertexCount;
         public ushort IndexBase;
         public ushort IndexCount;
     }
@@ -34,7 +33,6 @@ namespace NitroSharp.Graphics
         public ResourceSet SharedResourceSet;
         public ResourceSet ObjectResourceSet;
         public ushort VertexBase;
-        public ushort VertexCount;
         public ushort IndexBase;
         public ushort IndexCount;
         public ushort InstanceBase;
@@ -47,7 +45,6 @@ namespace NitroSharp.Graphics
         {
             public ResourceSet ObjectResourceSet;
             public ushort VertexBase;
-            public ushort VertexCount;
             public ushort IndexBase;
             public ushort IndexCount;
             public ushort InstanceBase;
@@ -107,7 +104,6 @@ namespace NitroSharp.Graphics
             renderItem.VertexBuffer0 = GetResourceId(submission.VertexBuffer, _vertexBuffers, ref _lastVertexBuffer0);
             renderItem.IndexBuffer = GetResourceId(submission.IndexBuffer, _indexBuffers, ref _lastIndexBuffer);
             renderItem.VertexBase = submission.VertexBase;
-            renderItem.VertexCount = submission.VertexCount;
             renderItem.IndexBase = submission.IndexBase;
             renderItem.IndexCount = submission.IndexCount;
             renderItem.PipelineId = GetPipelineId(submission.Pipeline);
@@ -125,7 +121,6 @@ namespace NitroSharp.Graphics
             renderItem.VertexBuffer0 = GetResourceId(submission.VertexBuffer, _vertexBuffers, ref _lastVertexBuffer0);
             renderItem.IndexBuffer = GetResourceId(submission.IndexBuffer, _indexBuffers, ref _lastIndexBuffer);
             renderItem.VertexBase = submission.VertexBase;
-            renderItem.VertexCount = submission.VertexCount;
             renderItem.IndexBase = submission.IndexBase;
             renderItem.IndexCount = submission.IndexCount;
             renderItem.PipelineId = GetPipelineId(submission.Pipeline);
@@ -215,51 +210,14 @@ namespace NitroSharp.Graphics
             }
 
             int index;
-            byte id = 0;
             if ((index = resourceList.IndexOf(resource)) == -1)
             {
                 index = resourceList.Count;
-                id = (byte)index;
                 resourceList.Add(resource);
-                lastUsed = (id, resource);
+                lastUsed = ((byte)index, resource);
             }
 
-            return id;
+            return (byte)index;
         }
-
-        //private void Sort(int[] keys, RenderItem[] renderItems, int left, int right)
-        //{
-        //    if ((right - left) < 2) return;
-
-        //    int l = left;
-        //    int r = right;
-        //    int pivot = keys[(left + right) / 2];
-        //    while (l <= r)
-        //    {
-        //        while (keys[l] < pivot) { l++; }
-        //        while (keys[r] > pivot) { r--; }
-
-        //        if (l <= r)
-        //        {
-        //            ref int lKey = ref keys[l];
-        //            ref int rKey = ref keys[r];
-        //            int tmp = lKey;
-        //            lKey = rKey;
-        //            rKey = tmp;
-
-        //            ref var lItem = ref renderItems[l];
-        //            ref var rItem = ref renderItems[r];
-        //            RenderItem tmpItem = lItem;
-        //            lItem = rItem;
-        //            rItem = tmpItem;
-
-        //            l++;
-        //            r--;
-        //        }
-
-        //        if (left < r) { Sort(keys, renderItems, left, r); }
-        //        if (l < right) { Sort(keys, renderItems, l, right); }
-        //    }
-        //}
     }
 }

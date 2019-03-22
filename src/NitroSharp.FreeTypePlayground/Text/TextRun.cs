@@ -4,73 +4,52 @@ using Veldrid;
 
 namespace NitroSharp.Text
 {
-    internal enum TextRunKind
+    [Flags]
+    internal enum TextRunFlags : byte
     {
-        Regular,
+        None,
         RubyText
     }
 
-    [StructLayout(LayoutKind.Explicit)]
+    [StructLayout(LayoutKind.Auto)]
     internal readonly struct TextRun
     {
-        [FieldOffset(0)]
-        public readonly TextRunKind Kind;
+        public readonly ReadOnlyMemory<char> Text;
+        public readonly ReadOnlyMemory<char> RubyText;
+        public readonly FontFace Font;
+        public readonly int FontSize;
+        public readonly RgbaFloat Color;
+        public readonly TextRunFlags Flags;
 
-        [FieldOffset(8)]
-        public readonly RegularTextRun Regular;
+        public bool HasRubyText => (Flags & TextRunFlags.RubyText) == TextRunFlags.RubyText;
 
-        [FieldOffset(8)]
-        public readonly RubyTextRun RubyText;
-
-        public static TextRun MakeRegular(
+        public static TextRun Regular(
             ReadOnlyMemory<char> text, FontFace font, int ptFontSize, RgbaFloat color)
         {
-            return new TextRun(new RegularTextRun(text, font, ptFontSize, color));
+            return new TextRun(font, ptFontSize, color, text, default, TextRunFlags.None);
         }
 
-        public static TextRun MakeRuby(
+        public static TextRun WithRubyText(
             FontFace font, int ptFontSize, RgbaFloat color,
             ReadOnlyMemory<char> rubyBase, ReadOnlyMemory<char> rubyText)
         {
-            return new TextRun(
-                new RubyTextRun(font, ptFontSize, color, rubyBase, rubyText));
+            return new TextRun(font, ptFontSize, color, rubyBase, rubyText, TextRunFlags.RubyText);
         }
 
-        private TextRun(RegularTextRun regularTextRun) : this()
-            => (Kind, Regular) = (TextRunKind.Regular, regularTextRun);
-
-        private TextRun(RubyTextRun rubyTextRun) : this()
-            => (Kind, RubyText) = (TextRunKind.RubyText, rubyTextRun);
-    }
-
-    internal readonly struct RegularTextRun
-    {
-        public readonly FontFace Font;
-        public readonly RgbaFloat Color;
-        public readonly int FontSize;
-        public readonly ReadOnlyMemory<char> Text;
-
-        public RegularTextRun(ReadOnlyMemory<char> text, FontFace font, int fontSize, RgbaFloat color)
-            => (Text, Font, FontSize, Color) = (text, font, fontSize, color);
-    }
-
-    internal readonly struct RubyTextRun
-    {
-        public readonly FontFace Font;
-        public readonly int FontSize;
-        public readonly RgbaFloat Color;
-        public readonly ReadOnlyMemory<char> RubyBase;
-        public readonly ReadOnlyMemory<char> RubyText;
-
-        public RubyTextRun(
-            FontFace font, int fontSize, RgbaFloat color,
-            ReadOnlyMemory<char> rubyBase, ReadOnlyMemory<char> rubyText)
+        private TextRun(
+            FontFace font,
+            int fontSize,
+            RgbaFloat color,
+            ReadOnlyMemory<char> text,
+            ReadOnlyMemory<char> rubyText,
+            TextRunFlags flags)
         {
             Font = font;
             FontSize = fontSize;
             Color = color;
-            RubyBase = rubyBase;
+            Text = text;
             RubyText = rubyText;
+            Flags = flags;
         }
     }
 }
