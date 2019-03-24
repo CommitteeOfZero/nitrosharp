@@ -6,7 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Veldrid.SPIRV" Version="1.0.0-beta4" />
+    <PackageReference Include="Veldrid.SPIRV" Version="1.0.8" />
   </ItemGroup>
 
 </Project>

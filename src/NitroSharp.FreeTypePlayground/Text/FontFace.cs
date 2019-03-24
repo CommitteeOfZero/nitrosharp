@@ -136,10 +136,10 @@ namespace NitroSharp.Text
 
     internal readonly struct GlyphCacheKey
     {
-        public readonly int FontSize;
+        public readonly float FontSize;
         public readonly char Character;
 
-        public GlyphCacheKey(char character, int fontSize)
+        public GlyphCacheKey(char character, float fontSize)
         {
             Character = character;
             FontSize = fontSize;
@@ -154,7 +154,7 @@ namespace NitroSharp.Text
         private readonly IntPtr _ftInstance;
 
         private Face* _face;
-        private int _currentSize;
+        private float _currentSize;
         private VerticalMetrics _currentSizeMetrics;
         private readonly Dictionary<GlyphCacheKey, Glyph> _glyphCache;
 
@@ -187,12 +187,12 @@ namespace NitroSharp.Text
         public FontStyle Style { get; }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        private void SetSize(int ptSize)
+        private void SetSize(float ptSize)
         {
             FT.CheckResult(
                 FT.FT_Set_Char_Size(_face,
-                (IntPtr)Fixed26Dot6.FromInt32(0).Value,
-                (IntPtr)Fixed26Dot6.FromInt32(ptSize).Value,
+                (IntPtr)Fixed26Dot6.FromSingle(0).Value,
+                (IntPtr)Fixed26Dot6.FromSingle(ptSize).Value,
                 72, 72));
 
             _currentSize = ptSize;
@@ -214,7 +214,7 @@ namespace NitroSharp.Text
             return _currentSizeMetrics;
         }
 
-        public Glyph GetGlyph(char c, int ptFontSize)
+        public Glyph GetGlyph(char c, float ptFontSize)
         {
             var key = new GlyphCacheKey(c, ptFontSize);
             if (!_glyphCache.TryGetValue(key, out Glyph glyph))
@@ -226,7 +226,7 @@ namespace NitroSharp.Text
             return glyph;
         }
 
-        private Glyph LoadGlyph(char c, int ptSize)
+        private Glyph LoadGlyph(char c, float ptSize)
         {
             if (ptSize != _currentSize)
             {

@@ -1,6 +1,6 @@
 #version 450
 
-//#extension GL_EXT_samplerless_texture_functions : enable
+#extension GL_EXT_samplerless_texture_functions : enable
 
 const int MAX_GLYPHS = 4096;
 const vec2 ATLAS_SIZE = vec2(512, 512);
@@ -17,7 +17,7 @@ layout(set = 0, binding = 1) uniform GlyphRects
 };
 
 layout(set = 0, binding = 2) uniform utexture1D ArrayLayers;
-layout(set = 0, binding = 3) uniform sampler DummySampler;
+//layout(set = 0, binding = 3) uniform sampler DummySampler;
 
 // Fullscreen quad vertex
 layout(location = 0) in vec2 vs_Position;
@@ -51,7 +51,7 @@ void main()
     vec2 p = pos[gl_VertexIndex];
     gl_Position = _ViewProjection * vec4(p.x, p.y, 0, 1);
 
-    uint layer = texelFetch(usampler1D(ArrayLayers, DummySampler), vs_GlyphIndex, 0).r;
+    uint layer = texelFetch(ArrayLayers, vs_GlyphIndex, 0).r;
     fs_TexCoord = vec3(uv[gl_VertexIndex] / ATLAS_SIZE, layer);
     fs_Color = vs_Color;
 }

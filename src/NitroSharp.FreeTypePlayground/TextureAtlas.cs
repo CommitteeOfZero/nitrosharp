@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using NitroSharp.Utilities;
@@ -201,6 +200,9 @@ namespace NitroSharp.FreeTypePlayground
         }
     }
 
+    // Implements the skyline bottom-left packing algorithm,
+    // as described in a paper by Jukka Jylänki
+    // http://pds25.egloos.com/pds/201504/21/98/RectangleBinPack.pdf
     internal struct Bin
     {
         private struct SkylineSegment
@@ -209,7 +211,7 @@ namespace NitroSharp.FreeTypePlayground
             public int Y;
             public int Width;
 
-            public SkylineSegment(int x, int y, int width) : this()
+            public SkylineSegment(int x, int y, int width)
                 => (X, Y, Width) = (x, y, width);
         }
 
@@ -221,7 +223,7 @@ namespace NitroSharp.FreeTypePlayground
         {
             _binWidth = width;
             _binHeight = height;
-            _skyline = new ArrayBuilder<SkylineSegment>();
+            _skyline = new ArrayBuilder<SkylineSegment>(initialCapacity: 32);
             _skyline.Add(
                 new SkylineSegment(x: 0, y: 0, width)
             );
@@ -231,7 +233,8 @@ namespace NitroSharp.FreeTypePlayground
         {
             _skyline.Clear();
             _skyline.Add(
-                new SkylineSegment(x: 0, y: 0, _binWidth));
+                new SkylineSegment(x: 0, y: 0, _binWidth)
+            );
         }
 
         public bool TryPackRect(int width, int height, out Rectangle rect)

@@ -30,8 +30,8 @@ namespace NitroSharp.Text
         }
 
         public static TextRun WithRubyText(
-            FontFace font, int ptFontSize, RgbaFloat color,
-            ReadOnlyMemory<char> rubyBase, ReadOnlyMemory<char> rubyText)
+            ReadOnlyMemory<char> rubyBase, ReadOnlyMemory<char> rubyText,
+            FontFace font, int ptFontSize, RgbaFloat color)
         {
             return new TextRun(font, ptFontSize, color, rubyBase, rubyText, TextRunFlags.RubyText);
         }

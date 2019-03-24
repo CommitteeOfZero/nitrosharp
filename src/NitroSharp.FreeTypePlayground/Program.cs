@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Numerics;
+using System.Runtime.CompilerServices;
 using NitroSharp.Graphics;
 using NitroSharp.Primitives;
 using NitroSharp.Text;
@@ -24,7 +25,7 @@ namespace NitroSharp.FreeTypePlayground
             VeldridStartup.CreateWindowAndGraphicsDevice(
                 new WindowCreateInfo(50, 50, 1280, 720, WindowState.Normal, "Sample Text"),
                 options,
-                GraphicsBackend.OpenGL,
+                GraphicsBackend.Direct3D11,
                 out Sdl2Window window,
                 out GraphicsDevice gd);
 
@@ -34,25 +35,36 @@ namespace NitroSharp.FreeTypePlayground
 
             var fontLib = new FontLibrary();
             FontFamily fontFamily = fontLib.RegisterFont("Fonts/NotoSansCJKjp-Regular.otf");
-            //FontFamily fontFamily = fontService.RegisterFont("C:/Windows/Fonts/Arial.ttf");
             FontFace font = fontFamily.GetFace(FontStyle.Regular);
+            var g = font.GetGlyph('G', 22.3f);
+
 
             var bigFontSize = 40;
             var meowColor = new RgbaFloat(253 / 255.0f, 149 / 255.0f, 89 / 255.0f, 1.0f);
 
             var blue = new RgbaFloat(6 / 255.0f, 67 / 255.0f, 94 / 255.0f, 1.0f);
+            //var layout = new TextLayout(
+            //    new[]
+            //    {
+            //        TextRun.Regular("meow".AsMemory(), font, bigFontSize, meowColor),
+            //        TextRun.Regular(" is a game about ".AsMemory(), font, FontSize, RgbaFloat.Black),
+            //        TextRun.Regular("Increasing The Cats".AsMemory(), font, bigFontSize, RgbaFloat.Black),
+            //        TextRun.Regular(".\nyou can summon as many cats as you want and watch them bounce and roll around and ".AsMemory(), font, FontSize, RgbaFloat.Black),
+            //        TextRun.Regular("meow".AsMemory(), font, bigFontSize, meowColor),
+            //        TextRun.Regular(" at you.\nplease enjoy your cat friends".AsMemory(), font, FontSize, RgbaFloat.Black)
+            //    },
+            //    new Size(400, 400)
+            //);
+
             var layout = new TextLayout(
                 new[]
                 {
-                    TextRun.Regular("meow".AsMemory(), font, bigFontSize, meowColor),
-                    TextRun.Regular(" is a game about ".AsMemory(), font, FontSize, RgbaFloat.Black),
-                    TextRun.Regular("Increasing The Cats".AsMemory(), font, bigFontSize, RgbaFloat.Black),
-                    TextRun.Regular(".\nyou can summon as many cats as you want and watch them bounce and roll around and ".AsMemory(), font, FontSize, RgbaFloat.Black),
-                    TextRun.Regular("meow".AsMemory(), font, bigFontSize, meowColor),
-                    TextRun.Regular(" at you.\nplease enjoy your cat friends".AsMemory(), font, FontSize, RgbaFloat.Black)
+                    TextRun.Regular("Sample Text\n                          ".AsMemory(), font, FontSize, RgbaFloat.White),
+                    TextRun.WithRubyText("西條".AsMemory(), "にしじょう".AsMemory(), font, FontSize, blue)
                 },
-                new Size(400, 400)
-            );
+                new Size(400, 600));
+
+            var size = Unsafe.SizeOf<TextRun>();
 
             //var layout = new TextLayout(
             //    new[]
@@ -70,7 +82,7 @@ namespace NitroSharp.FreeTypePlayground
             layout.EndLine(font);
 
             //string charset = File.ReadAllText("S:/noah-charset.utf8");
-            string charset = " ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz ., \n'";
+            string charset = " ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz西條にしじょう .,- \n'";
 
             var factory = gd.ResourceFactory;
             var shaderLibrary = new ShaderLibrary(gd);
@@ -88,8 +100,7 @@ namespace NitroSharp.FreeTypePlayground
                 new ResourceLayoutDescription(
                     new ResourceLayoutElementDescription("ViewProjection", ResourceKind.UniformBuffer, ShaderStages.Vertex),
                     new ResourceLayoutElementDescription("GlyphRects", ResourceKind.UniformBuffer, ShaderStages.Vertex),
-                    new ResourceLayoutElementDescription("ArrayLayers", ResourceKind.TextureReadOnly, ShaderStages.Vertex),
-                    new ResourceLayoutElementDescription("DummySampler", ResourceKind.Sampler, ShaderStages.Vertex)));
+                    new ResourceLayoutElementDescription("ArrayLayers", ResourceKind.TextureReadOnly, ShaderStages.Vertex)));
 
             var fsLayout = factory.CreateResourceLayout(new ResourceLayoutDescription(
                 new ResourceLayoutElementDescription("Atlas", ResourceKind.TextureReadOnly, ShaderStages.Fragment),
@@ -126,7 +137,7 @@ namespace NitroSharp.FreeTypePlayground
             var rs = new Rectangle[charset.Length * 2];
 
             loop(0, FontSize);
-            loop(charset.Length, 40);
+            loop(charset.Length, 11);
 
             void loop(int start, int fontSize)
             {
@@ -177,7 +188,7 @@ namespace NitroSharp.FreeTypePlayground
             cl.CopyTexture(layersStaging, arrayLayersBuffer);
 
             var vsResourceSet = factory.CreateResourceSet(
-                new ResourceSetDescription(vsLayout, projectionBuffer, rectBuffer, arrayLayersBuffer, gd.LinearSampler));
+                new ResourceSetDescription(vsLayout, projectionBuffer, rectBuffer, arrayLayersBuffer));
             var fsResourceSet = factory.CreateResourceSet(
                 new ResourceSetDescription(fsLayout, atlas.Texture, gd.LinearSampler));
 
@@ -205,6 +216,10 @@ namespace NitroSharp.FreeTypePlayground
                 ref readonly TextRun run = ref layout.TextRuns[pg.TextRunIndex];
                 ref InstanceData data = ref glyphs.Add();
                 int fontSize = run.FontSize;
+                if (pg.IsRuby)
+                {
+                    fontSize = (int)(fontSize * 0.4f);
+                }
                 var key = new GlyphCacheKey(pg.Character, fontSize);
                 int idx = glyphMap[key];
                 data.GlyphIndex = idx;
