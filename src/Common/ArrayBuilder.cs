@@ -131,6 +131,8 @@ namespace NitroSharp.Utilities
         public Span<T> AsSpan() => new Span<T>(_elements, 0, (int)Count);
         public Span<T> AsSpan(int start, int length) => new Span<T>(_elements, start, length);
         public ReadOnlySpan<T> AsReadonlySpan() => new ReadOnlySpan<T>(_elements, 0, (int)Count);
+        public ReadOnlySpan<T> AsReadonlySpan(int start, int length)
+            => new ReadOnlySpan<T>(_elements, start, length);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Reset()

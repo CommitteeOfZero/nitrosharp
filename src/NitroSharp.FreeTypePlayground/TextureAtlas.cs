@@ -76,6 +76,35 @@ namespace NitroSharp.FreeTypePlayground
             }
         }
 
+        public unsafe void InsertSprite<T>(
+            ReadOnlySpan<T> pixelData,
+            uint arrayLayer,
+            in Rectangle rect)
+            where T : unmanaged
+        {
+            _currentLayer = arrayLayer;
+            ref Layer layer = ref _layers[arrayLayer];
+            ref MappedResource map = ref layer.Map;
+            uint bytesPerPixel = (uint)Unsafe.SizeOf<T>();
+            fixed (T* src = &pixelData[0])
+            {
+                uint srcRowPitch = (uint)rect.Width * bytesPerPixel;
+                uint srcDepthPitch = srcRowPitch * (uint)rect.Height;
+                CopyTextureRegion(
+                    src,
+                    srcX: 0, srcY: 0, srcZ: 0,
+                    srcRowPitch, srcDepthPitch,
+                    dst: map.Data.ToPointer(),
+                    dstX: (uint)rect.X, dstY: (uint)rect.Y, dstZ: 0,
+                    map.RowPitch, map.DepthPitch,
+                    (uint)rect.Width, (uint)rect.Height, depth: 1, bytesPerPixel);
+            }
+
+            layer.DirtyRect = layer.DirtyRect.Width > 0
+                ? Rectangle.Union(layer.DirtyRect, rect)
+                : rect;
+        }
+
         public unsafe bool TryPackSprite<T>(
             ReadOnlySpan<T> pixelData,
             uint width,
@@ -90,8 +119,9 @@ namespace NitroSharp.FreeTypePlayground
             arrayLayer = _currentLayer;
             do
             {
-                if (_layers[arrayLayer].Bin.TryPackRect(w, h, out rect))
+                if (_layers[arrayLayer].Bin.TryPackRect(w + 12, h + 12, out rect))
                 {
+                    rect = new Rectangle(rect.X, rect.Y, w, h);
                     success = true;
                     break;
                 }
@@ -100,29 +130,10 @@ namespace NitroSharp.FreeTypePlayground
 
             if (success)
             {
-                _currentLayer = arrayLayer;
-                ref Layer layer = ref _layers[arrayLayer];
-                ref MappedResource map = ref layer.Map;
-                uint bytesPerPixel = (uint)Unsafe.SizeOf<T>();
-                fixed (T* src = &pixelData[0])
-                {
-                    uint srcRowPitch = width * bytesPerPixel;
-                    uint srcDepthPitch = srcRowPitch * height;
-                    CopyTextureRegion(
-                        src,
-                        srcX: 0, srcY: 0, srcZ: 0,
-                        srcRowPitch, srcDepthPitch,
-                        dst: map.Data.ToPointer(),
-                        dstX: (uint)rect.X, dstY: (uint)rect.Y, dstZ: 0,
-                        map.RowPitch, map.DepthPitch,
-                        width, height, depth: 1, bytesPerPixel);
-                }
-
-                layer.DirtyRect = layer.DirtyRect.Width > 0
-                    ? Rectangle.Union(layer.DirtyRect, rect)
-                    : rect;
+                InsertSprite(pixelData, arrayLayer, rect);
             }
 
+            //rect = new Rectangle(rect.X + 2, rect.Y, rect.Width + 2, rect.Height);
             return success;
         }
 
@@ -221,11 +232,11 @@ namespace NitroSharp.FreeTypePlayground
 
         public Bin(int width, int height)
         {
-            _binWidth = width;
-            _binHeight = height;
+            _binWidth = width - 4;
+            _binHeight = height - 4;
             _skyline = new ArrayBuilder<SkylineSegment>(initialCapacity: 32);
             _skyline.Add(
-                new SkylineSegment(x: 0, y: 0, width)
+                new SkylineSegment(x: 0, y: 0, width - 4)
             );
         }
 
@@ -233,7 +244,7 @@ namespace NitroSharp.FreeTypePlayground
         {
             _skyline.Clear();
             _skyline.Add(
-                new SkylineSegment(x: 0, y: 0, _binWidth)
+                new SkylineSegment(x: 0, y: 0, _binWidth - 4)
             );
         }
 
@@ -249,6 +260,8 @@ namespace NitroSharp.FreeTypePlayground
             }
 
             (int x, int y) = position.Value;
+            //x += 4;
+            //y += 4;
 
             // Update skyline level
             var skylineSeg = new SkylineSegment(x, y + height, width);
@@ -286,6 +299,7 @@ namespace NitroSharp.FreeTypePlayground
             }
 
             rect = new Rectangle(x, y, width, height);
+            //rect = new Rectangle(x + 1, y + 1, width, height);
             return true;
         }
 

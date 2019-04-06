@@ -97,7 +97,7 @@ namespace NitroSharp.Text
                 bool isNewline = c == '\r' || c == '\n';
                 bool isWhitespace = char.IsWhiteSpace(c);
                 Glyph glyph = textRun.Font.GetGlyph(c, textRun.FontSize);
-                if (CanFitGlyph(glyph.Size) || isNewline)
+                if (CanFitGlyph(glyph.BitmapSize) || isNewline)
                 {
                     Debug.Assert(_glyphs.Count >= glyphPos);
                     var position = new Vector2(
@@ -281,7 +281,7 @@ namespace NitroSharp.Text
                 ref readonly PositionedGlyph baseFirstGlyph = ref rubyBaseGlyphs[0];
                 ref readonly PositionedGlyph baseLastGlyph = ref rubyBaseGlyphs[rubyBaseGlyphs.Length - 1];
                 float rubyBaseWidth = baseLastGlyph.Position.X - baseFirstGlyph.Position.X
-                    + font.GetGlyph(baseLastGlyph.Character, textRun.FontSize).Size.Width;
+                    + font.GetGlyph(baseLastGlyph.Character, textRun.FontSize).BitmapSize.Width;
 
                 // Measure the ruby text
                 int rubyFontSize = (int)MathF.Round(textRun.FontSize * _rubyFontSizeMultiplier);
@@ -311,7 +311,7 @@ namespace NitroSharp.Text
                         char c = rubyText[j];
                         ref readonly Glyph g = ref rubyGlyphs[j];
                         var position = new Vector2(
-                            penX + halfBlockWidth - MathF.Round(g.Size.Width / 2.0f),
+                            penX + halfBlockWidth - MathF.Round(g.BitmapSize.Width / 2),
                             rubyTextBaseline - g.BitmapTop
                         );
                         _glyphs.Add() = new PositionedGlyph(c, position, (ushort)runIndex, true);
@@ -384,7 +384,7 @@ namespace NitroSharp.Text
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private bool CanFitGlyph(in SizeF size)
+        private bool CanFitGlyph(in Size size)
             => CurrentLine.PenX + size.Width <= _maxBounds.Width;
     }
 }

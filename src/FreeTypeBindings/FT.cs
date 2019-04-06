@@ -133,9 +133,49 @@ namespace FreeTypeBindings
         public static extern Error FT_Outline_Render(IntPtr library, ref Outline outline, ref RasterParams @params);
 
         [DllImport(FreetypeDll, CallingConvention = CallConvention)]
+        public static extern Error FT_Outline_Get_BBox(ref Outline outline, out BBox bbox);
+
+        [DllImport(FreetypeDll, CallingConvention = CallConvention)]
+        public static extern void FT_Outline_Get_CBox(ref Outline outline, out BBox cbox);
+
+        [DllImport(FreetypeDll, CallingConvention = CallConvention)]
         public static extern Error FT_Outline_Done(IntPtr library, ref Outline outline);
 
         [DllImport(FreetypeDll, CallingConvention = CallConvention)]
         public static extern void FT_Bitmap_Init(out Bitmap bitmap);
+
+
+        [DllImport(FreetypeDll, CallingConvention = CallConvention)]
+        public static extern Error FT_Stroker_New(IntPtr library, out IntPtr stroker);
+
+        [DllImport(FreetypeDll, CallingConvention = CallConvention)]
+        public static extern void FT_Stroker_Done(IntPtr stroker);
+
+        [DllImport(FreetypeDll, CallingConvention = CallConvention)]
+        public static extern void FT_Stroker_Set(IntPtr stroker, int radius, StrokerLineCap line_cap, StrokerLineJoin line_join, IntPtr miter_limit);
+
+        [DllImport(FreetypeDll, CallingConvention = CallConvention)]
+        public static extern Error FT_Glyph_Stroke(ref Glyph* glyph, IntPtr stroker, [MarshalAs(UnmanagedType.U1)] bool destroy);
+
+        [DllImport(FreetypeDll, CallingConvention = CallConvention)]
+        public static extern Error FT_Glyph_Stroke(ref Glyph glyph, IntPtr stroker, [MarshalAs(UnmanagedType.U1)] bool destroy);
+
+        [DllImport(FreetypeDll, CallingConvention = CallConvention)]
+        public static extern Error FT_Glyph_StrokeBorder(ref Glyph glyph, IntPtr stroker, [MarshalAs(UnmanagedType.U1)] bool inside, [MarshalAs(UnmanagedType.U1)] bool destroy);
+
+        [DllImport(FreetypeDll, CallingConvention = CallConvention)]
+        public static extern Error FT_Stroker_ParseOutline(IntPtr stroker, ref Outline outline, [MarshalAs(UnmanagedType.U1)] bool opened);
+
+        [DllImport(FreetypeDll, CallingConvention = CallConvention)]
+        public static extern Error FT_Stroker_GetBorderCounts(IntPtr stroker, StrokerBorder border, out uint num_points, out uint num_contours);
+
+        [DllImport(FreetypeDll, CallingConvention = CallConvention)]
+        public static extern Error FT_Stroker_GetCounts(IntPtr stroker, out uint num_points, out uint num_contours);
+
+        [DllImport(FreetypeDll, CallingConvention = CallConvention)]
+        public static extern void FT_Stroker_ExportBorder(IntPtr stroker, StrokerBorder border, ref Outline outline);
+
+        [DllImport(FreetypeDll, CallingConvention = CallConvention)]
+        public static extern void FT_Stroker_Export(IntPtr stroker, ref Outline outline);
     }
 }

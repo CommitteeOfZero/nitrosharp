@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netcoreapp2.2</TargetFramework>
+    <TargetFramework>netcoreapp3.0</TargetFramework>
     <LangVersion>8.0</LangVersion>
     <OutputType>Exe</OutputType>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -30,7 +30,7 @@
     <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="4.5.2" />
     <!--<PackageReference Include="Veldrid" Version="4.5.0" />
     <PackageReference Include="Veldrid.StartupUtilities" Version="4.5.0" />-->
-    <PackageReference Include="Microsoft.DotNet.ILCompiler" Version="1.0.0-alpha-27502-01" />
+    <PackageReference Include="Microsoft.DotNet.ILCompiler" Version="1.0.0-alpha-27527-01" />
   </ItemGroup>
 
 </Project>

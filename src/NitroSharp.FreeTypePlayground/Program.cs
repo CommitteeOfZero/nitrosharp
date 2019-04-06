@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using NitroSharp.Graphics;
@@ -20,6 +21,11 @@ namespace NitroSharp.FreeTypePlayground
 
         static unsafe void Main(string[] args)
         {
+            var fontLib = new FontLibrary();
+            GC.KeepAlive(fontLib);
+            FontFamily fontFamily = fontLib.RegisterFont("Fonts/NotoSansCJKjp-Regular.otf");
+            FontFace font = fontFamily.GetFace(FontStyle.Regular);
+
             var options = new GraphicsDeviceOptions(true, null, true);
             options.PreferStandardClipSpaceYDirection = true;
             VeldridStartup.CreateWindowAndGraphicsDevice(
@@ -32,12 +38,6 @@ namespace NitroSharp.FreeTypePlayground
             const uint width = 512;
             const uint height = 512;
             CommandList cl = gd.ResourceFactory.CreateCommandList();
-
-            var fontLib = new FontLibrary();
-            FontFamily fontFamily = fontLib.RegisterFont("Fonts/NotoSansCJKjp-Regular.otf");
-            FontFace font = fontFamily.GetFace(FontStyle.Regular);
-            var g = font.GetGlyph('G', 22.3f);
-
 
             var bigFontSize = 40;
             var meowColor = new RgbaFloat(253 / 255.0f, 149 / 255.0f, 89 / 255.0f, 1.0f);
@@ -59,8 +59,9 @@ namespace NitroSharp.FreeTypePlayground
             var layout = new TextLayout(
                 new[]
                 {
-                    TextRun.Regular("Sample Text\n                          ".AsMemory(), font, FontSize, RgbaFloat.White),
-                    TextRun.WithRubyText("西條".AsMemory(), "にしじょう".AsMemory(), font, FontSize, blue)
+                    TextRun.Regular("The Committee\n                          ".AsMemory(), font, FontSize, RgbaFloat.White),
+                    //TextRun.Regular("The Committee would be the Committee of 300 that KnightHeart had been talking about, right?".AsMemory(), font, FontSize, RgbaFloat.White),
+                    //TextRun.WithRubyText("西條".AsMemory(), "にしじょう".AsMemory(), font, FontSize, RgbaFloat.White)
                 },
                 new Size(400, 600));
 
@@ -82,7 +83,7 @@ namespace NitroSharp.FreeTypePlayground
             layout.EndLine(font);
 
             //string charset = File.ReadAllText("S:/noah-charset.utf8");
-            string charset = " ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz西條にしじょう .,- \n'";
+            string charset = " ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz西條にしじょう .,?- \n'";
 
             var factory = gd.ResourceFactory;
             var shaderLibrary = new ShaderLibrary(gd);
@@ -95,6 +96,7 @@ namespace NitroSharp.FreeTypePlayground
             var mainBucket = new RenderBucket<int>(16);
 
             (Shader vs, Shader fs) = shaderLibrary.GetShaderSet("text");
+            (Shader outlineVS, Shader outlineFS) = shaderLibrary.GetShaderSet("outline");
 
             var vsLayout = factory.CreateResourceLayout(
                 new ResourceLayoutDescription(
@@ -118,9 +120,25 @@ namespace NitroSharp.FreeTypePlayground
                     new[] { vsLayout, fsLayout },
                     gd.SwapchainFramebuffer.OutputDescription));
 
+            var secondPipeline = factory.CreateGraphicsPipeline(
+               new GraphicsPipelineDescription(
+                   BlendStateDescription.SingleAlphaBlend,
+                   DepthStencilStateDescription.Disabled,
+                   RasterizerStateDescription.CullNone,
+                   PrimitiveTopology.TriangleList,
+                   new ShaderSetDescription(
+                       new[] { QuadVertex.LayoutDescription, InstanceData.LayoutDescription },
+                       new[] { outlineVS, outlineFS }),
+                   new[] { vsLayout, fsLayout },
+                   gd.SwapchainFramebuffer.OutputDescription));
+
             DeviceBuffer rectsStaging = factory.CreateBuffer(new BufferDescription(
                 (uint)(sizeof(Vector4) * 4096), BufferUsage.Staging));
             MappedResourceView<Vector4> rects = gd.Map<Vector4>(rectsStaging, MapMode.Write);
+
+            DeviceBuffer outlineRectsStaging = factory.CreateBuffer(new BufferDescription(
+               (uint)(sizeof(Vector4) * 4096), BufferUsage.Staging));
+            MappedResourceView<Vector4> outlineRects = gd.Map<Vector4>(outlineRectsStaging, MapMode.Write);
 
             Texture layersStaging = factory.CreateTexture(TextureDescription.Texture1D(
                     4096, 1, 1, PixelFormat.R8_UInt, TextureUsage.Staging));
@@ -129,16 +147,20 @@ namespace NitroSharp.FreeTypePlayground
             var glyphMap = new Dictionary<GlyphCacheKey, ushort>();
 
             var atlas = new TextureAtlas(gd, width, height, layerCount: 64, PixelFormat.R8_UNorm);
+            var outlines = new TextureAtlas(gd, width, height, layerCount: 64, PixelFormat.R8_G8_B8_A8_UNorm);
 
             cl.Begin();
             atlas.Begin(clear: true);
+            outlines.Begin(clear: true);
             var pixels = new byte[16 * 1024];
-
+            var outlinePixels = new byte[16 * 1024];
+            var outlineOffsets = new Vector2[4096];
             var rs = new Rectangle[charset.Length * 2];
-
+            var sw = Stopwatch.StartNew();
             loop(0, FontSize);
-            loop(charset.Length, 11);
-
+            sw.Stop();
+            Console.WriteLine(sw.Elapsed.TotalMilliseconds);
+            //loop(charset.Length, 11);
             void loop(int start, int fontSize)
             {
                 for (int i = start; i < start + charset.Length; i++)
@@ -155,6 +177,15 @@ namespace NitroSharp.FreeTypePlayground
                             out uint layer,
                             out rs[i]);
 
+                        var outlineBytes = glyph.RasterizeOutlineHack(font, out Size outlineSize, out outlineOffsets[i]);
+                        outlines.TryPackSprite<RgbaByte>(
+                            outlineBytes,
+                            outlineSize.Width,
+                            outlineSize.Height,
+                            out _,
+                            out Rectangle outlineRect
+                        );
+
                         arrayLayers[i] = (byte)layer;
                         var rect = rs[i];
                         rects[i] = new Vector4(
@@ -163,21 +194,29 @@ namespace NitroSharp.FreeTypePlayground
                             rect.Right,
                             rect.Bottom);
 
+                        outlineRects[i] = new Vector4(
+                            outlineRect.Left,
+                            outlineRect.Top,
+                            outlineRect.Right,
+                            outlineRect.Bottom);
+
                         var key = new GlyphCacheKey(charset[i - start], fontSize);
                         glyphMap[key] = (ushort)i;
                     }
                 }
             }
 
-            font.Dispose();
-
             gd.Unmap(rectsStaging);
+            gd.Unmap(outlineRectsStaging);
             gd.Unmap(layersStaging);
             atlas.End(cl);
+            outlines.End(cl);
             cl.End();
             gd.SubmitCommands(cl);
 
             DeviceBuffer rectBuffer = factory.CreateBuffer(new BufferDescription(
+               (uint)(sizeof(Vector4) * 4096), BufferUsage.UniformBuffer));
+            DeviceBuffer outlineRectBuffer = factory.CreateBuffer(new BufferDescription(
                (uint)(sizeof(Vector4) * 4096), BufferUsage.UniformBuffer));
 
             Texture arrayLayersBuffer = factory.CreateTexture(TextureDescription.Texture1D(
@@ -185,12 +224,17 @@ namespace NitroSharp.FreeTypePlayground
 
             cl.Begin();
             cl.CopyBuffer(rectsStaging, 0, rectBuffer, 0, rectBuffer.SizeInBytes);
+            cl.CopyBuffer(outlineRectsStaging, 0, outlineRectBuffer, 0, outlineRectBuffer.SizeInBytes);
             cl.CopyTexture(layersStaging, arrayLayersBuffer);
 
             var vsResourceSet = factory.CreateResourceSet(
                 new ResourceSetDescription(vsLayout, projectionBuffer, rectBuffer, arrayLayersBuffer));
+            var vsOutlineResourceSet = factory.CreateResourceSet(
+                new ResourceSetDescription(vsLayout, projectionBuffer, outlineRectBuffer, arrayLayersBuffer));
             var fsResourceSet = factory.CreateResourceSet(
-                new ResourceSetDescription(fsLayout, atlas.Texture, gd.LinearSampler));
+                new ResourceSetDescription(fsLayout, atlas.Texture, gd.PointSampler));
+            var fsOutlineResourceSet = factory.CreateResourceSet(
+                new ResourceSetDescription(fsLayout, outlines.Texture, gd.LinearSampler));
 
             var vb = new VertexBuffer<QuadVertex>(gd, cl,
                 new[]
@@ -223,15 +267,29 @@ namespace NitroSharp.FreeTypePlayground
                 var key = new GlyphCacheKey(pg.Character, fontSize);
                 int idx = glyphMap[key];
                 data.GlyphIndex = idx;
-                data.Origin = pg.Position;
-                data.Color = run.Color.ToVector4();
+                var pos = pg.Position;
+                //pos.X += 100;
+                data.Origin = pos;
+                var c = run.Color.ToVector4();
+                data.Color = c;
+            }
+
+            var outlineData = new InstanceData[glyphs.Count * 7];
+            var gs = glyphs.ToArray();
+            gs.CopyTo(outlineData, 0);
+            foreach (ref InstanceData id in outlineData.AsSpan(0, gs.Length))
+            {
+                id.Color = RgbaFloat.Black.ToVector4();
+                id.Origin += new Vector2(-4, -4);
             }
 
             var instanceData = new VertexBuffer<InstanceData>(gd, cl, glyphs.AsSpan());
+            var outlineDataBuf = new VertexBuffer<InstanceData>(gd, cl, outlineData.AsSpan());
 
             cl.End();
             gd.SubmitCommands(cl);
 
+            var bakColor = new RgbaFloat(25 / 255.0f, 29 / 255.0f, 34 / 255.0f, 1.0f);
             while (window.Exists)
             {
                 window.PumpEvents();
@@ -239,7 +297,7 @@ namespace NitroSharp.FreeTypePlayground
 
                 cl.Begin();
                 cl.SetFramebuffer(gd.MainSwapchain.Framebuffer);
-                cl.ClearColorTarget(0, RgbaFloat.CornflowerBlue);
+                cl.ClearColorTarget(0, bakColor);
 
                 mainBucket.Begin();
                 var submission = new RenderBucketSubmission<QuadVertex, InstanceData>
@@ -256,7 +314,24 @@ namespace NitroSharp.FreeTypePlayground
                     InstanceCount = (ushort)pgs.Length
                 };
 
-                mainBucket.Submit(ref submission, 0);
+                mainBucket.Submit(ref submission, 10);
+
+                var submission2 = new RenderBucketSubmission<QuadVertex, InstanceData>
+                {
+                    Pipeline = secondPipeline,
+                    SharedResourceSet = vsOutlineResourceSet,
+                    ObjectResourceSet = fsOutlineResourceSet,
+                    VertexBuffer = vb,
+                    IndexBuffer = ib,
+                    IndexBase = 0,
+                    IndexCount = 6,
+                    InstanceDataBuffer = outlineDataBuf,
+                    InstanceBase = 0,
+                    InstanceCount = (ushort)(pgs.Length)
+                };
+
+                mainBucket.Submit(ref submission2, 0);
+
                 mainBucket.End(cl);
 
                 cl.End();

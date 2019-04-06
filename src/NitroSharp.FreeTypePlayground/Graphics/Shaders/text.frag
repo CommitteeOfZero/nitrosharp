@@ -10,6 +10,6 @@ layout(location = 0) out vec4 OutColor;
 
 void main()
 {
-    float alpha = texture(sampler2DArray(Atlas, Sampler), fs_TexCoord).r;
+    float alpha = texture(sampler2DArray(Atlas, Sampler), fs_TexCoord).r * fs_Color.w;
     OutColor = vec4(fs_Color.x, fs_Color.y, fs_Color.z, alpha);
 }

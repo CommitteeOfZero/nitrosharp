@@ -3,9 +3,10 @@ using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using FreeTypeBindings;
-using NitroSharp.Primitives;
 using System.Collections.Generic;
+using Veldrid;
 
+using FTGlyph = FreeTypeBindings.Glyph;
 using Size = NitroSharp.Primitives.Size;
 
 namespace NitroSharp.Text
@@ -72,11 +73,10 @@ namespace NitroSharp.Text
     //             |                                   |
     //             |------------- advanceX ----------->|
     //
-    internal unsafe readonly struct Glyph
+    internal unsafe struct Glyph
     {
-        internal readonly Outline Outline;
+        internal OutlineGlyph* FTGlyph;
 
-        public readonly SizeF Size;
         public readonly Size BitmapSize;
         public readonly int BitmapLeft;
         public readonly int BitmapTop;
@@ -84,24 +84,12 @@ namespace NitroSharp.Text
 
         internal Glyph(GlyphSlot* slot)
         {
-            FT.CheckResult(FT.FT_Outline_New(
-                slot->library,
-                (uint)slot->outline.n_points,
-                slot->outline.n_contours,
-                out Outline outlineCopy));
-
-            FT.CheckResult(FT.FT_Outline_Copy(ref slot->outline, ref outlineCopy));
-            Outline = outlineCopy;
-
-            GlyphMetrics* metrics = &slot->metrics;
-            Size = new SizeF((long)metrics->width / 64.0f,
-                             (long)metrics->height / 64.0f);
+            FT.FT_Get_Glyph(slot, out FTGlyph* glyphPtr);
+            FTGlyph = (OutlineGlyph*)glyphPtr;
             Advance = new Vector2(slot->advance.X.ToSingle(),
                                   slot->advance.Y.ToSingle());
-
             BitmapSize = new Size((uint)slot->bitmap.width,
                                   (uint)slot->bitmap.rows);
-
             (BitmapLeft, BitmapTop) = (slot->bitmap_left, slot->bitmap_top);
         }
 
@@ -110,11 +98,16 @@ namespace NitroSharp.Text
             buffer.Clear();
 
             (int w, int h) = ((int)BitmapSize.Width, (int)BitmapSize.Height);
-            Outline outline = Outline;
+            ref Outline outline = ref FTGlyph->outline;
             FT.FT_Outline_Translate(
                 ref outline,
                 (IntPtr)(-BitmapLeft * 64),
-                (IntPtr)((h - BitmapTop) * 64));
+                (IntPtr)((h - BitmapTop) * 64)
+            );
+
+            //FT.FT_Glyph_Get_CBox((FTGlyph*)FTGlyph, GlyphBBoxMode.Pixels, out BBox bbox);
+            //Debug.Assert(bbox.Left == BitmapLeft);
+            //Debug.Assert(bbox.Top == BitmapTop);
 
             fixed (byte* ptr = &buffer[0])
             {
@@ -129,8 +122,188 @@ namespace NitroSharp.Text
                 };
 
                 FT.CheckResult(
-                    FT.FT_Outline_Get_Bitmap(face.Library, ref outline, ref bmp));
+                    FT.FT_Outline_Get_Bitmap(face.Library, ref outline, ref bmp)
+                );
+
+                //Span<byte> sdf = stackalloc byte[w * h];
+                //Sdf.make_distance_mapb(buffer, w, h, sdf);
+                //sdf.CopyTo(buffer);
             }
+        }
+
+        //public void RasterizeWithOutline(FontFace face, Span<byte> buffer, out Size size)
+        //{
+        //    buffer.Clear();
+
+        //    (int w, int h) = ((int)BitmapSize.Width, (int)BitmapSize.Height);
+        //    ref Outline outline = ref FTGlyph->outline;
+
+        //    var radius = Fixed16Dot16.FromInt32(2);
+        //    IntPtr stroker = face.Stroker;
+        //    FT.FT_Stroker_Set(
+        //        stroker,
+        //        64 * 2,
+        //        StrokerLineCap.Round,
+        //        StrokerLineJoin.Round,
+        //        miter_limit: IntPtr.Zero
+        //    );
+
+        //    var glyph = (FTGlyph*)FTGlyph;
+        //    FT.FT_Glyph_Stroke(ref glyph, face.Stroker, destroy: true);
+        //    var origin = new FTVector26Dot6(Fixed26Dot6.FromInt32(0), Fixed26Dot6.FromInt32(0));
+        //    FT.CheckResult(FT.FT_Glyph_To_Bitmap(ref glyph, RenderMode.Normal, ref origin, destroy: true));
+
+        //    BitmapGlyph* bmp = (BitmapGlyph*)glyph;
+        //    size = new Size((uint)bmp->bitmap.width, (uint)bmp->bitmap.rows);
+
+        //    var span = new Span<byte>(bmp->bitmap.buffer.ToPointer(), (int)(size.Width * size.Height));
+        //}
+
+        unsafe struct Pixel
+        {
+            public fixed byte Channels[4];
+        }
+
+        public ReadOnlySpan<RgbaByte> RasterizeOutlineHack(FontFace face, out Size size, out Vector2 bitmapOffset)
+        {
+            var glyph = (FTGlyph*)FTGlyph;
+            IntPtr stroker = face.Stroker;
+
+            var buffer = new Pixel[40 * 40];
+            int w = 0, h = 0;
+            BBox bbox = default;
+            int ch = 3;
+            for (int i = 4; i > 0; i--)
+            {
+                FT.FT_Stroker_Set(
+                    stroker,
+                    64 * i,
+                    StrokerLineCap.Round,
+                    StrokerLineJoin.Round,
+                    miter_limit: IntPtr.Zero
+                );
+
+                FTGlyph* stroked = (FTGlyph*)FTGlyph;
+                FT.CheckResult(FT.FT_Glyph_Stroke(ref stroked, stroker, destroy: false));
+                FTVector26Dot6 origin = default;
+                FT.CheckResult(FT.FT_Glyph_To_Bitmap(ref stroked, RenderMode.Normal, ref origin, destroy: false));
+                BitmapGlyph* bmp = (BitmapGlyph*)stroked;
+                ref readonly Bitmap bitmap = ref bmp->bitmap;
+                var srcBuffer = new ReadOnlySpan<byte>(bitmap.buffer.ToPointer(), bitmap.width * bitmap.rows);
+                if (i == 4)
+                {
+                    w = bmp->bitmap.width;
+                    h = bmp->bitmap.rows;
+                    FT.FT_Glyph_Get_CBox(glyph, GlyphBBoxMode.Pixels, out bbox);
+                }
+
+                int dstStartX = (w - bitmap.width) / 2;
+                int dstStartY = (h - bitmap.rows) / 2;
+                int thisH = bitmap.rows;
+                int thisW = bitmap.width;
+                for (int srcY = 0; srcY < thisH; srcY++)
+                {
+                    for (int srcX = 0; srcX < thisW; srcX++)
+                    {
+                        int index = w * (dstStartY + srcY) + dstStartX + srcX;
+                        buffer[index].Channels[ch] = srcBuffer[srcY * thisW + srcX];
+                    }
+                }
+
+                ch--;
+            }
+
+            size = new Size((uint)w, (uint)h);
+            bitmapOffset = new Vector2(bbox.Left, bbox.Top);
+            return MemoryMarshal.Cast<Pixel, RgbaByte>(buffer.AsSpan(0, w * h));
+        }
+
+        public void RasterizeOutline(FontFace face, Span<byte> buffer, out Size size, out Vector2 bitmapOffset)
+        {
+            buffer.Clear();
+
+            (int w, int h) = ((int)BitmapSize.Width, (int)BitmapSize.Height);
+            ref Outline outline = ref FTGlyph->outline;
+
+            var radius = Fixed16Dot16.FromInt32(2);
+            IntPtr stroker = face.Stroker;
+            FT.FT_Stroker_Set(
+                stroker,
+                64 * 4,
+                StrokerLineCap.Round,
+                StrokerLineJoin.Round,
+                miter_limit: IntPtr.Zero
+            );
+
+            var glyph = (FTGlyph*)FTGlyph;
+            FT.FT_Glyph_Stroke(ref glyph, face.Stroker, destroy: true);
+            FT.FT_Glyph_Get_CBox(glyph, GlyphBBoxMode.Pixels, out BBox bbox);
+            //var origin = new FTVector26Dot6(Fixed26Dot6.FromInt32(-bbox.Left), Fixed26Dot6.FromInt32(-bbox.Top));
+            var origin = new FTVector26Dot6(Fixed26Dot6.FromInt32(0), Fixed26Dot6.FromInt32(0));
+            FT.CheckResult(FT.FT_Glyph_To_Bitmap(ref glyph, RenderMode.Normal, ref origin, destroy: true));
+
+            BitmapGlyph* bmp = (BitmapGlyph*)glyph;
+            size = new Size((uint)bmp->bitmap.width, (uint)bmp->bitmap.rows);
+            var span = new Span<byte>(bmp->bitmap.buffer.ToPointer(), (int)(size.Width * size.Height));
+            span.CopyTo(buffer);
+
+            bitmapOffset = new Vector2(bbox.Left, bbox.Top);
+
+            //FT.CheckResult(
+            //    FT.FT_Stroker_ParseOutline(stroker, ref outline, opened: false)
+            //);
+            //FT.CheckResult(
+            //    FT.FT_Stroker_GetCounts(
+            //        stroker,
+            //        out uint numPoints,
+            //        out uint numContours
+            //    )
+            //);
+            //FT.CheckResult(
+            //    FT.FT_Outline_New(face.Library, numPoints, (int)numContours, out Outline newOutline)
+            //);
+
+            //newOutline.n_contours = 0;
+            //newOutline.n_points = 0;
+            //FT.FT_Stroker_Export(stroker, ref newOutline);
+
+            //FT.FT_Outline_Get_BBox(ref newOutline, out BBox outlineBox);
+            //size = new Size(
+            //    width: (uint)(outlineBox.Right - outlineBox.Left),
+            //    height: (uint)(outlineBox.Bottom - outlineBox.Top)
+            //);
+
+            //FT.FT_Outline_Translate(
+            //    ref newOutline,
+            //    (IntPtr)(-1 * 64),
+            //    (IntPtr)(1 * 64)
+            //);
+            //FT.FT_Outline_Translate(
+            //    ref outline,
+            //    (IntPtr)(-BitmapLeft * 64),
+            //    (IntPtr)((h - BitmapTop) * 64)
+            //);
+            //outline = newOutline;
+
+            //fixed (byte* ptr = &buffer[0])
+            //{
+            //    var bmp = new Bitmap
+            //    {
+            //        buffer = new IntPtr(ptr),
+            //        width = w,
+            //        pitch = w,
+            //        rows = h,
+            //        pixel_mode = PixelMode.Gray,
+            //        num_grays = 256
+            //    };
+
+            //    FT.CheckResult(
+            //        FT.FT_Outline_Get_Bitmap(face.Library, ref outline, ref bmp)
+            //    );
+            //    FT.CheckResult(
+            //       FT.FT_Outline_Get_Bitmap(face.Library, ref newOutline, ref bmp)
+            //   );
+            //}
         }
     }
 
@@ -158,6 +331,8 @@ namespace NitroSharp.Text
         private VerticalMetrics _currentSizeMetrics;
         private readonly Dictionary<GlyphCacheKey, Glyph> _glyphCache;
 
+        private IntPtr _stroker;
+
         public FontFace(IntPtr ftInstance, Face* face)
         {
             _ftInstance = ftInstance;
@@ -179,9 +354,11 @@ namespace NitroSharp.Text
             }
 
             _glyphCache = new Dictionary<GlyphCacheKey, Glyph>(1024);
+            FT.FT_Stroker_New(ftInstance, out _stroker);
         }
 
         internal IntPtr Library => _ftInstance;
+        internal IntPtr Stroker => _stroker;
 
         public string FontFamily { get; }
         public FontStyle Style { get; }
@@ -191,12 +368,12 @@ namespace NitroSharp.Text
         {
             FT.CheckResult(
                 FT.FT_Set_Char_Size(_face,
-                (IntPtr)Fixed26Dot6.FromSingle(0).Value,
-                (IntPtr)Fixed26Dot6.FromSingle(ptSize).Value,
-                72, 72));
+                    (IntPtr)Fixed26Dot6.FromSingle(0).Value,
+                    (IntPtr)Fixed26Dot6.FromSingle(ptSize).Value,
+                    72, 72)
+            );
 
             _currentSize = ptSize;
-
             SizeMetrics metrics = _face->size->metrics;
             float ascender = Fixed26Dot6.FromRawValue((int)metrics.ascender).ToSingle();
             float descender = Fixed26Dot6.FromRawValue((int)metrics.descender).ToSingle();
@@ -246,20 +423,20 @@ namespace NitroSharp.Text
 
         private void Destroy()
         {
-            foreach (Glyph g in _glyphCache.Values)
-            {
-                Outline outline = g.Outline;
-                FT.CheckResult(FT.FT_Outline_Done(_ftInstance, ref outline));
-            }
+            //foreach (Glyph g in _glyphCache.Values)
+            //{
+            //    FT.FT_Done_Glyph((FTGlyph*)g.FTGlyph);
+            //}
 
-            _glyphCache.Clear();
-            FT.FT_Done_Face(_face);
-            _face = null;
+            //_glyphCache.Clear();
+            //FT.FT_Stroker_Done(_stroker);
+            //FT.FT_Done_Face(_face);
+            //_face = null;
         }
 
-        ~FontFace()
-        {
-            Destroy();
-        }
+        //~FontFace()
+        //{
+        //    Destroy();
+        //}
     }
 }
