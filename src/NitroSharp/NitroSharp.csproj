@@ -3,6 +3,7 @@
   <PropertyGroup>
     <TargetFramework>netcoreapp2.2</TargetFramework>
     <ShaderOutputPath>$(BaseIntermediateOutputPath)\Shaders.Generated</ShaderOutputPath>
+    <LangVersion>8.0</LangVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <NoWarn>1701;1702;CA1063</NoWarn>
   </PropertyGroup>

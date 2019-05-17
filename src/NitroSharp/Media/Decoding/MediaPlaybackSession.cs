@@ -1,10 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using FFmpeg.AutoGen;
 using NitroSharp.Primitives;
+
+#nullable enable
 
 namespace NitroSharp.Media.Decoding
 {
@@ -17,18 +20,12 @@ namespace NitroSharp.Media.Decoding
         private ProcessingContext _audioProcessingContext;
         private ProcessingContext _videoProcessingContext;
 
-        private Task _readingPackets;
+        private Task? _readingPackets;
         private volatile bool _running;
-        private CancellationTokenSource _cts;
+        private CancellationTokenSource? _cts;
 
         private double? _seekTarget;
         private volatile int _disposed;
-
-        private bool SeekingRequested
-        {
-            get => _seekTarget.HasValue;
-            set => _seekTarget = null;
-        }
 
         private struct ProcessingContext
         {
@@ -40,12 +37,12 @@ namespace NitroSharp.Media.Decoding
 
         public MediaPlaybackSession(
             MediaContainer mediaContainer,
-            VideoStream videoStream,
-            AudioStream audioStream,
+            VideoStream? videoStream,
+            AudioStream? audioStream,
             in MediaProcessingOptions options)
         {
             Container = mediaContainer;
-            _processingContexts = new ProcessingContext[mediaContainer.MediaStreams.Count];
+            _processingContexts = new ProcessingContext[mediaContainer.MediaStreams.Length];
             _packetPool = new UnmanagedMemoryPool((uint)Unsafe.SizeOf<AVPacket>(), PacketPoolSize, clearMemory: true);
 
             VideoStream = videoStream ?? mediaContainer.BestVideoStream;
@@ -79,16 +76,16 @@ namespace NitroSharp.Media.Decoding
         }
 
         public MediaContainer Container { get; }
-        public VideoStream VideoStream { get; }
-        public AudioStream AudioStream { get; }
-        public MediaFrameQueue<MediaFrame> VideoFrameQueue { get; private set; }
-        public MediaFrameQueue<MediaFrame> AudioBufferQueue { get; private set; }
+        public VideoStream? VideoStream { get; }
+        public AudioStream? AudioStream { get; }
+        public MediaFrameQueue<MediaFrame>? VideoFrameQueue { get; private set; }
+        public MediaFrameQueue<MediaFrame>? AudioBufferQueue { get; private set; }
 
         public bool IsRunning => _running;
-        public Task Completion { get; private set; }
+        public Task? Completion { get; private set; }
 
         private unsafe void OpenStream(
-            MediaStream stream, AudioParameters? audioParameters, VideoFrameConverter frameConverter,
+            MediaStream stream, AudioParameters? audioParameters, VideoFrameConverter? frameConverter,
             Size? videoResolution, out ProcessingContext processingContext)
         {
             var decodingSession = new DecodingSession(stream.AvStream);
@@ -125,7 +122,7 @@ namespace NitroSharp.Media.Decoding
             AudioBufferQueue = _audioProcessingContext.Pipeline?.Output;
             VideoFrameQueue = _videoProcessingContext.Pipeline?.Output;
             _running = true;
-            _readingPackets = Task.Run(() => ReadPackets(_cts));
+            _readingPackets = Task.Run(ReadPackets);
         }
 
         public void Seek(TimeSpan time) => Seek(time.TotalSeconds);
@@ -138,19 +135,19 @@ namespace NitroSharp.Media.Decoding
 
             if (_readingPackets?.IsCompleted == true)
             {
-                _readingPackets = Task.Run(() => ReadPackets(_cts));
+                _readingPackets = Task.Run(ReadPackets);
             }
         }
 
-        private async Task ReadPackets(CancellationTokenSource cts)
+        private async Task ReadPackets()
         {
+            Debug.Assert(_cts != null);
             bool eof = false;
-            while (!cts.IsCancellationRequested && !eof)
+            while (!_cts.IsCancellationRequested && !eof)
             {
                 if (_seekTarget.HasValue)
                 {
                     Container.Seek(TimeSpan.FromSeconds(_seekTarget.Value));
-                    SeekingRequested = false;
                 }
 
                 IntPtr chunk = await _packetPool.RentChunkAsync();
@@ -201,7 +198,7 @@ namespace NitroSharp.Media.Decoding
         public void Stop()
         {
             _running = false;
-            _cts.Cancel();
+            _cts?.Cancel();
         }
 
         public void Dispose()
@@ -225,9 +222,9 @@ namespace NitroSharp.Media.Decoding
             try
             {
                 var tasks = new List<Task>();
-                foreach (var ctx in _processingContexts)
+                foreach (ProcessingContext ctx in _processingContexts)
                 {
-                    var pipeline = ctx.Pipeline;
+                    MediaProcessingPipeline pipeline = ctx.Pipeline;
                     if (pipeline != null)
                     {
                         pipeline.Dispose();
@@ -235,7 +232,10 @@ namespace NitroSharp.Media.Decoding
                     }
                 }
 
-                tasks.Add(_readingPackets);
+                if (_readingPackets != null)
+                {
+                    tasks.Add(_readingPackets);
+                }
                 await Task.WhenAll(tasks);
             }
             catch (OperationCanceledException)
@@ -243,9 +243,9 @@ namespace NitroSharp.Media.Decoding
             }
             finally
             {
-                foreach (var ctx in _processingContexts)
+                foreach (ProcessingContext ctx in _processingContexts)
                 {
-                    var processor = ctx.Processor;
+                    MediaProcessor processor = ctx.Processor;
                     if (processor != null)
                     {
                         processor.Dispose();
@@ -257,6 +257,7 @@ namespace NitroSharp.Media.Decoding
             }
         }
 
+        // TODO: unused method
         private void DestroyPacketPool()
         {
             foreach (ref AVPacket packet in _packetPool.AsSpan<AVPacket>())

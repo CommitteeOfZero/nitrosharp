@@ -5,6 +5,8 @@ using System.Runtime.InteropServices;
 using NitroSharp.Utilities;
 using Veldrid;
 
+#nullable enable
+
 namespace NitroSharp.Graphics
 {
     [StructLayout(LayoutKind.Auto)]
@@ -42,6 +44,7 @@ namespace NitroSharp.Graphics
 
     internal sealed class RenderBucket<TKey> where TKey : IComparable<TKey>
     {
+        [StructLayout(LayoutKind.Auto)]
         private struct RenderItem
         {
             public ResourceSet ObjectResourceSet;
@@ -144,7 +147,7 @@ namespace NitroSharp.Graphics
             byte lastIndexBuffer = byte.MaxValue;
             byte lastPipelineId = byte.MaxValue;
             byte lastSharedResourceSetId = byte.MaxValue;
-            ResourceSet lastObjectResourceSet = null;
+            ResourceSet? lastObjectResourceSet = null;
             for (uint i = 0; i < _renderItems.Count; i++)
             {
                 ref RenderItem item = ref _renderItems[i];
@@ -188,7 +191,6 @@ namespace NitroSharp.Graphics
                     lastIndexBuffer = item.IndexBuffer;
                 }
 
-                uint instanceStart = i;
                 commandList.DrawIndexed(
                     item.IndexCount,
                     instanceCount: 1,
@@ -200,7 +202,7 @@ namespace NitroSharp.Graphics
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private byte GetPipelineId(Pipeline pipeline)
-            => GetResourceId(pipeline, _pipelines, ref _lastPipeline);
+           => GetResourceId(pipeline, _pipelines, ref _lastPipeline);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private byte GetResourceId<T>(T resource, List<T> resourceList, ref (byte index, T resource) lastUsed)
@@ -223,40 +225,5 @@ namespace NitroSharp.Graphics
 
             return id;
         }
-
-        //private void Sort(int[] keys, RenderItem[] renderItems, int left, int right)
-        //{
-        //    if ((right - left) < 2) return;
-
-        //    int l = left;
-        //    int r = right;
-        //    int pivot = keys[(left + right) / 2];
-        //    while (l <= r)
-        //    {
-        //        while (keys[l] < pivot) { l++; }
-        //        while (keys[r] > pivot) { r--; }
-
-        //        if (l <= r)
-        //        {
-        //            ref int lKey = ref keys[l];
-        //            ref int rKey = ref keys[r];
-        //            int tmp = lKey;
-        //            lKey = rKey;
-        //            rKey = tmp;
-
-        //            ref var lItem = ref renderItems[l];
-        //            ref var rItem = ref renderItems[r];
-        //            RenderItem tmpItem = lItem;
-        //            lItem = rItem;
-        //            rItem = tmpItem;
-
-        //            l++;
-        //            r--;
-        //        }
-
-        //        if (left < r) { Sort(keys, renderItems, left, r); }
-        //        if (l < right) { Sort(keys, renderItems, l, right); }
-        //    }
-        //}
     }
 }

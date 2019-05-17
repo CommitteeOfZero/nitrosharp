@@ -1,8 +1,11 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using NitroSharp.Primitives;
 using Veldrid;
+
+#nullable enable
 
 namespace NitroSharp.Graphics
 {
@@ -48,8 +51,8 @@ namespace NitroSharp.Graphics
 
             ResourceFactory factory = gd.ResourceFactory;
             _spriteResourceLayout = factory.CreateResourceLayout(new ResourceLayoutDescription(
-                    new ResourceLayoutElementDescription("Texture", ResourceKind.TextureReadOnly, ShaderStages.Fragment),
-                    new ResourceLayoutElementDescription("Sampler", ResourceKind.Sampler, ShaderStages.Fragment)));
+                new ResourceLayoutElementDescription("Texture", ResourceKind.TextureReadOnly, ShaderStages.Fragment),
+                new ResourceLayoutElementDescription("Sampler", ResourceKind.Sampler, ShaderStages.Fragment)));
 
             _spriteResourceSetDesc = new ResourceSetDescription(_spriteResourceLayout, new BindableResource[2]);
             _spriteResourceSetDesc.BoundResources[1] = gd.LinearSampler;
@@ -60,13 +63,13 @@ namespace NitroSharp.Graphics
                 new[] { vs, fs });
 
             var pipelineDesc = new GraphicsPipelineDescription(
-                    BlendStateDescription.SingleAlphaBlend,
-                    DepthStencilStateDescription.Disabled,
-                    RasterizerStateDescription.CullNone,
-                    PrimitiveTopology.TriangleList,
-                    shaderSetDesc,
-                    new[] { viewProjection.ResourceLayout, _spriteResourceLayout },
-                    framebuffer.OutputDescription);
+                BlendStateDescription.SingleAlphaBlend,
+                DepthStencilStateDescription.Disabled,
+                RasterizerStateDescription.CullNone,
+                PrimitiveTopology.TriangleList,
+                shaderSetDesc,
+                new[] { viewProjection.ResourceLayout, _spriteResourceLayout },
+                framebuffer.OutputDescription);
 
             _alphaBlendPipeline = factory.CreateGraphicsPipeline(ref pipelineDesc);
             pipelineDesc.BlendState = BlendStateDescription.SingleAdditiveBlend;

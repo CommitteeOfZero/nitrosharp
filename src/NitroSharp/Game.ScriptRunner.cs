@@ -3,9 +3,12 @@ using NitroSharp.NsScript.Compiler;
 using NitroSharp.NsScript.VM;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+
+#nullable enable
 
 namespace NitroSharp
 {
@@ -24,11 +27,11 @@ namespace NitroSharp
             private readonly bool _usingDedicatedThread;
             private readonly CancellationTokenSource _shutdownCancellation;
             private readonly string _nssFolder;
-            private VirtualMachine _nssInterpreter;
+            private VirtualMachine? _nssInterpreter;
             private readonly NsBuiltins _builtinFunctions;
 
             private volatile Status _status;
-            private Task _interpreterProc;
+            private Task? _interpreterProc;
 
             public ScriptRunner(Game game, World world) : base(world)
             {
@@ -121,6 +124,7 @@ namespace NitroSharp
 
             private Status Run()
             {
+                Debug.Assert(_nssInterpreter != null);
                 bool threadStateChanged = _nssInterpreter.RefreshThreadState();
                 if (threadStateChanged || _nssInterpreter.ProcessPendingThreadActions())
                 {
@@ -143,6 +147,7 @@ namespace NitroSharp
 
             protected override void HandleMessages(Queue<Message> messages)
             {
+                Debug.Assert(_nssInterpreter != null);
                 foreach (Message message in messages)
                 {
                     switch (message.Kind)
@@ -175,6 +180,7 @@ namespace NitroSharp
 
             private void RunThreadAction(ThreadActionMessage message)
             {
+                Debug.Assert(_nssInterpreter != null);
                 InterpreterThreadInfo threadInfo = message.ThreadInfo;
                 switch (message.Action)
                 {

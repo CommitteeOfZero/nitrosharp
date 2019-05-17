@@ -1,7 +1,10 @@
 ﻿using System.Collections.Immutable;
 using NitroSharp.Input;
+using System.Diagnostics;
 using NitroSharp.Text;
 using Veldrid;
+
+#nullable enable
 
 namespace NitroSharp.Dialogue
 {
@@ -26,11 +29,9 @@ namespace NitroSharp.Dialogue
 
         private readonly EntityTable.RefTypeRow<TextLayout> _textLayouts;
 
-        private TextRevealAnimation _revealAnimation;
-        private RevealSkipAnimation _revealSkipAnimation;
+        private TextRevealAnimation? _revealAnimation;
         private int _currentDialoguePart;
         private bool _startFromNewLine;
-        private string _lastVoiceName;
 
         public DialogueSystem(Game.Presenter presenter, InputTracker inputTracker)
             : base(presenter)
@@ -43,7 +44,6 @@ namespace NitroSharp.Dialogue
         private void ResetState()
         {
             _revealAnimation = null;
-            _revealSkipAnimation = null;
             _currentDialoguePart = 0;
             _startFromNewLine = false;
         }
@@ -124,12 +124,10 @@ namespace NitroSharp.Dialogue
 
             if (_world.TryGetAnimation<TextRevealAnimation>(input.TextEntity, out _revealAnimation))
             {
-                _revealSkipAnimation = null;
                 return Status.PlayingRevealAnimation;
             }
-            if (_world.TryGetAnimation<RevealSkipAnimation>(input.TextEntity, out _revealSkipAnimation))
+            if (_world.TryGetAnimation<RevealSkipAnimation>(input.TextEntity, out _))
             {
-                _revealAnimation = null;
                 return Status.PlayingSkipAnimation;
             }
 
@@ -182,6 +180,7 @@ namespace NitroSharp.Dialogue
 
         private void SkipTextRevealAnimation(Entity textEntity)
         {
+            Debug.Assert(_revealAnimation != null);
             TextRevealAnimation animation = _revealAnimation;
             if (!animation.IsAllTextVisible)
             {

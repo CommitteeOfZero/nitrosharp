@@ -3,6 +3,8 @@
   <PropertyGroup>
     <TargetFramework>netcoreapp3.0</TargetFramework>
     <OutputType>Exe</OutputType>
+    <LangVersion>8.0</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <ApplicationIcon>hoppygirl_fA5_icon.ico</ApplicationIcon>
     <PlatformTarget>x64</PlatformTarget>
     <DebugType>pdbonly</DebugType>

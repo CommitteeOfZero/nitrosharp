@@ -3,6 +3,8 @@ using System.Runtime.CompilerServices;
 using NitroSharp.Primitives;
 using NitroSharp.Utilities;
 
+#nullable enable
+
 namespace NitroSharp.Media.Decoding
 {
     public readonly struct MediaProcessingOptions : IEquatable<MediaProcessingOptions>
@@ -16,11 +18,6 @@ namespace NitroSharp.Media.Decoding
             VideoFrameConverter frameConverter,
             Size? outputVideoResolution = null)
         {
-            if (frameConverter == null)
-            {
-                throw new ArgumentNullException(nameof(frameConverter));
-            }
-
             OutputAudioParameters = outputAudioParameters;
             FrameConverter = frameConverter;
             OutputVideoResolution = outputVideoResolution;
@@ -36,7 +33,7 @@ namespace NitroSharp.Media.Decoding
                 if (OutputVideoResolution.HasValue == other.OutputVideoResolution.HasValue)
                 {
                     return OutputVideoResolution.HasValue
-                        ? OutputVideoResolution.Value.Equals(other.OutputVideoResolution.Value)
+                        ? OutputVideoResolution.Value.Equals(other.OutputVideoResolution!.Value)
                         : true;
                 }
             }

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -7,9 +6,11 @@ using FFmpeg.AutoGen;
 
 using static NitroSharp.Media.Decoding.FFmpegUtil;
 
+#nullable enable
+
 namespace NitroSharp.Media.Decoding
 {
-    public sealed partial class MediaContainer : IDisposable
+    public sealed unsafe class MediaContainer : IDisposable
     {
         private const int IOBufferSize = 4096;
 
@@ -20,39 +21,24 @@ namespace NitroSharp.Media.Decoding
         private avio_alloc_context_seek _seekFunc;
         private byte[] _managedIOBuffer;
 
-        private List<MediaStream> _mediaStreams;
+        private MediaStream[]? _mediaStreams;
 
         public static MediaContainer Open(Stream stream, bool leaveOpen = false)
             => new MediaContainer(stream, leaveOpen);
 
-        public static unsafe MediaContainer Open(Stream stream, AVInputFormat* inputFormat, bool leaveOpen = false)
+        public static MediaContainer Open(Stream stream, AVInputFormat* inputFormat, bool leaveOpen = false)
             => new MediaContainer(stream, inputFormat, leaveOpen);
 
-        private unsafe MediaContainer(Stream stream, bool leaveOpen = false)
+        private MediaContainer(Stream stream, bool leaveOpen = false)
             : this(stream, null, leaveOpen)
         {
         }
 
-        private unsafe MediaContainer(Stream fileStream, AVInputFormat* inputFormat, bool leaveOpen = false)
+        private MediaContainer(Stream fileStream, AVInputFormat* inputFormat, bool leaveOpen = false)
         {
-            FileStream = fileStream ?? throw new ArgumentNullException(nameof(fileStream));
+            FileStream = fileStream;
             _leaveOpen = leaveOpen;
-            _formatContext = new FormatContext(OpenInput(inputFormat));
-            EnumerateStreams();
-        }
 
-        public Stream FileStream { get; }
-        public bool HasAudio => BestAudioStream != null;
-        public bool HasVideo => BestVideoStream != null;
-
-        public IReadOnlyList<MediaStream> MediaStreams => _mediaStreams;
-        public AudioStream BestAudioStream { get; private set; }
-        public VideoStream BestVideoStream { get; private set; }
-        public AudioStream ActiveAudioStream { get; private set; }
-        public VideoStream ActiveVideoStream { get; private set; }
-
-        private unsafe AVFormatContext* OpenInput(AVInputFormat* inputFormat)
-        {
             _readFunc = IOReadPacket;
             _writeFunc = IOWritePacket;
             _seekFunc = IOSeek;
@@ -67,18 +53,29 @@ namespace NitroSharp.Media.Decoding
             ThrowIfNotZero(ffmpeg.avformat_open_input(&pFormatContext, string.Empty, inputFormat, null));
             ThrowIfNotZero(ffmpeg.avformat_find_stream_info(pFormatContext, null));
 
-            return pFormatContext;
+            _formatContext = new FormatContext(pFormatContext);
+            EnumerateStreams();
         }
 
-        private unsafe void EnumerateStreams()
+        public Stream FileStream { get; }
+        public bool HasAudio => BestAudioStream != null;
+        public bool HasVideo => BestVideoStream != null;
+
+        public ReadOnlySpan<MediaStream> MediaStreams => _mediaStreams;
+        public AudioStream? BestAudioStream { get; private set; }
+        public VideoStream? BestVideoStream { get; private set; }
+        public AudioStream? ActiveAudioStream { get; private set; }
+        public VideoStream? ActiveVideoStream { get; private set; }
+
+        private void EnumerateStreams()
         {
             AVFormatContext* ctx = _formatContext.Get();
             AVStream** avStreams = ctx->streams;
 
-            _mediaStreams = new List<MediaStream>((int)ctx->nb_streams);
+            _mediaStreams = new MediaStream[(int)ctx->nb_streams];
             for (int i = 0; i < ctx->nb_streams; i++)
             {
-                _mediaStreams.Add(MediaStream.FromAvStream(avStreams[i]));
+                _mediaStreams[i] = MediaStream.FromAvStream(avStreams[i]);
             }
 
             int n = ffmpeg.av_find_best_stream(ctx, AVMediaType.AVMEDIA_TYPE_AUDIO, -1, -1, null, 0);
@@ -94,7 +91,7 @@ namespace NitroSharp.Media.Decoding
             }
         }
 
-        public void SelectStreams(VideoStream videoStream, AudioStream audioStream)
+        public void SelectStreams(VideoStream? videoStream, AudioStream? audioStream)
         {
             if (videoStream == ActiveVideoStream && audioStream == ActiveAudioStream)
             {
@@ -103,52 +100,41 @@ namespace NitroSharp.Media.Decoding
 
             ActiveAudioStream = audioStream;
             ActiveVideoStream = videoStream;
-            unsafe
+            AVFormatContext* ctx = _formatContext.Get();
+            for (uint i = 0; i < ctx->nb_streams; i++)
             {
-                AVFormatContext* ctx = _formatContext.Get();
-                for (uint i = 0; i < ctx->nb_streams; i++)
-                {
-                    bool active = i == videoStream?.Id || i == audioStream?.Id;
-                    ctx->streams[(int)i]->discard = active ? AVDiscard.AVDISCARD_DEFAULT : AVDiscard.AVDISCARD_ALL;
-                }
+                bool active = i == videoStream?.Id || i == audioStream?.Id;
+                ctx->streams[(int)i]->discard = active ? AVDiscard.AVDISCARD_DEFAULT : AVDiscard.AVDISCARD_ALL;
             }
         }
 
-        public unsafe int ReadFrame(ref AVPacket packet)
+        public int ReadFrame(ref AVPacket packet)
         {
-            unsafe
+            fixed (AVPacket* ptr = &packet)
             {
-                fixed (AVPacket* ptr = &packet)
-                {
-                    return ReadFrame(ptr);
-                }
+                return ReadFrame(ptr);
             }
         }
 
-        public unsafe int ReadFrame(AVPacket* packet)
+        public int ReadFrame(AVPacket* packet)
         {
             return ffmpeg.av_read_frame(_formatContext.Get(), packet);
         }
 
         public int ReadFrame(IntPtr packet)
         {
-            unsafe
-            {
-                return ReadFrame((AVPacket*)packet);
-            }
+            return ReadFrame((AVPacket*)packet);
         }
 
         public void Seek(TimeSpan timestamp)
         {
             long ts = (long)Math.Round(timestamp.TotalSeconds * ffmpeg.AV_TIME_BASE);
-            unsafe
-            {
-                AVFormatContext* ctx = _formatContext.Get();
-                int result = ffmpeg.av_seek_frame(ctx, -1, ts, ffmpeg.AVSEEK_FLAG_BACKWARD);
-            }
+            AVFormatContext* ctx = _formatContext.Get();
+            int result = ffmpeg.av_seek_frame(ctx, -1, ts, ffmpeg.AVSEEK_FLAG_BACKWARD);
+            // TODO: check result
         }
 
-        private unsafe long IOSeek(void* opaque, long offset, int whence)
+        private long IOSeek(void* opaque, long offset, int whence)
         {
             Debug.Assert(FileStream.CanSeek);
             if (whence == ffmpeg.AVSEEK_SIZE)
@@ -160,7 +146,7 @@ namespace NitroSharp.Media.Decoding
             return FileStream.Seek(offset, origin);
         }
 
-        private unsafe int IOReadPacket(void* opaque, byte* buf, int buf_size)
+        private int IOReadPacket(void* opaque, byte* buf, int buf_size)
         {
             Debug.Assert(FileStream.CanRead);
 
@@ -175,7 +161,7 @@ namespace NitroSharp.Media.Decoding
             return result;
         }
 
-        private unsafe int IOWritePacket(void* opaque, byte* buf, int buf_size)
+        private int IOWritePacket(void* opaque, byte* buf, int buf_size)
         {
             throw new NotImplementedException();
         }

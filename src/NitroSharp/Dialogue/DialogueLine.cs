@@ -5,13 +5,15 @@ using NitroSharp.Primitives;
 using NitroSharp.Text;
 using Veldrid;
 
+#nullable enable
+
 namespace NitroSharp.Dialogue
 {
     internal sealed class DialogueLine
     {
         private static readonly PXmlTreeVisitor s_treeVisitor = new PXmlTreeVisitor();
 
-        public DialogueLine(ImmutableArray<DialogueLinePart> parts, Voice voice, uint textLength)
+        public DialogueLine(ImmutableArray<DialogueLinePart> parts, Voice? voice, uint textLength)
         {
             Parts = parts;
             Voice = voice;
@@ -19,7 +21,7 @@ namespace NitroSharp.Dialogue
         }
 
         public ImmutableArray<DialogueLinePart> Parts { get; }
-        public Voice Voice { get; }
+        public Voice? Voice { get; }
         public uint TextLength { get; }
         public bool IsEmpty => Parts.Length == 0;
 
@@ -42,7 +44,7 @@ namespace NitroSharp.Dialogue
             private readonly ImmutableArray<DialogueLinePart>.Builder _parts;
             private TextParams _textParams;
             private uint _textLength;
-            private Voice _voice;
+            private Voice? _voice;
 
             public PXmlTreeVisitor()
             {

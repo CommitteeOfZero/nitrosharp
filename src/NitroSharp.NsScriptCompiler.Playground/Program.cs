@@ -28,8 +28,8 @@ namespace NitroSharp.NsScriptCompiler.Playground
 
         static void Main(string[] args)
         {
-            var list = GlobalVarLookupTable.Load(File.OpenRead("S:/globals"));
-            list.TryLookupSystemVariable("SYSTEM_present_preprocess", out int index);
+            //var list = GlobalVarLookupTable.Load(File.OpenRead("S:/globals"));
+            //list.TryLookupSystemVariable("SYSTEM_present_preprocess", out int index);
             //RunCompiler();
             //RunVM();
         }
@@ -87,17 +87,17 @@ namespace NitroSharp.NsScriptCompiler.Playground
             debugger.Run();
         }
 
-        static void RunCompiler()
-        {
-            //bool s = GC.TryStartNoGCRegion(125829120);
-            var sw = Stopwatch.StartNew();
-            var compilation = new Compilation(ScriptFolder);
-            SourceModuleSymbol boot = compilation.GetSourceModule("test.nss");
-            compilation.Emit(boot);
-            sw.Stop();
-            Console.WriteLine(sw.Elapsed.TotalSeconds);
-            //GC.EndNoGCRegion();
-        }
+        //static void RunCompiler()
+        //{
+        //    //bool s = GC.TryStartNoGCRegion(125829120);
+        //    var sw = Stopwatch.StartNew();
+        //    var compilation = new Compilation(ScriptFolder);
+        //    SourceModuleSymbol boot = compilation.GetSourceModule("test.nss");
+        //    compilation.Emit(boot);
+        //    sw.Stop();
+        //    Console.WriteLine(sw.Elapsed.TotalSeconds);
+        //    //GC.EndNoGCRegion();
+        //}
 
         
     }
