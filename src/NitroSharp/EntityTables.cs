@@ -10,17 +10,6 @@ using Veldrid;
 
 namespace NitroSharp
 {
-    internal enum EntityKind : ushort
-    {
-        Thread,
-        Sprite,
-        Rectangle,
-        Text,
-        AudioClip,
-        VideoClip,
-        Choice
-    }
-
     internal sealed class ThreadTable : EntityTable
     {
         public ThreadTable(World world, ushort columnCount)

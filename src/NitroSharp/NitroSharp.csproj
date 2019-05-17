@@ -51,6 +51,7 @@
   
   <ItemGroup>
     <Compile Include="../Common/HashHelper.cs" Link="Utilities/HashHelper.cs" />
+    <Compile Include="../Common/ArrayBuilder.cs" Link="Utilities/ArrayBuilder.cs" />
   </ItemGroup>
 
   <Target Name="EmbedGeneratedShaderContent" AfterTargets="AssignTargetPaths">

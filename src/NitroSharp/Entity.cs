@@ -3,6 +3,17 @@ using NitroSharp.Utilities;
 
 namespace NitroSharp
 {
+    internal enum EntityKind : ushort
+    {
+        Thread,
+        Sprite,
+        Rectangle,
+        Text,
+        AudioClip,
+        VideoClip,
+        Choice
+    }
+
     internal readonly struct Entity : IEquatable<Entity>
     {
         public bool IsValid => Id > 0;

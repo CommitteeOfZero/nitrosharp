@@ -62,7 +62,7 @@ namespace NitroSharp.Dialogue
 
             public override void VisitVoiceElement(VoiceElement node)
             {
-                _voice = new Voice(node.CharacterName, node.FileName, (VoiceAction)node.Action);
+                _voice = new Voice(node.CharacterName, node.FileName, node.Action);
                 _parts.Add(_voice);
             }
 

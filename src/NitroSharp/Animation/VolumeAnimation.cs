@@ -1,12 +1,13 @@
 ﻿using System;
+using NitroSharp.NsScript;
 
 namespace NitroSharp.Animation
 {
     internal sealed class VolumeAnimation : LerpAnimation<float>
     {
         public VolumeAnimation(Entity entity, TimeSpan duration,
-            TimingFunction timingFunction = TimingFunction.Linear,
-            bool repeat = false) : base(entity, duration, timingFunction, repeat)
+            NsEasingFunction easingFunction = NsEasingFunction.None,
+            bool repeat = false) : base(entity, duration, easingFunction, repeat)
         {
         }
 

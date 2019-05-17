@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
+using NitroSharp.NsScript;
 using NitroSharp.NsScript.VM;
 using NitroSharp.Utilities;
 
@@ -13,18 +14,18 @@ namespace NitroSharp.Animation
 
         protected PropertyAnimation(
             Entity entity, TimeSpan duration,
-            TimingFunction timingFunction = TimingFunction.Linear,
+            NsEasingFunction easingFunction = NsEasingFunction.None,
             bool repeat = false)
         {
             Entity = entity;
             Duration = duration;
-            TimingFunction = timingFunction;
+            NsEasingFunction = easingFunction;
             Repeat = repeat;
         }
 
         public Entity Entity { get; }
         public TimeSpan Duration { get; protected set; }
-        public TimingFunction TimingFunction { get; }
+        public NsEasingFunction NsEasingFunction { get; }
         public bool Repeat { get; }
 
         public bool IsBlocking { get; set; }
@@ -89,41 +90,31 @@ namespace NitroSharp.Animation
             => MathUtil.Clamp(elapsed / duration, 0.0f, 1.0f);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        protected float CalculateFactor(float progress, TimingFunction function)
+        protected float CalculateFactor(float progress, NsEasingFunction function)
         {
             switch (function)
             {
-                case TimingFunction.QuadraticEaseIn:
+                case NsEasingFunction.QuadraticEaseIn:
                     return (float)Math.Pow(progress, 2);
-
-                case TimingFunction.CubicEaseIn:
+                case NsEasingFunction.CubicEaseIn:
                     return (float)Math.Pow(progress, 3);
-
-                case TimingFunction.QuarticEaseIn:
+                case NsEasingFunction.QuarticEaseIn:
                     return (float)Math.Pow(progress, 4);
-
-                case TimingFunction.QuadraticEaseOut:
+                case NsEasingFunction.QuadraticEaseOut:
                     return 1.0f - (float)Math.Pow(1.0f - progress, 2);
-
-                case TimingFunction.CubicEaseOut:
+                case NsEasingFunction.CubicEaseOut:
                     return 1.0f - (float)Math.Pow(1.0f - progress, 3);
-
-                case TimingFunction.QuarticEaseOut:
+                case NsEasingFunction.QuarticEaseOut:
                     return 1.0f - (float)Math.Pow(1.0f - progress, 4);
-
-                case TimingFunction.SineEaseIn:
+                case NsEasingFunction.SineEaseIn:
                     return 1.0f - (float)Math.Cos(progress * Math.PI * 0.5f);
-
-                case TimingFunction.SineEaseOut:
+                case NsEasingFunction.SineEaseOut:
                     return (float)Math.Sin(progress * Math.PI * 0.5f);
-
-                case TimingFunction.SineEaseInOut:
+                case NsEasingFunction.SineEaseInOut:
                     return 0.5f * (1.0f - (float)Math.Cos(progress * Math.PI));
-
-                case TimingFunction.SineEaseOutIn:
+                case NsEasingFunction.SineEaseOutIn:
                     return (float)(Math.Acos(1.0f - progress * 2.0f) / Math.PI);
-
-                case TimingFunction.Linear:
+                case NsEasingFunction.None:
                 default:
                     return progress;
             }

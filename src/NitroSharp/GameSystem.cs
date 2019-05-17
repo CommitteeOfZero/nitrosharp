@@ -5,10 +5,6 @@
         private readonly Game.Presenter _presenter;
         protected float DeltaTime;
 
-        //protected GameSystem()
-        //{
-        //}
-
         protected GameSystem(Game.Presenter presenter)
         {
             _presenter = presenter;

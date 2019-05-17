@@ -1,13 +1,11 @@
 ﻿using NitroSharp.NsScript;
 using System;
 using System.Numerics;
-using NitroSharp.Animation;
 using NitroSharp.Logic.Components;
 using NitroSharp.Primitives;
 using Veldrid;
-using NitroSharp.Graphics;
 using NitroSharp.NsScript.Primitives;
-using System.Diagnostics;
+using NitroSharp.Graphics;
 
 namespace NitroSharp
 {
@@ -49,10 +47,12 @@ namespace NitroSharp
             RgbaFloat color = table.Colors.GetValue(entity);
             if (duration > TimeSpan.Zero)
             {
-                var animation = new FadeAnimation(entity, duration, (TimingFunction)easingFunction);
-                animation.InitialOpacity = color.A;
-                animation.FinalOpacity = adjustedOpacity;
-                animation.IsBlocking = CurrentThread == MainThread;
+                var animation = new FadeAnimation(entity, duration, easingFunction)
+                {
+                    InitialOpacity = color.A,
+                    FinalOpacity = adjustedOpacity,
+                    IsBlocking = CurrentThread == MainThread
+                };
                 if (wait)
                 {
                     animation.WaitingThread = CurrentThread;
@@ -113,10 +113,12 @@ namespace NitroSharp
             var destination = new Vector3(targetX, targetY, 0);
             if (duration > TimeSpan.Zero)
             {
-                var animation = new MoveAnimation(entity, duration, (TimingFunction)easingFunction);
-                animation.StartPosition = position;
-                animation.Destination = destination;
-                animation.IsBlocking = CurrentThread == MainThread;
+                var animation = new MoveAnimation(entity, duration, easingFunction)
+                {
+                    StartPosition = position,
+                    Destination = destination,
+                    IsBlocking = CurrentThread == MainThread
+                };
                 if (wait)
                 {
                     animation.WaitingThread = CurrentThread;
@@ -176,10 +178,12 @@ namespace NitroSharp
                     scale = Vector3.Zero;
                 }
 
-                var animation = new ZoomAnimation(entity, duration, (TimingFunction)easingFunction);
-                animation.InitialScale = scale;
-                animation.FinalScale = finalScale;
-                animation.IsBlocking = CurrentThread == MainThread;
+                var animation = new ZoomAnimation(entity, duration, easingFunction)
+                {
+                    InitialScale = scale,
+                    FinalScale = finalScale,
+                    IsBlocking = CurrentThread == MainThread
+                };
                 if (suspendThread)
                 {
                     animation.WaitingThread = CurrentThread;
@@ -233,7 +237,7 @@ namespace NitroSharp
 
         //    if (duration > TimeSpan.Zero)
         //    {
-        //        var fn = (TimingFunction)easingFunction;
+        //        var fn = (NsEasingFunction)easingFunction;
         //        var animation = new RotateAnimation(transform, rotation, finalValue, duration, fn);
         //        entity.AddComponent(animation);
         //    }
@@ -274,7 +278,7 @@ namespace NitroSharp
         //    dstTranslationY.AssignTo(ref finalValue.Y);
         //    dstTranslationZ.AssignTo(ref finalValue.Z);
 
-        //    var fn = (TimingFunction)easingFunction;
+        //    var fn = (NsEasingFunction)easingFunction;
         //    var animation = new MoveAnimation(transform, initialValue, finalValue, duration, fn);
         //    entity.AddComponent(animation);
         //}

@@ -1,6 +1,6 @@
 ﻿using System;
-using System.Numerics;
 using NitroSharp.Animation;
+using NitroSharp.NsScript;
 using Veldrid;
 
 namespace NitroSharp.Logic.Components
@@ -8,8 +8,8 @@ namespace NitroSharp.Logic.Components
     internal sealed class FadeAnimation : LerpAnimation<RgbaFloat>
     {
         public FadeAnimation(Entity entity, TimeSpan duration,
-            TimingFunction timingFunction = TimingFunction.Linear, bool repeat = false)
-            : base(entity, duration, timingFunction, repeat)
+            NsEasingFunction easingFunction = NsEasingFunction.None, bool repeat = false)
+            : base(entity, duration, easingFunction, repeat)
         {
         }
 

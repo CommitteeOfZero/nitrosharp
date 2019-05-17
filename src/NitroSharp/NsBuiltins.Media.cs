@@ -79,7 +79,8 @@ namespace NitroSharp
             {
                 MediaClipTable table = GetTable(entity);
                 TimeSpan duration = table.Duration.GetValue(entity);
-                Interpreter.SuspendThread(MainThread, duration);
+                // TODO: nullable
+                Interpreter.SuspendThread(MainThread!, duration);
             }
         }
 

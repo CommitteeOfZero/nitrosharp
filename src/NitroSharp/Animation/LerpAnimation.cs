@@ -1,4 +1,5 @@
 ﻿using System;
+using NitroSharp.NsScript;
 
 namespace NitroSharp.Animation
 {
@@ -7,8 +8,8 @@ namespace NitroSharp.Animation
     {
         protected LerpAnimation(
             Entity entity, TimeSpan duration,
-            TimingFunction timingFunction = TimingFunction.Linear,
-            bool repeat = false) : base(entity, duration, timingFunction, repeat)
+            NsEasingFunction easingFunction = NsEasingFunction.None,
+            bool repeat = false) : base(entity, duration, easingFunction, repeat)
         {
         }
 
@@ -23,7 +24,7 @@ namespace NitroSharp.Animation
 
         protected override void Advance(float deltaMilliseconds)
         {
-            InterpolateValue(ref PropertyRow.Mutate(Entity), CalculateFactor(Progress, TimingFunction));
+            InterpolateValue(ref PropertyRow.Mutate(Entity), CalculateFactor(Progress, NsEasingFunction));
         }
 
         protected abstract void InterpolateValue(ref T value, float factor);

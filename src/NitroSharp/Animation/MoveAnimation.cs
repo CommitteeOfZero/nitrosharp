@@ -2,6 +2,7 @@
 using System.Numerics;
 using NitroSharp.Animation;
 using NitroSharp.Graphics;
+using NitroSharp.NsScript;
 
 namespace NitroSharp.Logic.Components
 {
@@ -11,8 +12,8 @@ namespace NitroSharp.Logic.Components
         public Vector3 Destination;
 
         public MoveAnimation(Entity entity, TimeSpan duration,
-            TimingFunction timingFunction = TimingFunction.Linear, bool repeat = false)
-            : base(entity, duration, timingFunction, repeat)
+            NsEasingFunction easingFunction = NsEasingFunction.None, bool repeat = false)
+            : base(entity, duration, easingFunction, repeat)
         {
         }
 

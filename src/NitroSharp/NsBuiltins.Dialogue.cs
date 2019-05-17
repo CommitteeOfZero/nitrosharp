@@ -2,11 +2,14 @@
 using NitroSharp.Content;
 using NitroSharp.Dialogue;
 using NitroSharp.Media.Decoding;
+using NitroSharp.NsScript;
 using NitroSharp.NsScript.Primitives;
 using NitroSharp.NsScript.VM;
 using NitroSharp.Primitives;
 using NitroSharp.Text;
 using Veldrid;
+
+#nullable enable
 
 namespace NitroSharp
 {
@@ -91,7 +94,7 @@ namespace NitroSharp
                 _world.RemoveEntity(_lastVoiceName);
             }
 
-            if (voice.Action == VoiceAction.Play)
+            if (voice.Action == NsVoiceAction.Play)
             {
                 AssetId assetId = "voice/" + voice.FileName;
                 if (Content.TryGet<MediaPlaybackSession>(assetId, out var session))
