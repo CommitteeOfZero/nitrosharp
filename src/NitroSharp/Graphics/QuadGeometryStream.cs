@@ -4,6 +4,8 @@ using NitroSharp.Primitives;
 using NitroSharp.Utilities;
 using Veldrid;
 
+#nullable enable
+
 namespace NitroSharp.Graphics
 {
     internal sealed class QuadGeometryStream : IDisposable
@@ -11,13 +13,13 @@ namespace NitroSharp.Graphics
         public QuadGeometryStream(GraphicsDevice graphicsDevice, uint initialCapacity = 512)
         {
             var indexArray = new ushort[] { 0, 1, 2, 2, 1, 3 };
-            VertexBuffer = new CircularVertexBuffer<QuadVertex>(graphicsDevice, initialCapacity * 4);
-            InstanceDataBuffer = new CircularVertexBuffer<QuadInstanceData>(graphicsDevice, initialCapacity);
+            VertexBuffer = new VertexList<QuadVertex>(graphicsDevice, initialCapacity * 4);
+            InstanceDataBuffer = new VertexList<QuadInstanceData>(graphicsDevice, initialCapacity);
             IndexBuffer = graphicsDevice.CreateStaticBuffer(indexArray, BufferUsage.IndexBuffer);
         }
 
-        public CircularVertexBuffer<QuadVertex> VertexBuffer { get; }
-        public CircularVertexBuffer<QuadInstanceData> InstanceDataBuffer { get; }
+        public VertexList<QuadVertex> VertexBuffer { get; }
+        public VertexList<QuadInstanceData> InstanceDataBuffer { get; }
         public DeviceBuffer IndexBuffer { get; }
 
         public void Begin()
