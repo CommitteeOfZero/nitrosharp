@@ -4,6 +4,8 @@ using System.IO;
 using System.Reflection;
 using Veldrid;
 
+#nullable enable
+
 namespace NitroSharp.Graphics
 {
     internal sealed class ShaderLibrary : IDisposable
@@ -11,7 +13,7 @@ namespace NitroSharp.Graphics
         private static readonly Assembly s_assembly = typeof(ShaderLibrary).Assembly;
 
         private readonly Dictionary<string, (Shader vs, Shader fs)> _shaderSetCache;
-        private object _shaderLoading = new object();
+        private readonly object _shaderLoading = new object();
 
         public ShaderLibrary(GraphicsDevice graphicsDevice)
         {
@@ -27,8 +29,8 @@ namespace NitroSharp.Graphics
             {
                 if (!_shaderSetCache.TryGetValue(name, out (Shader vs, Shader fs) shaderSet))
                 {
-                    Shader vs = LoadShader(name, ShaderStages.Vertex, "VS");
-                    Shader fs = LoadShader(name, ShaderStages.Fragment, "FS");
+                    Shader vs = LoadShader(name, ShaderStages.Vertex, "main");
+                    Shader fs = LoadShader(name, ShaderStages.Fragment, "main");
                     shaderSet = (vs, fs);
                     _shaderSetCache.Add(name, shaderSet);
                 }
@@ -39,16 +41,11 @@ namespace NitroSharp.Graphics
 
         private Shader LoadShader(string set, ShaderStages stage, string entryPoint)
         {
-            //if (set == "Cube")
-            //{
-            //    set = "Generated." + set.ToLower();
-            //}
-
             ResourceFactory factory = GraphicsDevice.ResourceFactory;
             string name = "NitroSharp.Graphics.Shaders." + set +
                 $"-{stage.ToString().ToLower()}{GetExtension(factory.BackendType)}";
 
-            using (var stream = s_assembly.GetManifestResourceStream(name))
+            using (Stream stream = s_assembly.GetManifestResourceStream(name))
             using (var reader = new BinaryReader(stream))
             {
                 byte[] bytes = reader.ReadBytes((int)stream.Length);
@@ -71,10 +68,10 @@ namespace NitroSharp.Graphics
 
         public void Dispose()
         {
-            foreach ((Shader vs, Shader fs) shaderSet in _shaderSetCache.Values)
+            foreach ((Shader vs, Shader fs) in _shaderSetCache.Values)
             {
-                shaderSet.vs.Dispose();
-                shaderSet.fs.Dispose();
+                vs.Dispose();
+                fs.Dispose();
             }
             _shaderSetCache.Clear();
         }

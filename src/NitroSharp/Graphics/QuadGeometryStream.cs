@@ -95,8 +95,8 @@ namespace NitroSharp.Graphics
         public Vector2 TexCoord;
 
         public static readonly VertexLayoutDescription LayoutDescription = new VertexLayoutDescription(
-            new VertexElementDescription("Position", VertexElementSemantic.Position, VertexElementFormat.Float2),
-            new VertexElementDescription("TexCoord", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float2));
+            new VertexElementDescription("vs_Position", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float2),
+            new VertexElementDescription("vs_TexCoord", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float2));
 
         public bool Equals(QuadVertex other)
         {
@@ -111,7 +111,7 @@ namespace NitroSharp.Graphics
 
         public static VertexLayoutDescription LayoutDescription => new VertexLayoutDescription(
             stride: 16, instanceStepRate: 1,
-            new VertexElementDescription("Color", VertexElementSemantic.Color, VertexElementFormat.Float4));
+            new VertexElementDescription("vs_Color", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float4));
 
         public bool Equals(QuadInstanceData other)
         {

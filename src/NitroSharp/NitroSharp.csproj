@@ -2,7 +2,6 @@
 
   <PropertyGroup>
     <TargetFramework>netcoreapp2.2</TargetFramework>
-    <ShaderOutputPath>$(BaseIntermediateOutputPath)\Shaders.Generated</ShaderOutputPath>
     <LangVersion>8.0</LangVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <NoWarn>1701;1702;CA1063</NoWarn>
@@ -34,19 +33,11 @@
     <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="4.5.2" />
     <PackageReference Include="System.Threading.Channels" Version="4.5.0" />
 
-    <PackageReference Include="Veldrid" Version="4.5.0" />
-    <PackageReference Include="Veldrid.StartupUtilities" Version="4.5.0" />
-    <PackageReference Include="ShaderGen.Primitives" Version="1.2.0-beta2" />
-    <PackageReference Include="ShaderGen.Build" Version="1.2.0-beta2" PrivateAssets="All" />
+    <PackageReference Include="Veldrid" Version="4.6.0" />
+    <PackageReference Include="Veldrid.StartupUtilities" Version="4.6.0" />
     
     <PackageReference Include="SharpDX.Direct2D1" Version="4.2.0" />
     <PackageReference Include="SharpDX.XAudio2" Version="4.2.0" />
-
-    <Compile Remove="Content/ImageSharpTextureLoader.cs" />
-  </ItemGroup>
-  
-  <ItemGroup>
-    <EmbeddedResource Include="Graphics\Shaders\Generated\**" />
   </ItemGroup>
   
   <ItemGroup>
@@ -56,7 +47,8 @@
 
   <Target Name="EmbedGeneratedShaderContent" AfterTargets="AssignTargetPaths">
     <ItemGroup>
-      <EmbeddedResource Include="@(GeneratedShader)">
+      <GeneratedShaders Include="$(BaseIntermediateOutputPath)\Shaders.Generated\**" />
+      <EmbeddedResource Include="@(GeneratedShaders)">
         <LogicalName>NitroSharp.Graphics.Shaders.%(FileName)%(Extension)</LogicalName>
       </EmbeddedResource>
     </ItemGroup>

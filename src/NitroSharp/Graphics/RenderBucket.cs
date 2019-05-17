@@ -214,16 +214,14 @@ namespace NitroSharp.Graphics
             }
 
             int index;
-            byte id = 0;
             if ((index = resourceList.IndexOf(resource)) == -1)
             {
                 index = resourceList.Count;
-                id = (byte)index;
                 resourceList.Add(resource);
-                lastUsed = (id, resource);
+                lastUsed = ((byte)index, resource);
             }
 
-            return id;
+            return (byte)index;
         }
     }
 }

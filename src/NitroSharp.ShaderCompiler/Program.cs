@@ -13,11 +13,11 @@ namespace NitroSharp.ShaderCompiler
     {
         static void Main(string[] args)
         {
-            if (args.Length > 0)
+            if (args.Length == 2)
             {
                 try
                 {
-                    CompileAll(args[0]);
+                    CompileAll(args[0], args[1]);
                 }
                 catch (Exception e)
                 {
@@ -26,9 +26,8 @@ namespace NitroSharp.ShaderCompiler
             }
         }
 
-        private static void CompileAll(string inputDirectory)
+        private static void CompileAll(string inputDirectory, string outputDirectory)
         {
-            string outputDirectory = Path.Combine(inputDirectory, "Generated");
             Directory.CreateDirectory(outputDirectory);
             IEnumerable<string> files = Directory.EnumerateFiles(inputDirectory);
 

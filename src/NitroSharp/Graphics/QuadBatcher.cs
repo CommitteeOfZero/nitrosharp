@@ -57,7 +57,7 @@ namespace NitroSharp.Graphics
             _spriteResourceSetDesc = new ResourceSetDescription(_spriteResourceLayout, new BindableResource[2]);
             _spriteResourceSetDesc.BoundResources[1] = gd.LinearSampler;
 
-            (Shader vs, Shader fs) = shaderLibrary.GetShaderSet("TexturedQuad");
+            (Shader vs, Shader fs) = shaderLibrary.GetShaderSet("quad");
             var shaderSetDesc = new ShaderSetDescription(
                 new[] { QuadVertex.LayoutDescription, QuadInstanceData.LayoutDescription },
                 new[] { vs, fs });
