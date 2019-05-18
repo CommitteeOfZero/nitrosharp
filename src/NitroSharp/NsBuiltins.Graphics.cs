@@ -130,7 +130,7 @@ namespace NitroSharp
             NsCoordinate x, NsCoordinate y,
             int priority, RectangleF? srcRect = null)
         {
-            Console.WriteLine($"Loading sprite: {fileOrExistingEntityName}");
+            _logger.LogInformation($"Loading sprite: {fileOrExistingEntityName}");
             Entity parentEntity = default;
             int idxSlash = entityName.IndexOf('/');
             if (idxSlash > 0)

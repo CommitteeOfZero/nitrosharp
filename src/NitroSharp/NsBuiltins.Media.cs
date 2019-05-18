@@ -93,7 +93,7 @@ namespace NitroSharp
 
         public override void SetVolume(string entityName, TimeSpan duration, NsRational volume)
         {
-            foreach ((Entity e, string name) in _world.Query(entityName))
+            foreach ((Entity e, _) in QueryEntities(entityName))
             {
                 SetVolumeCore(e, duration, volume);
             }
@@ -119,7 +119,7 @@ namespace NitroSharp
 
         public override void ToggleLooping(string entityName, bool looping)
         {
-            foreach ((Entity e, string name) in _world.Query(entityName))
+            foreach ((Entity e, _) in QueryEntities(entityName))
             {
                 ToggleLoopingCore(e, looping);
             }
@@ -133,7 +133,7 @@ namespace NitroSharp
 
         public override void SetLoopRegion(string entityName, TimeSpan loopStart, TimeSpan loopEnd)
         {
-            foreach ((Entity e, string name) in _world.Query(entityName))
+            foreach ((Entity e, _) in QueryEntities(entityName))
             {
                 SetLoopRegionCore(e, loopStart, loopEnd);
             }

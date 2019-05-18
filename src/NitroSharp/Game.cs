@@ -40,12 +40,15 @@ namespace NitroSharp
         private Presenter _presenter;
         private ScriptRunner _scriptRunner;
 
+        private readonly Logger _logger;
+        private readonly LogEventRecorder _logEventRecorder;
+
         public Game(GameWindow window, Configuration configuration)
         {
             _shutdownCancellation = new CancellationTokenSource();
             _initializingGraphics = new TaskCompletionSource<int>();
-
             _configuration = configuration;
+            (_logger, _logEventRecorder) = SetupLogging();
             _window = window;
             _window.Mobile_SurfaceCreated += OnSurfaceCreated;
             _window.Resized += OnWindowResized;
@@ -64,6 +67,9 @@ namespace NitroSharp
         internal AudioDevice AudioDevice => _audioDevice;
         internal AudioSourcePool AudioSourcePool => _audioSourcePool;
 
+        internal Logger Logger => _logger;
+        internal LogEventRecorder LogEventRecorder => _logEventRecorder;
+
         public async Task Run(bool useDedicatedThread = false)
         {
             // Blocking the main thread here so that the main loop wouldn't get executed
@@ -78,6 +84,15 @@ namespace NitroSharp
                 throw aex.Flatten();
             }
             await RunMainLoop(useDedicatedThread);
+        }
+
+        private (Logger, LogEventRecorder) SetupLogging()
+        {
+            var recorder = new LogEventRecorder();
+            Logger logger = new LoggerConfiguration()
+                .WithSink(recorder)
+                .CreateLogger();
+            return (logger, recorder);
         }
 
         private async Task Initialize()

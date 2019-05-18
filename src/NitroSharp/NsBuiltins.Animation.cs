@@ -16,7 +16,7 @@ namespace NitroSharp
             NsEasingFunction easingFunction, TimeSpan delay)
         {
             bool wait = delay == duration;
-            foreach ((Entity entity, _) in _world.Query(entityName))
+            foreach ((Entity entity, _) in QueryEntities(entityName))
             {
                 if (entity.IsVisual)
                 {
@@ -71,7 +71,7 @@ namespace NitroSharp
             NsEasingFunction easingFunction, TimeSpan delay)
         {
             bool wait = delay == duration;
-            foreach ((Entity entity, _) in _world.Query(entityName))
+            foreach ((Entity entity, _) in QueryEntities(entityName))
             {
                 if (entity.IsVisual)
                 {
@@ -135,7 +135,7 @@ namespace NitroSharp
             NsEasingFunction easingFunction, TimeSpan delay)
         {
             bool wait = delay == duration;
-            foreach ((Entity entity, string name) in _world.Query(entityName))
+            foreach ((Entity entity, _) in QueryEntities(entityName))
             {
                 if (entity.IsVisual)
                 {
@@ -207,7 +207,7 @@ namespace NitroSharp
         //    NsNumeric dstRotationX, NsNumeric dstRotationY, NsNumeric dstRotationZ,
         //    NsEasingFunction easingFunction, TimeSpan delay)
         //{
-        //    foreach (var entity in _world.Query(entityName))
+        //    foreach (var entity in Query(entityName))
         //    {
         //        RotateCore(entity, duration, dstRotationX, dstRotationY, dstRotationZ, easingFunction);
         //    }

@@ -25,6 +25,7 @@ namespace NitroSharp
             }
 
             private readonly Configuration _configuration;
+            private readonly Logger _logger;
             private readonly bool _usingDedicatedThread;
             private readonly CancellationTokenSource _shutdownCancellation;
             private readonly string _nssFolder;
@@ -39,6 +40,7 @@ namespace NitroSharp
             public ScriptRunner(Game game, World world) : base(world)
             {
                 _configuration = game._configuration;
+                _logger = game._logger;
                 _usingDedicatedThread = _configuration.UseDedicatedInterpreterThread;
                 _nssFolder = Path.Combine(_configuration.ContentRoot, "nss");
                 _builtinFunctions = new NsBuiltins(game);
@@ -64,8 +66,13 @@ namespace NitroSharp
                 string globalsPath = Path.Combine(bytecodeCacheDir, globalsFileName);
                 if (!File.Exists(globalsPath) || !ValidateBytecodeCache())
                 {
+                    _logger.LogInformation("Bytecode cache is not up-to-date. Recompiling the scripts...");
                     var compilation = new Compilation(_nssFolder, bytecodeCacheDir, globalsFileName);
                     compilation.Emit(compilation.GetSourceModule(_configuration.StartupScript));
+                }
+                else
+                {
+                    _logger.LogInformation("Bytecode cache is up-to-date.");
                 }
 
                 var nsxLocator = new FileSystemNsxModuleLocator(bytecodeCacheDir);

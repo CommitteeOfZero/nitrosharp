@@ -13,13 +13,14 @@ namespace NitroSharp
     {
         private World _world;
         private readonly Game _game;
-
+        private readonly Logger _logger;
         private readonly Queue<string> _entitiesToRemove = new Queue<string>();
         private readonly Queue<Game.Message> _messageQueue = new Queue<Game.Message>();
 
         public NsBuiltins(Game game)
         {
             _game = game;
+            _logger = game.Logger;
         }
 
         private ContentManager Content => _game.Content;
@@ -68,7 +69,7 @@ namespace NitroSharp
 
         public override void RemoveEntity(string entityName)
         {
-            foreach ((Entity entity, string name) in _world.Query(entityName))
+            foreach ((Entity entity, string name) in QueryEntities(entityName))
             {
                 var table = _world.GetTable<EntityTable>(entity);
                 if (!table.IsLocked.GetValue(entity))
@@ -87,6 +88,23 @@ namespace NitroSharp
             {
                 _world.RemoveEntity(_entitiesToRemove.Dequeue());
             }
+        }
+
+        private readonly StringBuilder _logMessage = new StringBuilder();
+
+        private EntityQueryResult QueryEntities(string query)
+        {
+            EntityQueryResult eqr = _world.Query(query);
+            if (eqr.IsEmpty)
+            {
+                _logMessage.Clear();
+                _logMessage.Append("Game object query yielded no results: ");
+                _logMessage.Append("'");
+                _logMessage.Append(eqr.Query);
+                _logMessage.Append("'");
+                _logger.LogWarning(_logMessage);
+            }
+            return eqr;
         }
 
         public override void Delay(TimeSpan delay)
@@ -137,7 +155,7 @@ namespace NitroSharp
 
         public override void Request(string entityName, NsEntityAction action)
         {
-            foreach ((Entity entity, string name) in _world.Query(entityName))
+            foreach ((Entity entity, string name) in QueryEntities(entityName))
             {
                 RequestCore(entity, name, action);
             }

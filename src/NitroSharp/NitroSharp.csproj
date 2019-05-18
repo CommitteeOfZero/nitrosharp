@@ -15,12 +15,13 @@
   
   <ItemGroup>
     <ProjectReference Include="..\FreeTypeBindings\FreeTypeBindings.csproj" />
-
-    <!--<ProjectReference Include="..\..\..\SomeAnonDev\veldrid\src\Veldrid.OpenGLBindings\Veldrid.OpenGLBindings.csproj" />
-    <ProjectReference Include="..\..\..\SomeAnonDev\veldrid\src\Veldrid.SDL2\Veldrid.SDL2.csproj" />
-    <ProjectReference Include="..\..\..\SomeAnonDev\veldrid\src\Veldrid.StartupUtilities\Veldrid.StartupUtilities.csproj" />
-    <ProjectReference Include="..\..\..\SomeAnonDev\veldrid\src\Veldrid\Veldrid.csproj" />-->
     <ProjectReference Include="..\NitroSharp.NsScriptCompiler\NitroSharp.NsScriptCompiler.csproj" />
+
+    <ProjectReference Include="..\..\..\SomeAnonDev\veldrid\src\Veldrid\Veldrid.csproj" />
+    <ProjectReference Include="..\..\..\SomeAnonDev\veldrid\src\Veldrid.StartupUtilities\Veldrid.StartupUtilities.csproj" />
+    <ProjectReference Include="..\..\..\SomeAnonDev\veldrid\src\Veldrid.ImGui\Veldrid.ImGui.csproj" />
+    <ProjectReference Include="..\..\..\SomeAnonDev\veldrid\src\Veldrid.SDL2\Veldrid.SDL2.csproj" />
+    <ProjectReference Include="..\..\..\SomeAnonDev\veldrid\src\Veldrid.OpenGLBindings\Veldrid.OpenGLBindings.csproj" />
     
     <PackageReference Include="NitroSharp.Dependencies.FFmpeg" Version="0.4.0.13" />
     <PackageReference Include="NitroSharp.Dependencies.FreeType" Version="0.2.903" />
@@ -33,8 +34,8 @@
     <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="4.5.2" />
     <PackageReference Include="System.Threading.Channels" Version="4.6.0-preview5.19224.8" />
 
-    <PackageReference Include="Veldrid" Version="4.6.0" />
-    <PackageReference Include="Veldrid.StartupUtilities" Version="4.6.0" />
+    <!--<PackageReference Include="Veldrid" Version="4.6.0" />
+    <PackageReference Include="Veldrid.StartupUtilities" Version="4.6.0" />-->
     
     <PackageReference Include="SharpDX.Direct2D1" Version="4.2.0" />
     <PackageReference Include="SharpDX.XAudio2" Version="4.2.0" />
@@ -44,6 +45,9 @@
     <Compile Include="../Common/HashHelper.cs" Link="Utilities/HashHelper.cs" />
     <Compile Include="../Common/ThrowHelper.cs" Link="Utilities/ThrowHelper.cs" />
     <Compile Include="../Common/ArrayBuilder.cs" Link="Utilities/ArrayBuilder.cs" />
+    <Content Include="../../fonts/NotoSansCJKjp-Regular.ttf" Link="Fonts/NotoSansCJKjp-Regular.ttf">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
   <Target Name="EmbedGeneratedShaderContent" AfterTargets="AssignTargetPaths">
