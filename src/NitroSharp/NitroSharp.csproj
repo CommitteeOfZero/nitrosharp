@@ -28,10 +28,10 @@
     <PackageReference Include="NitroSharp.Fonts" Version="0.1.1" />
     <PackageReference Include="FFmpeg.AutoGen.DllImport" Version="0.4.0" />
     <PackageReference Include="OpenAL-CS.NetStandard" Version="1.0.0" />
-    <PackageReference Include="System.Memory" Version="4.5.1" />
+    <PackageReference Include="System.Memory" Version="4.5.3" />
     <PackageReference Include="System.Buffers" Version="4.5.0" />
     <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="4.5.2" />
-    <PackageReference Include="System.Threading.Channels" Version="4.5.0" />
+    <PackageReference Include="System.Threading.Channels" Version="4.6.0-preview5.19224.8" />
 
     <PackageReference Include="Veldrid" Version="4.6.0" />
     <PackageReference Include="Veldrid.StartupUtilities" Version="4.6.0" />

@@ -1,10 +1,8 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 
@@ -12,16 +10,12 @@ namespace NitroSharp.Media.Decoding
 {
     public sealed class UnmanagedMemoryPool : IDisposable
     {
-        private const bool EnableManualContinuationScheduling = false;
-
         private IntPtr _start;
         private readonly Channel<IntPtr> _availableChunks;
 #if DEBUG
         private readonly HashSet<IntPtr> _allPointers;
-#endif
 
-        private readonly ConcurrentQueue<IntPtr> _chunksToReturn;
-        private readonly WaitCallback _threadPoolCallback;
+#endif
 
         public UnmanagedMemoryPool(uint chunkSize, uint chunkCount, bool clearMemory = false)
         {
@@ -43,12 +37,6 @@ namespace NitroSharp.Media.Decoding
                     SingleWriter = true,
                     AllowSynchronousContinuations = false
                 });
-
-            if (EnableManualContinuationScheduling)
-            {
-                _chunksToReturn = new ConcurrentQueue<IntPtr>();
-                _threadPoolCallback = new WaitCallback(ThreadPoolCallback);
-            }
 
 #if DEBUG
             _allPointers = new HashSet<IntPtr>();
@@ -74,19 +62,6 @@ namespace NitroSharp.Media.Decoding
         public void Return(IntPtr chunkPointer)
         {
             EnsureBelongsToPool(chunkPointer);
-            if (EnableManualContinuationScheduling)
-            {
-                ReturnOnThreadPool(chunkPointer);
-            }
-            else
-            {
-                ReturnCore(chunkPointer);
-            }
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void ReturnCore(IntPtr chunkPointer)
-        {
             try
             {
                 if (!_availableChunks.Writer.TryWrite(chunkPointer))
@@ -100,20 +75,6 @@ namespace NitroSharp.Media.Decoding
             }
         }
 
-        public void ReturnOnThreadPool(IntPtr buffer)
-        {
-            _chunksToReturn.Enqueue(buffer);
-            ThreadPool.QueueUserWorkItem(_threadPoolCallback, null);
-        }
-
-        private void ThreadPoolCallback(object o)
-        {
-            if (_chunksToReturn.TryDequeue(out IntPtr chunk))
-            {
-                ReturnCore(chunk);
-            }
-        }
-
         [Conditional("DEBUG")]
         [DebuggerNonUserCode]
         private void EnsureBelongsToPool(IntPtr ptr)
@@ -123,26 +84,11 @@ namespace NitroSharp.Media.Decoding
 #endif
         }
 
-        private void ReturnFailed()
-        {
-            throw new InvalidOperationException("Could not return a memory chunk to the pool. This usually means the pool is used incorrectly.");
-        }
+        public unsafe Span<T> AsSpan<T>() where T : struct
+            => new Span<T>(_start.ToPointer(), (int)ChunkCount);
 
-        public Span<T> AsSpan<T>() where T : struct
-        {
-            unsafe
-            {
-                return new Span<T>(_start.ToPointer(), (int)ChunkCount);
-            }
-        }
-
-        public ReadOnlySpan<T> AsReadOnlySpan<T>() where T : struct
-        {
-            unsafe
-            {
-                return new ReadOnlySpan<T>(_start.ToPointer(), (int)(ChunkSize * ChunkCount));
-            }
-        }
+        public unsafe ReadOnlySpan<T> AsReadOnlySpan<T>() where T : struct
+            => new ReadOnlySpan<T>(_start.ToPointer(), (int)(ChunkSize * ChunkCount));
 
         public void Dispose()
         {
@@ -150,5 +96,8 @@ namespace NitroSharp.Media.Decoding
             Marshal.FreeHGlobal(_start);
             _start = IntPtr.Zero;
         }
+
+        private void ReturnFailed()
+            => throw new InvalidOperationException("Could not return a memory chunk to the pool. This usually means the pool is used incorrectly.");
     }
 }
