@@ -65,7 +65,8 @@ namespace NitroSharp
                 }
 
                 _querySegments.Clear();
-                foreach (ReadOnlyMemory<char> segment in EnumerateQuerySegments(_query))
+                var segmentEnumerable = new SegmentEnumerable<char>(_query.AsMemory(), separator: '*');
+                foreach (ReadOnlyMemory<char> segment in segmentEnumerable)
                 {
                     _querySegments.Add(segment);
                 }
@@ -87,7 +88,7 @@ namespace NitroSharp
             {
                 ReadOnlySpan<char> nameSegment = entityName;
                 bool firstSegment = true;
-                foreach (ReadOnlyMemory<char> segmentMem in EnumerateQuerySegments(_query))
+                foreach (ReadOnlyMemory<char> segmentMem in _querySegments)
                 {
                     ReadOnlySpan<char> querySegment = segmentMem.Span;
                     int index = nameSegment.IndexOf(querySegment, StringComparison.Ordinal);
@@ -105,9 +106,6 @@ namespace NitroSharp
 
                 return true;
             }
-
-            private SegmentEnumerable<char> EnumerateQuerySegments(string query)
-                => new SegmentEnumerable<char>(query.AsMemory(), '*');
         }
 
         private ref struct SegmentEnumerable<T> where T : IEquatable<T>
