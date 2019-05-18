@@ -27,6 +27,12 @@ namespace NitroSharp.Media.Decoding
         private double? _seekTarget;
         private volatile int _disposed;
 
+        private bool SeekingRequested
+        {
+            get => _seekTarget.HasValue;
+            set => _seekTarget = null;
+        }
+
         private struct ProcessingContext
         {
             public uint StreamId;
@@ -148,6 +154,7 @@ namespace NitroSharp.Media.Decoding
                 if (_seekTarget.HasValue)
                 {
                     Container.Seek(TimeSpan.FromSeconds(_seekTarget.Value));
+                    SeekingRequested = false;
                 }
 
                 IntPtr chunk = await _packetPool.RentChunkAsync();
