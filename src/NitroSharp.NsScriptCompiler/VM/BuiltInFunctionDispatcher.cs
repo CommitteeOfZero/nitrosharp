@@ -6,7 +6,7 @@ using NitroSharp.NsScript.Primitives;
 
 namespace NitroSharp.NsScript.VM
 {
-    public class BuiltInFunctionDispatcher
+    internal sealed class BuiltInFunctionDispatcher
     {
         private readonly BuiltInFunctions _impl;
         private ConstantValue? _result;
@@ -489,7 +489,7 @@ namespace NitroSharp.NsScript.VM
                     : rawEntityName;
             }
 
-            public static TimeSpan Time(int ms) => TimeSpan.FromMilliseconds(ms);
+            private static TimeSpan Time(int ms) => TimeSpan.FromMilliseconds(ms);
 
             public int Count => _args.Length;
 

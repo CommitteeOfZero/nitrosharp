@@ -33,7 +33,7 @@ namespace NitroSharp.NsScript
             }
         }
 
-        public override sealed SourceText ReadText(ResolvedPath resolvedPath)
+        public override SourceText ReadText(ResolvedPath resolvedPath)
         {
             using (FileStream stream = File.OpenRead(resolvedPath.Value))
             {
@@ -42,7 +42,7 @@ namespace NitroSharp.NsScript
         }
 
         /// <exception cref="FileNotFoundException" />
-        public override sealed ResolvedPath ResolvePath(string path)
+        public override ResolvedPath ResolvePath(string path)
         {
             if (GetFirstPathSegment(path).Equals(_rootDirectoryName, StringComparison.Ordinal))
             {

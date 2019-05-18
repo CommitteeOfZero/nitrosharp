@@ -168,6 +168,19 @@ namespace NitroSharp
                         Interpreter.TerminateThread(thread);
                     }
                     break;
+
+                case NsEntityAction.SetAdditiveBlend:
+                    _world.GetEntityStruct<RenderItem>(entity).AsMutable()
+                        .BlendMode = Graphics.BlendMode.Additive;
+                    break;
+                case NsEntityAction.SetSubtractiveBlend:
+                    _world.GetEntityStruct<RenderItem>(entity).AsMutable()
+                        .BlendMode = Graphics.BlendMode.Subtractive;
+                    break;
+                case NsEntityAction.SetMultiplicativeBlend:
+                    _world.GetEntityStruct<RenderItem>(entity).AsMutable()
+                        .BlendMode = Graphics.BlendMode.Multiplicative;
+                    break;
             }
         }
 

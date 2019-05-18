@@ -117,7 +117,7 @@ namespace NitroSharp.NsScript.VM
             int size = ReadUInt16();
             var bytes = new byte[size];
             _stream.Read(bytes);
-            _subroutines[index] = new Subroutine(index, bytes);
+            _subroutines[index] = new Subroutine(bytes);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -131,7 +131,7 @@ namespace NitroSharp.NsScript.VM
         private unsafe struct TableHeader
         {
             public fixed byte Marker[4];
-            public int TableSize; 
+            public int TableSize;
         }
 
         public static long GetSourceModificationTime(Stream stream)
@@ -229,13 +229,11 @@ namespace NitroSharp.NsScript.VM
         private readonly byte[] _bytes;
         private readonly int _codeStart;
 
-        public readonly int Index;
         public bool IsEmpty => _bytes == null;
         public readonly int[] DialogueBlockOffsets;
 
-        public Subroutine(int index, byte[] bytes)
+        public Subroutine(byte[] bytes)
         {
-            Index = index;
             _bytes = bytes;
             var reader = new BufferReader(bytes);
             int dialogoueBlockCount = reader.ReadUInt16LE();

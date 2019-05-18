@@ -21,7 +21,8 @@ namespace NitroSharp.Graphics
         private ResourceSetDescription _spriteResourceSetDesc;
         private readonly Pipeline _alphaBlendPipeline;
         private readonly Pipeline _additiveBlendPipeline;
-
+        private readonly Pipeline _subtractiveBlendPipeline;
+        private readonly Pipeline _mulpiplicativeBlendPipeline;
         private ResourceSet? _lastResourceSet;
         private Texture? _lastTexture;
         private Matrix4x4 _transform;
@@ -68,6 +69,42 @@ namespace NitroSharp.Graphics
             _alphaBlendPipeline = factory.CreateGraphicsPipeline(ref pipelineDesc);
             pipelineDesc.BlendState = BlendStateDescription.SingleAdditiveBlend;
             _additiveBlendPipeline = factory.CreateGraphicsPipeline(ref pipelineDesc);
+
+            pipelineDesc.BlendState = new BlendStateDescription
+            {
+                AttachmentStates = new BlendAttachmentDescription[]
+                {
+                    new BlendAttachmentDescription
+                    {
+                        BlendEnabled = true,
+                        SourceColorFactor = BlendFactor.One,
+                        DestinationColorFactor = BlendFactor.One,
+                        ColorFunction = BlendFunction.Subtract,
+                        SourceAlphaFactor = BlendFactor.One,
+                        DestinationAlphaFactor = BlendFactor.One,
+                        AlphaFunction = BlendFunction.Subtract
+                    }
+                }
+            };
+            _subtractiveBlendPipeline = factory.CreateGraphicsPipeline(ref pipelineDesc);
+
+            pipelineDesc.BlendState = new BlendStateDescription
+            {
+                AttachmentStates = new BlendAttachmentDescription[]
+                {
+                    new BlendAttachmentDescription
+                    {
+                        BlendEnabled = true,
+                        SourceColorFactor = BlendFactor.Zero,
+                        DestinationColorFactor = BlendFactor.SourceColor,
+                        ColorFunction = BlendFunction.Add,
+                        SourceAlphaFactor = BlendFactor.Zero,
+                        DestinationAlphaFactor = BlendFactor.SourceAlpha,
+                        AlphaFunction = BlendFunction.Add
+                    }
+                }
+            };
+            _mulpiplicativeBlendPipeline = factory.CreateGraphicsPipeline(ref pipelineDesc);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -122,6 +159,15 @@ namespace NitroSharp.Graphics
                 _lastResourceSet = resourceSet;
             }
 
+            Pipeline pipeline = blendMode switch
+            {
+                BlendMode.Alpha => _alphaBlendPipeline,
+                BlendMode.Additive => _additiveBlendPipeline,
+                BlendMode.Subtractive => _subtractiveBlendPipeline,
+                BlendMode.Multiplicative => _mulpiplicativeBlendPipeline,
+                _ => ThrowHelper.UnexpectedValue<Pipeline>()
+            };
+
             Debug.Assert(resourceSet != null);
             var submission = new RenderBucketSubmission<QuadVertex, QuadInstanceData>
             {
@@ -132,7 +178,7 @@ namespace NitroSharp.Graphics
                 IndexCount = 6,
                 InstanceDataBuffer = _quadGeometryStream.InstanceDataBuffer,
                 InstanceBase = instanceBase,
-                Pipeline = blendMode == BlendMode.Alpha ? _alphaBlendPipeline : _additiveBlendPipeline,
+                Pipeline = pipeline,
                 SharedResourceSet = _viewProjection.ResourceSet,
                 ObjectResourceSet = resourceSet
             };
@@ -144,6 +190,8 @@ namespace NitroSharp.Graphics
         {
             _alphaBlendPipeline.Dispose();
             _additiveBlendPipeline.Dispose();
+            _subtractiveBlendPipeline.Dispose();
+            _mulpiplicativeBlendPipeline.Dispose();
             _spriteResourceLayout.Dispose();
         }
     }

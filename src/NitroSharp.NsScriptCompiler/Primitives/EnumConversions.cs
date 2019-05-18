@@ -22,6 +22,12 @@
                     return NsEntityAction.Start;
                 case BuiltInConstant.Stop:
                     return NsEntityAction.Stop;
+                case BuiltInConstant.AddRender:
+                    return NsEntityAction.SetAdditiveBlend;
+                case BuiltInConstant.SubRender:
+                    return NsEntityAction.SetSubtractiveBlend;
+                case BuiltInConstant.MulRender:
+                    return NsEntityAction.SetMultiplicativeBlend;
 
                 default:
                     return NsEntityAction.Other;

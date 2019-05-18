@@ -306,7 +306,7 @@ namespace NitroSharp.NsScript.Compiler
             var strTableHeaderWriter = new BufferWriter(strTableHeader);
             strTableHeaderWriter.WriteBytes(NsxConstants.StringTableMarker);
             strTableHeaderWriter.WriteUInt16LE((ushort)stringTableSize);
-            
+
             // Build the NSX header
             using var headerBuffer = PooledBuffer<byte>.Allocate(NsxConstants.NsxHeaderSize);
             var headerWriter = new BufferWriter(headerBuffer);
@@ -566,7 +566,6 @@ namespace NitroSharp.NsScript.Compiler
             try
             {
                 SourceModuleSymbol targetSourceModule = _compilation.GetSourceModule(modulePath);
-                SourceFileSymbol rootSourceFile = targetSourceModule.RootSourceFile;
                 ChapterSymbol? chapter = targetSourceModule.LookupChapter("main");
                 if (chapter == null)
                 {
@@ -596,7 +595,6 @@ namespace NitroSharp.NsScript.Compiler
             try
             {
                 SourceModuleSymbol targetSourceModule = _compilation.GetSourceModule(modulePath);
-                SourceFileSymbol rootSourceFile = targetSourceModule.RootSourceFile;
                 SceneSymbol? scene = targetSourceModule.LookupScene(callSceneStmt.TargetScene.Value);
                 if (scene == null)
                 {
@@ -703,7 +701,6 @@ namespace NitroSharp.NsScript.Compiler
         private readonly SubroutineSymbol _subrotuine;
         private Checker _checker;
         private readonly Compilation _compilation;
-        private readonly SourceModuleSymbol _sourceModule;
         private BufferWriter _code;
         private int _textId;
         private readonly TokenMap<ParameterSymbol>? _parameters;
@@ -718,7 +715,6 @@ namespace NitroSharp.NsScript.Compiler
             _subrotuine = subroutine;
             _checker = new Checker(subroutine, moduleBuilder.Diagnostics);
             _compilation = moduleBuilder.Compilation;
-            _sourceModule = _subrotuine.DeclaringSourceFile.Module;
             _parameters = null;
             if (subroutine is FunctionSymbol function && function.Parameters.Length > 0)
             {

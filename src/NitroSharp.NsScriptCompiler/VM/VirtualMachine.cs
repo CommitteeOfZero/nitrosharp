@@ -43,7 +43,7 @@ namespace NitroSharp.NsScript.VM
             }
         }
 
-        class SystemVariables
+        internal class SystemVariableLookup
         {
             private readonly VirtualMachine _vm;
             private readonly GlobalVarLookupTable _nameLookup;
@@ -52,7 +52,7 @@ namespace NitroSharp.NsScript.VM
             public readonly int PresentText;
             public readonly int PresentProcess;
 
-            public SystemVariables(VirtualMachine vm)
+            public SystemVariableLookup(VirtualMachine vm)
             {
                 _vm = vm;
                 _nameLookup = vm._globalVarLookup;
@@ -84,7 +84,7 @@ namespace NitroSharp.NsScript.VM
         private readonly Stopwatch _timer;
         private readonly ConstantValue[] _globals;
         private readonly GlobalVarLookupTable _globalVarLookup;
-        private readonly SystemVariables _systemVariables;
+        private readonly SystemVariableLookup _systemVariables;
 
         public ThreadContext? MainThread { get; internal set; }
         public ThreadContext? CurrentThread { get; internal set; }
@@ -105,10 +105,12 @@ namespace NitroSharp.NsScript.VM
             _globals = new ConstantValue[5000];
             _globalVarLookup = GlobalVarLookupTable.Load(globalVarLookupTableStream);
             builtInFunctionsImpl._vm = this;
-            _systemVariables = new SystemVariables(this);
+            _systemVariables = new SystemVariableLookup(this);
         }
 
         public IReadOnlyList<ThreadContext> Threads => _threads;
+
+        internal SystemVariableLookup SystemVariables => _systemVariables;
 
         public ThreadContext CreateThread(string name, string symbol, bool start = false)
             => CreateThread(name, CurrentThread!.CurrentFrame.Module.Name, symbol, start);
@@ -199,10 +201,6 @@ namespace NitroSharp.NsScript.VM
                     {
                         CommitResumeThread(thread);
                         nbResumed++;
-                    }
-                    else
-                    {
-                        continue;
                     }
                 }
             }
