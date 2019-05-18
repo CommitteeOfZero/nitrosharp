@@ -74,6 +74,7 @@ namespace NitroSharp
 
             private bool ValidateBytecodeCache()
             {
+                string startupScriptName = Path.GetFileName(_configuration.StartupScript);
                 foreach (string nssFile in Directory.EnumerateFiles(_nssFolder))
                 {
                     string nsxFile = nssFile.Replace("nss", "nsx");
@@ -93,6 +94,11 @@ namespace NitroSharp
                     }
                     catch (FileNotFoundException)
                     {
+                        if (Path.GetFileName(nsxFile).Equals(startupScriptName))
+                        {
+                            return false;
+                        }
+
                         continue;
                     }
                 }
