@@ -38,6 +38,7 @@ namespace NitroSharp.FreeTypePlayground
             const uint width = 512;
             const uint height = 512;
             CommandList cl = gd.ResourceFactory.CreateCommandList();
+            ResourceFactory factory = gd.ResourceFactory;
 
             var bigFontSize = 40;
             var meowColor = new RgbaFloat(253 / 255.0f, 149 / 255.0f, 89 / 255.0f, 1.0f);
@@ -56,36 +57,36 @@ namespace NitroSharp.FreeTypePlayground
             //    new Size(400, 400)
             //);
 
-            var layout = new TextLayout(
-                new[]
-                {
-                    TextRun.Regular("The Committee\n                          ".AsMemory(), font, FontSize, RgbaFloat.White),
-                    //TextRun.Regular("The Committee would be the Committee of 300 that KnightHeart had been talking about, right?".AsMemory(), font, FontSize, RgbaFloat.White),
-                    //TextRun.WithRubyText("西條".AsMemory(), "にしじょう".AsMemory(), font, FontSize, RgbaFloat.White)
-                },
-                new Size(400, 600));
-
-            var size = Unsafe.SizeOf<TextRun>();
-
             //var layout = new TextLayout(
             //    new[]
             //    {
-            //        TextRun.MakeRegular("This text is rasterized with ".AsMemory(), font, FontSize, RgbaFloat.Black),
-            //        TextRun.MakeRegular("FreeType".AsMemory(), font, bigFontSize, blue),
-            //        TextRun.MakeRegular("\nGlyph images are cached on the GPU as needed\n".AsMemory(), font, FontSize, RgbaFloat.White),
-            //        TextRun.MakeRegular("Only ".AsMemory(), font, FontSize, RgbaFloat.Yellow),
-            //        TextRun.MakeRegular("one".AsMemory(), font, bigFontSize, meowColor),
-            //        TextRun.MakeRegular(" draw call is required to render this text".AsMemory(), font, FontSize, RgbaFloat.Yellow)
+            //        TextRun.Regular("Please please kill yourself\n                          ".AsMemory(), font, FontSize, RgbaFloat.White),
+            //        //TextRun.Regular("The Committee would be the Committee of 300 that KnightHeart had been talking about, right?".AsMemory(), font, FontSize, RgbaFloat.White),
+            //        //TextRun.WithRubyText("西條".AsMemory(), "にしじょう".AsMemory(), font, FontSize, RgbaFloat.White)
             //    },
-            //    new Size(400, 400)
-            //);
+            //    new Size(400, 600));
+
+            var size = Unsafe.SizeOf<TextRun>();
+
+            var layout = new TextLayout(
+                new[]
+                {
+                    TextRun.Regular("This text is rasterized with ".AsMemory(), font, FontSize, RgbaFloat.Black),
+                    TextRun.Regular("FreeType".AsMemory(), font, bigFontSize, blue),
+                    TextRun.Regular("\nGlyph images are cached on the GPU as needed\n".AsMemory(), font, FontSize, RgbaFloat.White),
+                    TextRun.Regular("Only ".AsMemory(), font, FontSize, RgbaFloat.Yellow),
+                    TextRun.Regular("one".AsMemory(), font, bigFontSize, meowColor),
+                    TextRun.Regular(" draw call is required to render this text".AsMemory(), font, FontSize, RgbaFloat.Yellow)
+                },
+                new Size(400, 400)
+            );
 
             layout.EndLine(font);
 
             //string charset = File.ReadAllText("S:/noah-charset.utf8");
             string charset = " ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz西條にしじょう .,?- \n'";
 
-            var factory = gd.ResourceFactory;
+            //var factory = gd.ResourceFactory;
             var shaderLibrary = new ShaderLibrary(gd);
 
             var designResolution = new Size(1280, 720);
@@ -146,8 +147,8 @@ namespace NitroSharp.FreeTypePlayground
 
             var glyphMap = new Dictionary<GlyphCacheKey, ushort>();
 
-            var atlas = new TextureAtlas(gd, width, height, layerCount: 64, PixelFormat.R8_UNorm);
-            var outlines = new TextureAtlas(gd, width, height, layerCount: 64, PixelFormat.R8_G8_B8_A8_UNorm);
+            var atlas = new TextureAtlas(gd, width, height, layerCount: 8, PixelFormat.R8_UNorm);
+            var outlines = new TextureAtlas(gd, width, height, layerCount: 8, PixelFormat.R8_G8_B8_A8_UNorm);
 
             cl.Begin();
             atlas.Begin(clear: true);
@@ -155,12 +156,13 @@ namespace NitroSharp.FreeTypePlayground
             var pixels = new byte[16 * 1024];
             var outlinePixels = new byte[16 * 1024];
             var outlineOffsets = new Vector2[4096];
-            var rs = new Rectangle[charset.Length * 2];
+            var rs = new Rectangle[charset.Length * 3];
             var sw = Stopwatch.StartNew();
             loop(0, FontSize);
             sw.Stop();
             Console.WriteLine(sw.Elapsed.TotalMilliseconds);
-            //loop(charset.Length, 11);
+            loop(charset.Length, 11);
+            loop(charset.Length, bigFontSize);
             void loop(int start, int fontSize)
             {
                 for (int i = start; i < start + charset.Length; i++)
@@ -314,7 +316,7 @@ namespace NitroSharp.FreeTypePlayground
                     InstanceCount = (ushort)pgs.Length
                 };
 
-                mainBucket.Submit(ref submission, 10);
+                //mainBucket.Submit(ref submission, 10);
 
                 var submission2 = new RenderBucketSubmission<QuadVertex, InstanceData>
                 {
@@ -330,7 +332,7 @@ namespace NitroSharp.FreeTypePlayground
                     InstanceCount = (ushort)(pgs.Length)
                 };
 
-                mainBucket.Submit(ref submission2, 0);
+                //mainBucket.Submit(ref submission2, 0);
 
                 mainBucket.End(cl);
 

@@ -51,7 +51,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NitroSharp.NsScriptCompiler
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Veldrid.ImGui", "..\SomeAnonDev\veldrid\src\Veldrid.ImGui\Veldrid.ImGui.csproj", "{EB07CDE1-1BA8-4D60-BCCC-FAF0944EBBC4}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NitroSharp.FreeTypePlayground", "src\NitroSharp.FreeTypePlayground\NitroSharp.FreeTypePlayground.csproj", "{A4560E1E-3B2A-4ABE-8427-1F86FDF3ABD6}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NitroSharp.FreeTypePlayground", "src\NitroSharp.FreeTypePlayground\NitroSharp.FreeTypePlayground.csproj", "{A4560E1E-3B2A-4ABE-8427-1F86FDF3ABD6}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

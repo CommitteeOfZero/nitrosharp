@@ -31,7 +31,6 @@ namespace NitroSharp.Text
 
             ~FreeTypeInstance()
             {
-                Console.WriteLine("If you're seeing this, it means the the runtime is drunk. This object was not supposed to be collected yet.");
                 Destroy();
             }
         }
@@ -97,17 +96,17 @@ namespace NitroSharp.Text
 
         public void Dispose()
         {
-            //foreach (List<FontFace> list in _instances.Values)
-            //{
-            //    foreach (FontFace face in list)
-            //    {
-            //        face.Dispose();
-            //    }
-            //}
+            foreach (List<FontFace> list in _instances.Values)
+            {
+                foreach (FontFace face in list)
+                {
+                    face.Dispose();
+                }
+            }
 
-            //_instances.Clear();
-            //_families.Clear();
-            //_freetype.Dispose();
+            _instances.Clear();
+            _families.Clear();
+            _freetype.Dispose();
         }
 
         private FontFace ThrowNotFound(string fontFamily, FontStyle fontStyle)

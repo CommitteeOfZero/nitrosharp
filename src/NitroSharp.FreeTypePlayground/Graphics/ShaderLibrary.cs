@@ -39,11 +39,6 @@ namespace NitroSharp.Graphics
 
         private Shader LoadShader(string set, ShaderStages stage, string entryPoint)
         {
-            //if (set == "Cube")
-            {
-                set = "Generated." + set.ToLower();
-            }
-
             ResourceFactory factory = GraphicsDevice.ResourceFactory;
             string name = "NitroSharp.FreeTypePlayground.Graphics.Shaders." + set +
                 $"-{stage.ToString().ToLower()}{GetExtension(factory.BackendType)}";

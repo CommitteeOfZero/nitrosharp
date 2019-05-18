@@ -17,7 +17,6 @@
 
   <ItemGroup>
     <Compile Include="../Common/ArrayBuilder.cs" Link="ArrayBuilder.cs" />
-    <EmbeddedResource Include="Graphics/Shaders/Generated/**" />
   </ItemGroup>
   
   <ItemGroup>
@@ -32,5 +31,14 @@
     <PackageReference Include="Veldrid.StartupUtilities" Version="4.5.0" />-->
     <PackageReference Include="Microsoft.DotNet.ILCompiler" Version="1.0.0-alpha-27527-01" />
   </ItemGroup>
+
+  <Target Name="EmbedGeneratedShaderContent" AfterTargets="AssignTargetPaths">
+    <ItemGroup>
+      <GeneratedShaders Include="$(BaseIntermediateOutputPath)\Shaders.Generated\**" />
+      <EmbeddedResource Include="@(GeneratedShaders)">
+        <LogicalName>NitroSharp.FreeTypePlayground.Graphics.Shaders.%(FileName)%(Extension)</LogicalName>
+      </EmbeddedResource>
+    </ItemGroup>
+  </Target>
 
 </Project>

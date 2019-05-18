@@ -169,7 +169,7 @@ namespace NitroSharp.Text
             var glyph = (FTGlyph*)FTGlyph;
             IntPtr stroker = face.Stroker;
 
-            var buffer = new Pixel[40 * 40];
+            var buffer = new Pixel[100 * 100];
             int w = 0, h = 0;
             BBox bbox = default;
             int ch = 3;
@@ -423,20 +423,20 @@ namespace NitroSharp.Text
 
         private void Destroy()
         {
-            //foreach (Glyph g in _glyphCache.Values)
-            //{
-            //    FT.FT_Done_Glyph((FTGlyph*)g.FTGlyph);
-            //}
+            foreach (Glyph g in _glyphCache.Values)
+            {
+                FT.FT_Done_Glyph((FTGlyph*)g.FTGlyph);
+            }
 
-            //_glyphCache.Clear();
-            //FT.FT_Stroker_Done(_stroker);
-            //FT.FT_Done_Face(_face);
-            //_face = null;
+            _glyphCache.Clear();
+            FT.FT_Stroker_Done(_stroker);
+            FT.FT_Done_Face(_face);
+            _face = null;
         }
 
-        //~FontFace()
-        //{
-        //    Destroy();
-        //}
+        ~FontFace()
+        {
+            Destroy();
+        }
     }
 }
