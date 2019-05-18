@@ -60,4 +60,27 @@ namespace NitroSharp
         public static bool operator ==(Entity left, Entity right) => left.Equals(right);
         public static bool operator !=(Entity left, Entity right) => !(left == right);
     }
+
+    internal interface EntityStruct
+    {
+    }
+
+    internal interface MutableEntityStruct
+    {
+    }
+
+    internal interface EntityStruct<T> : EntityStruct
+        where T : class
+    {
+        T Table { get; }
+        ushort Index { get; }
+    }
+
+    internal interface MutableEntityStruct<T> : MutableEntityStruct
+        where T : class
+    {
+        T Table { get; }
+        Entity Entity { get; }
+        ushort Index { get; }
+    }
 }

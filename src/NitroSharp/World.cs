@@ -3,22 +3,18 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Numerics;
 using NitroSharp.Animation;
-using NitroSharp.Content;
 using NitroSharp.Graphics;
 using NitroSharp.Media;
+using NitroSharp.Content;
 using NitroSharp.Primitives;
 using NitroSharp.Text;
 using NitroSharp.Utilities;
 using Veldrid;
 
+#nullable enable
+
 namespace NitroSharp
 {
-    internal enum WorldKind
-    {
-        Primary,
-        Secondary
-    }
-
     internal sealed class World
     {
         public const ushort InitialCapacity = 1024;
@@ -38,9 +34,9 @@ namespace NitroSharp
         private readonly List<(AnimationDictionaryKey key, PropertyAnimation anim)> _animationsToDeactivate;
         private readonly List<AnimationEvent> _animationEvents;
 
-        public World(WorldKind kind)
+        public World(bool isPrimary)
         {
-            Kind = kind;
+            IsPrimary = isPrimary;
             _entities = new Dictionary<string, Entity>(InitialCapacity);
             _aliases = new Dictionary<string, string>();
             _entityEvents = new ArrayBuilder<EntityEvent>();
@@ -59,8 +55,7 @@ namespace NitroSharp
             _animationEvents = new List<AnimationEvent>();
         }
 
-        public WorldKind Kind { get; }
-        public bool IsPrimary => Kind == WorldKind.Primary;
+        public bool IsPrimary { get; }
 
         public ThreadTable Threads { get; }
         public SpriteTable Sprites { get; }
@@ -82,6 +77,18 @@ namespace NitroSharp
 
         public T GetTable<T>(Entity entity) where T : EntityTable
             => (T)_tables[(int)entity.Kind];
+
+        public T GetEntityStruct<T>(Entity entity) where T : EntityStruct
+        {
+            EntityTable table = GetTable<EntityTable>(entity);
+            return table.Get<T>(entity);
+        }
+
+        public T GetMutEntityStruct<T>(Entity entity) where T : MutableEntityStruct
+        {
+            EntityTable table = GetTable<EntityTable>(entity);
+            return table.GetMutable<T>(entity);
+        }
 
         public bool TryGetEntity(string name, out Entity entity)
             => _entities.TryGetValue(name, out entity);
@@ -116,7 +123,7 @@ namespace NitroSharp
         }
 
         public Entity CreateSprite(
-            string name, string image, in RectangleF sourceRectangle,
+            string name, AssetId image, in RectangleF sourceRectangle,
             int renderPriority, SizeF size, ref RgbaFloat color)
         {
             Entity entity = CreateVisual(name, EntityKind.Sprite, renderPriority, size, ref color);
@@ -191,7 +198,7 @@ namespace NitroSharp
             _animationEvents.Add(new AnimationEvent(key, AnimationEventKind.AnimationDeactivated));
         }
 
-        public bool TryGetAnimation<T>(Entity entity, out T animation) where T : PropertyAnimation
+        public bool TryGetAnimation<T>(Entity entity, out T? animation) where T : PropertyAnimation
         {
             var key = new AnimationDictionaryKey(entity, typeof(T));
             bool result = _activeAnimations.TryGetValue(key, out PropertyAnimation val);
@@ -211,17 +218,17 @@ namespace NitroSharp
             _animationsToDeactivate.Clear();
         }
 
-        public void FlushEvents()
+        public void FlushFrameEvents()
         {
             foreach (EntityTable table in _tables)
             {
-                table.BeginFrame();
+                table.FlushFrameEvents();
             }
         }
 
         private Entity CreateEntity(string name, EntityKind kind)
         {
-            if (_entities.TryGetValue(name, out Entity existing))
+            if (_entities.TryGetValue(name, out _))
             {
                 RemoveEntity(name);
             }

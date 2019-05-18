@@ -1,9 +1,8 @@
 ﻿using System;
 using System.Numerics;
-using NitroSharp.Content;
 using NitroSharp.Graphics;
-using NitroSharp.Graphics.Renderers;
 using NitroSharp.Media;
+using NitroSharp.Content;
 using NitroSharp.Primitives;
 using NitroSharp.Text;
 using Veldrid;
@@ -21,40 +20,44 @@ namespace NitroSharp
         public Row<InterpreterThreadInfo> Infos { get; }
     }
 
-    internal abstract class RenderItemTable : EntityTable
+    internal abstract class RenderItemTable : EntityTable<RenderItem>
     {
         public Row<RenderItemKey> SortKeys { get; }
         public Row<RgbaFloat> Colors { get; }
+        public Row<BlendMode> BlendModes { get; }
         public Row<SizeF> Bounds { get; }
         public Row<TransformComponents> TransformComponents { get; }
 
-        public SystemDataRow<Matrix4x4> TransformMatrices { get; }
+        public Row<Matrix4x4> TransformMatrices { get; }
         public SystemDataRow<RectangleF> WorldRects { get; }
 
-        public RenderItemTable(World world, ushort columnCount)
+        protected RenderItemTable(World world, ushort columnCount)
             : base(world, columnCount)
         {
             TransformComponents = AddRow<TransformComponents>();
             SortKeys = AddRow<RenderItemKey>();
             Colors = AddRow<RgbaFloat>();
+            BlendModes = AddRow<BlendMode>();
             Bounds = AddRow<SizeF>();
-
-            TransformMatrices = AddSystemDataRow<Matrix4x4>();
-            WorldRects = AddSystemDataRow<RectangleF>();
+            TransformMatrices = AddRow<Matrix4x4>();
         }
+
+        public Enumerator<RenderItemTable, RenderItem> GetEnumerator()
+            => new Enumerator<RenderItemTable, RenderItem>(this);
     }
 
     internal sealed class SpriteTable : RenderItemTable
     {
         public Row<ImageSource> ImageSources { get; }
-        public SystemDataRow<SpriteSystemData> SystemData { get; }
 
         public SpriteTable(World world, ushort spriteCount)
             : base(world, spriteCount)
         {
             ImageSources = AddRow<ImageSource>();
-            SystemData = AddSystemDataRow<SpriteSystemData>();
         }
+
+        public new Enumerator<SpriteTable, Sprite> GetEnumerator()
+            => new Enumerator<SpriteTable, Sprite>(this);
     }
 
     internal sealed class RectangleTable : RenderItemTable
@@ -63,20 +66,21 @@ namespace NitroSharp
             : base(world, rectCount)
         {
         }
+
+        public new Enumerator<RenderItemTable, RenderItem> GetEnumerator()
+            => new Enumerator<RenderItemTable, RenderItem>(this);
     }
 
     internal sealed class TextInstanceTable : RenderItemTable
     {
         public RefTypeRow<TextLayout> Layouts { get; }
-        public SystemDataRow<bool> ClearFlags { get; }
-        public SystemDataRow<TextSystemData> SystemData { get; }
+        public Row<bool> ClearFlags { get; }
 
         public TextInstanceTable(World world, ushort initialCount)
             : base(world, initialCount)
         {
             Layouts = AddRefTypeRow<TextLayout>();
-            ClearFlags = AddSystemDataRow<bool>();
-            SystemData = AddSystemDataRow<TextSystemData>();
+            ClearFlags = AddRow<bool>();
         }
     }
 
@@ -92,7 +96,7 @@ namespace NitroSharp
         EntityTable.SystemDataRow<AudioState> AudioState { get; }
     }
 
-    internal sealed class AudioClipTable : EntityTable, MediaClipTable
+    internal sealed class AudioClipTable : EntityTable<AudioClip>, MediaClipTable
     {
         public AudioClipTable(World world, ushort columnCount)
             : base(world, columnCount)
@@ -103,8 +107,6 @@ namespace NitroSharp
             LoopData = AddRow<MediaClipLoopData>();
             Volume = AddRow<float>();
             SoundAmplitude = AddRow<double>();
-            PlaybackState = AddSystemDataRow<PlaybackState>();
-            AudioState = AddSystemDataRow<AudioState>();
         }
 
         public Row<AssetId> Asset { get; }
@@ -114,8 +116,11 @@ namespace NitroSharp
         public Row<float> Volume { get; }
         public Row<double> SoundAmplitude { get; }
 
-        public SystemDataRow<PlaybackState> PlaybackState { get; }
-        public SystemDataRow<AudioState> AudioState { get; }
+        public SystemDataRow<PlaybackState> PlaybackState => throw new NotImplementedException();
+        public SystemDataRow<AudioState> AudioState => throw new NotImplementedException();
+
+        public Enumerator<AudioClipTable, AudioClip> GetEnumerator()
+            => new Enumerator<AudioClipTable, AudioClip>(this);
     }
 
     internal sealed class VideoClipTable : RenderItemTable, MediaClipTable
@@ -142,6 +147,9 @@ namespace NitroSharp
             VideoState = AddSystemDataRow<VideoState>();
             AudioState = AddSystemDataRow<AudioState>();
         }
+
+        public new Enumerator<VideoClipTable, VideoClip> GetEnumerator()
+            => new Enumerator<VideoClipTable, VideoClip>(this);
     }
 
     internal sealed class ChoiceTable : EntityTable

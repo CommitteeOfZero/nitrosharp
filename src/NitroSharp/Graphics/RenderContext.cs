@@ -16,7 +16,7 @@ namespace NitroSharp.Graphics
         public CommandList MainCommandList { get; set; }
 
         public ShaderLibrary ShaderLibrary { get; set; }
-        public RgbaTexturePool TexturePool { get; set; }
+        public TexturePool TexturePool { get; set; }
         public ResourceSetCache ResourceSetCache { get; set; }
         public FontService FontService { get; set; }
 
@@ -25,8 +25,7 @@ namespace NitroSharp.Graphics
         public QuadGeometryStream QuadGeometryStream { get; set; }
         public QuadBatcher QuadBatcher { get; set; }
        
-
-        public TextureView WhiteTexture { get; set; }
+        public Texture WhiteTexture { get; set; }
 
         public Size DesignResolution { get; set; }
 

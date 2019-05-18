@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
 using NitroSharp.Media.Decoding;
 
 namespace NitroSharp.Media
@@ -8,6 +7,39 @@ namespace NitroSharp.Media
     internal static class AudioRenderer
     {
         private static readonly Dictionary<IntPtr, MediaFrame> _submittedAudioFrames = new Dictionary<IntPtr, MediaFrame>();
+
+        public static void AdvanceAudio<T>(
+            T mediaClips,
+            Span<PlaybackState> playbackState,
+            Span<AudioState> audioState)
+            where T : EntityTable, MediaClipTable
+        {
+            if (mediaClips.EntryCount == 0) { return; }
+            ReadOnlySpan<MediaClipLoopData> loopData = mediaClips.LoopData.Enumerate();
+            ReadOnlySpan<float> volume = mediaClips.Volume.Enumerate();
+            Span<TimeSpan> elapsed = mediaClips.Elapsed.MutateAll();
+            int count = playbackState.Length;
+            for (int i = 0; i < count; i++)
+            {
+                ref AudioState state = ref audioState[i];
+                if (state.AudioSource != null)
+                {
+                    state.AudioSource.Volume = volume[i];
+                }
+            }
+
+            for (int i = 0; i < count; i++)
+            {
+                ref PlaybackState state = ref playbackState[i];
+                float vol = volume[i];
+                if (state.HasAudio && vol > 0)
+                {
+                    AdvanceAudio(
+                        ref state, ref audioState[i],
+                        loopData[i], ref elapsed[i]);
+                }
+            }
+        }
 
         public static void InitializeAudioState(
             ref AudioState audioState,
@@ -41,12 +73,10 @@ namespace NitroSharp.Media
             audioSourcePool.Return(audioSource);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void AdvanceAudio(
             ref PlaybackState playbackState,
             ref AudioState audioState,
             in MediaClipLoopData loopData,
-            float volume,
             ref TimeSpan elapsed)
         {
             AudioSource audioSource = audioState.AudioSource;
@@ -81,7 +111,6 @@ namespace NitroSharp.Media
             elapsed = TimeSpan.FromSeconds(Synchonization.GetPlaybackPosition(ref playbackState, audioState));
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static double CalculateAmplitude(in AudioState audioState)
         {
             IntPtr sampleBuffer = _submittedAudioFrames[audioState.AudioSource.CurrentBuffer].Buffer.Data;
@@ -108,7 +137,6 @@ namespace NitroSharp.Media
             return 0;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static double GetPlaybackPosition(in AudioState audioState)
         {
             AudioSource audioSource = audioState.AudioSource;

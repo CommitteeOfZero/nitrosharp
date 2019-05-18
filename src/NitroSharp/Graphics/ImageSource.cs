@@ -1,13 +1,14 @@
-﻿using NitroSharp.Primitives;
+﻿using NitroSharp.Content;
+using NitroSharp.Primitives;
 
 namespace NitroSharp.Graphics
 {
     internal readonly struct ImageSource
     {
-        public readonly string Image;
+        public readonly AssetId Image;
         public readonly RectangleF SourceRectangle;
 
-        public ImageSource(string image, in RectangleF sourceRectangle)
+        public ImageSource(AssetId image, in RectangleF sourceRectangle)
         {
             Image = image;
             SourceRectangle = sourceRectangle;

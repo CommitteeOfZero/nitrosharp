@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Numerics;
-using NitroSharp.Content;
 using NitroSharp.Graphics.Renderers;
 using NitroSharp.Media;
+using NitroSharp.Content;
 using NitroSharp.Primitives;
 using NitroSharp.Text;
 using NitroSharp.Utilities;
@@ -25,7 +25,6 @@ namespace NitroSharp.Graphics.Systems
         private readonly DeviceBuffer _viewProjectionBuffer;
 
         private readonly Texture _whiteTexture;
-        private readonly TextureView _whiteTextureView;
         private readonly RenderBucket<RenderItemKey> _mainBucket;
         private readonly QuadGeometryStream _quadGeometryStream;
         private readonly QuadBatcher _quadBatcher;
@@ -33,11 +32,15 @@ namespace NitroSharp.Graphics.Systems
         private readonly RectangleRenderer _quadRenderer;
         private readonly TextRenderer _textRenderer;
         private readonly VideoRenderer _videoRenderer;
+
+        public RenderContext RenderContext { get; }
+
         private readonly ResourceSetCache _resourceSetCache;
         private readonly ShaderLibrary _shaderLibrary;
-        private readonly RgbaTexturePool _texturePool;
+        private readonly TexturePool _texturePool;
 
-        public RenderSystem(World world,
+        public RenderSystem(
+            World world,
             GraphicsDevice device,
             Swapchain swapchain,
             ContentManager content,
@@ -52,11 +55,11 @@ namespace NitroSharp.Graphics.Systems
 
             ResourceFactory factory = _gd.ResourceFactory;
             _cl = factory.CreateCommandList();
-            _cl.Name = "Main Pass";
+            _cl.Name = "Main";
 
             _resourceSetCache = new ResourceSetCache(_gd.ResourceFactory);
             _shaderLibrary = new ShaderLibrary(_gd);
-            _texturePool = new RgbaTexturePool(_gd);
+            _texturePool = new TexturePool(_gd, PixelFormat.R8_G8_B8_A8_UNorm);
 
             _viewProjectionLayout = factory.CreateResourceLayout(new ResourceLayoutDescription(
                 new ResourceLayoutElementDescription("ViewProjection", ResourceKind.UniformBuffer, ShaderStages.Vertex)));
@@ -71,7 +74,7 @@ namespace NitroSharp.Graphics.Systems
             _mainBucket = new RenderBucket<RenderItemKey>(MainBucketSize);
             _quadGeometryStream = new QuadGeometryStream(device);
           
-            CreateWhiteTexture(out _whiteTexture, out _whiteTextureView);
+            _whiteTexture = CreateWhiteTexture();
 
             var context = new RenderContext
             {
@@ -87,7 +90,7 @@ namespace NitroSharp.Graphics.Systems
                 ViewProjection = viewProjection,
                 MainBucket = _mainBucket,
                 QuadGeometryStream = _quadGeometryStream,
-                WhiteTexture = _whiteTextureView,
+                WhiteTexture = _whiteTexture,
                 DesignResolution = new Size((uint)DesignResolution.Width, (uint)DesignResolution.Height)
             };
 
@@ -97,13 +100,14 @@ namespace NitroSharp.Graphics.Systems
             _spriteRenderer = new SpriteRenderer(world, context, content);
             _quadRenderer = new RectangleRenderer(world, context);
             _textRenderer = new TextRenderer(world, context);
-
             _videoRenderer = new VideoRenderer(world, context, content);
+
+            RenderContext = context;
         }
 
         private SizeF DesignResolution { get; }
 
-        private void CreateWhiteTexture(out Texture texture, out TextureView textureView)
+        private Texture CreateWhiteTexture()
         {
             Texture stagingWhite = _gd.ResourceFactory.CreateTexture(TextureDescription.Texture2D(
                 width: 1, height: 1, mipLevels: 1, arrayLayers: 1,
@@ -113,16 +117,16 @@ namespace NitroSharp.Graphics.Systems
             pixels[0] = RgbaByte.White;
             _gd.Unmap(stagingWhite);
 
-            texture = _gd.ResourceFactory.CreateTexture(TextureDescription.Texture2D(
+            Texture texture = _gd.ResourceFactory.CreateTexture(TextureDescription.Texture2D(
                  width: 1, height: 1, mipLevels: 1, arrayLayers: 1,
                  PixelFormat.R8_G8_B8_A8_UNorm, TextureUsage.Sampled));
-            textureView = _gd.ResourceFactory.CreateTextureView(texture);
 
             _cl.Begin();
             _cl.CopyTexture(stagingWhite, texture);
             _cl.End();
             _gd.SubmitCommands(_cl);
             _gd.DisposeWhenIdle(stagingWhite);
+            return texture;
         }
 
         public void ProcessTransforms()
@@ -166,7 +170,6 @@ namespace NitroSharp.Graphics.Systems
             _resourceSetCache.Dispose();
             _texturePool.Dispose();
             _shaderLibrary.Dispose();
-            _whiteTextureView.Dispose();
             _whiteTexture.Dispose();
 
             _viewProjectionSet.Dispose();

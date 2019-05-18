@@ -1,79 +1,71 @@
 ﻿using System.IO;
 using NitroSharp.Graphics;
+using SharpDX.Mathematics.Interop;
 using SharpDX.WIC;
 using Veldrid;
+using PixelFormat = Veldrid.PixelFormat;
+
+#nullable enable
 
 namespace NitroSharp.Content
 {
-    internal sealed class WicTextureLoader : ContentLoader
+    internal sealed unsafe class WicTextureLoader : TextureLoader
     {
         private readonly ImagingFactory _wicFactory;
 
-        public WicTextureLoader(ContentManager content, ImagingFactory wicFactory) : base(content)
+        public WicTextureLoader(
+            GraphicsDevice graphicsDevice,
+            TexturePool texturePool,
+            ImagingFactory wicFactory)
+            : base(graphicsDevice, texturePool)
         {
             _wicFactory = wicFactory;
         }
 
-        public override object Load(Stream stream)
+        protected override Texture LoadStaging(Stream stream)
         {
-            using (stream)
+            using (var decoder = new BitmapDecoder(_wicFactory, stream, DecodeOptions.CacheOnDemand))
+            using (var formatConv = new FormatConverter(_wicFactory))
+            using (BitmapFrameDecode frame = decoder.GetFrame(0))
             {
-                var decoder = new BitmapDecoder(_wicFactory, stream, DecodeOptions.CacheOnDemand);
-                using (var pixelFormatConverter = new FormatConverter(_wicFactory))
-                using (var frame = decoder.GetFrame(0))
+                formatConv.Initialize(frame, SharpDX.WIC.PixelFormat.Format32bppRGBA);
+
+                uint width = (uint)frame.Size.Width;
+                uint height = (uint)frame.Size.Height;
+                Texture stagingTexture = _rf.CreateTexture(TextureDescription.Texture2D(
+                    width, height, mipLevels: 1, arrayLayers: 1,
+                    PixelFormat.R8_G8_B8_A8_UNorm, TextureUsage.Staging
+                ));
+
+                MappedResource map = _gd.Map(stagingTexture, MapMode.Write);
+                uint rowWidth = width * 4;
+                if (rowWidth == map.RowPitch)
                 {
-                    pixelFormatConverter.Initialize(frame, SharpDX.WIC.PixelFormat.Format32bppRGBA);
-                    var device = Content.GraphicsDevice;
-                    var texture = CreateDeviceTexture(device, device.ResourceFactory, pixelFormatConverter);
-                    return new BindableTexture(device.ResourceFactory, texture);
+                    uint size = rowWidth * height;
+                    formatConv.CopyPixels((int)rowWidth, map.Data, (int)size);
                 }
+                else
+                {
+                    for (uint y = 0; y < height; y++)
+                    {
+                        byte* dstStart = (byte*)map.Data + y * map.RowPitch;
+                        formatConv.CopyPixels(
+                            new RawBox(0, (int)y, (int)width, 1),
+                            (int)rowWidth,
+                            new SharpDX.DataPointer(dstStart, (int)rowWidth)
+                        );
+                    }
+                }
+
+                _gd.Unmap(stagingTexture);
+                return stagingTexture;
             }
         }
 
-        private unsafe Texture CreateDeviceTexture(GraphicsDevice gd, ResourceFactory factory, FormatConverter fc)
+        public override void Dispose()
         {
-            uint width = (uint)fc.Size.Width;
-            uint height = (uint)fc.Size.Height;
-
-            Texture staging = factory.CreateTexture(
-                TextureDescription.Texture2D(width, height, 1, 1, Veldrid.PixelFormat.R8_G8_B8_A8_UNorm, TextureUsage.Staging));
-
-            Texture result = factory.CreateTexture(
-                TextureDescription.Texture2D(width, height, 1, 1, Veldrid.PixelFormat.R8_G8_B8_A8_UNorm, TextureUsage.Sampled));
-
-            CommandList cl = gd.ResourceFactory.CreateCommandList();
-            cl.Begin();
-
-            uint level = 0;
-            MappedResource map = gd.Map(staging, MapMode.Write, level);
-            uint rowWidth = width * 4;
-            if (rowWidth == map.RowPitch)
-            {
-                uint size = rowWidth * height;
-                fc.CopyPixels((int)rowWidth, map.Data, (int)size);
-            }
-            else
-            {
-                for (uint y = 0; y < height; y++)
-                {
-                    byte* dstStart = (byte*)map.Data.ToPointer() + y * map.RowPitch;
-                    fc.CopyPixels(new SharpDX.Mathematics.Interop.RawBox(0, (int)y, (int)width, 1),
-                        (int)rowWidth, new SharpDX.DataPointer(dstStart, (int)rowWidth));
-                }
-            }
-
-            gd.Unmap(staging, level);
-            cl.CopyTexture(
-                staging, 0, 0, 0, level, 0,
-                result, 0, 0, 0, level, 0,
-                width, height, 1, 1);
-            cl.End();
-
-            gd.SubmitCommands(cl);
-            gd.DisposeWhenIdle(staging);
-            gd.DisposeWhenIdle(cl);
-
-            return result;
+            base.Dispose();
+            _wicFactory.Dispose();
         }
     }
 }

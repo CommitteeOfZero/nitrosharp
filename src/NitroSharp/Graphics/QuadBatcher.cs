@@ -9,27 +9,21 @@ using Veldrid;
 
 namespace NitroSharp.Graphics
 {
-    internal enum BlendMode
-    {
-        Alpha,
-        Additive
-    }
-
     internal sealed class QuadBatcher : IDisposable
     {
         private readonly RenderBucket<RenderItemKey> _renderBucket;
         private readonly QuadGeometryStream _quadGeometryStream;
         private readonly ViewProjection _viewProjection;
         private readonly ResourceSetCache _resourceSetCache;
-        private readonly TextureView _whiteTextureView;
+        private readonly Texture _whiteTexture;
 
         private readonly ResourceLayout _spriteResourceLayout;
         private ResourceSetDescription _spriteResourceSetDesc;
         private readonly Pipeline _alphaBlendPipeline;
         private readonly Pipeline _additiveBlendPipeline;
 
-        private ResourceSet _lastResourceSet;
-        private TextureView _lastTexture;
+        private ResourceSet? _lastResourceSet;
+        private Texture? _lastTexture;
         private Matrix4x4 _transform;
 
         public QuadBatcher(
@@ -40,14 +34,14 @@ namespace NitroSharp.Graphics
             QuadGeometryStream quadGeometryStream,
             ResourceSetCache resourceSetCache,
             ShaderLibrary shaderLibrary,
-            TextureView whiteTexture)
+            Texture whiteTexture)
         {
             GraphicsDevice gd = graphicsDevice;
             _viewProjection = viewProjection;
             _renderBucket = renderBucket;
             _quadGeometryStream = quadGeometryStream;
             _resourceSetCache = resourceSetCache;
-            _whiteTextureView = whiteTexture;
+            _whiteTexture = whiteTexture;
 
             ResourceFactory factory = gd.ResourceFactory;
             _spriteResourceLayout = factory.CreateResourceLayout(new ResourceLayoutDescription(
@@ -82,49 +76,58 @@ namespace NitroSharp.Graphics
             _transform = transform;
         }
 
-        public void FillRectangle(float x, float y, float width, float height, ref RgbaFloat fillColor, RenderItemKey renderPriority)
+        public void FillRectangle(
+            float x,
+            float y,
+            float width,
+            float height,
+            ref RgbaFloat fillColor,
+            RenderItemKey renderPriority)
             => FillRectangle(new RectangleF(x, y, width, height), ref fillColor, renderPriority);
 
-        public void FillRectangle(in RectangleF rect, ref RgbaFloat fillColor, RenderItemKey renderPriority)
-            => DrawImage(_whiteTextureView, null, rect, ref fillColor, renderPriority);
+        public void FillRectangle(
+            in RectangleF rect,
+            ref RgbaFloat fillColor,
+            RenderItemKey renderPriority)
+            => DrawImage(_whiteTexture, null, rect, ref fillColor, renderPriority);
 
         public void DrawImage(
-            TextureView textureView,
+            Texture texture,
             in RectangleF? sourceRect,
             in RectangleF destinationRect,
             ref RgbaFloat color,
             RenderItemKey renderPriority,
             BlendMode blendMode = BlendMode.Alpha)
         {
-            var sourceRectangle = sourceRect ?? new RectangleF(
-                0, 0, (int)textureView.Target.Width, (int)textureView.Target.Height);
+            (uint width, uint height) = (texture.Width, texture.Height);
+            var sourceRectangle = sourceRect ?? new RectangleF(0, 0, width, height);
 
             var uvTopLeft = new Vector2(
-                    sourceRectangle.Left / textureView.Target.Width,
-                    sourceRectangle.Top / textureView.Target.Height);
+                sourceRectangle.Left / width,
+                sourceRectangle.Top / height);
 
             var uvBottomRight = new Vector2(
-                sourceRectangle.Right / textureView.Target.Width,
-                sourceRectangle.Bottom / textureView.Target.Height);
+                sourceRectangle.Right / width,
+                sourceRectangle.Bottom / height);
 
             (ushort vertexBase, ushort instanceBase) = _quadGeometryStream.Append(
                 destinationRect, uvTopLeft, uvBottomRight, _transform, ref color);
 
-            ResourceSet resourceSet = _lastResourceSet;
-            if (textureView != _lastTexture)
+            ResourceSet? resourceSet = _lastResourceSet;
+            if (texture != _lastTexture)
             {
-                _spriteResourceSetDesc.BoundResources[0] = textureView;
+                _spriteResourceSetDesc.BoundResources[0] = texture;
                 resourceSet = _resourceSetCache.GetResourceSet(ref _spriteResourceSetDesc);
-                _lastTexture = textureView;
+                _lastTexture = texture;
                 _lastResourceSet = resourceSet;
             }
 
+            Debug.Assert(resourceSet != null);
             var submission = new RenderBucketSubmission<QuadVertex, QuadInstanceData>
             {
                 VertexBuffer = _quadGeometryStream.VertexBuffer,
                 IndexBuffer = _quadGeometryStream.IndexBuffer,
                 VertexBase = vertexBase,
-                VertexCount = 4,
                 IndexBase = 0,
                 IndexCount = 6,
                 InstanceDataBuffer = _quadGeometryStream.InstanceDataBuffer,

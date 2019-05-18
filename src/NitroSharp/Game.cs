@@ -1,17 +1,16 @@
 ﻿using NitroSharp.Content;
 using NitroSharp.Graphics;
 using NitroSharp.Media;
-using NitroSharp.Media.Decoding;
 using NitroSharp.Primitives;
 using NitroSharp.Text;
 using System;
 using System.Diagnostics;
 using System.IO;
-using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Veldrid;
 using Veldrid.StartupUtilities;
+using System.Runtime.InteropServices;
 
 namespace NitroSharp
 {
@@ -27,10 +26,10 @@ namespace NitroSharp
         private volatile bool _needsResize;
         private volatile bool _surfaceDestroyed;
         private GraphicsDevice _graphicsDevice;
+        private TexturePool _texturePool;
         private Swapchain _swapchain;
         private readonly TaskCompletionSource<int> _initializingGraphics;
 
-        private VideoFrameConverter _frameConverter;
         private SharpDX.WIC.ImagingFactory _wicFactory;
         private AudioDevice _audioDevice;
         private AudioSourcePool _audioSourcePool;
@@ -53,13 +52,10 @@ namespace NitroSharp
             _window.Mobile_SurfaceDestroyed += OnSurfaceDestroyed;
 
             _gameTimer = new Stopwatch();
-
-            _presenterWorld = _scriptingWorld = new World(WorldKind.Primary);
-            World scriptingWorld = _presenterWorld;
+            _presenterWorld = _scriptingWorld = new World(isPrimary: true);
             if (_configuration.UseDedicatedInterpreterThread)
             {
-                _scriptingWorld = new World(WorldKind.Secondary);
-                scriptingWorld = _scriptingWorld;
+                _scriptingWorld = new World(isPrimary: false);
             }
         }
 
@@ -180,8 +176,7 @@ namespace NitroSharp
             {
                 if (_graphicsDevice.BackendType == GraphicsBackend.OpenGLES)
                 {
-                    Content.SetGraphicsDevice(_graphicsDevice);
-                    RecreateGraphicsResources();
+                    // TODO (Android): recreate all device resources
                 }
 
                 RunMainLoop(true);
@@ -229,6 +224,7 @@ namespace NitroSharp
                 default:
                     return null;
             }
+            _texturePool = new TexturePool(_graphicsDevice, PixelFormat.R8_G8_B8_A8_UNorm);
         }
 
         private void SetupAudio()
@@ -242,36 +238,33 @@ namespace NitroSharp
         private void CreateServices()
         {
             Content = CreateContentManager();
-            Content.SetGraphicsDevice(_graphicsDevice);
             FontService = new FontService();
             FontService.RegisterFonts(Directory.EnumerateFiles("Fonts"));
         }
 
         private ContentManager CreateContentManager()
         {
-            var content = new ContentManager(_configuration.ContentRoot);
-            ContentLoader textureLoader = null;
-            ContentLoader textureDataLoader = null;
-
-            if (UseWicOnWindows && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            TextureLoader textureLoader;
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && UseWicOnWindows)
             {
                 _wicFactory = new SharpDX.WIC.ImagingFactory();
-                textureLoader = new WicTextureLoader(content, _wicFactory);
-                textureDataLoader = new WicTextureDataLoader(content, _wicFactory);
+                textureLoader = new WicTextureLoader(
+                    _graphicsDevice,
+                    _texturePool,
+                    _wicFactory
+                );
             }
             else
             {
-                textureLoader = new FFmpegTextureLoader(content);
-                textureDataLoader = new FFmpegTextureDataLoader(content);
+                textureLoader = new FFmpegTextureLoader(_graphicsDevice, _texturePool);
             }
 
-            content.RegisterContentLoader(typeof(BindableTexture), textureLoader);
-            content.RegisterContentLoader(typeof(TextureData), textureDataLoader);
-
-            _frameConverter = new VideoFrameConverter();
-            var mediaFileLoader = new MediaClipLoader(content, _frameConverter, _audioDevice.AudioParameters);
-            content.RegisterContentLoader(typeof(MediaPlaybackSession), mediaFileLoader);
-
+            var content = new ContentManager(
+                _configuration.ContentRoot,
+                _graphicsDevice,
+                textureLoader,
+                _audioDevice
+            );
             return content;
         }
 
@@ -289,7 +282,7 @@ namespace NitroSharp
         {
             if (_graphicsDevice.BackendType == GraphicsBackend.OpenGLES)
             {
-                DestroyDeviceResources();
+                // TODO (Android): destroy all device resources
                 _graphicsDevice.Dispose();
                 _graphicsDevice = null;
                 _swapchain = null;
@@ -304,16 +297,6 @@ namespace NitroSharp
             _window.Mobile_HandledSurfaceDestroyed.Set();
         }
 
-        private void RecreateGraphicsResources()
-        {
-            Content.ReloadTextures();
-        }
-
-        private void DestroyDeviceResources()
-        {
-            Content.DestroyTextures();
-        }
-
         public void Exit()
         {
             _shutdownCancellation.Cancel();
@@ -321,13 +304,14 @@ namespace NitroSharp
 
         public void Dispose()
         {
+            _graphicsDevice.WaitForIdle();
             Content.Dispose();
             FontService.Dispose();
+            _texturePool.Dispose();
             _wicFactory?.Dispose();
             _swapchain.Dispose();
             _graphicsDevice.Dispose();
             _audioDevice.Dispose();
-            _frameConverter.Dispose();
         }
     }
 }

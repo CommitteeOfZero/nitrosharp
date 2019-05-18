@@ -42,9 +42,9 @@ namespace NitroSharp
             NsEasingFunction easingFunction, bool wait)
         {
             if (!entity.IsVisual) { return; }
-            RenderItemTable table = _world.GetTable<RenderItemTable>(entity);
+            RenderItem renderItem = _world.GetEntityStruct<RenderItem>(entity);
+            RgbaFloat color = renderItem.Color;
             float adjustedOpacity = dstOpacity.Rebase(1.0f);
-            RgbaFloat color = table.Colors.GetValue(entity);
             if (duration > TimeSpan.Zero)
             {
                 var animation = new FadeAnimation(entity, duration, easingFunction)
@@ -61,8 +61,7 @@ namespace NitroSharp
             }
             else
             {
-                color.SetAlpha(adjustedOpacity);
-                table.Colors.Set(entity, ref color);
+                renderItem.AsMutable().Color.SetAlpha(adjustedOpacity);
             }
         }
 
@@ -98,9 +97,8 @@ namespace NitroSharp
             NsCoordinate dstX, NsCoordinate dstY,
             NsEasingFunction easingFunction, bool wait)
         {
-            RenderItemTable table = _world.GetTable<RenderItemTable>(entity);
-            ref TransformComponents transform = ref table.TransformComponents.Mutate(entity);
-            ref Vector3 position = ref transform.Position;
+            MutableRenderItem renderItem = _world.GetMutEntityStruct<MutableRenderItem>(entity);
+            ref Vector3 position = ref renderItem.TransformComponents.Position;
 
             float targetX = dstX.Origin == NsCoordinateOrigin.CurrentValue
                 ? position.X + dstX.Value
@@ -163,9 +161,8 @@ namespace NitroSharp
             NsRational dstScaleX, NsRational dstScaleY,
             NsEasingFunction easingFunction, bool suspendThread)
         {
-            RenderItemTable table = _world.GetTable<RenderItemTable>(entity);
-            ref TransformComponents transform = ref table.TransformComponents.Mutate(entity);
-            ref Vector3 scale = ref transform.Scale;
+            MutableRenderItem renderItem = _world.GetMutEntityStruct<MutableRenderItem>(entity);
+            ref Vector3 scale = ref renderItem.TransformComponents.Scale;
 
             dstScaleX = dstScaleX.Rebase(1.0f);
             dstScaleY = dstScaleY.Rebase(1.0f);

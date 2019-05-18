@@ -1,16 +1,16 @@
-﻿using NitroSharp.Content;
-using NitroSharp.Dialogue;
+﻿using NitroSharp.Dialogue;
 using NitroSharp.Graphics;
+using NitroSharp.Content;
 using NitroSharp.NsScript;
 using NitroSharp.NsScript.Primitives;
 using NitroSharp.Primitives;
 using NitroSharp.Text;
 using System;
 using System.Collections.Immutable;
-using System.Diagnostics;
-using System.IO;
 using System.Numerics;
 using Veldrid;
+
+#nullable enable
 
 namespace NitroSharp
 {
@@ -25,7 +25,7 @@ namespace NitroSharp
         public override void CreateText(string entityName, int priority, NsCoordinate x, NsCoordinate y, int width, int height, string text)
         {
             var fontFamily = FontService.GetFontFamily("Noto Sans CJK JP");
-            TextLayout layout = new TextLayout(fontFamily, new Size(width > 0 ? (uint)width : 300, 50), 256);
+            var layout = new TextLayout(fontFamily, new Size(width > 0 ? (uint)width : 300, 50), 256);
             ImmutableArray<DialogueLinePart> parts = DialogueLine.Parse(text).Parts;
             for (int i = 0; i < parts.Length; i++)
             {
@@ -84,9 +84,16 @@ namespace NitroSharp
 
         public override void LoadImage(string entityName, string fileName)
         {
-            Content.Get<BindableTexture>(fileName);
-            RgbaFloat white = RgbaFloat.White;
-            _world.CreateSprite(entityName, fileName, default, 0, default, ref white);
+            try
+            {
+                var texId = new AssetId(fileName);
+                _ = Content.GetTexture(texId, increaseRefCount: false);
+                RgbaFloat white = RgbaFloat.White;
+                _world.CreateSprite(entityName, texId, default, 0, default, ref white);
+            }
+            catch (ContentLoadException)
+            {
+            }
         }
 
         public override void CreateSprite(
@@ -136,27 +143,26 @@ namespace NitroSharp
             if (source.ToUpperInvariant().Contains("COLOR")) { return; }
             if (_world.TryGetEntity(fileOrExistingEntityName, out Entity existingEnitity))
             {
-                source = _world.Sprites.ImageSources.GetValue(existingEnitity).Image;
+                source = _world.Sprites.ImageSources.GetValue(existingEnitity).Image.NormalizedPath;
             }
 
-            AssetRef<BindableTexture> texture;
+            var texId = new AssetId(source);
+            Texture texture;
             try
             {
-                texture = Content.Get<BindableTexture>(source);
+                texture = Content.GetTexture(texId, increaseRefCount: false);
             }
-            catch (FileNotFoundException)
+            catch (ContentLoadException)
             {
                 return;
             }
 
             RgbaFloat color = RgbaFloat.White;
-            var bounds = new Vector2(texture.Asset.Width, texture.Asset.Height);
-            var sourceRectangle = srcRect.HasValue
-                ? srcRect.Value
-                : new RectangleF(0, 0, bounds.X, bounds.Y);
+            var bounds = new Vector2(texture.Width, texture.Height);
+            var sourceRectangle = srcRect ?? new RectangleF(0, 0, bounds.X, bounds.Y);
             var size = new SizeF(sourceRectangle.Width, sourceRectangle.Height);
 
-            Entity entity = _world.CreateSprite(entityName, source, sourceRectangle, priority, size, ref color);
+            Entity entity = _world.CreateSprite(entityName, texId, sourceRectangle, priority, size, ref color);
             SetPosition(entity, x, y);
             if (parentEntity.IsValid)
             {

@@ -4,19 +4,19 @@ using System;
 using NitroSharp.Media.Decoding;
 using System.IO;
 using System.Linq;
-using NitroSharp.Content;
 using Veldrid;
 using NitroSharp.Animation;
 using System.Runtime.CompilerServices;
 using NitroSharp.Primitives;
 using NitroSharp.NsScript.Primitives;
+using NitroSharp.Content;
+
+#nullable enable
 
 namespace NitroSharp
 {
     internal sealed partial class NsBuiltins
     {
-        private AudioSourcePool AudioSourcePool => _game.AudioSourcePool;
-
         private AudioClipTable AudioClips => _world.AudioClips;
         private VideoClipTable VideoClips => _world.VideoClips;
 
@@ -44,32 +44,39 @@ namespace NitroSharp
 
         public override void LoadAudio(string entityName, NsAudioKind kind, string fileName)
         {
-            AssetId assetId = fileName;
-            if (!Content.TryGet<MediaPlaybackSession>(assetId, out var session))
+            var assetId = new AssetId(fileName);
+            MediaPlaybackSession? session = Content.TryGetMediaClip(assetId, increaseRefCount: false);
+            if (session == null)
             {
                 string directory = Path.GetDirectoryName(fileName);
                 string nameWithoutExtension = Path.GetFileNameWithoutExtension(fileName);
                 string searchPattern = nameWithoutExtension + "*";
                 assetId = Content.Search(directory, searchPattern).First();
-                session = Content.Get<MediaPlaybackSession>(assetId);
+                session = Content.TryGetMediaClip(assetId, increaseRefCount: false);
             }
 
-            Entity entity = _world.CreateAudioClip(entityName, assetId, false);
-            AudioClips.Duration.Set(entity, session.Asset.AudioStream.Duration);
+            if (session != null)
+            {
+                Entity entity = _world.CreateAudioClip(entityName, assetId, false);
+                AudioClips.Duration.Set(entity, session.AudioStream!.Duration);
+            }
         }
 
         public override void LoadVideo(string entityName, int priority, NsCoordinate x, NsCoordinate y, bool loop, string fileName)
         {
-            AssetId assetId = fileName;
-            Content.TryGet<MediaPlaybackSession>(assetId, out var session);
-            RgbaFloat color = RgbaFloat.White;
-            Entity entity = _world.CreateVideoClip(entityName, assetId, loop, priority, ref color);
+            var assetId = new AssetId(fileName);
+            MediaPlaybackSession? session = Content.TryGetMediaClip(assetId, increaseRefCount: false);
+            if (session != null)
+            {
+                RgbaFloat color = RgbaFloat.White;
+                Entity entity = _world.CreateVideoClip(entityName, assetId, loop, priority, ref color);
 
-            VideoStream stream = session.Asset.VideoStream;
-            VideoClips.Duration.Set(entity, stream.Duration);
+                VideoStream stream = session.VideoStream!;
+                VideoClips.Duration.Set(entity, stream.Duration);
 
-            var bounds = new SizeF(stream.Width, stream.Height);
-            VideoClips.Bounds.Set(entity, bounds);
+                var bounds = new SizeF(stream.Width, stream.Height);
+                VideoClips.Bounds.Set(entity, bounds);
+            }
             //SetPosition(entity, x, y);
         }
 

@@ -2,74 +2,127 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using NitroSharp.Graphics;
+using NitroSharp.Media;
+using NitroSharp.Media.Decoding;
 using Veldrid;
+
+#nullable enable
 
 namespace NitroSharp.Content
 {
     internal class ContentManager : IDisposable
     {
-        private readonly Dictionary<Type, ContentLoader> _contentLoaders;
-        private readonly Dictionary<AssetId, (object asset, int refCount)> _loadedAssets;
-
-        public ContentManager(string rootDirectory)
+        private struct CacheEntry
         {
-            RootDirectory = rootDirectory;
-            _contentLoaders = new Dictionary<Type, ContentLoader>();
-            _loadedAssets = new Dictionary<AssetId, (object asset, int refCount)>();
+            public IDisposable Asset;
+            public int ReferenceCount;
         }
 
-        public ContentManager() : this(string.Empty)
+        private readonly Dictionary<AssetId, CacheEntry> _loadedAssets;
+        private readonly Func<Stream, Texture> _loadTextureFunc;
+        private readonly VideoFrameConverter _videoFrameConverter;
+        private readonly Func<Stream, MediaPlaybackSession> _loadMediaClipFunc;
+        private readonly TextureLoader _textureLoader;
+        private readonly AudioDevice _audioDevice;
+
+        public ContentManager(
+            string rootDirectory,
+            GraphicsDevice graphicsDevice,
+            TextureLoader textureLoader,
+            AudioDevice audioDevice)
         {
+            RootDirectory = rootDirectory;
+            GraphicsDevice = graphicsDevice;
+            _textureLoader = textureLoader;
+            _audioDevice = audioDevice;
+            _loadedAssets = new Dictionary<AssetId, CacheEntry>();
+            _loadTextureFunc = stream => _textureLoader.LoadTexture(stream, staging: false);
+            _videoFrameConverter = new VideoFrameConverter();
+            _loadMediaClipFunc = LoadMediaClip;
         }
 
         public string RootDirectory { get; }
-        public GraphicsDevice GraphicsDevice { get; private set; }
+        public GraphicsDevice GraphicsDevice { get; }
 
-        public AssetRef<T> Get<T>(AssetId assetId)
+        /// <exception cref="ContentLoadException" />
+        public Texture LoadTexture(AssetId textureId, bool staging)
         {
-            if (_loadedAssets.TryGetValue(assetId, out var cachedItem))
-            {
-                IncrementRefCount(assetId, cachedItem);
-            }
-            else
-            {
-                Load<T>(assetId);
-            }
-
-            return new AssetRef<T>(assetId, this);
+            Stream stream = OpenStream(textureId.NormalizedPath);
+            return _textureLoader.LoadTexture(stream, staging);
         }
 
-        public bool TryGet<T>(AssetId assetId, out AssetRef<T> asset)
+        /// <exception cref="ContentLoadException" />
+        public Texture GetTexture(AssetId textureId, bool increaseRefCount = true)
+            => GetAsset<Texture>(textureId, _loadTextureFunc, increaseRefCount);
+
+        /// <exception cref="ContentLoadException" />
+        public MediaPlaybackSession GetMediaClip(AssetId assetId, bool increaseRefCount = true)
+            => GetAsset<MediaPlaybackSession>(assetId, _loadMediaClipFunc, increaseRefCount);
+
+        public MediaPlaybackSession? TryGetMediaClip(AssetId assetId, bool increaseRefCount = true)
         {
             try
             {
-                asset = Get<T>(assetId);
-                return true;
+                return GetAsset<MediaPlaybackSession>(assetId, _loadMediaClipFunc, increaseRefCount);
             }
-            catch (FileNotFoundException)
+            catch (ContentLoadException)
             {
-                asset = null;
-                return false;
+                return null;
             }
         }
 
-        public bool IsLoaded(AssetId assetId) => _loadedAssets.ContainsKey(assetId);
-        public bool Exists(AssetId assetId)
+        private MediaPlaybackSession LoadMediaClip(Stream stream)
         {
-            Stream stream = null;
-            try
+            var container = MediaContainer.Open(stream);
+            var options = new MediaProcessingOptions(
+                _audioDevice.AudioParameters,
+                _videoFrameConverter);
+            return new MediaPlaybackSession(container, options);
+        }
+
+        /// <exception cref="ContentLoadException" />
+        private T GetAsset<T>(AssetId assetId, Func<Stream, IDisposable> loader, bool increaseRefCount = true)
+            where T : class, IDisposable
+        {
+            if (!_loadedAssets.TryGetValue(assetId, out CacheEntry cacheEntry))
             {
-                stream = OpenStream(assetId);
-                return true;
+                try
+                {
+                    Stream stream = OpenStream(assetId.NormalizedPath);
+                    // The loader is responsible for disposing the stream
+                    cacheEntry = new CacheEntry
+                    {
+                        Asset = loader(stream),
+                        ReferenceCount = 0
+                    };
+                }
+                catch (Exception ex)
+                {
+                    throw new ContentLoadException($"Couldn't load asset '{assetId.NormalizedPath}'.", ex);
+                }
             }
-            catch
+
+            if (increaseRefCount)
             {
-                return false;
+                cacheEntry.ReferenceCount++;
+                _loadedAssets[assetId] = cacheEntry;
             }
-            finally
+            return (T)cacheEntry.Asset;
+        }
+
+        public void UnrefAsset(AssetId assetId)
+        {
+            if (_loadedAssets.TryGetValue(assetId, out CacheEntry cacheEntry))
             {
-                stream?.Dispose();
+                if (--cacheEntry.ReferenceCount == 0)
+                {
+                    cacheEntry.Asset.Dispose();
+                    _loadedAssets.Remove(assetId);
+                }
+                else
+                {
+                    _loadedAssets[assetId] = cacheEntry;
+                }
             }
         }
 
@@ -78,101 +131,12 @@ namespace NitroSharp.Content
             string path = Path.Combine(RootDirectory.Replace("\\", "/"), relativePath);
             try
             {
-                return Directory.EnumerateFiles(path, searchPattern).Select(x => new AssetId(x));
+                return Directory.EnumerateFiles(path, searchPattern)
+                    .Select(x => new AssetId(x));
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 return Enumerable.Empty<AssetId>();
-            }
-        }
-
-        public void SetGraphicsDevice(GraphicsDevice graphicsDevice)
-        {
-            GraphicsDevice = graphicsDevice;
-        }
-
-        public void DestroyTextures()
-        {
-            foreach (var cacheValue in _loadedAssets.Values)
-            {
-                if (cacheValue.asset is BindableTexture texture)
-                {
-                    texture.Dispose();
-                }
-            }
-        }
-
-        public void ReloadTextures()
-        {
-            var texturesToReload = _loadedAssets
-                .Where(x => x.Value.asset is BindableTexture)
-                .ToDictionary(x => x.Key, x => x.Value);
-
-            foreach (var oldKvp in texturesToReload)
-            {
-                var oldTexture = oldKvp.Value.asset as BindableTexture;
-                oldTexture.Dispose();
-
-                var newTexture = Load<BindableTexture>(oldKvp.Key);
-                _loadedAssets[oldKvp.Key] = (newTexture, oldKvp.Value.refCount);
-            }
-        }
-
-        internal T InternalGetCached<T>(AssetId assetId) => (T)_loadedAssets[assetId].asset;
-
-        public void RegisterContentLoader(Type t, ContentLoader loader)
-        {
-            _contentLoaders[t] = loader;
-        }
-
-        private T Load<T>(AssetId assetId) => (T)Load(assetId, typeof(T));
-        private object Load(AssetId assetId) => Load(assetId, contentType: null);
-
-        private object Load(AssetId assetId, Type contentType)
-        {
-            var stream = OpenStream(assetId);
-            return Load(stream, assetId, contentType);
-        }
-
-        private object Load(Stream stream, AssetId assetId, Type contentType)
-        {
-            if (stream == null)
-            {
-                throw new ContentLoadException($"Failed to load asset '{assetId}': file not found.");
-            }
-
-            if (contentType == null || !_contentLoaders.TryGetValue(contentType, out var loader))
-            {
-                throw UnsupportedFormat(assetId);
-            }
-
-            object asset = loader.Load(stream);
-            _loadedAssets[assetId] = (asset, 1);
-            return asset;
-        }
-
-        private int IncrementRefCount(AssetId assetId, (object asset, int refCount) cachedItem)
-        {
-            _loadedAssets[assetId] = (cachedItem.asset, cachedItem.refCount + 1);
-            return cachedItem.refCount + 1;
-        }
-
-        private int DecrementRefCount(AssetId assetId, (object asset, int refCount) cachedItem)
-        {
-            _loadedAssets[assetId] = (cachedItem.asset, cachedItem.refCount - 1);
-            return cachedItem.refCount - 1;
-        }
-
-        internal void ReleaseReference(AssetId assetId)
-        {
-            if (_loadedAssets.TryGetValue(assetId, out var cachedItem))
-            {
-                int newRefCount = DecrementRefCount(assetId, cachedItem);
-                if (newRefCount == 0)
-                {
-                    (cachedItem.asset as IDisposable)?.Dispose();
-                    _loadedAssets.Remove(assetId);
-                }
             }
         }
 
@@ -182,24 +146,16 @@ namespace NitroSharp.Content
             return File.OpenRead(fullPath);
         }
 
-        private Exception UnsupportedFormat(string path)
-        {
-            return new ContentLoadException($"Failed to load asset '{path}': unsupported format.");
-        }
-
         public virtual void Dispose()
         {
-            foreach (var cachedItem in _loadedAssets.Values)
+            foreach (CacheEntry cachedItem in _loadedAssets.Values)
             {
-                (cachedItem.asset as IDisposable)?.Dispose();
+                cachedItem.Asset.Dispose();
             }
 
             _loadedAssets.Clear();
-
-            foreach (var loader in _contentLoaders.Values)
-            {
-                loader.Dispose();
-            }
+            _textureLoader.Dispose();
+            _videoFrameConverter.Dispose();
         }
     }
 }

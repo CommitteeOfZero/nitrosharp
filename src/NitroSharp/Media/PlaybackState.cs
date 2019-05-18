@@ -35,7 +35,6 @@ namespace NitroSharp.Media
         public MediaFrameQueue<MediaFrame> FrameQueue;
         public Texture VideoTexture;
         public Texture StagingTexture;
-        public TextureView TextureView;
         public Clock VideoClock;
         public double NextRefreshTime;
     }

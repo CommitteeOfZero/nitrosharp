@@ -1,31 +1,29 @@
 ﻿using System;
 
+#nullable enable
+
 namespace NitroSharp.Content
 {
     internal readonly struct AssetId : IEquatable<AssetId>
     {
         public AssetId(string value)
         {
-            if (string.IsNullOrEmpty(value))
-            {
-                throw new ArgumentNullException(nameof(value));
-            }
-
-            Value = value.Replace('\\', '/');
+            NormalizedPath = value.Replace('\\', '/');
         }
 
-        public string Value { get; }
+        public string NormalizedPath { get; }
 
-        public bool Equals(AssetId other) => other.Value.Equals(Value, StringComparison.OrdinalIgnoreCase);
+        public bool Equals(AssetId other)
+            => other.NormalizedPath.Equals(NormalizedPath, StringComparison.Ordinal);
+
         public override bool Equals(object obj) => obj is AssetId other && other.Equals(this);
 
-        public override int GetHashCode() => Value != null ? StringComparer.OrdinalIgnoreCase.GetHashCode(Value) : 0;
-        public override string ToString() => Value;
+        public override int GetHashCode()
+            => NormalizedPath != null ? NormalizedPath.GetHashCode(StringComparison.Ordinal) : 0;
+
+        public override string ToString() => NormalizedPath;
 
         public static bool operator ==(AssetId a, AssetId b) => a.Equals(b);
         public static bool operator !=(AssetId a, AssetId b) => !a.Equals(b);
-
-        public static implicit operator AssetId(string s) => new AssetId(s);
-        public static implicit operator string(AssetId id) => id.Value;
     }
 }

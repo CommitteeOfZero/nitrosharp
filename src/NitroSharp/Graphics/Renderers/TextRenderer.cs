@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Numerics;
 using NitroSharp.Primitives;
 using NitroSharp.Text;
@@ -7,19 +8,21 @@ using Veldrid;
 
 namespace NitroSharp.Graphics.Renderers
 {
-    internal struct TextSystemData
-    {
-        public Texture StagingTexture;
-        public Texture LayoutTexture;
-        public TextureView TextureView;
-    }
-
     internal sealed class TextRenderer : IDisposable
     {
+        internal struct SystemData
+        {
+            public Texture StagingTexture;
+            public Texture LayoutTexture;
+        }
+
         private readonly World _world;
         private readonly RenderContext _renderContext;
 
-        private NativeMemory _nativeBuffer = NativeMemory.Allocate(256 * 256 * 4);
+        private SystemData[] _systemData = new SystemData[World.InitialTextLayoutCount];
+        private readonly List<SystemData> _recycledSystemData = new List<SystemData>();
+
+        private readonly NativeMemory _nativeBuffer = NativeMemory.Allocate(256 * 256 * 4);
 
         public TextRenderer(World world, RenderContext renderContext)
         {
@@ -29,29 +32,28 @@ namespace NitroSharp.Graphics.Renderers
 
         public void ProcessTextLayouts()
         {
-            var textInstances = _world.TextInstances;
+            TextInstanceTable textInstances = _world.TextInstances;
+            textInstances.RearrangeSystemComponents(ref _systemData, _recycledSystemData);
 
-            RgbaTexturePool texturePool = _renderContext.TexturePool;
-            var removed = textInstances.SystemData.RecycledComponents;
-            foreach (TextSystemData data in removed)
+            TexturePool texturePool = _renderContext.TexturePool;
+            List<SystemData> removed = _recycledSystemData;
+            foreach (SystemData data in removed)
             {
                 if (data.LayoutTexture != null)
                 {
                     texturePool.Return(data.StagingTexture);
                     texturePool.Return(data.LayoutTexture);
-                    _renderContext.Device.DisposeWhenIdle(data.TextureView);
                 }
             }
 
-            var added = textInstances.AddedEntities;
+            ReadOnlyHashSet<Entity> added = textInstances.NewEntities;
             foreach (Entity entity in added)
             {
-                ref TextSystemData data = ref textInstances.SystemData.Mutate(entity);
+                ref SystemData data = ref _systemData[textInstances.LookupIndex(entity)];
                 TextLayout layout = textInstances.Layouts.GetValue(entity);
                 data.StagingTexture = texturePool.RentStaging(layout.MaxBounds);
                 Texture sampled = texturePool.RentSampled(layout.MaxBounds);
                 data.LayoutTexture = sampled;
-                data.TextureView = _renderContext.ResourceFactory.CreateTextureView(sampled);
             }
 
             TransformProcessor.ProcessTransforms(_world, textInstances);
@@ -59,7 +61,7 @@ namespace NitroSharp.Graphics.Renderers
                 textInstances.ClearFlags.MutateAll(),
                 textInstances.SortKeys.Enumerate(),
                 textInstances.TransformMatrices.Enumerate(),
-                textInstances.SystemData.Enumerate());
+                _systemData.AsSpan(0, textInstances.EntryCount));
         }
 
         public void RenderTextLayouts(
@@ -67,7 +69,7 @@ namespace NitroSharp.Graphics.Renderers
             Span<bool> clearFlags,
             ReadOnlySpan<RenderItemKey> renderPriorities,
             ReadOnlySpan<Matrix4x4> transforms,
-            ReadOnlySpan<TextSystemData> systemData)
+            ReadOnlySpan<SystemData> systemData)
         {
             if (layouts.IsEmpty) { return; }
             GraphicsDevice device = _renderContext.Device;
@@ -79,8 +81,7 @@ namespace NitroSharp.Graphics.Renderers
             {
                 TextLayout layout = layouts[i];
                 ref bool clear = ref clearFlags[i];
-                ref readonly TextSystemData sd = ref systemData[i];
-                TextureView texView = sd.TextureView;
+                ref readonly SystemData sd = ref systemData[i];
 
                 if (layout.DirtyGlyphs.Count == 0 && !clear) { goto present; }
 
@@ -118,7 +119,7 @@ namespace NitroSharp.Graphics.Renderers
                 RgbaFloat color = RgbaFloat.White;
                 var dstRect = new RectangleF(0, 0, layout.MaxBounds.Width, layout.MaxBounds.Height);
                 batcher.SetTransform(transforms[i]);
-                batcher.DrawImage(texView, dstRect, dstRect, ref color, renderPriorities[i]);
+                batcher.DrawImage(sd.LayoutTexture, dstRect, dstRect, ref color, renderPriorities[i]);
             }
 
             _renderContext.FreeCommandList(cl);
@@ -128,7 +129,7 @@ namespace NitroSharp.Graphics.Renderers
             TextLayout textLayout, int textureIndex,
             CommandList commandList, uint glyphIndex,
             Span<byte> srcBuffer, MappedResourceView<RgbaByte> dstBuffer,
-            in TextSystemData systemData)
+            in SystemData systemData)
         {
             ref LayoutGlyph glyph = ref textLayout.Glyphs[glyphIndex];
             if (glyph.Color.A == 0) { return; }
@@ -173,10 +174,6 @@ namespace NitroSharp.Graphics.Renderers
         public void Dispose()
         {
             _nativeBuffer.Dispose();
-            foreach (TextSystemData sd in _world.TextInstances.SystemData.Enumerate())
-            {
-                sd.TextureView?.Dispose();
-            }
         }
     }
 }

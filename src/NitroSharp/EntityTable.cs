@@ -2,46 +2,94 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Runtime.CompilerServices;
 
 namespace NitroSharp
 {
+    internal abstract class EntityTable<S> : EntityTable where S : struct, EntityStruct
+    {
+        protected EntityTable(World world, ushort initialColumnCount)
+            : base(world, initialColumnCount)
+        {
+        }
+
+        public S this[ushort index]
+        {
+            get
+            {
+                var mut = new DummyEntityStruct
+                {
+                    Table = this,
+                    Index = index
+                };
+                return Unsafe.As<DummyEntityStruct, S>(ref mut);
+            }
+        }
+    }
+
     internal abstract class EntityTable
     {
-        private readonly List<Row> _rows = new List<Row>(8);
-        internal readonly Dictionary<ushort, ushort> _idToIndex;
-        internal readonly Dictionary<ushort, ushort> _indexToId;
+        internal struct DummyEntityStruct
+        {
+            public EntityTable Table;
+            public ushort Index;
+        }
 
-        private ushort _columnCount;
+        internal struct DummyMutableEntityStruct
+        {
+            public EntityTable Table;
+            public Entity Entity;
+            public ushort Index;
+        }
+
+        private enum LossyOperationKind
+        {
+            Erase,
+            Move
+        }
+
+        private struct LossyOperation
+        {
+            public ushort Column;
+            public ushort DstColumn;
+            public LossyOperationKind Kind;
+        }
+
+        private readonly List<Row> _rows = new List<Row>(8);
+        private readonly Dictionary<ushort, ushort> _idToIndex;
+        private readonly List<LossyOperation> _lossyOperations;
+
+        private Entity[] _entities;
+
+        private ushort _capacity;
         private ushort _nextFreeColumn;
 
-        public HashSet<Entity> AddedEntities = new HashSet<Entity>();
+        private readonly HashSet<Entity> _newEntities;
+        public ReadOnlyHashSet<Entity> NewEntities { get; }
 
         protected EntityTable(World world, ushort initialColumnCount)
         {
             World = world;
-            _columnCount = initialColumnCount;
+            _capacity = initialColumnCount;
             Parents = AddRow<Entity>();
             IsLocked = AddRow<bool>();
             _idToIndex = new Dictionary<ushort, ushort>(initialColumnCount);
-            _indexToId = new Dictionary<ushort, ushort>(initialColumnCount);
+            _entities = new Entity[initialColumnCount];
+            _lossyOperations = new List<LossyOperation>();
+            _newEntities = new HashSet<Entity>();
+            NewEntities = new ReadOnlyHashSet<Entity>(_newEntities);
         }
 
         public World World { get; }
 
-        public ushort ColumnsUsed => _nextFreeColumn;
+        public uint Capacity => _capacity;
+        public ushort EntryCount => _nextFreeColumn;
 
         public Row<bool> IsLocked { get; }
         public Row<Entity> Parents { get; }
 
-        public void BeginFrame()
-        {
-            AddedEntities.Clear();
-            foreach (Row row in _rows)
-            {
-                row.FlushEvents();
-            }
-        }
+        public ReadOnlySpan<Entity> Entities => _entities.AsSpan(0, _nextFreeColumn);
 
         public bool TryLookupIndex(Entity entity, out ushort index)
         {
@@ -53,23 +101,74 @@ namespace NitroSharp
             return _idToIndex[entity.Id];
         }
 
+        public T Get<T>(Entity entity) where T : EntityStruct
+        {
+            var entityStruct = new DummyEntityStruct
+            {
+                Table = this,
+                Index = LookupIndex(entity)
+            };
+            return Unsafe.As<DummyEntityStruct, T>(ref entityStruct);
+        }
+
+        public T GetMutable<T>(Entity entity) where T : MutableEntityStruct
+        {
+            var entityStruct = new DummyMutableEntityStruct
+            {
+                Table = this,
+                Entity = entity,
+                Index = LookupIndex(entity)
+            };
+            return Unsafe.As<DummyMutableEntityStruct, T>(ref entityStruct);
+        }
+
+        public void RearrangeSystemComponents<T>(ref T[] componentArray, List<T> recycledComponents)
+        {
+            if (componentArray.Length < _capacity)
+            {
+                Array.Resize(ref componentArray, _capacity);
+            }
+
+            recycledComponents.Clear();
+            foreach (LossyOperation op in _lossyOperations)
+            {
+                if (op.Kind == LossyOperationKind.Erase)
+                {
+                    recycledComponents.Add(componentArray[op.Column]);
+                    componentArray[op.Column] = default;
+                }
+                else if (op.Kind == LossyOperationKind.Move)
+                {
+                    recycledComponents.Add(componentArray[op.DstColumn]);
+                    componentArray[op.DstColumn] = componentArray[op.Column];
+                    componentArray[op.Column] = default;
+                }
+            }
+        }
+
+        internal void FlushFrameEvents()
+        {
+            _newEntities.Clear();
+            _lossyOperations.Clear();
+        }
+
         protected Row<T> AddRow<T>() where T : struct
         {
-            var row = new Row<T>(this, _columnCount);
+            var row = new Row<T>(this, _capacity);
             _rows.Add(row);
             return row;
         }
 
         protected SystemDataRow<T> AddSystemDataRow<T>() where T : struct
         {
-            var row = new SystemDataRow<T>(this, _columnCount);
+            var row = new SystemDataRow<T>(this, _capacity);
             _rows.Add(row);
             return row;
         }
 
         protected RefTypeRow<T> AddRefTypeRow<T>() where T : class
         {
-            var row = new RefTypeRow<T>(this, _columnCount);
+            var row = new RefTypeRow<T>(this, _capacity);
             _rows.Add(row);
             return row;
         }
@@ -77,10 +176,11 @@ namespace NitroSharp
         internal void Insert(Entity entity)
         {
             ushort index = _nextFreeColumn++;
-            if (index == _columnCount)
+            if (index == _capacity)
             {
-                _columnCount *= 2;
-                ushort newSize = _columnCount;
+                _capacity *= 2;
+                ushort newSize = _capacity;
+                Array.Resize(ref _entities, newSize);
                 foreach (Row row in _rows)
                 {
                     row.Resize(newSize);
@@ -88,11 +188,26 @@ namespace NitroSharp
             }
 
             _idToIndex[entity.Id] = index;
-            _indexToId[index] = entity.Id;
+            _entities[index] = entity;
 
-            if (World.Kind == WorldKind.Primary)
+            if (World.IsPrimary)
             {
-                AddedEntities.Add(entity);
+                _newEntities.Add(entity);
+            }
+        }
+
+        internal void ReplayChanges(EntityTable table, Row row)
+        {
+            foreach (LossyOperation c in table._lossyOperations)
+            {
+                if (c.Kind == LossyOperationKind.Erase)
+                {
+                    row.EraseValue(c.Column);
+                }
+                else if (c.Kind == LossyOperationKind.Move)
+                {
+                    row.MoveValue(srcIndex: c.Column, c.DstColumn);
+                }
             }
         }
 
@@ -100,33 +215,44 @@ namespace NitroSharp
         {
             ushort index = _idToIndex[entity.Id];
             ushort lastIndex = (ushort)(_nextFreeColumn - 1);
-
             if (index < lastIndex)
             {
-                ushort lastId = _indexToId[lastIndex];
-                _idToIndex[lastId] = index;
-                _indexToId[index] = lastId;
-
+                Entity lastEntity = _entities[lastIndex];
+                _idToIndex[lastEntity.Id] = index;
+                _entities[index] = lastEntity;
+                _lossyOperations.Add(new LossyOperation
+                {
+                    Column = lastIndex,
+                    DstColumn = index,
+                    Kind = LossyOperationKind.Move
+                });
                 foreach (Row row in _rows)
                 {
-                    row.Move(srcIndex: lastIndex, dstIndex: index);
+                    if (row.IsSystemDataRow) continue;
+                    row.MoveValue(srcIndex: lastIndex, dstIndex: index);
                 }
             }
             else
             {
+                _lossyOperations.Add(new LossyOperation
+                {
+                    Column = index,
+                    Kind = LossyOperationKind.Erase
+                });
                 foreach (Row row in _rows)
                 {
-                    row.ResetValue(index);
+                    if (row.IsSystemDataRow) continue;
+                    row.EraseValue(index);
                 }
             }
 
             _idToIndex.Remove(entity.Id);
-            _indexToId.Remove(lastIndex);
+            _entities[lastIndex] = Entity.Invalid;
             _nextFreeColumn--;
 
             if (World.IsPrimary)
             {
-                AddedEntities.Remove(entity);
+                _newEntities.Remove(entity);
             }
         }
 
@@ -134,7 +260,7 @@ namespace NitroSharp
         {
             for (int i = 0; i < _rows.Count; i++)
             {
-                _rows[i].MergeChanges(target._rows[i]);
+                _rows[i].MergeChangesInto(target._rows[i]);
             }
 
             Debug_CompareIdMaps(this, target);
@@ -143,6 +269,35 @@ namespace NitroSharp
         internal bool EntityExists(Entity entity)
         {
             return _idToIndex.ContainsKey(entity.Id);
+        }
+
+        public ref struct Enumerator<T, S>
+            where T : EntityTable
+            where S : EntityStruct<T>
+        {
+            public S _current;
+            private readonly ushort _count;
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public Enumerator(T entityTable)
+            {
+                var mut = new DummyEntityStruct
+                {
+                    Index = ushort.MaxValue,
+                    Table = entityTable
+                };
+                _current = Unsafe.As<DummyEntityStruct, S>(ref mut);
+                _count = _current.Table.EntryCount;
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public bool MoveNext()
+            {
+                ref DummyEntityStruct mut = ref Unsafe.As<S, DummyEntityStruct>(ref _current);
+                return ++mut.Index < _count;
+            }
+
+            public S Current => _current;
         }
 
         internal abstract class Row
@@ -154,10 +309,11 @@ namespace NitroSharp
                 _table = table;
             }
 
-            internal abstract void FlushEvents();
-            internal abstract void MergeChanges(Row dstRow);
-            internal abstract void ResetValue(ushort index);
-            internal abstract void Move(ushort srcIndex, ushort dstIndex);
+            internal virtual bool IsSystemDataRow => false;
+
+            internal abstract void MergeChangesInto(Row dstRow);
+            internal abstract void EraseValue(ushort index);
+            internal abstract void MoveValue(ushort srcIndex, ushort dstIndex);
             internal abstract void Resize(ushort newSize);
 
             [Conditional("DEBUG")]
@@ -177,31 +333,36 @@ namespace NitroSharp
                 _dirtyIds = new HashSet<ushort>();
             }
 
-            public ushort CellsUsed => _table.ColumnsUsed;
+            public ushort CellsUsed => _table.EntryCount;
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             protected ushort IndexOf(Entity entity) => _table.LookupIndex(entity);
 
-            public T GetValue(ushort index) => _data[index];
-            public T GetValue(Entity key) => _data[IndexOf(key)];
-            public ref readonly T GetReadonlyRef(Entity entity) => ref _data[IndexOf(entity)];
+            public ref readonly T GetValue(ushort index) => ref _data[index];
+            public ref readonly T GetValue(Entity key) => ref _data[IndexOf(key)];
             public ReadOnlySpan<T> Enumerate() => new ReadOnlySpan<T>(_data, 0, CellsUsed);
 
-            public virtual void Set(Entity key, T value)
+            public void Set(Entity key, T value)
             {
                 ushort index = IndexOf(key);
                 _data[index] = value;
                 ValueChanged(key.Id);
             }
 
-            public virtual void Set(Entity key, ref T value)
+            public void Set(Entity key, ref T value)
             {
                 ushort index = IndexOf(key);
                 _data[index] = value;
                 ValueChanged(key.Id);
             }
 
-            public virtual ref T Mutate(Entity key)
+            public ref T Mutate(ushort entityId, ushort column)
+            {
+                ValueChanged(entityId);
+                return ref _data[column];
+            }
+
+            public ref T Mutate(Entity key)
             {
                 ushort index = IndexOf(key);
                 ValueChanged(key.Id);
@@ -227,11 +388,7 @@ namespace NitroSharp
                 return new Span<T>(_data, 0, CellsUsed);
             }
 
-            internal override void FlushEvents()
-            {
-            }
-
-            internal override void MergeChanges(Row dstRow)
+            internal override void MergeChangesInto(Row dstRow)
             {
                 var other = (RowBase<T>)dstRow;
                 if (_entireRowChanged && other._dirtyIds.Count > 0)
@@ -247,7 +404,7 @@ namespace NitroSharp
                     }
                     else
                     {
-                        var map = _table._idToIndex;
+                        Dictionary<ushort, ushort> map = _table._idToIndex;
                         foreach (ushort id in _dirtyIds)
                         {
                             if (map.TryGetValue(id, out ushort index))
@@ -268,12 +425,12 @@ namespace NitroSharp
                 _dirtyIds.Clear();
             }
 
-            internal override void ResetValue(ushort index)
+            internal override void EraseValue(ushort index)
             {
                 _data[index] = default;
             }
 
-            internal override void Move(ushort srcIndex, ushort dstIndex)
+            internal override void MoveValue(ushort srcIndex, ushort dstIndex)
             {
                 ref T srcRef = ref _data[srcIndex];
                 _data[dstIndex] = srcRef;
@@ -306,6 +463,8 @@ namespace NitroSharp
 
         internal sealed class SystemDataRow<T> : RowBase<T> where T : struct
         {
+            internal override bool IsSystemDataRow => true;
+
             public Span<T> RecycledComponents
             {
                 get
@@ -327,22 +486,18 @@ namespace NitroSharp
             {
             }
 
-            internal override void ResetValue(ushort index)
+            internal override void EraseValue(ushort index)
             {
                 _recycledElements.Add(_data[index]);
                 _data[index] = default;
             }
 
-            internal override void Move(ushort srcIndex, ushort dstIndex)
+            internal override void MoveValue(ushort srcIndex, ushort dstIndex)
             {
                 _recycledElements.Add(_data[dstIndex]);
                 ref T srcRef = ref _data[srcIndex];
                 _data[dstIndex] = srcRef;
                 srcRef = default;
-            }
-
-            internal override void FlushEvents()
-            {
             }
         }
 
@@ -372,14 +527,13 @@ namespace NitroSharp
             validateMaps(right);
 
             compareMaps(left._idToIndex, right._idToIndex);
-            compareMaps(left._indexToId, right._indexToId);
+            Debug.Assert(left._entities.SequenceEqual(right._entities));
 
             void validateMaps(EntityTable table)
             {
-                Debug.Assert(table._idToIndex.Count == table._indexToId.Count);
                 foreach (var kvp in table._idToIndex)
                 {
-                    Debug.Assert(table._indexToId[kvp.Value] == kvp.Key);
+                    Debug.Assert(table._entities[kvp.Value].Id == kvp.Key);
                 }
             }
 

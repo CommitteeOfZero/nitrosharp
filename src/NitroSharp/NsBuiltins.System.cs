@@ -1,10 +1,11 @@
 ﻿using System;
 using NitroSharp.NsScript;
-using NitroSharp.Content;
 using System.Collections.Generic;
 using System.Linq;
 using NitroSharp.Utilities;
 using NitroSharp.NsScript.VM;
+using NitroSharp.Content;
+using System.Text;
 
 namespace NitroSharp
 {

@@ -1,9 +1,8 @@
 ﻿using System;
 using System.Numerics;
-using System.Runtime.CompilerServices;
-using NitroSharp.Content;
 using NitroSharp.Graphics;
 using NitroSharp.Media.Decoding;
+using NitroSharp.Content;
 using NitroSharp.Primitives;
 using Veldrid;
 
@@ -23,7 +22,6 @@ namespace NitroSharp.Media
             _videoClips = world.VideoClips;
             _renderContext = renderContext;
             _content = content;
-
             _cl = renderContext.ResourceFactory.CreateCommandList();
         }
 
@@ -33,29 +31,27 @@ namespace NitroSharp.Media
             {
                 _renderContext.TexturePool.Return(videoState.VideoTexture);
                 _renderContext.TexturePool.Return(videoState.StagingTexture);
-                _renderContext.Device.DisposeWhenIdle(videoState.TextureView);
             }
         }
 
         private void ProcessNew()
         {
-            var added = _videoClips.AddedEntities;
+            var added = _videoClips.NewEntities;
             foreach (Entity e in added)
             {
                 AssetId asset = _videoClips.Asset.GetValue(e);
-                var session = _content.Get<MediaPlaybackSession>(asset).Asset;
+                MediaPlaybackSession session = _content.GetMediaClip(asset);
                 ref PlaybackState playbackState = ref _videoClips.PlaybackState.Mutate(e);
                 PlaybackState.Initialize(ref playbackState, session);
 
                 ref VideoState videoState = ref _videoClips.VideoState.Mutate(e);
                 videoState.FrameQueue = session.VideoFrameQueue;
                 videoState.VideoClock = new Clock(playbackState.Stopwatch);
-                RgbaTexturePool texturePool = _renderContext.TexturePool;
+                TexturePool texturePool = _renderContext.TexturePool;
                 VideoStream stream = videoState.VideoStream = session.VideoStream;
                 var size = new Size(stream.Width, stream.Height);
                 videoState.VideoTexture = texturePool.RentSampled(size);
                 videoState.StagingTexture = texturePool.RentStaging(size);
-                videoState.TextureView = _renderContext.ResourceFactory.CreateTextureView(videoState.VideoTexture);
 
                 if (!session.IsRunning)
                 {
@@ -65,18 +61,47 @@ namespace NitroSharp.Media
             }
         }
 
+        //public static void RenderVideo<T>(T videoClips, Span<VideoState> videoState, ReadOnlySpan<AudioState> audioState)
+        //    where T : RenderItemTable, MediaClipTable
+        //{
+        //    if (videoClips.ColumnsUsed == 0) { return; }
+        //    TransformProcessor.ProcessTransforms(_world, videoClips);
+
+        //    Span<PlaybackState> playbackState = videoClips.PlaybackState.MutateAll();
+        //    ReadOnlySpan<MediaClipLoopData> loopData = videoClips.LoopData.Enumerate();
+
+        //    int count = videoClips.ColumnsUsed;
+        //    Span<TimeSpan> elapsed = videoClips.Elapsed.MutateAll();
+        //    for (int i = 0; i < count; i++)
+        //    {
+        //        ref VideoState vs = ref videoState[i];
+        //        UpdateVideo(ref playbackState[i], ref vs, audioState[i], loopData[i], ref elapsed[i]);
+        //    }
+
+        //    ReadOnlySpan<SizeF> bounds = videoClips.Bounds.Enumerate();
+        //    ReadOnlySpan<Matrix4x4> transform = videoClips.TransformMatrices.Enumerate();
+        //    ReadOnlySpan<RgbaFloat> color = videoClips.Colors.Enumerate();
+        //    ReadOnlySpan<RenderItemKey> renderPriority = videoClips.SortKeys.Enumerate();
+        //    for (int i = 0; i < count; i++)
+        //    {
+        //        DisplayCurrentFrame(
+        //            ref videoState[i], bounds[i], transform[i],
+        //            color[i], renderPriority[i]);
+        //    }
+        //}
+
         public void ProcessVideoClips()
         {
             ProcessRemoved();
             ProcessNew();
 
-            if (_videoClips.ColumnsUsed == 0) { return; }
+            if (_videoClips.EntryCount == 0) { return; }
             TransformProcessor.ProcessTransforms(_world, _videoClips);
 
             Span<PlaybackState> playbackState = _videoClips.PlaybackState.MutateAll();
             ReadOnlySpan<MediaClipLoopData> loopData = _videoClips.LoopData.Enumerate();
 
-            int count = _videoClips.ColumnsUsed;
+            int count = _videoClips.EntryCount;
             Span<VideoState> videoState = _videoClips.VideoState.MutateAll();
             ReadOnlySpan<AudioState> audioState = _videoClips.AudioState.Enumerate();
             Span<TimeSpan> elapsed = _videoClips.Elapsed.MutateAll();
@@ -98,7 +123,6 @@ namespace NitroSharp.Media
             }
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void UpdateVideo(
             ref PlaybackState playbackState,
             ref VideoState videoState,
@@ -143,7 +167,6 @@ namespace NitroSharp.Media
             }
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void DisplayCurrentFrame(
             ref VideoState videoState, SizeF bounds,
             in Matrix4x4 transform, RgbaFloat color, RenderItemKey priority)
@@ -151,10 +174,9 @@ namespace NitroSharp.Media
             var rect = new RectangleF(Vector2.Zero, bounds);
             QuadBatcher batcher = _renderContext.QuadBatcher;
             batcher.SetTransform(transform);
-            batcher.DrawImage(videoState.TextureView, rect, rect, ref color, priority, BlendMode.Additive);
+            batcher.DrawImage(videoState.VideoTexture, rect, rect, ref color, priority, BlendMode.Additive);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void UpdateTexture(ref VideoState videoState, in PooledBuffer buffer)
         {
             Texture staging = videoState.StagingTexture;
@@ -174,7 +196,6 @@ namespace NitroSharp.Media
             ReadOnlySpan<VideoState> videoState = _videoClips.VideoState.Enumerate();
             for (int i = 0; i < videoState.Length; i++)
             {
-                videoState[i].TextureView.Dispose();
             }
 
             _cl.Dispose();

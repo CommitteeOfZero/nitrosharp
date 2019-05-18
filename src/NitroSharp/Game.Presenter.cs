@@ -7,6 +7,8 @@ using NitroSharp.Interactivity;
 using NitroSharp.Media;
 using Veldrid;
 
+#nullable enable
+
 namespace NitroSharp
 {
     public partial class Game
@@ -14,7 +16,6 @@ namespace NitroSharp
         internal sealed class Presenter : Actor
         {
             private readonly World _world;
-            private readonly Configuration _configuration;
             private readonly InputTracker _inputTracker;
 
             private DialogueSystemInput _dialogueSystemInput;
@@ -26,7 +27,6 @@ namespace NitroSharp
 
             public Presenter(Game game, World world) : base(world)
             {
-                _configuration = game._configuration;
                 _inputTracker = new InputTracker(game._window);
 
                 _dialogueSystem = new DialogueSystem(this, _inputTracker);
@@ -36,7 +36,7 @@ namespace NitroSharp
                 _world = world;
                 _renderSystem = new RenderSystem(
                     _world, game._graphicsDevice, game._swapchain,
-                    game.Content, game.FontService, _configuration);
+                    game.Content, game.FontService, game._configuration);
 
                 _audioSystem = new AudioSystem(_world, game.Content, game.AudioSourcePool);
             }
@@ -81,7 +81,7 @@ namespace NitroSharp
                     return;
                 }
 
-                _world.FlushEvents();
+                _world.FlushFrameEvents();
             }
 
             protected override void HandleMessages(Queue<Message> messages)

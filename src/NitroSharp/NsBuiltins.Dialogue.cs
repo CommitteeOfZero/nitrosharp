@@ -1,7 +1,7 @@
 ﻿using System;
-using NitroSharp.Content;
 using NitroSharp.Dialogue;
 using NitroSharp.Media.Decoding;
+using NitroSharp.Content;
 using NitroSharp.NsScript;
 using NitroSharp.NsScript.Primitives;
 using NitroSharp.NsScript.VM;
@@ -96,11 +96,12 @@ namespace NitroSharp
 
             if (voice.Action == NsVoiceAction.Play)
             {
-                AssetId assetId = "voice/" + voice.FileName;
-                if (Content.TryGet<MediaPlaybackSession>(assetId, out var session))
+                var assetId = new AssetId("voice/" + voice.FileName);
+                MediaPlaybackSession? voiceClip = Content.TryGetMediaClip(assetId, increaseRefCount: false);
+                if (voiceClip != null)
                 {
                     Entity entity = _world.CreateAudioClip(voice.FileName, assetId, false);
-                    _world.AudioClips.Duration.Set(entity, session.Asset.AudioStream.Duration);
+                    _world.AudioClips.Duration.Set(entity, voiceClip.AudioStream!.Duration);
                     _lastVoiceName = voice.FileName;
                 }
             }
