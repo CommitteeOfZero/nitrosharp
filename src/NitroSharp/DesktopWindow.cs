@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Threading;
-using System.Threading.Tasks;
 using NitroSharp.Primitives;
 using Veldrid;
 using Veldrid.Sdl2;
@@ -32,7 +31,7 @@ namespace NitroSharp
         public event Action Resized;
         public event Action<SwapchainSource> Mobile_SurfaceCreated
         {
-            add => Task.Run(() => value?.Invoke(SwapchainSource));
+            add => value?.Invoke(SwapchainSource);
             remove => throw new NotImplementedException();
         }
         public event Action Mobile_SurfaceDestroyed;
