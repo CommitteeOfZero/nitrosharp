@@ -20,7 +20,8 @@ namespace NitroSharp
             {
                 Running,
                 AwaitingPresenterState,
-                NewStateReady
+                NewStateReady,
+                Crashed
             }
 
             private readonly Configuration _configuration;
@@ -32,6 +33,8 @@ namespace NitroSharp
 
             private volatile Status _status;
             private Task? _interpreterProc;
+
+            public Exception? LastException { get; private set; }
 
             public ScriptRunner(Game game, World world) : base(world)
             {
@@ -124,7 +127,15 @@ namespace NitroSharp
                         Thread.Sleep(1);
                     }
 
-                    _status = Run();
+                    try
+                    {
+                        _status = Run();
+                    }
+                    catch (Exception ex)
+                    {
+                        _status = Status.Crashed;
+                        LastException = ex;
+                    }
                 }
             }
 

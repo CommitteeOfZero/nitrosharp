@@ -158,6 +158,8 @@ namespace NitroSharp
                     _presenter.SyncTo(_scriptRunner);
                     _scriptRunner.Resume();
                     break;
+                case ScriptRunner.Status.Crashed:
+                    throw _scriptRunner.LastException;
                 case ScriptRunner.Status.Running:
                 default:
                     break;
