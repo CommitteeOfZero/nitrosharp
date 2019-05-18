@@ -4,13 +4,12 @@ Committee of Zero's effort to reimplement n2system, a visual novel engine used i
 
 ## Building
 ### Required Software
-- [.NET Framework 4.6.1 SDK](https://www.microsoft.com/en-us/download/details.aspx?id=49978)
-- [.NET Core 2.0 SDK](https://www.microsoft.com/net/download/core)
+- [.NET Core 3.0 SDK (preview)](https://dotnet.microsoft.com/download/dotnet-core/3.0)
 
 Run
 ```
-(optional) dotnet restore
+dotnet run --project src/NitroSharp.ShaderCompiler/NitroSharp.ShaderCompiler.csproj
 dotnet build [-c Release]
 ```
 
-You can also Visual Studio 2017+ or JetBrains Rider to build the solution.
+You can also use Visual Studio 2019, VS Code or JetBrains Rider to build the solution.
