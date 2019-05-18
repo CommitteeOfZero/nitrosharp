@@ -7,7 +7,7 @@ namespace NitroSharp.Media.Decoding
 {
     internal static class FFmpegUtil
     {
-        private static object s_lock = new object();
+        private static readonly object s_lock = new object();
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static unsafe void OpenStream(AVCodecContext* ctx, AVCodec* codec)

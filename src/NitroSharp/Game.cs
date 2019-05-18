@@ -16,7 +16,7 @@ namespace NitroSharp
 {
     public partial class Game : IDisposable
     {
-        private bool UseWicOnWindows = false;
+        private readonly bool UseWicOnWindows = false;
 
         private readonly Stopwatch _gameTimer;
         private readonly Configuration _configuration;
@@ -34,8 +34,8 @@ namespace NitroSharp
         private AudioDevice _audioDevice;
         private AudioSourcePool _audioSourcePool;
 
-        private World _presenterWorld;
-        private World _scriptingWorld;
+        private readonly World _presenterWorld;
+        private readonly World _scriptingWorld;
 
         private Presenter _presenter;
         private ScriptRunner _scriptRunner;
@@ -189,10 +189,11 @@ namespace NitroSharp
 #if DEBUG
             options.Debug = true;
 #endif
-            GraphicsBackend backend = _configuration.PreferredGraphicsBackend ?? VeldridStartup.GetPlatformDefaultBackend();
+            GraphicsBackend backend = _configuration.PreferredGraphicsBackend
+                ?? VeldridStartup.GetPlatformDefaultBackend();
             var swapchainDesc = new SwapchainDescription(swapchainSource,
-                    (uint)_configuration.WindowWidth, (uint)_configuration.WindowHeight,
-                    options.SwapchainDepthFormat, options.SyncToVerticalBlank);
+                (uint)_configuration.WindowWidth, (uint)_configuration.WindowHeight,
+                options.SwapchainDepthFormat, options.SyncToVerticalBlank);
 
             if (backend == GraphicsBackend.OpenGLES || backend == GraphicsBackend.OpenGL)
             {
@@ -205,32 +206,25 @@ namespace NitroSharp
             {
                 if (_graphicsDevice == null)
                 {
-                    _graphicsDevice = CreateDeviceWithoutSwapchain(backend, options);
+                    _graphicsDevice = backend switch
+                    {
+                        GraphicsBackend.Direct3D11 => GraphicsDevice.CreateD3D11(options),
+                        GraphicsBackend.Vulkan => GraphicsDevice.CreateVulkan(options),
+                        GraphicsBackend.Metal => GraphicsDevice.CreateMetal(options),
+                        _ => ThrowHelper.Unreachable<GraphicsDevice>()
+                    };
                 }
                 _swapchain = _graphicsDevice.ResourceFactory.CreateSwapchain(ref swapchainDesc);
             }
-        }
 
-        private GraphicsDevice CreateDeviceWithoutSwapchain(GraphicsBackend backend, GraphicsDeviceOptions options)
-        {
-            switch (backend)
-            {
-                case GraphicsBackend.Direct3D11:
-                    return GraphicsDevice.CreateD3D11(options);
-                case GraphicsBackend.Vulkan:
-                    return GraphicsDevice.CreateVulkan(options);
-                case GraphicsBackend.Metal:
-                    return GraphicsDevice.CreateMetal(options);
-                default:
-                    return null;
-            }
             _texturePool = new TexturePool(_graphicsDevice, PixelFormat.R8_G8_B8_A8_UNorm);
         }
 
         private void SetupAudio()
         {
             var audioParameters = AudioParameters.Default;
-            var backend = _configuration.PreferredAudioBackend ?? AudioDevice.GetPlatformDefaultBackend();
+            AudioBackend backend = _configuration.PreferredAudioBackend
+                ?? AudioDevice.GetPlatformDefaultBackend();
             _audioDevice = AudioDevice.Create(backend, audioParameters);
             _audioSourcePool = new AudioSourcePool(_audioDevice);
         }

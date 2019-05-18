@@ -6,7 +6,7 @@ using NitroSharp.Utilities;
 
 namespace NitroSharp.Media.Decoding
 {
-    public sealed class VideoFrameConverter : IDisposable
+    public sealed unsafe class VideoFrameConverter : IDisposable
     {
         private const AVPixelFormat OutputFormat = AVPixelFormat.AV_PIX_FMT_RGBA;
 
@@ -46,12 +46,12 @@ namespace NitroSharp.Media.Decoding
             }
         }
 
-        private unsafe byte*[] _srcPlanes;
-        private unsafe byte*[] _dstPlanes;
-        private int[] _srcLinesizes;
-        private unsafe int[] _dstLinesizes;
+        private readonly byte*[] _srcPlanes;
+        private readonly byte*[] _dstPlanes;
+        private readonly int[] _srcLinesizes;
+        private readonly int[] _dstLinesizes;
 
-        public unsafe VideoFrameConverter()
+        public VideoFrameConverter()
         {
             _ctxCache = new Dictionary<CacheKey, IntPtr>();
             _srcLinesizes = new int[8];
@@ -60,7 +60,7 @@ namespace NitroSharp.Media.Decoding
             _dstPlanes = new byte*[1];
         }
 
-        public unsafe void ConvertToRgba(ref AVFrame srcAvFrame, Size targetResolution, byte* dstBuffer)
+        public void ConvertToRgba(ref AVFrame srcAvFrame, Size targetResolution, byte* dstBuffer)
         {
             int_array8 linesizes = srcAvFrame.linesize;
             for (uint i = 0; i < 8; i++)
@@ -93,7 +93,7 @@ namespace NitroSharp.Media.Decoding
                 ctx, _srcPlanes, _srcLinesizes, 0, srcAvFrame.height, _dstPlanes, _dstLinesizes);
         }
 
-        private unsafe SwsContext* GetContext(ref AVFrame frame, Size dstSize)
+        private SwsContext* GetContext(ref AVFrame frame, Size dstSize)
         {
             var key = new CacheKey(
                 (AVPixelFormat)frame.format,

@@ -49,7 +49,6 @@ namespace NitroSharp.Media.Decoding
             private readonly AsyncOperation<VoidResult> _asyncOperation;
             private readonly Action _rentAvFrame;
             private readonly Action _onRentCompleted;
-            private readonly Action _receiveDecodedFrame;
             private ValueTask<IntPtr> _rentFrameTask;
             private PooledStruct<AVFrame> _pooledFrame;
             private ValueTask _submitFrameTask;
@@ -62,7 +61,6 @@ namespace NitroSharp.Media.Decoding
                 _asyncOperation = new AsyncOperation<VoidResult>(runContinuationsAsynchronously: true);
                 _rentAvFrame = new Action(RentAvFrame);
                 _onRentCompleted = new Action(OnRentCompleted);
-                _receiveDecodedFrame = new Action(ReceiveDecodedFrame);
             }
 
             /// <summary>

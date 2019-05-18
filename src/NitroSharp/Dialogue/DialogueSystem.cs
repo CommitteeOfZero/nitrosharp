@@ -1,6 +1,6 @@
 ﻿using System.Collections.Immutable;
-using NitroSharp.Input;
 using System.Diagnostics;
+using NitroSharp.Interactivity;
 using NitroSharp.Text;
 using Veldrid;
 
@@ -75,14 +75,11 @@ namespace NitroSharp.Dialogue
                     case Status.LineNotLoaded:
                         PostMessage(new Game.SimpleMessage(Game.MessageKind.ResumeMainThread));
                         break;
-
                     case Status.PlayingRevealAnimation:
                         SkipTextRevealAnimation(input.TextEntity);
                         break;
-
                     case Status.PlayingSkipAnimation:
                         break;
-
                     case Status.Waiting:
                         if (_currentDialoguePart < input.DialogueLine.Parts.Length)
                         {

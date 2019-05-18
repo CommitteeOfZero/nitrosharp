@@ -4,9 +4,9 @@ using NitroSharp.Launcher;
 
 namespace CowsHead
 {
-    public class Program
+    class Program
     {
-        public static Task Main(string[] args)
+        static Task Main()
         {
             return GameLauncher.Launch("Game.json");
         }

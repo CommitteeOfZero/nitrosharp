@@ -6,7 +6,7 @@ namespace NitroSharp.Media.Decoding
     internal abstract class MediaProcessor : IDisposable
     {
         protected unsafe readonly AVStream* _avStream;
-        private UnmanagedMemoryPool _bufferPool;
+        private readonly UnmanagedMemoryPool _bufferPool;
 
         public unsafe MediaProcessor(AVStream* stream, uint bufferSize)
         {

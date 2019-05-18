@@ -1,8 +1,8 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using NitroSharp.Animation;
 using NitroSharp.Dialogue;
 using NitroSharp.Graphics.Systems;
-using NitroSharp.Input;
 using NitroSharp.Interactivity;
 using NitroSharp.Media;
 using Veldrid;
@@ -45,7 +45,7 @@ namespace NitroSharp
 
             public void Tick(float deltaMilliseconds)
             {
-                _inputTracker.Update(deltaMilliseconds);
+                _inputTracker.Update();
                 _world.FlushDetachedAnimations();
 
                 AnimationProcessorOutput animProcessorOutput =
@@ -70,7 +70,7 @@ namespace NitroSharp
                 }
 
                 _audioSystem.UpdateAudioSources();
-                _renderSystem.ExecutePipeline(deltaMilliseconds);
+                _renderSystem.RenderFrame();
 
                 try
                 {

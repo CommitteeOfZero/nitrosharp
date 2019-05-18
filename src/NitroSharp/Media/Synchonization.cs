@@ -66,7 +66,6 @@ namespace NitroSharp.Media
         /// <summary>
         /// Calculates the delay between two frames using their PTS values.
         /// </summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static double CalculateDelay(
             ref PlaybackState playbackState,
             ref VideoState videoState, in AudioState audioState,
@@ -82,7 +81,7 @@ namespace NitroSharp.Media
             }
             else if (diff >= syncThreshold && delay > 0.1d)
             {
-                delay = delay + diff;
+                delay += diff;
             }
             else if (diff >= syncThreshold)
             {

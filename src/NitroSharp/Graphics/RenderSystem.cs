@@ -62,14 +62,31 @@ namespace NitroSharp.Graphics.Systems
             _texturePool = new TexturePool(_gd, PixelFormat.R8_G8_B8_A8_UNorm);
 
             _viewProjectionLayout = factory.CreateResourceLayout(new ResourceLayoutDescription(
-                new ResourceLayoutElementDescription("ViewProjection", ResourceKind.UniformBuffer, ShaderStages.Vertex)));
+                new ResourceLayoutElementDescription(
+                    "ViewProjection",
+                    ResourceKind.UniformBuffer,
+                    ShaderStages.Vertex
+                )
+            ));
 
-            Matrix4x4 projection = Matrix4x4.CreateOrthographicOffCenter(
-                0, DesignResolution.Width, DesignResolution.Height, 0, 0, -1);
+            var projection = Matrix4x4.CreateOrthographicOffCenter(
+                left: 0, right: DesignResolution.Width,
+                bottom: DesignResolution.Height, top: 0,
+                zNearPlane: 0.0f, zFarPlane: -1.0f
+            );
 
             _viewProjectionBuffer = _gd.CreateStaticBuffer(ref projection, BufferUsage.UniformBuffer);
-            _viewProjectionSet = factory.CreateResourceSet(new ResourceSetDescription(_viewProjectionLayout, _viewProjectionBuffer));
-            var viewProjection = new ViewProjection(_viewProjectionLayout, _viewProjectionSet, _viewProjectionBuffer);
+            _viewProjectionSet = factory.CreateResourceSet(
+                new ResourceSetDescription(
+                    _viewProjectionLayout,
+                    _viewProjectionBuffer
+                )
+            );
+            var viewProjection = new ViewProjection(
+                _viewProjectionLayout,
+                _viewProjectionSet,
+                _viewProjectionBuffer
+            );
 
             _mainBucket = new RenderBucket<RenderItemKey>(MainBucketSize);
             _quadGeometryStream = new QuadGeometryStream(device);
@@ -134,7 +151,7 @@ namespace NitroSharp.Graphics.Systems
             TransformProcessor.ProcessTransforms(_world, _world.Sprites);
         }
 
-        public void ExecutePipeline(float deltaTime)
+        public void RenderFrame()
         {
             _cl.Begin();
             _cl.SetFramebuffer(_swapchain.Framebuffer);

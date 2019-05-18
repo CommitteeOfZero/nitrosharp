@@ -2,7 +2,7 @@
 using System.Numerics;
 using Veldrid;
 
-namespace NitroSharp.Input
+namespace NitroSharp.Interactivity
 {
     internal sealed class InputTracker
     {
@@ -26,7 +26,7 @@ namespace NitroSharp.Input
         public Vector2 MouseDelta { get; private set; }
         public InputSnapshot CurrentSnapshot { get; private set; }
 
-        public void Update(float deltaMilliseconds)
+        public void Update()
         {
             UpdateFrameInput(_window.PumpEvents());
         }

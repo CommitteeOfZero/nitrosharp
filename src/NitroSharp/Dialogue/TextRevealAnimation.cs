@@ -12,7 +12,7 @@ namespace NitroSharp.Dialogue
 
         private readonly ushort _startIndex;
         private ushort _offset;
-        private World _world;
+        private readonly World _world;
         private EntityTable.RefTypeRow<TextLayout> _textLayouts;
 
         public TextRevealAnimation(World world, Entity textEntity, ushort startPosition)

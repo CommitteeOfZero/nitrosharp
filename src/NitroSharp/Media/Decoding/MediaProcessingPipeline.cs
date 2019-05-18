@@ -86,7 +86,7 @@ namespace NitroSharp.Media.Decoding
             var output = _decodedFrames.Writer;
             while (!cts.IsCancellationRequested)
             {
-                var input = _rawPackets.Reader;
+                ChannelReader<PooledStruct<AVPacket>> input = _rawPackets.Reader;
                 PooledStruct<AVPacket> pooledPacket = await input.ReadAsync();
                 if (cts.IsCancellationRequested)
                 {
@@ -153,7 +153,7 @@ namespace NitroSharp.Media.Decoding
             public bool BufferHasEnoughSpace(uint spaceRequired) => Buffer.FreeSpace >= spaceRequired;
             public void AdvancePosition(uint offset) => Buffer.Position += offset;
 
-            public void SetPtsAndDuration(ref AVFrame sourceFrame, AVRational streamTimeBase)
+            public void SetPtsAndDuration(ref AVFrame sourceFrame)
             {
                 if (double.IsNaN(Pts))
                 {
@@ -243,7 +243,7 @@ namespace NitroSharp.Media.Decoding
 
                         uint bytesWritten = (uint)_processor.ProcessFrame(ref srcFrame.AsRef(), ref context.Buffer);
                         context.AdvancePosition(bytesWritten);
-                        context.SetPtsAndDuration(ref srcFrame.AsRef(), _decodingSession.StreamTimebase);
+                        context.SetPtsAndDuration(ref srcFrame.AsRef());
                     }
                     finally
                     {

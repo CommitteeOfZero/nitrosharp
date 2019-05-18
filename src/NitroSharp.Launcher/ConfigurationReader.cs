@@ -10,8 +10,10 @@ namespace NitroSharp.Launcher
     {
         public static Configuration Read(string configPath)
         {
-            var configuration = new Configuration();
-            configuration.ContentRoot = "Content";
+            var configuration = new Configuration
+            {
+                ContentRoot = "Content"
+            };
 
             using (FileStream stream = File.OpenRead(configPath))
             {

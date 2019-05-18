@@ -142,36 +142,19 @@ namespace NitroSharp.Utilities
         {
             var f = new StringBuilder();
             var r = new Regex(@"\%([\'\#\-\+ ]*)(\d*)(?:\.(\d+))?([hl])?([dioxXucsfeEgGpn%])");
-            Match m = null;
-            string w = string.Empty;
-            long i = 0;
-            object o = null;
-
-            bool flagLeft2Right = false;
-            bool flagAlternate = false;
-            bool flagPositiveSign = false;
-            bool flagPositiveSpace = false;
-            bool flagZeroPadding = false;
-            bool flagGroupThousands = false;
-
-            int fieldLength = 0;
-            int fieldPrecision = 0;
-            char shortLongIndicator = '\0';
-            char formatSpecifier = '\0';
-            char paddingCharacter = ' ';
 
             // find all format parameters in format string
             f.Append(format);
-            m = r.Match(f.ToString());
+            Match m = r.Match(f.ToString());
             while (m.Success)
             {
                 // extract format flags
-                flagAlternate = false;
-                flagLeft2Right = false;
-                flagPositiveSign = false;
-                flagPositiveSpace = false;
-                flagZeroPadding = false;
-                flagGroupThousands = false;
+                bool flagAlternate = false;
+                bool flagLeft2Right = false;
+                bool flagPositiveSign = false;
+                bool flagPositiveSpace = false;
+                bool flagZeroPadding = false;
+                bool flagGroupThousands = false;
                 if (m.Groups[1] != null && m.Groups[1].Value.Length > 0)
                 {
                     string flags = m.Groups[1].Value;
@@ -192,8 +175,8 @@ namespace NitroSharp.Utilities
 
                 // extract field length and 
                 // pading character
-                paddingCharacter = ' ';
-                fieldLength = int.MinValue;
+                char paddingCharacter = ' ';
+                int fieldLength = int.MinValue;
                 if (m.Groups[2] != null && m.Groups[2].Value.Length > 0)
                 {
                     fieldLength = Convert.ToInt32(m.Groups[2].Value);
@@ -213,21 +196,21 @@ namespace NitroSharp.Utilities
                 }
 
                 // extract field precision
-                fieldPrecision = int.MinValue;
+                int fieldPrecision = int.MinValue;
                 if (m.Groups[3] != null && m.Groups[3].Value.Length > 0)
                 {
                     fieldPrecision = Convert.ToInt32(m.Groups[3].Value);
                 }
 
                 // extract short / long indicator
-                shortLongIndicator = char.MinValue;
+                char shortLongIndicator = char.MinValue;
                 if (m.Groups[4] != null && m.Groups[4].Value.Length > 0)
                 {
                     shortLongIndicator = m.Groups[4].Value[0];
                 }
 
                 // extract format
-                formatSpecifier = char.MinValue;
+                char formatSpecifier = char.MinValue;
                 if (m.Groups[5] != null && m.Groups[5].Value.Length > 0)
                 {
                     formatSpecifier = m.Groups[5].Value[0];
@@ -239,6 +222,8 @@ namespace NitroSharp.Utilities
                     fieldPrecision = 6;
                 }
 
+                long i = 0;
+                object o;
                 // get next value parameter and convert value parameter depending on short / long indicator
                 if (args == null || i >= args.Length)
                 {
@@ -289,7 +274,7 @@ namespace NitroSharp.Utilities
                 }
 
                 // convert value parameters to a string depending on the formatSpecifier
-                w = string.Empty;
+                string w = string.Empty;
                 switch (formatSpecifier)
                 {
                     case '%':   // % character

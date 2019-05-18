@@ -16,10 +16,10 @@ namespace NitroSharp.Media.Decoding
 
         private readonly FormatContext _formatContext;
         private readonly bool _leaveOpen;
-        private avio_alloc_context_read_packet _readFunc;
-        private avio_alloc_context_write_packet _writeFunc;
-        private avio_alloc_context_seek _seekFunc;
-        private byte[] _managedIOBuffer;
+        private readonly avio_alloc_context_read_packet _readFunc;
+        private readonly avio_alloc_context_write_packet _writeFunc;
+        private readonly avio_alloc_context_seek _seekFunc;
+        private readonly byte[] _managedIOBuffer;
 
         private MediaStream[]? _mediaStreams;
 
@@ -45,7 +45,15 @@ namespace NitroSharp.Media.Decoding
 
             _managedIOBuffer = new byte[IOBufferSize + ffmpeg.AV_INPUT_BUFFER_PADDING_SIZE];
             var ioBuffer = (byte*)ffmpeg.av_malloc(IOBufferSize);
-            var ioContext = ffmpeg.avio_alloc_context(ioBuffer, IOBufferSize, 0, null, _readFunc, _writeFunc, _seekFunc);
+            AVIOContext* ioContext = ffmpeg.avio_alloc_context(
+                ioBuffer,
+                IOBufferSize,
+                write_flag: 0,
+                opaque: null,
+                _readFunc,
+                _writeFunc,
+                _seekFunc
+            );
 
             AVFormatContext* pFormatContext = ffmpeg.avformat_alloc_context();
             pFormatContext->pb = ioContext;

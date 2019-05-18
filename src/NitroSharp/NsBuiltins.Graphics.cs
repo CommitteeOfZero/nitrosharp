@@ -234,7 +234,7 @@ namespace NitroSharp
 
         internal void SetPosition(Entity entity, NsCoordinate x, NsCoordinate y)
         {
-            SizeF parentBounds = new SizeF(1280, 720);
+            var parentBounds = new SizeF(1280, 720);
 
             RenderItemTable properties = _world.GetTable<RenderItemTable>(entity);
 

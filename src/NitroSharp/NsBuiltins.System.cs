@@ -74,7 +74,8 @@ namespace NitroSharp
                 if (!table.IsLocked.GetValue(entity))
                 {
                     _entitiesToRemove.Enqueue(name);
-                    var attachedThread = Interpreter.Threads.FirstOrDefault(x => entityName.StartsWith(x.Name));
+                    ThreadContext attachedThread = Interpreter.Threads
+                        .FirstOrDefault(x => entityName.StartsWith(x.Name));
                     if (attachedThread != null)
                     {
                         Interpreter.TerminateThread(attachedThread);
@@ -155,7 +156,7 @@ namespace NitroSharp
                     break;
 
                 case NsEntityAction.Start:
-                    if (Interpreter.TryGetThread(entityName, out var thread))
+                    if (Interpreter.TryGetThread(entityName, out ThreadContext thread))
                     {
                         Interpreter.ResumeThread(thread);
                     }

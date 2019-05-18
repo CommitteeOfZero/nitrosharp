@@ -33,7 +33,7 @@ namespace NitroSharp.Text
                 _instances[familyName] = list;
             }
 
-            if (!_families.TryGetValue(familyName, out var family))
+            if (!_families.TryGetValue(familyName, out FontFamily family))
             {
                 family = new FontFamily(familyName, this);
                 _families[familyName] = family;

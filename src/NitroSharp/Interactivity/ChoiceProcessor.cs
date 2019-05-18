@@ -1,5 +1,4 @@
-﻿using NitroSharp.Input;
-using NitroSharp.Primitives;
+﻿using NitroSharp.Primitives;
 using System.Numerics;
 using Veldrid;
 
@@ -35,7 +34,6 @@ namespace NitroSharp.Interactivity
             var mouseOverSprite = choices.MouseOverSprite.Enumerate();
             var mouseOverThread = choices.MouseOverThread.Enumerate();
             var mouseLeaveThread = choices.MouseLeaveThread.Enumerate();
-            var threadInfos = _world.Threads.Infos.Enumerate();
             var choiceRects = choices.Rects.MutateAll();
             var state = choices.State.MutateAll();
 
@@ -62,9 +60,6 @@ namespace NitroSharp.Interactivity
             }
 
             var threads = _world.Threads;
-
-            bool mouseDown = input.IsMouseDown(Veldrid.MouseButton.Left);
-            
 
             bool isMouseDown = _inputTracker.IsMouseButtonDownThisFrame(MouseButton.Left);
             var mouseDownSprite = choices.MouseClickSprite.Enumerate();

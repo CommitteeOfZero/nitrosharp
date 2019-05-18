@@ -89,11 +89,13 @@ namespace NitroSharp.Dialogue
             {
                 if (text.Text.Length > 0)
                 {
-                    var textRun = new TextRun();
-                    textRun.Text = text.Text;
-                    textRun.FontSize = _textParams.FontSize;
-                    textRun.Color = _textParams.Color;
-                    textRun.ShadowColor = _textParams.ShadowColor;
+                    var textRun = new TextRun
+                    {
+                        Text = text.Text,
+                        FontSize = _textParams.FontSize,
+                        Color = _textParams.Color,
+                        ShadowColor = _textParams.ShadowColor
+                    };
 
                     _parts.Add(new TextPart(textRun));
                     _textLength += (uint)text.Text.Length;
