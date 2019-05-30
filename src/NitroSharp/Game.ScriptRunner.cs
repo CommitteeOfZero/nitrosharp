@@ -68,6 +68,11 @@ namespace NitroSharp
                 if (!File.Exists(globalsPath) || !ValidateBytecodeCache())
                 {
                     _logger.LogInformation("Bytecode cache is not up-to-date. Recompiling the scripts...");
+                    foreach (string file in Directory.EnumerateFiles(
+                        _bytecodeCacheDir, "*.nsx", SearchOption.AllDirectories))
+                    {
+                        File.Delete(file);
+                    }
                     var compilation = new Compilation(_nssFolder, _bytecodeCacheDir, globalsFileName);
                     compilation.Emit(compilation.GetSourceModule(_configuration.StartupScript));
                 }
@@ -104,7 +109,7 @@ namespace NitroSharp
                         }
 
                     }
-                    catch (FileNotFoundException)
+                    catch
                     {
                         string nsxRelativePath = Path.GetRelativePath(relativeTo: _bytecodeCacheDir, nsxFile)
                             .Replace('\\', '/');
