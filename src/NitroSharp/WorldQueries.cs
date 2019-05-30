@@ -104,6 +104,15 @@ namespace NitroSharp
                     nameSegment = nameSegment.Slice(start: index + querySegment.Length);
                 }
 
+                if (nameSegment.IndexOf('/') >= 0)
+                {
+                    // If entity's name has less '/'-separated segments than the query,
+                    // we should return false.
+                    // Example: Query("選択肢*/*/*") should NOT return "選択肢板１",
+                    // as it only consists of one segment.
+                    return false;
+                }
+
                 return true;
             }
         }
