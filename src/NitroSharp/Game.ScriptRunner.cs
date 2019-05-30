@@ -29,6 +29,7 @@ namespace NitroSharp
             private readonly bool _usingDedicatedThread;
             private readonly CancellationTokenSource _shutdownCancellation;
             private readonly string _nssFolder;
+            private readonly string _bytecodeCacheDir;
             private VirtualMachine? _nssInterpreter;
             private readonly NsBuiltins _builtinFunctions;
 
@@ -43,6 +44,7 @@ namespace NitroSharp
                 _logger = game._logger;
                 _usingDedicatedThread = _configuration.UseDedicatedInterpreterThread;
                 _nssFolder = Path.Combine(_configuration.ContentRoot, "nss");
+                _bytecodeCacheDir = _nssFolder.Replace("nss", "nsx");
                 _builtinFunctions = new NsBuiltins(game);
                 _builtinFunctions.SetWorld(world);
                 
@@ -62,12 +64,11 @@ namespace NitroSharp
             public void LoadStartupScript()
             {
                 const string globalsFileName = "_globals";
-                string bytecodeCacheDir = _nssFolder.Replace("nss", "nsx");
-                string globalsPath = Path.Combine(bytecodeCacheDir, globalsFileName);
+                string globalsPath = Path.Combine(_bytecodeCacheDir, globalsFileName);
                 if (!File.Exists(globalsPath) || !ValidateBytecodeCache())
                 {
                     _logger.LogInformation("Bytecode cache is not up-to-date. Recompiling the scripts...");
-                    var compilation = new Compilation(_nssFolder, bytecodeCacheDir, globalsFileName);
+                    var compilation = new Compilation(_nssFolder, _bytecodeCacheDir, globalsFileName);
                     compilation.Emit(compilation.GetSourceModule(_configuration.StartupScript));
                 }
                 else
@@ -75,7 +76,7 @@ namespace NitroSharp
                     _logger.LogInformation("Bytecode cache is up-to-date.");
                 }
 
-                var nsxLocator = new FileSystemNsxModuleLocator(bytecodeCacheDir);
+                var nsxLocator = new FileSystemNsxModuleLocator(_bytecodeCacheDir);
                 _nssInterpreter = new VirtualMachine(nsxLocator, File.OpenRead(globalsPath), _builtinFunctions);
                 _nssInterpreter.CreateThread(
                     "__MAIN",
@@ -84,8 +85,9 @@ namespace NitroSharp
 
             private bool ValidateBytecodeCache()
             {
-                string startupScriptName = Path.GetFileName(_configuration.StartupScript);
-                foreach (string nssFile in Directory.EnumerateFiles(_nssFolder))
+                string startupScript = _configuration.StartupScript.Replace('\\', '/');
+                startupScript = startupScript.Remove(startupScript.Length - 4);
+                foreach (string nssFile in Directory.EnumerateFiles(_nssFolder, "*.nss", SearchOption.AllDirectories))
                 {
                     string nsxFile = nssFile.Replace("nss", "nsx");
                     try
@@ -104,7 +106,10 @@ namespace NitroSharp
                     }
                     catch (FileNotFoundException)
                     {
-                        if (Path.GetFileName(nsxFile).Equals(startupScriptName))
+                        string nsxRelativePath = Path.GetRelativePath(relativeTo: _bytecodeCacheDir, nsxFile)
+                            .Replace('\\', '/');
+                        nsxRelativePath = nsxRelativePath.Remove(nsxRelativePath.Length - 4);
+                        if (nsxRelativePath.Equals(startupScript))
                         {
                             return false;
                         }

@@ -65,8 +65,21 @@ namespace NitroSharp.NsScript.Compiler
         {
             Debug.Assert(syntaxTree.Root is SourceFileRootSyntax);
             string rawPath = syntaxTree.SourceText.FilePath;
-            ResolvedPath canonicalPath = Compilation.SourceReferenceResolver.ResolvePath(rawPath);
-            return new SourceFileSymbol(this, canonicalPath, (SourceFileRootSyntax)syntaxTree.Root);
+            SourceReferenceResolver sourceRefResolver = Compilation.SourceReferenceResolver;
+            ResolvedPath canonicalPath = sourceRefResolver.ResolvePath(rawPath);
+            string rootDir = sourceRefResolver.RootDirectory;
+            string relativePathNoExtension = Path.GetRelativePath(relativeTo: rootDir, canonicalPath.Value);
+            if (relativePathNoExtension.EndsWith(".nss", StringComparison.OrdinalIgnoreCase))
+            {
+                relativePathNoExtension = relativePathNoExtension
+                    .Remove(relativePathNoExtension.Length - 4);
+            }
+
+            return new SourceFileSymbol(
+                this,
+                canonicalPath,
+                relativePathNoExtension,
+                (SourceFileRootSyntax)syntaxTree.Root);
         }
 
         public override SymbolKind Kind => SymbolKind.Module;
@@ -123,12 +136,14 @@ namespace NitroSharp.NsScript.Compiler
         private readonly Dictionary<string, FunctionSymbol> _functionMap;
 
         internal SourceFileSymbol(
-            SourceModuleSymbol module, ResolvedPath filePath, SourceFileRootSyntax syntax)
-            : base(Path.GetFileName(filePath.Value))
+            SourceModuleSymbol module,
+            ResolvedPath filePath,
+            string relativePathNoExtension,
+            SourceFileRootSyntax syntax)
+            : base(relativePathNoExtension)
         {
             Module = module;
             FilePath = filePath;
-            NameWithoutExtension = Path.GetFileNameWithoutExtension(Name);
 
             (int chapterCount, int sceneCount, int functionCount) =
                 ((int)syntax.ChapterCount,
@@ -179,7 +194,6 @@ namespace NitroSharp.NsScript.Compiler
 
         public SourceModuleSymbol Module { get; }
         public ResolvedPath FilePath { get; }
-        public string NameWithoutExtension { get; }
 
         public ImmutableArray<ChapterSymbol> Chapters { get; }
         public ImmutableArray<FunctionSymbol> Functions { get; }

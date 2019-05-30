@@ -258,8 +258,7 @@ namespace NitroSharp.NsScript.Compiler
             impTableWriter.WriteUInt16LE((ushort)imports.Length);
             for (int i = 0; i < imports.Length; i++)
             {
-                impTableWriter.WriteLengthPrefixedUtf8String(
-                    imports[i].NameWithoutExtension);
+                impTableWriter.WriteLengthPrefixedUtf8String(imports[i].Name);
             }
             impTableWriter.WriteBytes(NsxConstants.TableEndMarker);
 

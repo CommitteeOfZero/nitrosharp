@@ -7,6 +7,8 @@ namespace NitroSharp.NsScript
 {
     public abstract class SourceReferenceResolver
     {
+        public abstract string RootDirectory { get; }
+
         /// <exception cref="FileNotFoundException" />
         public abstract ResolvedPath ResolvePath(string path);
         public abstract SourceText ReadText(ResolvedPath path);
@@ -32,6 +34,8 @@ namespace NitroSharp.NsScript
                 _canonicalPaths[normalizedPath.ToUpperInvariant()] = normalizedPath;
             }
         }
+
+        public override string RootDirectory => _rootDirectory;
 
         public override SourceText ReadText(ResolvedPath resolvedPath)
         {
