@@ -105,8 +105,8 @@ namespace NitroSharp.Content
             if (increaseRefCount)
             {
                 cacheEntry.ReferenceCount++;
-                _loadedAssets[assetId] = cacheEntry;
             }
+            _loadedAssets[assetId] = cacheEntry;
             return (T)cacheEntry.Asset;
         }
 
