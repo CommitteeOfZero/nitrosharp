@@ -67,12 +67,21 @@ namespace NitroSharp
                 string globalsPath = Path.Combine(_bytecodeCacheDir, globalsFileName);
                 if (!File.Exists(globalsPath) || !ValidateBytecodeCache())
                 {
-                    _logger.LogInformation("Bytecode cache is not up-to-date. Recompiling the scripts...");
-                    foreach (string file in Directory.EnumerateFiles(
-                        _bytecodeCacheDir, "*.nsx", SearchOption.AllDirectories))
+                    if (!Directory.Exists(_bytecodeCacheDir))
                     {
-                        File.Delete(file);
+                        Directory.CreateDirectory(_bytecodeCacheDir);
+                        _logger.LogInformation("Bytecode cache is empty. Compiling the scripts...");
                     }
+                    else
+                    {
+                        _logger.LogInformation("Bytecode cache is not up-to-date. Recompiling the scripts...");
+                        foreach (string file in Directory.EnumerateFiles(
+                            _bytecodeCacheDir, "*.nsx", SearchOption.AllDirectories))
+                        {
+                            File.Delete(file);
+                        }
+                    }
+
                     var compilation = new Compilation(_nssFolder, _bytecodeCacheDir, globalsFileName);
                     compilation.Emit(compilation.GetSourceModule(_configuration.StartupScript));
                 }
