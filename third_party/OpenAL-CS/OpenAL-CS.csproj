@@ -2,9 +2,12 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
+    <AssemblyName>OpenAL-CS</AssemblyName>
+    <RootNamespace>OpenAL</RootNamespace>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
   </PropertyGroup>
 
   <Import Project="..\..\OutputPath.props" />
-  
+
 </Project>

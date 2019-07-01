@@ -7,4 +7,26 @@
     <Company>Committee of Zero</Company>
     <PackageVersion>0.1</PackageVersion>
   </PropertyGroup>
+
+  <PropertyGroup Condition=" '$(Portable)' == 'true' ">
+    <DefineConstants>$(DefineConstants);PORTABLE</DefineConstants>
+  </PropertyGroup>
+
+  <PropertyGroup Condition=" '$(NativeRid)' == 'win-x64' Or ('$(NativeRid)' == '' And '$(Portable)' != 'true' And '$([MSBuild]::IsOsPlatform(`WINDOWS`))' == 'true') ">
+    <IsWindows>true</IsWindows>
+    <DefineConstants>$(DefineConstants);WINDOWS</DefineConstants>
+  </PropertyGroup>
+
+  <PropertyGroup Condition=" '$(NativeRid)' == 'linux-x64' Or ('$(NativeRid)' == '' And '$(Portable)' != 'true' And '$([MSBuild]::IsOsPlatform(`LINUX`))' == 'true') ">
+    <IsLinux>true</IsLinux>
+    <IsUnix>true</IsUnix>
+    <DefineConstants>$(DefineConstants);LINUX;UNIX</DefineConstants>
+  </PropertyGroup>
+
+  <PropertyGroup Condition=" '$(NativeRid)' == 'osx-x64'  Or ('$(NativeRid)' == '' And '$(Portable)' != 'true' And '$([MSBuild]::IsOsPlatform(`OSX`))' == 'true') ">
+    <IsMacOS>true</IsMacOS>
+    <IsUnix>true</IsUnix>
+    <DefineConstants>$(DefineConstants);MACOS;UNIX</DefineConstants>
+  </PropertyGroup>
+  
 </Project>

@@ -3,12 +3,14 @@
   <PropertyGroup>
     <TargetFramework>netcoreapp3.0</TargetFramework>
     <LangVersion>8.0</LangVersion>
+    <Nullable>enable</Nullable>
     <OutputType>Exe</OutputType>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <NoWarn>1701;1702;CA1063</NoWarn>
     <RootAllApplicationAssemblies>false</RootAllApplicationAssemblies>
     <IlcGenerateCompleteTypeMetadata>false</IlcGenerateCompleteTypeMetadata>
     <IlcGenerateStackTraceData>false</IlcGenerateStackTraceData>
+    <VeldridVersion>4.7.0-ge32775f6a5</VeldridVersion>
   </PropertyGroup>
 
   <ItemGroup>
@@ -17,19 +19,23 @@
 
   <ItemGroup>
     <Compile Include="../Common/ArrayBuilder.cs" Link="ArrayBuilder.cs" />
+
+    <Content Include="../../fonts/**/*.*" LinkBase="Fonts">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   
   <ItemGroup>
-    <ProjectReference Include="..\..\..\SomeAnonDev\veldrid\src\Veldrid.SDL2\Veldrid.SDL2.csproj" />
-    <ProjectReference Include="..\..\..\SomeAnonDev\veldrid\src\Veldrid.StartupUtilities\Veldrid.StartupUtilities.csproj" />
-    <ProjectReference Include="..\..\..\SomeAnonDev\veldrid\src\Veldrid\Veldrid.csproj" />
     <ProjectReference Include="..\FreeTypeBindings\FreeTypeBindings.csproj" />
-    <PackageReference Include="NitroSharp.Dependencies.FreeType" Version="0.2.903" />
-    <PackageReference Include="NitroSharp.Fonts" Version="0.1.1" />
+    <PackageReference Include="FreeType.Binaries" Version="0.42.0" />
     <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="4.5.2" />
     <!--<PackageReference Include="Veldrid" Version="4.5.0" />
     <PackageReference Include="Veldrid.StartupUtilities" Version="4.5.0" />-->
     <PackageReference Include="Microsoft.DotNet.ILCompiler" Version="1.0.0-alpha-27527-01" />
+
+    <PackageReference Include="Veldrid" Version="$(VeldridVersion)" />
+    <PackageReference Include="Veldrid.SDL2" Version="$(VeldridVersion)" />
+    <PackageReference Include="Veldrid.StartupUtilities" Version="$(VeldridVersion)" />
   </ItemGroup>
 
   <Target Name="EmbedGeneratedShaderContent" AfterTargets="AssignTargetPaths">

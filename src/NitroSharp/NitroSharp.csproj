@@ -5,6 +5,7 @@
     <LangVersion>8.0</LangVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <NoWarn>1701;1702;CA1063</NoWarn>
+    <VeldridVersion>4.7.0-ge32775f6a5</VeldridVersion>
   </PropertyGroup>
 
   <Import Project="..\..\OutputPath.props" />
@@ -14,28 +15,31 @@
   </ItemGroup>
   
   <ItemGroup>
-    <ProjectReference Include="..\FreeTypeBindings\FreeTypeBindings.csproj" />
     <ProjectReference Include="..\NitroSharp.NsScriptCompiler\NitroSharp.NsScriptCompiler.csproj" />
 
-    <ProjectReference Include="..\..\..\SomeAnonDev\veldrid\src\Veldrid\Veldrid.csproj" />
-    <ProjectReference Include="..\..\..\SomeAnonDev\veldrid\src\Veldrid.StartupUtilities\Veldrid.StartupUtilities.csproj" />
-    <ProjectReference Include="..\..\..\SomeAnonDev\veldrid\src\Veldrid.ImGui\Veldrid.ImGui.csproj" />
-    <ProjectReference Include="..\..\..\SomeAnonDev\veldrid\src\Veldrid.SDL2\Veldrid.SDL2.csproj" />
-    <ProjectReference Include="..\..\..\SomeAnonDev\veldrid\src\Veldrid.OpenGLBindings\Veldrid.OpenGLBindings.csproj" />
+    <ProjectReference Include="..\..\third_party\FFmpeg.AutoGen\FFmpeg.AutoGen.csproj" />
+    <ProjectReference Include="..\..\third_party\OpenAL-CS\OpenAL-CS.csproj" />
+    <ProjectReference Include="..\FreeTypeBindings\FreeTypeBindings.csproj" />
+
+    <!--<ProjectReference Include="..\..\..\mellinoe\veldrid\src\Veldrid\Veldrid.csproj" />
+    <ProjectReference Include="..\..\..\mellinoe\veldrid\src\Veldrid.StartupUtilities\Veldrid.StartupUtilities.csproj" />
+    <ProjectReference Include="..\..\..\mellinoe\veldrid\src\Veldrid.ImGui\Veldrid.ImGui.csproj" />
+    <ProjectReference Include="..\..\..\mellinoe\veldrid\src\Veldrid.SDL2\Veldrid.SDL2.csproj" />
+    <ProjectReference Include="..\..\..\mellinoe\veldrid\src\Veldrid.OpenGLBindings\Veldrid.OpenGLBindings.csproj" />-->
     
-    <PackageReference Include="NitroSharp.Dependencies.FFmpeg" Version="0.4.0.13" />
-    <PackageReference Include="NitroSharp.Dependencies.FreeType" Version="0.2.903" />
-    <PackageReference Include="NitroSharp.Dependencies.OpenALSoft" Version="1.18.2" />
-    <PackageReference Include="NitroSharp.Fonts" Version="0.1.1" />
-    <PackageReference Include="FFmpeg.AutoGen.DllImport" Version="0.4.0" />
-    <PackageReference Include="OpenAL-CS.NetStandard" Version="1.0.0" />
+    <PackageReference Include="FreeType.Binaries" Version="0.42.0" />
+    <PackageReference Include="OpenALSoft.Binaries" Version="0.42.0" />
+    <PackageReference Include="FFmpeg.Binaries" Version="0.42.0" />
+    
     <PackageReference Include="System.Memory" Version="4.5.3" />
     <PackageReference Include="System.Buffers" Version="4.5.0" />
     <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="4.5.2" />
     <PackageReference Include="System.Threading.Channels" Version="4.6.0-preview5.19224.8" />
 
-    <!--<PackageReference Include="Veldrid" Version="4.6.0" />
-    <PackageReference Include="Veldrid.StartupUtilities" Version="4.6.0" />-->
+    <PackageReference Include="Veldrid" Version="$(VeldridVersion)" />
+    <PackageReference Include="Veldrid.SDL2" Version="$(VeldridVersion)" />
+    <PackageReference Include="Veldrid.StartupUtilities" Version="$(VeldridVersion)" />
+    <PackageReference Include="Veldrid.ImGui" Version="5.69.0" />
     
     <PackageReference Include="SharpDX.Direct2D1" Version="4.2.0" />
     <PackageReference Include="SharpDX.XAudio2" Version="4.2.0" />
@@ -45,7 +49,8 @@
     <Compile Include="../Common/HashHelper.cs" Link="Utilities/HashHelper.cs" />
     <Compile Include="../Common/ThrowHelper.cs" Link="Utilities/ThrowHelper.cs" />
     <Compile Include="../Common/ArrayBuilder.cs" Link="Utilities/ArrayBuilder.cs" />
-    <Content Include="../../fonts/NotoSansCJKjp-Regular.ttf" Link="Fonts/NotoSansCJKjp-Regular.ttf">
+
+    <Content Include="../../fonts/**/*.*" LinkBase="Fonts">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
@@ -58,11 +63,5 @@
       </EmbeddedResource>
     </ItemGroup>
   </Target>
-
-  <!--<ItemGroup>
-    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
-      <_Parameter1>$(MSBuildProjectName).Tests</_Parameter1>
-    </AssemblyAttribute>
-  </ItemGroup>-->
   
 </Project>
