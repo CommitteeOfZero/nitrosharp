@@ -628,7 +628,7 @@ namespace NitroSharp.NsScript.Syntax
 #endif
                     var numberStyle = token.IsHexTriplet ? NumberStyles.HexNumber : NumberStyles.None;
                     value = token.IsFloatingPointLiteral
-                        ? ConstantValue.Float(float.Parse(valueText))
+                        ? ConstantValue.Float(float.Parse(valueText, provider: CultureInfo.InvariantCulture))
                         : ConstantValue.Integer(int.Parse(valueText, numberStyle));
                     break;
 
