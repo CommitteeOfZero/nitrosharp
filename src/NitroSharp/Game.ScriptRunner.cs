@@ -66,7 +66,7 @@ namespace NitroSharp
             {
                 const string globalsFileName = "_globals";
                 string globalsPath = Path.Combine(_bytecodeCacheDir, globalsFileName);
-                if (!File.Exists(globalsPath) || !ValidateBytecodeCache())
+                if (_configuration.SkipUpToDateCheck || !File.Exists(globalsPath) || !ValidateBytecodeCache())
                 {
                     if (!Directory.Exists(_bytecodeCacheDir))
                     {
