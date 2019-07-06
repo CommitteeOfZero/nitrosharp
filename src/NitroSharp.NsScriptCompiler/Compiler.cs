@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Text;
 using NitroSharp.NsScript.CodeGen;
 using NitroSharp.NsScript.Syntax;
 using NitroSharp.NsScript.Text;
@@ -20,6 +21,7 @@ namespace NitroSharp.NsScript.Compiler
         private readonly SourceReferenceResolver _sourceReferenceResolver;
         private readonly string _outputDirectory;
         private readonly string _globalsFileName;
+        private readonly Encoding? _sourceTextEncoding;
         private readonly Dictionary<ResolvedPath, SyntaxTree> _syntaxTrees;
         private readonly Dictionary<SyntaxTree, SourceModuleSymbol> _sourceModuleSymbols;
 
@@ -27,18 +29,26 @@ namespace NitroSharp.NsScript.Compiler
         private readonly TokenMap<string> _globals = new TokenMap<string>(4096);
         private readonly List<string> _systemVariables = new List<string>();
 
-        public Compilation(string rootSourceDirectory, string outputDirectory, string globalsFileName)
-            : this(new DefaultSourceReferenceResolver(rootSourceDirectory), outputDirectory, globalsFileName)
+        public Compilation(string rootSourceDirectory,
+                           string outputDirectory,
+                           string globalsFileName,
+                           Encoding? sourceTextEncoding = null)
+            : this(new DefaultSourceReferenceResolver(rootSourceDirectory),
+                   outputDirectory,
+                   globalsFileName,
+                   sourceTextEncoding)
         {
         }
 
         public Compilation(SourceReferenceResolver sourceReferenceResolver,
                            string outputDirectory,
-                           string globalsFileName)
+                           string globalsFileName,
+                           Encoding? sourceTextEncoding = null)
         {
             _sourceReferenceResolver = sourceReferenceResolver;
             _outputDirectory = outputDirectory;
             _globalsFileName = globalsFileName;
+            _sourceTextEncoding = sourceTextEncoding;
             _syntaxTrees = new Dictionary<ResolvedPath, SyntaxTree>();
             _sourceModuleSymbols = new Dictionary<SyntaxTree, SourceModuleSymbol>();
             _nsxModuleBuilders = new Dictionary<ResolvedPath, NsxModuleBuilder>();
@@ -119,7 +129,7 @@ namespace NitroSharp.NsScript.Compiler
                 return syntaxTree;
             }
 
-            SourceText sourceText = _sourceReferenceResolver.ReadText(resolvedPath);
+            SourceText sourceText = _sourceReferenceResolver.ReadText(resolvedPath, _sourceTextEncoding);
             syntaxTree = Parsing.ParseText(sourceText);
             _syntaxTrees[resolvedPath] = syntaxTree;
             return syntaxTree;

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
 using NitroSharp.NsScript.Text;
 
 namespace NitroSharp.NsScript
@@ -11,7 +12,7 @@ namespace NitroSharp.NsScript
 
         /// <exception cref="FileNotFoundException" />
         public abstract ResolvedPath ResolvePath(string path);
-        public abstract SourceText ReadText(ResolvedPath path);
+        public abstract SourceText ReadText(ResolvedPath path, Encoding? encoding);
         public abstract long GetModificationTimestamp(ResolvedPath path);
     }
 
@@ -37,11 +38,11 @@ namespace NitroSharp.NsScript
 
         public override string RootDirectory => _rootDirectory;
 
-        public override SourceText ReadText(ResolvedPath resolvedPath)
+        public override SourceText ReadText(ResolvedPath resolvedPath, Encoding? encoding)
         {
             using (FileStream stream = File.OpenRead(resolvedPath.Value))
             {
-                return SourceText.From(stream, resolvedPath.Value);
+                return SourceText.From(stream, resolvedPath, encoding);
             }
         }
 
@@ -53,7 +54,7 @@ namespace NitroSharp.NsScript
                 path = path.Substring(_rootDirectoryName.Length + 1);
             }
 
-            string fullPath = NormalizePath(Path.GetFullPath(path, _rootDirectory));
+            string fullPath = NormalizePath(Path.Combine(_rootDirectory, path));
             return _canonicalPaths.TryGetValue(fullPath.ToUpperInvariant(), out string actualPath)
                 ? new ResolvedPath(actualPath)
                 : throw new FileNotFoundException($"File '{fullPath}' does not exist.", fullPath);

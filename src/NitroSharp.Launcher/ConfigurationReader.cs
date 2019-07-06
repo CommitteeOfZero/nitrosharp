@@ -80,6 +80,9 @@ namespace NitroSharp.Launcher
                 case "dev.useDedicatedInterpreterThread":
                     configuration.UseDedicatedInterpreterThread = property.Value;
                     break;
+                case "dev.useUtf8":
+                    configuration.UseUtf8 = property.Value;
+                    break;
             }
         }
 

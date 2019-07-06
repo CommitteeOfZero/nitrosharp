@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -47,7 +48,7 @@ namespace NitroSharp
                 _bytecodeCacheDir = _nssFolder.Replace("nss", "nsx");
                 _builtinFunctions = new NsBuiltins(game);
                 _builtinFunctions.SetWorld(world);
-                
+
                 _shutdownCancellation = new CancellationTokenSource();
             }
 
@@ -82,7 +83,8 @@ namespace NitroSharp
                         }
                     }
 
-                    var compilation = new Compilation(_nssFolder, _bytecodeCacheDir, globalsFileName);
+                    Encoding? sourceEncoding = _configuration.UseUtf8 ? Encoding.UTF8 : null;
+                    var compilation = new Compilation(_nssFolder, _bytecodeCacheDir, globalsFileName, sourceEncoding);
                     compilation.Emit(compilation.GetSourceModule(_configuration.StartupScript));
                 }
                 else
