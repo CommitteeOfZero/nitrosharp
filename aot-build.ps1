@@ -1,5 +1,6 @@
 param(
-    [ValidateSet("win-x64", "linux-x64", "osx-x64")][string]$Runtime
+    [ValidateSet("win-x64", "linux-x64", "osx-x64")][string]$Runtime,
+    [string]$CppCompiler = "clang-6.0"
 )
 
 if ($Runtime -eq "") {
@@ -16,7 +17,7 @@ if ($Runtime -eq "") {
 }
 
 if (!$msvc) {
-    $env:CppCompilerAndLinker = "clang-6.0"
+    $env:CppCompilerAndLinker = $CppCompiler
 }
 
 $args = @(
