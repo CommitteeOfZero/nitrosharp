@@ -43,7 +43,7 @@ namespace NitroSharp.NsScript
 
         public static SyntaxTree ParseText(Stream stream, string filePath, Encoding? encoding = null)
         {
-            var sourceText = SourceText.From(stream, filePath, encoding);
+            var sourceText = SourceText.From(stream, new ResolvedPath(filePath), encoding);
             return ParseText(sourceText);
         }
 

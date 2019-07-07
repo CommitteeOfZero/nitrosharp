@@ -19,7 +19,7 @@ namespace NitroSharp.NsScript.Text
             s_defaultEncoding = Encoding.GetEncoding("shift-jis");
         }
 
-        private SourceText(string text, string filePath)
+        private SourceText(string text, ResolvedPath filePath)
         {
             _source = text;
             FilePath = filePath;
@@ -27,14 +27,14 @@ namespace NitroSharp.NsScript.Text
         }
 
         public string Source => _source;
-        public string FilePath { get; }
+        public ResolvedPath FilePath { get; }
         public char this[int index] => Source[index];
         public int Length => _source.Length;
 
         internal List<TextSpan> Lines => _lines;
 
-        public static SourceText From(string text) => new SourceText(text, string.Empty);
-        public static SourceText From(Stream stream, string filePath, Encoding? encoding = null)
+        public static SourceText From(string text) => new SourceText(text, new ResolvedPath(string.Empty));
+        public static SourceText From(Stream stream, ResolvedPath filePath, Encoding? encoding = null)
         {
             if (!stream.CanRead)
             {
@@ -63,9 +63,6 @@ namespace NitroSharp.NsScript.Text
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ReadOnlySpan<char> GetCharacterSpan(TextSpan textSpan)
             => _source.AsSpan().Slice(textSpan.Start, textSpan.Length);
-
-        //public ReadOnlySpan<char> GetText(TextSpan span)
-        //    => _source.AsSpan().Slice(span.Start, span.Length);
 
         public int GetLineNumberFromPosition(int position)
         {

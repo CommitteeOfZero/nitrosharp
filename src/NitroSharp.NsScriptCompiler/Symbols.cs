@@ -64,11 +64,10 @@ namespace NitroSharp.NsScript.Compiler
         private SourceFileSymbol MakeSourceFileSymbol(SyntaxTree syntaxTree)
         {
             Debug.Assert(syntaxTree.Root is SourceFileRootSyntax);
-            string rawPath = syntaxTree.SourceText.FilePath;
+            ResolvedPath filePath = syntaxTree.SourceText.FilePath;
             SourceReferenceResolver sourceRefResolver = Compilation.SourceReferenceResolver;
-            ResolvedPath canonicalPath = sourceRefResolver.ResolvePath(rawPath);
             string rootDir = sourceRefResolver.RootDirectory;
-            string relativePathNoExtension = Path.GetRelativePath(relativeTo: rootDir, canonicalPath.Value);
+            string relativePathNoExtension = Path.GetRelativePath(relativeTo: rootDir, filePath.Value);
             if (relativePathNoExtension.EndsWith(".nss", StringComparison.OrdinalIgnoreCase))
             {
                 relativePathNoExtension = relativePathNoExtension
@@ -77,7 +76,7 @@ namespace NitroSharp.NsScript.Compiler
 
             return new SourceFileSymbol(
                 this,
-                canonicalPath,
+                filePath,
                 relativePathNoExtension,
                 (SourceFileRootSyntax)syntaxTree.Root);
         }
