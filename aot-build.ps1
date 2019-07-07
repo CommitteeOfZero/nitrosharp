@@ -1,6 +1,6 @@
 param(
     [ValidateSet("win-x64", "linux-x64", "osx-x64")][string]$Runtime,
-    [string]$CppCompiler = "clang-6.0"
+    [string]$CppCompiler = "clang"
 )
 
 if ($Runtime -eq "") {
@@ -13,6 +13,7 @@ if ($Runtime -eq "") {
     }
     else {
         $Runtime = "linux-x64"
+        $linuxBuild = $true
     }
 }
 
@@ -40,7 +41,7 @@ Remove-Item -Path $dst -Recurse -ErrorAction SilentlyContinue
 Copy-Item -Path bin/Release/Games/CowsHead/netcoreapp3.0/$Runtime/publish -Destination $dst `
     -Recurse -Container -Force -Exclude *.pdb,*.deps.json,*.runtimeconfig.json
 
-if (!$msvc) {
+if ($linuxBuild) {
     $args = @("$dst/CowsHead", "--strip-all")
     if (Get-Command wsl -ErrorAction SilentlyContinue) {
         & wsl strip $args
@@ -51,7 +52,7 @@ if (!$msvc) {
 }
 
 function dotnet($args) {
-    if ($IsWindows -and $Runtime -eq "linux-x64") {
+    if ($IsWindows -and $linuxBuild) {
         & bash --login -c "dotnet $args"
     }
     else {
