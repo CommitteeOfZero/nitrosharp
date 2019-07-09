@@ -676,17 +676,22 @@ namespace NitroSharp.NsScript.Syntax
                     }
                 }
 
+                int pos = Position;
                 int newlineSequenceLength = 0;
-                while (SyntaxFacts.IsNewLine(PeekChar(newlineSequenceLength)))
+                while (SyntaxFacts.IsNewLine(PeekChar()))
                 {
-                    newlineSequenceLength++;
-                    if (newlineSequenceLength >= 4)
+                    ScanEndOfLine();
+                    if (++newlineSequenceLength == 2)
                     {
+                        SetPosition(pos);
                         goto exit;
                     }
                 }
 
-                AdvanceChar();
+                if (newlineSequenceLength == 0)
+                {
+                    AdvanceChar();
+                }
             }
 
         exit:
