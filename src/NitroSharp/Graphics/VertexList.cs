@@ -4,6 +4,8 @@ using System.Runtime.CompilerServices;
 using NitroSharp.Utilities;
 using Veldrid;
 
+#nullable enable
+
 namespace NitroSharp.Graphics
 {
     internal sealed unsafe class VertexList<TVertex> : VertexBuffer
@@ -12,7 +14,8 @@ namespace NitroSharp.Graphics
         private readonly GraphicsDevice _gd;
         private readonly uint _vertexSize;
 
-        private DeviceBuffer _stagingBuffer;
+        private CommandList? _cl;
+        private DeviceBuffer? _stagingBuffer;
         private MappedResource _map;
         private uint _capacity;
         private int _cursor;
@@ -38,8 +41,9 @@ namespace NitroSharp.Graphics
             }
         }
 
-        public void Begin()
+        public void Begin(CommandList commandList)
         {
+            _cl = commandList;
             _cursor = 0;
             _bufferLocked = true;
             _map = _gd.Map(_stagingBuffer, MapMode.Write);
@@ -73,8 +77,9 @@ namespace NitroSharp.Graphics
             return (ushort)oldPosition;
         }
 
-        public void End(CommandList commandList)
+        public void End()
         {
+            Debug.Assert(_cl != null);
             _gd.Unmap(_stagingBuffer);
             _map = default;
             _bufferLocked = false;
@@ -82,31 +87,44 @@ namespace NitroSharp.Graphics
             if (totalVertices > 0)
             {
                 uint size = _vertexSize * totalVertices;
-                commandList.CopyBuffer(_stagingBuffer, 0, _deviceBuffer, 0, size);
+                _cl.CopyBuffer(_stagingBuffer, 0, _deviceBuffer, 0, size);
             }
+            _cl = null;
         }
 
         private void Resize(uint newCapacity)
         {
+            Debug.Assert(newCapacity > _capacity);
+            uint size = MathUtil.RoundUp(newCapacity * _vertexSize, 16);
+            DeviceBuffer newStagingBuffer = _gd.ResourceFactory.CreateBuffer(
+                new BufferDescription(size, BufferUsage.Staging));
+            DeviceBuffer newDeviceBuffer = _gd.ResourceFactory.CreateBuffer(
+                new BufferDescription(size, BufferUsage.VertexBuffer));
+
             if (_deviceBuffer != null)
             {
+                Debug.Assert(_cl != null);
+                _cl.CopyBuffer(
+                    source: _stagingBuffer,
+                    sourceOffset: 0,
+                    destination: newStagingBuffer,
+                    destinationOffset: 0,
+                    sizeInBytes: (uint)(_cursor * _vertexSize)
+                );
+
                 _gd.DisposeWhenIdle(_deviceBuffer);
                 _gd.DisposeWhenIdle(_stagingBuffer);
             }
 
-            uint size = MathUtil.RoundUp(newCapacity * _vertexSize, 16);
-            _deviceBuffer = _gd.ResourceFactory.CreateBuffer(
-                new BufferDescription(size, BufferUsage.VertexBuffer));
-            _stagingBuffer = _gd.ResourceFactory.CreateBuffer(
-                new BufferDescription(size, BufferUsage.Staging));
-
             _capacity = newCapacity;
+            _stagingBuffer = newStagingBuffer;
+            _deviceBuffer = newDeviceBuffer;
         }
 
         public override void Dispose()
         {
             base.Dispose();
-            _stagingBuffer.Dispose();
+            _stagingBuffer!.Dispose();
         }
 
         private void ThrowBufferLocked()
