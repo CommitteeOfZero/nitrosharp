@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using SharpDX.D3DCompiler;
 using Veldrid;
@@ -90,22 +91,25 @@ namespace NitroSharp.ShaderCompiler
                 File.WriteAllText(outputBase + "-vertex.300.glsles", glslResult.VertexShader);
                 File.WriteAllText(outputBase + "-fragment.300.glsles", glslResult.FragmentShader);
 
-                var hlslDebugOutput = SpirvCompilation.CompileVertexFragment(
-                    vsSpvDebugOutput.SpirvBytes,
-                    fsSpvDebugOutput.SpirvBytes,
-                    CrossCompileTarget.HLSL);
-                File.WriteAllText(outputBase + "-vertex.hlsl", hlslDebugOutput.VertexShader);
-                File.WriteAllText(outputBase + "-fragment.hlsl", hlslDebugOutput.FragmentShader);
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    var hlslDebugOutput = SpirvCompilation.CompileVertexFragment(
+                        vsSpvDebugOutput.SpirvBytes,
+                        fsSpvDebugOutput.SpirvBytes,
+                        CrossCompileTarget.HLSL);
+                    File.WriteAllText(outputBase + "-vertex.hlsl", hlslDebugOutput.VertexShader);
+                    File.WriteAllText(outputBase + "-fragment.hlsl", hlslDebugOutput.FragmentShader);
 
-                var hlslReleaseOutput = SpirvCompilation.CompileVertexFragment(
-                    vsSpvReleaseOutput.SpirvBytes,
-                    fsSpvReleaseOutput.SpirvBytes,
-                    CrossCompileTarget.HLSL);
+                    var hlslReleaseOutput = SpirvCompilation.CompileVertexFragment(
+                        vsSpvReleaseOutput.SpirvBytes,
+                        fsSpvReleaseOutput.SpirvBytes,
+                        CrossCompileTarget.HLSL);
 
-                byte[] vertBytes = Encoding.UTF8.GetBytes(hlslReleaseOutput.VertexShader);
-                byte[] fragBytes = Encoding.UTF8.GetBytes(hlslReleaseOutput.FragmentShader);
-                File.WriteAllBytes(outputBase + "-vertex.hlsl.bytes", CompileHlsl(ShaderStages.Vertex, vertBytes));
-                File.WriteAllBytes(outputBase + "-fragment.hlsl.bytes", CompileHlsl(ShaderStages.Fragment, fragBytes));
+                    byte[] vertBytes = Encoding.UTF8.GetBytes(hlslReleaseOutput.VertexShader);
+                    byte[] fragBytes = Encoding.UTF8.GetBytes(hlslReleaseOutput.FragmentShader);
+                    File.WriteAllBytes(outputBase + "-vertex.hlsl.bytes", CompileHlsl(ShaderStages.Vertex, vertBytes));
+                    File.WriteAllBytes(outputBase + "-fragment.hlsl.bytes", CompileHlsl(ShaderStages.Fragment, fragBytes));
+                }
             }
         }
 
