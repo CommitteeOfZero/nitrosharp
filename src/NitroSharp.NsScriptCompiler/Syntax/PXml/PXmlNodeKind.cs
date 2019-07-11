@@ -8,6 +8,7 @@
         FontElement,
         RubyElement,
         HaltElement,
-        NoLinebreaksElement
+        NoLinebreaksElement,
+        ItalicElement
     }
 }

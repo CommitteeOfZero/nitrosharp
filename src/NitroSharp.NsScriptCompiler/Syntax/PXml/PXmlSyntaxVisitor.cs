@@ -44,5 +44,9 @@ namespace NitroSharp.NsScript.Syntax.PXml
         public virtual void VisitNoLinebreaksElement(NoLinebreaksElement noLinebreaksElement)
         {
         }
+
+        public virtual void VisitItalicElement(ItalicElement italicElement)
+        {
+        }
     }
 }

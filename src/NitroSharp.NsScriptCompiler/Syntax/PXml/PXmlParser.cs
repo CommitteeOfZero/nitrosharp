@@ -80,6 +80,11 @@ namespace NitroSharp.NsScript.Syntax.PXml
                 case "?":
                     return new NoLinebreaksElement();
 
+                case "i":
+                case "I":
+                    PXmlContent content = ParseContent(startTag.Name);
+                    return new ItalicElement(content);
+
                 default:
                     throw new NotImplementedException($"PXml tag '{startTag.Name}' is not yet supported.");
             }

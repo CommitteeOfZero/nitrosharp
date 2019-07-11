@@ -111,6 +111,11 @@ namespace NitroSharp.Dialogue
             {
                 _parts.Add(new Marker(MarkerKind.NoLinebreaks));
             }
+
+            public override void VisitItalicElement(ItalicElement italicElement)
+            {
+                VisitContent(italicElement.Content);
+            }
         }
     }
 }
