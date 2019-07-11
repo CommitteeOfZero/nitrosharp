@@ -104,13 +104,13 @@ namespace NitroSharp
                     nameSegment = nameSegment.Slice(start: index + querySegment.Length);
                 }
 
-                if (nameSegment.IndexOf('/') >= 0)
-                {
-                    // If entity's name has more '/'-separated segments than the query,
-                    // we should return false.
-                    // Example: Query("選択肢*") should NOT return "選択肢１/MouseUsual/選択肢１板１".
-                    return false;
-                }
+                //if (nameSegment.IndexOf('/') >= 0)
+                //{
+                //    // If entity's name has more '/'-separated segments than the query,
+                //    // we should return false.
+                //    // Example: Query("選択肢*") should NOT return "選択肢１/MouseUsual/選択肢１板１".
+                //    return false;
+                //}
 
                 return true;
             }
