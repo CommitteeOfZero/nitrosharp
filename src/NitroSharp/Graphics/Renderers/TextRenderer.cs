@@ -146,7 +146,7 @@ namespace NitroSharp.Graphics.Renderers
 
             Vector2 margin = bitmapInfo.Margin;
             // TODO: remove the hardcoded top margin.
-            var pos = new Vector2(glyph.Position.X + margin.X, 28 + glyph.Position.Y - margin.Y);
+            var pos = new Vector2(glyph.Position.X + Math.Abs(margin.X), 28 + glyph.Position.Y - margin.Y);
             RgbaFloat color = glyph.Color;
             for (uint y = 0; y < dimensions.Height; y++)
             {
