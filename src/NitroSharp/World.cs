@@ -39,7 +39,7 @@ namespace NitroSharp
             IsPrimary = isPrimary;
             _entities = new Dictionary<string, Entity>(InitialCapacity);
             _aliases = new Dictionary<string, string>();
-            _entityEvents = new ArrayBuilder<EntityEvent>();
+            _entityEvents = new ArrayBuilder<EntityEvent>(initialCapacity: 128);
             _tables = new List<EntityTable>(8);
 
             Threads = RegisterTable(new ThreadTable(this, 32));
