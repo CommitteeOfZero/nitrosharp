@@ -45,7 +45,14 @@ namespace NitroSharp.Graphics
             string name = "NitroSharp.Graphics.Shaders." + set +
                 $"-{stage.ToString().ToLower()}{GetExtension(factory.BackendType)}";
 
-            using (Stream stream = s_assembly.GetManifestResourceStream(name))
+            Stream? stream = s_assembly.GetManifestResourceStream(name);
+            if (stream == null)
+            {
+                throw new InvalidOperationException(
+                    $"Couldn't find shader set '{name}'. " +
+                    "Did you forget to run the shader compiler?"
+                );
+            }
             using (var reader = new BinaryReader(stream))
             {
                 byte[] bytes = reader.ReadBytes((int)stream.Length);
@@ -55,15 +62,15 @@ namespace NitroSharp.Graphics
 
         private static string GetExtension(GraphicsBackend backend)
         {
-            switch (backend)
+            return backend switch
             {
-                case GraphicsBackend.Direct3D11: return ".hlsl.bytes";
-                case GraphicsBackend.Vulkan: return ".450.glsl.spv";
-                case GraphicsBackend.OpenGL: return ".330.glsl";
-                case GraphicsBackend.OpenGLES: return ".300.glsles";
-                case GraphicsBackend.Metal: return ".metallib";
-                default: return ThrowIllegalValue(nameof(backend));
-            }
+                GraphicsBackend.Direct3D11 => ".hlsl.bytes",
+                GraphicsBackend.Vulkan => ".450.glsl.spv",
+                GraphicsBackend.OpenGL => ".330.glsl",
+                GraphicsBackend.OpenGLES => ".300.glsles",
+                GraphicsBackend.Metal => ".metallib",
+                _ => ThrowIllegalValue(nameof(backend)),
+            };
         }
 
         public void Dispose()
@@ -78,8 +85,5 @@ namespace NitroSharp.Graphics
 
         private static string ThrowIllegalValue(string paramName)
             => throw new ArgumentException("Illegal value.", paramName);
-
-        private static void ThrowShaderSetNotFound(string name)
-            => throw new InvalidOperationException($"Couldn't find shader set '{name}'");
     }
 }
