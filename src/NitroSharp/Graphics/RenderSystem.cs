@@ -158,14 +158,14 @@ namespace NitroSharp.Graphics.Systems
             _cl.ClearColorTarget(0, RgbaFloat.Black);
 
             _mainBucket.Begin();
-            _quadGeometryStream.Begin(_cl);
+            _quadGeometryStream.Begin();
 
             _spriteRenderer.ProcessSprites();
             _quadRenderer.ProcessRectangles(_world.Rectangles);
             _textRenderer.ProcessTextLayouts();
             _videoRenderer.ProcessVideoClips();
 
-            _quadGeometryStream.End();
+            _quadGeometryStream.End(_cl);
             _mainBucket.End(_cl);
 
             _cl.End();

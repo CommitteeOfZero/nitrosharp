@@ -171,16 +171,17 @@ namespace NitroSharp.Graphics
             Debug.Assert(resourceSet != null);
             var submission = new RenderBucketSubmission<QuadVertex, QuadInstanceData>
             {
-                VertexBuffer = _quadGeometryStream.VertexBuffer,
+                VertexBuffer0 = _quadGeometryStream.VertexBuffer,
                 IndexBuffer = _quadGeometryStream.IndexBuffer,
                 VertexBase = vertexBase,
                 IndexBase = 0,
                 IndexCount = 6,
-                InstanceDataBuffer = _quadGeometryStream.InstanceDataBuffer,
+                VertexBuffer1 = _quadGeometryStream.InstanceDataBuffer,
                 InstanceBase = instanceBase,
                 Pipeline = pipeline,
                 SharedResourceSet = _viewProjection.ResourceSet,
-                ObjectResourceSet = resourceSet
+                ObjectResourceSet = resourceSet,
+                InstanceCount = 1
             };
 
             _renderBucket.Submit(ref submission, renderPriority);

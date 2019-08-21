@@ -22,10 +22,10 @@ namespace NitroSharp.Graphics
         public VertexList<QuadInstanceData> InstanceDataBuffer { get; }
         public DeviceBuffer IndexBuffer { get; }
 
-        public void Begin(CommandList commandList)
+        public void Begin()
         {
-            VertexBuffer.Begin(commandList);
-            InstanceDataBuffer.Begin(commandList);
+            VertexBuffer.Begin();
+            InstanceDataBuffer.Begin();
         }
 
         public (ushort vertexBase, ushort instanceBase) Append(
@@ -75,10 +75,10 @@ namespace NitroSharp.Graphics
             return (vertexBase, instanceBase);
         }
 
-        public void End()
+        public void End(CommandList commandList)
         {
-            VertexBuffer.End();
-            InstanceDataBuffer.End();
+            VertexBuffer.End(commandList);
+            InstanceDataBuffer.End(commandList);
         }
 
         public void Dispose()

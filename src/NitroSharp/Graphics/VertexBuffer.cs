@@ -2,28 +2,30 @@
 using System.Runtime.CompilerServices;
 using Veldrid;
 
+#nullable enable
+
 namespace NitroSharp.Graphics
 {
     internal abstract class VertexBuffer : IDisposable
     {
-        protected DeviceBuffer _deviceBuffer;
+        protected DeviceBuffer? _deviceBuffer;
 
         public virtual DeviceBuffer DeviceBuffer
         {
-            get => _deviceBuffer;
+            get => _deviceBuffer!;
             protected set => _deviceBuffer = value;
         }
 
         public virtual void Dispose()
         {
-            _deviceBuffer.Dispose();
+            _deviceBuffer!.Dispose();
         }
     }
 
     internal class VertexBuffer<TVertex> : VertexBuffer
         where TVertex : unmanaged
     {
-        private readonly DeviceBuffer _staging;
+        private readonly DeviceBuffer? _staging;
 
         public VertexBuffer(
             GraphicsDevice graphicsDevice,
@@ -50,7 +52,7 @@ namespace NitroSharp.Graphics
         }
 
         public void Update(GraphicsDevice graphicsDevice, CommandList commandList, Span<TVertex> data)
-            => Update(graphicsDevice, commandList, data, _staging ?? _deviceBuffer);
+            => Update(graphicsDevice, commandList, data, _staging ?? _deviceBuffer!);
 
         private void Update(
             GraphicsDevice graphicsDevice,

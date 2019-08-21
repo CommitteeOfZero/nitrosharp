@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using NitroSharp.Utilities;
 using Veldrid;
@@ -14,24 +13,7 @@ namespace NitroSharp.Graphics
         where TVertex : unmanaged
     {
         public VertexBuffer VertexBuffer;
-        public DeviceBuffer IndexBuffer;
-        public Pipeline Pipeline;
-        public ResourceSet SharedResourceSet;
-        public ResourceSet ObjectResourceSet;
-        public ushort VertexBase;
-        public ushort VertexCount;
-        public ushort IndexBase;
-        public ushort IndexCount;
-    }
-
-    [StructLayout(LayoutKind.Auto)]
-    internal ref struct RenderBucketSubmission<TVertex, TInstanceData>
-        where TVertex : unmanaged
-        where TInstanceData : unmanaged
-    {
-        public VertexBuffer VertexBuffer;
-        public DeviceBuffer IndexBuffer;
-        public VertexBuffer InstanceDataBuffer;
+        public DeviceBuffer? IndexBuffer;
         public Pipeline Pipeline;
         public ResourceSet SharedResourceSet;
         public ResourceSet ObjectResourceSet;
@@ -40,6 +22,26 @@ namespace NitroSharp.Graphics
         public ushort IndexBase;
         public ushort IndexCount;
         public ushort InstanceBase;
+        public ushort InstanceCount;
+    }
+
+    [StructLayout(LayoutKind.Auto)]
+    internal ref struct RenderBucketSubmission<TVertex0, TVertex1>
+        where TVertex0 : unmanaged
+        where TVertex1 : unmanaged
+    {
+        public VertexBuffer VertexBuffer0;
+        public VertexBuffer VertexBuffer1;
+        public DeviceBuffer? IndexBuffer;
+        public Pipeline Pipeline;
+        public ResourceSet SharedResourceSet;
+        public ResourceSet ObjectResourceSet;
+        public ushort VertexBase;
+        public ushort VertexCount;
+        public ushort IndexBase;
+        public ushort IndexCount;
+        public ushort InstanceBase;
+        public ushort InstanceCount;
     }
 
     internal sealed class RenderBucket<TKey> where TKey : IComparable<TKey>
@@ -53,6 +55,7 @@ namespace NitroSharp.Graphics
             public ushort IndexBase;
             public ushort IndexCount;
             public ushort InstanceBase;
+            public ushort InstanceCount;
             public byte SharedResourceSetId;
             public byte PipelineId;
             public byte VertexBuffer0;
@@ -65,10 +68,10 @@ namespace NitroSharp.Graphics
 
         private readonly List<VertexBuffer> _vertexBuffers;
         private (byte index, VertexBuffer buffer) _lastVertexBuffer0;
-        private (byte index, VertexBuffer buffer) _lastInstanceDataBuffer;
+        private (byte index, VertexBuffer? buffer) _lastVertexBuffer1;
 
         private readonly List<DeviceBuffer> _indexBuffers;
-        private (byte index, DeviceBuffer buffer) _lastIndexBuffer;
+        private (byte index, DeviceBuffer? buffer) _lastIndexBuffer;
 
         private readonly List<Pipeline> _pipelines;
         private (byte index, Pipeline pipeline) _lastPipeline;
@@ -92,7 +95,7 @@ namespace NitroSharp.Graphics
             _keys.Reset();
             _vertexBuffers.Clear();
             _lastVertexBuffer0 = default;
-            _lastInstanceDataBuffer = default;
+            _lastVertexBuffer1 = default;
             _indexBuffers.Clear();
             _lastIndexBuffer = default;
             _pipelines.Clear();
@@ -106,7 +109,8 @@ namespace NitroSharp.Graphics
         {
             ref RenderItem renderItem = ref _renderItems.Add();
             renderItem.VertexBuffer0 = GetResourceId(submission.VertexBuffer, _vertexBuffers, ref _lastVertexBuffer0);
-            renderItem.IndexBuffer = GetResourceId(submission.IndexBuffer, _indexBuffers, ref _lastIndexBuffer);
+            renderItem.VertexBuffer1 = byte.MaxValue;
+            renderItem.IndexBuffer = GetResourceIdMaybe(submission.IndexBuffer, _indexBuffers, ref _lastIndexBuffer);
             renderItem.VertexBase = submission.VertexBase;
             renderItem.VertexCount = submission.VertexCount;
             renderItem.IndexBase = submission.IndexBase;
@@ -114,17 +118,20 @@ namespace NitroSharp.Graphics
             renderItem.PipelineId = GetPipelineId(submission.Pipeline);
             renderItem.SharedResourceSetId = GetResourceId(submission.SharedResourceSet, _sharedResourceSets, ref _lastSharedResourceSet);
             renderItem.ObjectResourceSet = submission.ObjectResourceSet;
+            renderItem.InstanceBase = submission.InstanceBase;
+            renderItem.InstanceCount = submission.InstanceCount;
 
             _keys.Add(key);
         }
 
-        public void Submit<TVertex, TInstanceData>(ref RenderBucketSubmission<TVertex, TInstanceData> submission, TKey key)
-            where TVertex : unmanaged
-            where TInstanceData : unmanaged
+        public void Submit<TVertex0, TVertex1>(ref RenderBucketSubmission<TVertex0, TVertex1> submission, TKey key)
+            where TVertex0 : unmanaged
+            where TVertex1 : unmanaged
         {
             ref RenderItem renderItem = ref _renderItems.Add();
-            renderItem.VertexBuffer0 = GetResourceId(submission.VertexBuffer, _vertexBuffers, ref _lastVertexBuffer0);
-            renderItem.IndexBuffer = GetResourceId(submission.IndexBuffer, _indexBuffers, ref _lastIndexBuffer);
+            renderItem.VertexBuffer0 = GetResourceId(submission.VertexBuffer0, _vertexBuffers, ref _lastVertexBuffer0);
+            renderItem.VertexBuffer1 = GetResourceIdMaybe(submission.VertexBuffer1, _vertexBuffers, ref _lastVertexBuffer1);
+            renderItem.IndexBuffer = GetResourceIdMaybe(submission.IndexBuffer, _indexBuffers, ref _lastIndexBuffer);
             renderItem.VertexBase = submission.VertexBase;
             renderItem.VertexCount = submission.VertexCount;
             renderItem.IndexBase = submission.IndexBase;
@@ -132,8 +139,8 @@ namespace NitroSharp.Graphics
             renderItem.PipelineId = GetPipelineId(submission.Pipeline);
             renderItem.SharedResourceSetId = GetResourceId(submission.SharedResourceSet, _sharedResourceSets, ref _lastSharedResourceSet);
             renderItem.ObjectResourceSet = submission.ObjectResourceSet;
-            renderItem.VertexBuffer1 = GetResourceId(submission.InstanceDataBuffer, _vertexBuffers, ref _lastInstanceDataBuffer);
             renderItem.InstanceBase = submission.InstanceBase;
+            renderItem.InstanceCount = submission.InstanceCount;
 
             _keys.Add(key);
         }
@@ -191,20 +198,44 @@ namespace NitroSharp.Graphics
                     lastIndexBuffer = item.IndexBuffer;
                 }
 
-                commandList.DrawIndexed(
-                    item.IndexCount,
-                    instanceCount: 1,
-                    item.IndexBase,
-                    item.VertexBase,
-                    item.InstanceBase);
+                bool indexed = _lastIndexBuffer.buffer != null;
+                if (indexed)
+                {
+                    commandList.DrawIndexed(
+                        item.IndexCount,
+                        item.InstanceCount,
+                        item.IndexBase,
+                        item.VertexBase,
+                        item.InstanceBase
+                    );
+                }
+                else
+                {
+                    commandList.Draw(
+                        item.VertexCount,
+                        item.InstanceCount,
+                        item.VertexBase,
+                        item.InstanceBase
+                    );
+                }
             }
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private byte GetPipelineId(Pipeline pipeline)
-           => GetResourceId(pipeline, _pipelines, ref _lastPipeline);
+            => GetResourceId(pipeline, _pipelines, ref _lastPipeline);
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private byte GetResourceIdMaybe<T>(T? resource, List<T> resourceList, ref (byte index, T? resource) lastUsed)
+            where T : class
+        {
+            if (resource == null)
+            {
+                lastUsed = (byte.MaxValue, null);
+                return byte.MaxValue;
+            }
+
+            return GetResourceId(resource, resourceList, ref lastUsed!);
+        }
+
         private byte GetResourceId<T>(T resource, List<T> resourceList, ref (byte index, T resource) lastUsed)
             where T : class
         {
