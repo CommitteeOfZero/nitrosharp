@@ -131,7 +131,7 @@ namespace NitroSharp
         {
             _gameTimer.Start();
 
-            float prevFrameTicks = 0.0f;
+            long prevFrameTicks = 0L;
             while (!_shutdownCancellation.IsCancellationRequested && _window.Exists)
             {
                 if (_surfaceDestroyed)
@@ -147,7 +147,8 @@ namespace NitroSharp
                 }
 
                 long currentFrameTicks = _gameTimer.ElapsedTicks;
-                float deltaMilliseconds = (currentFrameTicks - prevFrameTicks) / Stopwatch.Frequency * 1000.0f;
+                float deltaMilliseconds = (float)(currentFrameTicks - prevFrameTicks)
+                    / Stopwatch.Frequency * 1000.0f;
                 prevFrameTicks = currentFrameTicks;
 
                 try
