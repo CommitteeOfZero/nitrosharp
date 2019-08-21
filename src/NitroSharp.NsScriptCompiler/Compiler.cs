@@ -124,7 +124,7 @@ namespace NitroSharp.NsScript.Compiler
         public SyntaxTree GetSyntaxTree(string filePath)
         {
             ResolvedPath resolvedPath = _sourceReferenceResolver.ResolvePath(filePath);
-            if (_syntaxTrees.TryGetValue(resolvedPath, out SyntaxTree syntaxTree))
+            if (_syntaxTrees.TryGetValue(resolvedPath, out SyntaxTree? syntaxTree))
             {
                 return syntaxTree;
             }
@@ -144,7 +144,7 @@ namespace NitroSharp.NsScript.Compiler
 
         private SourceModuleSymbol GetModuleSymbol(SyntaxTree syntaxTree)
         {
-            if (_sourceModuleSymbols.TryGetValue(syntaxTree, out SourceModuleSymbol symbol))
+            if (_sourceModuleSymbols.TryGetValue(syntaxTree, out SourceModuleSymbol? symbol))
             {
                 return symbol;
             }
@@ -188,7 +188,7 @@ namespace NitroSharp.NsScript.Compiler
 
         internal NsxModuleBuilder GetNsxModuleBuilder(SourceFileSymbol sourceFile)
         {
-            if (!_nsxModuleBuilders.TryGetValue(sourceFile.FilePath, out NsxModuleBuilder moduleBuilder))
+            if (!_nsxModuleBuilders.TryGetValue(sourceFile.FilePath, out NsxModuleBuilder? moduleBuilder))
             {
                 moduleBuilder = new NsxModuleBuilder(this, sourceFile);
                 _nsxModuleBuilders.Add(sourceFile.FilePath, moduleBuilder);
@@ -1030,13 +1030,13 @@ namespace NitroSharp.NsScript.Compiler
                     EmitIfStatement((IfStatementSyntax)statement);
                     break;
                 case SyntaxNodeKind.BreakStatement:
-                    EmitBreakStatement((BreakStatementSyntax)statement);
+                    EmitBreakStatement();
                     break;
                 case SyntaxNodeKind.WhileStatement:
                     EmitWhileStatement((WhileStatementSyntax)statement);
                     break;
                 case SyntaxNodeKind.ReturnStatement:
-                    EmitReturnStatement((ReturnStatementSyntax)statement);
+                    EmitReturnStatement();
                     break;
                 case SyntaxNodeKind.CallChapterStatement:
                     EmitCallChapter((CallChapterStatementSyntax)statement);
@@ -1051,7 +1051,7 @@ namespace NitroSharp.NsScript.Compiler
                     EmitSelectSection((SelectSectionSyntax)statement);
                     break;
                 case SyntaxNodeKind.DialogueBlock:
-                    EmitActivateText((DialogueBlockSyntax)statement);
+                    EmitActivateText();
                     break;
                 case SyntaxNodeKind.PXmlString:
                     EmitDialogue((PXmlString)statement);
@@ -1062,7 +1062,7 @@ namespace NitroSharp.NsScript.Compiler
             }
         }
 
-        private void EmitActivateText(DialogueBlockSyntax block)
+        private void EmitActivateText()
         {
             EmitOpcode(Opcode.ActivateText);
             _code.WriteUInt16LE((ushort)_textId++);
@@ -1174,7 +1174,7 @@ namespace NitroSharp.NsScript.Compiler
             }
         }
 
-        private void EmitReturnStatement(ReturnStatementSyntax statement)
+        private void EmitReturnStatement()
         {
             EmitOpcode(Opcode.Return);
         }
@@ -1217,7 +1217,7 @@ namespace NitroSharp.NsScript.Compiler
             _code.Position = exit;
         }
 
-        private void EmitBreakStatement(BreakStatementSyntax statement)
+        private void EmitBreakStatement()
         {
             _insertBreaksAt.Enqueue(_code.Position);
             _code.Position += JumpInstrSize;

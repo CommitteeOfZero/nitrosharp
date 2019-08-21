@@ -32,17 +32,15 @@ namespace NitroSharp.NsScript
 
         public static NsColor FromConstant(BuiltInConstant constant)
         {
-            switch (constant)
+            return constant switch
             {
-                case BuiltInConstant.Black: return Black;
-                case BuiltInConstant.White: return White;
-                case BuiltInConstant.Red: return Red;
-                case BuiltInConstant.Green: return Green;
-                case BuiltInConstant.Blue: return Blue;
-
-                default:
-                    throw ThrowHelper.UnexpectedValue(nameof(constant));
-            }
+                BuiltInConstant.Black => Black,
+                BuiltInConstant.White => White,
+                BuiltInConstant.Red => Red,
+                BuiltInConstant.Green => Green,
+                BuiltInConstant.Blue => Blue,
+                _ => throw ThrowHelper.UnexpectedValue(nameof(constant)),
+            };
         }
 
         public static NsColor FromString(string colorString)
@@ -56,7 +54,7 @@ namespace NitroSharp.NsScript
             }
             else
             {
-                if (Enum.TryParse<BuiltInConstant>(colorString, true, out var enumValue))
+                if (Enum.TryParse(colorString, true, out BuiltInConstant enumValue))
                 {
                     return FromConstant(enumValue);
                 }

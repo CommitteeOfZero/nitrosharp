@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Threading;
 using NitroSharp.NsScript.Utilities;
@@ -110,8 +111,6 @@ namespace NitroSharp.NsScript.VM
 
         public IReadOnlyList<ThreadContext> Threads => _threads;
 
-        internal SystemVariableLookup SystemVariables => _systemVariables;
-
         public ThreadContext CreateThread(string name, string symbol, bool start = false)
             => CreateThread(name, CurrentThread!.CurrentFrame.Module.Name, symbol, start);
 
@@ -146,7 +145,7 @@ namespace NitroSharp.NsScript.VM
 
         public NsxModule GetModule(string name)
         {
-            if (!_loadedModules.TryGetValue(name, out NsxModule module))
+            if (!_loadedModules.TryGetValue(name, out NsxModule? module))
             {
                 Stream stream = _moduleLocator.OpenModule(name);
                 module = NsxModule.LoadModule(stream, name);
@@ -207,7 +206,7 @@ namespace NitroSharp.NsScript.VM
             return nbResumed > 0;
         }
 
-        public bool TryGetThread(string name, out ThreadContext thread)
+        public bool TryGetThread(string name, [NotNullWhen(true)] out ThreadContext? thread)
         {
             return _threadMap.TryGetValue(name, out thread);
         }

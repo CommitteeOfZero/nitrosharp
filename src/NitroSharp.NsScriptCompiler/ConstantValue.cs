@@ -334,7 +334,7 @@ namespace NitroSharp.NsScript
 
         public bool Equals(ConstantValue other) => Equals(this, other);
 
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
             => obj is ConstantValue other && Equals(this, other);
 
         public override int GetHashCode()

@@ -23,7 +23,7 @@ namespace NitroSharp.NsScript.Text
         public bool Contains(TextSpan span) => span.Start >= Start && span.End <= End;
 
         public bool Equals(TextSpan other) => Start == other.Start && Length == other.Length;
-        public override bool Equals(object obj) => obj is TextSpan span && Equals(span);
+        public override bool Equals(object? obj) => obj is TextSpan span && Equals(span);
         public override string ToString() => $"[{Start}..{End})";
 
         public static bool operator ==(TextSpan left, TextSpan right) => left.Equals(right);

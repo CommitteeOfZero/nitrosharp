@@ -1,10 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netcoreapp2.2</TargetFramework>
+    <TargetFramework>netcoreapp3.0</TargetFramework>
     <LangVersion>8.0</LangVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <NoWarn>1701;1702;CA1063</NoWarn>
+    <NoWarn>1701;1702;CA1063;IDE1006;IDE0063</NoWarn>
     <VeldridVersion>4.7.0-ge32775f6a5</VeldridVersion>
   </PropertyGroup>
 
@@ -34,7 +34,7 @@
     <PackageReference Include="System.Memory" Version="4.5.3" />
     <PackageReference Include="System.Buffers" Version="4.5.0" />
     <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="4.5.2" />
-    <PackageReference Include="System.Threading.Channels" Version="4.6.0-preview5.19224.8" />
+    <PackageReference Include="System.Threading.Channels" Version="4.6.0-preview8.19405.3" />
 
     <PackageReference Include="Veldrid" Version="$(VeldridVersion)" />
     <PackageReference Include="Veldrid.SDL2" Version="$(VeldridVersion)" />

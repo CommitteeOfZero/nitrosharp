@@ -40,6 +40,7 @@ namespace NitroSharp.Content
                 _cl.CopyTexture(source: stagingTex, destination: sampledTex);
                 _cl.End();
                 _gd.SubmitCommands(_cl);
+                // TODO: report the GL backend's quirk upstream
                 if (_gd.BackendType == GraphicsBackend.OpenGL)
                 {
                     _gd.DisposeWhenIdle(stagingTex);

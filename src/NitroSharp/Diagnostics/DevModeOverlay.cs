@@ -33,8 +33,9 @@ namespace NitroSharp.Diagnostics
             ImGuiIOPtr io = ImGui.GetIO();
             io.Fonts.Clear();
             io.Fonts.AddFontFromFileTTF(
-                 "Fonts/NotoSansCJKjp-Regular.ttf",
-                16, null, io.Fonts.GetGlyphRangesJapanese());
+                "Fonts/NotoSansCJKjp-Regular.ttf",
+                16, null, io.Fonts.GetGlyphRangesJapanese()
+            );
             _imguiRenderer.RecreateFontDeviceTexture(renderContext.Device);
             ImGui.NewFrame();
 

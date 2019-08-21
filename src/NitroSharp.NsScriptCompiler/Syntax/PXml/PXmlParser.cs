@@ -110,8 +110,7 @@ namespace NitroSharp.NsScript.Syntax.PXml
             NsColor? color = null, shadowColor = null;
 
             var attributes = startTag.Attributes;
-            string value;
-            if (attributes.TryGetValue("size", out value))
+            if (attributes.TryGetValue("size", out string value))
             {
                 size = int.Parse(value);
             }

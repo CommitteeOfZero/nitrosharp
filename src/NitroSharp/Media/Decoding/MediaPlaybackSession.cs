@@ -97,7 +97,7 @@ namespace NitroSharp.Media.Decoding
             var decodingSession = new DecodingSession(stream.AvStream);
             AVStream* avStream = stream.AvStream;
             var processor = stream.Kind == MediaStreamKind.Audio
-                ? (MediaProcessor)new AudioProcessor(avStream, new Resampler(decodingSession.CodecContext, audioParameters.Value))
+                ? (MediaProcessor)new AudioProcessor(avStream, new Resampler(decodingSession.CodecContext, audioParameters!.Value))
                 : new VideoProcessor(frameConverter, avStream, videoResolution);
 
             var processingPipeline = new MediaProcessingPipeline(decodingSession, processor);

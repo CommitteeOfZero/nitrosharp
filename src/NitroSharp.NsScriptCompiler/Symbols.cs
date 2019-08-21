@@ -210,7 +210,7 @@ namespace NitroSharp.NsScript.Compiler
             => LookupSubroutine(_functionMap, name);
 
         private T? LookupSubroutine<T>(Dictionary<string, T> map, string name) where T : SubroutineSymbol
-            => map.TryGetValue(name, out T symbol) ? symbol : null;
+            => map.TryGetValue(name, out T? symbol) ? symbol : null;
 
         public override string ToString() => $"SourceFile '{Name}'";
     }
@@ -233,7 +233,7 @@ namespace NitroSharp.NsScript.Compiler
         public bool Equals(SubroutineSymbol other)
             => ReferenceEquals(Declaration, other.Declaration);
 
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
             => obj is SubroutineSymbol other && ReferenceEquals(Declaration, other.Declaration);
 
         public override int GetHashCode() => Declaration.GetHashCode();
@@ -275,7 +275,7 @@ namespace NitroSharp.NsScript.Compiler
         public override ParameterSymbol? LookupParameter(string name)
         {
             if (_parameterMap == null) { return null; }
-            return _parameterMap.TryGetValue(name, out ParameterSymbol symbol) ? symbol : null;
+            return _parameterMap.TryGetValue(name, out ParameterSymbol? symbol) ? symbol : null;
         }
 
         public bool Equals(FunctionSymbol other) => ReferenceEquals(Declaration, other.Declaration);

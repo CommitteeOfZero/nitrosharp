@@ -55,7 +55,7 @@ namespace NitroSharp.NsScript
             }
 
             string fullPath = NormalizePath(Path.Combine(_rootDirectory, path));
-            return _canonicalPaths.TryGetValue(fullPath.ToUpperInvariant(), out string actualPath)
+            return _canonicalPaths.TryGetValue(fullPath.ToUpperInvariant(), out string? actualPath)
                 ? new ResolvedPath(actualPath)
                 : throw new FileNotFoundException($"File '{fullPath}' does not exist.", fullPath);
         }

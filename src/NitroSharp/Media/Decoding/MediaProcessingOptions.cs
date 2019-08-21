@@ -23,7 +23,7 @@ namespace NitroSharp.Media.Decoding
             OutputVideoResolution = outputVideoResolution;
         }
 
-        public override bool Equals(object obj) => obj is MediaProcessingOptions other && Equals(other);
+        public override bool Equals(object? obj) => obj is MediaProcessingOptions other && Equals(other);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool Equals(MediaProcessingOptions other)

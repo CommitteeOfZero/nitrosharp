@@ -529,7 +529,7 @@ namespace NitroSharp
             compareMaps(left._idToIndex, right._idToIndex);
             Debug.Assert(left._entities.SequenceEqual(right._entities));
 
-            void validateMaps(EntityTable table)
+            static void validateMaps(EntityTable table)
             {
                 foreach (var kvp in table._idToIndex)
                 {
@@ -537,7 +537,7 @@ namespace NitroSharp
                 }
             }
 
-            void compareMaps<K, V>(Dictionary<K, V> l, Dictionary<K, V> r) where V : IEquatable<V>
+            static void compareMaps<K, V>(Dictionary<K, V> l, Dictionary<K, V> r) where V : IEquatable<V>
             {
                 Debug.Assert(l.Count == r.Count);
                 foreach (var kvp in l)

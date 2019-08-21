@@ -106,9 +106,11 @@ namespace NitroSharp
             finalVolume = finalVolume.Rebase(1.0f);
             if (duration > TimeSpan.Zero)
             {
-                var animation = new VolumeAnimation(entity, duration);
-                animation.InitialVolume = actual;
-                animation.FinalVolume = finalVolume;
+                var animation = new VolumeAnimation(entity, duration)
+                {
+                    InitialVolume = actual,
+                    FinalVolume = finalVolume
+                };
                 _world.ActivateAnimation(animation);
             }
             else

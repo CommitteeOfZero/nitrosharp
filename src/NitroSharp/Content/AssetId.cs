@@ -16,7 +16,7 @@ namespace NitroSharp.Content
         public bool Equals(AssetId other)
             => other.NormalizedPath.Equals(NormalizedPath, StringComparison.Ordinal);
 
-        public override bool Equals(object obj) => obj is AssetId other && other.Equals(this);
+        public override bool Equals(object? obj) => obj is AssetId other && other.Equals(this);
 
         public override int GetHashCode()
             => NormalizedPath != null ? NormalizedPath.GetHashCode(StringComparison.Ordinal) : 0;

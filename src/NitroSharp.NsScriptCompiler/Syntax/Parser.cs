@@ -333,7 +333,7 @@ namespace NitroSharp.NsScript.Syntax
 
         internal StatementSyntax? ParseStatement()
         {
-            StatementSyntax? statement = null;
+            StatementSyntax? statement;
             do
             {
                 statement = ParseStatementCore();
@@ -407,7 +407,7 @@ namespace NitroSharp.NsScript.Syntax
             int currentLine = GetLineNumber();
 
             int n = 0;
-            SyntaxToken token = default;
+            SyntaxToken token;
             // Look for the closing '>'
             while ((token = PeekToken(n)).Kind != SyntaxTokenKind.GreaterThan)
             {
@@ -534,10 +534,8 @@ namespace NitroSharp.NsScript.Syntax
                 tk = CurrentToken.Kind;
                 tkSpan = CurrentToken.TextSpan;
                 bool binary;
-                BinaryOperatorKind binOpKind = default;
                 AssignmentOperatorKind assignOpKind = default;
-
-                if (SyntaxFacts.TryGetBinaryOperatorKind(tk, out binOpKind))
+                if (SyntaxFacts.TryGetBinaryOperatorKind(tk, out BinaryOperatorKind binOpKind))
                 {
                     binary = true;
                 }

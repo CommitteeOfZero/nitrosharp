@@ -230,7 +230,7 @@ namespace NitroSharp
                 switch (message.Action)
                 {
                     case ThreadActionMessage.ActionKind.StartOrResume:
-                        if (_nssInterpreter.TryGetThread(threadInfo.Name, out ThreadContext thread))
+                        if (_nssInterpreter.TryGetThread(threadInfo.Name, out ThreadContext? thread))
                         {
                             _nssInterpreter.ResumeThread(thread);
                         }

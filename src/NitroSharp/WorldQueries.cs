@@ -7,7 +7,6 @@ namespace NitroSharp
 {
     internal struct EntityQueryResult
     {
-        private readonly World _world;
         private QueryExecutor _executor;
 
         public readonly string Query;
@@ -15,9 +14,8 @@ namespace NitroSharp
 
         public EntityQueryResult(World world, string query, List<ReadOnlyMemory<char>> querySegments)
         {
-            _world = world;
             Query = query;
-            _executor = new QueryExecutor(_world, Query, querySegments);
+            _executor = new QueryExecutor(world, Query, querySegments);
             IsEmpty = _executor.EmptyResult;
         }
 
@@ -172,7 +170,7 @@ namespace NitroSharp
 
     internal static class WorldQueries
     {
-        private static List<ReadOnlyMemory<char>> s_querySegments
+        private static readonly List<ReadOnlyMemory<char>> s_querySegments
             = new List<ReadOnlyMemory<char>>();
 
         public static EntityQueryResult Query(this World world, string query)

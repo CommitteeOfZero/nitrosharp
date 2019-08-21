@@ -4,78 +4,52 @@
     {
         public static string GetText(BinaryOperatorKind operatorKind)
         {
-            switch (operatorKind)
+            return operatorKind switch
             {
-                case BinaryOperatorKind.Add:
-                    return "+";
-                case BinaryOperatorKind.Subtract:
-                    return "-";
-                case BinaryOperatorKind.Multiply:
-                    return "*";
-                case BinaryOperatorKind.Divide:
-                    return "/";
-                case BinaryOperatorKind.Remainder:
-                    return "%";
-                case BinaryOperatorKind.Equals:
-                    return "==";
-                case BinaryOperatorKind.NotEquals:
-                    return "!=";
-                case BinaryOperatorKind.LessThan:
-                    return "<";
-                case BinaryOperatorKind.LessThanOrEqual:
-                    return "<=";
-                case BinaryOperatorKind.GreaterThan:
-                    return ">";
-                case BinaryOperatorKind.GreaterThanOrEqual:
-                    return ">=";
-                case BinaryOperatorKind.And:
-                    return "&&";
-                case BinaryOperatorKind.Or:
-                    return "||";
+                BinaryOperatorKind.Add => "+",
+                BinaryOperatorKind.Subtract => "-",
+                BinaryOperatorKind.Multiply => "*",
+                BinaryOperatorKind.Divide => "/",
+                BinaryOperatorKind.Remainder => "%",
+                BinaryOperatorKind.Equals => "==",
+                BinaryOperatorKind.NotEquals => "!=",
+                BinaryOperatorKind.LessThan => "<",
+                BinaryOperatorKind.LessThanOrEqual => "<=",
+                BinaryOperatorKind.GreaterThan => ">",
+                BinaryOperatorKind.GreaterThanOrEqual => ">=",
+                BinaryOperatorKind.And => "&&",
+                BinaryOperatorKind.Or => "||",
 
-                default:
-                    throw ThrowHelper.UnexpectedValue(nameof(operatorKind));
-            }
+                _ => throw ThrowHelper.UnexpectedValue(nameof(operatorKind)),
+            };
         }
 
         public static string GetText(AssignmentOperatorKind operatorKind)
         {
-            switch (operatorKind)
+            return operatorKind switch
             {
-                case AssignmentOperatorKind.Assign:
-                    return "=";
-                case AssignmentOperatorKind.AddAssign:
-                    return "+=";
-                case AssignmentOperatorKind.SubtractAssign:
-                    return "-=";
-                case AssignmentOperatorKind.MultiplyAssign:
-                    return "*=";
-                case AssignmentOperatorKind.DivideAssign:
-                    return "/=";
-                case AssignmentOperatorKind.Increment:
-                    return "++";
-                case AssignmentOperatorKind.Decrement:
-                    return "--";
+                AssignmentOperatorKind.Assign => "=",
+                AssignmentOperatorKind.AddAssign => "+=",
+                AssignmentOperatorKind.SubtractAssign => "-=",
+                AssignmentOperatorKind.MultiplyAssign => "*=",
+                AssignmentOperatorKind.DivideAssign => "/=",
+                AssignmentOperatorKind.Increment => "++",
+                AssignmentOperatorKind.Decrement => "--",
 
-                default:
-                    throw ThrowHelper.UnexpectedValue(nameof(operatorKind));
-            }
+                _ => throw ThrowHelper.UnexpectedValue(nameof(operatorKind)),
+            };
         }
 
         public static string GetText(UnaryOperatorKind operatorKind)
         {
-            switch (operatorKind)
+            return operatorKind switch
             {
-                case UnaryOperatorKind.Not:
-                    return "!";
-                case UnaryOperatorKind.Plus:
-                    return "+";
-                case UnaryOperatorKind.Minus:
-                    return "-";
+                UnaryOperatorKind.Not => "!",
+                UnaryOperatorKind.Plus => "+",
+                UnaryOperatorKind.Minus => "-",
 
-                default:
-                    throw ThrowHelper.UnexpectedValue(nameof(operatorKind));
-            }
+                _ => throw ThrowHelper.UnexpectedValue(nameof(operatorKind)),
+            };
         }
     }
 }

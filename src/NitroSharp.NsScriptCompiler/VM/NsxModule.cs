@@ -16,7 +16,6 @@ namespace NitroSharp.NsScript.VM
         private readonly Stream _stream;
         private readonly int[] _subroutineOffsets;
 
-        private readonly byte[] _rtiTable;
         private readonly int[] _stringOffsets;
         private readonly Subroutine[] _subroutines;
         private readonly SubroutineRuntimeInformation[] _srti;
@@ -35,9 +34,6 @@ namespace NitroSharp.NsScript.VM
             _subroutines = new Subroutine[_subroutineOffsets.Length];
             _stringHeap = new string?[stringOffsets.Length];
 
-            StringCount = stringOffsets.Length;
-
-            _rtiTable = rtiTable;
             int subroutineCount = _subroutines.Length;
             var rtiReader = new BufferReader(rtiTable);
             var rtiEntryOffsets = new int[subroutineCount];
@@ -60,7 +56,6 @@ namespace NitroSharp.NsScript.VM
 
         public string Name { get; }
         public string[] Imports { get; }
-        public int StringCount { get; }
         public DateTimeOffset SourceModificationTime { get; }
 
         internal Subroutine GetSubroutine(int index)
@@ -82,11 +77,6 @@ namespace NitroSharp.NsScript.VM
 
         public string GetSubroutineName(int subroutineIndex)
             => _srti[subroutineIndex].SubroutineName;
-
-        public string[] GetParameterNames(int subroutineIndex)
-        {
-            return _srti[subroutineIndex].GetParameterNames(_rtiTable);
-        }
 
         public string GetString(ushort token)
         {
@@ -289,7 +279,7 @@ namespace NitroSharp.NsScript.VM
             _parameterNames = null;
         }
 
-        internal int LookupDialogueBlockIndex(string dialogueBlockName)
+        internal readonly int LookupDialogueBlockIndex(string dialogueBlockName)
         {
             Debug.Assert(_dialogueBlockMap != null);
             return _dialogueBlockMap[dialogueBlockName];

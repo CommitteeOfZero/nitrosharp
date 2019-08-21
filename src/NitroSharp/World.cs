@@ -201,7 +201,7 @@ namespace NitroSharp
         public bool TryGetAnimation<T>(Entity entity, out T? animation) where T : PropertyAnimation
         {
             var key = new AnimationDictionaryKey(entity, typeof(T));
-            bool result = _activeAnimations.TryGetValue(key, out PropertyAnimation val);
+            bool result = _activeAnimations.TryGetValue(key, out PropertyAnimation? val);
             animation = val as T;
             return result;
         }
@@ -261,7 +261,7 @@ namespace NitroSharp
             if (_entities.TryGetValue(name, out Entity entity))
             {
                 _entities.Remove(name);
-                if (_aliases.TryGetValue(name, out string alias))
+                if (_aliases.TryGetValue(name, out string? alias))
                 {
                     _entities.Remove(alias);
                     _aliases.Remove(name);
@@ -316,7 +316,7 @@ namespace NitroSharp
             {
                 if (ae.EventKind == AnimationEventKind.AnimationActivated)
                 {
-                    if (_activeAnimations.TryGetValue(ae.Key, out PropertyAnimation animation))
+                    if (_activeAnimations.TryGetValue(ae.Key, out PropertyAnimation? animation))
                     {
                         target._activeAnimations[ae.Key] = animation;
                     }
@@ -353,7 +353,7 @@ namespace NitroSharp
                 }
             }
 
-            void validateEntities(World world)
+            static void validateEntities(World world)
             {
                 foreach (var kvp in world._entities)
                 {
@@ -411,9 +411,9 @@ namespace NitroSharp
             }
 
             public bool Equals(AnimationDictionaryKey other)
-                => Entity.Equals(other.Entity) && RuntimeType.Equals(other.RuntimeType);
+                => Entity.Equals(other.Entity) && RuntimeType == other.RuntimeType;
 
-            public override bool Equals(object obj)
+            public override bool Equals(object? obj)
                 => obj is AnimationDictionaryKey other && Equals(other);
 
             public override int GetHashCode()
