@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Numerics;
-using NitroSharp.Graphics.Renderers;
 using NitroSharp.Media;
 using NitroSharp.Content;
 using NitroSharp.Primitives;

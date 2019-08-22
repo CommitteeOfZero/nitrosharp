@@ -6,7 +6,7 @@ using NitroSharp.Text;
 using NitroSharp.Utilities;
 using Veldrid;
 
-namespace NitroSharp.Graphics.Renderers
+namespace NitroSharp.Graphics
 {
     internal sealed class TextRenderer : IDisposable
     {

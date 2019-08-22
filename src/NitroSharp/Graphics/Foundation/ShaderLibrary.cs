@@ -49,7 +49,7 @@ namespace NitroSharp.Graphics
             if (stream == null)
             {
                 throw new InvalidOperationException(
-                    $"Couldn't find shader set '{name}'. " +
+                    $"Couldn't find shader set '{set}'. " +
                     "Did you forget to run the shader compiler?"
                 );
             }
