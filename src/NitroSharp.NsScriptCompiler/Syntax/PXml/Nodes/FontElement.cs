@@ -2,17 +2,17 @@
 {
     public sealed class FontElement : PXmlNode
     {
-        internal FontElement(int? size, NsColor? color, NsColor? shadowColor, PXmlContent content)
+        internal FontElement(int? size, NsColor? color, NsColor? outlineColor, PXmlContent content)
         {
             Size = size;
             Color = color;
-            ShadowColor = shadowColor;
+            OutlineColor = outlineColor;
             Content = content;
         }
 
         public int? Size { get; }
         public NsColor? Color { get; }
-        public NsColor? ShadowColor { get; }
+        public NsColor? OutlineColor { get; }
         public PXmlContent Content { get; }
 
         public override PXmlNodeKind Kind => PXmlNodeKind.FontElement;

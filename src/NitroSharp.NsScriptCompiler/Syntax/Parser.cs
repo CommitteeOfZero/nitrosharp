@@ -615,15 +615,11 @@ namespace NitroSharp.NsScript.Syntax
         private LiteralExpressionSyntax ParseLiteral()
         {
             SyntaxToken token = EatToken();
-            ConstantValue value = default;
+            ConstantValue value;
             switch (token.Kind)
             {
                 case SyntaxTokenKind.NumericLiteral:
-#if NETCOREAPP2_2
                     ReadOnlySpan<char> valueText = SourceText.GetCharacterSpan(token.GetValueSpan());
-#else
-                    string valueText = InternValueText(token);
-#endif
                     var numberStyle = token.IsHexTriplet ? NumberStyles.HexNumber : NumberStyles.None;
                     value = token.IsFloatingPointLiteral
                         ? ConstantValue.Float(float.Parse(valueText, provider: CultureInfo.InvariantCulture))
@@ -841,8 +837,9 @@ namespace NitroSharp.NsScript.Syntax
         private SelectSectionSyntax ParseSelectSection()
         {
             SyntaxToken keyword = EatToken(SyntaxTokenKind.CaseKeyword);
-            Spanned<string> labelName = ConsumeTextUntil(tk => tk == SyntaxTokenKind.OpenBrace
-                                                         || tk == SyntaxTokenKind.Colon);
+            Spanned<string> labelName = ConsumeTextUntil(
+                tk => tk == SyntaxTokenKind.OpenBrace || tk == SyntaxTokenKind.Colon
+            );
             if (CurrentToken.Kind == SyntaxTokenKind.Colon)
             {
                 EatToken();
@@ -880,8 +877,9 @@ namespace NitroSharp.NsScript.Syntax
 
             Spanned<string>? filePath = null;
             Spanned<string> symbolName = default;
-            Spanned<string> part = ConsumeTextUntil(tk => tk == SyntaxTokenKind.Semicolon
-                                                    || tk == SyntaxTokenKind.Arrow);
+            Spanned<string> part = ConsumeTextUntil(
+                tk => tk == SyntaxTokenKind.Semicolon || tk == SyntaxTokenKind.Arrow
+            );
             if (CurrentToken.Kind == SyntaxTokenKind.Arrow)
             {
                 EatToken();

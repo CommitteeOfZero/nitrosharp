@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Text;
 using NitroSharp.NsScript.Text;
 
@@ -14,45 +15,59 @@ namespace NitroSharp.NsScript.Syntax.PXml
 
         public PXmlContent Parse()
         {
-            return ParseContent(string.Empty);
+            return ParseContent(rootElementName: null);
         }
 
-        private PXmlContent ParseContent(string rootElementName)
+        private PXmlContent ParseContent(string? rootElementName)
         {
-            var children = ImmutableArray.CreateBuilder<PXmlNode>();
+            var children = ImmutableArray.Create<PXmlNode>();
+            ImmutableArray<PXmlNode>.Builder? builder = null;
             while (PeekChar() != EofCharacter)
             {
                 if (IsEndTag())
                 {
-                    var endTag = ParsePXmlTag();
+                    PXmlTag endTag = ParsePXmlTag();
                     if (rootElementName == endTag.Name)
                     {
                         break;
                     }
                 }
 
-                var node = ParseNode();
-                if (node != null)
+                PXmlNode node = ParseNode();
+                Debug.Assert(node != null);
+                if (children.Length == 0)
                 {
-                    children.Add(node);
+                    children = ImmutableArray.Create(node);
+                }
+                else
+                {
+                    Debug.Assert(children.Length == 1);
+                    if (builder == null)
+                    {
+                        builder = ImmutableArray.CreateBuilder<PXmlNode>();
+                        builder.Add(children[0]);
+                    }
+                    builder.Add(node);
                 }
             }
 
-            return new PXmlContent(children.ToImmutable());
+            ImmutableArray<PXmlNode> array = builder != null
+                ? builder.ToImmutable()
+                : children;
+            return new PXmlContent(array);
         }
 
         private PXmlNode ParseNode()
         {
             SkipTrivia();
             StartScanning();
-
             char peek = PeekChar();
             return peek == '<' ? ParseElement() : ParsePlainText();
         }
 
         private PXmlNode ParseElement()
         {
-            var startTag = ParsePXmlTag();
+            PXmlTag startTag = ParsePXmlTag();
             PXmlNode node;
             switch (startTag.Name)
             {
@@ -96,20 +111,18 @@ namespace NitroSharp.NsScript.Syntax.PXml
         {
             string characterName = tag.Attributes["name"];
             string fileName = tag.Attributes["src"];
-
             tag.Attributes.TryGetValue("mode", out string mode);
             bool stop = mode == "off";
             var action = stop ? NsVoiceAction.Stop : NsVoiceAction.Play;
-
             return new VoiceElement(action, characterName, fileName);
         }
 
         private FontElement ParseFontElement(in PXmlTag startTag)
         {
             int? size = null;
-            NsColor? color = null, shadowColor = null;
+            NsColor? color = null, outlineColor = null;
 
-            var attributes = startTag.Attributes;
+            ImmutableDictionary<string, string> attributes = startTag.Attributes;
             if (attributes.TryGetValue("size", out string value))
             {
                 size = int.Parse(value);
@@ -120,18 +133,17 @@ namespace NitroSharp.NsScript.Syntax.PXml
             }
             if (attributes.TryGetValue("outcolor", out value))
             {
-                shadowColor = NsColor.FromString(value);
+                outlineColor = NsColor.FromString(value);
             }
 
-            var content = ParseContent(startTag.Name);
-            return new FontElement(size, color, shadowColor, content);
+            PXmlContent content = ParseContent(startTag.Name);
+            return new FontElement(size, color, outlineColor, content);
         }
 
         private RubyElement ParseRubyElement(in PXmlTag startTag)
         {
             string rubyText = startTag.Attributes["text"];
-            var rubyBase = ParseContent("RUBY");
-
+            PXmlContent rubyBase = ParseContent("RUBY");
             return new RubyElement(rubyBase, rubyText);
         }
 
@@ -201,7 +213,8 @@ namespace NitroSharp.NsScript.Syntax.PXml
 
             StartScanning();
             char c;
-            while (!SyntaxFacts.IsWhitespace(c = PeekChar()) && !SyntaxFacts.IsNewLine(c) && c != '>')
+            while (!SyntaxFacts.IsWhitespace(c = PeekChar())
+                && !SyntaxFacts.IsNewLine(c) && c != '>')
             {
                 AdvanceChar();
             }
@@ -229,7 +242,7 @@ namespace NitroSharp.NsScript.Syntax.PXml
         {
             char c;
             StartScanning();
-            while ((c = PeekChar()) != '=')
+            while (PeekChar() != '=')
             {
                 AdvanceChar();
             }

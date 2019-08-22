@@ -580,12 +580,7 @@ namespace NitroSharp.NsScript.Syntax
             }
 
             TextSpan valueSpan = CurrentLexemeSpan;
-#if NETCOREAPP2_2
             ReadOnlySpan<char> valueText = SourceText.GetCharacterSpan(valueSpan);
-#else
-            string valueText = SourceText.GetCharacterSpan(valueSpan).ToString();
-#endif
-
             bool valid;
             if (!isFloat)
             {
