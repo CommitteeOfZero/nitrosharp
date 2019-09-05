@@ -20,14 +20,39 @@ dotnet_style_qualification_for_property = false:suggestion
 dotnet_style_qualification_for_method = false:suggestion
 dotnet_style_qualification_for_event = false:suggestion
 
-# Prefix private field names with '_'
-dotnet_naming_rule.private_members_with_underscore.symbols = private_fields
-dotnet_naming_rule.private_members_with_underscore.style = prefix_underscore
-dotnet_naming_rule.private_members_with_underscore.severity = suggestion
-dotnet_naming_symbols.private_fields.applicable_kinds = field
-dotnet_naming_symbols.private_fields.applicable_accessibilities = private
-dotnet_naming_style.prefix_underscore.capitalization = camel_case
+# Prefix private and internals field names with '_'
+dotnet_naming_rule.underscore_private_fields.symbols = private_internal_fields
+dotnet_naming_rule.underscore_private_fields.style = prefix_underscore
+dotnet_naming_rule.underscore_private_fields.severity = suggestion
+dotnet_naming_symbols.private_internal_fields.applicable_kinds = field
+dotnet_naming_symbols.private_internal_fields.applicable_accessibilities = private, internal
 dotnet_naming_style.prefix_underscore.required_prefix = _
+dotnet_naming_style.prefix_underscore.capitalization = camel_case
+
+# Use PascalCase for constant fields
+dotnet_naming_rule.constant_fields_should_be_pascal_case.symbols = constant_fields
+dotnet_naming_rule.constant_fields_should_be_pascal_case.style = pascal_case_style
+dotnet_naming_rule.constant_fields_should_be_pascal_case.severity = suggestion
+dotnet_naming_symbols.constant_fields.applicable_kinds = field
+dotnet_naming_symbols.constant_fields.required_modifiers = const
+
+# Private static fields are prefixed with 's_' and are camelCased
+dotnet_naming_rule.private_static_field_naming.symbols = private_static_field_symbols
+dotnet_naming_rule.private_static_field_naming.style = private_static_field_style
+dotnet_naming_rule.private_static_field_naming.severity = suggestion
+dotnet_naming_style.private_static_field_style.required_prefix = s_
+dotnet_naming_style.private_static_field_style.capitalization = camel_case
+dotnet_naming_symbols.private_static_field_symbols.applicable_kinds = field
+dotnet_naming_symbols.private_static_field_symbols.applicable_accessibilities = private
+dotnet_naming_symbols.private_static_field_symbols.required_modifiers = static
+
+# Use PascalCase for public static readonly fields
+dotnet_naming_rule.public_static_readonly_field_casing.symbols = public_static_readonly_field_symbols
+dotnet_naming_rule.public_static_readonly_field_casing.style = pascal_case_style
+dotnet_naming_rule.public_static_readonly_field_casing.severity = suggestion
+dotnet_naming_symbols.public_static_readonly_field_symbols.applicable_kinds = field
+dotnet_naming_symbols.public_static_readonly_field_symbols.applicable_accessibilities = public
+dotnet_naming_symbols.public_static_readonly_field_symbols.required_modifiers = static, readonly
 
 # Prefer language keywords over framework type names
 dotnet_style_predefined_type_for_locals_parameters_members = true:suggestion
@@ -40,6 +65,13 @@ csharp_new_line_before_catch = true
 csharp_new_line_before_finally = true
 csharp_new_line_before_members_in_object_initializers = true
 csharp_new_line_before_members_in_anonymous_types = true
+
+# Other
+csharp_indent_labels = one_less_than_current
+csharp_prefer_simple_using_statement = false:none
+
+# Common styles
+dotnet_naming_style.pascal_case_style.capitalization = pascal_case
 
 [*.{csproj,vbproj,vcxproj,vcxproj.filters,proj,projitems,shproj,props,targets}]
 indent_size = 2
