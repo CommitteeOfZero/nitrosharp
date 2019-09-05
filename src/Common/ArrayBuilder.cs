@@ -26,8 +26,25 @@ namespace NitroSharp.Utilities
         public T[] UnderlyingArray => _elements;
         public uint Count => _count;
 
-        public ref T this[uint index] => ref _elements[index];
-        public ref T this[int index] => ref _elements[index];
+        public ref T this[uint index]
+        {
+            get
+            {
+                static void oob() => throw new IndexOutOfRangeException();
+                if (index >= _count) { oob(); }
+                return ref _elements[index];
+            }
+        }
+
+        public ref T this[int index]
+        {
+            get
+            {
+                static void oob() => throw new IndexOutOfRangeException();
+                if (index >= _count) { oob(); }
+                return ref _elements[index];
+            }
+        }
 
         public ref T Add()
         {
