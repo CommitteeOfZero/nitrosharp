@@ -20,7 +20,13 @@ namespace NitroSharp
         public static Exception UnexpectedValue(string paramName)
             => new ArgumentException("Unexpected value.", paramName);
 
+        public static T UnexpectedValue<T>(string paramName)
+           => throw new ArgumentException("Unexpected value.", paramName);
+
         public static T InvalidData<T>(string message)
             => throw new InvalidDataException(message);
+
+        public static T IllegalValue<T>(string message)
+            => throw new ArgumentException(message);
     }
 }
