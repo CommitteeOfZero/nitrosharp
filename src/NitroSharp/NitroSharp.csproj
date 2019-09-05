@@ -5,7 +5,7 @@
     <LangVersion>8.0</LangVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <NoWarn>1701;1702;CA1063;IDE1006;IDE0063</NoWarn>
-    <VeldridVersion>4.7.0-ge32775f6a5</VeldridVersion>
+    <VeldridVersion>4.7</VeldridVersion>
   </PropertyGroup>
 
   <Import Project="..\..\OutputPath.props" />
