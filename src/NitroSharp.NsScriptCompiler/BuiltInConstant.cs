@@ -61,6 +61,9 @@
         Enter,
         Pause,
         Resume,
+        PushText,
+        NoLog,
+        NoIcon,
 
         // Used by CreateSound
         BGM,
@@ -86,10 +89,6 @@
         // Used by CreateText
         Auto,
         Inherit,
-
-        PushText,
-        NoLog,
-        NoIcon,
 
         // Used by SetScore
         Local,

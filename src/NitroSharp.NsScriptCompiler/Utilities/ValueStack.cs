@@ -51,7 +51,6 @@ namespace NitroSharp.NsScript.Utilities
                 ThrowStackEmpty();
             }
 
-            T[] array = _array;
             return ref _array[size - 1];
         }
 
@@ -63,7 +62,6 @@ namespace NitroSharp.NsScript.Utilities
                 ThrowStackEmpty();
             }
 
-            T[] array = _array;
             return ref _array[size - offset - 1];
         }
 

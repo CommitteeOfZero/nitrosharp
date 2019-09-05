@@ -238,123 +238,69 @@ namespace NitroSharp.NsScript.Syntax
 
         public static string GetText(SyntaxTokenKind kind)
         {
-            switch (kind)
+            return kind switch
             {
-                case SyntaxTokenKind.Dollar:
-                    return "$";
-                case SyntaxTokenKind.Hash:
-                    return "#";
-                case SyntaxTokenKind.At:
-                    return "@";
-                case SyntaxTokenKind.Exclamation:
-                    return "!";
-                case SyntaxTokenKind.Ampersand:
-                    return "&";
-                case SyntaxTokenKind.Asterisk:
-                    return "*";
-                case SyntaxTokenKind.OpenParen:
-                    return "(";
-                case SyntaxTokenKind.CloseParen:
-                    return ")";
-                case SyntaxTokenKind.Minus:
-                    return "-";
-                case SyntaxTokenKind.Plus:
-                    return "+";
-                case SyntaxTokenKind.Equals:
-                    return "=";
-                case SyntaxTokenKind.OpenBrace:
-                    return "{";
-                case SyntaxTokenKind.CloseBrace:
-                    return "}";
-                case SyntaxTokenKind.Colon:
-                    return ":";
-                case SyntaxTokenKind.Semicolon:
-                    return ";";
-                case SyntaxTokenKind.LessThan:
-                    return "<";
-                case SyntaxTokenKind.Comma:
-                    return ",";
-                case SyntaxTokenKind.GreaterThan:
-                    return ">";
-                case SyntaxTokenKind.Dot:
-                    return ".";
-                case SyntaxTokenKind.Slash:
-                    return "/";
-                case SyntaxTokenKind.Percent:
-                    return "%";
-                case SyntaxTokenKind.Arrow:
-                    return "->";
-                case SyntaxTokenKind.AtArrow:
-                    return "@->";
+                SyntaxTokenKind.Dollar => "$",
+                SyntaxTokenKind.Hash => "#",
+                SyntaxTokenKind.At => "@",
+                SyntaxTokenKind.Exclamation => "!",
+                SyntaxTokenKind.Ampersand => "&",
+                SyntaxTokenKind.Asterisk => "*",
+                SyntaxTokenKind.OpenParen => "(",
+                SyntaxTokenKind.CloseParen => ")",
+                SyntaxTokenKind.Minus => "-",
+                SyntaxTokenKind.Plus => "+",
+                SyntaxTokenKind.Equals => "=",
+                SyntaxTokenKind.OpenBrace => "{",
+                SyntaxTokenKind.CloseBrace => "}",
+                SyntaxTokenKind.Colon => ":",
+                SyntaxTokenKind.Semicolon => ";",
+                SyntaxTokenKind.LessThan => "<",
+                SyntaxTokenKind.Comma => ",",
+                SyntaxTokenKind.GreaterThan => ">",
+                SyntaxTokenKind.Dot => ".",
+                SyntaxTokenKind.Slash => "/",
+                SyntaxTokenKind.Percent => "%",
+                SyntaxTokenKind.Arrow => "->",
+                SyntaxTokenKind.AtArrow => "@->",
 
                 // compound
-                case SyntaxTokenKind.BarBar:
-                    return "||";
-                case SyntaxTokenKind.AmpersandAmpersand:
-                    return "&&";
-                case SyntaxTokenKind.MinusMinus:
-                    return "--";
-                case SyntaxTokenKind.PlusPlus:
-                    return "++";
-                case SyntaxTokenKind.ExclamationEquals:
-                    return "!=";
-                case SyntaxTokenKind.EqualsEquals:
-                    return "==";
-                case SyntaxTokenKind.LessThanEquals:
-                    return "<=";
-                case SyntaxTokenKind.GreaterThanEquals:
-                    return ">=";
-                case SyntaxTokenKind.SlashEquals:
-                    return "/=";
-                case SyntaxTokenKind.AsteriskEquals:
-                    return "*=";
-                case SyntaxTokenKind.PlusEquals:
-                    return "+=";
-                case SyntaxTokenKind.MinusEquals:
-                    return "-=";
+                SyntaxTokenKind.BarBar => "||",
+                SyntaxTokenKind.AmpersandAmpersand => "&&",
+                SyntaxTokenKind.MinusMinus => "--",
+                SyntaxTokenKind.PlusPlus => "++",
+                SyntaxTokenKind.ExclamationEquals => "!=",
+                SyntaxTokenKind.EqualsEquals => "==",
+                SyntaxTokenKind.LessThanEquals => "<=",
+                SyntaxTokenKind.GreaterThanEquals => ">=",
+                SyntaxTokenKind.SlashEquals => "/=",
+                SyntaxTokenKind.AsteriskEquals => "*=",
+                SyntaxTokenKind.PlusEquals => "+=",
+                SyntaxTokenKind.MinusEquals => "-=",
 
-                case SyntaxTokenKind.ChapterKeyword:
-                    return "chapter";
-                case SyntaxTokenKind.FunctionKeyword:
-                    return "function";
-                case SyntaxTokenKind.SceneKeyword:
-                    return "scene";
-                case SyntaxTokenKind.CallSceneKeyword:
-                    return "call_scene";
-                case SyntaxTokenKind.CallChapterKeyword:
-                    return "call_chapter";
-                case SyntaxTokenKind.NullKeyword:
-                    return "null";
-                case SyntaxTokenKind.TrueKeyword:
-                    return "true";
-                case SyntaxTokenKind.FalseKeyword:
-                    return "false";
-                case SyntaxTokenKind.WhileKeyword:
-                    return "while";
-                case SyntaxTokenKind.IfKeyword:
-                    return "if";
-                case SyntaxTokenKind.ElseKeyword:
-                    return "else";
-                case SyntaxTokenKind.SelectKeyword:
-                    return "select";
-                case SyntaxTokenKind.CaseKeyword:
-                    return "case";
-                case SyntaxTokenKind.BreakKeyword:
-                    return "break";
-                case SyntaxTokenKind.ReturnKeyword:
-                    return "return";
+                SyntaxTokenKind.ChapterKeyword => "chapter",
+                SyntaxTokenKind.FunctionKeyword => "function",
+                SyntaxTokenKind.SceneKeyword => "scene",
+                SyntaxTokenKind.CallSceneKeyword => "call_scene",
+                SyntaxTokenKind.CallChapterKeyword => "call_chapter",
+                SyntaxTokenKind.NullKeyword => "null",
+                SyntaxTokenKind.TrueKeyword => "true",
+                SyntaxTokenKind.FalseKeyword => "false",
+                SyntaxTokenKind.WhileKeyword => "while",
+                SyntaxTokenKind.IfKeyword => "if",
+                SyntaxTokenKind.ElseKeyword => "else",
+                SyntaxTokenKind.SelectKeyword => "select",
+                SyntaxTokenKind.CaseKeyword => "case",
+                SyntaxTokenKind.BreakKeyword => "break",
+                SyntaxTokenKind.ReturnKeyword => "return",
 
-                case SyntaxTokenKind.IncludeDirective:
-                    return "#include";
+                SyntaxTokenKind.IncludeDirective => "#include",
 
-                case SyntaxTokenKind.PXmlLineSeparator:
-                    return "\r\n";
-                case SyntaxTokenKind.DialogueBlockEndTag:
-                    return "</PRE>";
+                SyntaxTokenKind.PXmlLineSeparator => "\r\n",
+                SyntaxTokenKind.DialogueBlockEndTag => "</PRE>",
 
-                default:
-                    return string.Empty;
-            }
+                _ => string.Empty,
+            };
         }
 
         private static class KeywordScanner

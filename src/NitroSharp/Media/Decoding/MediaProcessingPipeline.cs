@@ -83,7 +83,7 @@ namespace NitroSharp.Media.Decoding
 
         private async Task Decode(CancellationTokenSource cts)
         {
-            var output = _decodedFrames.Writer;
+            ChannelWriter<PooledStruct<AVFrame>> output = _decodedFrames.Writer;
             while (!cts.IsCancellationRequested)
             {
                 ChannelReader<PooledStruct<AVPacket>> input = _rawPackets.Reader;
@@ -188,7 +188,7 @@ namespace NitroSharp.Media.Decoding
             {
                 while (!cts.IsCancellationRequested)
                 {
-                    var input = _decodedFrames.Reader;
+                    ChannelReader<PooledStruct<AVFrame>> input = _decodedFrames.Reader;
                     PooledStruct<AVFrame> srcFrame = default;
                     bool taken = false;
                     do
@@ -281,7 +281,7 @@ namespace NitroSharp.Media.Decoding
 
         private ValueTask SubmitProcessedFrame(ref FrameProcessingContext state, CancellationToken ct)
         {
-            var output = _processedFrames.Writer;
+            ChannelWriter<MediaFrame> output = _processedFrames.Writer;
             state.Buffer.Size = state.Buffer.Position;
             var processedFrame = new MediaFrame(state.Buffer, state.Pts, state.FrameDuration);
             return output.WriteAsync(processedFrame, ct);

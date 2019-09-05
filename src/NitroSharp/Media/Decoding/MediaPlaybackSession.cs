@@ -96,7 +96,7 @@ namespace NitroSharp.Media.Decoding
         {
             var decodingSession = new DecodingSession(stream.AvStream);
             AVStream* avStream = stream.AvStream;
-            var processor = stream.Kind == MediaStreamKind.Audio
+            MediaProcessor processor = stream.Kind == MediaStreamKind.Audio
                 ? (MediaProcessor)new AudioProcessor(avStream, new Resampler(decodingSession.CodecContext, audioParameters!.Value))
                 : new VideoProcessor(frameConverter, avStream, videoResolution);
 
@@ -120,7 +120,7 @@ namespace NitroSharp.Media.Decoding
             }
 
             _cts = new CancellationTokenSource();
-            foreach (var stream in _processingContexts)
+            foreach (ProcessingContext stream in _processingContexts)
             {
                 stream.Pipeline?.Start(_cts);
             }

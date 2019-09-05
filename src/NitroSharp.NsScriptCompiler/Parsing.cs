@@ -60,7 +60,7 @@ namespace NitroSharp.NsScript
         {
             var sourceText = SourceText.From(text);
             var parser = new Parser(new Lexer(sourceText));
-            var root = parseFunc(parser);
+            SyntaxNode? root = parseFunc(parser);
             return new SyntaxTree(sourceText, root, parser.DiagnosticBuilder);
         }
 

@@ -73,7 +73,7 @@ namespace NitroSharp.NsScript.Utilities
 
     internal ref struct BufferWriter
     {
-        private IBuffer<byte>? _resizableBuffer;
+        private readonly IBuffer<byte>? _resizableBuffer;
         private Span<byte> _span;
         private int _position;
 

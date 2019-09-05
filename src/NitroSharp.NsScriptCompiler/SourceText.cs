@@ -41,7 +41,7 @@ namespace NitroSharp.NsScript.Text
                 throw new ArgumentException("Stream must support read operation.", nameof(stream));
             }
 
-            encoding = encoding ?? s_defaultEncoding;
+            encoding ??= s_defaultEncoding;
             string text = ReadStream(stream, encoding);
             return new SourceText(text, filePath);
         }

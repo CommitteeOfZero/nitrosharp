@@ -542,7 +542,7 @@ namespace NitroSharp.NsScript.Compiler
         public bool IsEmpty => Discriminator == LookupResultDiscriminator.Empty;
     }
 
-    internal struct Checker
+    internal readonly struct Checker
     {
         private readonly SubroutineSymbol _subroutine;
         private readonly SourceModuleSymbol _module;
@@ -708,7 +708,7 @@ namespace NitroSharp.NsScript.Compiler
 
         private readonly NsxModuleBuilder _module;
         private readonly SubroutineSymbol _subrotuine;
-        private Checker _checker;
+        private readonly Checker _checker;
         private readonly Compilation _compilation;
         private BufferWriter _code;
         private int _textId;
@@ -1068,10 +1068,10 @@ namespace NitroSharp.NsScript.Compiler
             _code.WriteUInt16LE((ushort)_textId++);
         }
 
-        private void EmitDialogue(PXmlString textNode)
+        private void EmitDialogue(PXmlString dialogue)
         {
             EmitOpcode(Opcode.PresentText);
-            _code.WriteUInt16LE(_module.GetStringToken(textNode.Text));
+            _code.WriteUInt16LE(_module.GetStringToken(dialogue.Text));
         }
 
         private void EmitSelectSection(SelectSectionSyntax section)
