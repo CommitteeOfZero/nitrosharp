@@ -330,9 +330,15 @@ namespace NitroSharp.NsScript.Compiler
             headerWriter.WriteInt32LE(codeStart);
 
             // --- Write everything to the stream ---
-            string path = Path.Combine(
-                compilation.OutputDirectory,
-                Path.ChangeExtension(sourceFile.Name, "nsx"));
+            string outDir = compilation.OutputDirectory;
+            string? subDir = Path.GetDirectoryName(sourceFile.Name);
+            if (!string.IsNullOrEmpty(subDir))
+            {
+                subDir = Path.Combine(outDir, subDir);
+                Directory.CreateDirectory(subDir);
+            }
+
+            string path = Path.Combine(outDir, Path.ChangeExtension(sourceFile.Name, "nsx"));
             using FileStream fileStream = File.Create(path);
             fileStream.Write(headerWriter.Written);
 
