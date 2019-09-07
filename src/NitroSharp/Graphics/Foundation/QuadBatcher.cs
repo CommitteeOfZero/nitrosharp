@@ -176,6 +176,7 @@ namespace NitroSharp.Graphics
                 VertexBase = vertexBase,
                 IndexBase = 0,
                 IndexCount = 6,
+                VertexCount = 4,
                 VertexBuffer1 = _quadGeometryStream.InstanceDataBuffer,
                 InstanceBase = instanceBase,
                 Pipeline = pipeline,
