@@ -6,6 +6,7 @@ using NitroSharp.Content;
 using NitroSharp.Primitives;
 using NitroSharp.Text;
 using Veldrid;
+using NitroSharp.Interactivity;
 
 namespace NitroSharp
 {
@@ -163,7 +164,7 @@ namespace NitroSharp
             MouseClickSprite = AddRow<Entity>();
             MouseOverThread = AddRow<Entity>();
             MouseLeaveThread = AddRow<Entity>();
-            State = AddRow<Interactivity.State>();
+            State = AddRow<MouseState>();
             Rects = AddSystemDataRow<RectangleF>();
         }
 
@@ -174,7 +175,7 @@ namespace NitroSharp
 
         public Row<Entity> MouseOverThread { get; }
         public Row<Entity> MouseLeaveThread { get; }
-        public Row<Interactivity.State> State { get; }
+        public Row<MouseState> State { get; }
 
         public SystemDataRow<RectangleF> Rects { get; }
     }

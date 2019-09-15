@@ -241,6 +241,16 @@ namespace NitroSharp
             evt.Entity = handle;
             evt.EntityName = name;
             evt.EventKind = EntityEventKind.EntityAdded;
+
+            var parsedName = new EntityName(name);
+            ReadOnlySpan<char> parentName = parsedName.Parent;
+            if (parentName.Length > 0
+                && TryGetEntity(parentName.ToString(), out Entity parent)
+                && parent.IsValid)
+            {
+                table.Parents.Set(handle, parent);
+            }
+
             return handle;
         }
 

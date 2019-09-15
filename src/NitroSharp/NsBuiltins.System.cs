@@ -129,27 +129,19 @@ namespace NitroSharp
             ThreadContext thread = Interpreter.CreateThread(name, target, startImmediately);
             var info = new InterpreterThreadInfo(name, thread.EntryModule, target);
             Entity threadEntity = _world.CreateThreadEntity(info);
-
-            Entity parentEntity = default;
-            int idxSlash = name.IndexOf('/');
-            if (idxSlash > 0)
+            Entity parent = _world.Threads.Parents.GetValue(threadEntity);
+            if (parent.IsValid && parent.Kind == EntityKind.Choice)
             {
-                string parentEntityName = name.Substring(0, idxSlash);
-                _world.TryGetEntity(parentEntityName, out parentEntity);
-            }
-
-            if (parentEntity.IsValid)
-            {
-                if (parentEntity.Kind == EntityKind.Choice)
+                var parsedName = new EntityName(name);
+                ChoiceTable choices = _world.Choices;
+                switch (parsedName.MouseState)
                 {
-                    if (name.Contains("MouseOver"))
-                    {
-                        _world.Choices.MouseOverThread.Set(parentEntity, threadEntity);
-                    }
-                    else if (name.Contains("MouseLeave"))
-                    {
-                        _world.Choices.MouseLeaveThread.Set(parentEntity, threadEntity);
-                    }
+                    case Interactivity.MouseState.Over:
+                        choices.MouseOverThread.Set(parent, threadEntity);
+                        break;
+                    case Interactivity.MouseState.Leave:
+                        choices.MouseLeaveThread.Set(parent, threadEntity);
+                        break;
                 }
             }
         }

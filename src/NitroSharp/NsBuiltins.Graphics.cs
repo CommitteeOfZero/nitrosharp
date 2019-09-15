@@ -78,13 +78,6 @@ namespace NitroSharp
             int priority, RectangleF? srcRect = null)
         {
             _logger.LogInformation($"Loading sprite: {fileOrExistingEntityName}");
-            Entity parentEntity = default;
-            int idxSlash = entityName.IndexOf('/');
-            if (idxSlash > 0)
-            {
-                string parentEntityName = entityName.Substring(0, idxSlash);
-                _world.TryGetEntity(parentEntityName, out parentEntity);
-            }
 
             string source = fileOrExistingEntityName;
             if (source.ToUpperInvariant().Contains("COLOR")) { return; }
@@ -103,34 +96,31 @@ namespace NitroSharp
             {
                 return;
             }
+            var texSize = new Size(texture.Width, texture.Height);
 
             RgbaFloat color = RgbaFloat.White;
-            var bounds = new Vector2(texture.Width, texture.Height);
+            var bounds = new Vector2(texSize.Width, texSize.Height);
             var sourceRectangle = srcRect ?? new RectangleF(0, 0, bounds.X, bounds.Y);
             var size = new SizeF(sourceRectangle.Width, sourceRectangle.Height);
 
             Entity entity = _world.CreateSprite(entityName, texId, sourceRectangle, priority, size, ref color);
             SetPosition(entity, x, y);
-            if (parentEntity.IsValid)
+            Entity parent = _world.Sprites.Parents.GetValue(entity);
+            if (parent.IsValid && parent.Kind == EntityKind.Choice)
             {
-                if (parentEntity.Kind == EntityKind.Choice)
+                var parsedName = new EntityName(entityName);
+                ChoiceTable choices = _world.Choices;
+                switch (parsedName.MouseState)
                 {
-                    if (entityName.Contains("MouseUsual"))
-                    {
-                        _world.Choices.MouseUsualSprite.Set(parentEntity, entity);
-                    }
-                    else if (entityName.Contains("MouseOver"))
-                    {
-                        _world.Choices.MouseOverSprite.Set(parentEntity, entity);
-                    }
-                    else if (entityName.Contains("MouseClick"))
-                    {
-                        _world.Choices.MouseClickSprite.Set(parentEntity, entity);
-                    }
-                }
-                else
-                {
-                    SetParent(entity, parentEntity);
+                    case Interactivity.MouseState.Normal:
+                        choices.MouseUsualSprite.Set(parent, entity);
+                        break;
+                    case Interactivity.MouseState.Over:
+                        choices.MouseOverSprite.Set(parent, entity);
+                        break;
+                    case Interactivity.MouseState.Pressed:
+                        choices.MouseClickSprite.Set(parent, entity);
+                        break;
                 }
             }
         }
@@ -199,35 +189,21 @@ namespace NitroSharp
                 y.Origin == NsCoordinateOrigin.CurrentValue ? transform.Position.Y + y.Value : y.Value);
 
             var anchorPoint = new Vector2(x.AnchorPoint, y.AnchorPoint);
-
             Vector2 translateOrigin;
-            switch (x.Origin)
+            translateOrigin.X = x.Origin switch
             {
-                case NsCoordinateOrigin.Left:
-                default:
-                    translateOrigin.X = 0.0f;
-                    break;
-                case NsCoordinateOrigin.Center:
-                    translateOrigin.X = 0.5f;
-                    break;
-                case NsCoordinateOrigin.Right:
-                    translateOrigin.X = 1.0f;
-                    break;
-            }
-
-            switch (y.Origin)
+                NsCoordinateOrigin.Left => 0.0f,
+                NsCoordinateOrigin.Center => 0.5f,
+                NsCoordinateOrigin.Right => 1.0f,
+                _ => 0.0f
+            };
+            translateOrigin.Y = y.Origin switch
             {
-                case NsCoordinateOrigin.Top:
-                default:
-                    translateOrigin.Y = 0.0f;
-                    break;
-                case NsCoordinateOrigin.Center:
-                    translateOrigin.Y = 0.5f;
-                    break;
-                case NsCoordinateOrigin.Bottom:
-                    translateOrigin.Y = 1.0f;
-                    break;
-            }
+                NsCoordinateOrigin.Top => 0.0f,
+                NsCoordinateOrigin.Center => 0.5f,
+                NsCoordinateOrigin.Bottom => 1.0f,
+                _ => 0.0f
+            };
 
             Vector2 position = translateOrigin * new Vector2(parentBounds.Width, parentBounds.Height);
             position -= anchorPoint * new Vector2(bounds.Width, bounds.Height);

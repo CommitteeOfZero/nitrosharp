@@ -46,7 +46,7 @@ namespace NitroSharp.NsScriptCompiler.Tests
         [Fact]
         public void ReturnStatement_Parses_Correctly()
         {
-            var breakStmt = AssertStatement<ReturnStatementSyntax>("return;", SyntaxNodeKind.ReturnStatement);
+            AssertStatement<ReturnStatementSyntax>("return;", SyntaxNodeKind.ReturnStatement);
         }
 
         [Fact]

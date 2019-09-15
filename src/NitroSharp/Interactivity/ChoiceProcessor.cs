@@ -79,7 +79,7 @@ namespace NitroSharp.Interactivity
                 bool isMouseOver = choiceRects[i].Contains(input.MousePosition);
                 if (isMouseOver && mouseOverSprite[i].IsValid)
                 {
-                    if (state[i] == State.Normal && mouseNormalTable != null)
+                    if (state[i] == MouseState.Normal && mouseNormalTable != null)
                     {
                         // MouseEnter
                         mouseNormalTable.Colors.Mutate(mouseNormalEntity).SetAlpha(0);
@@ -93,10 +93,10 @@ namespace NitroSharp.Interactivity
                         }
 
                         mouseOverTable.Colors.Mutate(mouseOverEntity).SetAlpha(1);
-                        state[i] = State.MouseOver;
+                        state[i] = MouseState.Over;
                     }
                 }
-                else if (!isMouseOver && state[i] == State.MouseOver)
+                else if (!isMouseOver && state[i] == MouseState.Over)
                 {
                     // Mouse leave
                     mouseOverTable.Colors.Mutate(mouseOverEntity).SetAlpha(0);
@@ -110,7 +110,7 @@ namespace NitroSharp.Interactivity
                     }
 
                     mouseNormalTable.Colors.Mutate(mouseNormalEntity).SetAlpha(1);
-                    state[i] = State.Normal;
+                    state[i] = MouseState.Normal;
                 }
 
                 if (isMouseOver && isMouseDown)
