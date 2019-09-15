@@ -16,7 +16,7 @@ namespace NitroSharp
 {
     public partial class Game : IDisposable
     {
-        private readonly bool UseWicOnWindows = true;
+        private readonly bool UseWicOnWindows = false;
 
         private readonly Stopwatch _gameTimer;
         private readonly Configuration _configuration;

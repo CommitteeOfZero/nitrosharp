@@ -43,7 +43,7 @@
     <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="4.5.2" />
     <!--<PackageReference Include="Veldrid" Version="4.5.0" />
     <PackageReference Include="Veldrid.StartupUtilities" Version="4.5.0" />-->
-    <PackageReference Include="Microsoft.DotNet.ILCompiler" Version="1.0.0-alpha-28020-01" />
+    <PackageReference Include="Microsoft.DotNet.ILCompiler" Version="1.0.0-alpha-28114-01" />
 
     <PackageReference Include="Veldrid" Version="$(VeldridVersion)" />
     <PackageReference Include="Veldrid.SDL2" Version="$(VeldridVersion)" />
