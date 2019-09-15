@@ -1,12 +1,9 @@
-﻿using NitroSharp.Dialogue;
-using NitroSharp.Graphics;
+﻿using NitroSharp.Graphics;
 using NitroSharp.Content;
 using NitroSharp.NsScript;
 using NitroSharp.NsScript.Primitives;
 using NitroSharp.Primitives;
-using NitroSharp.Text;
 using System;
-using System.Collections.Immutable;
 using System.Numerics;
 using Veldrid;
 
@@ -20,56 +17,6 @@ namespace NitroSharp
         {
             var table = _world.GetTable<EntityTable>(entity);
             table.Parents.Set(entity, parent);
-        }
-
-        public override void CreateText(string entityName, int priority, NsCoordinate x, NsCoordinate y, int width, int height, string text)
-        {
-            var fontFamily = FontService.GetFontFamily("Noto Sans CJK JP");
-            var layout = new TextLayout(fontFamily, new Size(width > 0 ? (uint)width : 300, 50), 256);
-            ImmutableArray<DialogueLinePart> parts = DialogueLine.Parse(text).Parts;
-            for (int i = 0; i < parts.Length; i++)
-            {
-                if (parts[i] is TextPart textPart)
-                {
-                    layout.Append(textPart.Text, display: true);
-                }
-            }
-
-            RgbaFloat color = RgbaFloat.White;
-            Entity entity = _world.CreateTextInstance(entityName, layout, priority, ref color);
-            _world.TextInstances.Bounds.Set(entity, new SizeF(width, 50));
-            SetPosition(entity, x, y);
-
-            Entity parentEntity = default;
-            int idxSlash = entityName.IndexOf('/');
-            if (idxSlash > 0)
-            {
-                string parentEntityName = entityName.Substring(0, idxSlash);
-                _world.TryGetEntity(parentEntityName, out parentEntity);
-            }
-
-            if (parentEntity.IsValid)
-            {
-                if (parentEntity.Kind == EntityKind.Choice)
-                {
-                    if (entityName.Contains("MouseUsual"))
-                    {
-                        _world.Choices.MouseUsualSprite.Set(parentEntity, entity);
-                    }
-                    else if (entityName.Contains("MouseOver"))
-                    {
-                        _world.Choices.MouseOverSprite.Set(parentEntity, entity);
-                    }
-                    else if (entityName.Contains("MouseClick"))
-                    {
-                        _world.Choices.MouseClickSprite.Set(parentEntity, entity);
-                    }
-                }
-                else
-                {
-                    SetParent(entity, parentEntity);
-                }
-            }
         }
 
         public override void FillRectangle(
@@ -242,7 +189,7 @@ namespace NitroSharp
             SizeF bounds = properties.Bounds.GetValue(entity);
 
             Entity parent = properties.Parents.GetValue(entity);
-            if (parent.IsValid)
+            if (parent.IsValid && parent.IsVisual)
             {
                 parentBounds = _world.GetTable<RenderItemTable>(parent).Bounds.GetValue(parent);
             }

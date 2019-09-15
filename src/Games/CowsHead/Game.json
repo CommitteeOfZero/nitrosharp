@@ -1,20 +1,18 @@
 ﻿{
   "productName": "COWSHEAD_NOAH",
-  "activeProfile": "Noah",
+  "activeProfile": "CustomBoot",
   "graphics.vsync": true,
-  "graphics.backend": "D3D11",
+  "graphics.backend": "Direct3D",
   "audio.backend": "XAudio2",
   "window.title": "COWS;HEAD NOAH",
   "window.width": 1280,
   "window.height": 720,
-  "dev.contentRoot": "S:/ChaosContent/Noah",
-  "dev.useDedicatedInterpreterThread": true,
+  "dev.contentRoot": "S:/C;HN",
+  "dev.useDedicatedInterpreterThread": false,
+  "dev.skipUpToDateCheck": false,
+  "font.size": "28",
 
   "profiles": {
-    "NewVM": {
-      "startupScript": "boot-phantasm.nss"
-    },
-
     "Noah": {
       "startupScript": "boot.nss"
     },
@@ -36,7 +34,7 @@
     },
 
     "Test": {
-      "startupScript": "tests/media.nss"
+      "startupScript": "tests/all.nss"
     },
 
     "CustomBoot": {

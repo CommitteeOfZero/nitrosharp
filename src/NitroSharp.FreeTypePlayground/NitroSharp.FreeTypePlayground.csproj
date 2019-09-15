@@ -9,7 +9,7 @@
     <NoWarn>1701;1702;CA1063</NoWarn>
     <RootAllApplicationAssemblies>false</RootAllApplicationAssemblies>
     <IlcGenerateCompleteTypeMetadata>false</IlcGenerateCompleteTypeMetadata>
-    <IlcGenerateStackTraceData>false</IlcGenerateStackTraceData>
+    <IlcGenerateStackTraceData>false</IlcGenerateStackTraceData> 
     <VeldridVersion>4.7.0-ge32775f6a5</VeldridVersion>
   </PropertyGroup>
 
@@ -23,6 +23,18 @@
     <Content Include="../../fonts/**/*.*" LinkBase="Fonts">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+
+    <Compile Include="../NitroSharp/Utilities/FreeList.cs" Link="FreeList.cs" />
+    <Compile Include="../NitroSharp/Primitives/GeometryTypes.cs" Link="GeometryTypes.cs" />
+    <Compile Include="../NitroSharp/Graphics/Foundation/GpuCache.cs" Link="Graphics/GpuCache.cs" />
+    <Compile Include="../NitroSharp/Graphics/Foundation/TextureCache.cs" Link="Graphics/TextureCache.cs" />
+    <Compile Include="../NitroSharp/Graphics/Foundation/VertexBuffer.cs" Link="Graphics/VertexBuffer.cs" />
+    <Compile Include="../NitroSharp/Graphics/Foundation/VertexList.cs" Link="Graphics/VertexList.cs" />
+    <Compile Include="../NitroSharp/Graphics/Foundation/ShaderLibrary.cs" Link="Graphics/ShaderLibrary.cs" />
+    <Compile Include="../NitroSharp/Graphics/Foundation/RenderBucket.cs" Link="Graphics/RenderBucket.cs" />
+    <Compile Include="../NitroSharp/Utilities/GraphicsUtils.cs" Link="GraphicsUtils.cs" />
+
+    <Compile Include="../NitroSharp/Text/**" LinkBase="Text" />
   </ItemGroup>
   
   <ItemGroup>
@@ -31,7 +43,7 @@
     <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="4.5.2" />
     <!--<PackageReference Include="Veldrid" Version="4.5.0" />
     <PackageReference Include="Veldrid.StartupUtilities" Version="4.5.0" />-->
-    <PackageReference Include="Microsoft.DotNet.ILCompiler" Version="1.0.0-alpha-27527-01" />
+    <PackageReference Include="Microsoft.DotNet.ILCompiler" Version="1.0.0-alpha-28020-01" />
 
     <PackageReference Include="Veldrid" Version="$(VeldridVersion)" />
     <PackageReference Include="Veldrid.SDL2" Version="$(VeldridVersion)" />
@@ -40,9 +52,9 @@
 
   <Target Name="EmbedGeneratedShaderContent" AfterTargets="AssignTargetPaths">
     <ItemGroup>
-      <GeneratedShaders Include="$(BaseIntermediateOutputPath)\Shaders.Generated\**" />
+      <GeneratedShaders Include="../../bin/obj/NitroSharp/Shaders.Generated/**" />
       <EmbeddedResource Include="@(GeneratedShaders)">
-        <LogicalName>NitroSharp.FreeTypePlayground.Graphics.Shaders.%(FileName)%(Extension)</LogicalName>
+        <LogicalName>NitroSharp.Graphics.Shaders.%(FileName)%(Extension)</LogicalName>
       </EmbeddedResource>
     </ItemGroup>
   </Target>

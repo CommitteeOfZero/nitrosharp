@@ -47,7 +47,7 @@ namespace NitroSharp.Graphics
             Matrix4x4 worldMatrix = scale * translation;
 
             Entity parent = parents[index];
-            if (parent.IsValid)
+            if (parent.IsValid && parent.IsVisual)
             {
                 RenderItemTable table = world.GetTable<RenderItemTable>(parent);
                 if (table.TryLookupIndex(parent, out ushort parentIdx))

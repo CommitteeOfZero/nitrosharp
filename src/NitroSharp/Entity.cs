@@ -1,5 +1,4 @@
 ﻿using System;
-using NitroSharp.Utilities;
 
 namespace NitroSharp
 {
@@ -8,7 +7,7 @@ namespace NitroSharp
         Thread,
         Sprite,
         Rectangle,
-        Text,
+        TextBlock,
         AudioClip,
         VideoClip,
         Choice
@@ -37,8 +36,8 @@ namespace NitroSharp
                 {
                     case EntityKind.Sprite:
                     case EntityKind.Rectangle:
-                    case EntityKind.Text:
                     case EntityKind.VideoClip:
+                    case EntityKind.TextBlock:
                         return true;
 
                     default:
@@ -48,13 +47,10 @@ namespace NitroSharp
         }
 
         public override bool Equals(object obj) => obj is Entity other && Equals(other);
-
         public bool Equals(Entity other)
-        {
-            return Id == other.Id;
-        }
+            => Id == other.Id && Kind == other.Kind;
 
-        public override int GetHashCode() => HashHelper.Combine((int)Id, (int)Kind);
+        public override int GetHashCode() => HashCode.Combine(Id, Kind);
         public override string ToString() => Id > 0 ? $"Entity #{Id.ToString()}" : "InvalidEntityHandle";
 
         public static bool operator ==(Entity left, Entity right) => left.Equals(right);
@@ -65,7 +61,7 @@ namespace NitroSharp
     {
     }
 
-    internal interface MutableEntityStruct
+    internal interface MutEntityStruct
     {
     }
 
@@ -76,7 +72,7 @@ namespace NitroSharp
         ushort Index { get; }
     }
 
-    internal interface MutableEntityStruct<T> : MutableEntityStruct
+    internal interface MutEntityStruct<T> : MutEntityStruct
         where T : class
     {
         T Table { get; }

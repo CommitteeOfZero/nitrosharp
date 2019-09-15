@@ -24,6 +24,7 @@ namespace NitroSharp.Graphics.Systems
         private readonly DeviceBuffer _viewProjectionBuffer;
 
         private readonly Texture _whiteTexture;
+        private readonly TextureCache _textureCache;
         private readonly RenderBucket<RenderItemKey> _mainBucket;
         private readonly QuadGeometryStream _quadGeometryStream;
         private readonly QuadBatcher _quadBatcher;
@@ -43,7 +44,7 @@ namespace NitroSharp.Graphics.Systems
             GraphicsDevice device,
             Swapchain swapchain,
             ContentManager content,
-            FontService fontService,
+            GlyphRasterizer glyphRasterizer,
             Configuration gameConfiguration)
         {
             _world = world;
@@ -92,6 +93,8 @@ namespace NitroSharp.Graphics.Systems
           
             _whiteTexture = CreateWhiteTexture();
 
+            _textureCache = new TextureCache(device, initialLayerCount: 8);
+
             var context = new RenderContext
             {
                 Device = device,
@@ -102,12 +105,13 @@ namespace NitroSharp.Graphics.Systems
                 ShaderLibrary = _shaderLibrary,
                 TexturePool = _texturePool,
                 ResourceSetCache = _resourceSetCache,
-                FontService = fontService,
+                GlyphRasterizer = glyphRasterizer,
                 ViewProjection = viewProjection,
                 MainBucket = _mainBucket,
                 QuadGeometryStream = _quadGeometryStream,
                 WhiteTexture = _whiteTexture,
-                DesignResolution = new Size((uint)DesignResolution.Width, (uint)DesignResolution.Height)
+                DesignResolution = new Size((uint)DesignResolution.Width, (uint)DesignResolution.Height),
+                TextureCache = _textureCache
             };
 
             context.QuadBatcher = context.CreateQuadBatcher(_mainBucket, _swapchain.Framebuffer);
@@ -150,7 +154,7 @@ namespace NitroSharp.Graphics.Systems
             TransformProcessor.ProcessTransforms(_world, _world.Sprites);
         }
 
-        public void RenderFrame()
+        public void RenderFrame(in FrameStamp framestamp)
         {
             _cl.Begin();
             _cl.SetFramebuffer(_swapchain.Framebuffer);
@@ -158,12 +162,18 @@ namespace NitroSharp.Graphics.Systems
 
             _mainBucket.Begin();
             _quadGeometryStream.Begin();
+            _textureCache.BeginFrame(framestamp);
+            _textRenderer.BeginFrame();
 
+            _textRenderer.PreprocessTextBlocks(_world.TextBlocks);
             _spriteRenderer.ProcessSprites();
             _quadRenderer.ProcessRectangles(_world.Rectangles);
-            _textRenderer.ProcessTextLayouts();
             _videoRenderer.ProcessVideoClips();
 
+            _textRenderer.ResolveGlyphs();
+
+            _textureCache.EndFrame(_cl);
+            _textRenderer.EndFrame();
             _quadGeometryStream.End(_cl);
             _mainBucket.End(_cl);
 
@@ -191,6 +201,9 @@ namespace NitroSharp.Graphics.Systems
             _viewProjectionSet.Dispose();
             _viewProjectionBuffer.Dispose();
             _viewProjectionLayout.Dispose();
+
+            _textRenderer.Dispose();
+            _textureCache.Dispose();
 
             _cl.Dispose();
         }

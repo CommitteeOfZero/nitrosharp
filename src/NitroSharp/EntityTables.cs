@@ -20,7 +20,7 @@ namespace NitroSharp
         public Row<InterpreterThreadInfo> Infos { get; }
     }
 
-    internal abstract class RenderItemTable : EntityTable<RenderItem>
+    internal abstract class RenderItemTable : EntityTable
     {
         public Row<RenderItemKey> SortKeys { get; }
         public Row<RgbaFloat> Colors { get; }
@@ -29,7 +29,6 @@ namespace NitroSharp
         public Row<TransformComponents> TransformComponents { get; }
 
         public Row<Matrix4x4> TransformMatrices { get; }
-        public SystemDataRow<RectangleF> WorldRects { get; }
 
         protected RenderItemTable(World world, ushort columnCount)
             : base(world, columnCount)
@@ -71,17 +70,18 @@ namespace NitroSharp
             => new Enumerator<RenderItemTable, RenderItem>(this);
     }
 
-    internal sealed class TextInstanceTable : RenderItemTable
+    internal sealed class TextBlockTable : RenderItemTable
     {
         public RefTypeRow<TextLayout> Layouts { get; }
-        public Row<bool> ClearFlags { get; }
 
-        public TextInstanceTable(World world, ushort initialCount)
-            : base(world, initialCount)
+        public TextBlockTable(World world, ushort columnCount)
+            : base(world, columnCount)
         {
             Layouts = AddRefTypeRow<TextLayout>();
-            ClearFlags = AddRow<bool>();
         }
+
+        public new Enumerator<TextBlockTable, TextBlock> GetEnumerator()
+            => new Enumerator<TextBlockTable, TextBlock>(this);
     }
 
     internal interface MediaClipTable
@@ -96,7 +96,7 @@ namespace NitroSharp
         EntityTable.SystemDataRow<AudioState> AudioState { get; }
     }
 
-    internal sealed class AudioClipTable : EntityTable<AudioClip>, MediaClipTable
+    internal sealed class AudioClipTable : EntityTable, MediaClipTable
     {
         public AudioClipTable(World world, ushort columnCount)
             : base(world, columnCount)

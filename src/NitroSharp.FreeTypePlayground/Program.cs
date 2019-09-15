@@ -1,32 +1,136 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Numerics;
-using System.Runtime.CompilerServices;
 using NitroSharp.Graphics;
-using NitroSharp.Primitives;
 using NitroSharp.Text;
+using NitroSharp.Primitives;
 using NitroSharp.Utilities;
 using Veldrid;
 using Veldrid.Sdl2;
 using Veldrid.StartupUtilities;
 
-using Rectangle = NitroSharp.Primitives.Rectangle;
-
 namespace NitroSharp.FreeTypePlayground
 {
+    //[MemoryDiagnoser]
+    //public class RasterizerBenchmark
+    //{
+    //    private GlyphRasterizer _rasterizer;
+    //    private FontKey _fontKey;
+    //    //private uint[] _indices;
+    //    private GraphicsDevice _gd;
+    //    private CommandList _cl;
+    //    private TextLayoutBuilder _layout;
+    //    private GpuCache<TextureLocation> _uvRectCache;
+    //    private TextureCache _cache;
+
+    //    [GlobalSetup]
+    //    public void Setup()
+    //    {
+    //        _rasterizer = new GlyphRasterizer();
+    //        _fontKey = _rasterizer.AddFont("Fonts/NotoSansCJKjp-Regular.otf");
+
+    //        // _indices = new uint[256];
+    //        FontData data = _rasterizer.GetFontData(_fontKey)!;
+    //        //for (int i = 0; i < 256; i++)
+    //        //{
+    //        //    _indices[i] = data.GetGlyphIndex((char)('A' + i));
+    //        //}
+
+    //        var options = new GraphicsDeviceOptions(true, null, true);
+    //        options.PreferStandardClipSpaceYDirection = true;
+    //        _gd = GraphicsDevice.CreateD3D11(options);
+    //        _cl = _gd.ResourceFactory.CreateCommandList();
+    //        ResourceFactory factory = _gd.ResourceFactory;
+
+    //        _uvRectCache = new GpuCache<TextureLocation>(
+    //            _gd,
+    //            TextureLocation.SizeInGpuBlocks,
+    //            initialCapacity: 256
+    //        );
+    //        _cache = new TextureCache(_gd, _uvRectCache, initialLayerCount: 1);
+
+    //        var layout = new TextLayoutBuilder(_rasterizer,
+    //            new[]
+    //            {
+    //                TextRun.Regular("なんとか刀をくっつけようとしてみるけど、折れた部分を接着することはできても、完全に修復するのは不可能だった。これじゃもう価値なしだ。".AsMemory(), _fontKey, FontSize, RgbaFloat.White),
+    //            },
+    //            new Size(2000, 600)
+    //        );
+
+    //        layout.EndLine(data);
+
+    //        _layout = layout;
+    //    }
+
+    //    PtFontSize FontSize = new PtFontSize(14);
+
+    //    [GlobalCleanup]
+    //    public void Cleanup()
+    //    {
+    //        _cache.Dispose();
+    //        _uvRectCache.Dispose();
+    //        _cl.Dispose();
+    //        _gd.Dispose();
+    //    }
+
+    //    [Benchmark(Baseline = true)]
+    //    public void RasterizeSingleThreaded()
+    //    {
+    //        TextLayoutBuilder layout = _layout;
+    //        foreach (ref readonly GlyphRun run in layout.GlyphRuns)
+    //        {
+    //            ReadOnlySpan<PositionedGlyph> glyphs = layout.GetGlyphs(run.GlyphSpan);
+    //            _rasterizer.RasterizeGlyphs(_fontKey, FontSize, glyphs);
+    //        }
+    //    }
+
+    //    [Benchmark]
+    //    public void RasterizeParallel()
+    //    {
+    //        TextLayoutBuilder layout = _layout;
+    //        foreach (ref readonly GlyphRun run in layout.GlyphRuns)
+    //        {
+    //            ReadOnlySpan<PositionedGlyph> glyphs = layout.GetGlyphs(run.GlyphSpan);
+    //            _rasterizer.RequestGlyphs(_fontKey, FontSize, glyphs, _cache);
+    //        }
+
+    //        _rasterizer.ResolveGlyphs(_cache).AsTask().Wait();
+    //        // _rasterizer.RasterizeOutlinesParallel2(_fontKey, new PtFontSize(14), _indices);
+    //    }
+
+    //    //[Benchmark]
+    //    //public void RasterizeSingleThreaded()
+    //    //{
+    //    //    _rasterizer.RasterizeGlyphs(_fontKey, new PtFontSize(14), _indices);
+    //    //}
+
+    //    //[Benchmark]
+    //    //public void RasterizeParallel()
+    //    //{
+    //    //    _rasterizer.RasterizeGlyphsParallel(_fontKey, new PtFontSize(14), _indices)
+    //    //        .Wait();
+    //    //}
+
+    //    //[Benchmark]
+    //    //public void RasterizeParallel2()
+    //    //{
+    //    //    _rasterizer.RasterizeOutlinesParallel2(_fontKey, new PtFontSize(14), _indices);
+    //    //}
+
+    //    //[Benchmark]
+    //    //public void RasterizeParallel3()
+    //    //{
+    //    //    _rasterizer.RasterizeOutlinesParallel3(_fontKey, new PtFontSize(14), _indices);
+    //    //}
+    //}
+
     class Program
     {
-        const int FontSize = 28;
+        private static readonly PtFontSize FontSize = new PtFontSize(28);
 
-        static unsafe void Main(string[] args)
+        static void Main()
         {
-            var fontLib = new FontLibrary();
-            GC.KeepAlive(fontLib);
-            FontFamily fontFamily = fontLib.RegisterFont("Fonts/NotoSansCJKjp-Regular.otf");
-            FontFace font = fontFamily.GetFace(FontStyle.Regular);
-
-            var options = new GraphicsDeviceOptions(true, null, true);
+            var options = new GraphicsDeviceOptions(false, null, true);
             options.PreferStandardClipSpaceYDirection = true;
             VeldridStartup.CreateWindowAndGraphicsDevice(
                 new WindowCreateInfo(50, 50, 1280, 720, WindowState.Normal, "Sample Text"),
@@ -35,60 +139,9 @@ namespace NitroSharp.FreeTypePlayground
                 out Sdl2Window window,
                 out GraphicsDevice gd);
 
-            const uint width = 512;
-            const uint height = 512;
             CommandList cl = gd.ResourceFactory.CreateCommandList();
-            ResourceFactory factory = gd.ResourceFactory;
 
-            var bigFontSize = 40;
-            var meowColor = new RgbaFloat(253 / 255.0f, 149 / 255.0f, 89 / 255.0f, 1.0f);
-
-            var blue = new RgbaFloat(6 / 255.0f, 67 / 255.0f, 94 / 255.0f, 1.0f);
-            //var layout = new TextLayout(
-            //    new[]
-            //    {
-            //        TextRun.Regular("meow".AsMemory(), font, bigFontSize, meowColor),
-            //        TextRun.Regular(" is a game about ".AsMemory(), font, FontSize, RgbaFloat.Black),
-            //        TextRun.Regular("Increasing The Cats".AsMemory(), font, bigFontSize, RgbaFloat.Black),
-            //        TextRun.Regular(".\nyou can summon as many cats as you want and watch them bounce and roll around and ".AsMemory(), font, FontSize, RgbaFloat.Black),
-            //        TextRun.Regular("meow".AsMemory(), font, bigFontSize, meowColor),
-            //        TextRun.Regular(" at you.\nplease enjoy your cat friends".AsMemory(), font, FontSize, RgbaFloat.Black)
-            //    },
-            //    new Size(400, 400)
-            //);
-
-            //var layout = new TextLayout(
-            //    new[]
-            //    {
-            //        TextRun.Regular("Please please kill yourself\n                          ".AsMemory(), font, FontSize, RgbaFloat.White),
-            //        //TextRun.Regular("The Committee would be the Committee of 300 that KnightHeart had been talking about, right?".AsMemory(), font, FontSize, RgbaFloat.White),
-            //        //TextRun.WithRubyText("西條".AsMemory(), "にしじょう".AsMemory(), font, FontSize, RgbaFloat.White)
-            //    },
-            //    new Size(400, 600));
-
-            var size = Unsafe.SizeOf<TextRun>();
-
-            var layout = new TextLayout(
-                new[]
-                {
-                    TextRun.Regular("This text is rasterized with ".AsMemory(), font, FontSize, RgbaFloat.Black),
-                    TextRun.Regular("FreeType".AsMemory(), font, bigFontSize, blue),
-                    TextRun.Regular("\nGlyph images are cached on the GPU as needed\n".AsMemory(), font, FontSize, RgbaFloat.White),
-                    TextRun.Regular("Only ".AsMemory(), font, FontSize, RgbaFloat.Yellow),
-                    TextRun.Regular("one".AsMemory(), font, bigFontSize, meowColor),
-                    TextRun.Regular(" draw call is required to render this text".AsMemory(), font, FontSize, RgbaFloat.Yellow)
-                },
-                new Size(400, 400)
-            );
-
-            layout.EndLine(font);
-
-            //string charset = File.ReadAllText("S:/noah-charset.utf8");
-            string charset = " ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz西條にしじょう .,?- \n'";
-
-            //var factory = gd.ResourceFactory;
             var shaderLibrary = new ShaderLibrary(gd);
-
             var designResolution = new Size(1280, 720);
             var projection = Matrix4x4.CreateOrthographicOffCenter(
                0, designResolution.Width, designResolution.Height, 0, 0, -1);
@@ -96,288 +149,120 @@ namespace NitroSharp.FreeTypePlayground
 
             var mainBucket = new RenderBucket<int>(16);
 
-            (Shader vs, Shader fs) = shaderLibrary.GetShaderSet("text");
-            (Shader outlineVS, Shader outlineFS) = shaderLibrary.GetShaderSet("outline");
+            var textureCache = new TextureCache(gd, initialLayerCount: 4);
 
-            var vsLayout = factory.CreateResourceLayout(
-                new ResourceLayoutDescription(
-                    new ResourceLayoutElementDescription("ViewProjection", ResourceKind.UniformBuffer, ShaderStages.Vertex),
-                    new ResourceLayoutElementDescription("GlyphRects", ResourceKind.UniformBuffer, ShaderStages.Vertex),
-                    new ResourceLayoutElementDescription("ArrayLayers", ResourceKind.TextureReadOnly, ShaderStages.Vertex)));
+            var rasterizer = new GlyphRasterizer(enableOutlines: true);
+            FontKey font = rasterizer.AddFont("Fonts/NotoSansCJKjp-Regular.otf");
+            //FontKey font = rasterizer.AddFont("C:/Windows/Fonts/consola.ttf");
+            FontKey comicItalic = rasterizer.AddFont("C:/Windows/Fonts/comicz.ttf");
+            //FontKey font = comicItalic;
+            var textRenderer = new TextRenderer(
+                gd,
+                shaderLibrary,
+                rasterizer,
+                textureCache,
+                projectionBuffer
+            );
 
-            var fsLayout = factory.CreateResourceLayout(new ResourceLayoutDescription(
-                new ResourceLayoutElementDescription("Atlas", ResourceKind.TextureReadOnly, ShaderStages.Fragment),
-                new ResourceLayoutElementDescription("Sampler", ResourceKind.Sampler, ShaderStages.Fragment)));
+            string txt = @"その答えは“僕を操作しているプレイヤー”っていうことになる。
+だったらもっと上手にプレイしてほしいね。
+でもアバターは文句を言えない。
+『将軍』と僕が同一人物っていうのも、説明がつく。
+言ってみればリーゼロッテみたいなものだ。
+ナイトハルトとリーゼロッテは、決して同じ時間にバゼラードに存在できない。プレイヤーは僕ひとりなんだから。
+それと同じように、西條拓巳と『将軍』もまた、同じ時間にこの世界には存在できないのかも。
+あるいはバグだっていう可能性も考えられる。
+バグと言えば、妙な女が現れたり殺人事件に遭遇したりするのもバグかもしれない。
+Suck my motherfucking dick";
 
-            var pipeline = factory.CreateGraphicsPipeline(
-                new GraphicsPipelineDescription(
-                    BlendStateDescription.SingleAlphaBlend,
-                    DepthStencilStateDescription.Disabled,
-                    RasterizerStateDescription.CullNone,
-                    PrimitiveTopology.TriangleList,
-                    new ShaderSetDescription(
-                        new[] { QuadVertex.LayoutDescription, InstanceData.LayoutDescription },
-                        new[] { vs, fs }),
-                    new[] { vsLayout, fsLayout },
-                    gd.SwapchainFramebuffer.OutputDescription));
+            string text = @"jLorem ipsum dolor sit amet, consectetur adipiscing elit. Sed ex mauris, ornare quis auctor eget, suscipit accumsan nunc. Nullam molestie vehicula vestibulum. Suspendisse malesuada scelerisque enim non placerat. Aliquam commodo libero vel tellus egestas posuere. Donec consequat interdum nibh. Curabitur ornare dolor at felis tincidunt, nec interdum ante maximus. Suspendisse potenti.
 
-            var secondPipeline = factory.CreateGraphicsPipeline(
-               new GraphicsPipelineDescription(
-                   BlendStateDescription.SingleAlphaBlend,
-                   DepthStencilStateDescription.Disabled,
-                   RasterizerStateDescription.CullNone,
-                   PrimitiveTopology.TriangleList,
-                   new ShaderSetDescription(
-                       new[] { QuadVertex.LayoutDescription, InstanceData.LayoutDescription },
-                       new[] { outlineVS, outlineFS }),
-                   new[] { vsLayout, fsLayout },
-                   gd.SwapchainFramebuffer.OutputDescription));
+Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. Phasellus eget tempus eros, nec egestas mauris. Sed ultricies, mauris at rhoncus iaculis, leo dolor lobortis mauris, et fringilla orci magna sit amet lacus. Fusce odio lectus, lacinia ut semper eu, accumsan sed ante. Nullam malesuada nisi et justo aliquam, in maximus nulla porta. Nulla volutpat, magna at venenatis tristique, libero sem lobortis odio, sed condimentum enim justo a dolor. Integer lectus eros, dictum id aliquam eget, condimentum et orci. Vivamus ut commodo diam, non viverra ex. Morbi rutrum sed sapien eget tincidunt. Praesent efficitur suscipit nibh. Mauris ac pellentesque massa. Nam molestie tempus leo sollicitudin ullamcorper.
 
-            DeviceBuffer rectsStaging = factory.CreateBuffer(new BufferDescription(
-                (uint)(sizeof(Vector4) * 4096), BufferUsage.Staging));
-            MappedResourceView<Vector4> rects = gd.Map<Vector4>(rectsStaging, MapMode.Write);
+Fusce non felis fringilla, facilisis turpis id, sodales tortor. Vestibulum ut eleifend lectus. Maecenas nibh neque, tincidunt ut egestas non, laoreet ut erat. Donec ut nibh ut orci congue placerat. Phasellus ut suscipit mi. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer eget tellus at eros lacinia consectetur a vel nulla.
 
-            DeviceBuffer outlineRectsStaging = factory.CreateBuffer(new BufferDescription(
-               (uint)(sizeof(Vector4) * 4096), BufferUsage.Staging));
-            MappedResourceView<Vector4> outlineRects = gd.Map<Vector4>(outlineRectsStaging, MapMode.Write);
+Donec ac interdum massa. Duis et dignissim nunc, pulvinar posuere lorem. Nunc imperdiet gravida elit sit amet placerat. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Fusce eu urna scelerisque, mattis diam at, molestie diam. Morbi ac massa odio. Donec condimentum euismod nulla, nec fringilla nulla molestie eget. Aliquam volutpat quam neque, ut luctus dolor tristique et. Vestibulum euismod nunc ut nibh imperdiet rhoncus. Maecenas pretium orci ex, vel porta mi malesuada eget. Suspendisse vulputate tincidunt urna, eu dignissim ipsum fermentum ac. In et pharetra diam, eget mollis velit. Vivamus suscipit egestas orci, ac dignissim purus feugiat non. Vivamus mollis sit amet diam ac tincidunt. Mauris facilisis ut augue sit amet sodales.
 
-            Texture layersStaging = factory.CreateTexture(TextureDescription.Texture1D(
-                    4096, 1, 1, PixelFormat.R8_UInt, TextureUsage.Staging));
-            MappedResourceView<byte> arrayLayers = gd.Map<byte>(layersStaging, MapMode.Write, 0);
+Praesent eget sem turpis. Vestibulum ullamcorper egestas odio eget finibus. Sed mollis ligula odio, sed gravida sapien maximus a. Aliquam rhoncus dolor sit amet viverra laoreet. Aliquam erat volutpat. Morbi pellentesque nulla eu ornare euismod. Nunc tincidunt lacus vel velit ornare posuere. Sed purus purus, varius non elit sit amet, pharetra pulvinar est. Pellentesque interdum vehicula ante, eu mattis quam. Nullam sagittis augue nec quam volutpat, facilisis fringilla sem aliquet. Vestibulum et suscipit nibh. Morbi volutpat congue venenatis. Phasellus tempus leo non sapien tincidunt, vel pharetra metus faucibus. ";
 
-            var glyphMap = new Dictionary<GlyphCacheKey, ushort>();
 
-            var atlas = new TextureAtlas(gd, width, height, layerCount: 8, PixelFormat.R8_UNorm);
-            var outlines = new TextureAtlas(gd, width, height, layerCount: 8, PixelFormat.R8_G8_B8_A8_UNorm);
+            //txt = "を";
 
-            cl.Begin();
-            atlas.Begin(clear: true);
-            outlines.Begin(clear: true);
-            var pixels = new byte[16 * 1024];
-            var outlinePixels = new byte[16 * 1024];
-            var outlineOffsets = new Vector2[4096];
-            var rs = new Rectangle[charset.Length * 3];
-            var sw = Stopwatch.StartNew();
-            loop(0, FontSize);
-            sw.Stop();
-            Console.WriteLine(sw.Elapsed.TotalMilliseconds);
-            loop(charset.Length, 11);
-            loop(charset.Length, bigFontSize);
-            void loop(int start, int fontSize)
-            {
-                for (int i = start; i < start + charset.Length; i++)
-                {
-                    Glyph glyph = font.GetGlyph(charset[i - start], fontSize);
-                    Size dimensions = glyph.BitmapSize;
-                    if (dimensions.Height > 0)
-                    {
-                        glyph.Rasterize(font, pixels);
-                        atlas.TryPackSprite<byte>(
-                            pixels,
-                            dimensions.Width,
-                            dimensions.Height,
-                            out uint layer,
-                            out rs[i]);
+            ///text = "たてたたとにかくそんな状況だから手に入れるのはもう無理かもって思ってたんだけど、昨日＠ちゃんを見ていたら、最近になってその新刊がまんがだらけに再入荷したらしいっていう情報をたまたま入手したんだ。";
 
-                        var outlineBytes = glyph.RasterizeOutlineHack(font, out Size outlineSize, out outlineOffsets[i]);
-                        outlines.TryPackSprite<RgbaByte>(
-                            outlineBytes,
-                            outlineSize.Width,
-                            outlineSize.Height,
-                            out _,
-                            out Rectangle outlineRect
-                        );
-
-                        arrayLayers[i] = (byte)layer;
-                        var rect = rs[i];
-                        rects[i] = new Vector4(
-                            rect.Left,
-                            rect.Top,
-                            rect.Right,
-                            rect.Bottom);
-
-                        outlineRects[i] = new Vector4(
-                            outlineRect.Left,
-                            outlineRect.Top,
-                            outlineRect.Right,
-                            outlineRect.Bottom);
-
-                        var key = new GlyphCacheKey(charset[i - start], fontSize);
-                        glyphMap[key] = (ushort)i;
-                    }
-                }
-            }
-
-            gd.Unmap(rectsStaging);
-            gd.Unmap(outlineRectsStaging);
-            gd.Unmap(layersStaging);
-            atlas.End(cl);
-            outlines.End(cl);
-            cl.End();
-            gd.SubmitCommands(cl);
-
-            DeviceBuffer rectBuffer = factory.CreateBuffer(new BufferDescription(
-               (uint)(sizeof(Vector4) * 4096), BufferUsage.UniformBuffer));
-            DeviceBuffer outlineRectBuffer = factory.CreateBuffer(new BufferDescription(
-               (uint)(sizeof(Vector4) * 4096), BufferUsage.UniformBuffer));
-
-            Texture arrayLayersBuffer = factory.CreateTexture(TextureDescription.Texture1D(
-                    4096, 1, 1, PixelFormat.R8_UInt, TextureUsage.Sampled));
-
-            cl.Begin();
-            cl.CopyBuffer(rectsStaging, 0, rectBuffer, 0, rectBuffer.SizeInBytes);
-            cl.CopyBuffer(outlineRectsStaging, 0, outlineRectBuffer, 0, outlineRectBuffer.SizeInBytes);
-            cl.CopyTexture(layersStaging, arrayLayersBuffer);
-
-            var vsResourceSet = factory.CreateResourceSet(
-                new ResourceSetDescription(vsLayout, projectionBuffer, rectBuffer, arrayLayersBuffer));
-            var vsOutlineResourceSet = factory.CreateResourceSet(
-                new ResourceSetDescription(vsLayout, projectionBuffer, outlineRectBuffer, arrayLayersBuffer));
-            var fsResourceSet = factory.CreateResourceSet(
-                new ResourceSetDescription(fsLayout, atlas.Texture, gd.PointSampler));
-            var fsOutlineResourceSet = factory.CreateResourceSet(
-                new ResourceSetDescription(fsLayout, outlines.Texture, gd.LinearSampler));
-
-            var vb = new VertexBuffer<QuadVertex>(gd, cl,
+            text = "「あなたはタクのなんなの、って」";
+            var layout = new TextLayout(rasterizer,
                 new[]
                 {
-                    new QuadVertex(new Vector2(-1, 1)),
-                    new QuadVertex(new Vector2(1, 1)),
-                    new QuadVertex(new Vector2(-1, -1)),
-                    new QuadVertex(new Vector2(1, -1))
-                });
+                    //TextRun.Regular(txt.AsMemory(), font, FontSize, RgbaFloat.Black, RgbaFloat.Black)
+                    TextRun.Regular(text.AsMemory(), font, FontSize, RgbaFloat.White, RgbaFloat.Black),
+                    //<RUBY text="しっぷうじんらい">疾風迅雷</RUBY>のナイトハルト"っていう異名だけでほとんどのプレイヤーには通じる。
+                    //TextRun.WithRubyText("疾風迅雷".AsMemory(), "しっぷうじんらい".AsMemory(), font, FontSize, RgbaFloat.Black, RgbaFloat.Black),
+                    //TextRun.Regular("のナイトハルトっていう異名だけでほとんどのプレイヤーには通じる。".AsMemory(), font, FontSize, RgbaFloat.Black, RgbaFloat.White)
+                },
+                new Size(1280, 720)
+            );
 
-            var ib = gd.CreateStaticBuffer(new ushort[] { 0, 1, 2, 2, 1, 3 }, BufferUsage.IndexBuffer);
+            //var bb = layout.BoundingBox;
 
-            var pgs = layout.Glyphs;
-            var glyphs = new ArrayBuilder<InstanceData>(100);
-            for (int i = 0; i < layout.Glyphs.Length; i++)
-            {
-                ref readonly PositionedGlyph pg = ref pgs[i];
-                if (char.IsWhiteSpace(pg.Character))
-                {
-                    continue;
-                }
-
-                ref readonly TextRun run = ref layout.TextRuns[pg.TextRunIndex];
-                ref InstanceData data = ref glyphs.Add();
-                int fontSize = run.FontSize;
-                if (pg.IsRuby)
-                {
-                    fontSize = (int)(fontSize * 0.4f);
-                }
-                var key = new GlyphCacheKey(pg.Character, fontSize);
-                int idx = glyphMap[key];
-                data.GlyphIndex = idx;
-                var pos = pg.Position;
-                //pos.X += 100;
-                data.Origin = pos;
-                var c = run.Color.ToVector4();
-                data.Color = c;
-            }
-
-            var outlineData = new InstanceData[glyphs.Count * 7];
-            var gs = glyphs.ToArray();
-            gs.CopyTo(outlineData, 0);
-            foreach (ref InstanceData id in outlineData.AsSpan(0, gs.Length))
-            {
-                id.Color = RgbaFloat.Black.ToVector4();
-                id.Origin += new Vector2(-4, -4);
-            }
-
-            var instanceData = new VertexBuffer<InstanceData>(gd, cl, glyphs.AsSpan());
-            var outlineDataBuf = new VertexBuffer<InstanceData>(gd, cl, outlineData.AsSpan());
-
-            cl.End();
-            gd.SubmitCommands(cl);
-
-            var bakColor = new RgbaFloat(25 / 255.0f, 29 / 255.0f, 34 / 255.0f, 1.0f);
+            //var bakColor = new RgbaFloat(25 / 255.0f, 29 / 255.0f, 34 / 255.0f, 1.0f);
+            //bakColor = new RgbaFloat(247 / 255.0f, 249 / 255.0f,254 / 255.0f, 1.0f);
+            var stopwatch = Stopwatch.StartNew();
+            var sw = new Stopwatch();
+            bool firstFrame = true;
+            long frameId = 0;
+            long prevFrameTicks = 0;
+            float msElapsed = 0;
             while (window.Exists)
             {
+                long currentFrameTicks = stopwatch.ElapsedTicks;
+                float deltaMilliseconds = (float)(currentFrameTicks - prevFrameTicks)
+                    / Stopwatch.Frequency * 1000.0f;
+                prevFrameTicks = currentFrameTicks;
+
                 window.PumpEvents();
                 if (!window.Exists) { break; }
 
                 cl.Begin();
-                cl.SetFramebuffer(gd.MainSwapchain.Framebuffer);
-                cl.ClearColorTarget(0, bakColor);
-
                 mainBucket.Begin();
-                var submission = new RenderBucketSubmission<QuadVertex, InstanceData>
+
+                textureCache.BeginFrame(new FrameStamp(frameId++, currentFrameTicks));
+                textRenderer.BeginFrame();
+                textRenderer.RequestGlyphs(layout);
+
+                cl.SetFramebuffer(gd.MainSwapchain.Framebuffer);
+                cl.ClearColorTarget(0, RgbaFloat.White);
+
+                if (firstFrame)
                 {
-                    Pipeline = pipeline,
-                    SharedResourceSet = vsResourceSet,
-                    ObjectResourceSet = fsResourceSet,
-                    VertexBuffer = vb,
-                    IndexBuffer = ib,
-                    IndexBase = 0,
-                    IndexCount = 6,
-                    InstanceDataBuffer = instanceData,
-                    InstanceBase = 0,
-                    InstanceCount = (ushort)pgs.Length
-                };
-
-                //mainBucket.Submit(ref submission, 10);
-
-                var submission2 = new RenderBucketSubmission<QuadVertex, InstanceData>
+                    sw.Start();
+                }
+                textRenderer.ResolveGlyphs(layout);
+                if (firstFrame)
                 {
-                    Pipeline = secondPipeline,
-                    SharedResourceSet = vsOutlineResourceSet,
-                    ObjectResourceSet = fsOutlineResourceSet,
-                    VertexBuffer = vb,
-                    IndexBuffer = ib,
-                    IndexBase = 0,
-                    IndexCount = 6,
-                    InstanceDataBuffer = outlineDataBuf,
-                    InstanceBase = 0,
-                    InstanceCount = (ushort)(pgs.Length)
-                };
+                    firstFrame = false;
+                    sw.Stop();
+                    Console.WriteLine(sw.Elapsed.TotalMilliseconds);
+                }
 
-                //mainBucket.Submit(ref submission2, 0);
-
+                textureCache.EndFrame(cl);
+                textRenderer.EndFrame(mainBucket, cl);
                 mainBucket.End(cl);
 
                 cl.End();
                 gd.SubmitCommands(cl);
                 gd.SwapBuffers(gd.MainSwapchain);
+
+                msElapsed += deltaMilliseconds;
             }
 
             gd.WaitForIdle();
+            textureCache.Dispose();
+            textRenderer.Dispose();
+            shaderLibrary.Dispose();
+            projectionBuffer.Dispose();
             cl.Dispose();
-            atlas.Dispose();
             gd.Dispose();
-        }
-
-        internal struct QuadVertex : IEquatable<QuadVertex>
-        {
-            public Vector2 Position;
-
-            public QuadVertex(Vector2 pos)
-            {
-                Position = pos;
-            }
-
-            public static readonly VertexLayoutDescription LayoutDescription = new VertexLayoutDescription(
-                new VertexElementDescription("vs_Position", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float2));
-
-            public bool Equals(QuadVertex other)
-                => Position == other.Position;
-        }
-
-        internal struct InstanceData : IEquatable<InstanceData>
-        {
-            public Vector4 Color;
-            public Vector2 Origin;
-            public int GlyphIndex;
-            private int _padding;
-
-            public static VertexLayoutDescription LayoutDescription => new VertexLayoutDescription(
-                stride: 32, instanceStepRate: 1,
-                new VertexElementDescription("vs_Color", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float4),
-                new VertexElementDescription("vs_Origin", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float2),
-                new VertexElementDescription("vs_GlyphIndex", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Int1));
-
-            public bool Equals(InstanceData other)
-                => GlyphIndex == other.GlyphIndex;
         }
     }
 }

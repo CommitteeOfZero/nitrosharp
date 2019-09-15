@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using NitroSharp.Utilities;
 using Veldrid;
@@ -181,24 +182,36 @@ namespace NitroSharp.Graphics
 
                 if (item.VertexBuffer0 != lastVertexBuffer0)
                 {
-                    DeviceBuffer buffer = _vertexBuffers[item.VertexBuffer0].DeviceBuffer;
-                    commandList.SetVertexBuffer(0, buffer);
+                    byte newVB0 = item.VertexBuffer0;
+                    if (newVB0 != byte.MaxValue)
+                    {
+                        DeviceBuffer buffer = _vertexBuffers[newVB0].DeviceBuffer;
+                        commandList.SetVertexBuffer(0, buffer);
+                    }
                     lastVertexBuffer0 = item.VertexBuffer0;
                 }
                 if (item.VertexBuffer1 != lastVertexBuffer1)
                 {
-                    DeviceBuffer buffer = _vertexBuffers[item.VertexBuffer1].DeviceBuffer;
-                    commandList.SetVertexBuffer(1, buffer);
+                    byte newVB1 = item.VertexBuffer1;
+                    if (newVB1 != byte.MaxValue)
+                    {
+                        DeviceBuffer buffer = _vertexBuffers[newVB1].DeviceBuffer;
+                        commandList.SetVertexBuffer(1, buffer);
+                    }
                     lastVertexBuffer1 = item.VertexBuffer1;
                 }
                 if (item.IndexBuffer != lastIndexBuffer)
                 {
-                    DeviceBuffer buffer = _indexBuffers[item.IndexBuffer];
-                    commandList.SetIndexBuffer(buffer, IndexFormat.UInt16);
+                    byte newIB = item.IndexBuffer;
+                    if (newIB != byte.MaxValue)
+                    {
+                        DeviceBuffer buffer = _indexBuffers[item.IndexBuffer];
+                        commandList.SetIndexBuffer(buffer, IndexFormat.UInt16);
+                    }
                     lastIndexBuffer = item.IndexBuffer;
                 }
 
-                bool indexed = _lastIndexBuffer.buffer != null;
+                bool indexed = lastIndexBuffer != byte.MaxValue;
                 if (indexed)
                 {
                     commandList.DrawIndexed(

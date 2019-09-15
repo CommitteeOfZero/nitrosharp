@@ -70,6 +70,13 @@ namespace NitroSharp.Launcher
                     configuration.PreferredAudioBackend = GetAudioBackend(name);
                     break;
 
+                case "font.family":
+                    configuration.FontFamily = property.Value;
+                    break;
+                case "font.size":
+                    configuration.FontSize = property.Value;
+                    break;
+
                 case "dev.contentRoot":
                 case "debug.contentRoot":
                     configuration.ContentRoot = property.Value;

@@ -75,6 +75,9 @@ namespace NitroSharp.NsScript.VM
                 case BuiltInFunction.CreateWindow:
                     CreateWindow(ref args);
                     break;
+                case BuiltInFunction.CreateText:
+                    CreateText(ref args);
+                    break;
                 case BuiltInFunction.LoadText:
                     LoadText(ref args);
                     break;
@@ -131,11 +134,32 @@ namespace NitroSharp.NsScript.VM
                 case BuiltInFunction.Time:
                     Time(ref args);
                     break;
+                case BuiltInFunction.ScrollbarValue:
+                    ScrollbarValue(ref args);
+                    break;
             }
 
             ConstantValue? result = _result;
             _result = null;
             return result;
+        }
+
+        private void CreateText(ref ArgConsumer args)
+        {
+            string entityName = args.TakeEntityName();
+            int priority = args.TakeInt();
+            NsCoordinate x = args.TakeCoordinate();
+            NsCoordinate y = args.TakeCoordinate();
+            NsDimension width = args.TakeDimension();
+            NsDimension height = args.TakeDimension();
+            string pxmlText = args.TakeString();
+            _impl.CreateText(entityName, priority, x, y, width, height, pxmlText);
+        }
+
+        private void ScrollbarValue(ref ArgConsumer args)
+        {
+            string scrollbarEntity = args.TakeEntityName();
+            SetResult(ConstantValue.Float(_impl.GetScrollbarValue(scrollbarEntity)));
         }
 
         private void Integer(ref ArgConsumer args)
@@ -527,7 +551,14 @@ namespace NitroSharp.NsScript.VM
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public TimeSpan TakeTimeSpan()
             {
-                return Time(TakeInt());
+                ConstantValue val = TakeOpt(ConstantValue.Integer(0));
+                int num = val.Type switch
+                {
+                    BuiltInType.Integer => val.AsInteger()!.Value,
+                    BuiltInType.String => int.Parse(val.AsString()!),
+                    _ => UnexpectedType<int>(val.Type)
+                };
+                return Time(num);
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -555,13 +586,26 @@ namespace NitroSharp.NsScript.VM
                 return val.Type switch
                 {
                     BuiltInType.Integer
-                        => new NsCoordinate(val.AsInteger()!.Value, NsCoordinateOrigin.Zero, 0),
+                        => NsCoordinate.WithValue(val.AsInteger()!.Value, NsCoordinateOrigin.Zero, 0),
                     BuiltInType.DeltaInteger
-                        => new NsCoordinate(val.AsDelta()!.Value, NsCoordinateOrigin.CurrentValue, 0),
+                        => NsCoordinate.WithValue(val.AsDelta()!.Value, NsCoordinateOrigin.CurrentValue, 0),
                     BuiltInType.BuiltInConstant
-                        => NsCoordinate.FromEnumValue(val.AsBuiltInConstant()!.Value),
+                        => NsCoordinate.FromConstant(val.AsBuiltInConstant()!.Value),
 
                     _ => UnexpectedType<NsCoordinate>(val.Type)
+                };
+            }
+
+            public NsDimension TakeDimension()
+            {
+                ConstantValue val = TakeOpt(ConstantValue.Integer(0));
+                return val.Type switch
+                {
+                    BuiltInType.Integer
+                        => NsDimension.WithValue(val.AsInteger()!.Value),
+                    BuiltInType.BuiltInConstant
+                        => NsDimension.FromConstant(val.AsBuiltInConstant()!.Value),
+                    _ => UnexpectedType<NsDimension>(val.Type)
                 };
             }
 

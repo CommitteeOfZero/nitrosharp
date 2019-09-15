@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
-using NitroSharp.Primitives;
 using NitroSharp.Text;
+using NitroSharp.Primitives;
 using Veldrid;
 
 namespace NitroSharp.Graphics
@@ -18,7 +18,7 @@ namespace NitroSharp.Graphics
         public ShaderLibrary ShaderLibrary { get; set; }
         public TexturePool TexturePool { get; set; }
         public ResourceSetCache ResourceSetCache { get; set; }
-        public FontService FontService { get; set; }
+        public GlyphRasterizer GlyphRasterizer { get; set; }
 
         public ViewProjection ViewProjection { get; set; }
         public RenderBucket<RenderItemKey> MainBucket { get; set; }
@@ -28,6 +28,7 @@ namespace NitroSharp.Graphics
         public Texture WhiteTexture { get; set; }
 
         public Size DesignResolution { get; set; }
+        public TextureCache TextureCache { get; internal set; }
 
         public CommandList GetFreeCommandList()
         {

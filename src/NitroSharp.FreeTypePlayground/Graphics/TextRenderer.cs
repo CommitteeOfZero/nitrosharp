@@ -1,8 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Numerics;
 using System.Threading.Tasks;
+using NitroSharp.Graphics;
 using NitroSharp.Text;
 using Veldrid;
 
@@ -63,34 +63,34 @@ namespace NitroSharp.Graphics
         private ResourceSet? _vsResourceSet;
         private ResourceSet? _fsResourceSet;
         private ResourceSet? _fsOutlineResourceSet;
-        private TextBlockTable _textblocks;
-        private readonly List<(uint offset, uint count)> _textBlockInstancingParams;
+
         private readonly GpuCache<GpuGlyphRun> _gpuGlyphRuns;
         private readonly GpuCache<GpuTransform> _gpuTransforms;
-        private readonly World _world;
-        private readonly RenderContext _renderContext;
 
-        public TextRenderer(World world, RenderContext renderContext)
+        public TextRenderer(
+            GraphicsDevice graphicsDevice,
+            ShaderLibrary shaderLibrary,
+            GlyphRasterizer glyphRasterizer,
+            TextureCache textureCache,
+            DeviceBuffer projectionBuffer)
         {
-            _textBlockInstancingParams = new List<(uint offset, uint count)>();
-            _graphicsDevice = renderContext.Device;
-            _glyphRasterizer = renderContext.GlyphRasterizer;
-            _textureCache = renderContext.TextureCache;
-            _gpuGlyphs = new VertexList<GpuGlyph>(_graphicsDevice, initialCapacity: 2048);
-            _projectionBuffer = renderContext.ViewProjection.DeviceBuffer;
+            _graphicsDevice = graphicsDevice;
+            _glyphRasterizer = glyphRasterizer;
+            _textureCache = textureCache;
+            _gpuGlyphs = new VertexList<GpuGlyph>(graphicsDevice, initialCapacity: 512);
+            _projectionBuffer = projectionBuffer;
             _gpuGlyphRuns = new GpuCache<GpuGlyphRun>(
-                _graphicsDevice,
+                graphicsDevice,
                 GpuGlyphRun.SizeInGpuBlocks,
-                initialTextureDimension: 16
+                initialTextureDimension: 32
             );
             _gpuTransforms = new GpuCache<GpuTransform>(
-                _graphicsDevice,
+                graphicsDevice,
                 GpuTransform.SizeInGpuBlocks,
-                initialTextureDimension: 16
+                initialTextureDimension: 32
             );
 
-            ResourceFactory factory = _graphicsDevice.ResourceFactory;
-            ShaderLibrary shaderLibrary = renderContext.ShaderLibrary;
+            ResourceFactory factory = graphicsDevice.ResourceFactory;
             (Shader vs, Shader fs) = shaderLibrary.GetShaderSet("text");
             (Shader outlineVS, Shader outlineFS) = shaderLibrary.GetShaderSet("outline");
 
@@ -144,7 +144,7 @@ namespace NitroSharp.Graphics
                     new[] { vs, fs }
                 ),
                 new[] { _vsLayout, _fsLayout },
-                renderContext.MainSwapchain.Framebuffer.OutputDescription
+                graphicsDevice.SwapchainFramebuffer.OutputDescription
             );
             _pipeline = factory.CreateGraphicsPipeline(ref pipelineDesc);
 
@@ -153,8 +153,6 @@ namespace NitroSharp.Graphics
                 new[] { outlineVS, outlineFS }
             );
             _outlinePipeline = factory.CreateGraphicsPipeline(ref pipelineDesc);
-            _world = world;
-            _renderContext = renderContext;
         }
 
         public void BeginFrame()
@@ -162,17 +160,6 @@ namespace NitroSharp.Graphics
             _gpuGlyphRuns.BeginFrame(clear: true);
             _gpuTransforms.BeginFrame(clear: true);
             _gpuGlyphs.Begin();
-            _textBlockInstancingParams.Clear();
-        }
-
-        public void PreprocessTextBlocks(TextBlockTable textBlocks)
-        {
-            _textblocks = textBlocks;
-            TransformProcessor.ProcessTransforms(_world, textBlocks);
-            foreach (TextBlock textBlock in textBlocks)
-            {
-                RequestGlyphs(textBlock.Layout);
-            }
         }
 
         public void RequestGlyphs(TextLayout textLayout)
@@ -184,35 +171,27 @@ namespace NitroSharp.Graphics
             }
         }
 
-        public void ResolveGlyphs()
+        public void ResolveGlyphs(TextLayout textLayout)
         {
             ValueTask vt = _glyphRasterizer.ResolveGlyphs(_textureCache);
             if (!vt.IsCompleted)
             {
                 vt.GetAwaiter().GetResult();
             }
-
-            foreach (TextBlock textBlock in _textblocks)
+            foreach (ref readonly GlyphRun glyphRun in textLayout.GlyphRuns)
             {
-                uint instanceBase = _gpuGlyphs.Count;
-                TextLayout layout = textBlock.Layout;
-                foreach (ref readonly GlyphRun glyphRun in layout.GlyphRuns)
-                {
-                    ReadOnlySpan<PositionedGlyph> glyphs = layout.GetGlyphs(glyphRun.GlyphSpan);
-                    AppendRun(glyphRun, glyphs, textBlock.Transform);
-                }
-                uint instanceCount = _gpuGlyphs.Count - instanceBase;
-                _textBlockInstancingParams.Add((instanceBase, instanceCount));
+                ReadOnlySpan<PositionedGlyph> glyphs = textLayout.GetGlyphs(glyphRun.GlyphSpan);
+                AppendRun(glyphRun, glyphs);
             }
         }
 
-        private void AppendRun(in GlyphRun glyphRun, ReadOnlySpan<PositionedGlyph> glyphs, in Matrix4x4 matrix)
+        private void AppendRun(in GlyphRun glyphRun, ReadOnlySpan<PositionedGlyph> glyphs)
         {
             var gpuGlyphRun = new GpuGlyphRun(glyphRun.Color, glyphRun.OutlineColor);
             GpuCacheHandle glyphRunHandle = _gpuGlyphRuns.Insert(ref gpuGlyphRun);
             int glyphRunId = _gpuGlyphRuns.GetCachePosition(glyphRunHandle);
 
-            var transform = new GpuTransform(matrix);
+            var transform = new GpuTransform(Matrix4x4.Identity);
             GpuCacheHandle transformHandle = _gpuTransforms.Insert(ref transform);
             Debug.Assert(_gpuTransforms.GetCachePosition(transformHandle) == glyphRunId);
 
@@ -243,11 +222,8 @@ namespace NitroSharp.Graphics
             }
         }
 
-        public void EndFrame()
+        public void EndFrame(RenderBucket<int> renderBucket, CommandList commandList)
         {
-            var renderBucket = _renderContext.MainBucket;
-            var commandList = _renderContext.MainCommandList;
-
             void updateResourceSet(ref ResourceSet? fsResourceSet, PixelFormat pixelFormat)
             {
                 ResourceFactory factory = _graphicsDevice.ResourceFactory;
@@ -284,30 +260,21 @@ namespace NitroSharp.Graphics
             Debug.Assert(_fsResourceSet != null);
             Debug.Assert(_fsOutlineResourceSet != null);
 
-            int i = 0;
-            foreach (TextBlock textBlock in _textblocks)
+            var submission = new RenderBucketSubmission<GpuGlyph>
             {
-                TextLayout layout = textBlock.Layout;
-                if (layout.GlyphRuns.Length == 0) { continue; }
-                (uint instanceBase, uint instanceCount) = _textBlockInstancingParams[i];
-                var submission = new RenderBucketSubmission<GpuGlyph>
-                {
-                    Pipeline = _pipeline,
-                    SharedResourceSet = _vsResourceSet,
-                    ObjectResourceSet = _fsResourceSet,
-                    VertexBuffer = _gpuGlyphs,
-                    VertexCount = 6,
-                    InstanceBase = (ushort)instanceBase,
-                    InstanceCount = (ushort)instanceCount
-                };
-                renderBucket.Submit(ref submission, textBlock.SortKey);
+                Pipeline = _pipeline,
+                SharedResourceSet = _vsResourceSet,
+                ObjectResourceSet = _fsResourceSet,
+                VertexBuffer = _gpuGlyphs,
+                VertexCount = 6,
+                InstanceBase = 0,
+                InstanceCount = (ushort)_gpuGlyphs.Count
+            };
+            renderBucket.Submit(ref submission, 1);
 
-                submission.Pipeline = _outlinePipeline;
-                submission.ObjectResourceSet = _fsOutlineResourceSet;
-                renderBucket.Submit(ref submission, textBlock.SortKey);
-
-                i++;
-            }
+            submission.Pipeline = _outlinePipeline;
+            submission.ObjectResourceSet = _fsOutlineResourceSet;
+            renderBucket.Submit(ref submission, 0);
         }
 
         public void Dispose()

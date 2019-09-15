@@ -29,8 +29,6 @@ namespace CowsHead
 
         static Task Main()
         {
-            
-
 #if PORTABLE
             LoadNativeDependencies();
             NativeLibrary.SetDllImportResolver(typeof(NitroSharp.Game).Assembly, ResolveDllImport);

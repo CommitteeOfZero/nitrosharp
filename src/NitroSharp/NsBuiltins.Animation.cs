@@ -5,7 +5,6 @@ using NitroSharp.Logic.Components;
 using NitroSharp.Primitives;
 using Veldrid;
 using NitroSharp.NsScript.Primitives;
-using NitroSharp.Graphics;
 
 namespace NitroSharp
 {
@@ -97,7 +96,7 @@ namespace NitroSharp
             NsCoordinate dstX, NsCoordinate dstY,
             NsEasingFunction easingFunction, bool wait)
         {
-            MutableRenderItem renderItem = _world.GetMutEntityStruct<MutableRenderItem>(entity);
+            MutRenderItem renderItem = _world.GetMutEntityStruct<MutRenderItem>(entity);
             ref Vector3 position = ref renderItem.TransformComponents.Position;
 
             float targetX = dstX.Origin == NsCoordinateOrigin.CurrentValue
@@ -161,7 +160,7 @@ namespace NitroSharp
             NsRational dstScaleX, NsRational dstScaleY,
             NsEasingFunction easingFunction, bool suspendThread)
         {
-            MutableRenderItem renderItem = _world.GetMutEntityStruct<MutableRenderItem>(entity);
+            MutRenderItem renderItem = _world.GetMutEntityStruct<MutRenderItem>(entity);
             ref Vector3 scale = ref renderItem.TransformComponents.Scale;
 
             dstScaleX = dstScaleX.Rebase(1.0f);

@@ -7,6 +7,7 @@ using NitroSharp.Graphics.Systems;
 using NitroSharp.Interactivity;
 using NitroSharp.Media;
 using Veldrid;
+using NitroSharp.Graphics;
 
 #nullable enable
 
@@ -31,14 +32,14 @@ namespace NitroSharp
             public Presenter(Game game, World world) : base(world)
             {
                 _inputTracker = new InputTracker(game._window);
-                _dialogueSystem = new DialogueSystem(this, _inputTracker);
+                _dialogueSystem = new DialogueSystem(this, game.GlyphRasterizer, _inputTracker);
                 _animationProcessor = new AnimationProcessor(this);
                 _choiceProcessor = new ChoiceProcessor(this);
 
                 _world = world;
                 _renderSystem = new RenderSystem(
                     _world, game._graphicsDevice, game._swapchain,
-                    game.Content, game.FontService, game._configuration);
+                    game.Content, game.GlyphRasterizer, game._configuration);
 
                 _audioSystem = new AudioSystem(_world, game.Content, game.AudioSourcePool);
 
@@ -47,7 +48,7 @@ namespace NitroSharp
 
             public InputTracker InputTracker => _inputTracker;
 
-            public void Tick(float deltaMilliseconds)
+            public void Tick(in FrameStamp framestamp, float deltaMilliseconds)
             {
                 _inputTracker.Update();
                 _world.FlushDetachedAnimations();
@@ -74,7 +75,7 @@ namespace NitroSharp
                 }
 
                 _audioSystem.UpdateAudioSources();
-                _renderSystem.RenderFrame();
+                _renderSystem.RenderFrame(framestamp);
 
                 _devModeOverlay.Tick(deltaMilliseconds, _inputTracker);
 
@@ -100,10 +101,10 @@ namespace NitroSharp
                             var beginBlockMsg = (BeginDialogueBlockMessage)message;
                             _dialogueSystemInput.TextEntity = beginBlockMsg.TextEntity;
                             break;
-                        case MessageKind.BeginDialogueLine:
-                            var beginLineMsg = (BeginDialogueLineMessage)message;
+                        case MessageKind.PresentDialogue:
+                            var presentDialogueMsg = (PresentDialogueMessage)message;
                             _dialogueSystemInput.Command = DialogueSystemCommand.BeginDialogue;
-                            _dialogueSystemInput.DialogueLine = beginLineMsg.DialogueLine;
+                            _dialogueSystemInput.TextBuffer = presentDialogueMsg.TextBuffer;
                             break;
                     }
                 }

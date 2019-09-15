@@ -104,8 +104,8 @@
 
         // Other
         Xxx,
-        Key,
-        Mmo,
+        //Key,
+        //Mmo,
         Tipbar,
 
         // Character names (Noah)

@@ -71,7 +71,7 @@ namespace NitroSharp.NsScript.VM
 
         public virtual void LoadVideo(string entityName, int priority, NsCoordinate x, NsCoordinate y, bool loop, string fileName) { }
 
-        public virtual void CreateText(string entityName, int priority, NsCoordinate x, NsCoordinate y, int width, int height, string text) { }
+        public virtual void CreateText(string entityName, int priority, NsCoordinate x, NsCoordinate y, NsDimension width, NsDimension height, string pxmlText) { }
 
         /// <summary>
         /// Original name: CreateColor.
@@ -100,6 +100,11 @@ namespace NitroSharp.NsScript.VM
         public virtual void DrawTransition(string sourceEntityName, TimeSpan duration, NsRational initialOpacity, NsRational finalOpacity, NsRational feather, NsEasingFunction easingFunction, string maskFileName, TimeSpan delay) { }
 
         public virtual ConstantValue FormatString(string format, object[] args) => throw new NotImplementedException();
+
+        public virtual float GetScrollbarValue(string scrollbarEntity)
+        {
+            return 0.5f;
+        }
 
         public virtual void CreateChoice(string entityName) { }
         public virtual void PlayCutscene(string entityName, int priority, bool loop, bool alpha, string fileName, bool enableAudio) { }

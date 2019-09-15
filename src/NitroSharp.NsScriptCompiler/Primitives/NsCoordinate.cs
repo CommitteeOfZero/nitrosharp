@@ -1,4 +1,6 @@
-﻿namespace NitroSharp.NsScript.Primitives
+﻿using System.Runtime.InteropServices;
+
+namespace NitroSharp.NsScript.Primitives
 {
     public enum NsCoordinateOrigin
     {
@@ -11,58 +13,80 @@
         Center
     }
 
+    public enum NsCoordinateVariant
+    {
+        Value,
+        Inherit
+    }
+
+    [StructLayout(LayoutKind.Auto)]
     public readonly struct NsCoordinate
     {
-        public NsCoordinate(int value, NsCoordinateOrigin origin, float anchorPoint)
+        public NsCoordinate(
+            NsCoordinateVariant variant,
+            int value,
+            NsCoordinateOrigin origin,
+            float anchorPoint)
         {
+            Variant = variant;
             Value = value;
             Origin = origin;
             AnchorPoint = anchorPoint;
         }
 
+        public NsCoordinateVariant Variant { get; }
         public int Value { get; }
         public NsCoordinateOrigin Origin { get; }
         public float AnchorPoint { get; }
 
-        public static NsCoordinate FromEnumValue(BuiltInConstant constant)
+        public static NsCoordinate WithValue(int value, NsCoordinateOrigin origin, float anchorPoint)
+            => new NsCoordinate(NsCoordinateVariant.Value, value, origin, anchorPoint);
+
+        public static NsCoordinate Inherit()
+            => new NsCoordinate(NsCoordinateVariant.Inherit, default, default, default);
+
+        public static NsCoordinate FromConstant(BuiltInConstant constant)
         {
             switch (constant)
             {
                 case BuiltInConstant.InLeft:
-                    return new NsCoordinate(0, NsCoordinateOrigin.Left, 0.0f);
+                    return WithValue(0, NsCoordinateOrigin.Left, 0.0f);
                 case BuiltInConstant.OnLeft:
-                    return new NsCoordinate(0, NsCoordinateOrigin.Left, 0.5f);
+                    return WithValue(0, NsCoordinateOrigin.Left, 0.5f);
                 case BuiltInConstant.OutLeft:
                 case BuiltInConstant.Left:
-                    return new NsCoordinate(0, NsCoordinateOrigin.Left, 1.0f);
+                    return WithValue(0, NsCoordinateOrigin.Left, 1.0f);
 
                 case BuiltInConstant.InTop:
-                    return new NsCoordinate(0, NsCoordinateOrigin.Top, 0.0f);
+                    return WithValue(0, NsCoordinateOrigin.Top, 0.0f);
                 case BuiltInConstant.OnTop:
-                    return new NsCoordinate(0, NsCoordinateOrigin.Top, 0.5f);
+                    return WithValue(0, NsCoordinateOrigin.Top, 0.5f);
                 case BuiltInConstant.OutTop:
                 case BuiltInConstant.Top:
-                    return new NsCoordinate(0, NsCoordinateOrigin.Top, 1.0f);
+                    return WithValue(0, NsCoordinateOrigin.Top, 1.0f);
 
                 case BuiltInConstant.InRight:
-                    return new NsCoordinate(0, NsCoordinateOrigin.Right, 1.0f);
+                    return WithValue(0, NsCoordinateOrigin.Right, 1.0f);
                 case BuiltInConstant.OnRight:
-                    return new NsCoordinate(0, NsCoordinateOrigin.Right, 0.5f);
+                    return WithValue(0, NsCoordinateOrigin.Right, 0.5f);
                 case BuiltInConstant.OutRight:
                 case BuiltInConstant.Right:
-                    return new NsCoordinate(0, NsCoordinateOrigin.Right, 0.0f);
+                    return WithValue(0, NsCoordinateOrigin.Right, 0.0f);
 
                 case BuiltInConstant.InBottom:
-                    return new NsCoordinate(0, NsCoordinateOrigin.Bottom, 1.0f);
+                    return WithValue(0, NsCoordinateOrigin.Bottom, 1.0f);
                 case BuiltInConstant.OnBottom:
-                    return new NsCoordinate(0, NsCoordinateOrigin.Bottom, 0.5f);
+                    return WithValue(0, NsCoordinateOrigin.Bottom, 0.5f);
                 case BuiltInConstant.OutBottom:
                 case BuiltInConstant.Bottom:
-                    return new NsCoordinate(0, NsCoordinateOrigin.Bottom, 0.0f);
+                    return WithValue(0, NsCoordinateOrigin.Bottom, 0.0f);
 
                 case BuiltInConstant.Center:
                 case BuiltInConstant.Middle:
-                    return new NsCoordinate(0, NsCoordinateOrigin.Center, 0.5f);
+                    return WithValue(0, NsCoordinateOrigin.Center, 0.5f);
+
+                case BuiltInConstant.Inherit:
+                    return Inherit();
 
                 default:
                     throw ThrowHelper.UnexpectedValue(nameof(constant));

@@ -3,53 +3,27 @@ using System.Runtime.InteropServices;
 
 namespace NitroSharp.Utilities
 {
-    internal sealed class NativeMemory : IDisposable
+    internal struct NativeMemory : IDisposable
     {
-        public static NativeMemory Allocate(uint size)
-        {
-            return new NativeMemory(Marshal.AllocHGlobal((int)size), size);
-        }
+        public IntPtr Pointer;
+        public readonly uint Size;
 
         private NativeMemory(IntPtr pointer, uint size)
-        {
-            Pointer = pointer;
-            Size = size;
-        }
+            => (Pointer, Size) = (pointer, size);
 
-        public IntPtr Pointer { get; private set; }
-        public uint Size { get; }
+        public static NativeMemory Allocate(uint size)
+            => new NativeMemory(Marshal.AllocHGlobal((int)size), size);
 
-        public Span<T> AsSpan<T>()
-        {
-            unsafe
-            {
-                return new Span<T>(Pointer.ToPointer(), (int)Size);
-            }
-        }
+        public unsafe Span<T> AsSpan<T>()
+            => new Span<T>(Pointer.ToPointer(), (int)Size);
 
-        public ReadOnlySpan<T> AsReadOnlySpan<T>()
-        {
-            unsafe
-            {
-                return new ReadOnlySpan<T>(Pointer.ToPointer(), (int)Size);
-            }
-        }
+        public unsafe ReadOnlySpan<T> AsReadOnlySpan<T>()
+            => new ReadOnlySpan<T>(Pointer.ToPointer(), (int)Size);
 
         public void Dispose()
         {
-            Destroy();
-            GC.SuppressFinalize(this);
-        }
-
-        private void Destroy()
-        {
             Marshal.FreeHGlobal(Pointer);
             Pointer = IntPtr.Zero;
-        }
-
-        ~NativeMemory()
-        {
-            Destroy();
         }
     }
 }

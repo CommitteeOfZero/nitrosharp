@@ -13,7 +13,7 @@ namespace NitroSharp.Dialogue
         public bool AcceptUserInput;
         public DialogueSystemCommand Command;
         public Entity TextEntity;
-        public DialogueLine DialogueLine;
+        public TextBuffer? TextBuffer;
     }
 
     internal enum DialogueSystemCommand
@@ -25,26 +25,30 @@ namespace NitroSharp.Dialogue
     internal sealed class DialogueSystem : GameSystem
     {
         private readonly World _world;
+        private readonly GlyphRasterizer _glyphRasterizer;
         private readonly InputTracker _inputTracker;
 
         private readonly EntityTable.RefTypeRow<TextLayout> _textLayouts;
 
-        private TextRevealAnimation? _revealAnimation;
-        private int _currentDialoguePart;
+        //private TextRevealAnimation? _revealAnimation;
+        private int _currentSegment;
         private bool _startFromNewLine;
 
-        public DialogueSystem(Game.Presenter presenter, InputTracker inputTracker)
+        public DialogueSystem(
+            Game.Presenter presenter,
+            GlyphRasterizer glyphRasterizer,
+            InputTracker inputTracker)
             : base(presenter)
         {
             _world = presenter.World;
+            _glyphRasterizer = glyphRasterizer;
             _inputTracker = inputTracker;
-            _textLayouts = _world.TextInstances.Layouts;
+            _textLayouts = _world.TextBlocks.Layouts;
         }
 
         private void ResetState()
         {
-            _revealAnimation = null;
-            _currentDialoguePart = 0;
+            _currentSegment = 0;
             _startFromNewLine = false;
         }
 
@@ -55,7 +59,6 @@ namespace NitroSharp.Dialogue
                 ResetState();
                 TextLayout textLayout = _textLayouts.GetValue(input.TextEntity);
                 textLayout.Clear();
-                _world.TextInstances.ClearFlags.Set(input.TextEntity, true);
                 AdvanceDialogue(ref input, textLayout);
                 return true;
             }
@@ -81,7 +84,8 @@ namespace NitroSharp.Dialogue
                     case Status.PlayingSkipAnimation:
                         break;
                     case Status.Waiting:
-                        if (_currentDialoguePart < input.DialogueLine.Parts.Length)
+                        Debug.Assert(input.TextBuffer != null);
+                        if (_currentSegment < input.TextBuffer.Segments.Length)
                         {
                             TextLayout textLayout = _textLayouts.GetValue(input.TextEntity);
                             AdvanceDialogue(ref input, textLayout);
@@ -114,47 +118,48 @@ namespace NitroSharp.Dialogue
 
         private Status GetStatus(ref DialogueSystemInput input)
         {
-            if (input.DialogueLine == null)
+            if (input.TextBuffer == null)
             {
                 return Status.LineNotLoaded;
             }
 
-            if (_world.TryGetAnimation<TextRevealAnimation>(input.TextEntity, out _revealAnimation))
-            {
-                return Status.PlayingRevealAnimation;
-            }
-            if (_world.TryGetAnimation<RevealSkipAnimation>(input.TextEntity, out _))
-            {
-                return Status.PlayingSkipAnimation;
-            }
+            //if (_world.TryGetAnimation<TextRevealAnimation>(input.TextEntity, out _revealAnimation))
+            //{
+            //    return Status.PlayingRevealAnimation;
+            //}
+            //if (_world.TryGetAnimation<RevealSkipAnimation>(input.TextEntity, out _))
+            //{
+            //    return Status.PlayingSkipAnimation;
+            //}
 
             return Status.Waiting;
         }
 
         private void AdvanceDialogue(ref DialogueSystemInput input, TextLayout textLayout)
         {
-            ImmutableArray<DialogueLinePart> parts = input.DialogueLine.Parts;
+            Debug.Assert(input.TextBuffer != null);
+            ImmutableArray<TextBufferSegment> segments = input.TextBuffer.Segments;
 
             if (_startFromNewLine)
             {
-                textLayout.StartNewLine();
+                //textLayout.StartNewLine();
                 _startFromNewLine = false;
             }
 
-            uint revealStart = textLayout.Glyphs.Count;
-            for (int i = _currentDialoguePart; i < parts.Length; i++)
+            uint revealStart = (uint)textLayout.Glyphs.Length;
+            for (int i = _currentSegment; i < segments.Length; i++)
             {
-                _currentDialoguePart++;
-                DialogueLinePart part = parts[i];
-                switch (part.PartKind)
+                _currentSegment++;
+                TextBufferSegment segment = segments[i];
+                switch (segment.SegmentKind)
                 {
-                    case DialogueLinePartKind.Text:
-                        var textPart = (TextPart)part;
-                        textLayout.Append(textPart.Text, display: false);
+                    case TextBufferSegmentKind.Text:
+                        var textPart = (TextSegment)segment;
+                        textLayout.Append(_glyphRasterizer, textPart.TextRuns.AsSpan());
                         break;
 
-                    case DialogueLinePartKind.Marker:
-                        var marker = (Marker)part;
+                    case TextBufferSegmentKind.Marker:
+                        var marker = (MarkerSegment)segment;
                         switch (marker.MarkerKind)
                         {
                             case MarkerKind.Halt:
@@ -170,24 +175,25 @@ namespace NitroSharp.Dialogue
                 }
             }
 
-        exit:
-            var animation = new TextRevealAnimation(_world, input.TextEntity, (ushort)revealStart);
-            _world.ActivateAnimation(animation);
+            exit:
+            return;
+            //var animation = new TextRevealAnimation(_world, input.TextEntity, (ushort)revealStart);
+            //_world.ActivateAnimation(animation);
         }
 
         private void SkipTextRevealAnimation(Entity textEntity)
         {
-            Debug.Assert(_revealAnimation != null);
-            TextRevealAnimation animation = _revealAnimation;
-            if (!animation.IsAllTextVisible)
-            {
-                animation.Stop();
-                if (!animation.IsAllTextVisible)
-                {
-                    var skip = new RevealSkipAnimation(textEntity, (ushort)(animation.Position + 1));
-                    _world.ActivateAnimation(skip);
-                }
-            }
+            //Debug.Assert(_revealAnimation != null);
+            //TextRevealAnimation animation = _revealAnimation;
+            //if (!animation.IsAllTextVisible)
+            //{
+            //    animation.Stop();
+            //    if (!animation.IsAllTextVisible)
+            //    {
+            //        var skip = new RevealSkipAnimation(textEntity, (ushort)(animation.Position + 1));
+            //        _world.ActivateAnimation(skip);
+            //    }
+            //}
         } 
     }
 }

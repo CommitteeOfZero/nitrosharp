@@ -25,12 +25,12 @@ namespace NitroSharp
         public ref readonly TransformComponents TransformComponents => ref Table.TransformComponents.GetValue(Index);
         public ref readonly Matrix4x4 Transform => ref Table.TransformMatrices.GetValue(Index);
 
-        public MutableRenderItem AsMutable() => new MutableRenderItem(Table, Index);
+        public MutRenderItem AsMutable() => new MutRenderItem(Table, Index);
     }
 
-    internal readonly struct MutableRenderItem : MutableEntityStruct<RenderItemTable>
+    internal readonly struct MutRenderItem : MutEntityStruct<RenderItemTable>
     {
-        public MutableRenderItem(RenderItemTable table, ushort index)
+        public MutRenderItem(RenderItemTable table, ushort index)
         {
             Table = table;
             Index = index;
@@ -69,12 +69,12 @@ namespace NitroSharp
         public ref readonly TransformComponents TransformComponents => ref Table.TransformComponents.GetValue(Index);
         public ref readonly Matrix4x4 Transform => ref Table.TransformMatrices.GetValue(Index);
 
-        public MutableSprite AsMutable() => new MutableSprite(Table, Index);
+        public MutSprite AsMutable() => new MutSprite(Table, Index);
     }
 
-    internal readonly struct MutableSprite : MutableEntityStruct<SpriteTable>
+    internal readonly struct MutSprite : MutEntityStruct<SpriteTable>
     {
-        public MutableSprite(SpriteTable table, ushort index)
+        public MutSprite(SpriteTable table, ushort index)
         {
             Table = table;
             Index = index;
@@ -86,6 +86,52 @@ namespace NitroSharp
         public ushort Index { get; }
 
         public ref ImageSource ImageSource => ref Table.ImageSources.Mutate(Entity.Id, Index);
+
+        public ref RenderItemKey SortKey => ref Table.SortKeys.Mutate(Entity.Id, Index);
+        public ref RgbaFloat Color => ref Table.Colors.Mutate(Entity.Id, Index);
+        public ref BlendMode BlendMode => ref Table.BlendModes.Mutate(Entity.Id, Index);
+        public ref SizeF Bounds => ref Table.Bounds.Mutate(Entity.Id, Index);
+        public ref TransformComponents TransformComponents => ref Table.TransformComponents.Mutate(Entity.Id, Index);
+        public ref Matrix4x4 Transform => ref Table.TransformMatrices.Mutate(Entity.Id, Index);
+    }
+
+    internal readonly struct TextBlock : EntityStruct<TextBlockTable>
+    {
+        public TextBlock(TextBlockTable table, ushort index)
+        {
+            Table = table;
+            Index = index;
+        }
+
+        public TextBlockTable Table { get; }
+        public ushort Index { get; }
+
+        public ref readonly Text.TextLayout Layout => ref Table.Layouts.GetValue(Index);
+
+        public ref readonly RenderItemKey SortKey => ref Table.SortKeys.GetValue(Index);
+        public ref readonly RgbaFloat Color => ref Table.Colors.GetValue(Index);
+        public ref readonly BlendMode BlendMode => ref Table.BlendModes.GetValue(Index);
+        public ref readonly SizeF Bounds => ref Table.Bounds.GetValue(Index);
+        public ref readonly TransformComponents TransformComponents => ref Table.TransformComponents.GetValue(Index);
+        public ref readonly Matrix4x4 Transform => ref Table.TransformMatrices.GetValue(Index);
+
+        public MutTextBlock AsMutable() => new MutTextBlock(Table, Index);
+    }
+
+    internal readonly struct MutTextBlock : MutEntityStruct<TextBlockTable>
+    {
+        public MutTextBlock(TextBlockTable table, ushort index)
+        {
+            Table = table;
+            Index = index;
+            Entity = table.Entities[index];
+        }
+
+        public TextBlockTable Table { get; }
+        public Entity Entity { get; }
+        public ushort Index { get; }
+
+        public ref Text.TextLayout Layout => ref Table.Layouts.Mutate(Entity.Id, Index);
 
         public ref RenderItemKey SortKey => ref Table.SortKeys.Mutate(Entity.Id, Index);
         public ref RgbaFloat Color => ref Table.Colors.Mutate(Entity.Id, Index);
@@ -107,17 +153,17 @@ namespace NitroSharp
         public ushort Index { get; }
 
         public ref readonly TimeSpan Duration => ref Table.Duration.GetValue(Index);
-        public ref readonly TimeSpan Elapsed => ref Table.Duration.GetValue(Index);
+        public ref readonly TimeSpan Elapsed => ref Table.Elapsed.GetValue(Index);
         public ref readonly MediaClipLoopData LoopData => ref Table.LoopData.GetValue(Index);
         public ref readonly float Volume => ref Table.Volume.GetValue(Index);
         public ref readonly double SoundAmplitude => ref Table.SoundAmplitude.GetValue(Index);
 
-        public MutableAudioClip AsMutable => new MutableAudioClip(Table, Index);
+        public MutAudioClip AsMutable => new MutAudioClip(Table, Index);
     }
 
-    internal readonly struct MutableAudioClip : MutableEntityStruct<AudioClipTable>
+    internal readonly struct MutAudioClip : MutEntityStruct<AudioClipTable>
     {
-        public MutableAudioClip(AudioClipTable table, ushort index)
+        public MutAudioClip(AudioClipTable table, ushort index)
         {
             Table = table;
             Index = index;
@@ -129,7 +175,7 @@ namespace NitroSharp
         public ushort Index { get; }
 
         public ref TimeSpan Duration => ref Table.Duration.Mutate(Entity.Id, Index);
-        public ref TimeSpan Elapsed => ref Table.Duration.Mutate(Entity.Id, Index);
+        public ref TimeSpan Elapsed => ref Table.Elapsed.Mutate(Entity.Id, Index);
         public ref MediaClipLoopData LoopData => ref Table.LoopData.Mutate(Entity.Id, Index);
         public ref float Volume => ref Table.Volume.Mutate(Entity.Id, Index);
     }
@@ -146,7 +192,7 @@ namespace NitroSharp
         public ushort Index { get; }
 
         public ref readonly TimeSpan Duration => ref Table.Duration.GetValue(Index);
-        public ref readonly TimeSpan Elapsed => ref Table.Duration.GetValue(Index);
+        public ref readonly TimeSpan Elapsed => ref Table.Elapsed.GetValue(Index);
         public ref readonly MediaClipLoopData LoopData => ref Table.LoopData.GetValue(Index);
         public ref readonly float Volume => ref Table.Volume.GetValue(Index);
 
@@ -157,12 +203,12 @@ namespace NitroSharp
         public ref readonly TransformComponents TransformComponents => ref Table.TransformComponents.GetValue(Index);
         public ref readonly Matrix4x4 Transform => ref Table.TransformMatrices.GetValue(Index);
 
-        public MutableVideoClip AsMutable() => new MutableVideoClip(Table, Index);
+        public MutVideoClip AsMutable() => new MutVideoClip(Table, Index);
     }
 
-    internal readonly struct MutableVideoClip : MutableEntityStruct<VideoClipTable>
+    internal readonly struct MutVideoClip : MutEntityStruct<VideoClipTable>
     {
-        public MutableVideoClip(VideoClipTable table, ushort index)
+        public MutVideoClip(VideoClipTable table, ushort index)
         {
             Table = table;
             Index = index;
@@ -174,7 +220,7 @@ namespace NitroSharp
         public ushort Index { get; }
 
         public ref TimeSpan Duration => ref Table.Duration.Mutate(Entity.Id, Index);
-        public ref TimeSpan Elapsed => ref Table.Duration.Mutate(Entity.Id, Index);
+        public ref TimeSpan Elapsed => ref Table.Elapsed.Mutate(Entity.Id, Index);
         public ref MediaClipLoopData LoopData => ref Table.LoopData.Mutate(Entity.Id, Index);
         public ref float Volume => ref Table.Volume.Mutate(Entity.Id, Index);
 

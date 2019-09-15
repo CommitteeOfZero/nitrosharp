@@ -16,7 +16,7 @@ namespace NitroSharp
 {
     public partial class Game : IDisposable
     {
-        private readonly bool UseWicOnWindows = false;
+        private readonly bool UseWicOnWindows = true;
 
         private readonly Stopwatch _gameTimer;
         private readonly Configuration _configuration;
@@ -39,9 +39,10 @@ namespace NitroSharp
 
         private Presenter _presenter;
         private ScriptRunner _scriptRunner;
-
         private readonly Logger _logger;
         private readonly LogEventRecorder _logEventRecorder;
+
+        private readonly GlyphRasterizer _glyphRasterizer;
 
         public Game(GameWindow window, Configuration configuration)
         {
@@ -49,6 +50,7 @@ namespace NitroSharp
             _initializingGraphics = new TaskCompletionSource<int>();
             _configuration = configuration;
             (_logger, _logEventRecorder) = SetupLogging();
+            _glyphRasterizer = new GlyphRasterizer(enableOutlines: true);
             _window = window;
             _window.Mobile_SurfaceCreated += OnSurfaceCreated;
             _window.Resized += OnWindowResized;
@@ -63,12 +65,14 @@ namespace NitroSharp
         }
 
         internal ContentManager Content { get; private set; }
-        internal FontService FontService { get; private set; }
         internal AudioDevice AudioDevice => _audioDevice;
         internal AudioSourcePool AudioSourcePool => _audioSourcePool;
 
         internal Logger Logger => _logger;
         internal LogEventRecorder LogEventRecorder => _logEventRecorder;
+
+        internal GlyphRasterizer GlyphRasterizer => _glyphRasterizer;
+        internal FontConfiguration FontConfiguration { get; private set; }
 
         public async Task Run(bool useDedicatedThread = false)
         {
@@ -98,8 +102,9 @@ namespace NitroSharp
         private async Task Initialize()
         {
             var initializeAudio = Task.Run((Action)SetupAudio);
+            SetupFonts();
             await Task.WhenAll(new[] { _initializingGraphics.Task, initializeAudio });
-            CreateServices();
+            Content = CreateContentManager();
             _scriptRunner = new ScriptRunner(this, _scriptingWorld);
             var loadScriptTask = Task.Run((Action)_scriptRunner.LoadStartupScript);
             _presenter = new Presenter(this, _presenterWorld);
@@ -107,11 +112,25 @@ namespace NitroSharp
             _scriptRunner.StartInterpreter();
         }
 
+        private void SetupFonts()
+        {
+            _glyphRasterizer.AddFonts(Directory.EnumerateFiles("Fonts"));
+            var defaultFont = new FontKey(_configuration.FontFamily, Text.FontStyle.Regular);
+            FontConfiguration = new FontConfiguration(
+                defaultFont,
+                italicFont: null,
+                new PtFontSize(_configuration.FontSize),
+                defaultTextColor: RgbaFloat.White,
+                defaultOutlineColor: RgbaFloat.Black,
+                rubyFontSizeMultiplier: 0.4f
+            );
+        }
+
         private Task RunMainLoop(bool useDedicatedThread = false)
         {
             if (useDedicatedThread)
             {
-                return Task.Factory.StartNew((Action)MainLoop, TaskCreationOptions.LongRunning);
+                return Task.Factory.StartNew(MainLoop, TaskCreationOptions.LongRunning);
             }
             else
             {
@@ -132,6 +151,7 @@ namespace NitroSharp
             _gameTimer.Start();
 
             long prevFrameTicks = 0L;
+            long frameId = 0L;
             while (!_shutdownCancellation.IsCancellationRequested && _window.Exists)
             {
                 if (_surfaceDestroyed)
@@ -153,7 +173,8 @@ namespace NitroSharp
 
                 try
                 {
-                    Tick(deltaMilliseconds);
+                    var framestamp = new FrameStamp(frameId++, _gameTimer.ElapsedTicks);
+                    Tick(framestamp, deltaMilliseconds);
                 }
                 catch (OperationCanceledException)
                 {
@@ -161,7 +182,7 @@ namespace NitroSharp
             }
         }
 
-        private void Tick(float deltaMilliseconds)
+        private void Tick(FrameStamp framestamp, float deltaMilliseconds)
         {
             var scriptRunnerStatus = _scriptRunner.Tick();
             switch (scriptRunnerStatus)
@@ -181,7 +202,7 @@ namespace NitroSharp
                     break;
             }
 
-            _presenter.Tick(deltaMilliseconds);
+            _presenter.Tick(framestamp, deltaMilliseconds);
         }
 
         private void OnSurfaceCreated(SwapchainSource swapchainSource)
@@ -245,13 +266,6 @@ namespace NitroSharp
                 ?? AudioDevice.GetPlatformDefaultBackend();
             _audioDevice = AudioDevice.Create(backend, audioParameters);
             _audioSourcePool = new AudioSourcePool(_audioDevice);
-        }
-
-        private void CreateServices()
-        {
-            Content = CreateContentManager();
-            FontService = new FontService();
-            FontService.RegisterFonts(Directory.EnumerateFiles("Fonts"));
         }
 
         private ContentManager CreateContentManager()
@@ -318,7 +332,7 @@ namespace NitroSharp
         {
             _graphicsDevice.WaitForIdle();
             Content.Dispose();
-            FontService.Dispose();
+            _glyphRasterizer.Dispose();
             _texturePool.Dispose();
             _wicFactory?.Dispose();
             _swapchain.Dispose();

@@ -7,7 +7,6 @@ using NitroSharp.Graphics;
 using NitroSharp.Media;
 using NitroSharp.Content;
 using NitroSharp.Primitives;
-using NitroSharp.Text;
 using NitroSharp.Utilities;
 using Veldrid;
 
@@ -45,7 +44,7 @@ namespace NitroSharp
             Threads = RegisterTable(new ThreadTable(this, 32));
             Sprites = RegisterTable(new SpriteTable(this, InitialSpriteCount));
             Rectangles = RegisterTable(new RectangleTable(this, InitialRectangleCount));
-            TextInstances = RegisterTable(new TextInstanceTable(this, InitialTextLayoutCount));
+            TextBlocks = RegisterTable(new TextBlockTable(this, columnCount: 32));
             AudioClips = RegisterTable(new AudioClipTable(this, InitialAudioClipCount));
             VideoClips = RegisterTable(new VideoClipTable(this, InitialVideoClipCount));
             Choices = RegisterTable(new ChoiceTable(this, 32));
@@ -60,7 +59,7 @@ namespace NitroSharp
         public ThreadTable Threads { get; }
         public SpriteTable Sprites { get; }
         public RectangleTable Rectangles { get; }
-        public TextInstanceTable TextInstances { get; }
+        public TextBlockTable TextBlocks { get; }
         public AudioClipTable AudioClips { get; }
         public VideoClipTable VideoClips { get; }
         public ChoiceTable Choices { get; }
@@ -84,7 +83,7 @@ namespace NitroSharp
             return table.Get<T>(entity);
         }
 
-        public T GetMutEntityStruct<T>(Entity entity) where T : MutableEntityStruct
+        public T GetMutEntityStruct<T>(Entity entity) where T : MutEntityStruct
         {
             EntityTable table = GetTable<EntityTable>(entity);
             return table.GetMutable<T>(entity);
@@ -115,6 +114,16 @@ namespace NitroSharp
             }
         }
 
+        public MutTextBlock CreateTextBlock(string name, int renderPriority)
+        {
+            Entity entity = CreateEntity(name, EntityKind.TextBlock);
+            MutTextBlock block = GetMutEntityStruct<MutTextBlock>(entity);
+            block.Transform = Matrix4x4.Identity;
+            block.SortKey = new RenderItemKey((ushort)renderPriority, entity.Id);
+            block.TransformComponents.Scale = Vector3.One;
+            return block;
+        }
+
         public Entity CreateThreadEntity(in InterpreterThreadInfo threadInfo)
         {
             Entity entity = CreateEntity(threadInfo.Name, EntityKind.Thread);
@@ -134,15 +143,6 @@ namespace NitroSharp
         public Entity CreateRectangle(string name, int renderPriority, SizeF size, ref RgbaFloat color)
         {
             Entity entity = CreateVisual(name, EntityKind.Rectangle, renderPriority, size, ref color);
-            return entity;
-        }
-
-        public Entity CreateTextInstance(string name, TextLayout layout, int renderPriority, ref RgbaFloat color)
-        {
-            var bounds = new SizeF(layout.MaxBounds.Width, layout.MaxBounds.Height);
-            Entity entity = CreateVisual(name, EntityKind.Text, renderPriority, bounds, ref color);
-            TextInstances.Layouts.Set(entity, ref layout);
-            TextInstances.ClearFlags.Set(entity, true);
             return entity;
         }
 
@@ -226,7 +226,7 @@ namespace NitroSharp
             }
         }
 
-        private Entity CreateEntity(string name, EntityKind kind)
+        public Entity CreateEntity(string name, EntityKind kind)
         {
             if (_entities.TryGetValue(name, out _))
             {

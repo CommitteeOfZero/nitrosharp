@@ -21,6 +21,7 @@ namespace NitroSharp
         {
             _game = game;
             _logger = game.Logger;
+            _fontConfig = game.FontConfiguration;
         }
 
         private ContentManager Content => _game.Content;

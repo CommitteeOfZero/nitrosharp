@@ -25,10 +25,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\SomeAnonDev\veldrid\src\Veldrid.ImGui\Veldrid.ImGui.csproj" />
-    <ProjectReference Include="..\..\..\SomeAnonDev\veldrid\src\Veldrid.SDL2\Veldrid.SDL2.csproj" />
-    <ProjectReference Include="..\..\..\SomeAnonDev\veldrid\src\Veldrid.StartupUtilities\Veldrid.StartupUtilities.csproj" />
-    <ProjectReference Include="..\..\..\SomeAnonDev\veldrid\src\Veldrid\Veldrid.csproj" />
     <ProjectReference Include="..\NitroSharp.NsScriptCompiler\NitroSharp.NsScriptCompiler.csproj" />
   </ItemGroup>
 

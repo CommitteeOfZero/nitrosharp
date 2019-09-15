@@ -1,5 +1,4 @@
 ﻿using NitroSharp.Animation;
-using NitroSharp.Dialogue;
 using System.Collections.Generic;
 
 namespace NitroSharp
@@ -49,7 +48,8 @@ namespace NitroSharp
 
             // ScriptRunner -> Presenter
             BeginDialogueBlock,
-            BeginDialogueLine
+            BeginDialogueLine,
+            PresentDialogue
         }
 
         internal abstract class Message
@@ -98,10 +98,10 @@ namespace NitroSharp
             public Entity TextEntity { get; set; }
         }
 
-        internal sealed class BeginDialogueLineMessage : Message
+        internal sealed class PresentDialogueMessage : Message
         {
-            public override MessageKind Kind => MessageKind.BeginDialogueLine;
-            public DialogueLine DialogueLine { get; set; }
+            public override MessageKind Kind => MessageKind.PresentDialogue;
+            public Dialogue.TextBuffer TextBuffer { get; set; }
         }
     }
 }

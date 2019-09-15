@@ -7,27 +7,6 @@ using System.Runtime.CompilerServices;
 
 namespace NitroSharp
 {
-    internal abstract class EntityTable<S> : EntityTable where S : struct, EntityStruct
-    {
-        protected EntityTable(World world, ushort initialColumnCount)
-            : base(world, initialColumnCount)
-        {
-        }
-
-        public S this[ushort index]
-        {
-            get
-            {
-                var mut = new DummyEntityStruct
-                {
-                    Table = this,
-                    Index = index
-                };
-                return Unsafe.As<DummyEntityStruct, S>(ref mut);
-            }
-        }
-    }
-
     internal abstract class EntityTable
     {
         internal struct DummyEntityStruct
@@ -36,7 +15,7 @@ namespace NitroSharp
             public ushort Index;
         }
 
-        internal struct DummyMutableEntityStruct
+        internal struct DummyMutEntityStruct
         {
             public EntityTable Table;
             public Entity Entity;
@@ -111,15 +90,15 @@ namespace NitroSharp
             return Unsafe.As<DummyEntityStruct, T>(ref entityStruct);
         }
 
-        public T GetMutable<T>(Entity entity) where T : MutableEntityStruct
+        public T GetMutable<T>(Entity entity) where T : MutEntityStruct
         {
-            var entityStruct = new DummyMutableEntityStruct
+            var entityStruct = new DummyMutEntityStruct
             {
                 Table = this,
                 Entity = entity,
                 Index = LookupIndex(entity)
             };
-            return Unsafe.As<DummyMutableEntityStruct, T>(ref entityStruct);
+            return Unsafe.As<DummyMutEntityStruct, T>(ref entityStruct);
         }
 
         public void RearrangeSystemComponents<T>(ref T[] componentArray, List<T> recycledComponents)
@@ -193,21 +172,6 @@ namespace NitroSharp
             if (World.IsPrimary)
             {
                 _newEntities.Add(entity);
-            }
-        }
-
-        internal void ReplayChanges(EntityTable table, Row row)
-        {
-            foreach (LossyOperation c in table._lossyOperations)
-            {
-                if (c.Kind == LossyOperationKind.Erase)
-                {
-                    row.EraseValue(c.Column);
-                }
-                else if (c.Kind == LossyOperationKind.Move)
-                {
-                    row.MoveValue(srcIndex: c.Column, c.DstColumn);
-                }
             }
         }
 
