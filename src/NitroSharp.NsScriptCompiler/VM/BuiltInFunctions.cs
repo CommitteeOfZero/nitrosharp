@@ -76,7 +76,7 @@ namespace NitroSharp.NsScript.VM
         /// <summary>
         /// Original name: CreateColor.
         /// </summary>
-        public virtual void FillRectangle(string entityName, int priority, NsCoordinate x, NsCoordinate y, int width, int height, NsColor color) { }
+        public virtual void CreateRectangle(string entityName, int priority, NsCoordinate x, NsCoordinate y, int width, int height, NsColor color) { }
 
         /// <summary>
         /// Original name: CreateSound.

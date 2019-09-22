@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using NitroSharp.Experimental;
+
+#nullable enable
 
 namespace NitroSharp
 {
@@ -11,7 +12,7 @@ namespace NitroSharp
         public readonly string Query;
         public readonly bool IsEmpty;
 
-        public EntityQueryResult(World world, string query, List<ReadOnlyMemory<char>> querySegments)
+        public EntityQueryResult(OldWorld world, string query, List<ReadOnlyMemory<char>> querySegments)
         {
             Query = query;
             _executor = new QueryExecutor(world, Query, querySegments);
@@ -23,12 +24,12 @@ namespace NitroSharp
 
         internal struct QueryExecutor
         {
-            private readonly World _world;
-            private Dictionary<EntityName, Entity>.Enumerator _entityEnumerator;
+            private readonly OldWorld _world;
+            private Dictionary<string, OldEntity>.Enumerator _entityEnumerator;
             private readonly string _query;
             private readonly List<ReadOnlyMemory<char>> _querySegments;
 
-            public QueryExecutor(World world, string query, List<ReadOnlyMemory<char>> querySegments)
+            public QueryExecutor(OldWorld world, string query, List<ReadOnlyMemory<char>> querySegments)
                 : this()
             {
                 _world = world;
@@ -39,7 +40,7 @@ namespace NitroSharp
                 _firstMoveNextCall = true;
             }
 
-            public (Entity entity, EntityName name) Current { get; private set; }
+            public (OldEntity entity, string name) Current { get; private set; }
 
             public readonly bool EmptyResult;
             private bool _firstMoveNextCall;
@@ -56,8 +57,8 @@ namespace NitroSharp
                 if (!_query.Contains("*"))
                 {
                     if (Current.entity.IsValid) { return false; }
-                    bool result = _world.TryGetEntity(new EntityName(_query), out Entity entity);
-                    Current = (entity, new EntityName(_query));
+                    bool result = _world.TryGetEntity(_query, out OldEntity entity);
+                    Current = (entity, _query);
                     return result;
                 }
 
@@ -70,8 +71,8 @@ namespace NitroSharp
 
                 while (_entityEnumerator.MoveNext())
                 {
-                    KeyValuePair<EntityName, Entity> kvp = _entityEnumerator.Current;
-                    if (SatisfiesQuery(kvp.Key.OwnName))
+                    KeyValuePair<string, OldEntity> kvp = _entityEnumerator.Current;
+                    if (SatisfiesQuery(kvp.Key))
                     {
                         Current = (kvp.Value, kvp.Key);
                         return true;
@@ -81,7 +82,7 @@ namespace NitroSharp
                 return false;
             }
 
-            private bool SatisfiesQuery(ReadOnlySpan<char> entityName)
+            private bool SatisfiesQuery(string entityName)
             {
                 ReadOnlySpan<char> nameSegment = entityName;
                 bool firstSegment = true;
@@ -172,7 +173,7 @@ namespace NitroSharp
         private static readonly List<ReadOnlyMemory<char>> s_querySegments
             = new List<ReadOnlyMemory<char>>();
 
-        public static EntityQueryResult Query(this World world, string query)
+        public static EntityQueryResult Query(this OldWorld world, string query)
             => new EntityQueryResult(world, query, s_querySegments);
     }
 }

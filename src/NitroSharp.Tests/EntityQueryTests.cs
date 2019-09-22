@@ -8,7 +8,7 @@ namespace NitroSharp.Tests
     public class EntityQueryTests
     {
         private readonly string[][] _treeLevels;
-        private readonly World _world;
+        private readonly OldWorld _world;
 
         public EntityQueryTests()
         {
@@ -25,7 +25,7 @@ namespace NitroSharp.Tests
                 levels[level].Add(name);
             }
 
-            _world = new World(true);
+            _world = new OldWorld();
             entity("root");
             entity("root1");
             entity("root/e11");
@@ -76,7 +76,7 @@ namespace NitroSharp.Tests
         public static string[] ToArray(this EntityQueryResult queryResult)
         {
             var list = new List<string>();
-            foreach ((Entity _, string name) in queryResult)
+            foreach ((OldEntity _, string name) in queryResult)
             {
                 list.Add(name);
             }

@@ -63,7 +63,7 @@ namespace NitroSharp.Utilities
         public override int GetHashCode() => HashCode.Combine(Index, Version);
     }
 
-    internal sealed class InvalidHandleException : Exception
+    public sealed class InvalidHandleException : Exception
     {
         public InvalidHandleException(string message) : base(message)
         {

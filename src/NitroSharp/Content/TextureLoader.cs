@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using NitroSharp.Graphics;
+using NitroSharp.Primitives;
 using Veldrid;
 
 #nullable enable
@@ -23,6 +24,7 @@ namespace NitroSharp.Content
         }
 
         protected abstract Texture LoadStaging(Stream stream);
+        public abstract Size GetTextureDimensions(Stream stream);
 
         public Texture LoadTexture(Stream stream, bool staging)
         {
@@ -36,10 +38,11 @@ namespace NitroSharp.Content
                     PixelFormat.R8_G8_B8_A8_UNorm, TextureUsage.Sampled
                 ));
 
-                _cl.Begin();
-                _cl.CopyTexture(source: stagingTex, destination: sampledTex);
-                _cl.End();
-                _gd.SubmitCommands(_cl);
+                using CommandList cl = _gd.ResourceFactory.CreateCommandList();
+                cl.Begin();
+                cl.CopyTexture(source: stagingTex, destination: sampledTex);
+                cl.End();
+                _gd.SubmitCommands(cl);
                 // TODO: report the GL backend's quirk upstream
                 if (_gd.BackendType == GraphicsBackend.OpenGL)
                 {

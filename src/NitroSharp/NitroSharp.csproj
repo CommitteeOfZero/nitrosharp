@@ -13,6 +13,7 @@
   <ItemGroup>
     <Compile Remove="Old/**" />
     <Compile Remove="OldDialogue/**" />
+    <Compile Remove="OldWorld/**" />
   </ItemGroup>
   
   <ItemGroup>
@@ -31,11 +32,6 @@
     <PackageReference Include="FreeType.Binaries" Version="0.42.0" />
     <PackageReference Include="OpenALSoft.Binaries" Version="0.42.0" />
     <PackageReference Include="FFmpeg.Binaries" Version="0.42.0" />
-    
-    <PackageReference Include="System.Memory" Version="4.5.3" />
-    <PackageReference Include="System.Buffers" Version="4.5.0" />
-    <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="4.5.2" />
-    <PackageReference Include="System.Threading.Channels" Version="4.6.0-preview8.19405.3" />
 
     <PackageReference Include="Veldrid" Version="$(VeldridVersion)" />
     <PackageReference Include="Veldrid.SDL2" Version="$(VeldridVersion)" />

@@ -11,12 +11,22 @@ using System.Threading.Tasks;
 using Veldrid;
 using Veldrid.StartupUtilities;
 using System.Runtime.InteropServices;
+using NitroSharp.Experimental;
 
 namespace NitroSharp
 {
+    internal readonly struct FrameStamp
+    {
+        public readonly long FrameId;
+        public readonly long StopwatchTicks;
+
+        public FrameStamp(long frameId, long stopwatchTicks)
+            => (FrameId, StopwatchTicks) = (frameId, stopwatchTicks);
+    }
+
     public partial class Game : IDisposable
     {
-        private readonly bool UseWicOnWindows = false;
+        private readonly bool UseWicOnWindows = true;
 
         private readonly Stopwatch _gameTimer;
         private readonly Configuration _configuration;
@@ -30,7 +40,6 @@ namespace NitroSharp
         private Swapchain _swapchain;
         private readonly TaskCompletionSource<int> _initializingGraphics;
 
-        private SharpDX.WIC.ImagingFactory _wicFactory;
         private AudioDevice _audioDevice;
         private AudioSourcePool _audioSourcePool;
 
@@ -57,11 +66,7 @@ namespace NitroSharp
             _window.Mobile_SurfaceDestroyed += OnSurfaceDestroyed;
 
             _gameTimer = new Stopwatch();
-            _presenterWorld = _scriptingWorld = new World(isPrimary: true);
-            if (_configuration.UseDedicatedInterpreterThread)
-            {
-                _scriptingWorld = new World(isPrimary: false);
-            }
+            _presenterWorld = _scriptingWorld = new World();
         }
 
         internal ContentManager Content { get; private set; }
@@ -109,13 +114,12 @@ namespace NitroSharp
             var loadScriptTask = Task.Run((Action)_scriptRunner.LoadStartupScript);
             _presenter = new Presenter(this, _presenterWorld);
             await loadScriptTask;
-            _scriptRunner.StartInterpreter();
         }
 
         private void SetupFonts()
         {
             _glyphRasterizer.AddFonts(Directory.EnumerateFiles("Fonts"));
-            var defaultFont = new FontKey(_configuration.FontFamily, Text.FontStyle.Regular);
+            var defaultFont = new FontKey(_configuration.FontFamily, FontStyle.Regular);
             FontConfiguration = new FontConfiguration(
                 defaultFont,
                 italicFont: null,
@@ -184,22 +188,27 @@ namespace NitroSharp
 
         private void Tick(FrameStamp framestamp, float deltaMilliseconds)
         {
-            var scriptRunnerStatus = _scriptRunner.Tick();
-            switch (scriptRunnerStatus)
+            if (Content.ResolveTextures())
             {
-                case ScriptRunner.Status.AwaitingPresenterState:
-                    _scriptRunner.SyncTo(_presenter);
-                    _scriptRunner.Resume();
-                    break;
-                case ScriptRunner.Status.NewStateReady:
-                    _presenter.SyncTo(_scriptRunner);
-                    _scriptRunner.Resume();
-                    break;
-                case ScriptRunner.Status.Crashed:
-                    throw _scriptRunner.LastException;
-                case ScriptRunner.Status.Running:
-                default:
-                    break;
+                _presenterWorld.CommitActivateAnimations();
+                _presenter.ProcessNewEntities();
+                _presenterWorld.BeginFrame();
+
+                var scriptRunnerStatus = _scriptRunner.Tick();
+                switch (scriptRunnerStatus)
+                {
+                    case ScriptRunner.Status.AwaitingPresenterState:
+                        _scriptRunner.SyncTo(_presenter);
+                        break;
+                    case ScriptRunner.Status.NewStateReady:
+                        _presenter.SyncTo(_scriptRunner);
+                        break;
+                    case ScriptRunner.Status.Crashed:
+                        throw _scriptRunner.LastException;
+                    case ScriptRunner.Status.Running:
+                    default:
+                        break;
+                }
             }
 
             _presenter.Tick(framestamp, deltaMilliseconds);
@@ -225,6 +234,7 @@ namespace NitroSharp
         private void SetupGraphics(SwapchainSource swapchainSource)
         {
             var options = new GraphicsDeviceOptions(false, null, _configuration.EnableVSync);
+            options.PreferStandardClipSpaceYDirection = true;
 #if DEBUG
             options.Debug = true;
 #endif
@@ -273,11 +283,9 @@ namespace NitroSharp
             TextureLoader textureLoader;
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && UseWicOnWindows)
             {
-                _wicFactory = new SharpDX.WIC.ImagingFactory();
                 textureLoader = new WicTextureLoader(
                     _graphicsDevice,
-                    _texturePool,
-                    _wicFactory
+                    _texturePool
                 );
             }
             else
@@ -330,11 +338,12 @@ namespace NitroSharp
 
         public void Dispose()
         {
+            _audioSourcePool.Dispose();
+            _presenter.Dispose();
             _graphicsDevice.WaitForIdle();
             Content.Dispose();
             _glyphRasterizer.Dispose();
             _texturePool.Dispose();
-            _wicFactory?.Dispose();
             _swapchain.Dispose();
             _graphicsDevice.Dispose();
             _audioDevice.Dispose();

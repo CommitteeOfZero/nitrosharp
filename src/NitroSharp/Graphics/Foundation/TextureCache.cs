@@ -27,15 +27,6 @@ namespace NitroSharp.Graphics
         public override int GetHashCode() => Value.GetHashCode();
     }
 
-    internal readonly struct FrameStamp
-    {
-        public readonly long FrameId;
-        public readonly long StopwatchTicks;
-
-        public FrameStamp(long frameId, long stopwatchTicks)
-            => (FrameId, StopwatchTicks) = (frameId, stopwatchTicks);
-    }
-
     [StructLayout(LayoutKind.Auto)]
     internal readonly struct TextureLocation : GpuType
     {

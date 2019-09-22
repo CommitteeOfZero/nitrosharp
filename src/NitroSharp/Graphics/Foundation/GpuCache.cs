@@ -66,8 +66,9 @@ namespace NitroSharp.Graphics
             _gd = graphicsDevice;
             _blocksPerSlot = powerOfTwo(typeSizeInGpuBlocks);
             _slots = new FreeList();
-            _usingGL = _gd.BackendType == GraphicsBackend.OpenGL
-                    || _gd.BackendType == GraphicsBackend.OpenGLES;
+            //_usingGL = _gd.BackendType == GraphicsBackend.OpenGL
+            //        || _gd.BackendType == GraphicsBackend.OpenGLES;
+            _usingGL = false;
             _mapMode = _usingGL ? MapMode.Write : MapMode.ReadWrite;
             Resize(powerOfTwo(initialTextureDimension));
         }

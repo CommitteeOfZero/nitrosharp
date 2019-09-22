@@ -1,4 +1,5 @@
 ﻿using NitroSharp.Animation;
+using NitroSharp.Experimental;
 using NitroSharp.NsScript.Compiler;
 using NitroSharp.NsScript.VM;
 using System;
@@ -7,7 +8,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 
 #nullable enable
 
@@ -27,15 +27,10 @@ namespace NitroSharp
 
             private readonly Configuration _configuration;
             private readonly Logger _logger;
-            private readonly bool _usingDedicatedThread;
-            private readonly CancellationTokenSource _shutdownCancellation;
             private readonly string _nssFolder;
             private readonly string _bytecodeCacheDir;
             private VirtualMachine? _nssInterpreter;
             private readonly NsBuiltins _builtinFunctions;
-
-            private volatile Status _status;
-            private Task? _interpreterProc;
 
             public Exception? LastException { get; private set; }
 
@@ -43,23 +38,15 @@ namespace NitroSharp
             {
                 _configuration = game._configuration;
                 _logger = game._logger;
-                _usingDedicatedThread = _configuration.UseDedicatedInterpreterThread;
                 _nssFolder = Path.Combine(_configuration.ContentRoot, "nss");
                 _bytecodeCacheDir = _nssFolder.Replace("nss", "nsx");
                 _builtinFunctions = new NsBuiltins(game);
                 _builtinFunctions.SetWorld(world);
-
-                _shutdownCancellation = new CancellationTokenSource();
             }
 
             public Status Tick()
             {
-                return _usingDedicatedThread ? _status : Run();
-            }
-
-            public void Resume()
-            {
-                _status = Status.Running;
+                return Run();
             }
 
             public void LoadStartupScript()
@@ -135,36 +122,6 @@ namespace NitroSharp
                 }
 
                 return true;
-            }
-
-            public void StartInterpreter()
-            {
-                if (_usingDedicatedThread)
-                {
-                    _interpreterProc = Task.Factory.StartNew(
-                        (Action)InterpreterLoop, TaskCreationOptions.LongRunning);
-                }
-            }
-
-            private void InterpreterLoop()
-            {
-                while (!_shutdownCancellation.IsCancellationRequested)
-                {
-                    while (_status != Status.Running)
-                    {
-                        Thread.Sleep(1);
-                    }
-
-                    try
-                    {
-                        _status = Run();
-                    }
-                    catch (Exception ex)
-                    {
-                        _status = Status.Crashed;
-                        LastException = ex;
-                    }
-                }
             }
 
             private Status Run()

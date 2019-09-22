@@ -10,7 +10,7 @@ namespace NitroSharp.Media.Decoding
 {
     internal sealed partial class MediaProcessingPipeline : IDisposable
     {
-        private static readonly uint AvFramePoolSize = 32;
+        private const uint AvFramePoolSize = 32;
         private static readonly uint AvFrameSize = (uint)Unsafe.SizeOf<AVFrame>();
 
         private static readonly int ErrorEAgain = ffmpeg.AVERROR(ffmpeg.EAGAIN);

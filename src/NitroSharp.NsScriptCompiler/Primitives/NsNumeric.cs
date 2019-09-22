@@ -24,28 +24,18 @@
         }
 
         public static implicit operator double(NsNumeric numeric)
-        {
-            return numeric.Value;
-        }
+            => numeric.Value;
 
         public static implicit operator float(NsNumeric numeric)
-        {
-            return (float)numeric.Value;
-        }
+            => (float)numeric.Value;
 
         public static explicit operator int(NsNumeric numeric)
-        {
-            return (int)numeric.Value;
-        }
+            => (int)numeric.Value;
 
         public static NsNumeric operator *(NsNumeric a, double m)
-        {
-            return new NsNumeric(a.Value * m, a.IsDelta);
-        }
+            => new NsNumeric(a.Value * m, a.IsDelta);
 
         public static NsNumeric operator /(NsNumeric a, double m)
-        {
-            return new NsNumeric(a.Value / m, a.IsDelta);
-        }
+            => new NsNumeric(a.Value / m, a.IsDelta);
     }
 }

@@ -9,7 +9,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\NitroSharp\NitroSharp.csproj" />
-    <PackageReference Include="System.Json" Version="4.5.0" />
+    <PackageReference Include="System.Json" Version="4.6.0" />
   </ItemGroup>
 
 </Project>

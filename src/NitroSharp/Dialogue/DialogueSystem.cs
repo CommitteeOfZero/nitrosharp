@@ -1,5 +1,6 @@
 ﻿using System.Collections.Immutable;
 using System.Diagnostics;
+using NitroSharp.Experimental;
 using NitroSharp.Interactivity;
 using NitroSharp.Text;
 using Veldrid;
@@ -28,7 +29,7 @@ namespace NitroSharp.Dialogue
         private readonly GlyphRasterizer _glyphRasterizer;
         private readonly InputTracker _inputTracker;
 
-        private readonly EntityTable.RefTypeRow<TextLayout> _textLayouts;
+        private readonly EntityStorage.ComponentStorage<TextLayout> _textLayouts;
 
         //private TextRevealAnimation? _revealAnimation;
         private int _currentSegment;
@@ -43,7 +44,7 @@ namespace NitroSharp.Dialogue
             _world = presenter.World;
             _glyphRasterizer = glyphRasterizer;
             _inputTracker = inputTracker;
-            _textLayouts = _world.TextBlocks.Layouts;
+            _textLayouts = _world.TextBlocks.Active.Layouts;
         }
 
         private void ResetState()
@@ -57,7 +58,7 @@ namespace NitroSharp.Dialogue
             if (input.Command == DialogueSystemCommand.BeginDialogue)
             {
                 ResetState();
-                TextLayout textLayout = _textLayouts.GetValue(input.TextEntity);
+                TextLayout textLayout = _textLayouts.GetRef(input.TextEntity);
                 textLayout.Clear();
                 AdvanceDialogue(ref input, textLayout);
                 return true;
@@ -87,7 +88,7 @@ namespace NitroSharp.Dialogue
                         Debug.Assert(input.TextBuffer != null);
                         if (_currentSegment < input.TextBuffer.Segments.Length)
                         {
-                            TextLayout textLayout = _textLayouts.GetValue(input.TextEntity);
+                            TextLayout textLayout = _textLayouts.GetRef(input.TextEntity);
                             AdvanceDialogue(ref input, textLayout);
                         }
                         else
@@ -175,7 +176,7 @@ namespace NitroSharp.Dialogue
                 }
             }
 
-            exit:
+        exit:
             return;
             //var animation = new TextRevealAnimation(_world, input.TextEntity, (ushort)revealStart);
             //_world.ActivateAnimation(animation);
@@ -194,6 +195,6 @@ namespace NitroSharp.Dialogue
             //        _world.ActivateAnimation(skip);
             //    }
             //}
-        } 
+        }
     }
 }

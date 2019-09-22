@@ -1,13 +1,11 @@
 ﻿using System;
-using NitroSharp.Media.Decoding;
-using NitroSharp.Content;
-using NitroSharp.NsScript;
 using NitroSharp.NsScript.Primitives;
 using NitroSharp.NsScript.VM;
 using NitroSharp.Primitives;
 using Veldrid;
 using NitroSharp.Dialogue;
 using NitroSharp.Text;
+using NitroSharp.Experimental;
 
 #nullable enable
 
@@ -17,7 +15,7 @@ namespace NitroSharp
     {
         private readonly FontConfiguration _fontConfig;
 
-        private string _lastDialogueBlockName;
+        private EntityName _lastDialogueBlockName;
         private string _lastVoiceName;
 
         private DialogueBlockToken _lastDialogueBlockToken;
@@ -32,11 +30,11 @@ namespace NitroSharp
         {
             RgbaFloat color = RgbaFloat.White;
             color.SetAlpha(0);
-            Entity box = _world.CreateRectangle(
-                entityName,
-                priority,
+            (Entity box, _) = _world.Rectangles.Uninitialized.New(
+                new EntityName(entityName),
                 new SizeF(width, height),
-                ref color
+                priority,
+                color
             );
             SetPosition(box, x, y);
         }
@@ -48,24 +46,26 @@ namespace NitroSharp
             int letterSpacing,
             int lineSpacing)
         {
-            if (_world.TryGetEntity(token.BoxName, out Entity dialogueBox))
+            if (_world.TryGetEntity(new EntityName(token.BoxName), out Entity dialogueBox))
             {
-                if (_lastDialogueBlockName != null)
+                if (_lastDialogueBlockName.Value != null)
                 {
-                    _world.RemoveEntity(_lastDialogueBlockName);
+                    _world.DestroyEntity(_lastDialogueBlockName);
                 }
 
-                MutTextBlock textBlock = _world.CreateTextBlock(token.BlockName, 99999);
-                _lastDialogueBlockName = token.BlockName;
-                textBlock.Layout = new TextLayout(
+                var layout = new TextLayout(
                     GlyphRasterizer,
                     Array.Empty<TextRun>(),
                     new Size((uint)maxWidth, (uint)maxHeight)
                 );
-                SetParent(textBlock.Entity, dialogueBox);
+                (Entity textBlock, _) = _world.TextBlocks.Uninitialized.New(
+                    new EntityName(token.BlockName), layout, 99999
+                );
+                _lastDialogueBlockName = new EntityName(token.BlockName);
+                _world.SetParent(textBlock, dialogueBox);
 
                 _lastDialogueBlockToken = token;
-                _lastTextEntity = textBlock.Entity;
+                _lastTextEntity = textBlock;
             }
         }
 
@@ -91,7 +91,7 @@ namespace NitroSharp
             //{
 
             //    MutTextBlock textBlock = _world.CreateTextBlock(entityName, priority);
-                
+
             //    var layout = new TextLayout(GlyphCacheEntry, textSegment.TextRuns, maxBounds: null)
             //}
         }
@@ -111,26 +111,26 @@ namespace NitroSharp
 
         private void HandleVoice(VoiceSegment voice)
         {
-            if (_lastVoiceName != null)
-            {
-                _world.RemoveEntity(_lastVoiceName);
-            }
+            //if (_lastVoiceName != null)
+            //{
+            //    _world.RemoveEntity(_lastVoiceName);
+            //}
 
-            if (voice.Action == NsVoiceAction.Play)
-            {
-                var assetId = new AssetId("voice/" + voice.FileName);
-                MediaPlaybackSession? voiceClip = Content.TryGetMediaClip(assetId, increaseRefCount: false);
-                if (voiceClip != null)
-                {
-                    Entity entity = _world.CreateAudioClip(voice.FileName, assetId, false);
-                    _world.AudioClips.Duration.Set(entity, voiceClip.AudioStream!.Duration);
-                    _lastVoiceName = voice.FileName;
-                }
-            }
-            else
-            {
-                _world.RemoveEntity(voice.FileName);
-            }
+            //if (voice.Action == NsVoiceAction.Play)
+            //{
+            //    var assetId = new AssetId("voice/" + voice.FileName);
+            //    MediaPlaybackSession? voiceClip = Content.TryGetMediaClip(assetId, increaseRefCount: false);
+            //    if (voiceClip != null)
+            //    {
+            //        Entity entity = _world.CreateAudioClip(voice.FileName, assetId, false);
+            //        _world.AudioClips.Duration.Set(entity, voiceClip.AudioStream!.Duration);
+            //        _lastVoiceName = voice.FileName;
+            //    }
+            //}
+            //else
+            //{
+            //    _world.RemoveEntity(voice.FileName);
+            //}
         }
 
         public override void WaitText(string id, TimeSpan time)

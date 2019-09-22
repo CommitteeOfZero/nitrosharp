@@ -6,6 +6,9 @@ using NitroSharp.Primitives;
 using NitroSharp.Text;
 using NitroSharp.Utilities;
 using Veldrid;
+using NitroSharp.Experimental;
+
+#nullable enable
 
 namespace NitroSharp.Graphics.Systems
 {
@@ -31,7 +34,7 @@ namespace NitroSharp.Graphics.Systems
         private readonly SpriteRenderer _spriteRenderer;
         private readonly RectangleRenderer _quadRenderer;
         private readonly TextRenderer _textRenderer;
-        private readonly VideoRenderer _videoRenderer;
+        //private readonly VideoRenderer _videoRenderer;
 
         public RenderContext RenderContext { get; }
 
@@ -120,9 +123,14 @@ namespace NitroSharp.Graphics.Systems
             _spriteRenderer = new SpriteRenderer(world, context, content);
             _quadRenderer = new RectangleRenderer(world, context);
             _textRenderer = new TextRenderer(world, context);
-            _videoRenderer = new VideoRenderer(world, context, content);
+            //_videoRenderer = new VideoRenderer(world, context, content);
 
             RenderContext = context;
+        }
+
+        internal void ProcessNewEntities()
+        {
+            _spriteRenderer.ProcessNewSprites();
         }
 
         private SizeF DesignResolution { get; }
@@ -151,7 +159,7 @@ namespace NitroSharp.Graphics.Systems
 
         public void ProcessTransforms()
         {
-            TransformProcessor.ProcessTransforms(_world, _world.Sprites);
+            TransformProcessor.ProcessTransforms(_world, _world.Sprites.Active);
         }
 
         public void RenderFrame(in FrameStamp framestamp)
@@ -162,19 +170,21 @@ namespace NitroSharp.Graphics.Systems
 
             _mainBucket.Begin();
             _quadGeometryStream.Begin();
+            _quadBatcher.BeginFrame();
             _textureCache.BeginFrame(framestamp);
             _textRenderer.BeginFrame();
 
             _textRenderer.PreprocessTextBlocks(_world.TextBlocks);
             _spriteRenderer.ProcessSprites();
-            _quadRenderer.ProcessRectangles(_world.Rectangles);
-            _videoRenderer.ProcessVideoClips();
+            _quadRenderer.ProcessRectangles();
+            //_videoRenderer.ProcessVideoClips();
 
             _textRenderer.ResolveGlyphs();
 
             _textureCache.EndFrame(_cl);
             _textRenderer.EndFrame();
             _quadGeometryStream.End(_cl);
+            _quadBatcher.EndFrame(_cl);
             _mainBucket.End(_cl);
 
             _cl.End();
@@ -188,8 +198,7 @@ namespace NitroSharp.Graphics.Systems
 
         public void Dispose()
         {
-            _textRenderer.Dispose();
-            _videoRenderer.Dispose();
+            //_videoRenderer.Dispose();
 
             _quadBatcher.Dispose();
             _quadGeometryStream.Dispose();
@@ -202,7 +211,7 @@ namespace NitroSharp.Graphics.Systems
             _viewProjectionBuffer.Dispose();
             _viewProjectionLayout.Dispose();
 
-            _textRenderer.Dispose();
+            //_textRenderer.Dispose();
             _textureCache.Dispose();
 
             _cl.Dispose();

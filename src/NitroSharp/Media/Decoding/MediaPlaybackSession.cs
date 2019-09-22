@@ -13,7 +13,7 @@ namespace NitroSharp.Media.Decoding
 {
     public sealed class MediaPlaybackSession : IDisposable
     {
-        private static readonly uint PacketPoolSize = 32;
+        private const uint PacketPoolSize = 32;
 
         private readonly ProcessingContext[] _processingContexts;
         private readonly UnmanagedMemoryPool _packetPool;

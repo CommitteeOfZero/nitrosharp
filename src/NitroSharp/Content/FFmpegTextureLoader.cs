@@ -82,5 +82,10 @@ namespace NitroSharp.Content
             base.Dispose();
             _frameConverter.Dispose();
         }
+
+        public override Size GetTextureDimensions(Stream stream)
+        {
+            throw new System.NotImplementedException();
+        }
     }
 }

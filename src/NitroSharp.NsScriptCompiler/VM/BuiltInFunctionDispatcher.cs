@@ -61,6 +61,9 @@ namespace NitroSharp.NsScript.VM
                 case BuiltInFunction.CreateClipTexture:
                     CreateClipTexture(ref args);
                     break;
+                case BuiltInFunction.DrawTransition:
+                    DrawTransition(ref args);
+                    break;
 
                 case BuiltInFunction.Fade:
                     Fade(ref args);
@@ -82,7 +85,7 @@ namespace NitroSharp.NsScript.VM
                     LoadText(ref args);
                     break;
                 case BuiltInFunction.WaitText:
-                    WaitText(ref args);
+                    WaitText();
                     break;
 
                 case BuiltInFunction.CreateSound:
@@ -132,7 +135,7 @@ namespace NitroSharp.NsScript.VM
                     Integer(ref args);
                     break;
                 case BuiltInFunction.Time:
-                    Time(ref args);
+                    Time();
                     break;
                 case BuiltInFunction.ScrollbarValue:
                     ScrollbarValue(ref args);
@@ -146,14 +149,15 @@ namespace NitroSharp.NsScript.VM
 
         private void CreateText(ref ArgConsumer args)
         {
-            string entityName = args.TakeEntityName();
-            int priority = args.TakeInt();
-            NsCoordinate x = args.TakeCoordinate();
-            NsCoordinate y = args.TakeCoordinate();
-            NsDimension width = args.TakeDimension();
-            NsDimension height = args.TakeDimension();
-            string pxmlText = args.TakeString();
-            _impl.CreateText(entityName, priority, x, y, width, height, pxmlText);
+            _impl.CreateText(
+                args.TakeEntityName(),
+               priority: args.TakeInt(),
+               x: args.TakeCoordinate(),
+               y: args.TakeCoordinate(),
+               width: args.TakeDimension(),
+               height: args.TakeDimension(),
+               pxmlText: args.TakeString()
+            );
         }
 
         private void ScrollbarValue(ref ArgConsumer args)
@@ -191,7 +195,7 @@ namespace NitroSharp.NsScript.VM
                 height: args.TakeInt());
         }
 
-        private void WaitText(ref ArgConsumer args)
+        private void WaitText()
         {
             _impl.WaitText(string.Empty, default);
         }
@@ -303,6 +307,22 @@ namespace NitroSharp.NsScript.VM
                 args.TakeAnimDelay(duration));
         }
 
+        private void DrawTransition(ref ArgConsumer args)
+        {
+            string entityName = args.TakeEntityName();
+            TimeSpan duration = args.TakeTimeSpan();
+            _impl.DrawTransition(
+                entityName,
+                duration,
+                initialOpacity: args.TakeRational(),
+                finalOpacity: args.TakeRational(),
+                feather: args.TakeRational(),
+                args.TakeEasingFunction(),
+                maskFileName: args.TakeString(),
+                delay: args.TakeAnimDelay(duration)
+            );
+        }
+
         private void SetAlias(ref ArgConsumer args)
         {
             _impl.SetAlias(
@@ -350,7 +370,7 @@ namespace NitroSharp.NsScript.VM
                 return args.TakeColor();
             }
 
-            _impl.FillRectangle(
+            _impl.CreateRectangle(
                 args.TakeEntityName(),
                 priority: args.TakeInt(),
                 x: args.TakeCoordinate(),
@@ -399,7 +419,7 @@ namespace NitroSharp.NsScript.VM
                 args.TakeEntityName());
         }
 
-        private void Time(ref ArgConsumer args)
+        private void Time()
         {
             SetResult(ConstantValue.Integer(0));
         }

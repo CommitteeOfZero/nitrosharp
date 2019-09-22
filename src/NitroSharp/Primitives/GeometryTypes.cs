@@ -259,6 +259,22 @@ namespace NitroSharp.Primitives
             Height = size.Height;
         }
 
+        public RectangleF(Vector2 position, Size size)
+        {
+            X = position.X;
+            Y = position.Y;
+            Width = size.Width;
+            Height = size.Height;
+        }
+
+        public RectangleF(Vector2 position, Vector2 size)
+        {
+            X = position.X;
+            Y = position.Y;
+            Width = size.X;
+            Height = size.Y;
+        }
+
         public bool Contains(Vector2 point)
         {
             return point.X >= X

@@ -1,10 +1,12 @@
 ﻿using NitroSharp.NsScript;
 using System;
 using System.Numerics;
-using NitroSharp.Logic.Components;
 using NitroSharp.Primitives;
 using Veldrid;
 using NitroSharp.NsScript.Primitives;
+using NitroSharp.Experimental;
+using NitroSharp.Graphics;
+using NitroSharp.Animation;
 
 namespace NitroSharp
 {
@@ -17,10 +19,7 @@ namespace NitroSharp
             bool wait = delay == duration;
             foreach ((Entity entity, _) in QueryEntities(entityName))
             {
-                if (entity.IsVisual)
-                {
-                    FadeCore(entity, duration, opacity, easingFunction, wait);
-                }
+                FadeCore(entity, duration, opacity, easingFunction, wait);
             }
 
             if (delay > TimeSpan.Zero)
@@ -40,10 +39,10 @@ namespace NitroSharp
             Entity entity, TimeSpan duration, NsRational dstOpacity,
             NsEasingFunction easingFunction, bool wait)
         {
-            if (!entity.IsVisual) { return; }
-            RenderItem renderItem = _world.GetEntityStruct<RenderItem>(entity);
-            RgbaFloat color = renderItem.Color;
+            var storage = _world.GetStorage<RenderItemStorage>(entity);
+            if (storage == null) { return; }
             float adjustedOpacity = dstOpacity.Rebase(1.0f);
+            ref RgbaFloat color = ref storage.CommonProperties.GetRef(entity).Color;
             if (duration > TimeSpan.Zero)
             {
                 var animation = new FadeAnimation(entity, duration, easingFunction)
@@ -60,7 +59,15 @@ namespace NitroSharp
             }
             else
             {
-                renderItem.AsMutable().Color.SetAlpha(adjustedOpacity);
+                color.SetAlpha(adjustedOpacity);
+                if (adjustedOpacity > 0.0f)
+                {
+                    _world.ScheduleEnableEntity(entity);
+                }
+                else
+                {
+                    _world.ScheduleDisableEntity(entity);
+                }
             }
         }
 
@@ -72,10 +79,7 @@ namespace NitroSharp
             bool wait = delay == duration;
             foreach ((Entity entity, _) in QueryEntities(entityName))
             {
-                if (entity.IsVisual)
-                {
-                    MoveCore(entity, duration, dstX, dstY, easingFunction, wait);
-                }
+                MoveCore(entity, duration, dstX, dstY, easingFunction, wait);
             }
 
             if (delay > TimeSpan.Zero)
@@ -96,8 +100,8 @@ namespace NitroSharp
             NsCoordinate dstX, NsCoordinate dstY,
             NsEasingFunction easingFunction, bool wait)
         {
-            MutRenderItem renderItem = _world.GetMutEntityStruct<MutRenderItem>(entity);
-            ref Vector3 position = ref renderItem.TransformComponents.Position;
+            ref Vector3 position = ref _world.GetStorage<RenderItemStorage>(entity)
+                .TransformComponents.GetRef(entity).Position;
 
             float targetX = dstX.Origin == NsCoordinateOrigin.CurrentValue
                 ? position.X + dstX.Value
@@ -136,10 +140,7 @@ namespace NitroSharp
             bool wait = delay == duration;
             foreach ((Entity entity, _) in QueryEntities(entityName))
             {
-                if (entity.IsVisual)
-                {
-                    ZoomCore(entity, duration, dstScaleX, dstScaleY, easingFunction, wait);
-                }
+                ZoomCore(entity, duration, dstScaleX, dstScaleY, easingFunction, wait);
             }
 
             if (delay > TimeSpan.Zero)
@@ -160,9 +161,8 @@ namespace NitroSharp
             NsRational dstScaleX, NsRational dstScaleY,
             NsEasingFunction easingFunction, bool suspendThread)
         {
-            MutRenderItem renderItem = _world.GetMutEntityStruct<MutRenderItem>(entity);
-            ref Vector3 scale = ref renderItem.TransformComponents.Scale;
-
+            ref Vector3 scale = ref _world.GetStorage<RenderItemStorage>(entity)
+                .TransformComponents.GetRef(entity).Scale;
             dstScaleX = dstScaleX.Rebase(1.0f);
             dstScaleY = dstScaleY.Rebase(1.0f);
 
@@ -218,7 +218,7 @@ namespace NitroSharp
         //}
 
         //private static void RotateCore(
-        //    OldEntity entity, TimeSpan duration,
+        //    Entity entity, TimeSpan duration,
         //    NsNumeric dstRotationX, NsNumeric dstRotationY, NsNumeric dstRotationZ,
         //    NsEasingFunction easingFunction)
         //{
@@ -260,7 +260,7 @@ namespace NitroSharp
         //}
 
         //private static void MoveCubeCore(
-        //    OldEntity entity, TimeSpan duration,
+        //    Entity entity, TimeSpan duration,
         //    NsNumeric dstTranslationX, NsNumeric dstTranslationY, NsNumeric dstTranslationZ,
         //    NsEasingFunction easingFunction)
         //{

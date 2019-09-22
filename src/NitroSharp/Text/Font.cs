@@ -1,6 +1,8 @@
 ﻿using System;
 using FreeTypeBindings;
 
+#nullable enable
+
 namespace NitroSharp.Text
 {
     internal readonly struct FontKey : IEquatable<FontKey>

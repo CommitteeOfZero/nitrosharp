@@ -1,104 +1,217 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Numerics;
+using System.Runtime.CompilerServices;
 using NitroSharp.Animation;
 using NitroSharp.Graphics;
-using NitroSharp.Media;
-using NitroSharp.Content;
-using NitroSharp.Primitives;
 using NitroSharp.Utilities;
-using Veldrid;
 
 #nullable enable
 
-namespace NitroSharp
+namespace NitroSharp.Experimental
 {
+    internal readonly struct Entity : IEquatable<Entity>
+    {
+        public readonly uint Index;
+        public readonly uint Version;
+
+        public Entity(uint index, uint verison)
+            => (Index, Version) = (index, verison);
+
+        public static Entity Invalid => default;
+
+        public bool IsValid => Version > 0;
+
+        public bool Equals(Entity other)
+            => Index == other.Index && Version == other.Version;
+
+        public override int GetHashCode()
+            => HashCode.Combine(Index, Version);
+    }
+
     internal sealed class World
     {
-        public const ushort InitialCapacity = 1024;
-        public const ushort InitialSpriteCount = 768;
-        public const ushort InitialRectangleCount = 32;
-        public const ushort InitialTextLayoutCount = 32;
-        public const ushort InitialAudioClipCount = 64;
-        public const ushort InitialVideoClipCount = 4;
+        public struct EntityPointer
+        {
+            public EntityStorage? Storage;
+            public uint IndexInStorage;
+        }
 
-        private readonly Dictionary<string, Entity> _entities;
-        private readonly Dictionary<string, string> _aliases;
-        private readonly List<EntityTable> _tables;
-        private ArrayBuilder<EntityEvent> _entityEvents;
-        private ushort _nextEntityId = 1;
+        private const uint InitialVersion = 1;
+        private const uint None = uint.MaxValue;
+
+        private EntityPointer[] _entityPointers;
+        private uint[] _versionByEntity;
+        private Entity[] _parentByEntity;
+        private SmallList<Entity>[] _childrenByEntity;
+        private bool[] _isLockedByEntity;
+
+        private uint _entityCount;
+        private uint _nextFreeSlot;
+
+        private readonly Dictionary<EntityName, Entity> _entities;
+        private readonly Dictionary<EntityName, EntityName> _aliases;
+        private readonly List<EntityHub> _entityHubs;
 
         private readonly Dictionary<AnimationDictionaryKey, PropertyAnimation> _activeAnimations;
         private readonly List<(AnimationDictionaryKey key, PropertyAnimation anim)> _animationsToDeactivate;
-        private readonly List<AnimationEvent> _animationEvents;
+        private readonly List<(AnimationDictionaryKey, PropertyAnimation)> _queuedAnimations;
 
-        public World(bool isPrimary)
+        private readonly List<(Entity entity, bool enable)> _entitiesToEnable;
+
+        public World()
         {
-            IsPrimary = isPrimary;
-            _entities = new Dictionary<string, Entity>(InitialCapacity);
-            _aliases = new Dictionary<string, string>();
-            _entityEvents = new ArrayBuilder<EntityEvent>(initialCapacity: 128);
-            _tables = new List<EntityTable>(8);
-
-            Threads = RegisterTable(new ThreadTable(this, 32));
-            Sprites = RegisterTable(new SpriteTable(this, InitialSpriteCount));
-            Rectangles = RegisterTable(new RectangleTable(this, InitialRectangleCount));
-            TextBlocks = RegisterTable(new TextBlockTable(this, columnCount: 32));
-            AudioClips = RegisterTable(new AudioClipTable(this, InitialAudioClipCount));
-            VideoClips = RegisterTable(new VideoClipTable(this, InitialVideoClipCount));
-            Choices = RegisterTable(new ChoiceTable(this, 32));
+            const int capacity = 1024;
+            _entityPointers = new EntityPointer[capacity];
+            _versionByEntity = new uint[capacity];
+            _parentByEntity = new Entity[capacity];
+            _childrenByEntity = new SmallList<Entity>[capacity];
+            _isLockedByEntity = new bool[capacity];
+            _nextFreeSlot = None;
+            _entities = new Dictionary<EntityName, Entity>();
+            _aliases = new Dictionary<EntityName, EntityName>();
 
             _activeAnimations = new Dictionary<AnimationDictionaryKey, PropertyAnimation>();
             _animationsToDeactivate = new List<(AnimationDictionaryKey key, PropertyAnimation anim)>();
-            _animationEvents = new List<AnimationEvent>();
+            _queuedAnimations = new List<(AnimationDictionaryKey, PropertyAnimation)>();
+            _entitiesToEnable = new List<(Entity entity, bool enable)>();
+
+            _entityHubs = new List<EntityHub>();
+            Rectangles = AddHub(hub => new RectangleStorage(hub, 16));
+            Sprites = AddHub(hub => new SpriteStorage(hub, 512));
+            Images = AddHub(hub => new ImageStorage(hub, 512));
+            TextBlocks = AddHub(hub => new TextBlockStorage(hub, 16));
         }
 
-        public bool IsPrimary { get; }
-
-        public ThreadTable Threads { get; }
-        public SpriteTable Sprites { get; }
-        public RectangleTable Rectangles { get; }
-        public TextBlockTable TextBlocks { get; }
-        public AudioClipTable AudioClips { get; }
-        public VideoClipTable VideoClips { get; }
-        public ChoiceTable Choices { get; }
-
-        public Dictionary<string, Entity>.Enumerator EntityEnumerator => _entities.GetEnumerator();
+        public Dictionary<EntityName, Entity>.Enumerator EntityEnumerator => _entities.GetEnumerator();
         public Dictionary<AnimationDictionaryKey, PropertyAnimation>.ValueCollection AttachedAnimations
             => _activeAnimations.Values;
 
-        private T RegisterTable<T>(T table) where T : EntityTable
+        public EntityHub<RectangleStorage> Rectangles { get; }
+        public EntityHub<SpriteStorage> Sprites { get; }
+        public EntityHub<ImageStorage> Images { get; }
+        public EntityHub<TextBlockStorage> TextBlocks { get; }
+
+        private EntityHub<T> AddHub<T>(Func<EntityHub, T> factory) where T : EntityStorage
         {
-            _tables.Add(table);
-            return table;
+            var hub = new EntityHub<T>(this, factory);
+            _entityHubs.Add(hub);
+            return hub;
         }
 
-        public T GetTable<T>(Entity entity) where T : EntityTable
-            => (T)_tables[(int)entity.Kind];
-
-        public T GetEntityStruct<T>(Entity entity) where T : EntityStruct
+        public void BeginFrame()
         {
-            EntityTable table = GetTable<EntityTable>(entity);
-            return table.Get<T>(entity);
+            foreach (EntityHub hub in _entityHubs)
+            {
+                ReadOnlySpan<Entity> activeEntities = hub.GetEntities(StorageArea.Active);
+                ReadOnlySpan<Entity> uninitialized = hub.GetEntities(StorageArea.Uninitialized);
+                int dstIndexStart = activeEntities.Length;
+                for (int i = 0; i < uninitialized.Length; i++)
+                {
+                    Entity entity = uninitialized[i];
+                    ref EntityPointer ptr = ref _entityPointers[entity.Index];
+                    ptr.Storage = hub.GetStorage(StorageArea.Active);
+                    ptr.IndexInStorage = (uint)(dstIndexStart + i);
+                }
+                hub.BeginFrame();
+            }
+
+            foreach ((Entity entity, bool enable) in _entitiesToEnable)
+            {
+                if (Exists(entity))
+                {
+                    ToggleEnableEntity(entity, enable);
+                }
+            }
+            _entitiesToEnable.Clear();
         }
 
-        public T GetMutEntityStruct<T>(Entity entity) where T : MutEntityStruct
+
+        public Entity CreateEntity(EntityName name, EntityStorage storage)
         {
-            EntityTable table = GetTable<EntityTable>(entity);
-            return table.GetMutable<T>(entity);
+            Entity entity = CreateEntityCore(storage);
+            _entities[name] = entity;
+            if (name.Parent != null)
+            {
+                var parentName = new EntityName(name.Parent);
+                if (_entities.TryGetValue(parentName, out Entity parent))
+                {
+                    _parentByEntity[entity.Index] = parent;
+                    _childrenByEntity[parent.Index].Add(entity);
+                }
+            }
+            return entity;
         }
 
-        public bool TryGetEntity(string name, out Entity entity)
+        private Entity CreateEntityCore(EntityStorage storage)
+        {
+            EnsureCapacity();
+            uint freeSlot = _nextFreeSlot;
+            uint entityCount = _entityCount;
+            uint index = freeSlot != None ? freeSlot : entityCount;
+            ref EntityPointer ptr = ref _entityPointers[index];
+            ref uint version = ref _versionByEntity[index];
+            if (freeSlot != None)
+            {
+                _nextFreeSlot = ptr.IndexInStorage;
+            }
+            else
+            {
+                version = InitialVersion;
+            }
+            ptr.Storage = storage;
+            uint indexInStorage = storage.Insert();
+            ptr.IndexInStorage = indexInStorage;
+            var entity = new Entity(index, version);
+            storage.SetEntity(ptr.IndexInStorage, entity);
+            _entityCount++;
+            return entity;
+        }
+
+        public Entity GetEntity(EntityName name)
+            => _entities.TryGetValue(name, out Entity entity)
+                ? entity : Entity.Invalid;
+
+        public bool TryGetEntity(EntityName name, out Entity entity)
             => _entities.TryGetValue(name, out entity);
 
-        public bool IsEntityAlive(Entity entity)
+        public T GetStorage<T>(Entity entity) where T : class
         {
-            var table = GetTable<EntityTable>(entity);
-            return table.EntityExists(entity);
+            EnsureExists(entity);
+            return _entityPointers[entity.Index].Storage as T;
         }
 
-        public void SetAlias(string name, string alias)
+        public EntityPointer LookupIndexInStorage(Entity entity)
+        {
+            EnsureExists(entity);
+            return _entityPointers[entity.Index];
+        }
+
+        public bool Exists(Entity entity)
+        {
+            return _versionByEntity[entity.Index] == entity.Version;
+        }
+
+        public Entity GetParent(Entity entity)
+        {
+            EnsureExists(entity);
+            return _parentByEntity[entity.Index];
+        }
+
+        public void SetParent(Entity entity, Entity parent)
+        {
+            EnsureExists(entity);
+            EnsureExists(parent);
+            _parentByEntity[entity.Index] = parent;
+        }
+
+        public ReadOnlySpan<Entity> GetChildren(Entity entity)
+        {
+            EnsureExists(entity);
+            return _childrenByEntity[entity.Index].Enumerate();
+        }
+
+        public void SetAlias(EntityName name, EntityName alias)
         {
             if (TryGetEntity(name, out Entity entity) || TryGetEntity(alias, out entity))
             {
@@ -106,96 +219,95 @@ namespace NitroSharp
                 _entities[alias] = entity;
                 _aliases[name] = alias;
                 _aliases[alias] = name;
-                ref EntityEvent evt = ref _entityEvents.Add();
-                evt.EventKind = EntityEventKind.AliasAdded;
-                evt.Entity = entity;
-                evt.EntityName = name;
-                evt.Alias = alias;
             }
         }
 
-        public MutTextBlock CreateTextBlock(string name, int renderPriority)
+        public void LockEntity(Entity entity)
         {
-            Entity entity = CreateEntity(name, EntityKind.TextBlock);
-            MutTextBlock block = GetMutEntityStruct<MutTextBlock>(entity);
-            block.Transform = Matrix4x4.Identity;
-            block.SortKey = new RenderItemKey((ushort)renderPriority, entity.Id);
-            block.TransformComponents.Scale = Vector3.One;
-            return block;
+            EnsureExists(entity);
+            _isLockedByEntity[entity.Index] = true;
         }
 
-        public Entity CreateThreadEntity(in InterpreterThreadInfo threadInfo)
+        public void UnlockEntity(Entity entity)
         {
-            Entity entity = CreateEntity(threadInfo.Name, EntityKind.Thread);
-            Threads.Infos.Set(entity, threadInfo);
-            return entity;
+            EnsureExists(entity);
+            _isLockedByEntity[entity.Index] = false;
         }
 
-        public Entity CreateSprite(
-            string name, AssetId image, in RectangleF sourceRectangle,
-            int renderPriority, SizeF size, ref RgbaFloat color)
+        public bool IsLocked(Entity entity)
         {
-            Entity entity = CreateVisual(name, EntityKind.Sprite, renderPriority, size, ref color);
-            Sprites.ImageSources.Set(entity, new ImageSource(image, sourceRectangle));
-            return entity;
+            EnsureExists(entity);
+            return _isLockedByEntity[entity.Index];
         }
 
-        public Entity CreateRectangle(string name, int renderPriority, SizeF size, ref RgbaFloat color)
+        public void ScheduleEnableEntity(Entity entity)
+            => _entitiesToEnable.Add((entity, enable: true));
+
+        public void ScheduleDisableEntity(Entity entity)
+            => _entitiesToEnable.Add((entity, enable: false));
+
+        public void EnableEntity(Entity entity)
+           => ToggleEnableEntity(entity, enable: true);
+
+        public void DisableEntity(Entity entity)
+            => ToggleEnableEntity(entity, enable: false);
+
+        private void ToggleEnableEntity(Entity entity, bool enable)
         {
-            Entity entity = CreateVisual(name, EntityKind.Rectangle, renderPriority, size, ref color);
-            return entity;
+            EnsureExists(entity);
+            ref EntityPointer ptr = ref _entityPointers[entity.Index];
+            Debug.Assert(ptr.Storage != null);
+            EntityHub hub = ptr.Storage.Hub;
+            EntityStorage uninitializedStorage = hub.GetStorage(StorageArea.Uninitialized);
+            if (ReferenceEquals(ptr.Storage, uninitializedStorage))
+            {
+                throw new InvalidOperationException("Cannot enable or disable an uninitialized entity.");
+            }
+            EntityStorage activeStorage = hub.GetStorage(StorageArea.Active);
+            EntityStorage inactiveStorage = hub.GetStorage(StorageArea.Inactive);
+            bool enabled = ReferenceEquals(ptr.Storage, activeStorage);
+            if (enabled != enable)
+            {
+                (EntityStorage src, EntityStorage dst) = (enabled, enable) switch
+                {
+                    (true, false) => (activeStorage, inactiveStorage),
+                    (false, true) => (inactiveStorage, activeStorage),
+                    _ => throw new Exception("Unreachable")
+                };
+                EntityMove move = src.MoveEntity(ptr.IndexInStorage, dst);
+                FixPointer(move);
+                ptr.Storage = dst;
+                ptr.IndexInStorage = dst.Count - 1;
+            }
         }
 
-        public Entity CreateAudioClip(string name, AssetId asset, bool enableLooping)
+        public void DestroyEntity(EntityName name)
         {
-            Entity entity = CreateEntity(name, EntityKind.AudioClip);
-            AudioClips.Asset.Set(entity, asset);
-            AudioClips.LoopData.Set(entity, new MediaClipLoopData(enableLooping, null));
-            AudioClips.Volume.Set(entity, 1.0f);
-            return entity;
+            if (TryGetEntity(name, out Entity entity))
+            {
+                DestroyEntity(entity);
+                _entities.Remove(name);
+                _aliases.Remove(name);
+            }
         }
 
-        public Entity CreateVideoClip(string name, AssetId asset, bool enableLooping, int renderPriority, ref RgbaFloat color)
+        private void DestroyEntity(Entity entity)
         {
-            Entity entity = CreateVisual(name, EntityKind.VideoClip, renderPriority, default, ref color);
-            VideoClips.Asset.Set(entity, asset);
-            VideoClips.LoopData.Set(entity, new MediaClipLoopData(enableLooping, null));
-            VideoClips.Volume.Set(entity, 1.0f);
-            return entity;
-        }
+            EnsureExists(entity);
+            ref EntityPointer ptr = ref _entityPointers[entity.Index];
+            uint indexInStorage = ptr.IndexInStorage;
+            Debug.Assert(ptr.Storage != null);
+            EntityStorage storage = ptr.Storage;
+            ptr.Storage = null;
+            ptr.IndexInStorage = _nextFreeSlot;
+            _versionByEntity[entity.Index]++;
+            _parentByEntity[entity.Index] = Entity.Invalid;
+            _childrenByEntity[entity.Index] = default;
+            _isLockedByEntity[entity.Index] = false;
+            _nextFreeSlot = entity.Index;
 
-        public Entity CreateChoice(string name)
-        {
-            Entity entity = CreateEntity(name, EntityKind.Choice);
-            Choices.Name.Set(entity, name);
-            return entity;
-        }
-
-        private Entity CreateVisual(
-            string name, EntityKind kind,
-            int renderPriority, SizeF size, ref RgbaFloat color)
-        {
-            Entity entity = CreateEntity(name, kind);
-            RenderItemTable table = GetTable<RenderItemTable>(entity);
-            table.SortKeys.Set(entity, new RenderItemKey((ushort)renderPriority, entity.Id));
-            table.Bounds.Set(entity, size);
-            table.Colors.Set(entity, ref color);
-            table.TransformComponents.Mutate(entity).Scale = Vector3.One;
-            return entity;
-        }
-
-        public void ActivateAnimation<T>(T animation) where T : PropertyAnimation
-        {
-            var key = new AnimationDictionaryKey(animation.Entity, typeof(T));
-            _activeAnimations[key] = animation;
-            _animationEvents.Add(new AnimationEvent(key, AnimationEventKind.AnimationActivated));
-        }
-
-        public void DeactivateAnimation(PropertyAnimation animation)
-        {
-            var key = new AnimationDictionaryKey(animation.Entity, animation.GetType());
-            _animationsToDeactivate.Add((key, animation));
-            _animationEvents.Add(new AnimationEvent(key, AnimationEventKind.AnimationDeactivated));
+            EntityMove movedEntity = storage.Remove(indexInStorage);
+            FixPointer(movedEntity);
         }
 
         public bool TryGetAnimation<T>(Entity entity, out T? animation) where T : PropertyAnimation
@@ -206,11 +318,32 @@ namespace NitroSharp
             return result;
         }
 
+        public void ActivateAnimation<T>(T animation) where T : PropertyAnimation
+        {
+            var key = new AnimationDictionaryKey(animation.Entity, typeof(T));
+            _queuedAnimations.Add((key, animation));
+        }
+
+        public void DeactivateAnimation(PropertyAnimation animation)
+        {
+            var key = new AnimationDictionaryKey(animation.Entity, animation.GetType());
+            _animationsToDeactivate.Add((key, animation));
+        }
+
+        public void CommitActivateAnimations()
+        {
+            foreach ((AnimationDictionaryKey key, PropertyAnimation anim) in _queuedAnimations)
+            {
+                _activeAnimations[key] = anim;
+            }
+            _queuedAnimations.Clear();
+        }
+
         public void FlushDetachedAnimations()
         {
-            foreach ((var dictKey, var anim) in _animationsToDeactivate)
+            foreach ((AnimationDictionaryKey dictKey, PropertyAnimation anim) in _animationsToDeactivate)
             {
-                if (_activeAnimations.TryGetValue(dictKey, out var value) && value == anim)
+                if (_activeAnimations.TryGetValue(dictKey, out PropertyAnimation? value) && value == anim)
                 {
                     _activeAnimations.Remove(dictKey);
                 }
@@ -218,195 +351,40 @@ namespace NitroSharp
             _animationsToDeactivate.Clear();
         }
 
-        public void FlushFrameEvents()
+        private void EnsureCapacity()
         {
-            foreach (EntityTable table in _tables)
+            int length = _entityPointers.Length;
+            if (length == _entityCount)
             {
-                table.FlushFrameEvents();
+                int newLength = length * 2;
+                Array.Resize(ref _entityPointers, newLength);
+                Array.Resize(ref _versionByEntity, newLength);
+                Array.Resize(ref _parentByEntity, newLength);
+                Array.Resize(ref _childrenByEntity, newLength);
+                Array.Resize(ref _isLockedByEntity, newLength);
             }
         }
 
-        public Entity CreateEntity(string name, EntityKind kind)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void EnsureExists(in Entity entity)
         {
-            if (_entities.TryGetValue(name, out _))
+            static void invalid() => throw new InvalidOperationException(
+                "Entity does not exist."
+            );
+
+            if (entity.Version != _versionByEntity[entity.Index])
             {
-                RemoveEntity(name);
-            }
-
-            EntityTable table = _tables[(int)kind];
-            var handle = new Entity(_nextEntityId++, kind);
-            table.Insert(handle);
-            _entities[name] = handle;
-            ref EntityEvent evt = ref _entityEvents.Add();
-            evt.Entity = handle;
-            evt.EntityName = name;
-            evt.EventKind = EntityEventKind.EntityAdded;
-
-            var parsedName = new EntityName(name);
-            ReadOnlySpan<char> parentName = parsedName.Parent;
-            if (parentName.Length > 0
-                && TryGetEntity(parentName.ToString(), out Entity parent)
-                && parent.IsValid)
-            {
-                table.Parents.Set(handle, parent);
-            }
-
-            return handle;
-        }
-
-        public void RemoveEntity(string name)
-        {
-            Entity entity = RemoveEntityCore(name);
-            if (entity.IsValid)
-            {
-                ref EntityEvent evt = ref _entityEvents.Add();
-                evt.EntityName = name;
-                evt.Entity = entity;
-                evt.EventKind = EntityEventKind.EntityRemoved;
+                invalid();
             }
         }
 
-        private Entity RemoveEntityCore(string name)
+        private void FixPointer(EntityMove movedEntity)
         {
-            if (_entities.TryGetValue(name, out Entity entity))
+            if (!movedEntity.IsEmpty)
             {
-                _entities.Remove(name);
-                if (_aliases.TryGetValue(name, out string? alias))
-                {
-                    _entities.Remove(alias);
-                    _aliases.Remove(name);
-                    _aliases.Remove(alias);
-                }
-
-                var table = GetTable<EntityTable>(entity);
-                table.Remove(entity);
-                return entity;
+                _entityPointers[movedEntity.Entity.Index]
+                    .IndexInStorage = movedEntity.NewIndexInStorage;
             }
-
-            return Entity.Invalid;
-        }
-
-        public void MergeChangesInto(World target)
-        {
-            if (_entityEvents.Count > 0 && target._entityEvents.Count > 0)
-            {
-                ThrowCannotMerge();
-            }
-
-            for (int i = 0; i < _entityEvents.Count; i++)
-            {
-                ref EntityEvent evt = ref _entityEvents[i];
-                var table = target.GetTable<EntityTable>(evt.Entity);
-                switch (evt.EventKind)
-                {
-                    case EntityEventKind.EntityAdded:
-                        table.Insert(evt.Entity);
-                        target._entities[evt.EntityName] = evt.Entity;
-                        target._nextEntityId++;
-                        break;
-                    case EntityEventKind.EntityRemoved:
-                        target.RemoveEntityCore(evt.EntityName);
-                        break;
-                    case EntityEventKind.AliasAdded:
-                        target._entities[evt.Alias] = evt.Entity;
-                        target._entities[evt.EntityName] = evt.Entity;
-                        target._aliases[evt.EntityName] = evt.Alias;
-                        target._aliases[evt.Alias] = evt.EntityName;
-                        break;
-                }
-            }
-
-            for (int i = 0; i < _tables.Count; i++)
-            {
-                _tables[i].MergeChanges(target._tables[i]);
-                EntityTable.Debug_CompareTables(_tables[i], target._tables[i]);
-            }
-
-            foreach (AnimationEvent ae in _animationEvents)
-            {
-                if (ae.EventKind == AnimationEventKind.AnimationActivated)
-                {
-                    if (_activeAnimations.TryGetValue(ae.Key, out PropertyAnimation? animation))
-                    {
-                        target._activeAnimations[ae.Key] = animation;
-                    }
-                }
-                else
-                {
-                    target._activeAnimations.Remove(ae.Key);
-                }
-            }
-
-            Debug_EnsureMergedCorrectly(this, target);
-
-            _animationEvents.Clear();
-            _entityEvents.Reset();
-        }
-
-        [Conditional("DEBUG")]
-        private static void Debug_EnsureMergedCorrectly(World src, World target)
-        {
-            validateEntities(src);
-            validateEntities(target);
-
-            if (src._entityEvents.Count > 0)
-            {
-                if (src._entities.Count != target._entities.Count)
-                {
-                    var exclusiveToSource = new HashSet<string>(src._entities.Keys);
-                    exclusiveToSource.ExceptWith(target._entities.Keys);
-                    var exclusiveToTarget = new HashSet<string>(target._entities.Keys);
-                    exclusiveToTarget.ExceptWith(src._entities.Keys);
-
-                    Debug.Assert(src._entities.Count == target._entities.Count);
-                    Debug.Assert(src._nextEntityId == target._nextEntityId);
-                }
-            }
-
-            static void validateEntities(World world)
-            {
-                foreach (var kvp in world._entities)
-                {
-                    Debug.Assert(world.IsEntityAlive(kvp.Value));
-                }
-            }
-        }
-
-        private static void ThrowCannotMerge()
-            => throw new InvalidOperationException(
-                "Instances of game state that have conflicting change sets cannot be merged. This is likely a bug.");
-
-        private struct EntityEvent
-        {
-            public string EntityName;
-            public string Alias;
-            public Entity Entity;
-            public EntityEventKind EventKind;
-        }
-
-        private enum EntityEventKind
-        {
-            EntityAdded,
-            EntityRemoved,
-            AliasAdded
-        }
-
-        private readonly struct AnimationEvent
-        {
-            public AnimationEvent(AnimationDictionaryKey key, AnimationEventKind kind)
-            {
-                Key = key;
-                EventKind = kind;
-            }
-
-            public readonly AnimationDictionaryKey Key;
-            public readonly AnimationEventKind EventKind;
-        }
-
-        private enum AnimationEventKind
-        {
-            AnimationActivated,
-            AnimationDeactivated
         }
 
         internal readonly struct AnimationDictionaryKey : IEquatable<AnimationDictionaryKey>
@@ -427,7 +405,7 @@ namespace NitroSharp
                 => obj is AnimationDictionaryKey other && Equals(other);
 
             public override int GetHashCode()
-                => HashHelper.Combine(Entity.GetHashCode(), RuntimeType.GetHashCode());
+                => HashCode.Combine(Entity, RuntimeType);
         }
     }
 }

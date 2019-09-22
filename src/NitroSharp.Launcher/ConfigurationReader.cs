@@ -6,7 +6,7 @@ using Veldrid;
 
 namespace NitroSharp.Launcher
 {
-    internal sealed class ConfigurationReader
+    internal static class ConfigurationReader
     {
         public static Configuration Read(string configPath)
         {
@@ -83,9 +83,6 @@ namespace NitroSharp.Launcher
                     break;
                 case "dev.enableDiagnostics":
                     configuration.EnableDiagnostics = property.Value;
-                    break;
-                case "dev.useDedicatedInterpreterThread":
-                    configuration.UseDedicatedInterpreterThread = property.Value;
                     break;
                 case "dev.useUtf8":
                     configuration.UseUtf8 = property.Value;

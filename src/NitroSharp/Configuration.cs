@@ -18,7 +18,6 @@ namespace NitroSharp
         public string ContentRoot { get; set; }
         public bool EnableDiagnostics { get; set; }
         public string StartupScript { get; set; }
-        public bool UseDedicatedInterpreterThread { get; set; } = true;
         public bool UseUtf8 { get; set; } = false;
         public bool SkipUpToDateCheck { get; set; } = false;
 

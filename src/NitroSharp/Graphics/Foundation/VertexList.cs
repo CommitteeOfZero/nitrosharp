@@ -110,6 +110,16 @@ namespace NitroSharp.Graphics
             return span;
         }
 
+        public Span<TVertex> Append(uint count)
+        {
+            Debug.Assert(_bufferLocked);
+            EnsureCapacity(_cursor + count);
+            var dst = new Span<TVertex>((void*)_map.Data, (int)_capacity);
+            int cursor = _cursor;
+            _cursor += (int)count;
+            return dst.Slice(cursor, (int)count);
+        }
+
         public ushort Append(ReadOnlySpan<TVertex> vertices)
         {
             Debug.Assert(_bufferLocked);

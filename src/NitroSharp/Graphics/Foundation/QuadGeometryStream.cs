@@ -71,7 +71,14 @@ namespace NitroSharp.Graphics
             VertexBR.Position = Vector2.Transform(VertexBR.Position, transform);
 
             ushort vertexBase = VertexBuffer.Append(vertices);
-            ushort instanceBase = InstanceDataBuffer.Append(new QuadInstanceData { Color = color });
+            ushort instanceBase = InstanceDataBuffer.Append(new QuadInstanceData
+            {
+                Color = color
+            });
+
+            //uint vertexBase = VertexBuffer.Count;
+            //Span<QuadVertex> dst = VertexBuffer.Append(count: 4);
+            //vertices.CopyTo(dst);
             return (vertexBase, instanceBase);
         }
 

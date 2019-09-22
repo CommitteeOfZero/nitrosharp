@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
+using NitroSharp.Experimental;
 using NitroSharp.NsScript;
 using NitroSharp.NsScript.VM;
 using NitroSharp.Utilities;
@@ -37,6 +38,8 @@ namespace NitroSharp.Animation
         public float Progress => MathUtil.Clamp(_elapsed / (float)Duration.TotalMilliseconds, 0.0f, 1.0f);
         public bool HasCompleted => _elapsed >= Duration.TotalMilliseconds;
 
+        public World World { get; private set; }
+
         public bool Update(World world, float deltaMilliseconds)
         {
             if (_initialized)
@@ -61,6 +64,7 @@ namespace NitroSharp.Animation
 
         protected virtual void Setup(World world)
         {
+            World = world;
         }
 
         protected virtual void Advance(float deltaMilliseconds)
@@ -71,6 +75,7 @@ namespace NitroSharp.Animation
         {
             if (HasCompleted)
             {
+                OnCompleted(world);
                 if (Repeat)
                 {
                     _elapsed = 0;
@@ -83,6 +88,10 @@ namespace NitroSharp.Animation
                     world.DeactivateAnimation(this);
                 }
             }
+        }
+
+        protected virtual void OnCompleted(World world)
+        {
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

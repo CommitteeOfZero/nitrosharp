@@ -12,6 +12,5 @@ namespace NitroSharp
         }
 
         public HashSet<T>.Enumerator GetEnumerator() => _hashSet.GetEnumerator();
-        //IEnumerator IEnumerable.GetEnumerator() => _hashSet.GetEnumerator();
     }
 }

@@ -1,4 +1,5 @@
 ﻿using NitroSharp.Animation;
+using NitroSharp.Experimental;
 using System.Collections.Generic;
 
 namespace NitroSharp
@@ -26,11 +27,6 @@ namespace NitroSharp
 
             public void SyncTo(Actor actor)
             {
-                if (!ReferenceEquals(World, actor.World))
-                {
-                    actor.World.MergeChangesInto(World);
-                }
-
                 Queue<Message> messages = actor._messageQueue;
                 HandleMessages(messages);
                 messages.Clear();

@@ -1,4 +1,6 @@
-﻿namespace NitroSharp.Animation
+﻿using NitroSharp.Experimental;
+
+namespace NitroSharp.Animation
 {
     internal struct AnimationProcessorOutput
     {
@@ -19,7 +21,7 @@
             uint blockingCount = 0;
             foreach (PropertyAnimation anim in _world.AttachedAnimations)
             {
-                if (!_world.IsEntityAlive(anim.Entity))
+                if (!_world.Exists(anim.Entity))
                 {
                     _world.DeactivateAnimation(anim);
                     PostMessage(new Game.AnimationCompletedMessage

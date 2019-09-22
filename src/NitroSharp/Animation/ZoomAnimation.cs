@@ -1,25 +1,26 @@
 ﻿using System;
 using System.Numerics;
-using NitroSharp.Animation;
+using NitroSharp.Experimental;
 using NitroSharp.Graphics;
 using NitroSharp.NsScript;
 
-namespace NitroSharp.Logic.Components
+namespace NitroSharp.Animation
 {
     internal sealed class ZoomAnimation : LerpAnimation<TransformComponents>
     {
+        public Vector3 InitialScale;
+        public Vector3 FinalScale;
+
+
         public ZoomAnimation(Entity entity, TimeSpan duration,
             NsEasingFunction easingFunction = NsEasingFunction.None, bool repeat = false)
             : base(entity, duration, easingFunction, repeat)
         {
         }
 
-        public Vector3 InitialScale;
-        public Vector3 FinalScale;
-
-        protected override EntityTable.Row<TransformComponents> GetPropertyRow(World world)
+        protected override EntityStorage.ComponentStorage<TransformComponents> GetPropertyRow()
         {
-            var table = world.GetTable<RenderItemTable>(Entity);
+            var table = World.GetStorage<RenderItemStorage>(Entity);
             return table.TransformComponents;
         }
 

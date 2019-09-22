@@ -6,6 +6,8 @@ using NitroSharp.Utilities;
 using NitroSharp.NsScript.VM;
 using NitroSharp.Content;
 using System.Text;
+using NitroSharp.Experimental;
+using NitroSharp.Graphics;
 
 namespace NitroSharp
 {
@@ -14,7 +16,7 @@ namespace NitroSharp
         private World _world;
         private readonly Game _game;
         private readonly Logger _logger;
-        private readonly Queue<string> _entitiesToRemove = new Queue<string>();
+        private readonly Queue<EntityName> _entitiesToRemove = new Queue<EntityName>();
         private readonly Queue<Game.Message> _messageQueue = new Queue<Game.Message>();
 
         public NsBuiltins(Game game)
@@ -30,10 +32,10 @@ namespace NitroSharp
 
         public void SetWorld(World gameWorld) => _world = gameWorld;
 
-        public override void CreateChoice(string entityName)
-        {
-            _world.CreateChoice(entityName);
-        }
+        //public override void CreateChoice(string entityName)
+        //{
+        //    _world.CreateChoice(entityName);
+        //}
 
         public override string GetSelectedChoice()
         {
@@ -50,30 +52,19 @@ namespace NitroSharp
             Interpreter.SuspendThread(CurrentThread);
         }
 
-        private void SuspendMainThread()
-        {
-            Interpreter.SuspendThread(MainThread);
-        }
-
-        private void ResumeMainThread()
-        {
-            Interpreter.ResumeThread(MainThread);
-        }
-
         public override void SetAlias(string entityName, string alias)
         {
             if (entityName != alias)
             {
-                _world.SetAlias(entityName, alias);
+                _world.SetAlias(new EntityName(entityName), new EntityName(alias));
             }
         }
 
         public override void RemoveEntity(string entityName)
         {
-            foreach ((Entity entity, string name) in QueryEntities(entityName))
+            foreach ((Entity entity, EntityName name) in QueryEntities(entityName))
             {
-                var table = _world.GetTable<EntityTable>(entity);
-                if (!table.IsLocked.GetValue(entity))
+                if (!_world.IsLocked(entity))
                 {
                     _entitiesToRemove.Enqueue(name);
                     ThreadContext attachedThread = Interpreter.Threads
@@ -87,7 +78,7 @@ namespace NitroSharp
 
             while (_entitiesToRemove.Count > 0)
             {
-                _world.RemoveEntity(_entitiesToRemove.Dequeue());
+                _world.DestroyEntity(_entitiesToRemove.Dequeue());
             }
         }
 
@@ -128,70 +119,72 @@ namespace NitroSharp
             bool startImmediately = _world.Query(name + "*").Any();
             ThreadContext thread = Interpreter.CreateThread(name, target, startImmediately);
             var info = new InterpreterThreadInfo(name, thread.EntryModule, target);
-            Entity threadEntity = _world.CreateThreadEntity(info);
-            Entity parent = _world.Threads.Parents.GetValue(threadEntity);
-            if (parent.IsValid && parent.Kind == EntityKind.Choice)
-            {
-                var parsedName = new EntityName(name);
-                ChoiceTable choices = _world.Choices;
-                switch (parsedName.MouseState)
-                {
-                    case Interactivity.MouseState.Over:
-                        choices.MouseOverThread.Set(parent, threadEntity);
-                        break;
-                    case Interactivity.MouseState.Leave:
-                        choices.MouseLeaveThread.Set(parent, threadEntity);
-                        break;
-                }
-            }
+            //Entity threadEntity = _world.CreateThreadEntity(info);
+            //Entity parent = _world.Threads.Parents.GetRef(threadEntity);
+            //if (parent.IsValid && parent.Kind == EntityKind.Choice)
+            //{
+            //    var parsedName = new EntityName(name);
+            //    ChoiceTable choices = _world.Choices;
+            //    switch (parsedName.MouseState)
+            //    {
+            //        case MouseState.Over:
+            //            choices.MouseOverThread.Set(parent, threadEntity);
+            //            break;
+            //        case MouseState.Leave:
+            //            choices.MouseLeaveThread.Set(parent, threadEntity);
+            //            break;
+            //    }
+            //}
         }
 
         public override void Request(string entityName, NsEntityAction action)
         {
-            foreach ((Entity entity, string name) in QueryEntities(entityName))
+            foreach ((Entity entity, EntityName name) in QueryEntities(entityName))
             {
                 RequestCore(entity, name, action);
             }
         }
 
-        private void RequestCore(Entity entity, string entityName, NsEntityAction action)
+        private void RequestCore(Entity entity, EntityName entityName, NsEntityAction action)
         {
-            EntityTable table = _world.GetTable<EntityTable>(entity);
             switch (action)
             {
                 case NsEntityAction.Lock:
-                    table.IsLocked.Set(entity, true);
+                    _world.LockEntity(entity);
                     break;
                 case NsEntityAction.Unlock:
-                    table.IsLocked.Set(entity, false);
+                    _world.UnlockEntity(entity);
                     break;
 
                 case NsEntityAction.Start:
-                    if (Interpreter.TryGetThread(entityName, out ThreadContext thread))
+                    if (Interpreter.TryGetThread(entityName.Value, out ThreadContext thread))
                     {
                         Interpreter.ResumeThread(thread);
                     }
                     break;
 
                 case NsEntityAction.Stop:
-                    if (Interpreter.TryGetThread(entityName, out thread))
+                    if (Interpreter.TryGetThread(entityName.Value, out thread))
                     {
                         Interpreter.TerminateThread(thread);
                     }
                     break;
 
                 case NsEntityAction.SetAdditiveBlend:
-                    _world.GetEntityStruct<RenderItem>(entity).AsMutable()
-                        .BlendMode = Graphics.BlendMode.Additive;
+                    setBlendMode(entity, BlendMode.Additive);
                     break;
                 case NsEntityAction.SetSubtractiveBlend:
-                    _world.GetEntityStruct<RenderItem>(entity).AsMutable()
-                        .BlendMode = Graphics.BlendMode.Subtractive;
+                    setBlendMode(entity, BlendMode.Subtractive);
                     break;
                 case NsEntityAction.SetMultiplicativeBlend:
-                    _world.GetEntityStruct<RenderItem>(entity).AsMutable()
-                        .BlendMode = Graphics.BlendMode.Multiplicative;
+                    setBlendMode(entity, BlendMode.Multiplicative);
                     break;
+            }
+
+            void setBlendMode(Entity entity, BlendMode blendMode)
+            {
+                var storage = _world.GetStorage<RenderItemStorage>(entity);
+                storage.CommonProperties.GetRef(entity).BlendMode = blendMode;
             }
         }
 

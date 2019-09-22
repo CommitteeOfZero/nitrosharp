@@ -8,6 +8,7 @@ using NitroSharp.Interactivity;
 using NitroSharp.Media;
 using Veldrid;
 using NitroSharp.Graphics;
+using NitroSharp.Experimental;
 
 #nullable enable
 
@@ -23,9 +24,9 @@ namespace NitroSharp
             private DialogueSystemInput _dialogueSystemInput;
             private readonly DialogueSystem _dialogueSystem;
             private readonly RenderSystem _renderSystem;
-            private readonly AudioSystem _audioSystem;
+            //private readonly AudioSystem _audioSystem;
             private readonly AnimationProcessor _animationProcessor;
-            private readonly ChoiceProcessor _choiceProcessor;
+            //private readonly ChoiceProcessor _choiceProcessor;
 
             private readonly DevModeOverlay _devModeOverlay;
 
@@ -34,19 +35,24 @@ namespace NitroSharp
                 _inputTracker = new InputTracker(game._window);
                 _dialogueSystem = new DialogueSystem(this, game.GlyphRasterizer, _inputTracker);
                 _animationProcessor = new AnimationProcessor(this);
-                _choiceProcessor = new ChoiceProcessor(this);
+               //_choiceProcessor = new ChoiceProcessor(this);
 
                 _world = world;
                 _renderSystem = new RenderSystem(
                     _world, game._graphicsDevice, game._swapchain,
                     game.Content, game.GlyphRasterizer, game._configuration);
 
-                _audioSystem = new AudioSystem(_world, game.Content, game.AudioSourcePool);
+                //_audioSystem = new AudioSystem(_world, game.Content, game.AudioSourcePool);
 
-                _devModeOverlay = new DevModeOverlay(_renderSystem.RenderContext, game.LogEventRecorder);
+                //_devModeOverlay = new DevModeOverlay(_renderSystem.RenderContext, game.LogEventRecorder);
             }
 
             public InputTracker InputTracker => _inputTracker;
+
+            public void ProcessNewEntities()
+            {
+                _renderSystem.ProcessNewEntities();
+            }
 
             public void Tick(in FrameStamp framestamp, float deltaMilliseconds)
             {
@@ -65,19 +71,19 @@ namespace NitroSharp
                 }
 
                 _renderSystem.ProcessTransforms();
-                var choiceProcessorOutput = _choiceProcessor.ProcessChoices();
-                if (choiceProcessorOutput.SelectedChoice != null)
-                {
-                    PostMessage(new ChoiceSelectedMessage
-                    {
-                        ChoiceName = choiceProcessorOutput.SelectedChoice
-                    });
-                }
+                //var choiceProcessorOutput = _choiceProcessor.ProcessChoices();
+                //if (choiceProcessorOutput.SelectedChoice != null)
+                //{
+                //    PostMessage(new ChoiceSelectedMessage
+                //    {
+                //        ChoiceName = choiceProcessorOutput.SelectedChoice
+                //    });
+                //}
 
-                _audioSystem.UpdateAudioSources();
+                //_audioSystem.UpdateAudioSources();
                 _renderSystem.RenderFrame(framestamp);
 
-                _devModeOverlay.Tick(deltaMilliseconds, _inputTracker);
+                //_devModeOverlay.Tick(deltaMilliseconds, _inputTracker);
 
                 try
                 {
@@ -87,8 +93,6 @@ namespace NitroSharp
                 {
                     return;
                 }
-
-                _world.FlushFrameEvents();
             }
 
             protected override void HandleMessages(Queue<Message> messages)
@@ -112,7 +116,7 @@ namespace NitroSharp
 
             public void Dispose()
             {
-                _devModeOverlay.Dispose();
+                //_devModeOverlay.Dispose();
             }
         }
     }

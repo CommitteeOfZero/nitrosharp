@@ -7,12 +7,13 @@ using NitroSharp.Primitives;
 using NitroSharp.Text;
 using Veldrid;
 using NitroSharp.Interactivity;
+using NitroSharp.NsScript;
 
 namespace NitroSharp
 {
     internal sealed class ThreadTable : EntityTable
     {
-        public ThreadTable(World world, ushort columnCount)
+        public ThreadTable(OldWorld world, ushort columnCount)
             : base(world, columnCount)
         {
             Infos = AddRow<InterpreterThreadInfo>();
@@ -31,7 +32,7 @@ namespace NitroSharp
 
         public Row<Matrix4x4> TransformMatrices { get; }
 
-        protected RenderItemTable(World world, ushort columnCount)
+        protected RenderItemTable(OldWorld world, ushort columnCount)
             : base(world, columnCount)
         {
             TransformComponents = AddRow<TransformComponents>();
@@ -50,10 +51,13 @@ namespace NitroSharp
     {
         public Row<ImageSource> ImageSources { get; }
 
-        public SpriteTable(World world, ushort spriteCount)
+        public SystemDataRow<SpriteRenderer.SystemData> SystemData { get; }
+
+        public SpriteTable(OldWorld world, ushort spriteCount)
             : base(world, spriteCount)
         {
             ImageSources = AddRow<ImageSource>();
+            SystemData = AddSystemDataRow<SpriteRenderer.SystemData>();
         }
 
         public new Enumerator<SpriteTable, Sprite> GetEnumerator()
@@ -62,7 +66,7 @@ namespace NitroSharp
 
     internal sealed class RectangleTable : RenderItemTable
     {
-        public RectangleTable(World world, ushort rectCount)
+        public RectangleTable(OldWorld world, ushort rectCount)
             : base(world, rectCount)
         {
         }
@@ -73,12 +77,12 @@ namespace NitroSharp
 
     internal sealed class TextBlockTable : RenderItemTable
     {
-        public RefTypeRow<TextLayout> Layouts { get; }
+        public Row<TextLayout> Layouts { get; }
 
-        public TextBlockTable(World world, ushort columnCount)
+        public TextBlockTable(OldWorld world, ushort columnCount)
             : base(world, columnCount)
         {
-            Layouts = AddRefTypeRow<TextLayout>();
+            Layouts = AddRow<TextLayout>();
         }
 
         public new Enumerator<TextBlockTable, TextBlock> GetEnumerator()
@@ -99,7 +103,7 @@ namespace NitroSharp
 
     internal sealed class AudioClipTable : EntityTable, MediaClipTable
     {
-        public AudioClipTable(World world, ushort columnCount)
+        public AudioClipTable(OldWorld world, ushort columnCount)
             : base(world, columnCount)
         {
             Asset = AddRow<AssetId>();
@@ -108,6 +112,9 @@ namespace NitroSharp
             LoopData = AddRow<MediaClipLoopData>();
             Volume = AddRow<float>();
             SoundAmplitude = AddRow<double>();
+
+            PlaybackState = AddSystemDataRow<PlaybackState>();
+            AudioState = AddSystemDataRow<AudioState>();
         }
 
         public Row<AssetId> Asset { get; }
@@ -117,8 +124,8 @@ namespace NitroSharp
         public Row<float> Volume { get; }
         public Row<double> SoundAmplitude { get; }
 
-        public SystemDataRow<PlaybackState> PlaybackState => throw new NotImplementedException();
-        public SystemDataRow<AudioState> AudioState => throw new NotImplementedException();
+        public SystemDataRow<PlaybackState> PlaybackState { get; }
+        public SystemDataRow<AudioState> AudioState { get; }
 
         public Enumerator<AudioClipTable, AudioClip> GetEnumerator()
             => new Enumerator<AudioClipTable, AudioClip>(this);
@@ -136,7 +143,7 @@ namespace NitroSharp
         public SystemDataRow<VideoState> VideoState { get; }
         public SystemDataRow<AudioState> AudioState { get; }
 
-        public VideoClipTable(World world, ushort columnCount)
+        public VideoClipTable(OldWorld world, ushort columnCount)
             : base(world, columnCount)
         {
             Asset = AddRow<AssetId>();
@@ -155,27 +162,27 @@ namespace NitroSharp
 
     internal sealed class ChoiceTable : EntityTable
     {
-        public ChoiceTable(World world, ushort columnCount)
+        public ChoiceTable(OldWorld world, ushort columnCount)
             : base(world, columnCount)
         {
-            Name = AddRefTypeRow<string>();
-            MouseUsualSprite = AddRow<Entity>();
-            MouseOverSprite = AddRow<Entity>();
-            MouseClickSprite = AddRow<Entity>();
-            MouseOverThread = AddRow<Entity>();
-            MouseLeaveThread = AddRow<Entity>();
-            State = AddRow<MouseState>();
+            Name = AddRow<string>();
+            MouseUsualSprite = AddRow<OldEntity>();
+            MouseOverSprite = AddRow<OldEntity>();
+            MouseClickSprite = AddRow<OldEntity>();
+            MouseOverThread = AddRow<OldEntity>();
+            MouseLeaveThread = AddRow<OldEntity>();
+            State = AddRow<NsMouseState>();
             Rects = AddSystemDataRow<RectangleF>();
         }
 
-        public RefTypeRow<string> Name { get; }
-        public Row<Entity> MouseUsualSprite { get; }
-        public Row<Entity> MouseOverSprite { get; }
-        public Row<Entity> MouseClickSprite { get; }
+        public Row<string> Name { get; }
+        public Row<OldEntity> MouseUsualSprite { get; }
+        public Row<OldEntity> MouseOverSprite { get; }
+        public Row<OldEntity> MouseClickSprite { get; }
 
-        public Row<Entity> MouseOverThread { get; }
-        public Row<Entity> MouseLeaveThread { get; }
-        public Row<MouseState> State { get; }
+        public Row<OldEntity> MouseOverThread { get; }
+        public Row<OldEntity> MouseLeaveThread { get; }
+        public Row<NsMouseState> State { get; }
 
         public SystemDataRow<RectangleF> Rects { get; }
     }

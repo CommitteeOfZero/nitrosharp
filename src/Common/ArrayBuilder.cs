@@ -36,6 +36,19 @@ namespace NitroSharp.Utilities
             }
         }
 
+        public ref T this[Index index]
+        {
+            get
+            {
+                static void oob() => throw new IndexOutOfRangeException();
+                int actualIndex = index.IsFromEnd
+                    ? (int)_count - index.Value
+                    : index.Value;
+                if (actualIndex >= _count) { oob(); }
+                return ref _elements[actualIndex];
+            }
+        }
+
         public ref T this[int index]
         {
             get
@@ -87,7 +100,7 @@ namespace NitroSharp.Utilities
 
         public void Truncate(uint length)
         {
-            static void outOfRange() => throw new ArgumentOutOfRangeException("length");
+            static void outOfRange() => throw new ArgumentOutOfRangeException(nameof(length));
 
             if (length > Count) outOfRange();
             _count = length;

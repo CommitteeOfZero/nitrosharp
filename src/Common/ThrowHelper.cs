@@ -15,7 +15,7 @@ namespace NitroSharp
             => throw new InvalidOperationException("This program location is expected to be unreachable.");
 
         public static void ThrowOutOfRange(string paramName)
-            => new ArgumentOutOfRangeException(paramName);
+            => throw new ArgumentOutOfRangeException(paramName);
 
         public static Exception UnexpectedValue(string paramName)
             => new ArgumentException("Unexpected value.", paramName);

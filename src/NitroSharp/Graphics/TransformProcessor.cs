@@ -1,39 +1,40 @@
 ﻿using System;
 using System.Numerics;
+using NitroSharp.Experimental;
 using NitroSharp.Primitives;
 
 namespace NitroSharp.Graphics
 {
     internal static class TransformProcessor
     {
-        public static void ProcessTransforms(World world, RenderItemTable table)
+        public static void ProcessTransforms(World world, RenderItem2DStorage table)
             => ProcessTransforms(world,
-                table.Bounds.Enumerate(),
-                table.TransformComponents.Enumerate(),
-                table.TransformMatrices.MutateAll(),
-                table.Parents.Enumerate());
+                table.Entities,
+                table.LocalBounds.All,
+                table.TransformComponents.All,
+                table.Transforms.All);
 
         public static void ProcessTransforms(
             World world,
+            ReadOnlySpan<Entity> entities,
             ReadOnlySpan<SizeF> bounds,
             ReadOnlySpan<TransformComponents> transformComponents,
-            Span<Matrix4x4> transformMatrices,
-            ReadOnlySpan<Entity> parents)
+            Span<Matrix4x4> transformMatrices)
         {
             int count = transformComponents.Length;
             for (int i = 0; i < count; i++)
             {
-                Calc(i, world, bounds, transformComponents, transformMatrices, parents);
+                Calc(entities[i], i, world, bounds, transformComponents, transformMatrices);
             }
         }
 
         private static void Calc(
+            Entity entity,
             int index,
             World world,
             ReadOnlySpan<SizeF> bounds,
             ReadOnlySpan<TransformComponents> transformComponents,
-            Span<Matrix4x4> transformMatrices,
-            ReadOnlySpan<Entity> parents)
+            Span<Matrix4x4> transformMatrices)
         {
             ref readonly TransformComponents local = ref transformComponents[index];
             SizeF size = bounds[index];
@@ -46,20 +47,19 @@ namespace NitroSharp.Graphics
 
             Matrix4x4 worldMatrix = scale * translation;
 
-            Entity parent = parents[index];
-            if (parent.IsValid && parent.IsVisual)
+            Entity parent = world.GetParent(entity);
+            if (parent.IsValid)
             {
-                RenderItemTable table = world.GetTable<RenderItemTable>(parent);
-                if (table.TryLookupIndex(parent, out ushort parentIdx))
+                RenderItem2DStorage table = world.GetStorage<RenderItem2DStorage>(parent);
+                int parentIdx = (int)world.LookupIndexInStorage(parent).IndexInStorage;
                 {
-                    Span<Matrix4x4> parentTableTransforms = table.TransformMatrices.MutateAll();
+                    Span<Matrix4x4> parentTableTransforms = table.Transforms.All;
                     if (parentTableTransforms[parentIdx].M11 == 0)
                     {
-                        Calc(parentIdx, world,
-                            table.Bounds.Enumerate(),
-                            table.TransformComponents.Enumerate(),
-                            parentTableTransforms,
-                            table.Parents.Enumerate());
+                        Calc(parent, parentIdx, world,
+                            table.LocalBounds.All,
+                            table.TransformComponents.All,
+                            parentTableTransforms);
                     }
                     worldMatrix *= parentTableTransforms[parentIdx];
                 }

@@ -1,6 +1,6 @@
 ﻿namespace NitroSharp.Interactivity
 {
-    internal enum MouseState
+    public enum MouseState
     {
         Normal,
         Over,

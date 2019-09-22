@@ -15,9 +15,14 @@
         public NsDimension(NsDimensionVariant variant, int? value)
             => (Variant, Value) = (variant, value);
 
-        public static NsDimension Auto => new NsDimension(NsDimensionVariant.Auto, null);
-        public static NsDimension Inherit => new NsDimension(NsDimensionVariant.Inherit, null);
-        public static NsDimension WithValue(int value) => new NsDimension(NsDimensionVariant.Value, value);
+        public static NsDimension Auto
+            => new NsDimension(NsDimensionVariant.Auto, null);
+
+        public static NsDimension Inherit
+            => new NsDimension(NsDimensionVariant.Inherit, null);
+
+        public static NsDimension WithValue(int value)
+            => new NsDimension(NsDimensionVariant.Value, value);
 
         public static NsDimension FromConstant(BuiltInConstant constant)
         {

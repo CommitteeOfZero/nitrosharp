@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 
 namespace NitroSharp.Launcher
 {
-    public class GameLauncher
+    public static class GameLauncher
     {
         public static async Task Launch(string configFilePath)
         {

@@ -1,24 +1,17 @@
-﻿using System.Collections.Generic;
+﻿using System.Diagnostics;
 using NitroSharp.Content;
-using NitroSharp.Primitives;
+using NitroSharp.Experimental;
 using Veldrid;
+
+#nullable enable
 
 namespace NitroSharp.Graphics
 {
     internal sealed class SpriteRenderer
     {
-        internal struct SystemData
-        {
-            public Texture Texture;
-            public AssetId TextureId;
-        }
-
-        private readonly SpriteTable _sprites;
+        private readonly EntityHub<SpriteStorage> _sprites;
         private readonly QuadBatcher _quadBatcher;
         private readonly ContentManager _content;
-
-        private SystemData[] _systemData = new SystemData[World.InitialSpriteCount];
-        private readonly List<SystemData> _recycledData = new List<SystemData>();
 
         public SpriteRenderer(World world, RenderContext renderContext, ContentManager content)
         {
@@ -29,40 +22,25 @@ namespace NitroSharp.Graphics
 
         public void ProcessSprites()
         {
-            SpriteTable sprites = _sprites;
-            sprites.RearrangeSystemComponents(ref _systemData, _recycledData);
-            foreach (Entity e in sprites.NewEntities)
-            {
-                ushort index = sprites.LookupIndex(e);
-                ImageSource source = sprites.ImageSources.GetValue(index);
-                Texture tex = _content.GetTexture(source.Image);
-                ref SystemData data = ref _systemData[index];
-                data.TextureId = source.Image;
-                data.Texture = tex;
-            }
+            SpriteStorage sprites = _sprites.Active;
+            _quadBatcher.BatchQuads(
+                sprites.CommonProperties.All,
+                sprites.LocalBounds.All,
+                sprites.Materials.All,
+                sprites.Transforms.All
+            );
+        }
 
-            foreach (SystemData data in _recycledData)
+        public void ProcessNewSprites()
+        {
+            SpriteStorage sprites = _sprites.Uninitialized;
+            for (uint i = 0; i < sprites.Count; i++)
             {
-                if (data.Texture != null)
-                {
-                    _content.UnrefAsset(data.TextureId);
-                }
-            }
-
-            QuadBatcher quadBatcher = _quadBatcher;
-            SystemData[] systemData = _systemData;
-            foreach (Sprite sprite in sprites)
-            {
-                if (sprite.SortKey.Priority > 0 && sprite.Color.A > 0.0f)
-                {
-                    Texture texture = systemData[sprite.Index].Texture;
-                    ref readonly RectangleF srcRect = ref sprite.ImageSource.SourceRectangle;
-                    var dstRect = new RectangleF(0, 0, srcRect.Width, srcRect.Height);
-
-                    quadBatcher.SetTransform(sprite.Transform);
-                    RgbaFloat c = sprite.Color;
-                    quadBatcher.DrawImage(texture, srcRect, dstRect, ref c, sprite.SortKey, sprite.BlendMode);
-                }
+                ImageSource source = sprites.ImageSources[i];
+                Texture? tex = _content.TryGetTexture(source.ImageId);
+                Debug.Assert(tex != null);
+                sprites.Materials[i] = _quadBatcher
+                    .CreateMaterial(tex, source.SourceRectangle);
             }
         }
     }

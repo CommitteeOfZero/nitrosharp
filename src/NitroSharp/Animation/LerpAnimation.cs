@@ -1,4 +1,5 @@
 ﻿using System;
+using NitroSharp.Experimental;
 using NitroSharp.NsScript;
 
 namespace NitroSharp.Animation
@@ -13,18 +14,11 @@ namespace NitroSharp.Animation
         {
         }
 
-        protected EntityTable.Row<T> PropertyRow { get; private set; }
-
-        protected override void Setup(World world)
-        {
-            PropertyRow = GetPropertyRow(world);
-        }
-
-        protected abstract EntityTable.Row<T> GetPropertyRow(World world);
+        protected abstract EntityStorage.ComponentStorage<T> GetPropertyRow();
 
         protected override void Advance(float deltaMilliseconds)
         {
-            InterpolateValue(ref PropertyRow.Mutate(Entity), CalculateFactor(Progress, NsEasingFunction));
+            InterpolateValue(ref GetPropertyRow().GetRef(Entity), CalculateFactor(Progress, NsEasingFunction));
         }
 
         protected abstract void InterpolateValue(ref T value, float factor);

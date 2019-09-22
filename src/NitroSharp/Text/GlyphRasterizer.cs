@@ -124,7 +124,6 @@ namespace NitroSharp.Text
         {
             var newGlyphIndices = new List<uint>();
             FontData fontData = GetFontData(font);
-            var invalidHandle = TextureCacheHandle.Invalid;
             foreach (PositionedGlyph glyph in glyphs)
             {
                 var key = new GlyphCacheKey(glyph.Index, fontSize);
@@ -279,10 +278,9 @@ namespace NitroSharp.Text
                 }
                 return new RasterizedGlyph(
                     buffer,
-                    largest.ActualTop,
+                    largest.Top,
                     largest.Left,
                     largest.Width,
-                    largest.Height,
                     largest.Height,
                     largest.Bottom
                 );
@@ -483,7 +481,6 @@ namespace NitroSharp.Text
         public readonly int Left;
         public readonly uint Width;
         public readonly uint Height;
-        public readonly uint MinHeight;
         public readonly int Bottom;
 
         public RasterizedGlyph(
@@ -492,7 +489,6 @@ namespace NitroSharp.Text
             int left,
             uint width,
             uint height,
-            uint minHeight = 0,
             int bottom = 0)
         {
             Bytes = bytes;
@@ -500,7 +496,6 @@ namespace NitroSharp.Text
             Left = left;
             Width = width;
             Height = height;
-            MinHeight = minHeight;
             Bottom = bottom;
         }
     }
@@ -513,7 +508,7 @@ namespace NitroSharp.Text
         public readonly uint Width;
         public readonly uint Height;
 
-        public NativeBitmapGlyph(BitmapGlyph* ftGlyph, int bottom, int actualTop)
+        public NativeBitmapGlyph(BitmapGlyph* ftGlyph, int bottom)
         {
             _ftGlyph = ftGlyph;
             Bottom = bottom;
@@ -521,7 +516,6 @@ namespace NitroSharp.Text
             Left = _ftGlyph->left;
             Width = (uint)_ftGlyph->bitmap.width;
             Height = (uint)_ftGlyph->bitmap.rows;
-            ActualTop = actualTop;
         }
 
         public ReadOnlySpan<byte> Bytes =>
@@ -530,10 +524,9 @@ namespace NitroSharp.Text
                 (int)(Width * Height)
             );
 
-        public readonly int ActualTop;
         public readonly int Bottom;
 
-        public readonly void Dispose()
+        public void Dispose()
         {
             var ptr = (Glyph*)_ftGlyph;
             FT.FT_Done_Glyph(ptr);
@@ -714,7 +707,7 @@ namespace NitroSharp.Text
             FT.FT_Glyph_Get_CBox(glyph, GlyphBBoxMode.Pixels, out BBox cbox);
 
 
-            return new NativeBitmapGlyph((BitmapGlyph*)glyph, cbox.Bottom, cbox.Top);
+            return new NativeBitmapGlyph((BitmapGlyph*)glyph, cbox.Bottom);
         }
 
         private void SetSize(Face* ftFace, PtFontSize size)
