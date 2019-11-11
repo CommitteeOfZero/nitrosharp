@@ -69,7 +69,7 @@ namespace NitroSharp
             }
         }
 
-        public override void CreateText(
+        public override void CreateTextBlock(
             string entityName, int priority,
             NsCoordinate x, NsCoordinate y,
             NsDimension width, NsDimension height,

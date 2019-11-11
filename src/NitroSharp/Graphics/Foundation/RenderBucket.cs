@@ -214,7 +214,7 @@ namespace NitroSharp.Graphics
                 if (curRenderItem >= 0)
                 {
                     ref RenderItem lastRI = ref renderItems[curRenderItem];
-                    if (submission.InstanceBase == (lastRI.InstanceBase + lastRI.InstanceCount)
+                    if (submission.IndexBase == (lastRI.IndexBase + lastRI.IndexCount)
                         && ReferenceEquals(submission.Pipeline, lastPipeline)
                         && ReferenceEquals(submission.SharedResourceSet, lastSharedSet.set)
                         && ReferenceEquals(submission.ObjectResourceSet0, lastResourceSet0)
@@ -225,7 +225,8 @@ namespace NitroSharp.Graphics
                     {
                         if (multiSubmission.Keys[i].Priority == multiSubmission.Keys[i - 1].Priority)
                         {
-                            lastRI.InstanceCount++;
+                            lastRI.VertexCount += submission.VertexCount;
+                            lastRI.IndexCount += submission.IndexCount;
                             continue;
                         }
                     }

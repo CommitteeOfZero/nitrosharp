@@ -1,4 +1,5 @@
 ﻿using System.Numerics;
+using System.Runtime.InteropServices;
 using NitroSharp.Content;
 using NitroSharp.Experimental;
 using NitroSharp.Primitives;
@@ -9,11 +10,13 @@ using Veldrid;
 
 namespace NitroSharp.Graphics
 {
+    [StructLayout(LayoutKind.Auto)]
     internal struct CommonItemProperties
     {
         public RenderItemKey Key;
         public RgbaFloat Color;
         public BlendMode BlendMode;
+        public EffectKind Effect;
     }
 
     internal readonly struct ImageSource
@@ -36,6 +39,12 @@ namespace NitroSharp.Graphics
         public Vector3 Position;
         public Vector3 Scale;
         public Vector3 Rotation;
+    }
+
+    internal enum EffectKind
+    {
+        None = 0,
+        Grayscale
     }
 
     internal abstract class RenderItemStorage : EntityStorage
@@ -145,6 +154,16 @@ namespace NitroSharp.Graphics
             ImageSources[i] = src;
             LocalBounds[i] = localBounds;
             return (e, i);
+        }
+    }
+
+    internal sealed class FadeTransitionStorage : RenderItem2DStorage
+    {
+
+
+        public FadeTransitionStorage(EntityHub hub, uint initialCapacity)
+            : base(hub, initialCapacity)
+        {
         }
     }
 

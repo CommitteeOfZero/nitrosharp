@@ -48,6 +48,7 @@ namespace NitroSharp.Graphics
         }
 
         public uint Count => (uint)_cursor;
+        public uint Capacity => _capacity;
 
         public ref TVertex this[uint index] => ref Get(index);
 

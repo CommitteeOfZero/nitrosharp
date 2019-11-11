@@ -8,25 +8,49 @@
         SetAlias,
         Delete,
         CreateProcess,
+        CreateName,
+
         LoadImage,
+        LoadColor,
         CreateColor,
         CreateTexture,
         CreateClipTexture,
-        CreateSound,
+        CreateMask,
+        CreateChoice,
+
+        CreateWindow,
+        CreateText,
+        LoadFont,
+        LoadText,
+        SetFont,
+        WaitText,
+
+        CreateCube,
+        SetFov,
+
+        CreateMovie,
+        WaitPlay,
 
         Fade,
         Move,
         Zoom,
         Rotate,
         MoveCube,
+        DrawTransition,
 
+        WaitAction,
+        WaitMove,
+
+        Shake,
+        SetBlur,
+        CreateEffect,
+        SetTone,
+        SetShade,
+
+        CreateSound,
         SetVolume,
-        CreateWindow,
-        LoadText,
-        WaitText,
         SetLoop,
         SetLoopPoint,
-        DrawTransition,
 
         DurationTime,
         PassageTime,
@@ -42,35 +66,13 @@
         Integer,
         DateTime,
         CursorPosition,
-
-        SetFont,
-        SetNextFocus,
         Position,
+
+        SetNextFocus,
         MoveCursor,
 
-        CreateCube,
-        SetFov,
-        CreateMovie,
-        WaitPlay,
-
-        WaitAction,
-        WaitMove,
-        LoadFont,
-        LoadColor,
-        
-        CreateText,
-        CreateChoice,
-        CreateMask,
-        CreateName,
         LoadFile,
         UnloadFile,
-
-        Shake,
-        SetBlur,
-        CreateEffect,
-        SetTone,
-        SetShade,
-
         Save,
         Load,
         ExistSave,

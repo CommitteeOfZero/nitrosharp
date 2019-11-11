@@ -36,5 +36,16 @@ namespace NitroSharp.Utilities
         {
             return degrees / 180.0f * PI;
         }
+
+        public static uint NearestPowerOfTwo(uint n)
+        {
+            uint res = n - 1;
+            res |= res >> 1;
+            res |= res >> 2;
+            res |= res >> 4;
+            res |= res >> 8;
+            res |= res >> 16;
+            return res + 1;
+        }
     }
 }

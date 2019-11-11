@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Runtime.CompilerServices;
 using NitroSharp.NsScript.Primitives;
 
 namespace NitroSharp.NsScript.VM
@@ -63,6 +62,12 @@ namespace NitroSharp.NsScript.VM
                     break;
                 case BuiltInFunction.DrawTransition:
                     DrawTransition(ref args);
+                    break;
+                case BuiltInFunction.SetShade:
+                    SetShade(ref args);
+                    break;
+                case BuiltInFunction.SetTone:
+                    SetTone(ref args);
                     break;
 
                 case BuiltInFunction.Fade:
@@ -147,9 +152,33 @@ namespace NitroSharp.NsScript.VM
             return result;
         }
 
+        private void SetTone(ref ArgConsumer args)
+        {
+            string entityQuery = args.TakeEntityQuery();
+            if (args.TakeConstant() != BuiltInConstant.Monochrome)
+            {
+                throw new Exception();
+            }
+
+            _impl.Grayscale(entityQuery);
+        }
+
+        private void SetShade(ref ArgConsumer args)
+        {
+            _impl.BoxBlur(
+                args.TakeEntityQuery(),
+                nbPasses: args.TakeConstant() switch
+                {
+                    BuiltInConstant.Heavy => 16u,
+                    BuiltInConstant.Medium => 8u,
+                    _ => throw new Exception()
+                }
+            );
+        }
+
         private void CreateText(ref ArgConsumer args)
         {
-            _impl.CreateText(
+            _impl.CreateTextBlock(
                 args.TakeEntityName(),
                priority: args.TakeInt(),
                x: args.TakeCoordinate(),
@@ -176,9 +205,9 @@ namespace NitroSharp.NsScript.VM
                 case BuiltInType.Float:
                     value = ConstantValue.Integer((int)value.AsFloat()!.Value);
                     break;
-                //default:
-                //    UnexpectedArgType<ConstantValue>(0, BuiltInType.Integer, value.Type);
-                //    break;
+                    //default:
+                    //    UnexpectedArgType<ConstantValue>(0, BuiltInType.Integer, value.Type);
+                    //    break;
             }
 
             SetResult(value);
@@ -192,7 +221,8 @@ namespace NitroSharp.NsScript.VM
                 x: args.TakeCoordinate(),
                 y: args.TakeCoordinate(),
                 width: args.TakeInt(),
-                height: args.TakeInt());
+                height: args.TakeInt()
+            );
         }
 
         private void WaitText()
@@ -225,7 +255,8 @@ namespace NitroSharp.NsScript.VM
             _impl.SetVolume(
                 args.TakeEntityName(),
                 duration: args.TakeTimeSpan(),
-                volume: args.TakeRational());
+                volume: args.TakeRational()
+            );
         }
 
         private void CreateSound(ref ArgConsumer args)
@@ -233,7 +264,8 @@ namespace NitroSharp.NsScript.VM
             _impl.LoadAudio(
                 args.TakeEntityName(),
                 kind: args.TakeAudioKind(),
-                fileName: args.TakeString());
+                fileName: args.TakeString()
+            );
         }
 
         private void WaitKey(ref ArgConsumer args)
@@ -259,52 +291,57 @@ namespace NitroSharp.NsScript.VM
             _impl.SetLoopRegion(
                 args.TakeEntityName(),
                 loopStart: args.TakeTimeSpan(),
-                loopEnd: args.TakeTimeSpan());
+                loopEnd: args.TakeTimeSpan()
+            );
         }
 
         private void SetLoop(ref ArgConsumer args)
         {
             _impl.ToggleLooping(
                 args.TakeEntityName(),
-                looping: args.TakeBool());
+                looping: args.TakeBool()
+            );
         }
 
         private void Zoom(ref ArgConsumer args)
         {
-            string entityName = args.TakeEntityName();
+            string entityQuery = args.TakeEntityQuery();
             TimeSpan duration = args.TakeTimeSpan();
             _impl.Zoom(
-                entityName,
+                entityQuery,
                 duration,
                 dstScaleX: args.TakeRational(),
                 dstScaleY: args.TakeRational(),
                 easingFunction: args.TakeEasingFunction(),
-                args.TakeAnimDelay(duration));
+                args.TakeAnimDelay(duration)
+            );
         }
 
         private void Move(ref ArgConsumer args)
         {
-            string entityName = args.TakeEntityName();
+            string entityQuery = args.TakeEntityQuery();
             TimeSpan duration = args.TakeTimeSpan();
             _impl.Move(
-                entityName,
+                entityQuery,
                 duration,
                 dstX: args.TakeCoordinate(),
                 dstY: args.TakeCoordinate(),
                 easingFunction: args.TakeEasingFunction(),
-                delay: args.TakeAnimDelay(duration));
+                delay: args.TakeAnimDelay(duration)
+            );
         }
 
         private void Fade(ref ArgConsumer args)
         {
-            string entityName = args.TakeEntityName();
+            string entityQuery = args.TakeEntityQuery();
             TimeSpan duration = args.TakeTimeSpan();
             _impl.Fade(
-                entityName,
+                entityQuery,
                 duration,
                 dstOpacity: args.TakeRational(),
                 easingFunction: args.TakeEasingFunction(),
-                args.TakeAnimDelay(duration));
+                args.TakeAnimDelay(duration)
+            );
         }
 
         private void DrawTransition(ref ArgConsumer args)
@@ -327,17 +364,18 @@ namespace NitroSharp.NsScript.VM
         {
             _impl.SetAlias(
                 args.TakeEntityName(),
-                alias: args.TakeString());
+                alias: args.TakeString()
+            );
         }
 
         private void Request(ref ArgConsumer args)
         {
-            _impl.Request(args.TakeEntityName(), args.TakeEntityAction());
+            _impl.Request(args.TakeEntityQuery(), args.TakeEntityAction());
         }
 
         private void Delete(ref ArgConsumer args)
         {
-            _impl.RemoveEntity(args.TakeEntityName());
+            _impl.DestroyEntities(args.TakeEntityQuery());
         }
 
         private void CreateProcess(ref ArgConsumer args)
@@ -377,14 +415,16 @@ namespace NitroSharp.NsScript.VM
                 y: args.TakeCoordinate(),
                 width: args.TakeInt(),
                 height: args.TakeInt(),
-                color: takeColor(ref args));
+                color: takeColor(ref args)
+            );
         }
 
         private void LoadImage(ref ArgConsumer args)
         {
             _impl.LoadImage(
                 args.TakeEntityName(),
-                fileName: args.TakeString());
+                fileName: args.TakeString()
+            );
         }
 
         private void CreateTexture(ref ArgConsumer args)
@@ -397,7 +437,7 @@ namespace NitroSharp.NsScript.VM
             ConstantValue arg4 = args.TakeOpt(ConstantValue.Null);
             string fileOrEntityName = arg4.Type switch
             {
-                BuiltInType.String => ArgConsumer.EntityName(arg4.AsString()!),
+                BuiltInType.String => ArgConsumer.EntityQuery(arg4.AsString()!),
                 BuiltInType.BuiltInConstant => arg4.ConvertToString(),
                 _ => args.UnexpectedType<string>(arg4.Type)
             };
@@ -416,7 +456,8 @@ namespace NitroSharp.NsScript.VM
                 y2: args.TakeCoordinate(),
                 width: args.TakeInt(),
                 height: args.TakeInt(),
-                args.TakeEntityName());
+                args.TakeEntityQuery()
+            );
         }
 
         private void Time()
@@ -468,31 +509,31 @@ namespace NitroSharp.NsScript.VM
 
         private void ImageHorizon(ref ArgConsumer args)
         {
-            string entityName = args.TakeEntityName();
+            string entityName = args.TakeEntityQuery();
             SetResult(ConstantValue.Integer(_impl.GetWidth(entityName)));
         }
 
         private void ImageVertical(ref ArgConsumer args)
         {
-            string entityName = args.TakeEntityName();
+            string entityName = args.TakeEntityQuery();
             SetResult(ConstantValue.Integer(_impl.GetHeight(entityName)));
         }
 
         private void RemainTime(ref ArgConsumer args)
         {
-            string entityName = args.TakeEntityName();
+            string entityName = args.TakeEntityQuery();
             SetResult(ConstantValue.Integer(_impl.GetTimeRemaining(entityName)));
         }
 
         private void PassageTime(ref ArgConsumer args)
         {
-            string entityName = args.TakeEntityName();
+            string entityName = args.TakeEntityQuery();
             SetResult(ConstantValue.Integer(_impl.GetTimeElapsed(entityName)));
         }
 
         private void DurationTime(ref ArgConsumer args)
         {
-            string entityName = args.TakeEntityName();
+            string entityName = args.TakeEntityQuery();
             SetResult(ConstantValue.Integer(_impl.GetSoundDuration(entityName)));
         }
 
@@ -526,11 +567,11 @@ namespace NitroSharp.NsScript.VM
                 _pos = 0;
             }
 
-            public static string EntityName(string rawEntityName)
+            public static string EntityQuery(string rawEntityQuery)
             {
-                return rawEntityName.StartsWith("@")
-                    ? rawEntityName.Substring(1)
-                    : rawEntityName;
+                return rawEntityQuery.StartsWith("@")
+                    ? rawEntityQuery.Substring(1)
+                    : rawEntityQuery;
             }
 
             private static TimeSpan Time(int ms) => TimeSpan.FromMilliseconds(ms);
@@ -540,7 +581,6 @@ namespace NitroSharp.NsScript.VM
             public ReadOnlySpan<ConstantValue> AsSpan(int start) => _args.Slice(start);
             public void Skip() => _pos++;
 
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public ConstantValue TakeOpt(in ConstantValue defaultValue)
             {
                 return _pos < _args.Length
@@ -548,27 +588,21 @@ namespace NitroSharp.NsScript.VM
                     : defaultValue;
             }
 
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public string TakeEntityName()
-            {
-                return EntityName(TakeString());
-            }
+            public string TakeEntityName() => EntityQuery(TakeString());
+            public string TakeEntityQuery() => EntityQuery(TakeString());
 
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public string TakeString()
             {
                 ConstantValue arg = TakeOpt(ConstantValue.EmptyString);
                 return arg.AsString()!;
             }
 
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public int TakeInt()
             {
                 ConstantValue arg = TakeOpt(ConstantValue.Integer(0));
                 return arg.AsInteger()!.Value;
             }
 
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public TimeSpan TakeTimeSpan()
             {
                 ConstantValue val = TakeOpt(ConstantValue.Integer(0));
@@ -581,7 +615,6 @@ namespace NitroSharp.NsScript.VM
                 return Time(num);
             }
 
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public bool TakeBool()
             {
                 ConstantValue arg = TakeOpt(ConstantValue.False);
@@ -669,6 +702,14 @@ namespace NitroSharp.NsScript.VM
             {
                 int delayArg = TakeInt();
                 return delayArg == 1 ? animDuration : TimeSpan.FromMilliseconds(delayArg);
+            }
+
+            public BuiltInConstant TakeConstant()
+            {
+                ConstantValue val = TakeOpt(ConstantValue.Null);
+                return val.Type == BuiltInType.BuiltInConstant
+                    ? val.AsBuiltInConstant()!.Value
+                    : UnexpectedType<BuiltInConstant>(val.Type);
             }
 
             public T UnexpectedType<T>(BuiltInType type)

@@ -14,13 +14,26 @@ namespace NitroSharp
 {
     internal sealed partial class NsBuiltins
     {
+        public override void BoxBlur(string entityName, uint nbPasses)
+        {
+        }
+
+        public override void Grayscale(string entityQuery)
+        {
+            foreach ((Entity entity, _) in _world.Query(entityQuery))
+            {
+                var storage = _world.GetStorage<RenderItem2DStorage>(entity);
+                storage.CommonProperties.GetRef(entity).Effect = EffectKind.Grayscale;
+            }
+        }
+
         public override void CreateRectangle(
-            string entityName, int priority,
+            string name, int priority,
             NsCoordinate x, NsCoordinate y,
             int width, int height, NsColor color)
         {
             (Entity e, _) = _world.Rectangles.Uninitialized.New(
-                new EntityName(entityName),
+                new EntityName(name),
                 new SizeF(width, height),
                 priority,
                 color.ToRgbaFloat()
@@ -41,17 +54,17 @@ namespace NitroSharp
         }
 
         public override void CreateSprite(
-            string entityName, int priority,
+            string name, int priority,
             NsCoordinate x, NsCoordinate y,
             string fileOrExistingEntityName)
         {
             if (fileOrExistingEntityName.Equals("SCREEN", StringComparison.OrdinalIgnoreCase))
             {
-                CaptureFramebuffer(entityName, x, y, priority);
+                CaptureFramebuffer(name, x, y, priority);
             }
             else
             {
-                CreateSpriteCore(entityName, fileOrExistingEntityName, x, y, priority);
+                CreateSpriteCore(name, fileOrExistingEntityName, x, y, priority);
             }
         }
 
@@ -60,17 +73,17 @@ namespace NitroSharp
         }
 
         public override void CreateSpriteEx(
-            string entityName, int priority,
+            string name, int priority,
             NsCoordinate dstX, NsCoordinate dstY,
             NsCoordinate srcX, NsCoordinate srcY,
             int width, int height, string srcEntityName)
         {
             var srcRectangle = new RectangleF(srcX.Value, srcY.Value, width, height);
-            CreateSpriteCore(entityName, srcEntityName, dstX, dstY, priority, srcRectangle);
+            CreateSpriteCore(name, srcEntityName, dstX, dstY, priority, srcRectangle);
         }
 
         private void CreateSpriteCore(
-            string entityName, string fileOrExistingEntityName,
+            string name, string fileOrExistingEntityName,
             NsCoordinate x, NsCoordinate y,
             int priority, RectangleF? srcRect = null)
         {
@@ -93,7 +106,7 @@ namespace NitroSharp
             var sourceRectangle = srcRect ?? new RectangleF(Vector2.Zero, texSize);
             var localBounds = new SizeF(sourceRectangle.Width, sourceRectangle.Height);
             (Entity entity, _) = _world.Sprites.Uninitialized.New(
-                new EntityName(entityName),
+                new EntityName(name),
                 priority,
                 new ImageSource(textureId, sourceRectangle),
                 RgbaFloat.White,
@@ -121,7 +134,7 @@ namespace NitroSharp
         }
 
         public override void CreateCube(
-            string entityName, int priority,
+            string name, int priority,
             string front, string back,
             string right, string left,
             string top, string bottom)
@@ -149,6 +162,8 @@ namespace NitroSharp
             string maskFileName,
             TimeSpan delay)
         {
+            Content.RequestTexture(new AssetId(maskFileName), out _);
+
             Interpreter.SuspendThread(CurrentThread, duration);
         }
 

@@ -52,25 +52,14 @@ namespace NitroSharp.Graphics
             uint typeSizeInGpuBlocks,
             uint initialTextureDimension = 128)
         {
-            static uint powerOfTwo(uint size)
-            {
-                uint sz = size - 1;
-                sz |= sz >> 1;
-                sz |= sz >> 2;
-                sz |= sz >> 4;
-                sz |= sz >> 8;
-                sz |= sz >> 16;
-                return sz + 1;
-            }
-
             _gd = graphicsDevice;
-            _blocksPerSlot = powerOfTwo(typeSizeInGpuBlocks);
+            _blocksPerSlot = MathUtil.NearestPowerOfTwo(typeSizeInGpuBlocks);
             _slots = new FreeList();
             //_usingGL = _gd.BackendType == GraphicsBackend.OpenGL
             //        || _gd.BackendType == GraphicsBackend.OpenGLES;
             _usingGL = false;
             _mapMode = _usingGL ? MapMode.Write : MapMode.ReadWrite;
-            Resize(powerOfTwo(initialTextureDimension));
+            Resize(MathUtil.NearestPowerOfTwo(initialTextureDimension));
         }
 
         private unsafe void Resize(uint dimension)

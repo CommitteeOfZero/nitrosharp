@@ -100,10 +100,12 @@ namespace NitroSharp.Graphics
     {
         public Vector2 Position;
         public Vector2 TexCoord;
+        public Vector4 Color;
 
         public static readonly VertexLayoutDescription LayoutDescription = new VertexLayoutDescription(
             new VertexElementDescription("vs_Position", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float2),
-            new VertexElementDescription("vs_TexCoord", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float2));
+            new VertexElementDescription("vs_TexCoord", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float2),
+            new VertexElementDescription("vs_Color", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float4));
 
         public bool Equals(QuadVertex other)
         {

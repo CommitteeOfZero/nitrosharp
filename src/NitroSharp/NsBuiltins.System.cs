@@ -60,7 +60,7 @@ namespace NitroSharp
             }
         }
 
-        public override void RemoveEntity(string entityName)
+        public override void DestroyEntities(string entityName)
         {
             foreach ((Entity entity, EntityName name) in QueryEntities(entityName))
             {

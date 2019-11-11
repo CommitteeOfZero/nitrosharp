@@ -74,33 +74,35 @@
         SCREEN,
         Video,
 
-        // Used by SetNextFocus
-        Up,
-        Down,
+        // Used by SetShade
+        Medium,
+        Heavy,
+
+        // Used by SetTone
+        Monochrome,
 
         // Used by SetFont
         LeftDown,
         RightDown,
         Lightdown,
         Around,
-        Monochrome,
         None,
 
         // Used by CreateText
         Auto,
         Inherit,
 
-        // Used by SetScore
-        Local,
-        Global,
-
-        // Used by SetShade
-        Medium,
-        Heavy,
+        // Used by SetNextFocus
+        Up,
+        Down,
 
         // Used by CreateScrollbar
         Vertical,
         Horizon,
+
+        // Used by SetScore
+        Local,
+        Global,
 
         // Other
         Xxx,
