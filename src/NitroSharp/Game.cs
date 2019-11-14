@@ -36,7 +36,6 @@ namespace NitroSharp
         private volatile bool _needsResize;
         private volatile bool _surfaceDestroyed;
         private GraphicsDevice _graphicsDevice;
-        private TexturePool _texturePool;
         private Swapchain _swapchain;
         private readonly TaskCompletionSource<int> _initializingGraphics;
 
@@ -265,8 +264,6 @@ namespace NitroSharp
                 }
                 _swapchain = _graphicsDevice.ResourceFactory.CreateSwapchain(ref swapchainDesc);
             }
-
-            _texturePool = new TexturePool(_graphicsDevice, PixelFormat.R8_G8_B8_A8_UNorm);
         }
 
         private void SetupAudio()
@@ -283,14 +280,11 @@ namespace NitroSharp
             TextureLoader textureLoader;
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && UseWicOnWindows)
             {
-                textureLoader = new WicTextureLoader(
-                    _graphicsDevice,
-                    _texturePool
-                );
+                textureLoader = new WicTextureLoader(_graphicsDevice);
             }
             else
             {
-                textureLoader = new FFmpegTextureLoader(_graphicsDevice, _texturePool);
+                textureLoader = new FFmpegTextureLoader(_graphicsDevice);
             }
 
             var content = new ContentManager(
@@ -343,7 +337,6 @@ namespace NitroSharp
             _graphicsDevice.WaitForIdle();
             Content.Dispose();
             _glyphRasterizer.Dispose();
-            _texturePool.Dispose();
             _swapchain.Dispose();
             _graphicsDevice.Dispose();
             _audioDevice.Dispose();

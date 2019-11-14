@@ -15,9 +15,8 @@ namespace NitroSharp.Content
         private readonly ImagingFactory _wicFactory;
 
         public WicTextureLoader(
-            GraphicsDevice graphicsDevice,
-            TexturePool texturePool)
-            : base(graphicsDevice, texturePool)
+            GraphicsDevice graphicsDevice)
+            : base(graphicsDevice)
         {
             _wicFactory = new ImagingFactory();
         }

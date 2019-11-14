@@ -39,7 +39,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FFmpeg.AutoGen", "third_par
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OpenAL-CS", "third_party\OpenAL-CS\OpenAL-CS.csproj", "{0602811E-0672-45D9-A59D-0E6FC63777FA}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NitroSharp.Tests", "src\NitroSharp.Tests\NitroSharp.Tests.csproj", "{5D058F6C-EB76-454D-A00F-3699BDE1F27E}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NitroSharp.Tests", "src\NitroSharp.Tests\NitroSharp.Tests.csproj", "{5D058F6C-EB76-454D-A00F-3699BDE1F27E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NitroSharp.Playground", "src\NitroSharp.Playground\NitroSharp.Playground.csproj", "{AAD44A65-9D06-4811-B51F-A841B365A48F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -229,6 +231,22 @@ Global
 		{5D058F6C-EB76-454D-A00F-3699BDE1F27E}.Release|x64.Build.0 = Release|Any CPU
 		{5D058F6C-EB76-454D-A00F-3699BDE1F27E}.Release|x86.ActiveCfg = Release|Any CPU
 		{5D058F6C-EB76-454D-A00F-3699BDE1F27E}.Release|x86.Build.0 = Release|Any CPU
+		{AAD44A65-9D06-4811-B51F-A841B365A48F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AAD44A65-9D06-4811-B51F-A841B365A48F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AAD44A65-9D06-4811-B51F-A841B365A48F}.Debug|ARM.ActiveCfg = Debug|Any CPU
+		{AAD44A65-9D06-4811-B51F-A841B365A48F}.Debug|ARM.Build.0 = Debug|Any CPU
+		{AAD44A65-9D06-4811-B51F-A841B365A48F}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{AAD44A65-9D06-4811-B51F-A841B365A48F}.Debug|x64.Build.0 = Debug|Any CPU
+		{AAD44A65-9D06-4811-B51F-A841B365A48F}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{AAD44A65-9D06-4811-B51F-A841B365A48F}.Debug|x86.Build.0 = Debug|Any CPU
+		{AAD44A65-9D06-4811-B51F-A841B365A48F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AAD44A65-9D06-4811-B51F-A841B365A48F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AAD44A65-9D06-4811-B51F-A841B365A48F}.Release|ARM.ActiveCfg = Release|Any CPU
+		{AAD44A65-9D06-4811-B51F-A841B365A48F}.Release|ARM.Build.0 = Release|Any CPU
+		{AAD44A65-9D06-4811-B51F-A841B365A48F}.Release|x64.ActiveCfg = Release|Any CPU
+		{AAD44A65-9D06-4811-B51F-A841B365A48F}.Release|x64.Build.0 = Release|Any CPU
+		{AAD44A65-9D06-4811-B51F-A841B365A48F}.Release|x86.ActiveCfg = Release|Any CPU
+		{AAD44A65-9D06-4811-B51F-A841B365A48F}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -91,15 +91,6 @@ namespace NitroSharp.Graphics
             }
         }
 
-        public ushort Append(in TVertex vertex)
-        {
-            Debug.Assert(_bufferLocked);
-            EnsureCapacity(_cursor + 1);
-            var ptr = (TVertex*)Unsafe.Add<TVertex>((void*)_map.Data, _cursor);
-            *ptr = vertex;
-            return (ushort)_cursor++;
-        }
-
         public Span<TVertex> Append(uint count, out uint position)
         {
             Debug.Assert(_bufferLocked);
@@ -119,17 +110,6 @@ namespace NitroSharp.Graphics
             int cursor = _cursor;
             _cursor += (int)count;
             return dst.Slice(cursor, (int)count);
-        }
-
-        public ushort Append(ReadOnlySpan<TVertex> vertices)
-        {
-            Debug.Assert(_bufferLocked);
-            EnsureCapacity(_cursor + vertices.Length);
-            int oldPosition = _cursor;
-            var dst = new Span<TVertex>((void*)_map.Data, (int)_capacity);
-            vertices.CopyTo(dst.Slice(_cursor, vertices.Length));
-            _cursor += vertices.Length;
-            return (ushort)oldPosition;
         }
 
         public void End(CommandList commandList)

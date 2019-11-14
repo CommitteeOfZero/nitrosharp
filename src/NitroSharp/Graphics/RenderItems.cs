@@ -19,6 +19,14 @@ namespace NitroSharp.Graphics
         public EffectKind Effect;
     }
 
+    internal enum BlendMode
+    {
+        Alpha,
+        Additive,
+        Subtractive,
+        Multiplicative
+    }
+
     internal readonly struct ImageSource
     {
         public readonly AssetId ImageId;
@@ -159,8 +167,6 @@ namespace NitroSharp.Graphics
 
     internal sealed class FadeTransitionStorage : RenderItem2DStorage
     {
-
-
         public FadeTransitionStorage(EntityHub hub, uint initialCapacity)
             : base(hub, initialCapacity)
         {

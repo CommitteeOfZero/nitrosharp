@@ -12,14 +12,12 @@ namespace NitroSharp.Content
     {
         protected readonly GraphicsDevice _gd;
         protected readonly ResourceFactory _rf;
-        protected readonly TexturePool _texturePool;
         private readonly CommandList _cl;
 
-        protected TextureLoader(GraphicsDevice graphicsDevice, TexturePool texturePool)
+        protected TextureLoader(GraphicsDevice graphicsDevice)
         {
             _gd = graphicsDevice;
             _rf = graphicsDevice.ResourceFactory;
-            _texturePool = texturePool;
             _cl = _gd.ResourceFactory.CreateCommandList();
         }
 

@@ -1,0 +1,53 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>netcoreapp3.0</TargetFramework>
+    <LangVersion>8.0</LangVersion>
+    <Nullable>enable</Nullable>
+    <OutputType>Exe</OutputType>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <NoWarn>1701;1702;CA1063</NoWarn>
+    <VeldridVersion>4.7.0</VeldridVersion>
+    <RootAllApplicationAssemblies>false</RootAllApplicationAssemblies>
+    <IlcGenerateCompleteTypeMetadata>false</IlcGenerateCompleteTypeMetadata>
+    <IlcGenerateStackTraceData>false</IlcGenerateStackTraceData>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <RdXmlFile Include="rd.xml" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="../Common/ArrayBuilder.cs" Link="ArrayBuilder.cs" />
+
+    <Compile Include="../NitroSharp/Utilities/FreeList.cs" Link="FreeList.cs" />
+    <Compile Include="../NitroSharp/Primitives/GeometryTypes.cs" Link="GeometryTypes.cs" />
+    <Compile Include="../NitroSharp/Graphics/Foundation/VertexBuffer.cs" Link="Graphics/VertexBuffer.cs" />
+    <Compile Include="../NitroSharp/Graphics/Foundation/VertexList.cs" Link="Graphics/VertexList.cs" />
+    <Compile Include="../NitroSharp/Graphics/Foundation/ShaderLibrary.cs" Link="Graphics/ShaderLibrary.cs" />
+    <Compile Include="../NitroSharp/Utilities/GraphicsUtils.cs" Link="GraphicsUtils.cs" />
+
+    <Compile Include="../NitroSharp/Content/TextureLoader.cs" Link="Content/TextureLoader.cs" />
+    <Compile Include="../NitroSharp/Content/WicTextureLoader.cs" Link="Content/WicTextureLoader.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Veldrid" Version="$(VeldridVersion)" />
+    <PackageReference Include="Veldrid.SDL2" Version="$(VeldridVersion)" />
+    <PackageReference Include="Veldrid.StartupUtilities" Version="$(VeldridVersion)" />
+    <PackageReference Include="SharpDX.Direct2D1" Version="4.2.0" />
+
+    <PackageReference Include="Microsoft.DotNet.ILCompiler" Version="1.0.0-alpha-28302-01" />
+  </ItemGroup>
+
+  <Target Name="EmbedGeneratedShaderContent" AfterTargets="AssignTargetPaths">
+    <ItemGroup>
+      <GeneratedShaders Include="../../bin/obj/NitroSharp/Shaders.Generated/**" />
+      <EmbeddedResource Include="@(GeneratedShaders)">
+        <LogicalName>NitroSharp.Graphics.Shaders.%(FileName)%(Extension)</LogicalName>
+      </EmbeddedResource>
+    </ItemGroup>
+  </Target>
+
+</Project>

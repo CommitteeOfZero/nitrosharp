@@ -17,8 +17,8 @@ namespace NitroSharp.Content
         private readonly VideoFrameConverter _frameConverter;
         private readonly AVInputFormat* _inputFormat;
 
-        public FFmpegTextureLoader(GraphicsDevice graphicsDevice, TexturePool texturePool)
-            : base(graphicsDevice, texturePool)
+        public FFmpegTextureLoader(GraphicsDevice graphicsDevice)
+            : base(graphicsDevice)
         {
             _frameConverter = new VideoFrameConverter();
             var decoderCollection = DecoderCollection.Shared;

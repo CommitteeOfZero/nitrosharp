@@ -222,9 +222,11 @@ namespace NitroSharp.Graphics
             Debug.Assert(_gpuTransforms.GetCachePosition(transformHandle) == glyphRunId);
 
             FontData fontData = _glyphRasterizer.GetFontData(glyphRun.Font);
-            foreach (PositionedGlyph glyph in glyphs)
+            Span<GpuGlyph> gpuGlyphs = _gpuGlyphs.Append((uint)glyphs.Length);
+            for (int i = 0; i < glyphs.Length; i++)
             {
-                var key = new GlyphCacheKey(glyph.Index, glyphRun.FontSize);
+                PositionedGlyph g = glyphs[i];
+                var key = new GlyphCacheKey(g.Index, glyphRun.FontSize);
                 if (fontData.TryGetCachedGlyph(key, out GlyphCacheEntry cachedGlyph)
                     && cachedGlyph.IsRegular)
                 {
@@ -236,14 +238,13 @@ namespace NitroSharp.Graphics
                             .Get(cachedGlyph.OutlineTextureCacheHandle);
                         outlineId = outlineTci.UvRectPosition;
                     }
-                    _gpuGlyphs.Append(new GpuGlyph
-                    {
-                        Offset = glyph.Position,
-                        GlyphRunId = glyphRunId,
-                        GlyphId = glyphTci.UvRectPosition,
-                        OutlineId = outlineId,
-                        Opacity = 1.0f
-                    });
+
+                    ref GpuGlyph gpuGlyph = ref gpuGlyphs[i];
+                    gpuGlyph.Offset = g.Position;
+                    gpuGlyph.GlyphRunId = glyphRunId;
+                    gpuGlyph.GlyphId = glyphTci.UvRectPosition;
+                    gpuGlyph.OutlineId = outlineId;
+                    gpuGlyph.Opacity = 1.0f;
                 }
             }
         }

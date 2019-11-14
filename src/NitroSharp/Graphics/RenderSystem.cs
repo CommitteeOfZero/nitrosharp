@@ -29,7 +29,6 @@ namespace NitroSharp.Graphics.Systems
         private readonly Texture _whiteTexture;
         private readonly TextureCache _textureCache;
         private readonly RenderBucket<RenderItemKey> _mainBucket;
-        private readonly QuadGeometryStream _quadGeometryStream;
         private readonly QuadBatcher _quadBatcher;
         private readonly SpriteRenderer _spriteRenderer;
         private readonly RectangleRenderer _quadRenderer;
@@ -92,10 +91,7 @@ namespace NitroSharp.Graphics.Systems
             );
 
             _mainBucket = new RenderBucket<RenderItemKey>(MainBucketSize);
-            _quadGeometryStream = new QuadGeometryStream(device);
-          
             _whiteTexture = CreateWhiteTexture();
-
             _textureCache = new TextureCache(device, initialLayerCount: 8);
 
             var context = new RenderContext
@@ -111,7 +107,6 @@ namespace NitroSharp.Graphics.Systems
                 GlyphRasterizer = glyphRasterizer,
                 ViewProjection = viewProjection,
                 MainBucket = _mainBucket,
-                QuadGeometryStream = _quadGeometryStream,
                 WhiteTexture = _whiteTexture,
                 DesignResolution = new Size((uint)DesignResolution.Width, (uint)DesignResolution.Height),
                 TextureCache = _textureCache
@@ -169,7 +164,6 @@ namespace NitroSharp.Graphics.Systems
             _cl.ClearColorTarget(0, RgbaFloat.Black);
 
             _mainBucket.Begin();
-            _quadGeometryStream.Begin();
             _quadBatcher.BeginFrame();
             _textureCache.BeginFrame(framestamp);
             _textRenderer.BeginFrame();
@@ -183,7 +177,6 @@ namespace NitroSharp.Graphics.Systems
 
             _textureCache.EndFrame(_cl);
             _textRenderer.EndFrame();
-            _quadGeometryStream.End(_cl);
             _quadBatcher.EndFrame(_cl);
             _mainBucket.End(_cl);
 
@@ -201,7 +194,6 @@ namespace NitroSharp.Graphics.Systems
             //_videoRenderer.Dispose();
 
             _quadBatcher.Dispose();
-            _quadGeometryStream.Dispose();
             _resourceSetCache.Dispose();
             _texturePool.Dispose();
             _shaderLibrary.Dispose();
@@ -211,7 +203,7 @@ namespace NitroSharp.Graphics.Systems
             _viewProjectionBuffer.Dispose();
             _viewProjectionLayout.Dispose();
 
-            //_textRenderer.Dispose();
+            _textRenderer.Dispose();
             _textureCache.Dispose();
 
             _cl.Dispose();
