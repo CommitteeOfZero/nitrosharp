@@ -2,7 +2,6 @@
 using System.IO;
 using System.Runtime.CompilerServices;
 using FFmpeg.AutoGen;
-using NitroSharp.Graphics;
 using NitroSharp.Media.Decoding;
 using NitroSharp.Primitives;
 using NitroSharp.Utilities;

@@ -99,7 +99,7 @@ namespace NitroSharp.NsScript.VM
         public virtual void Rotate(string entityQuery, TimeSpan duration, NsNumeric dstRotationX, NsNumeric dstRotationY, NsNumeric dstRotationZ, NsEasingFunction easingFunction, TimeSpan delay) { }
         public virtual void MoveCube(string entityQuery, TimeSpan duration, NsNumeric dstTranslationX, NsNumeric dstTranslationY, NsNumeric dstTranslationZ, NsEasingFunction easingFunction, TimeSpan delay) { }
 
-        public virtual void DrawTransition(string sourceEntityName, TimeSpan duration, NsRational initialOpacity, NsRational finalOpacity, NsRational feather, NsEasingFunction easingFunction, string maskFileName, TimeSpan delay) { }
+        public virtual void DrawTransition(string entityQuery, TimeSpan duration, NsRational initialFadeAmount, NsRational finalFadeAmount, NsRational feather, NsEasingFunction easingFunction, string maskFileName, TimeSpan delay) { }
 
         public virtual void CreateThread(string name, string target) { }
 
@@ -109,6 +109,10 @@ namespace NitroSharp.NsScript.VM
         {
             return 0.5f;
         }
+
+        public virtual void CreateEffect(string entity, int priority, NsCoordinate x, NsCoordinate y, int width, int height, string effectName) { }
+
+        public virtual void CreateAlphaMask(string v, int priority, NsCoordinate x, NsCoordinate y, string path, bool unk) { }
 
         public virtual void CreateChoice(string name) { }
         public virtual void PlayCutscene(string entityName, int priority, bool loop, bool alpha, string fileName, bool enableAudio) { }

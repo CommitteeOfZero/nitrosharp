@@ -5,7 +5,7 @@ using NitroSharp.NsScript;
 namespace NitroSharp.Animation
 {
     internal abstract class LerpAnimation<T> : PropertyAnimation
-        where T : unmanaged
+        where T : struct
     {
         protected LerpAnimation(
             Entity entity, TimeSpan duration,
@@ -18,7 +18,7 @@ namespace NitroSharp.Animation
 
         protected override void Advance(float deltaMilliseconds)
         {
-            InterpolateValue(ref GetPropertyRow().GetRef(Entity), CalculateFactor(Progress, NsEasingFunction));
+            InterpolateValue(ref GetPropertyRow()[Entity], CalculateFactor(Progress, EasingFunction));
         }
 
         protected abstract void InterpolateValue(ref T value, float factor);

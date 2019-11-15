@@ -9,9 +9,17 @@ const vec4 FullscreenTriangle[3] =
     vec4(3, -1, 2, 1)
 };
 
+const vec4 QuadInfos[4] =
+{
+    vec4(-1, 1, 0, 0),
+    vec4(1, 1, 1, 0),
+    vec4(-1, -1, 0, 1),
+    vec4(1, -1, 1, 1),
+};
+
 void main()
 {
-    vec4 vertex = FullscreenTriangle[gl_VertexIndex];
+    vec4 vertex = QuadInfos[gl_VertexIndex];
     gl_Position = vec4(vertex.xy, 0, 1);
     fs_TexCoord = vertex.zw;
 }

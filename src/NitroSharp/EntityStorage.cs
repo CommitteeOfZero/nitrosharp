@@ -116,6 +116,16 @@ namespace NitroSharp.Experimental
                 }
             }
 
+            public ref T this[Entity entity]
+            {
+                get
+                {
+                    World.EntityPointer ptr = _world.LookupIndexInStorage(entity);
+                    Debug.Assert(ReferenceEquals(_entityStorage, ptr.Storage));
+                    return ref _array[ptr.IndexInStorage];
+                }
+            }
+
             public override void MoveComponents(ComponentStorage abstractDstStorage)
             {
                 ComponentStorage<T> srcStorage = this;
@@ -164,13 +174,6 @@ namespace NitroSharp.Experimental
             public override void Erase(uint index)
             {
                 _array[index] = default;
-            }
-
-            internal ref T GetRef(Entity entity)
-            {
-                World.EntityPointer ptr = _world.LookupIndexInStorage(entity);
-                Debug.Assert(ReferenceEquals(_entityStorage, ptr.Storage));
-                return ref _array[ptr.IndexInStorage];
             }
         }
 

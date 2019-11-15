@@ -26,6 +26,8 @@ namespace NitroSharp.Utilities
         private FixedItems _fixedItems;
         private int _count;
 
+        public int Count => _count;
+
         public void Add(T item)
         {
             Span<T> fixedElements = _fixedItems.AsSpan();
@@ -68,9 +70,19 @@ namespace NitroSharp.Utilities
 
         public Span<T> Enumerate()
         {
-            return _count < MaxFixed
+            return _count <= MaxFixed
                 ? _fixedItems.AsSpan(_count)
                 : _array.AsSpan(0, _count);
+        }
+
+        public int HashElements()
+        {
+            int hash = 0;
+            foreach (ref T item in Enumerate())
+            {
+                hash = HashCode.Combine(hash, item);
+            }
+            return hash;
         }
     }
 }

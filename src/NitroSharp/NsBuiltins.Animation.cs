@@ -42,7 +42,7 @@ namespace NitroSharp
             var storage = _world.GetStorage<RenderItemStorage>(entity);
             if (storage == null) { return; }
             float adjustedOpacity = dstOpacity.Rebase(1.0f);
-            ref RgbaFloat color = ref storage.CommonProperties.GetRef(entity).Color;
+            ref RgbaFloat color = ref storage.Materials[entity].Color;
             if (duration > TimeSpan.Zero)
             {
                 var animation = new FadeAnimation(entity, duration, easingFunction)
@@ -100,8 +100,8 @@ namespace NitroSharp
             NsCoordinate dstX, NsCoordinate dstY,
             NsEasingFunction easingFunction, bool wait)
         {
-            ref Vector3 position = ref _world.GetStorage<RenderItemStorage>(entity)
-                .TransformComponents.GetRef(entity).Position;
+            ref Vector3 position = ref _world.GetStorage<SceneObjectStorage>(entity)
+                .TransformComponents[entity].Position;
 
             float targetX = dstX.Origin == NsCoordinateOrigin.CurrentValue
                 ? position.X + dstX.Value
@@ -161,8 +161,8 @@ namespace NitroSharp
             NsRational dstScaleX, NsRational dstScaleY,
             NsEasingFunction easingFunction, bool suspendThread)
         {
-            ref Vector3 scale = ref _world.GetStorage<RenderItemStorage>(entity)
-                .TransformComponents.GetRef(entity).Scale;
+            ref Vector3 scale = ref _world.GetStorage<SceneObjectStorage>(entity)
+                .TransformComponents[entity].Scale;
             dstScaleX = dstScaleX.Rebase(1.0f);
             dstScaleY = dstScaleY.Rebase(1.0f);
 

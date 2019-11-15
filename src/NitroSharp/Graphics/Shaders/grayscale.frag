@@ -1,16 +1,9 @@
 #version 450
 
-//layout(packed, set = 1, binding = 0) uniform LookupTable
-//{
-//    uint _Lookup[768];
-//};
+layout(set = 0, binding = 0) uniform texture2D Input;
+layout(set = 0, binding = 1) uniform sampler Sampler;
 
-layout(set = 1, binding = 0) uniform texture2D Texture;
-layout(set = 1, binding = 1) uniform sampler Sampler;
-
-layout(location = 0) in vec4 fs_Color;
-layout(location = 1) in vec2 fs_TexCoord;
-
+layout(location = 0) in vec2 fs_TexCoord;
 layout(location = 0) out vec4 OutColor;
 
 const uint[] red =
@@ -98,7 +91,7 @@ uint quantize(float f)
 
 void main()
 {
-    vec4 texel = texture(sampler2D(Texture, Sampler), fs_TexCoord);
+    vec4 texel = texture(sampler2D(Input, Sampler), fs_TexCoord);
     uvec3 t = uvec3(
         quantize(texel.r),
         quantize(texel.g),
@@ -106,5 +99,5 @@ void main()
     );
     uint grayscale = red[t.r] + green[t.g] + blue[t.b];
     grayscale %= 255;
-	OutColor = vec4(vec3(grayscale) / 255.0f, texel.a) * fs_Color;
+	OutColor = vec4(vec3(grayscale) / 255.0f, texel.a);
 }

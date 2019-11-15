@@ -5,8 +5,8 @@ using NitroSharp.NsScript.Primitives;
 using NitroSharp.Primitives;
 using System;
 using System.Numerics;
-using Veldrid;
 using NitroSharp.Experimental;
+using NitroSharp.Animation;
 
 #nullable enable
 
@@ -14,16 +14,62 @@ namespace NitroSharp
 {
     internal sealed partial class NsBuiltins
     {
-        public override void BoxBlur(string entityName, uint nbPasses)
+        public override void CreateAlphaMask(
+            string name, int priority,
+            NsCoordinate x, NsCoordinate y,
+            string path,
+            bool unk)
         {
+            var imageHandle = new AssetId(path);
+            if (Content.RequestTexture(imageHandle, out Size texSize))
+            {
+                (Entity entity, _) = _world.AlphaMasks.Uninitialized.New(
+                    new EntityName(name),
+                    new SizeF(1280, 720),
+                    priority,
+                    imageHandle
+                );
+                SetPosition(entity, x, y);
+            }
+        }
+
+        public override void CreateEffect(
+            string entity,
+            int priority,
+            NsCoordinate x, NsCoordinate y,
+            int width, int height,
+            string effectName)
+        {
+            var distortionMap = new AssetId("testcg/lens.png");
+            if (Content.RequestTexture(distortionMap, out _))
+            {
+                _world.PostEffects.Uninitialized.New(
+                    new EntityName(entity),
+                    new BarrelDistortionParameters
+                    {
+                        DistortionMap = distortionMap
+                    }
+                );
+            }
+        }
+
+        public override void BoxBlur(string entityQuery, uint nbPasses)
+        {
+            foreach ((Entity entity, _) in _world.Query(entityQuery))
+            {
+                var storage = _world.GetStorage<QuadStorage>(entity);
+                storage.Materials[entity].Effects
+                    .Add(new EffectDescription(EffectKind.BoxBlur, nbPasses));
+            }
         }
 
         public override void Grayscale(string entityQuery)
         {
             foreach ((Entity entity, _) in _world.Query(entityQuery))
             {
-                var storage = _world.GetStorage<RenderItem2DStorage>(entity);
-                storage.CommonProperties.GetRef(entity).Effect = EffectKind.Grayscale;
+                var storage = _world.GetStorage<QuadStorage>(entity);
+                storage.Materials[entity].Effects
+                    .Add(new EffectDescription(EffectKind.Grayscale));
             }
         }
 
@@ -32,12 +78,13 @@ namespace NitroSharp
             NsCoordinate x, NsCoordinate y,
             int width, int height, NsColor color)
         {
-            (Entity e, _) = _world.Rectangles.Uninitialized.New(
+            (Entity e, _) = _world.Quads.Uninitialized.New(
                 new EntityName(name),
                 new SizeF(width, height),
                 priority,
-                color.ToRgbaFloat()
+                Material.SolidColor(color.ToRgbaFloat())
             );
+
             SetPosition(e, x, y);
         }
 
@@ -68,8 +115,19 @@ namespace NitroSharp
             }
         }
 
-        private void CaptureFramebuffer(string entityName, NsCoordinate x, NsCoordinate y, int priority)
+        private void CaptureFramebuffer(
+            string entityName,
+            NsCoordinate x, NsCoordinate y,
+            int priority)
         {
+            (Entity e, _) = _world.Quads.Uninitialized.New(
+                new EntityName(entityName),
+                new SizeF(1280, 720),
+                priority,
+                Material.Screenshot()
+            );
+
+            SetPosition(e, x, y);
         }
 
         public override void CreateSpriteEx(
@@ -94,7 +152,7 @@ namespace NitroSharp
             if (_world.TryGetEntity(new EntityName(source), out Entity existingEnitity))
             {
                 var storage = _world.GetStorage<AbstractImageStorage>(existingEnitity);
-                source = storage.ImageSources.GetRef(existingEnitity).ImageId.NormalizedPath;
+                source = storage.ImageSources[existingEnitity].Handle.NormalizedPath;
             }
 
             var textureId = new AssetId(source);
@@ -105,12 +163,11 @@ namespace NitroSharp
 
             var sourceRectangle = srcRect ?? new RectangleF(Vector2.Zero, texSize);
             var localBounds = new SizeF(sourceRectangle.Width, sourceRectangle.Height);
-            (Entity entity, _) = _world.Sprites.Uninitialized.New(
+            (Entity entity, _) = _world.Quads.Uninitialized.New(
                 new EntityName(name),
+                localBounds,
                 priority,
-                new ImageSource(textureId, sourceRectangle),
-                RgbaFloat.White,
-                localBounds
+                Material.Texture(textureId, texSize, sourceRectangle)
             );
             SetPosition(entity, x, y);
             //Entity parent = _world.Sprites.Parents.GetRef(entity);
@@ -146,33 +203,47 @@ namespace NitroSharp
             //    Content.Get<BindableTexture>(right),
             //    Content.Get<BindableTexture>(top),
             //    Content.Get<BindableTexture>(bottom));
-
-            //cube.Priority = priority;
-            //var EntityHandle = _world.Create(entityName).WithComponent(cube);
-            //EntityHandle.Transform.TransformationOrder = TransformationOrder.ScaleTranslationRotation;
         }
 
         public override void DrawTransition(
-            string sourceEntityName,
+            string entityQuery,
             TimeSpan duration,
-            NsRational initialOpacity,
-            NsRational finalOpacity,
+            NsRational initialFadeAmount,
+            NsRational finalFadeAmount,
             NsRational feather,
             NsEasingFunction easingFunction,
             string maskFileName,
             TimeSpan delay)
         {
-            Content.RequestTexture(new AssetId(maskFileName), out _);
+            var maskHandle = new AssetId(maskFileName);
+            if (Content.RequestTexture(maskHandle, out _))
+            {
+                foreach ((Entity entity, _) in _world.Query(entityQuery))
+                {
+                    var storage = _world.GetStorage<QuadStorage>(entity);
+                    storage.Materials[entity]
+                        .TransitionParameters.MaskHandle = maskHandle;
 
-            Interpreter.SuspendThread(CurrentThread, duration);
+                    var animation = new TransitionAnimation(entity, duration, easingFunction)
+                    {
+                        InitialFadeAmount = initialFadeAmount.Rebase(1.0f),
+                        FinalFadeAmount = finalFadeAmount.Rebase(1.0f),
+                        IsBlocking = CurrentThread == MainThread
+                    };
+                    animation.WaitingThread = CurrentThread;
+                    _world.ActivateAnimation(animation);
+                }
+
+                Interpreter.SuspendThread(CurrentThread);
+            }
         }
 
         public override int GetWidth(string entityName)
         {
             if (_world.TryGetEntity(new EntityName(entityName), out Entity entity))
             {
-                var storage = _world.GetStorage<RenderItem2DStorage>(entity);
-                return (int)storage.LocalBounds.GetRef(entity).Width;
+                var storage = _world.GetStorage<SceneObject2DStorage>(entity);
+                return (int)storage.LocalBounds[entity].Width;
             }
 
             return 0;
@@ -182,8 +253,8 @@ namespace NitroSharp
         {
             if (_world.TryGetEntity(new EntityName(entityName), out Entity entity))
             {
-                var storage = _world.GetStorage<RenderItem2DStorage>(entity);
-                return (int)storage.LocalBounds.GetRef(entity).Height;
+                var storage = _world.GetStorage<SceneObject2DStorage>(entity);
+                return (int)storage.LocalBounds[entity].Height;
             }
 
             return 0;
@@ -193,15 +264,22 @@ namespace NitroSharp
         {
             var parentBounds = new SizeF(1280, 720);
 
-            var storage = _world.GetStorage<RenderItem2DStorage>(entity);
-            ref TransformComponents transform = ref storage.TransformComponents.GetRef(entity);
-            SizeF bounds = storage.LocalBounds.GetRef(entity);
+            var storage = _world.GetStorage<SceneObject2DStorage>(entity);
+            ref TransformComponents transform = ref storage.TransformComponents[entity];
+            SizeF bounds = storage.LocalBounds[entity];
 
             Entity parent = _world.GetParent(entity);
             if (parent.IsValid)
             {
-                parentBounds = _world.GetStorage<RenderItem2DStorage>(parent)
-                    .LocalBounds.GetRef(parent);
+                if (_world.GetStorage<SceneObject2DStorage>(parent) is AlphaMaskStorage maskStorage)
+                {
+
+                }
+                else
+                {
+                    parentBounds = _world.GetStorage<SceneObject2DStorage>(parent)
+                        .LocalBounds[parent];
+                }
             }
 
             var value = new Vector2(
@@ -231,7 +309,7 @@ namespace NitroSharp
             };
 
             Vector2 position = translateOrigin * parentBounds.ToVector();
-            position -= anchorPoint * new Vector2(bounds.Width, bounds.Height);
+            position -= anchorPoint * bounds.ToVector();
             position += value;
 
             transform.Position = new Vector3(position.X, position.Y, 0);

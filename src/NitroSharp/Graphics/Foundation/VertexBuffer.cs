@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using Veldrid;
 
 #nullable enable
@@ -54,32 +55,26 @@ namespace NitroSharp.Graphics
         public void Update(GraphicsDevice graphicsDevice, CommandList commandList, Span<TVertex> data)
             => Update(graphicsDevice, commandList, data, _staging ?? _deviceBuffer!);
 
-        private void Update(
+        private unsafe void Update(
             GraphicsDevice graphicsDevice,
             CommandList commandList,
             Span<TVertex> data,
             DeviceBuffer mappableBuffer)
         {
             MappedResource map = graphicsDevice.Map(mappableBuffer, MapMode.Write);
-            uint size = map.SizeInBytes;
-            unsafe
-            {
-                fixed (TVertex* pData = &data[0])
-                {
-                    if (size >= 1024)
-                    {
-                        Buffer.MemoryCopy(pData, map.Data.ToPointer(), size, size);
-                    }
-                    else
-                    {
-                        Unsafe.CopyBlock(map.Data.ToPointer(), pData, size);
-                    }
-                }
-            }
+            var src = MemoryMarshal.Cast<TVertex, byte>(data);
+            var dst = new Span<byte>(map.Data.ToPointer(), (int)map.SizeInBytes);
+            src.CopyTo(dst);
             graphicsDevice.Unmap(mappableBuffer);
             if (mappableBuffer != _deviceBuffer)
             {
-                commandList.CopyBuffer(mappableBuffer, 0, _deviceBuffer, 0, size);
+                commandList.CopyBuffer(
+                    source: mappableBuffer,
+                    sourceOffset: 0,
+                    destination: _deviceBuffer,
+                    destinationOffset: 0,
+                    map.SizeInBytes
+                );
             }
         }
 

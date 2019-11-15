@@ -1,45 +1,27 @@
-﻿using System.Numerics;
-using System.Runtime.InteropServices;
+﻿using System;
+using System.Numerics;
 using NitroSharp.Content;
 using NitroSharp.Experimental;
 using NitroSharp.Primitives;
 using NitroSharp.Text;
-using Veldrid;
 
 #nullable enable
 
 namespace NitroSharp.Graphics
 {
-    [StructLayout(LayoutKind.Auto)]
-    internal struct CommonItemProperties
-    {
-        public RenderItemKey Key;
-        public RgbaFloat Color;
-        public BlendMode BlendMode;
-        public EffectKind Effect;
-    }
-
-    internal enum BlendMode
-    {
-        Alpha,
-        Additive,
-        Subtractive,
-        Multiplicative
-    }
-
     internal readonly struct ImageSource
     {
-        public readonly AssetId ImageId;
+        public readonly AssetId Handle;
         public readonly RectangleF SourceRectangle;
 
-        public ImageSource(AssetId imageId, in RectangleF sourceRectangle)
+        public ImageSource(AssetId handle, in RectangleF sourceRectangle)
         {
-            ImageId = imageId;
+            Handle = handle;
             SourceRectangle = sourceRectangle;
         }
 
         public override string ToString()
-            => $"{ImageId.ToString()}, {SourceRectangle.ToString()}";
+            => $"{Handle.ToString()}, {SourceRectangle.ToString()}";
     }
 
     internal struct TransformComponents
@@ -49,69 +31,138 @@ namespace NitroSharp.Graphics
         public Vector3 Rotation;
     }
 
-    internal enum EffectKind
+    internal interface SceneObjectStorage
     {
-        None = 0,
-        Grayscale
+        public ReadOnlySpan<Entity> Entities { get; }
+        public EntityStorage.ComponentStorage<RenderItemKey> Keys { get; }
+        public EntityStorage.ComponentStorage<TransformComponents> TransformComponents { get; }
+        public EntityStorage.ComponentStorage<Matrix4x4> Transforms { get; }
     }
 
-    internal abstract class RenderItemStorage : EntityStorage
+    internal interface SceneObject2DStorage : SceneObjectStorage
     {
-        private static int s_id;
+        public EntityStorage.ComponentStorage<SizeF> LocalBounds { get; }
+    }
 
-        public ComponentStorage<CommonItemProperties> CommonProperties { get; }
+    internal abstract class RenderItemStorage : EntityStorage, SceneObjectStorage
+    {
+        private static uint s_id;
+
+        public ComponentStorage<RenderItemKey> Keys { get; }
         public ComponentStorage<TransformComponents> TransformComponents { get; }
         public ComponentStorage<Matrix4x4> Transforms { get; }
 
+        public ComponentStorage<Material> Materials { get; }
+        public SystemComponentStorage<DrawState> DrawState { get; }
+      
         protected RenderItemStorage(EntityHub hub, uint initialCapacity)
             : base(hub, initialCapacity)
         {
-            CommonProperties = AddComponentStorage<CommonItemProperties>();
+            Keys = AddComponentStorage<RenderItemKey>();
             TransformComponents = AddComponentStorage<TransformComponents>();
             Transforms = AddComponentStorage<Matrix4x4>();
+            Materials = AddComponentStorage<Material>();
+            DrawState = AddSystemComponentStorage<DrawState>();
         }
 
         protected (Entity entity, uint index) New(
-            EntityName name,
-            int priority,
-            RgbaFloat color)
+           EntityName name,
+           int priority)
         {
             (Entity e, uint i) = New(name);
-            ref CommonItemProperties commonData = ref CommonProperties[i];
-            commonData.Key = new RenderItemKey((ushort)priority, (ushort)++s_id);
-            commonData.Color = color;
-            commonData.BlendMode = BlendMode.Alpha;
+            Keys[i] = new RenderItemKey((ushort)priority, (ushort)++s_id);
             TransformComponents[i].Scale = Vector3.One;
             return (e, i);
         }
     }
 
-    internal abstract class RenderItem2DStorage : RenderItemStorage
+    internal sealed class QuadStorage : RenderItemStorage, SceneObject2DStorage
     {
+        public ComponentStorage<QuadGeometry> Geometry { get; }
         public ComponentStorage<SizeF> LocalBounds { get; }
 
-        protected RenderItem2DStorage(EntityHub hub, uint initialCapacity)
+        public QuadStorage(EntityHub hub, uint initialCapacity)
             : base(hub, initialCapacity)
         {
+            Geometry = AddComponentStorage<QuadGeometry>();
             LocalBounds = AddComponentStorage<SizeF>();
-        }
-    }
-
-    internal sealed class RectangleStorage : RenderItem2DStorage
-    {
-        public RectangleStorage(EntityHub hub, uint initialCapacity)
-            : base(hub, initialCapacity)
-        {
         }
 
         public (Entity entity, uint index) New(
-           EntityName name,
-           SizeF size,
-           int priority,
-           RgbaFloat color)
+            EntityName name,
+            SizeF localBounds,
+            int priority,
+            in Material material)
         {
-            (Entity e, uint i) = New(name, priority, color);
-            LocalBounds[i] = size;
+            (Entity e, uint i) = base.New(name, priority);
+            LocalBounds[i] = localBounds;
+            Materials[i] = material;
+
+            Entity parent = _world.GetParent(e);
+            if (parent.IsValid && _world.GetStorage<EntityStorage>(parent)
+                is AlphaMaskStorage maskStorage)
+            {
+                Materials[i].AlphaMask = maskStorage.ImageHandles[parent];
+            }
+            return (e, i);
+        }
+    }
+
+    internal sealed class AlphaMaskStorage : EntityStorage, SceneObject2DStorage
+    {
+        public AlphaMaskStorage(EntityHub hub, uint initialCapacity)
+            : base(hub, initialCapacity)
+        {
+            Keys = AddComponentStorage<RenderItemKey>();
+            TransformComponents = AddComponentStorage<TransformComponents>();
+            Transforms = AddComponentStorage<Matrix4x4>();
+            LocalBounds = AddComponentStorage<SizeF>();
+            ImageHandles = AddComponentStorage<AssetId>();
+        }
+
+        public ComponentStorage<RenderItemKey> Keys { get; }
+        public ComponentStorage<TransformComponents> TransformComponents { get; }
+        public ComponentStorage<Matrix4x4> Transforms { get; }
+        public ComponentStorage<SizeF> LocalBounds { get; }
+
+        public ComponentStorage<AssetId> ImageHandles { get; }
+
+        public (Entity entity, uint index) New(
+           EntityName name,
+           SizeF localBounds,
+           int priority,
+           AssetId imageHandle)
+        {
+            (Entity e, uint i) = New(name);
+            Keys[i] = new RenderItemKey((ushort)priority, 0);
+            TransformComponents[i].Scale = Vector3.One;
+            LocalBounds[i] = localBounds;
+            ImageHandles[i] = imageHandle;
+            return (e, i);
+        }
+    }
+
+    internal struct BarrelDistortionParameters
+    {
+        public AssetId DistortionMap;
+    }
+
+    internal sealed class PostEffectStorage : EntityStorage
+    {
+        public ComponentStorage<BarrelDistortionParameters> Parameters { get; }
+
+        public PostEffectStorage(EntityHub hub, uint initialCapacity)
+            : base(hub, initialCapacity)
+        {
+            Parameters = AddComponentStorage<BarrelDistortionParameters>();
+        }
+
+        public (Entity entity, uint index) New(
+            EntityName name,
+            in BarrelDistortionParameters parameters)
+        {
+            (Entity e, uint i) = base.New(name);
+            Parameters[i] = parameters;
             return (e, i);
         }
     }
@@ -139,48 +190,16 @@ namespace NitroSharp.Graphics
         }
     }
 
-    internal sealed class SpriteStorage : RenderItem2DStorage, AbstractImageStorage
-    {
-        public ComponentStorage<ImageSource> ImageSources { get; }
-        public SystemComponentStorage<QuadMaterial> Materials { get; }
-
-        public SpriteStorage(EntityHub hub, uint initialCapacity)
-            : base(hub, initialCapacity)
-        {
-            ImageSources = AddComponentStorage<ImageSource>();
-            Materials = AddSystemComponentStorage<QuadMaterial>();
-        }
-
-        public (Entity entity, uint index) New(
-            EntityName name,
-            int priority,
-            ImageSource src,
-            RgbaFloat color,
-            SizeF localBounds)
-        {
-            (Entity e, uint i) = New(name, priority, color);
-            ImageSources[i] = src;
-            LocalBounds[i] = localBounds;
-            return (e, i);
-        }
-    }
-
-    internal sealed class FadeTransitionStorage : RenderItem2DStorage
-    {
-        public FadeTransitionStorage(EntityHub hub, uint initialCapacity)
-            : base(hub, initialCapacity)
-        {
-        }
-    }
-
-    internal sealed class TextBlockStorage : RenderItem2DStorage
+    internal sealed class TextBlockStorage : RenderItemStorage, SceneObject2DStorage
     {
         public ComponentStorage<TextLayout> Layouts { get; }
+        public ComponentStorage<SizeF> LocalBounds { get; }
 
         public TextBlockStorage(EntityHub hub, uint initialCapacity)
             : base(hub, initialCapacity)
         {
             Layouts = AddComponentStorage<TextLayout>();
+            LocalBounds = AddComponentStorage<SizeF>();
         }
 
         public (Entity entity, uint index) New(
@@ -188,7 +207,7 @@ namespace NitroSharp.Graphics
            TextLayout layout,
            int priority)
         {
-            (Entity e, uint i) = New(name, priority, RgbaFloat.White);
+            (Entity e, uint i) = New(name, priority);
             Layouts[i] = layout;
             return (e, i);
         }

@@ -1,5 +1,4 @@
 ﻿using NitroSharp.Content;
-using NitroSharp.Graphics;
 using NitroSharp.Media;
 using NitroSharp.Primitives;
 using NitroSharp.Text;
@@ -12,6 +11,8 @@ using Veldrid;
 using Veldrid.StartupUtilities;
 using System.Runtime.InteropServices;
 using NitroSharp.Experimental;
+using System.Runtime.CompilerServices;
+using NitroSharp.Utilities;
 
 namespace NitroSharp
 {
@@ -42,8 +43,7 @@ namespace NitroSharp
         private AudioDevice _audioDevice;
         private AudioSourcePool _audioSourcePool;
 
-        private readonly World _presenterWorld;
-        private readonly World _scriptingWorld;
+        private readonly World _world;
 
         private Presenter _presenter;
         private ScriptRunner _scriptRunner;
@@ -65,7 +65,7 @@ namespace NitroSharp
             _window.Mobile_SurfaceDestroyed += OnSurfaceDestroyed;
 
             _gameTimer = new Stopwatch();
-            _presenterWorld = _scriptingWorld = new World();
+            _world = new World();
         }
 
         internal ContentManager Content { get; private set; }
@@ -109,9 +109,9 @@ namespace NitroSharp
             SetupFonts();
             await Task.WhenAll(new[] { _initializingGraphics.Task, initializeAudio });
             Content = CreateContentManager();
-            _scriptRunner = new ScriptRunner(this, _scriptingWorld);
+            _scriptRunner = new ScriptRunner(this, _world);
             var loadScriptTask = Task.Run((Action)_scriptRunner.LoadStartupScript);
-            _presenter = new Presenter(this, _presenterWorld);
+            _presenter = new Presenter(this, _world);
             await loadScriptTask;
         }
 
@@ -189,9 +189,8 @@ namespace NitroSharp
         {
             if (Content.ResolveTextures())
             {
-                _presenterWorld.CommitActivateAnimations();
                 _presenter.ProcessNewEntities();
-                _presenterWorld.BeginFrame();
+                _world.BeginFrame();
 
                 var scriptRunnerStatus = _scriptRunner.Tick();
                 switch (scriptRunnerStatus)

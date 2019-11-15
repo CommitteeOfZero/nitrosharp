@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Runtime.CompilerServices;
 using NitroSharp.Experimental;
 using NitroSharp.NsScript;
 using NitroSharp.NsScript.VM;
@@ -20,13 +19,13 @@ namespace NitroSharp.Animation
         {
             Entity = entity;
             Duration = duration;
-            NsEasingFunction = easingFunction;
+            EasingFunction = easingFunction;
             Repeat = repeat;
         }
 
         public Entity Entity { get; }
         public TimeSpan Duration { get; protected set; }
-        public NsEasingFunction NsEasingFunction { get; }
+        public NsEasingFunction EasingFunction { get; }
         public bool Repeat { get; }
 
         public bool IsBlocking { get; set; }
@@ -94,35 +93,33 @@ namespace NitroSharp.Animation
         {
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected float CalculateProgress(float elapsed, float duration)
             => MathUtil.Clamp(elapsed / duration, 0.0f, 1.0f);
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected float CalculateFactor(float progress, NsEasingFunction function)
         {
             switch (function)
             {
                 case NsEasingFunction.QuadraticEaseIn:
-                    return (float)Math.Pow(progress, 2);
+                    return MathF.Pow(progress, 2);
                 case NsEasingFunction.CubicEaseIn:
-                    return (float)Math.Pow(progress, 3);
+                    return MathF.Pow(progress, 3);
                 case NsEasingFunction.QuarticEaseIn:
-                    return (float)Math.Pow(progress, 4);
+                    return MathF.Pow(progress, 4);
                 case NsEasingFunction.QuadraticEaseOut:
-                    return 1.0f - (float)Math.Pow(1.0f - progress, 2);
+                    return 1.0f - MathF.Pow(1.0f - progress, 2);
                 case NsEasingFunction.CubicEaseOut:
-                    return 1.0f - (float)Math.Pow(1.0f - progress, 3);
+                    return 1.0f - MathF.Pow(1.0f - progress, 3);
                 case NsEasingFunction.QuarticEaseOut:
-                    return 1.0f - (float)Math.Pow(1.0f - progress, 4);
+                    return 1.0f - MathF.Pow(1.0f - progress, 4);
                 case NsEasingFunction.SineEaseIn:
-                    return 1.0f - (float)Math.Cos(progress * Math.PI * 0.5f);
+                    return 1.0f - MathF.Cos(progress * MathF.PI * 0.5f);
                 case NsEasingFunction.SineEaseOut:
-                    return (float)Math.Sin(progress * Math.PI * 0.5f);
+                    return MathF.Sin(progress * MathF.PI * 0.5f);
                 case NsEasingFunction.SineEaseInOut:
-                    return 0.5f * (1.0f - (float)Math.Cos(progress * Math.PI));
+                    return 0.5f * (1.0f - MathF.Cos(progress * MathF.PI));
                 case NsEasingFunction.SineEaseOutIn:
-                    return (float)(Math.Acos(1.0f - progress * 2.0f) / Math.PI);
+                    return MathF.Acos(1.0f - progress * 2.0f) / MathF.PI;
                 case NsEasingFunction.None:
                 default:
                     return progress;

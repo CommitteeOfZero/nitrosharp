@@ -77,20 +77,24 @@ namespace NitroSharp.Experimental
             _entitiesToEnable = new List<(Entity entity, bool enable)>();
 
             _entityHubs = new List<EntityHub>();
-            Rectangles = AddHub(hub => new RectangleStorage(hub, 16));
-            Sprites = AddHub(hub => new SpriteStorage(hub, 512));
+            Quads = AddHub(hub => new QuadStorage(hub, 512));
             Images = AddHub(hub => new ImageStorage(hub, 512));
+            AlphaMasks = AddHub(hub => new AlphaMaskStorage(hub, 4));
             TextBlocks = AddHub(hub => new TextBlockStorage(hub, 16));
+            ThreadRecords = AddHub(hub => new ThreadRecordStorage(hub, 16));
+            PostEffects = AddHub(hub => new PostEffectStorage(hub, 2));
         }
 
         public Dictionary<EntityName, Entity>.Enumerator EntityEnumerator => _entities.GetEnumerator();
         public Dictionary<AnimationDictionaryKey, PropertyAnimation>.ValueCollection AttachedAnimations
             => _activeAnimations.Values;
 
-        public EntityHub<RectangleStorage> Rectangles { get; }
-        public EntityHub<SpriteStorage> Sprites { get; }
+        public EntityHub<QuadStorage> Quads { get; }
         public EntityHub<ImageStorage> Images { get; }
+        public EntityHub<AlphaMaskStorage> AlphaMasks { get; }
         public EntityHub<TextBlockStorage> TextBlocks { get; }
+        public EntityHub<ThreadRecordStorage> ThreadRecords { get; }
+        public EntityHub<PostEffectStorage> PostEffects { get; }
 
         private EntityHub<T> AddHub<T>(Func<EntityHub, T> factory) where T : EntityStorage
         {
@@ -101,6 +105,12 @@ namespace NitroSharp.Experimental
 
         public void BeginFrame()
         {
+            foreach ((AnimationDictionaryKey key, PropertyAnimation anim) in _queuedAnimations)
+            {
+                _activeAnimations[key] = anim;
+            }
+            _queuedAnimations.Clear();
+
             foreach (EntityHub hub in _entityHubs)
             {
                 ReadOnlySpan<Entity> activeEntities = hub.GetEntities(StorageArea.Active);
@@ -328,15 +338,6 @@ namespace NitroSharp.Experimental
         {
             var key = new AnimationDictionaryKey(animation.Entity, animation.GetType());
             _animationsToDeactivate.Add((key, animation));
-        }
-
-        public void CommitActivateAnimations()
-        {
-            foreach ((AnimationDictionaryKey key, PropertyAnimation anim) in _queuedAnimations)
-            {
-                _activeAnimations[key] = anim;
-            }
-            _queuedAnimations.Clear();
         }
 
         public void FlushDetachedAnimations()

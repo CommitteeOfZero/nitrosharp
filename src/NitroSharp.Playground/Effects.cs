@@ -8,13 +8,11 @@ namespace NitroSharp.Playground
     internal enum EffectKind
     {
         Grayscale,
-        Blit,
         BoxBlur
     }
 
     internal class Effects : IDisposable
     {
-        private readonly Pipeline _blit;
         private readonly Pipeline _grayscale;
         private readonly Pipeline _boxblur;
 
@@ -47,7 +45,6 @@ namespace NitroSharp.Playground
                 ));
             }
 
-            _blit = createPipeline("blit");
             _grayscale = createPipeline("grayscalefx");
             _boxblur = createPipeline("boxblur");
         }
@@ -56,7 +53,6 @@ namespace NitroSharp.Playground
 
         public void Dispose()
         {
-            _blit.Dispose();
             _grayscale.Dispose();
             _boxblur.Dispose();
         }
@@ -65,7 +61,6 @@ namespace NitroSharp.Playground
         {
             return effect switch
             {
-                EffectKind.Blit => _blit,
                 EffectKind.Grayscale => _grayscale,
                 EffectKind.BoxBlur => _boxblur,
                 _ => throw new Exception()

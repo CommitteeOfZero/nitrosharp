@@ -1,20 +1,17 @@
 #version 450
 
-layout(set = 0, binding = 0) uniform ViewProjection
+layout (location = 0) out vec2 fs_TexCoord;
+
+const vec4 FullscreenTriangle[3] =
 {
-    mat4 _ViewProjection;
+    vec4(-1, -1, 0, 1),
+    vec4(-1, 3, 0, -1),
+    vec4(3, -1, 2, 1)
 };
-
-layout(location = 0) in vec2 vs_Position;
-layout(location = 1) in vec2 vs_TexCoord;
-layout(location = 2) in vec4 vs_Color;
-
-layout(location = 0) out vec4 fs_Color;
-layout(location = 1) out vec2 fs_TexCoord;
 
 void main()
 {
-    gl_Position = _ViewProjection * vec4(vs_Position, 0, 1);
-    fs_Color = vs_Color;
-    fs_TexCoord = vs_TexCoord;
+    vec4 vertex = FullscreenTriangle[gl_VertexIndex];
+    gl_Position = vec4(vertex.xy, 0, 1);
+    fs_TexCoord = vertex.zw;
 }

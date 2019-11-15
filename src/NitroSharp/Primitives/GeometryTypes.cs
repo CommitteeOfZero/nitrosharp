@@ -82,10 +82,12 @@ namespace NitroSharp.Primitives
         public bool Equals(Size other) => Width == other.Width && Height == other.Height;
         public override bool Equals(object? obj) => obj is Size size && Equals(size);
 
+        public SizeF ToSizeF() => new SizeF(Width, Height);
         public Vector2 ToVector2() => new Vector2(Width, Height);
 
         public override int GetHashCode() => HashCode.Combine(Width, Height);
         public override string? ToString() => $"{{Width:{Width.ToString()}, Height:{Height.ToString()}}}";
+
 
         public static bool operator ==(Size left, Size right) => left.Equals(right);
         public static bool operator !=(Size left, Size right) => !left.Equals(right);

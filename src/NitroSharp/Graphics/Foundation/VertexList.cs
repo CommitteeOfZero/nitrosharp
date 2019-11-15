@@ -91,6 +91,15 @@ namespace NitroSharp.Graphics
             }
         }
 
+        public ushort Append(in TVertex vertex)
+        {
+            Debug.Assert(_bufferLocked);
+            EnsureCapacity(_cursor + 1);
+            var ptr = (TVertex*)Unsafe.Add<TVertex>((void*)_map.Data, _cursor);
+            *ptr = vertex;
+            return (ushort)_cursor++;
+        }
+
         public Span<TVertex> Append(uint count, out uint position)
         {
             Debug.Assert(_bufferLocked);

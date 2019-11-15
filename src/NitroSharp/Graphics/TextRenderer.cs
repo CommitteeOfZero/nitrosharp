@@ -64,21 +64,28 @@ namespace NitroSharp.Graphics
         private ResourceSet? _vsResourceSet;
         private ResourceSet? _fsResourceSet;
         private ResourceSet? _fsOutlineResourceSet;
-        private EntityHub<TextBlockStorage> _textblocks;
+        private readonly EntityHub<TextBlockStorage> _textblocks;
         private readonly List<(uint offset, uint count)> _textBlockInstancingParams;
         private readonly GpuCache<GpuGlyphRun> _gpuGlyphRuns;
         private readonly GpuCache<GpuTransform> _gpuTransforms;
         private readonly World _world;
-        private readonly RenderContext _renderContext;
 
-        public TextRenderer(World world, RenderContext renderContext)
+        public TextRenderer(
+            World world,
+            GraphicsDevice graphicsDevice,
+            OutputDescription outputDescription,
+            ShaderLibrary shaderLibrary,
+            ViewProjection viewProjection,
+            GlyphRasterizer glyphRasterizer,
+            TextureCache textureCache)
         {
+            _textblocks = world.TextBlocks;
             _textBlockInstancingParams = new List<(uint offset, uint count)>();
-            _graphicsDevice = renderContext.Device;
-            _glyphRasterizer = renderContext.GlyphRasterizer;
-            _textureCache = renderContext.TextureCache;
+            _graphicsDevice = graphicsDevice;
+            _glyphRasterizer = glyphRasterizer;
+            _textureCache = textureCache;
             _gpuGlyphs = new VertexList<GpuGlyph>(_graphicsDevice, initialCapacity: 2048);
-            _projectionBuffer = renderContext.ViewProjection.DeviceBuffer;
+            _projectionBuffer = viewProjection.DeviceBuffer;
             _gpuGlyphRuns = new GpuCache<GpuGlyphRun>(
                 _graphicsDevice,
                 GpuGlyphRun.SizeInGpuBlocks,
@@ -91,7 +98,6 @@ namespace NitroSharp.Graphics
             );
 
             ResourceFactory factory = _graphicsDevice.ResourceFactory;
-            ShaderLibrary shaderLibrary = renderContext.ShaderLibrary;
             (Shader vs, Shader fs) = shaderLibrary.GetShaderSet("text");
             (Shader outlineVS, Shader outlineFS) = shaderLibrary.GetShaderSet("outline");
 
@@ -145,7 +151,7 @@ namespace NitroSharp.Graphics
                     new[] { vs, fs }
                 ),
                 new[] { _vsLayout, _fsLayout },
-                renderContext.MainSwapchain.Framebuffer.OutputDescription
+                outputDescription
             );
             _pipeline = factory.CreateGraphicsPipeline(ref pipelineDesc);
 
@@ -155,7 +161,6 @@ namespace NitroSharp.Graphics
             );
             _outlinePipeline = factory.CreateGraphicsPipeline(ref pipelineDesc);
             _world = world;
-            _renderContext = renderContext;
         }
 
         public void BeginFrame()
@@ -164,13 +169,9 @@ namespace NitroSharp.Graphics
             _gpuTransforms.BeginFrame(clear: true);
             _gpuGlyphs.Begin();
             _textBlockInstancingParams.Clear();
-        }
 
-        public void PreprocessTextBlocks(EntityHub<TextBlockStorage> textBlocks)
-        {
-            _textblocks = textBlocks;
-            TransformProcessor.ProcessTransforms(_world, textBlocks.Active);
-            foreach (TextLayout layout in textBlocks.Active.Layouts.All)
+            TransformProcessor.ProcessTransforms(_world, _textblocks.Active);
+            foreach (TextLayout layout in _textblocks.Active.Layouts.All)
             {
                 RequestGlyphs(layout);
             }
@@ -222,11 +223,9 @@ namespace NitroSharp.Graphics
             Debug.Assert(_gpuTransforms.GetCachePosition(transformHandle) == glyphRunId);
 
             FontData fontData = _glyphRasterizer.GetFontData(glyphRun.Font);
-            Span<GpuGlyph> gpuGlyphs = _gpuGlyphs.Append((uint)glyphs.Length);
-            for (int i = 0; i < glyphs.Length; i++)
+            foreach (PositionedGlyph glyph in glyphs)
             {
-                PositionedGlyph g = glyphs[i];
-                var key = new GlyphCacheKey(g.Index, glyphRun.FontSize);
+                var key = new GlyphCacheKey(glyph.Index, glyphRun.FontSize);
                 if (fontData.TryGetCachedGlyph(key, out GlyphCacheEntry cachedGlyph)
                     && cachedGlyph.IsRegular)
                 {
@@ -238,22 +237,21 @@ namespace NitroSharp.Graphics
                             .Get(cachedGlyph.OutlineTextureCacheHandle);
                         outlineId = outlineTci.UvRectPosition;
                     }
-
-                    ref GpuGlyph gpuGlyph = ref gpuGlyphs[i];
-                    gpuGlyph.Offset = g.Position;
-                    gpuGlyph.GlyphRunId = glyphRunId;
-                    gpuGlyph.GlyphId = glyphTci.UvRectPosition;
-                    gpuGlyph.OutlineId = outlineId;
-                    gpuGlyph.Opacity = 1.0f;
+                    _gpuGlyphs.Append(new GpuGlyph
+                    {
+                        Offset = glyph.Position,
+                        GlyphRunId = glyphRunId,
+                        GlyphId = glyphTci.UvRectPosition,
+                        OutlineId = outlineId,
+                        Opacity = 1.0f
+                    });
                 }
             }
         }
 
-        public void EndFrame()
+        public void EndFrame(RenderBucket<RenderItemKey> renderBucket, CommandList cl)
         {
-            var renderBucket = _renderContext.MainBucket;
-            var commandList = _renderContext.MainCommandList;
-
+            var commandList = cl;
             void updateResourceSet(ref ResourceSet? fsResourceSet, PixelFormat pixelFormat)
             {
                 ResourceFactory factory = _graphicsDevice.ResourceFactory;
@@ -293,11 +291,11 @@ namespace NitroSharp.Graphics
             int block = 0;
             TextBlockStorage textBlocks = _textblocks.Active;
             ReadOnlySpan<TextLayout> layouts = textBlocks.Layouts.All;
-            ReadOnlySpan<CommonItemProperties> commonProps = textBlocks.CommonProperties.All;
+            ReadOnlySpan<RenderItemKey> keys = textBlocks.Keys.All;
             for (int i = 0; i < layouts.Length; i++)
             {
                 TextLayout layout = layouts[i];
-                RenderItemKey key = commonProps[i].Key;
+                RenderItemKey key = keys[i];
                 if (layout.GlyphRuns.Length == 0) { continue; }
                 (uint instanceBase, uint instanceCount) = _textBlockInstancingParams[block];
                 var submission = new RenderBucketSubmission

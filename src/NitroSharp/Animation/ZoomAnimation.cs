@@ -20,7 +20,7 @@ namespace NitroSharp.Animation
 
         protected override EntityStorage.ComponentStorage<TransformComponents> GetPropertyRow()
         {
-            var table = World.GetStorage<RenderItemStorage>(Entity);
+            var table = World.GetStorage<SceneObjectStorage>(Entity);
             return table.TransformComponents;
         }
 

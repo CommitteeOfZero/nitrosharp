@@ -13,7 +13,9 @@
         Stop,
 
         SetAdditiveBlend,
-        SetSubtractiveBlend,
-        SetMultiplicativeBlend
+        SetReverseSubtractiveBlend,
+        SetMultiplicativeBlend,
+
+        UseLinearFiltering
     }
 }

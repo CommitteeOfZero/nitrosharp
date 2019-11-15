@@ -3,12 +3,12 @@ using System.Collections.Generic;
 using NitroSharp.Animation;
 using NitroSharp.Diagnostics;
 using NitroSharp.Dialogue;
-using NitroSharp.Graphics.Systems;
 using NitroSharp.Interactivity;
 using NitroSharp.Media;
 using Veldrid;
 using NitroSharp.Graphics;
 using NitroSharp.Experimental;
+using NitroSharp.Content;
 
 #nullable enable
 
@@ -19,11 +19,12 @@ namespace NitroSharp
         internal sealed class Presenter : Actor, IDisposable
         {
             private readonly World _world;
+            private readonly ContentManager _content;
             private readonly InputTracker _inputTracker;
 
             private DialogueSystemInput _dialogueSystemInput;
             private readonly DialogueSystem _dialogueSystem;
-            private readonly RenderSystem _renderSystem;
+            private readonly Renderer _renderSystem;
             //private readonly AudioSystem _audioSystem;
             private readonly AnimationProcessor _animationProcessor;
             //private readonly ChoiceProcessor _choiceProcessor;
@@ -38,9 +39,14 @@ namespace NitroSharp
                //_choiceProcessor = new ChoiceProcessor(this);
 
                 _world = world;
-                _renderSystem = new RenderSystem(
-                    _world, game._graphicsDevice, game._swapchain,
-                    game.Content, game.GlyphRasterizer, game._configuration);
+                _content = game.Content;
+                _renderSystem = new Renderer(
+                    _world,
+                    game._configuration,
+                    game._graphicsDevice,
+                    game._swapchain,
+                    game.GlyphRasterizer
+                );
 
                 //_audioSystem = new AudioSystem(_world, game.Content, game.AudioSourcePool);
 
@@ -51,7 +57,6 @@ namespace NitroSharp
 
             public void ProcessNewEntities()
             {
-                _renderSystem.ProcessNewEntities();
             }
 
             public void Tick(in FrameStamp framestamp, float deltaMilliseconds)
@@ -70,7 +75,6 @@ namespace NitroSharp
                     _dialogueSystemInput.Command = DialogueSystemCommand.HandleInput;
                 }
 
-                _renderSystem.ProcessTransforms();
                 //var choiceProcessorOutput = _choiceProcessor.ProcessChoices();
                 //if (choiceProcessorOutput.SelectedChoice != null)
                 //{
@@ -81,18 +85,26 @@ namespace NitroSharp
                 //}
 
                 //_audioSystem.UpdateAudioSources();
-                _renderSystem.RenderFrame(framestamp);
-
-                //_devModeOverlay.Tick(deltaMilliseconds, _inputTracker);
 
                 try
                 {
-                    _renderSystem.Present();
+                    _renderSystem.Render(framestamp, _content);
                 }
                 catch (VeldridException e) when (e.Message == "The Swapchain's underlying surface has been lost.")
                 {
                     return;
                 }
+
+                //_devModeOverlay.Tick(deltaMilliseconds, _inputTracker);
+
+                //try
+                //{
+                //    _renderSystem.Present();
+                //}
+                //catch (VeldridException e) when (e.Message == "The Swapchain's underlying surface has been lost.")
+                //{
+                //    return;
+                //}
             }
 
             protected override void HandleMessages(Queue<Message> messages)
@@ -116,6 +128,7 @@ namespace NitroSharp
 
             public void Dispose()
             {
+                _renderSystem.Dispose();
                 //_devModeOverlay.Dispose();
             }
         }

@@ -6,6 +6,7 @@ using Veldrid;
 using NitroSharp.Dialogue;
 using NitroSharp.Text;
 using NitroSharp.Experimental;
+using NitroSharp.Graphics;
 
 #nullable enable
 
@@ -30,11 +31,11 @@ namespace NitroSharp
         {
             RgbaFloat color = RgbaFloat.White;
             color.SetAlpha(0);
-            (Entity box, _) = _world.Rectangles.Uninitialized.New(
+            (Entity box, _) = _world.Quads.Uninitialized.New(
                 new EntityName(entityName),
                 new SizeF(width, height),
                 priority,
-                color
+                Material.SolidColor(color)
             );
             SetPosition(box, x, y);
         }

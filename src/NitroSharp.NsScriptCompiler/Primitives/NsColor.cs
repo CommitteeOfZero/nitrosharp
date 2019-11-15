@@ -19,7 +19,7 @@ namespace NitroSharp.NsScript
         public static NsColor Black { get; } = new NsColor(0, 0, 0);
         public static NsColor White { get; } = new NsColor(255, 255, 255);
         public static NsColor Red { get; } = new NsColor(255, 0, 0);
-        public static NsColor Green { get; } = new NsColor(0, 255, 0);
+        public static NsColor Green { get; } = new NsColor(0, 128, 0);
         public static NsColor Blue { get; } = new NsColor(0, 0, 255);
 
         public static NsColor FromRgb(int rgb)

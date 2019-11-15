@@ -63,11 +63,18 @@ namespace NitroSharp.NsScript.VM
                 case BuiltInFunction.DrawTransition:
                     DrawTransition(ref args);
                     break;
+                case BuiltInFunction.CreateMask:
+                    CreateMask(ref args);
+                    break;
                 case BuiltInFunction.SetShade:
                     SetShade(ref args);
                     break;
                 case BuiltInFunction.SetTone:
                     SetTone(ref args);
+                    break;
+
+                case BuiltInFunction.CreateEffect:
+                    CreateEffect(ref args);
                     break;
 
                 case BuiltInFunction.Fade:
@@ -150,6 +157,31 @@ namespace NitroSharp.NsScript.VM
             ConstantValue? result = _result;
             _result = null;
             return result;
+        }
+
+        private void CreateMask(ref ArgConsumer args)
+        {
+            _impl.CreateAlphaMask(
+                args.TakeEntityName(),
+                priority: args.TakeInt(),
+                x: args.TakeCoordinate(),
+                y: args.TakeCoordinate(),
+                path: args.TakeString(),
+                unk: args.TakeBool()
+            );
+        }
+
+        private void CreateEffect(ref ArgConsumer args)
+        {
+            _impl.CreateEffect(
+                args.TakeEntityName(),
+                priority: args.TakeInt(),
+                x: args.TakeCoordinate(),
+                y: args.TakeCoordinate(),
+                width: args.TakeInt(),
+                height: args.TakeInt(),
+                effectName: args.TakeString()
+            );
         }
 
         private void SetTone(ref ArgConsumer args)
@@ -346,13 +378,13 @@ namespace NitroSharp.NsScript.VM
 
         private void DrawTransition(ref ArgConsumer args)
         {
-            string entityName = args.TakeEntityName();
+            string entityQuery = args.TakeEntityQuery();
             TimeSpan duration = args.TakeTimeSpan();
             _impl.DrawTransition(
-                entityName,
+                entityQuery,
                 duration,
-                initialOpacity: args.TakeRational(),
-                finalOpacity: args.TakeRational(),
+                initialFadeAmount: args.TakeRational(),
+                finalFadeAmount: args.TakeRational(),
                 feather: args.TakeRational(),
                 args.TakeEasingFunction(),
                 maskFileName: args.TakeString(),

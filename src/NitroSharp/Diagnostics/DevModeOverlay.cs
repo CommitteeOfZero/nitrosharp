@@ -18,11 +18,14 @@ namespace NitroSharp.Diagnostics
         private readonly Framebuffer _framebuffer;
         private readonly LogView _logView;
 
-        public DevModeOverlay(RenderContext renderContext, LogEventRecorder logEventRecorder)
+        public DevModeOverlay(
+            GraphicsDevice graphicsDevice,
+            Framebuffer framebuffer,
+            LogEventRecorder logEventRecorder)
         {
-            Framebuffer mainFramebuffer = renderContext.MainFramebuffer;
+            Framebuffer mainFramebuffer = framebuffer;
             _imguiRenderer = new ImGuiRenderer(
-                renderContext.Device,
+                graphicsDevice,
                 mainFramebuffer.OutputDescription,
                 (int)mainFramebuffer.Width,
                 (int)mainFramebuffer.Height
@@ -36,10 +39,10 @@ namespace NitroSharp.Diagnostics
                 "Fonts/NotoSansCJKjp-Regular.ttf",
                 16, null, io.Fonts.GetGlyphRangesJapanese()
             );
-            _imguiRenderer.RecreateFontDeviceTexture(renderContext.Device);
+            _imguiRenderer.RecreateFontDeviceTexture(graphicsDevice);
             ImGui.NewFrame();
 
-            _gd = renderContext.Device;
+            _gd = graphicsDevice;
             _cl = _gd.ResourceFactory.CreateCommandList();
             _framebuffer = mainFramebuffer;
 

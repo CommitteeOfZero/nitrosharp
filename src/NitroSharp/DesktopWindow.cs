@@ -7,13 +7,19 @@ using Veldrid.StartupUtilities;
 
 namespace NitroSharp
 {
-    public class DesktopWindow : GameWindow
+    public sealed class DesktopWindow : GameWindow
     {
         private readonly Sdl2Window _window;
 
         public DesktopWindow(string title, uint width, uint height)
         {
-            _window = new Sdl2Window(title, 100, 100, (int)width, (int)height, SDL_WindowFlags.OpenGL, false)
+            const int centered = Sdl2Native.SDL_WINDOWPOS_CENTERED;
+            _window = new Sdl2Window(
+                title,
+                centered, centered,
+                (int)width, (int)height,
+                SDL_WindowFlags.OpenGL,
+                threadedProcessing: false)
             {
                 LimitPollRate = true,
                 PollIntervalInMs = 10.0f

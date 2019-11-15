@@ -6,7 +6,7 @@ using Veldrid;
 
 namespace NitroSharp.Animation
 {
-    internal sealed class FadeAnimation : LerpAnimation<CommonItemProperties>
+    internal sealed class FadeAnimation : LerpAnimation<Material>
     {
         public FadeAnimation(Entity entity, TimeSpan duration,
             NsEasingFunction easingFunction = NsEasingFunction.None, bool repeat = false)
@@ -31,13 +31,13 @@ namespace NitroSharp.Animation
             }
         }
 
-        protected override EntityStorage.ComponentStorage<CommonItemProperties> GetPropertyRow()
+        protected override EntityStorage.ComponentStorage<Material> GetPropertyRow()
         {
             var table = World.GetStorage<RenderItemStorage>(Entity);
-            return table.CommonProperties;
+            return table.Materials;
         }
 
-        protected override void InterpolateValue(ref CommonItemProperties value, float factor)
+        protected override void InterpolateValue(ref Material value, float factor)
         {
             var channels = value.Color.ToVector4();
             float delta = FinalOpacity - InitialOpacity;

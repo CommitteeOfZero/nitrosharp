@@ -32,11 +32,6 @@ namespace NitroSharp
 
         public void SetWorld(World gameWorld) => _world = gameWorld;
 
-        //public override void CreateChoice(string entityName)
-        //{
-        //    _world.CreateChoice(entityName);
-        //}
-
         public override string GetSelectedChoice()
         {
             return SelectedChoice;
@@ -44,11 +39,6 @@ namespace NitroSharp
 
         public override void Select()
         {
-            //_game.MessageQueue.Enqueue(new SelectChoiceMessage
-            //{
-            //    WaitingThread = CurrentThread
-            //});
-
             Interpreter.SuspendThread(CurrentThread);
         }
 
@@ -119,6 +109,9 @@ namespace NitroSharp
             bool startImmediately = _world.Query(name + "*").Any();
             ThreadContext thread = Interpreter.CreateThread(name, target, startImmediately);
             var info = new InterpreterThreadInfo(name, thread.EntryModule, target);
+            (Entity e, uint idx) = _world.ThreadRecords.Uninitialized.New(new EntityName(name));
+            var recs = _world.ThreadRecords.Uninitialized;
+            recs.Infos[idx] = info;
             //Entity threadEntity = _world.CreateThreadEntity(info);
             //Entity parent = _world.Threads.Parents.GetRef(threadEntity);
             //if (parent.IsValid && parent.Kind == EntityKind.Choice)
@@ -173,18 +166,22 @@ namespace NitroSharp
                 case NsEntityAction.SetAdditiveBlend:
                     setBlendMode(entity, BlendMode.Additive);
                     break;
-                case NsEntityAction.SetSubtractiveBlend:
-                    setBlendMode(entity, BlendMode.Subtractive);
+                case NsEntityAction.SetReverseSubtractiveBlend:
+                    setBlendMode(entity, BlendMode.ReverseSubtractive);
                     break;
                 case NsEntityAction.SetMultiplicativeBlend:
                     setBlendMode(entity, BlendMode.Multiplicative);
+                    break;
+
+                case NsEntityAction.UseLinearFiltering:
+                    var storage = _world.GetStorage<RenderItemStorage>(entity);
                     break;
             }
 
             void setBlendMode(Entity entity, BlendMode blendMode)
             {
-                var storage = _world.GetStorage<RenderItemStorage>(entity);
-                storage.CommonProperties.GetRef(entity).BlendMode = blendMode;
+                var storage = _world.GetStorage<QuadStorage>(entity);
+                storage.Materials[entity].BlendMode = blendMode;
             }
         }
 

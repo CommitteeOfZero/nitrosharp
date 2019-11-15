@@ -15,8 +15,9 @@
                 BuiltInConstant.Start => NsEntityAction.Start,
                 BuiltInConstant.Stop => NsEntityAction.Stop,
                 BuiltInConstant.AddRender => NsEntityAction.SetAdditiveBlend,
-                BuiltInConstant.SubRender => NsEntityAction.SetSubtractiveBlend,
+                BuiltInConstant.SubRender => NsEntityAction.SetReverseSubtractiveBlend,
                 BuiltInConstant.MulRender => NsEntityAction.SetMultiplicativeBlend,
+                BuiltInConstant.Smoothing => NsEntityAction.UseLinearFiltering,
                 _ => NsEntityAction.Other,
             };
         }

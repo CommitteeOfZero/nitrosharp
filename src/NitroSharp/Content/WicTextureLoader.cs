@@ -1,5 +1,5 @@
 ﻿using System.IO;
-using NitroSharp.Graphics;
+using System.Threading;
 using NitroSharp.Primitives;
 using SharpDX.Mathematics.Interop;
 using SharpDX.WIC;
