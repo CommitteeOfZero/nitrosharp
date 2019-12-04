@@ -100,7 +100,7 @@ namespace NitroSharp.Graphics
         private FrameStamp _now;
 
         private ResourceSetDescription _desc;
-        private BindableResource[] _array1, _array2, _array3, _array4;
+        private readonly BindableResource[] _array1, _array2, _array3, _array4;
 
         public ResourceSetCache(ResourceFactory resourceFactory)
         {

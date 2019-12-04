@@ -1,5 +1,4 @@
 ﻿using System.IO;
-using System.Threading;
 using NitroSharp.Primitives;
 using SharpDX.Mathematics.Interop;
 using SharpDX.WIC;

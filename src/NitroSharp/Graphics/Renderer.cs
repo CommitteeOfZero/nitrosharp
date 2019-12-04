@@ -92,7 +92,6 @@ namespace NitroSharp.Graphics
 
         private readonly Texture _whiteTexture;
         private readonly Texture _screenshotTexture;
-        private bool _takenScreenshotThisFrame;
 
         private readonly DeviceBuffer _transitionParamUB;
         private readonly ResourceSet _transitionParamSet;

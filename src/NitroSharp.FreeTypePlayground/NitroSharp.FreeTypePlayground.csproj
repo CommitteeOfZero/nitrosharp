@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netcoreapp3.0</TargetFramework>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
     <LangVersion>8.0</LangVersion>
     <Nullable>enable</Nullable>
     <OutputType>Exe</OutputType>
@@ -40,9 +40,6 @@
   <ItemGroup>
     <ProjectReference Include="..\FreeTypeBindings\FreeTypeBindings.csproj" />
     <PackageReference Include="FreeType.Binaries" Version="0.42.0" />
-    <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="4.5.2" />
-    <!--<PackageReference Include="Veldrid" Version="4.5.0" />
-    <PackageReference Include="Veldrid.StartupUtilities" Version="4.5.0" />-->
     <PackageReference Include="Microsoft.DotNet.ILCompiler" Version="1.0.0-alpha-28114-01" />
 
     <PackageReference Include="Veldrid" Version="$(VeldridVersion)" />

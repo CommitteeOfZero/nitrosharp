@@ -158,7 +158,6 @@ namespace NitroSharp.Experimental
 
             public override void Move(uint index, ComponentStorage abstractDstStorage)
             {
-                ComponentStorage<T> srcStorage = this;
                 var dstStorage = (ComponentStorage<T>)abstractDstStorage;
                 ref T[] dstArray = ref dstStorage._array;
                 if (dstArray.Length == dstStorage.Count)
