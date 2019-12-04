@@ -7,6 +7,7 @@ using System;
 using System.Numerics;
 using NitroSharp.Experimental;
 using NitroSharp.Animation;
+using static NitroSharp.Game;
 
 #nullable enable
 
@@ -128,6 +129,8 @@ namespace NitroSharp
             );
 
             SetPosition(e, x, y);
+            Interpreter.SuspendThread(MainThread!);
+            _messageQueue.Enqueue(new SimpleMessage(MessageKind.CaptureFramebuffer));
         }
 
         public override void CreateSpriteEx(

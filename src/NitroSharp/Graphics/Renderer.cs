@@ -223,7 +223,10 @@ namespace NitroSharp.Graphics
             return texture;
         }
 
-        public void Render(in FrameStamp frameStamp, ContentManager content)
+        public void Render(
+            in FrameStamp frameStamp,
+            ContentManager content,
+            bool captureFramebuffer)
         {
             _uniformData.Clear();
             _effectCL.Begin();
@@ -298,6 +301,11 @@ namespace NitroSharp.Graphics
                     );
                     effect.Apply(_cl);
                 }
+            }
+
+            if (captureFramebuffer)
+            {
+                _cl.CopyTexture(_targetFramebuffer.ColorTargets[0].Target, _screenshotTexture);
             }
 
             _cl.End();

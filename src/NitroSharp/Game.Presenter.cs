@@ -23,6 +23,7 @@ namespace NitroSharp
             private readonly InputTracker _inputTracker;
 
             private DialogueSystemInput _dialogueSystemInput;
+            private bool _captureFramebuffer;
             private readonly DialogueSystem _dialogueSystem;
             private readonly Renderer _renderSystem;
             //private readonly AudioSystem _audioSystem;
@@ -88,7 +89,12 @@ namespace NitroSharp
 
                 try
                 {
-                    _renderSystem.Render(framestamp, _content);
+                    _renderSystem.Render(framestamp, _content, _captureFramebuffer);
+                    if (_captureFramebuffer)
+                    {
+                        _captureFramebuffer = false;
+                        PostMessage(new SimpleMessage(MessageKind.ResumeMainThread));
+                    }
                 }
                 catch (VeldridException e) when (e.Message == "The Swapchain's underlying surface has been lost.")
                 {
@@ -121,6 +127,9 @@ namespace NitroSharp
                             var presentDialogueMsg = (PresentDialogueMessage)message;
                             _dialogueSystemInput.Command = DialogueSystemCommand.BeginDialogue;
                             _dialogueSystemInput.TextBuffer = presentDialogueMsg.TextBuffer;
+                            break;
+                        case MessageKind.CaptureFramebuffer:
+                            _captureFramebuffer = true;
                             break;
                     }
                 }

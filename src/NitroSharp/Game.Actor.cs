@@ -41,11 +41,13 @@ namespace NitroSharp
             ThreadAction,
             AnimationCompleted,
             ChoiceSelected,
+            FramebufferCaptured,
 
             // ScriptRunner -> Presenter
             BeginDialogueBlock,
             BeginDialogueLine,
-            PresentDialogue
+            PresentDialogue,
+            CaptureFramebuffer
         }
 
         internal abstract class Message
