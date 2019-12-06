@@ -11,8 +11,6 @@ using Veldrid;
 using Veldrid.StartupUtilities;
 using System.Runtime.InteropServices;
 using NitroSharp.Experimental;
-using System.Runtime.CompilerServices;
-using NitroSharp.Utilities;
 
 namespace NitroSharp
 {

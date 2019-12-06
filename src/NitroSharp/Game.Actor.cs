@@ -41,7 +41,6 @@ namespace NitroSharp
             ThreadAction,
             AnimationCompleted,
             ChoiceSelected,
-            FramebufferCaptured,
 
             // ScriptRunner -> Presenter
             BeginDialogueBlock,

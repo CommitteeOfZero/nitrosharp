@@ -31,7 +31,7 @@ namespace NitroSharp.Animation
             }
         }
 
-        protected override EntityStorage.ComponentStorage<Material> GetPropertyRow()
+        protected override EntityStorage.ComponentVec<Material> GetPropertyRow()
         {
             var table = World.GetStorage<RenderItemStorage>(Entity);
             return table.Materials;

@@ -16,7 +16,7 @@ namespace NitroSharp.Animation
         public float InitialFadeAmount;
         public float FinalFadeAmount;
 
-        protected override EntityStorage.ComponentStorage<Material> GetPropertyRow()
+        protected override EntityStorage.ComponentVec<Material> GetPropertyRow()
         {
             var storage = World.GetStorage<RenderItemStorage>(Entity);
             return storage.Materials;

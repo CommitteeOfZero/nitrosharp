@@ -34,35 +34,35 @@ namespace NitroSharp.Graphics
     internal interface SceneObjectStorage
     {
         public ReadOnlySpan<Entity> Entities { get; }
-        public EntityStorage.ComponentStorage<RenderItemKey> Keys { get; }
-        public EntityStorage.ComponentStorage<TransformComponents> TransformComponents { get; }
-        public EntityStorage.ComponentStorage<Matrix4x4> Transforms { get; }
+        public EntityStorage.ComponentVec<RenderItemKey> Keys { get; }
+        public EntityStorage.ComponentVec<TransformComponents> TransformComponents { get; }
+        public EntityStorage.ComponentVec<Matrix4x4> Transforms { get; }
     }
 
     internal interface SceneObject2DStorage : SceneObjectStorage
     {
-        public EntityStorage.ComponentStorage<SizeF> LocalBounds { get; }
+        public EntityStorage.ComponentVec<SizeF> LocalBounds { get; }
     }
 
     internal abstract class RenderItemStorage : EntityStorage, SceneObjectStorage
     {
         private static uint s_id;
 
-        public ComponentStorage<RenderItemKey> Keys { get; }
-        public ComponentStorage<TransformComponents> TransformComponents { get; }
-        public ComponentStorage<Matrix4x4> Transforms { get; }
+        public ComponentVec<RenderItemKey> Keys { get; }
+        public ComponentVec<TransformComponents> TransformComponents { get; }
+        public ComponentVec<Matrix4x4> Transforms { get; }
 
-        public ComponentStorage<Material> Materials { get; }
-        public SystemComponentStorage<DrawState> DrawState { get; }
+        public ComponentVec<Material> Materials { get; }
+        public SystemComponentVec<DrawState> DrawState { get; }
       
         protected RenderItemStorage(EntityHub hub, uint initialCapacity)
             : base(hub, initialCapacity)
         {
-            Keys = AddComponentStorage<RenderItemKey>();
-            TransformComponents = AddComponentStorage<TransformComponents>();
-            Transforms = AddComponentStorage<Matrix4x4>();
-            Materials = AddComponentStorage<Material>();
-            DrawState = AddSystemComponentStorage<DrawState>();
+            Keys = AddComponentVec<RenderItemKey>();
+            TransformComponents = AddComponentVec<TransformComponents>();
+            Transforms = AddComponentVec<Matrix4x4>();
+            Materials = AddComponentVec<Material>();
+            DrawState = AddSystemComponentVec<DrawState>();
         }
 
         protected (Entity entity, uint index) New(
@@ -78,14 +78,14 @@ namespace NitroSharp.Graphics
 
     internal sealed class QuadStorage : RenderItemStorage, SceneObject2DStorage
     {
-        public ComponentStorage<QuadGeometry> Geometry { get; }
-        public ComponentStorage<SizeF> LocalBounds { get; }
+        public ComponentVec<QuadGeometry> Geometry { get; }
+        public ComponentVec<SizeF> LocalBounds { get; }
 
         public QuadStorage(EntityHub hub, uint initialCapacity)
             : base(hub, initialCapacity)
         {
-            Geometry = AddComponentStorage<QuadGeometry>();
-            LocalBounds = AddComponentStorage<SizeF>();
+            Geometry = AddComponentVec<QuadGeometry>();
+            LocalBounds = AddComponentVec<SizeF>();
         }
 
         public (Entity entity, uint index) New(
@@ -113,19 +113,19 @@ namespace NitroSharp.Graphics
         public AlphaMaskStorage(EntityHub hub, uint initialCapacity)
             : base(hub, initialCapacity)
         {
-            Keys = AddComponentStorage<RenderItemKey>();
-            TransformComponents = AddComponentStorage<TransformComponents>();
-            Transforms = AddComponentStorage<Matrix4x4>();
-            LocalBounds = AddComponentStorage<SizeF>();
-            ImageHandles = AddComponentStorage<AssetId>();
+            Keys = AddComponentVec<RenderItemKey>();
+            TransformComponents = AddComponentVec<TransformComponents>();
+            Transforms = AddComponentVec<Matrix4x4>();
+            LocalBounds = AddComponentVec<SizeF>();
+            ImageHandles = AddComponentVec<AssetId>();
         }
 
-        public ComponentStorage<RenderItemKey> Keys { get; }
-        public ComponentStorage<TransformComponents> TransformComponents { get; }
-        public ComponentStorage<Matrix4x4> Transforms { get; }
-        public ComponentStorage<SizeF> LocalBounds { get; }
+        public ComponentVec<RenderItemKey> Keys { get; }
+        public ComponentVec<TransformComponents> TransformComponents { get; }
+        public ComponentVec<Matrix4x4> Transforms { get; }
+        public ComponentVec<SizeF> LocalBounds { get; }
 
-        public ComponentStorage<AssetId> ImageHandles { get; }
+        public ComponentVec<AssetId> ImageHandles { get; }
 
         public (Entity entity, uint index) New(
            EntityName name,
@@ -149,12 +149,12 @@ namespace NitroSharp.Graphics
 
     internal sealed class PostEffectStorage : EntityStorage
     {
-        public ComponentStorage<BarrelDistortionParameters> Parameters { get; }
+        public ComponentVec<BarrelDistortionParameters> Parameters { get; }
 
         public PostEffectStorage(EntityHub hub, uint initialCapacity)
             : base(hub, initialCapacity)
         {
-            Parameters = AddComponentStorage<BarrelDistortionParameters>();
+            Parameters = AddComponentVec<BarrelDistortionParameters>();
         }
 
         public (Entity entity, uint index) New(
@@ -169,17 +169,17 @@ namespace NitroSharp.Graphics
 
     internal interface AbstractImageStorage
     {
-        EntityStorage.ComponentStorage<ImageSource> ImageSources { get; }
+        EntityStorage.ComponentVec<ImageSource> ImageSources { get; }
     }
 
     internal sealed class ImageStorage : EntityStorage, AbstractImageStorage
     {
-        public ComponentStorage<ImageSource> ImageSources { get; }
+        public ComponentVec<ImageSource> ImageSources { get; }
 
         public ImageStorage(EntityHub hub, uint initialCapacity)
             : base(hub, initialCapacity)
         {
-            ImageSources = AddComponentStorage<ImageSource>();
+            ImageSources = AddComponentVec<ImageSource>();
         }
 
         public (Entity entity, uint index) New(EntityName name, ImageSource src)
@@ -192,14 +192,14 @@ namespace NitroSharp.Graphics
 
     internal sealed class TextBlockStorage : RenderItemStorage, SceneObject2DStorage
     {
-        public ComponentStorage<TextLayout> Layouts { get; }
-        public ComponentStorage<SizeF> LocalBounds { get; }
+        public ComponentVec<TextLayout> Layouts { get; }
+        public ComponentVec<SizeF> LocalBounds { get; }
 
         public TextBlockStorage(EntityHub hub, uint initialCapacity)
             : base(hub, initialCapacity)
         {
-            Layouts = AddComponentStorage<TextLayout>();
-            LocalBounds = AddComponentStorage<SizeF>();
+            Layouts = AddComponentVec<TextLayout>();
+            LocalBounds = AddComponentVec<SizeF>();
         }
 
         public (Entity entity, uint index) New(

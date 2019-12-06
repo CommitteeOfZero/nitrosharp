@@ -10,7 +10,7 @@ namespace NitroSharp.Graphics
         public Pipelines(
             ResourceFactory factory,
             ShaderLibrary shaderLibrary,
-            Framebuffer framebuffer,
+            in OutputDescription outputDescription,
             ViewProjection vp)
         {
             CommonResourceLayout = factory.CreateResourceLayout(new ResourceLayoutDescription(
@@ -118,7 +118,7 @@ namespace NitroSharp.Graphics
                 PrimitiveTopology.TriangleList,
                 shaderSetDesc,
                 new[] { vp.ResourceLayout, CommonResourceLayout },
-                framebuffer.OutputDescription
+                outputDescription
             );
 
             AlphaBlend = factory.CreateGraphicsPipeline(ref pipelineDesc);

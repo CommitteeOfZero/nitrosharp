@@ -4,12 +4,12 @@ namespace NitroSharp
 {
     internal sealed class ThreadRecordStorage : EntityStorage
     {
-        public ComponentStorage<InterpreterThreadInfo> Infos { get; }
+        public ComponentVec<InterpreterThreadInfo> Infos { get; }
 
         public ThreadRecordStorage(EntityHub hub, uint initialCapacity)
             : base(hub, initialCapacity)
         {
-            Infos = AddComponentStorage<InterpreterThreadInfo>();
+            Infos = AddComponentVec<InterpreterThreadInfo>();
         }
     }
 

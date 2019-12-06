@@ -44,6 +44,7 @@ namespace NitroSharp.Experimental
         private uint[] _versionByEntity;
         private Entity[] _parentByEntity;
         private SmallList<Entity>[] _childrenByEntity;
+        private SmallList<EntityName>[] _childrenNamesByEntity;
         private bool[] _isLockedByEntity;
 
         private uint _entityCount;
@@ -66,6 +67,7 @@ namespace NitroSharp.Experimental
             _versionByEntity = new uint[capacity];
             _parentByEntity = new Entity[capacity];
             _childrenByEntity = new SmallList<Entity>[capacity];
+            _childrenNamesByEntity = new SmallList<EntityName>[capacity];
             _isLockedByEntity = new bool[capacity];
             _nextFreeSlot = None;
             _entities = new Dictionary<EntityName, Entity>();
@@ -148,6 +150,7 @@ namespace NitroSharp.Experimental
                 {
                     _parentByEntity[entity.Index] = parent;
                     _childrenByEntity[parent.Index].Add(entity);
+                    _childrenNamesByEntity[parent.Index].Add(name);
                 }
             }
             return entity;
@@ -191,7 +194,7 @@ namespace NitroSharp.Experimental
             return _entityPointers[entity.Index].Storage as T;
         }
 
-        public EntityPointer LookupIndexInStorage(Entity entity)
+        public EntityPointer LookupPointer(Entity entity)
         {
             EnsureExists(entity);
             return _entityPointers[entity.Index];
@@ -304,6 +307,16 @@ namespace NitroSharp.Experimental
         private void DestroyEntity(Entity entity)
         {
             EnsureExists(entity);
+
+            SmallList<EntityName> children = _childrenNamesByEntity[entity.Index];
+            if (children.Count > 0)
+            {
+                foreach (EntityName child in children.Enumerate())
+                {
+                    DestroyEntity(child);
+                }
+            }
+
             ref EntityPointer ptr = ref _entityPointers[entity.Index];
             uint indexInStorage = ptr.IndexInStorage;
             Debug.Assert(ptr.Storage != null);
@@ -362,6 +375,7 @@ namespace NitroSharp.Experimental
                 Array.Resize(ref _versionByEntity, newLength);
                 Array.Resize(ref _parentByEntity, newLength);
                 Array.Resize(ref _childrenByEntity, newLength);
+                Array.Resize(ref _childrenNamesByEntity, newLength);
                 Array.Resize(ref _isLockedByEntity, newLength);
             }
         }

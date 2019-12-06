@@ -51,7 +51,7 @@ namespace NitroSharp.Graphics
             if (parent.IsValid)
             {
                 SceneObject2DStorage table = world.GetStorage<SceneObject2DStorage>(parent);
-                int parentIdx = (int)world.LookupIndexInStorage(parent).IndexInStorage;
+                int parentIdx = (int)world.LookupPointer(parent).IndexInStorage;
                 {
                     Span<Matrix4x4> parentTableTransforms = table.Transforms.All;
                     if (parentTableTransforms[parentIdx].M11 == 0)

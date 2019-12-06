@@ -152,7 +152,12 @@ namespace NitroSharp.Graphics
                 _viewProjectionBuffer
             );
 
-            _pipelines = new Pipelines(_rf, _shaderLibrary, _swapchainFramebuffer, viewProjection);
+            _pipelines = new Pipelines(
+                _rf,
+                _shaderLibrary,
+                _swapchainFramebuffer.OutputDescription,
+                viewProjection
+            );
             _cl = _rf.CreateCommandList();
             _effectCL = _rf.CreateCommandList();
             _whiteTexture = CreateWhiteTexture();
@@ -205,7 +210,6 @@ namespace NitroSharp.Graphics
                 PixelFormat.R8_G8_B8_A8_UNorm, TextureUsage.Staging
             );
             Texture stagingWhite = _rf.CreateTexture(ref textureDesc);
-
             MappedResourceView<RgbaByte> pixels = _gd.Map<RgbaByte>(
                 stagingWhite, MapMode.Write
             );
@@ -350,7 +354,6 @@ namespace NitroSharp.Graphics
                 MaterialKind.Texture => content.TryGetTexture(material.TextureVariant.TextureHandle)!,
                 MaterialKind.Screenshot => _screenshotTexture
             };
-
 
             Texture alphaMask = _whiteTexture;
             if (material.AlphaMask.NormalizedPath != null)

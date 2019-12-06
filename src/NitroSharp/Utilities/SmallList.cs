@@ -6,7 +6,7 @@ using System.Runtime.InteropServices;
 
 namespace NitroSharp.Utilities
 {
-    internal struct SmallList<T> where T : unmanaged
+    internal struct SmallList<T> where T : struct
     {
         private const int MaxFixed = 2;
 

@@ -14,7 +14,7 @@ namespace NitroSharp.Animation
         {
         }
 
-        protected abstract EntityStorage.ComponentStorage<T> GetPropertyRow();
+        protected abstract EntityStorage.ComponentVec<T> GetPropertyRow();
 
         protected override void Advance(float deltaMilliseconds)
         {
