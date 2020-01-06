@@ -84,7 +84,6 @@ namespace NitroSharp.Experimental
             AlphaMasks = AddHub(hub => new AlphaMaskStorage(hub, 4));
             TextBlocks = AddHub(hub => new TextBlockStorage(hub, 16));
             ThreadRecords = AddHub(hub => new ThreadRecordStorage(hub, 16));
-            PostEffects = AddHub(hub => new PostEffectStorage(hub, 2));
         }
 
         public Dictionary<EntityName, Entity>.Enumerator EntityEnumerator => _entities.GetEnumerator();
@@ -96,7 +95,6 @@ namespace NitroSharp.Experimental
         public EntityHub<AlphaMaskStorage> AlphaMasks { get; }
         public EntityHub<TextBlockStorage> TextBlocks { get; }
         public EntityHub<ThreadRecordStorage> ThreadRecords { get; }
-        public EntityHub<PostEffectStorage> PostEffects { get; }
 
         private EntityHub<T> AddHub<T>(Func<EntityHub, T> factory) where T : EntityStorage
         {

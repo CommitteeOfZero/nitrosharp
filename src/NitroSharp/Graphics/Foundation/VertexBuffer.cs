@@ -62,7 +62,7 @@ namespace NitroSharp.Graphics
             DeviceBuffer mappableBuffer)
         {
             MappedResource map = graphicsDevice.Map(mappableBuffer, MapMode.Write);
-            var src = MemoryMarshal.Cast<TVertex, byte>(data);
+            Span<byte> src = MemoryMarshal.Cast<TVertex, byte>(data);
             var dst = new Span<byte>(map.Data.ToPointer(), (int)map.SizeInBytes);
             src.CopyTo(dst);
             graphicsDevice.Unmap(mappableBuffer);

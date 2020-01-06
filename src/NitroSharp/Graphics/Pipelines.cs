@@ -120,7 +120,6 @@ namespace NitroSharp.Graphics
                 new[] { vp.ResourceLayout, CommonResourceLayout },
                 outputDescription
             );
-
             AlphaBlend = factory.CreateGraphicsPipeline(ref pipelineDesc);
 
             pipelineDesc.BlendState = new BlendStateDescription
@@ -178,16 +177,41 @@ namespace NitroSharp.Graphics
             MultiplicativeBlend = factory.CreateGraphicsPipeline(ref pipelineDesc);
 
             (vs, fs) = shaderLibrary.GetShaderSet("transition");
-            shaderSetDesc.Shaders = new[] { vs, fs };
-            pipelineDesc.BlendState = BlendStateDescription.SingleAlphaBlend;
-            pipelineDesc.ShaderSet = shaderSetDesc;
-            pipelineDesc.ResourceLayouts = new[]
-            {
-                vp.ResourceLayout,
-                TransitionInputLayout,
-                TransitionParamLayout
-            };
+            var transitionShaderSet = new ShaderSetDescription(
+               new[] { QuadVertex.LayoutDescription },
+               new[] { vs, fs }
+            );
+            pipelineDesc = new GraphicsPipelineDescription(
+                premultipliedAlpha,
+                DepthStencilStateDescription.Disabled,
+                RasterizerStateDescription.CullNone,
+                PrimitiveTopology.TriangleList,
+                transitionShaderSet,
+                new[]
+                {
+                    vp.ResourceLayout,
+                    TransitionInputLayout,
+                    TransitionParamLayout
+                },
+                outputDescription
+            );
             Transition = factory.CreateGraphicsPipeline(ref pipelineDesc);
+
+            (vs, fs) = shaderLibrary.GetShaderSet("lens");
+            var lensShaderSet = new ShaderSetDescription(
+                new[] { QuadVertex.LayoutDescription },
+                new[] { vs, fs }
+            );
+            var lensPipelineDesc = new GraphicsPipelineDescription(
+                premultipliedAlpha,
+                DepthStencilStateDescription.Disabled,
+                RasterizerStateDescription.CullNone,
+                PrimitiveTopology.TriangleList,
+                lensShaderSet,
+                new[] { vp.ResourceLayout, BarrelDistortionInputLayout },
+                outputDescription
+            );
+            BarrelDistortion = factory.CreateGraphicsPipeline(ref lensPipelineDesc);
 
             Pipeline createEffect(string shaderSet, ResourceLayout effectLayout)
             {
@@ -204,7 +228,6 @@ namespace NitroSharp.Graphics
             Blit = createEffect("blit", SimpleEffectInputLayout);
             Grayscale = createEffect("grayscale", SimpleEffectInputLayout);
             BoxBlur = createEffect("boxblur", SimpleEffectInputLayout);
-            BarrelDistortion = createEffect("barrel_distortion", BarrelDistortionInputLayout);
         }
 
         public ResourceLayout CommonResourceLayout { get; }
@@ -224,12 +247,12 @@ namespace NitroSharp.Graphics
 
         public void Dispose()
         {
+            BarrelDistortion.Dispose();
             AlphaBlend.Dispose();
             AdditiveBlend.Dispose();
             ReverseSubtractiveBlend.Dispose();
             MultiplicativeBlend.Dispose();
             Transition.Dispose();
-            BarrelDistortion.Dispose();
             Blit.Dispose();
             Grayscale.Dispose();
             BoxBlur.Dispose();

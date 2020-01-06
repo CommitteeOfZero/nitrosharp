@@ -78,13 +78,13 @@ namespace NitroSharp.Graphics
 
     internal sealed class QuadStorage : RenderItemStorage, SceneObject2DStorage
     {
-        public ComponentVec<QuadGeometry> Geometry { get; }
+        public ComponentVec<Quad> Geometry { get; }
         public ComponentVec<SizeF> LocalBounds { get; }
 
         public QuadStorage(EntityHub hub, uint initialCapacity)
             : base(hub, initialCapacity)
         {
-            Geometry = AddComponentVec<QuadGeometry>();
+            Geometry = AddComponentVec<Quad>();
             LocalBounds = AddComponentVec<SizeF>();
         }
 
@@ -138,31 +138,6 @@ namespace NitroSharp.Graphics
             TransformComponents[i].Scale = Vector3.One;
             LocalBounds[i] = localBounds;
             ImageHandles[i] = imageHandle;
-            return (e, i);
-        }
-    }
-
-    internal struct BarrelDistortionParameters
-    {
-        public AssetId DistortionMap;
-    }
-
-    internal sealed class PostEffectStorage : EntityStorage
-    {
-        public ComponentVec<BarrelDistortionParameters> Parameters { get; }
-
-        public PostEffectStorage(EntityHub hub, uint initialCapacity)
-            : base(hub, initialCapacity)
-        {
-            Parameters = AddComponentVec<BarrelDistortionParameters>();
-        }
-
-        public (Entity entity, uint index) New(
-            EntityName name,
-            in BarrelDistortionParameters parameters)
-        {
-            (Entity e, uint i) = base.New(name);
-            Parameters[i] = parameters;
             return (e, i);
         }
     }

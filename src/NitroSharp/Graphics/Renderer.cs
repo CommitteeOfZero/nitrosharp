@@ -13,46 +13,30 @@ using Veldrid;
 
 namespace NitroSharp.Graphics
 {
-    internal struct QuadGeometry
+    internal readonly struct RenderContext
     {
-        public QuadVertex TL;
-        public QuadVertex TR;
-        public QuadVertex BL;
-        public QuadVertex BR;
-    }
+        public readonly ContentManager Content;
+        public readonly GraphicsDevice GraphicsDevice;
+        public readonly Pipelines Pipelines;
+        public readonly CommandList CommandList;
+        public readonly Framebuffer PrimaryFramebuffer;
+        public readonly Framebuffer SecondaryFramebuffer;
 
-    internal struct QuadVertex
-    {
-        public Vector2 Position;
-        public Vector2 TexCoord;
-        public Vector4 Color;
-
-        public static readonly VertexLayoutDescription LayoutDescription = new VertexLayoutDescription(
-            new VertexElementDescription(
-                "vs_Position",
-                VertexElementSemantic.TextureCoordinate,
-                VertexElementFormat.Float2
-            ),
-            new VertexElementDescription(
-                "vs_TexCoord",
-                VertexElementSemantic.TextureCoordinate,
-                VertexElementFormat.Float2
-            ),
-            new VertexElementDescription(
-                "vs_Color",
-                VertexElementSemantic.TextureCoordinate,
-                VertexElementFormat.Float4
-            )
-        );
-    }
-
-    internal struct DrawState
-    {
-        public Pipeline Pipeline;
-        public ResourceSet ResourceSet0;
-        public ResourceSet? ResourceSet1;
-        public UniformUpdate? UniformUpdate;
-        public int MaterialHash;
+        public RenderContext(
+            ContentManager content,
+            GraphicsDevice graphicsDevice,
+            Pipelines pipelines,
+            CommandList commandList,
+            Framebuffer primaryFramebuffer,
+            Framebuffer secondaryFramebuffer)
+        {
+            Content = content;
+            GraphicsDevice = graphicsDevice;
+            Pipelines = pipelines;
+            CommandList = commandList;
+            PrimaryFramebuffer = primaryFramebuffer;
+            SecondaryFramebuffer = secondaryFramebuffer;
+        }
     }
 
     internal sealed class ViewProjection
@@ -67,6 +51,16 @@ namespace NitroSharp.Graphics
         public ResourceLayout ResourceLayout { get; }
         public ResourceSet ResourceSet { get; }
         public DeviceBuffer DeviceBuffer { get; }
+    }
+
+    internal struct DrawState
+    {
+        public Pipeline Pipeline;
+        public ResourceSet ResourceSet0;
+        public ResourceSet? ResourceSet1;
+        public UniformUpdate UniformUpdate;
+        public Action<RenderContext>? Callback;
+        public int MaterialHash;
     }
 
     internal sealed class Renderer : IDisposable
@@ -95,7 +89,6 @@ namespace NitroSharp.Graphics
 
         private readonly DeviceBuffer _transitionParamUB;
         private readonly ResourceSet _transitionParamSet;
-        private ArrayBuilder<byte> _uniformData;
 
         private readonly ResourceSetCache _resourceSetCache;
         private ArrayBuilder<BindableResource> _shaderResources;
@@ -178,7 +171,6 @@ namespace NitroSharp.Graphics
 
             _quadVertexBuffer = new VertexList<QuadVertex>(_gd, initialCapacity: 512 * 4);
             ResizeIndexBufferIfNecessary();
-            _uniformData = new ArrayBuilder<byte>(64);
             _resourceSetCache = new ResourceSetCache(_rf);
             _shaderResources = new ArrayBuilder<BindableResource>(4);
             _renderBucket = new RenderBucket<RenderItemKey>(initialCapacity: 512);
@@ -232,16 +224,8 @@ namespace NitroSharp.Graphics
             ContentManager content,
             bool captureFramebuffer)
         {
-            _uniformData.Clear();
             _effectCL.Begin();
-
             _targetFramebuffer = _swapchainFramebuffer;
-            PostEffectStorage postEffects = _world.PostEffects.Active;
-            if (postEffects.Count > 0)
-            {
-                _targetFramebuffer = _secondaryFramebuffer;
-            }
-
             _cl.Begin();
             _cl.SetFramebuffer(_targetFramebuffer);
             _cl.ClearColorTarget(0, RgbaFloat.Black);
@@ -287,25 +271,12 @@ namespace NitroSharp.Graphics
             _textureCache.EndFrame(_cl);
             _textRenderer.EndFrame(_renderBucket, _cl);
             _quadVertexBuffer.End(_cl);
-            _renderBucket.End(_cl);
 
-            if (postEffects.Count > 0)
-            {
-                for (uint i = 0; i < postEffects.Count; i++)
-                {
-                    BarrelDistortionParameters par = postEffects.Parameters[i];
-                    Texture distortionMap = content.TryGetTexture(par.DistortionMap)!;
-                    using var effect = new SinglePassEffect(
-                        _rf, _pipelines, _pipelines.BarrelDistortionInputLayout,
-                        input1: _targetFramebuffer.ColorTargets[0].Target,
-                        input2: distortionMap,
-                        _gd.LinearSampler,
-                        EffectKind.BarrelDistortion,
-                        _swapchainFramebuffer
-                    );
-                    effect.Apply(_cl);
-                }
-            }
+            var renderContext = new RenderContext(
+                content, _gd, _pipelines, _cl,
+                _targetFramebuffer, _secondaryFramebuffer
+            );
+            _renderBucket.End(renderContext);
 
             if (captureFramebuffer)
             {
@@ -326,34 +297,45 @@ namespace NitroSharp.Graphics
             Debug.Assert(_targetFramebuffer != null);
             if (material.TransitionParameters.MaskHandle.NormalizedPath != null)
             {
-                TransitionParameters par = material.TransitionParameters;
-                Span<byte> bytes = _uniformData.Append(16);
-                Span<float> param = MemoryMarshal.Cast<byte, float>(bytes);
-                param[0] = par.FadeAmount;
-
-                var memory = new Memory<byte>(
-                    _uniformData.UnderlyingArray,
-                    (int)(_uniformData.Count - 16),
-                    16
+                drawState.UniformUpdate = _renderBucket.StoreUniformUpdate(
+                    _transitionParamUB,
+                    ref material.TransitionParameters.FadeAmount
                 );
-                drawState.UniformUpdate = new UniformUpdate(_transitionParamUB, memory);
             }
 
-            if (material.GetHashCode() == drawState.MaterialHash)
-            {
-                return;
-            }
+            //if (material.GetHashCode() == drawState.MaterialHash)
+            //{
+            //    return;
+            //}
 
             Sampler sampler = material.UseLinearFiltering
                ? _gd.LinearSampler
-               : _gd.PointSampler;
+               : _gd.LinearSampler;
 
             Texture source = material.Kind switch
             {
                 MaterialKind.SolidColor => _whiteTexture,
                 MaterialKind.Texture => content.TryGetTexture(material.TextureVariant.TextureHandle)!,
-                MaterialKind.Screenshot => _screenshotTexture
+                MaterialKind.Screenshot => _screenshotTexture,
+                MaterialKind.Lens => content.TryGetTexture(material.LensTextureHandle)!
             };
+
+            if (material.Kind == MaterialKind.Lens)
+            {
+
+                drawState.Pipeline = _pipelines.BarrelDistortion;
+                drawState.ResourceSet0 = _resourceSetCache.GetResourceSet(new ResourceSetKey(
+                    _pipelines.BarrelDistortionInputLayout,
+                    ShaderResources(_secondaryFramebufferTexture, source, sampler)
+                ));
+                drawState.Callback = ctx =>
+                {
+                    ctx.CommandList.CopyTexture(
+                        source: ctx.PrimaryFramebuffer.ColorTargets[0].Target,
+                        destination: ctx.SecondaryFramebuffer.ColorTargets[0].Target
+                    );
+                };
+            }
 
             Texture alphaMask = _whiteTexture;
             if (material.AlphaMask.NormalizedPath != null)
@@ -378,7 +360,7 @@ namespace NitroSharp.Graphics
                 ));
                 drawState.ResourceSet1 = _transitionParamSet;
             }
-            else
+            else if (material.Kind != MaterialKind.Lens)
             {
                 drawState.Pipeline = material.BlendMode switch
                 {
@@ -434,12 +416,12 @@ namespace NitroSharp.Graphics
         private void CalcVertices(
             ReadOnlySpan<SizeF> localBounds,
             ReadOnlySpan<Matrix4x4> transforms,
-            Span<QuadGeometry> geometry,
+            Span<Quad> geometry,
             ReadOnlySpan<Material> materials)
         {
             for (int i = 0; i < localBounds.Length; i++)
             {
-                ref QuadGeometry geom = ref geometry[i];
+                ref Quad geom = ref geometry[i];
                 ref readonly Matrix4x4 transform = ref transforms[i];
                 ref readonly Material mat = ref materials[i];
                 ref QuadVertex VertexTL = ref geom.TL;
@@ -483,7 +465,7 @@ namespace NitroSharp.Graphics
         public void BatchQuads(
             ReadOnlySpan<RenderItemKey> keys,
             ReadOnlySpan<DrawState> drawState,
-            Span<QuadGeometry> geometry)
+            Span<Quad> geometry)
         {
             ResourceSet commonResourceSet = _viewProjectionSet;
             int count = keys.Length;
@@ -513,7 +495,8 @@ namespace NitroSharp.Graphics
                     IndexCount = 6,
                     VertexCount = 6,
                     //VertexBase = (ushort)(4 * (quadCount + i)),
-                    UniformUpdate = drawState[i].UniformUpdate
+                    UniformUpdate = drawState[i].UniformUpdate,
+                    BeforeRenderCallback = drawState[i].Callback
                 };
             }
 

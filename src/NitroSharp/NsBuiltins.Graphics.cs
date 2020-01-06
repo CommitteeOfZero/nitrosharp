@@ -35,7 +35,7 @@ namespace NitroSharp
         }
 
         public override void CreateEffect(
-            string entity,
+            string entityName,
             int priority,
             NsCoordinate x, NsCoordinate y,
             int width, int height,
@@ -44,13 +44,13 @@ namespace NitroSharp
             var distortionMap = new AssetId("testcg/lens.png");
             if (Content.RequestTexture(distortionMap, out _))
             {
-                _world.PostEffects.Uninitialized.New(
-                    new EntityName(entity),
-                    new BarrelDistortionParameters
-                    {
-                        DistortionMap = distortionMap
-                    }
+                (Entity entity, _)  =_world.Quads.Uninitialized.New(
+                    new EntityName(entityName),
+                    new SizeF(width, height),
+                    priority,
+                    Material.Lens(distortionMap)
                 );
+                SetPosition(entity, x, y);
             }
         }
 

@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Numerics;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using NitroSharp.Utilities;
 using Veldrid;
@@ -9,18 +9,10 @@ using Veldrid;
 
 namespace NitroSharp.Graphics
 {
-    internal struct UniformUpdate
-    {
-        public DeviceBuffer Buffer;
-        public Memory<byte> Data;
-
-        public UniformUpdate(DeviceBuffer buffer, Memory<byte> data)
-            => (Buffer, Data) = (buffer, data);
-    }
-
     [StructLayout(LayoutKind.Auto)]
     internal struct RenderBucketSubmission
     {
+        public Action<RenderContext>? BeforeRenderCallback;
         public VertexBuffer? VertexBuffer0;
         public VertexBuffer? VertexBuffer1;
         public DeviceBuffer? IndexBuffer;
@@ -34,8 +26,17 @@ namespace NitroSharp.Graphics
         public ushort IndexCount;
         public ushort InstanceBase;
         public ushort InstanceCount;
+        public UniformUpdate UniformUpdate;
+    }
 
-        public UniformUpdate? UniformUpdate;
+    internal struct UniformUpdate
+    {
+        public readonly DeviceBuffer Buffer;
+        public readonly ushort DataStart;
+        public readonly ushort DataLength;
+
+        public UniformUpdate(DeviceBuffer buffer, ushort dataStart, ushort dataLength)
+            => (Buffer, DataStart, DataLength) = (buffer, dataStart, dataLength);
     }
 
     internal sealed class RenderBucket<TKey> where TKey : IComparable<RenderItemKey>
@@ -55,6 +56,7 @@ namespace NitroSharp.Graphics
         [StructLayout(LayoutKind.Auto)]
         private struct RenderItem
         {
+            public Action<RenderContext>? BeforeRenderCallback;
             public ResourceSet ObjectResourceSet0;
             public ResourceSet? ObjectResourceSet1;
             public ushort VertexBase;
@@ -97,8 +99,7 @@ namespace NitroSharp.Graphics
         private (byte index, ResourceSet set) _lastSharedResourceSet;
 
         private readonly List<DeviceBuffer> _uniformBuffers;
-
-        private ArrayBuilder<Vector4> _uniformData;
+        private ArrayBuilder<byte> _uniformData;
 
         public RenderBucket(uint initialCapacity)
         {
@@ -110,7 +111,7 @@ namespace NitroSharp.Graphics
             _pipelines = new List<Pipeline>();
             _sharedResourceSets = new List<ResourceSet>();
             _uniformBuffers = new List<DeviceBuffer>();
-            _uniformData = new ArrayBuilder<Vector4>(initialCapacity: 128);
+            _uniformData = new ArrayBuilder<byte>(initialCapacity: 1024);
         }
 
         public void Begin()
@@ -130,6 +131,20 @@ namespace NitroSharp.Graphics
             _uniformBuffers.Clear();
             _uniformData.Clear();
         }
+
+        public UniformUpdate StoreUniformUpdate<T>(DeviceBuffer targetBuffer, ref T data)
+           where T : unmanaged
+        {
+            uint start = _uniformData.Count;
+            uint sizeInBytes = (uint)Unsafe.SizeOf<T>();
+            uint actualSize = MathUtil.RoundUp(sizeInBytes, multiple: 16u);
+            Span<byte> dstBytes = _uniformData.Append(actualSize);
+            MemoryMarshal.Write(dstBytes, ref data);
+            return new UniformUpdate(targetBuffer, (ushort)start, (ushort)actualSize);
+        }
+
+        public void Submit(ref RenderBucketSubmission submission, RenderItemKey key)
+            => Submit<byte>(ref submission, key);
 
         public void Submit<TVertex>(ref RenderBucketSubmission submission, RenderItemKey key)
             where TVertex : unmanaged
@@ -153,8 +168,7 @@ namespace NitroSharp.Graphics
                 }
             }
 
-            (byte index, DeviceBuffer buffer) uniform = default;
-
+            renderItem.BeforeRenderCallback = submission.BeforeRenderCallback;
             renderItem.VertexBuffer0 = GetResourceIdMaybe(submission.VertexBuffer0, _vertexBuffers, ref _lastVertexBuffer0);
             renderItem.VertexBuffer1 = byte.MaxValue;
             renderItem.IndexBuffer = GetResourceIdMaybe(submission.IndexBuffer, _indexBuffers, ref _lastIndexBuffer);
@@ -170,88 +184,24 @@ namespace NitroSharp.Graphics
             renderItem.InstanceCount = submission.InstanceCount;
 
             renderItem.UniformBuffer = byte.MaxValue;
-            if (submission.UniformUpdate != null)
+            UniformUpdate update = submission.UniformUpdate;
+            if (update.DataLength > 0)
             {
-                UniformUpdate update = submission.UniformUpdate.Value;
-                (byte bufferId, ushort start, ushort len) = writeUniformData(update);
+                (byte index, DeviceBuffer buffer) discard = default;
+                byte bufferId = GetResourceId(update.Buffer, _uniformBuffers, ref discard);
                 renderItem.UniformBuffer = bufferId;
-                renderItem.UniformDataStart = start;
-                renderItem.UniformDataLength = len;
+                renderItem.UniformDataStart = update.DataStart;
+                renderItem.UniformDataLength = update.DataLength;
             }
 
             _keys.Add(key);
-
-            (byte bufferId, ushort start, ushort length) writeUniformData(in UniformUpdate update)
-            {
-                byte bufferId = GetResourceId(update.Buffer, _uniformBuffers, ref uniform);
-                uint start = _uniformData.Count;
-                uint length = MathUtil.RoundUp((uint)update.Data.Length, multiple: 16u);
-                Span<Vector4> dst = _uniformData.Append(length);
-                update.Data.Span.CopyTo(MemoryMarshal.Cast<Vector4, byte>(dst));
-                return (bufferId, (ushort)start, (ushort)length);
-            }
         }
 
         public void Submit<TVertex0, TVertex1>(ref RenderBucketSubmission submission, RenderItemKey key)
             where TVertex0 : unmanaged
             where TVertex1 : unmanaged
         {
-            ref ArrayBuilder<RenderItem> renderItems = ref _renderItems;
-            if (renderItems.Count > 0)
-            {
-                ref RenderItem lastItem = ref renderItems[^1];
-                if ((submission.InstanceBase == (lastItem.InstanceBase + lastItem.InstanceCount))
-                    && submission.Pipeline == _lastPipeline.pipeline
-                    && submission.SharedResourceSet == _lastSharedResourceSet.set
-                    && submission.ObjectResourceSet0 == lastItem.ObjectResourceSet0
-                    && submission.ObjectResourceSet1 == lastItem.ObjectResourceSet1
-                    && submission.VertexBuffer0 == _lastVertexBuffer0.buffer
-                    && submission.VertexBuffer1 == _lastVertexBuffer1.buffer
-                    && submission.IndexBuffer == _lastIndexBuffer.buffer)
-                {
-                    lastItem.InstanceCount++;
-                    return;
-                }
-            }
-
-            (byte index, DeviceBuffer buffer) uniform = default;
-
-            ref RenderItem renderItem = ref renderItems.Add();
-            renderItem.VertexBuffer0 = GetResourceIdMaybe(submission.VertexBuffer0, _vertexBuffers, ref _lastVertexBuffer0);
-            renderItem.VertexBuffer1 = GetResourceIdMaybe(submission.VertexBuffer1, _vertexBuffers, ref _lastVertexBuffer1);
-            renderItem.IndexBuffer = GetResourceIdMaybe(submission.IndexBuffer, _indexBuffers, ref _lastIndexBuffer);
-            renderItem.VertexBase = submission.VertexBase;
-            renderItem.VertexCount = submission.VertexCount;
-            renderItem.IndexBase = submission.IndexBase;
-            renderItem.IndexCount = submission.IndexCount;
-            renderItem.PipelineId = GetPipelineId(submission.Pipeline);
-            renderItem.SharedResourceSetId = GetResourceId(submission.SharedResourceSet, _sharedResourceSets, ref _lastSharedResourceSet);
-            renderItem.ObjectResourceSet0 = submission.ObjectResourceSet0;
-            renderItem.ObjectResourceSet1 = submission.ObjectResourceSet1;
-            renderItem.InstanceBase = submission.InstanceBase;
-            renderItem.InstanceCount = submission.InstanceCount;
-
-            renderItem.UniformBuffer = byte.MaxValue;
-            if (submission.UniformUpdate != null)
-            {
-                UniformUpdate update = submission.UniformUpdate.Value;
-                (byte bufferId, ushort start, ushort len) = writeUniformData(update);
-                renderItem.UniformBuffer = bufferId;
-                renderItem.UniformDataStart = start;
-                renderItem.UniformDataLength = len;
-            }
-
-            (byte bufferId, ushort start, ushort length) writeUniformData(in UniformUpdate update)
-            {
-                byte bufferId = GetResourceId(update.Buffer, _uniformBuffers, ref uniform);
-                uint start = _uniformData.Count;
-                uint length = MathUtil.RoundUp((uint)update.Data.Length, multiple: 16u);
-                Span<Vector4> dst = _uniformData.Append(length);
-                update.Data.Span.CopyTo(MemoryMarshal.Cast<Vector4, byte>(dst));
-                return (bufferId, (ushort)start, (ushort)length);
-            }
-
-            _keys.Add(key);
+            Submit<TVertex0>(ref submission, key);
         }
 
         public MultiSubmission PrepareMultiSubmission(uint renderItemCount)
@@ -269,7 +219,6 @@ namespace NitroSharp.Graphics
             (byte index, VertexBuffer? buffer) vb0 = _lastVertexBuffer0;
             (byte index, VertexBuffer? buffer) vb1 = _lastVertexBuffer1;
             (byte index, DeviceBuffer? buffer) ib = _lastIndexBuffer;
-            (byte index, DeviceBuffer buffer) uniform = default;
             List<VertexBuffer> vertexBuffers = _vertexBuffers;
             List<DeviceBuffer> indexBuffers = _indexBuffers;
             List<ResourceSet> sharedResourceSets = _sharedResourceSets;
@@ -280,6 +229,7 @@ namespace NitroSharp.Graphics
             for (int i = 0; i < count; i++)
             {
                 ref RenderBucketSubmission submission = ref multiSubmission.Submissions[i];
+                ref RenderItem renderItem = ref renderItems[++curRenderItem];
                 if (curRenderItem >= 0)
                 {
                     ref RenderItem lastRI = ref renderItems[curRenderItem];
@@ -300,7 +250,7 @@ namespace NitroSharp.Graphics
                         }
                     }
                 }
-                ref RenderItem renderItem = ref renderItems[++curRenderItem];
+                renderItem.BeforeRenderCallback = submission.BeforeRenderCallback;
                 renderItem.VertexBuffer0 = GetResourceIdMaybe(submission.VertexBuffer0, vertexBuffers, ref vb0);
                 renderItem.VertexBuffer1 = GetResourceIdMaybe(submission.VertexBuffer1, vertexBuffers, ref vb1);
                 renderItem.IndexBuffer = GetResourceIdMaybe(submission.IndexBuffer, indexBuffers, ref ib);
@@ -319,13 +269,14 @@ namespace NitroSharp.Graphics
                 lastResourceSet1 = submission.ObjectResourceSet1;
 
                 renderItem.UniformBuffer = byte.MaxValue;
-                if (submission.UniformUpdate != null)
+                UniformUpdate update = submission.UniformUpdate;
+                if (update.DataLength > 0)
                 {
-                    UniformUpdate update = submission.UniformUpdate.Value;
-                    (byte bufferId, ushort start, ushort len) = writeUniformData(update);
+                    (byte index, DeviceBuffer buffer) discard = default;
+                    byte bufferId = GetResourceId(update.Buffer, _uniformBuffers, ref discard);
                     renderItem.UniformBuffer = bufferId;
-                    renderItem.UniformDataStart = start;
-                    renderItem.UniformDataLength = len;
+                    renderItem.UniformDataStart = update.DataStart;
+                    renderItem.UniformDataLength = update.DataLength;
                 }
 
                 multiSubmission.Keys[curRenderItem] = multiSubmission.Keys[i];
@@ -338,53 +289,42 @@ namespace NitroSharp.Graphics
             _lastVertexBuffer1 = vb1;
             _lastIndexBuffer = ib;
             _lastSharedResourceSet = lastSharedSet;
-
-            (byte bufferId, ushort start, ushort length) writeUniformData(in UniformUpdate update)
-            {
-                byte bufferId = GetResourceId(update.Buffer, _uniformBuffers, ref uniform);
-                uint start = _uniformData.Count;
-                uint length = (uint)Math.Ceiling(update.Data.Length / 16.0);
-                Span<Vector4> dst = _uniformData.Append(length);
-                update.Data.Span.CopyTo(MemoryMarshal.Cast<Vector4, byte>(dst));
-                return (bufferId, (ushort)start, (ushort)length);
-            }
         }
 
-        public void End(CommandList commandList)
+        public void End(in RenderContext renderContext)
         {
+            CommandList commandList = renderContext.CommandList;
             Array.Sort(_keys.UnderlyingArray, _renderItems.UnderlyingArray, 0, (int)_renderItems.Count);
 
+            byte lastPipelineId = byte.MaxValue;
+            byte lastSharedResourceSetId = byte.MaxValue;
             byte lastVertexBuffer0 = byte.MaxValue;
             byte lastVertexBuffer1 = byte.MaxValue;
             byte lastIndexBuffer = byte.MaxValue;
-            byte lastPipelineId = byte.MaxValue;
-            byte lastSharedResourceSetId = byte.MaxValue;
             ResourceSet? lastObjectResourceSet0 = null;
             ResourceSet? lastObjectResourceSet1 = null;
             for (uint i = 0; i < _renderItems.Count; i++)
             {
                 ref RenderItem item = ref _renderItems[i];
+                item.BeforeRenderCallback?.Invoke(renderContext);
                 if (item.PipelineId != lastPipelineId)
                 {
                     Pipeline pipeline = _pipelines[item.PipelineId];
                     commandList.SetPipeline(pipeline);
                     lastPipelineId = item.PipelineId;
                 }
-
                 if (item.SharedResourceSetId != lastSharedResourceSetId)
                 {
                     ResourceSet set = _sharedResourceSets[item.SharedResourceSetId];
                     commandList.SetGraphicsResourceSet(0, set);
                     lastSharedResourceSetId = item.SharedResourceSetId;
                 }
-
                 ResourceSet objectResourceSet0 = item.ObjectResourceSet0;
                 if (objectResourceSet0 != lastObjectResourceSet0)
                 {
                     commandList.SetGraphicsResourceSet(1, objectResourceSet0);
                     lastObjectResourceSet0 = objectResourceSet0;
                 }
-
                 ResourceSet? objectResourceSet1 = item.ObjectResourceSet1;
                 if (objectResourceSet1 != lastObjectResourceSet1)
                 {
@@ -394,7 +334,6 @@ namespace NitroSharp.Graphics
                         lastObjectResourceSet1 = objectResourceSet1;
                     }
                 }
-
                 if (item.VertexBuffer0 != lastVertexBuffer0)
                 {
                     byte newVB0 = item.VertexBuffer0;
@@ -425,17 +364,16 @@ namespace NitroSharp.Graphics
                     }
                     lastIndexBuffer = item.IndexBuffer;
                 }
-
                 if (item.UniformBuffer != byte.MaxValue)
                 {
                     DeviceBuffer buffer = _uniformBuffers[item.UniformBuffer];
-                    Span<Vector4> data = _uniformData.AsSpan(
+                    Span<byte> data = _uniformData.AsSpan(
                         item.UniformDataStart,
                         item.UniformDataLength
                     );
                     commandList.UpdateBuffer(
                         buffer, 0, ref data[0],
-                        (uint)(item.UniformDataLength * 16)
+                        item.UniformDataLength
                     );
                 }
 

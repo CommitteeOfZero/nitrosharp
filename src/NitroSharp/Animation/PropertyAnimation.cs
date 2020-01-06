@@ -98,32 +98,20 @@ namespace NitroSharp.Animation
 
         protected float CalculateFactor(float progress, NsEasingFunction function)
         {
-            switch (function)
+            return function switch
             {
-                case NsEasingFunction.QuadraticEaseIn:
-                    return MathF.Pow(progress, 2);
-                case NsEasingFunction.CubicEaseIn:
-                    return MathF.Pow(progress, 3);
-                case NsEasingFunction.QuarticEaseIn:
-                    return MathF.Pow(progress, 4);
-                case NsEasingFunction.QuadraticEaseOut:
-                    return 1.0f - MathF.Pow(1.0f - progress, 2);
-                case NsEasingFunction.CubicEaseOut:
-                    return 1.0f - MathF.Pow(1.0f - progress, 3);
-                case NsEasingFunction.QuarticEaseOut:
-                    return 1.0f - MathF.Pow(1.0f - progress, 4);
-                case NsEasingFunction.SineEaseIn:
-                    return 1.0f - MathF.Cos(progress * MathF.PI * 0.5f);
-                case NsEasingFunction.SineEaseOut:
-                    return MathF.Sin(progress * MathF.PI * 0.5f);
-                case NsEasingFunction.SineEaseInOut:
-                    return 0.5f * (1.0f - MathF.Cos(progress * MathF.PI));
-                case NsEasingFunction.SineEaseOutIn:
-                    return MathF.Acos(1.0f - progress * 2.0f) / MathF.PI;
-                case NsEasingFunction.None:
-                default:
-                    return progress;
-            }
+                NsEasingFunction.QuadraticEaseIn => MathF.Pow(progress, 2),
+                NsEasingFunction.CubicEaseIn => MathF.Pow(progress, 3),
+                NsEasingFunction.QuarticEaseIn => MathF.Pow(progress, 4),
+                NsEasingFunction.QuadraticEaseOut => 1.0f - MathF.Pow(1.0f - progress, 2),
+                NsEasingFunction.CubicEaseOut => 1.0f - MathF.Pow(1.0f - progress, 3),
+                NsEasingFunction.QuarticEaseOut => 1.0f - MathF.Pow(1.0f - progress, 4),
+                NsEasingFunction.SineEaseIn => 1.0f - MathF.Cos(progress * MathF.PI * 0.5f),
+                NsEasingFunction.SineEaseOut => MathF.Sin(progress * MathF.PI * 0.5f),
+                NsEasingFunction.SineEaseInOut => 0.5f * (1.0f - MathF.Cos(progress * MathF.PI)),
+                NsEasingFunction.SineEaseOutIn => MathF.Acos(1.0f - progress * 2.0f) / MathF.PI,
+                _ => progress,
+            };
         }
     }
 }

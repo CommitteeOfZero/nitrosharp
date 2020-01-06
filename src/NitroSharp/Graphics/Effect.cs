@@ -11,8 +11,7 @@ namespace NitroSharp.Graphics
     {
         Blit,
         Grayscale,
-        BoxBlur,
-        BarrelDistortion
+        BoxBlur
     }
 
     internal readonly struct EffectDescription
@@ -36,7 +35,6 @@ namespace NitroSharp.Graphics
                 EffectKind.Blit => pipelines.Blit,
                 EffectKind.Grayscale => pipelines.Grayscale,
                 EffectKind.BoxBlur => pipelines.BoxBlur,
-                EffectKind.BarrelDistortion => pipelines.BarrelDistortion,
                 _ => throw new Exception()
             };
         }

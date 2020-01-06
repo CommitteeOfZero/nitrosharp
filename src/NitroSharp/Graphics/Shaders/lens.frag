@@ -2,11 +2,12 @@
 
 #extension GL_EXT_samplerless_texture_functions : enable
 
-layout(set = 0, binding = 0) uniform texture2D Texture;
-layout(set = 0, binding = 1) uniform texture2D LensTexture;
-layout(set = 0, binding = 2) uniform sampler Sampler;
+layout(set = 1, binding = 0) uniform texture2D Texture;
+layout(set = 1, binding = 1) uniform texture2D LensTexture;
+layout(set = 1, binding = 2) uniform sampler Sampler;
 
-layout(location = 0) in vec2 fs_TexCoord;
+layout(location = 0) in vec4 fs_Color;
+layout(location = 1) in vec2 fs_TexCoord;
 layout(location = 0) out vec4 OutColor;
 
 vec4 sample_input(vec2 uv, vec2 offset, vec2 texelSize)
@@ -31,7 +32,8 @@ void main()
     vec2 srcTexSize = textureSize(Texture, 0);
     vec2 texelSize = vec2(1.0) / srcTexSize;
 	vec2 uvOffset = (offset * 128.0) / srcTexSize;
-    vec2 uv = fs_TexCoord + uvOffset;
+
+    vec2 uv = gl_FragCoord.xy / srcTexSize + uvOffset;
     vec4 t0 = sample_input(uv, vec2(0, 0), texelSize);
     vec4 t1 = sample_input(uv, vec2(1, 0), texelSize);
     vec4 t2 = sample_input(uv, vec2(0, 1), texelSize);

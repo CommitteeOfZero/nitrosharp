@@ -20,7 +20,8 @@ namespace NitroSharp.Graphics
     {
         SolidColor,
         Texture,
-        Screenshot
+        Screenshot,
+        Lens
     }
 
     [StructLayout(LayoutKind.Explicit)]
@@ -28,6 +29,9 @@ namespace NitroSharp.Graphics
     {
         [FieldOffset(0)]
         public TextureMaterial TextureVariant;
+
+        [FieldOffset(0)]
+        public AssetId LensTextureHandle;
 
         [FieldOffset(8)]
         public RgbaFloat Color;
@@ -58,6 +62,16 @@ namespace NitroSharp.Graphics
 
         public Material(MaterialKind kind)
             : this() => (Kind, Color, UvBottomRight) = (kind, RgbaFloat.White, Vector2.One);
+
+        public static Material Lens(AssetId lensTexture)
+        {
+            return new Material(MaterialKind.Lens)
+            {
+                LensTextureHandle = lensTexture,
+                UvTopLeft = Vector2.Zero,
+                UvBottomRight = Vector2.One
+            };
+        }
 
         public static Material SolidColor(in RgbaFloat color)
         {
@@ -121,7 +135,8 @@ namespace NitroSharp.Graphics
                     AlphaMask,
                     UvTopLeft,
                     UvBottomRight
-                )
+                ),
+                MaterialKind.Lens => 0
             };
         }
     }
