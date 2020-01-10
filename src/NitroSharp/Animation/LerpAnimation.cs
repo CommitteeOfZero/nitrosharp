@@ -14,11 +14,11 @@ namespace NitroSharp.Animation
         {
         }
 
-        protected abstract EntityStorage.ComponentVec<T> GetPropertyRow();
+        protected abstract EntityStorage.ComponentVec<T> SelectComponentVec();
 
         protected override void Advance(float deltaMilliseconds)
         {
-            InterpolateValue(ref GetPropertyRow()[Entity], CalculateFactor(Progress, EasingFunction));
+            InterpolateValue(ref SelectComponentVec()[Entity], CalculateFactor(Progress, EasingFunction));
         }
 
         protected abstract void InterpolateValue(ref T value, float factor);

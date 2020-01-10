@@ -20,6 +20,7 @@ namespace NitroSharp.NsScript
         InvalidExpressionTerm,
         InvalidExpressionStatement,
         StrayPXmlElement,
+        InvalidBezierCurve,
 
         UnresolvedIdentifier,
         BadAssignmentTarget,
@@ -56,7 +57,8 @@ namespace NitroSharp.NsScript
             private readonly object[] _arguments;
             private string? _message;
 
-            public DiagnosticWithArguments(TextSpan span, DiagnosticId id, params object[] arguments) : base(span, id)
+            public DiagnosticWithArguments(TextSpan span, DiagnosticId id, params object[] arguments)
+                : base(span, id)
             {
                 _arguments = arguments;
             }

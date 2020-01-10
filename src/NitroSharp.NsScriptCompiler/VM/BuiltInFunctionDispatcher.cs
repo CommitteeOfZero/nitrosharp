@@ -86,6 +86,9 @@ namespace NitroSharp.NsScript.VM
                 case BuiltInFunction.Zoom:
                     Zoom(ref args);
                     break;
+                case BuiltInFunction.BezierMove:
+                    BezierMove(ref args);
+                    break;
 
                 case BuiltInFunction.CreateWindow:
                     CreateWindow(ref args);
@@ -157,6 +160,17 @@ namespace NitroSharp.NsScript.VM
             ConstantValue? result = _result;
             _result = null;
             return result;
+        }
+
+        private void BezierMove(ref ArgConsumer args)
+        {
+            _impl.BezierMove(
+                args.TakeEntityQuery(),
+                duration: args.TakeTimeSpan(),
+                args.TakeBezierCurve(),
+                args.TakeEasingFunction(),
+                wait: args.TakeBool()
+            );
         }
 
         private void CreateMask(ref ArgConsumer args)
@@ -668,17 +682,8 @@ namespace NitroSharp.NsScript.VM
             public NsCoordinate TakeCoordinate()
             {
                 ConstantValue val = TakeOpt(ConstantValue.Integer(0));
-                return val.Type switch
-                {
-                    BuiltInType.Integer
-                        => NsCoordinate.WithValue(val.AsInteger()!.Value, NsCoordinateOrigin.Zero, 0),
-                    BuiltInType.DeltaInteger
-                        => NsCoordinate.WithValue(val.AsDelta()!.Value, NsCoordinateOrigin.CurrentValue, 0),
-                    BuiltInType.BuiltInConstant
-                        => NsCoordinate.FromConstant(val.AsBuiltInConstant()!.Value),
-
-                    _ => UnexpectedType<NsCoordinate>(val.Type)
-                };
+                NsCoordinate? ret = NsCoordinate.FromValue(val);
+                return ret ?? UnexpectedType<NsCoordinate>(val.Type);
             }
 
             public NsDimension TakeDimension()
@@ -742,6 +747,14 @@ namespace NitroSharp.NsScript.VM
                 return val.Type == BuiltInType.BuiltInConstant
                     ? val.AsBuiltInConstant()!.Value
                     : UnexpectedType<BuiltInConstant>(val.Type);
+            }
+
+            public CompositeBezier TakeBezierCurve()
+            {
+                ConstantValue val = TakeOpt(ConstantValue.Null);
+                return val.Type == BuiltInType.BezierCurve
+                    ? val.AsBezierCurve()!.Value
+                    : UnexpectedType<CompositeBezier>(val.Type);
             }
 
             public T UnexpectedType<T>(BuiltInType type)

@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using NitroSharp.NsScript.Primitives;
 using NitroSharp.Utilities;
 
 namespace NitroSharp.NsScript
@@ -15,14 +17,23 @@ namespace NitroSharp.NsScript
         Float,
         Boolean,
         String,
-        BuiltInConstant
+        BuiltInConstant,
+        BezierCurve
     }
 
+    [StructLayout(LayoutKind.Explicit)]
     public readonly struct ConstantValue : IEquatable<ConstantValue>
     {
-        private readonly int _numericValue;
+        [FieldOffset(0)]
         private readonly string? _stringValue;
 
+        [FieldOffset(0)]
+        private readonly CompositeBezier _bezierCurve;
+
+        [FieldOffset(8)]
+        private readonly int _numericValue;
+
+        [FieldOffset(12)]
         public readonly BuiltInType Type;
 
         public static ConstantValue Null => new ConstantValue(BuiltInType.Null);
@@ -35,11 +46,19 @@ namespace NitroSharp.NsScript
         public static ConstantValue Float(float value) => new ConstantValue(value);
         public static ConstantValue String(string value) => new ConstantValue(value);
         public static ConstantValue Boolean(bool value) => value ? True : False;
+        public static ConstantValue BezierCurve(CompositeBezier bezierCurve)
+            => new ConstantValue(bezierCurve);
 
         public static ConstantValue BuiltInConstant(BuiltInConstant value)
             => new ConstantValue(value);
 
-        private ConstantValue(BuiltInType type)
+        private ConstantValue(CompositeBezier bezierCurve) : this()
+        {
+            Type = BuiltInType.BezierCurve;
+            _bezierCurve = bezierCurve;
+        }
+
+        private ConstantValue(BuiltInType type) : this()
         {
             Debug.Assert(type == BuiltInType.Null);
             _numericValue = 0;
@@ -47,7 +66,7 @@ namespace NitroSharp.NsScript
             Type = type;
         }
 
-        private ConstantValue(int value, bool isDelta)
+        private ConstantValue(int value, bool isDelta) : this()
         {
             _numericValue = value;
             _stringValue = null;
@@ -56,28 +75,28 @@ namespace NitroSharp.NsScript
                 : BuiltInType.Integer;
         }
 
-        private ConstantValue(float value)
+        private ConstantValue(float value) : this()
         {
             _numericValue = Unsafe.As<float, int>(ref value);
             _stringValue = null;
             Type = BuiltInType.Integer;
         }
 
-        private ConstantValue(bool value)
+        private ConstantValue(bool value) : this()
         {
             _numericValue = value ? 1 : 0;
             _stringValue = null;
             Type = BuiltInType.Boolean;
         }
 
-        private ConstantValue(string value)
+        private ConstantValue(string value) : this()
         {
             _stringValue = value;
             _numericValue = 0;
             Type = BuiltInType.String;
         }
 
-        private ConstantValue(BuiltInConstant value)
+        private ConstantValue(BuiltInConstant value) : this()
         {
             _numericValue = (int)value;
             _stringValue = null;
@@ -135,6 +154,11 @@ namespace NitroSharp.NsScript
             => Type == BuiltInType.BuiltInConstant
                 ? (BuiltInConstant)_numericValue
                 : (BuiltInConstant?)null;
+
+        public CompositeBezier? AsBezierCurve()
+            => Type == BuiltInType.BezierCurve
+                ? _bezierCurve
+                : (CompositeBezier?)null;
 
         private static bool Equals(ConstantValue left, ConstantValue right)
         {

@@ -263,7 +263,7 @@ namespace NitroSharp
             return 0;
         }
 
-        internal void SetPosition(Entity entity, NsCoordinate x, NsCoordinate y)
+        internal Vector2 GetAbsolutePosition(Entity entity, NsCoordinate x, NsCoordinate y)
         {
             var parentBounds = new SizeF(1280, 720);
 
@@ -314,8 +314,15 @@ namespace NitroSharp
             Vector2 position = translateOrigin * parentBounds.ToVector();
             position -= anchorPoint * bounds.ToVector();
             position += value;
+            return position;
+        }
 
-            transform.Position = new Vector3(position.X, position.Y, 0);
+        internal void SetPosition(Entity entity, NsCoordinate x, NsCoordinate y)
+        {
+            Vector2 pos = GetAbsolutePosition(entity, x, y);
+            var storage = _world.GetStorage<SceneObject2DStorage>(entity);
+            storage.TransformComponents[entity]
+                .Position = new Vector3(pos.X, pos.Y, 0);
         }
     }
 }

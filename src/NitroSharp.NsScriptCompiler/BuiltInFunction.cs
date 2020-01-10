@@ -36,6 +36,7 @@
         Zoom,
         Rotate,
         MoveCube,
+        BezierMove,
         DrawTransition,
 
         WaitAction,

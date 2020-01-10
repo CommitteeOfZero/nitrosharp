@@ -1,4 +1,5 @@
-﻿using System.Runtime.InteropServices;
+﻿using System;
+using System.Runtime.InteropServices;
 
 namespace NitroSharp.NsScript.Primitives
 {
@@ -44,6 +45,14 @@ namespace NitroSharp.NsScript.Primitives
 
         public static NsCoordinate Inherit()
             => new NsCoordinate(NsCoordinateVariant.Inherit, default, default, default);
+
+        public static NsCoordinate FromValue(ConstantValue val) => val.Type switch
+        {
+            BuiltInType.Integer => WithValue(val.AsInteger()!.Value, NsCoordinateOrigin.Zero, 0),
+            BuiltInType.DeltaInteger => WithValue(val.AsDelta()!.Value, NsCoordinateOrigin.CurrentValue, 0),
+            BuiltInType.BuiltInConstant => FromConstant(val.AsBuiltInConstant()!.Value),
+            _ => throw new ArgumentException("Cannot create a valid NsCoordinate from the provided ConstantValue.")
+        };
 
         public static NsCoordinate FromConstant(BuiltInConstant constant)
         {

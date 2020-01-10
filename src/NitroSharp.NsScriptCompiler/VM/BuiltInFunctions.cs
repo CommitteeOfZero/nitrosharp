@@ -98,7 +98,7 @@ namespace NitroSharp.NsScript.VM
         public virtual void Zoom(string entityQuery, TimeSpan duration, NsRational dstScaleX, NsRational dstScaleY, NsEasingFunction easingFunction, TimeSpan delay) { }
         public virtual void Rotate(string entityQuery, TimeSpan duration, NsNumeric dstRotationX, NsNumeric dstRotationY, NsNumeric dstRotationZ, NsEasingFunction easingFunction, TimeSpan delay) { }
         public virtual void MoveCube(string entityQuery, TimeSpan duration, NsNumeric dstTranslationX, NsNumeric dstTranslationY, NsNumeric dstTranslationZ, NsEasingFunction easingFunction, TimeSpan delay) { }
-
+        public virtual void BezierMove(string entityQuery, TimeSpan duration, CompositeBezier curve, NsEasingFunction easingFunction, bool wait) { }
         public virtual void DrawTransition(string entityQuery, TimeSpan duration, NsRational initialFadeAmount, NsRational finalFadeAmount, NsRational feather, NsEasingFunction easingFunction, string maskFileName, TimeSpan delay) { }
 
         public virtual void CreateThread(string name, string target) { }

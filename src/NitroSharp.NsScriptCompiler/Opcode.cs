@@ -31,6 +31,9 @@
         Equal = 0x28,           // <>
         NotEqual = 0x29,        // <>
         Binary = 0x2A,          // <byte operator>
+        BezierStart = 0x2B,     // <>
+        BezierEndSeg = 0x2C,    // <>
+        BezierEnd = 0x2D,       // <>
 
         Jump = 0x30,            // <short offset>
         JumpIfTrue = 0x31,      // <short offset>

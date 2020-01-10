@@ -18,10 +18,10 @@ namespace NitroSharp.Animation
         {
         }
 
-        protected override EntityStorage.ComponentVec<TransformComponents> GetPropertyRow()
+        protected override EntityStorage.ComponentVec<TransformComponents> SelectComponentVec()
         {
-            var table = World.GetStorage<SceneObjectStorage>(Entity);
-            return table.TransformComponents;
+            var storage = World.GetStorage<SceneObjectStorage>(Entity);
+            return storage.TransformComponents;
         }
 
         protected override void InterpolateValue(ref TransformComponents value, float factor)

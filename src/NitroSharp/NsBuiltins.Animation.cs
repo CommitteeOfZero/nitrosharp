@@ -7,11 +7,65 @@ using NitroSharp.NsScript.Primitives;
 using NitroSharp.Experimental;
 using NitroSharp.Graphics;
 using NitroSharp.Animation;
+using System.Collections.Immutable;
 
 namespace NitroSharp
 {
     internal sealed partial class NsBuiltins
     {
+        public override void BezierMove(
+            string entityQuery,
+            TimeSpan duration,
+            CompositeBezier curve,
+            NsEasingFunction easingFunction,
+            bool wait)
+        {
+            foreach ((Entity entity, _) in QueryEntities(entityQuery))
+            {
+                BezierMoveCore(entity, duration, curve, easingFunction, wait);
+            }
+            if (duration > TimeSpan.Zero && wait)
+            {
+                Interpreter.SuspendThread(CurrentThread);
+            }
+        }
+
+        private void BezierMoveCore(
+            Entity entity,
+            TimeSpan duration,
+            CompositeBezier curve,
+            NsEasingFunction easingFunction,
+            bool wait)
+        {
+            if (duration <= TimeSpan.Zero) { return; }
+            var segments = ImmutableArray.CreateBuilder<ProcessedBezierSegment>();
+            foreach (CubicBezierSegment srcSeg in curve.Segments)
+            {
+                Vector2 processPoint(BezierControlPoint srcPoint)
+                    => GetAbsolutePosition(entity, srcPoint.X, srcPoint.Y);
+
+                segments.Add(new ProcessedBezierSegment(
+                    processPoint(srcSeg.P0),
+                    processPoint(srcSeg.P1),
+                    processPoint(srcSeg.P2),
+                    processPoint(srcSeg.P3)
+                ));
+            }
+            var processedCurve = new ProcessedBezierCurve(segments.ToImmutable());
+            var storage = _world.GetStorage<RenderItemStorage>(entity);
+            if (storage == null) { return; }
+            var animation = new BezierMoveAnimation(entity, duration, easingFunction)
+            {
+                Curve = processedCurve,
+                IsBlocking = CurrentThread == MainThread
+            };
+            if (wait)
+            {
+                animation.WaitingThread = CurrentThread;
+            }
+            _world.ActivateAnimation(animation);
+        }
+
         public override void Fade(
             string entityName, TimeSpan duration, NsRational opacity,
             NsEasingFunction easingFunction, TimeSpan delay)

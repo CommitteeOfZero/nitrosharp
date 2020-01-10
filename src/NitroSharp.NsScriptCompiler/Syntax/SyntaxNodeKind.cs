@@ -12,7 +12,6 @@
         Block,
         IfStatement,
         WhileStatement,
-        FunctionCallExpression,
         ExpressionStatement,
         ReturnStatement,
         SelectStatement,
@@ -26,7 +25,10 @@
         UnaryExpression,
         BinaryExpression,
         AssignmentExpression,
-        
+        FunctionCallExpression,
+        BezierExpression,
+
+
         DialogueBlock,
         PXmlString,
         PXmlLineSeparator

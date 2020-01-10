@@ -31,10 +31,10 @@ namespace NitroSharp.Animation
             }
         }
 
-        protected override EntityStorage.ComponentVec<Material> GetPropertyRow()
+        protected override EntityStorage.ComponentVec<Material> SelectComponentVec()
         {
-            var table = World.GetStorage<RenderItemStorage>(Entity);
-            return table.Materials;
+            var storage = World.GetStorage<RenderItemStorage>(Entity);
+            return storage.Materials;
         }
 
         protected override void InterpolateValue(ref Material value, float factor)

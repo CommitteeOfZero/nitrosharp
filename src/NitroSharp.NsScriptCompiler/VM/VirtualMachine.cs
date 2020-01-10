@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Threading;
+using NitroSharp.NsScript.Primitives;
 using NitroSharp.NsScript.Utilities;
 
 namespace NitroSharp.NsScript.VM
@@ -87,6 +89,8 @@ namespace NitroSharp.NsScript.VM
         private readonly GlobalVarLookupTable _globalVarLookup;
         private readonly SystemVariableLookup _systemVariables;
 
+        private readonly Stack<CubicBezierSegment> _bezierSegmentStack;
+
         public ThreadContext? MainThread { get; internal set; }
         public ThreadContext? CurrentThread { get; internal set; }
 
@@ -107,6 +111,7 @@ namespace NitroSharp.NsScript.VM
             _globalVarLookup = GlobalVarLookupTable.Load(globalVarLookupTableStream);
             builtInFunctionsImpl._vm = this;
             _systemVariables = new SystemVariableLookup(this);
+            _bezierSegmentStack = new Stack<CubicBezierSegment>();
         }
 
         public IReadOnlyList<ThreadContext> Threads => _threads;
@@ -341,7 +346,7 @@ namespace NitroSharp.NsScript.VM
                     Opcode.LoadArg2 => stack[frame.ArgStart + 2],
                     Opcode.LoadArg3 => stack[frame.ArgStart + 3],
                     Opcode.LoadArg => stack[frame.ArgStart + program.ReadByte()],
-                    _ => (ConstantValue?)null
+                    _ => null
                 };
 
                 if (imm.HasValue)
@@ -493,6 +498,29 @@ namespace NitroSharp.NsScript.VM
                         if (thread.CallFrameStack.Count == 0) { return; }
                         thread.CallFrameStack.Pop();
                         return;
+                    case Opcode.BezierStart:
+                        _bezierSegmentStack.Clear();
+                        break;
+                    case Opcode.BezierEndSeg:
+                        BezierControlPoint popPoint(ref ValueStack<ConstantValue> stack)
+                        {
+                            var x = NsCoordinate.FromValue(stack.Pop());
+                            var y = NsCoordinate.FromValue(stack.Pop());
+                            return new BezierControlPoint(x, y);
+                        }
+
+                        var seg = new CubicBezierSegment(
+                            popPoint(ref stack),
+                            popPoint(ref stack),
+                            popPoint(ref stack),
+                            popPoint(ref stack)
+                        );
+                        _bezierSegmentStack.Push(seg);
+                        break;
+                    case Opcode.BezierEnd:
+                        var curve = new CompositeBezier(_bezierSegmentStack.ToImmutableArray());
+                        stack.Push(ConstantValue.BezierCurve(curve));
+                        break;
                     case Opcode.Dispatch:
                         var func = (BuiltInFunction)program.ReadByte();
                         argCount = program.ReadByte();
@@ -502,12 +530,12 @@ namespace NitroSharp.NsScript.VM
                             default:
                                 if (CurrentThread == MainThread)
                                 {
-                                    Console.Write($"Built-in: {func.ToString()}(");
-                                    foreach (ref readonly ConstantValue cv in args)
-                                    {
-                                        Console.Write(cv.ConvertToString() + ", ");
-                                    }
-                                    Console.Write(")\r\n");
+                                    //Console.Write($"Built-in: {func.ToString()}(");
+                                    //foreach (ref readonly ConstantValue cv in args)
+                                    //{
+                                    //    Console.Write(cv.ConvertToString() + ", ");
+                                    //}
+                                    //Console.Write(")\r\n");
                                 }
                                 ConstantValue? result = _builtInCallDispatcher.Dispatch(func, args);
                                 stack.Pop(argCount);

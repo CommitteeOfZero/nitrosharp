@@ -599,9 +599,13 @@ namespace NitroSharp.NsScript.Syntax
                     return ParseLiteral();
 
                 case SyntaxTokenKind.OpenParen:
-                    EatToken(SyntaxTokenKind.OpenParen);
+                    SyntaxToken openParen = EatToken(SyntaxTokenKind.OpenParen);
                     ExpressionSyntax? expr = ParseSubExpression(Precedence.Expression);
                     if (expr == null) { return null; }
+                    if (CurrentToken.Kind == SyntaxTokenKind.Comma)
+                    {
+                        return ParseBezierExpression(openParen, expr);
+                    }
                     EatToken(SyntaxTokenKind.CloseParen);
                     return expr;
 
@@ -609,6 +613,48 @@ namespace NitroSharp.NsScript.Syntax
                     Report(DiagnosticId.InvalidExpressionTerm, GetText(CurrentToken));
                     EatToken();
                     return null;
+            }
+        }
+
+        private BezierExpressionSyntax? ParseBezierExpression(in SyntaxToken openParen, ExpressionSyntax x0)
+        {
+            var controlPoints = ImmutableArray.CreateBuilder<BezierControlPointSyntax>();
+            EatToken(SyntaxTokenKind.Comma);
+            ExpressionSyntax? y0 = ParseSubExpression(Precedence.Expression);
+            if (y0 != null)
+            {
+                controlPoints.Add(new BezierControlPointSyntax(x0, y0, starting: true));
+            }
+            EatToken(SyntaxTokenKind.CloseParen);
+            while (CurrentToken.Kind != SyntaxTokenKind.EndOfFileToken)
+            {
+                bool? paren = CurrentToken.Kind switch
+                {
+                    SyntaxTokenKind.OpenParen => true,
+                    SyntaxTokenKind.OpenBrace => false,
+                    _ => null
+                };
+                if (paren == null) { break; }
+                BezierControlPointSyntax? cp = parseControlPoint(paren.Value);
+                if (cp == null) { return null; }
+                controlPoints.Add(cp.Value);
+            }
+
+            return new BezierExpressionSyntax(controlPoints.ToImmutable(), SpanFrom(openParen));
+
+            BezierControlPointSyntax? parseControlPoint(bool starting)
+            {
+                (SyntaxTokenKind startTk, SyntaxTokenKind endTk) = starting
+                    ? (SyntaxTokenKind.OpenParen, SyntaxTokenKind.CloseParen)
+                    : (SyntaxTokenKind.OpenBrace, SyntaxTokenKind.CloseBrace);
+                EatToken(startTk);
+                ExpressionSyntax? x = ParseSubExpression(Precedence.Expression);
+                if (x == null) { return null; }
+                EatToken(SyntaxTokenKind.Comma);
+                ExpressionSyntax? y = ParseSubExpression(Precedence.Expression);
+                if (y == null) { return null; }
+                EatToken(endTk);
+                return new BezierControlPointSyntax(x, y, starting);
             }
         }
 

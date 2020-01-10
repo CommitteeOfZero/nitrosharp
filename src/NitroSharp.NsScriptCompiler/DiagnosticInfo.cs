@@ -1,3 +1,5 @@
+using System;
+
 namespace NitroSharp.NsScript
 {
     public static class DiagnosticInfo
@@ -42,6 +44,8 @@ namespace NitroSharp.NsScript
                     return "External module '{0}' is not found.";
                 case DiagnosticId.ChapterMainNotFound:
                     return "The target module of a call_chapter expression does not have chapter 'main'.";
+                case DiagnosticId.InvalidBezierCurve:
+                    return "The specified bezier curve does not meet the requirements of the engine.";
 
                 default:
                     throw ThrowHelper.UnexpectedValue(nameof(id));

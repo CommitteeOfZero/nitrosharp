@@ -686,6 +686,69 @@ namespace NitroSharp.NsScript.Compiler
             return null;
         }
 
+        public bool ParseBezierCurve(
+            BezierExpressionSyntax bezierExpr,
+            out ImmutableArray<CompileTimeBezierSegment> segments)
+        {
+            bool consumePoint(
+                ref ReadOnlySpan<BezierControlPointSyntax> points,
+                out BezierControlPointSyntax pt)
+            {
+                if (points.Length == 0)
+                {
+                    pt = default;
+                    return false;
+                }
+                pt = points[0];
+                points = points[1..];
+                return true;
+            }
+
+            ReadOnlySpan<BezierControlPointSyntax> remainingPoints = bezierExpr
+                .ControlPoints.AsSpan();
+            var mutSegments = ImmutableArray.CreateBuilder<CompileTimeBezierSegment>();
+            CompileTimeBezierSegment seg = default;
+            while (consumePoint(ref remainingPoints, out BezierControlPointSyntax pt))
+            {
+                if (pt.IsStartingPoint)
+                {
+                    if (seg.PointCount == 0 || seg.PointCount == 3)
+                    {
+                        seg.AddPoint(pt);
+                        if (seg.IsComplete)
+                        {
+                            mutSegments.Add(seg);
+                            seg = default;
+                            if (remainingPoints.Length > 0)
+                            {
+                                seg.AddPoint(pt);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        goto error;
+                    }
+                }
+                else if (seg.PointCount > 0 && seg.PointCount < 3)
+                {
+                    seg.AddPoint(pt);
+                }
+            }
+            if (mutSegments.Count == 0 || (seg.PointCount > 0 && !seg.IsComplete))
+            {
+                goto error;
+            }
+
+            segments = mutSegments.ToImmutable();
+            return true;
+
+        error:
+            Report(bezierExpr, DiagnosticId.InvalidBezierCurve);
+            segments = default;
+            return false;
+        }
+
         private void ReportUnresolvedIdentifier(Spanned<string> identifier)
         {
             _diagnostics.Add(
@@ -705,6 +768,29 @@ namespace NitroSharp.NsScript.Compiler
         private void Report(ExpressionSyntax node, DiagnosticId diagnosticId)
         {
             _diagnostics.Add(Diagnostic.Create(node.Span, diagnosticId));
+        }
+    }
+
+    internal struct CompileTimeBezierSegment
+    {
+        private int _count;
+
+        public BezierControlPointSyntax P0;
+        public BezierControlPointSyntax P1;
+        public BezierControlPointSyntax P2;
+        public BezierControlPointSyntax P3;
+
+        public int PointCount => _count;
+        public bool IsComplete => _count == 4;
+
+        public Span<BezierControlPointSyntax> Points
+            => MemoryMarshal.CreateSpan(ref P0, 4);
+
+        public bool AddPoint(BezierControlPointSyntax pt)
+        {
+            if (_count == 4) { return false; }
+            Points[_count++] = pt;
+            return true;
         }
     }
 
@@ -830,6 +916,9 @@ namespace NitroSharp.NsScript.Compiler
                     break;
                 case SyntaxNodeKind.FunctionCallExpression:
                     EmitFunctionCall((FunctionCallExpressionSyntax)expression);
+                    break;
+                case SyntaxNodeKind.BezierExpression:
+                    EmitBezierExpression((BezierExpressionSyntax)expression);
                     break;
             }
         }
@@ -991,6 +1080,25 @@ namespace NitroSharp.NsScript.Compiler
                     _code.WriteUInt16LE(externalNsxBuilder.GetSubroutineToken(function));
                     _code.WriteByte((byte)callExpression.Arguments.Length);
                 }
+            }
+        }
+
+        private void EmitBezierExpression(BezierExpressionSyntax expr)
+        {
+            if (_checker.ParseBezierCurve(expr, out ImmutableArray<CompileTimeBezierSegment> segments))
+            {
+                EmitOpcode(Opcode.BezierStart);
+                foreach (CompileTimeBezierSegment seg in segments.Reverse())
+                {
+                    seg.Points.Reverse();
+                    foreach (BezierControlPointSyntax cp in seg.Points)
+                    {
+                        EmitExpression(cp.Y);
+                        EmitExpression(cp.X);
+                    }
+                    EmitOpcode(Opcode.BezierEndSeg);
+                }
+                EmitOpcode(Opcode.BezierEnd);
             }
         }
 

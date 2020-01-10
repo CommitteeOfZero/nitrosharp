@@ -198,4 +198,43 @@ namespace NitroSharp.NsScript.Syntax
             return visitor.VisitFunctionCall(this);
         }
     }
+
+    public sealed class BezierExpressionSyntax : ExpressionSyntax
+    {
+        public BezierExpressionSyntax(
+            ImmutableArray<BezierControlPointSyntax> controlPoints,
+            TextSpan span) : base(span)
+        {
+            ControlPoints = controlPoints;
+        }
+
+        public ImmutableArray<BezierControlPointSyntax> ControlPoints { get; }
+        public override SyntaxNodeKind Kind => SyntaxNodeKind.BezierExpression;
+
+        public override void Accept(SyntaxVisitor visitor)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override TResult Accept<TResult>(SyntaxVisitor<TResult> visitor)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    public readonly struct BezierControlPointSyntax
+    {
+        public readonly ExpressionSyntax X;
+        public readonly ExpressionSyntax Y;
+        public readonly bool IsStartingPoint;
+
+        public BezierControlPointSyntax(ExpressionSyntax x, ExpressionSyntax y, bool starting)
+            => (X, Y, IsStartingPoint) = (x, y, starting);
+
+        public void Deconstruct(out ExpressionSyntax x, out ExpressionSyntax y)
+        {
+            x = X;
+            y = Y;
+        }
+    }
 }
