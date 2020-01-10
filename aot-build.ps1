@@ -3,6 +3,8 @@ param(
     [string]$CppCompiler = "clang"
 )
 
+$Framework = "netcoreapp3.1"
+
 if ($Runtime -eq "") {
     if ($IsWindows -or $null -eq $IsWindows) {
         $Runtime = "win-x64"
@@ -38,7 +40,7 @@ dotnet($args)
 
 $dst = "publish/$Runtime"
 Remove-Item -Path $dst -Recurse -ErrorAction SilentlyContinue
-Copy-Item -Path bin/Release/Games/CowsHead/netcoreapp3.0/$Runtime/publish -Destination $dst `
+Copy-Item -Path bin/Release/Games/CowsHead/$Framework/$Runtime/publish -Destination $dst `
     -Recurse -Container -Force -Exclude *.pdb,*.deps.json,*.runtimeconfig.json
 
 if ($linuxBuild) {
