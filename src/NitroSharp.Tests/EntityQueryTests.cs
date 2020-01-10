@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using NitroSharp.Experimental;
 using Xunit;
 
 namespace NitroSharp.Tests
@@ -8,7 +9,7 @@ namespace NitroSharp.Tests
     public class EntityQueryTests
     {
         private readonly string[][] _treeLevels;
-        private readonly OldWorld _world;
+        private readonly World _world;
 
         public EntityQueryTests()
         {
@@ -20,12 +21,12 @@ namespace NitroSharp.Tests
 
             void entity(string name)
             {
-                _world.CreateEntity(name, EntityKind.Sprite);
+                _world.CreateEntity(new EntityName(name), _world.Quads.Uninitialized);
                 int level = name.Count(c => c == '/');
                 levels[level].Add(name);
             }
 
-            _world = new OldWorld();
+            _world = new World();
             entity("root");
             entity("root1");
             entity("root/e11");
@@ -53,7 +54,7 @@ namespace NitroSharp.Tests
             }
 
             string[][] levels = _treeLevels;
-            
+
             Q("root", "root");
             Q("root/e11", "root/e11");
             Q("root/e12/e22", "root/e12/e22");
@@ -76,9 +77,9 @@ namespace NitroSharp.Tests
         public static string[] ToArray(this EntityQueryResult queryResult)
         {
             var list = new List<string>();
-            foreach ((OldEntity _, string name) in queryResult)
+            foreach ((Entity _, EntityName name) in queryResult)
             {
-                list.Add(name);
+                list.Add(name.Value);
             }
             return list.ToArray();
         }
