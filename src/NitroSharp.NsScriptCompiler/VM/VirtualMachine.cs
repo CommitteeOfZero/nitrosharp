@@ -573,13 +573,7 @@ namespace NitroSharp.NsScript.VM
                         _systemVariables.CurrentTextName = ConstantValue.String(textName);
                         break;
 
-                    case Opcode.Select:
-                        _builtInFuncImpl.Select();
-                        frame.ProgramCounter = program.Position;
-                        return;
-                    case Opcode.GetSelChoice:
-                        string choice = _builtInFuncImpl.GetSelectedChoice() ?? string.Empty;
-                        stack.Push(ConstantValue.String(choice));
+                    case Opcode.SelectStart:
                         break;
                     case Opcode.PresentText:
                         string text = thisModule.GetString(program.DecodeToken());

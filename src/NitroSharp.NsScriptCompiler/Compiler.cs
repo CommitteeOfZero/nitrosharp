@@ -805,8 +805,7 @@ namespace NitroSharp.NsScript.Compiler
         private BufferWriter _code;
         private int _textId;
         private readonly TokenMap<ParameterSymbol>? _parameters;
-
-        private readonly Queue<int> _insertBreaksAt;
+        private ValueStack<Scope> _scopeStack;
 
         private bool _supressConstantLookup;
 
@@ -817,6 +816,7 @@ namespace NitroSharp.NsScript.Compiler
             _checker = new Checker(subroutine, moduleBuilder.Diagnostics);
             _compilation = moduleBuilder.Compilation;
             _parameters = null;
+            _scopeStack = new ValueStack<Scope>(initialCapacity: 4);
             if (subroutine is FunctionSymbol function && function.Parameters.Length > 0)
             {
                 ImmutableArray<ParameterSymbol> parameters = function.Parameters;
@@ -826,12 +826,54 @@ namespace NitroSharp.NsScript.Compiler
                     _parameters.GetOrAddToken(param);
                 }
             }
-
-            _insertBreaksAt = new Queue<int>();
             _code = default;
             _textId = 0;
             _supressConstantLookup = false;
         }
+
+        private struct Scope
+        {
+            private Queue<int>? _breakLocations;
+            public readonly bool CanBreak;
+
+            public Scope(bool canBreak)
+            {
+                _breakLocations = null;
+                CanBreak = canBreak;
+            }
+
+            public bool NoBreakPlaceholders
+                => _breakLocations == null;
+
+            public Queue<int> BreakLocations
+            {
+                get
+                {
+                    if (_breakLocations == null)
+                    {
+                        _breakLocations = new Queue<int>();
+                    }
+                    return _breakLocations;
+                }
+            }
+        }
+
+        private void PushScope(SyntaxNodeKind parentKind)
+        {
+            bool canBreak = parentKind switch
+            {
+                SyntaxNodeKind.IfStatement => true,
+                SyntaxNodeKind.WhileStatement => true,
+                SyntaxNodeKind.SelectStatement => true,
+                SyntaxNodeKind.SelectSection => true,
+                _ => false
+            };
+            var scope = new Scope(canBreak);
+            _scopeStack.Push(scope);
+        }
+
+        private ref Scope CurrentScope => ref _scopeStack.Peek();
+        private Scope PopScope() => _scopeStack.Pop();
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void EmitOpcode(Opcode opcode)
@@ -1144,7 +1186,7 @@ namespace NitroSharp.NsScript.Compiler
                     EmitIfStatement((IfStatementSyntax)statement);
                     break;
                 case SyntaxNodeKind.BreakStatement:
-                    EmitBreakStatement();
+                    EmitBreakPlaceholder();
                     break;
                 case SyntaxNodeKind.WhileStatement:
                     EmitWhileStatement((WhileStatementSyntax)statement);
@@ -1188,15 +1230,22 @@ namespace NitroSharp.NsScript.Compiler
             _code.WriteUInt16LE(_module.GetStringToken(dialogue.Text));
         }
 
+        private void EmitSelect(SelectStatementSyntax selectStmt)
+        {
+            EmitOpcode(Opcode.SelectStart);
+            EmitBody(selectStmt.Kind, selectStmt.Body);
+            EmitOpcode(Opcode.SelectEnd);
+        }
+
         private void EmitSelectSection(SelectSectionSyntax section)
         {
-            EmitOpcode(Opcode.GetSelChoice);
-            EmitLoadImm(ConstantValue.String(section.Label.Value));
-            EmitBinary(BinaryOperatorKind.Equals);
+            EmitOpcode(Opcode.IsPressed);
+            _code.WriteUInt16LE(_module.GetStringToken(section.Label.Value));
             int jumpPos = _code.Position;
             _code.Position += JumpInstrSize;
 
-            EmitStatement(section.Body);
+            EmitBody(section.Kind, section.Body);
+            EmitBreakPlaceholder();
             int end = _code.Position;
 
             _code.Position = jumpPos;
@@ -1205,18 +1254,15 @@ namespace NitroSharp.NsScript.Compiler
             _code.Position = end;
         }
 
-        private void EmitSelect(SelectStatementSyntax selectStmt)
-        {
-            EmitOpcode(Opcode.Select);
-            EmitStatement(selectStmt.Body);
-        }
-
         private void EmitBlock(BlockSyntax block)
         {
+            PushScope(SyntaxNodeKind.Block);
             foreach (StatementSyntax statement in block.Statements)
             {
                 EmitStatement(statement);
             }
+            Scope scope = PopScope();
+            Debug.Assert(scope.BreakLocations.Count == 0);
         }
 
         private void EmitExpressionStatement(ExpressionStatementSyntax statement)
@@ -1242,7 +1288,7 @@ namespace NitroSharp.NsScript.Compiler
 
                 int jmpInstrPos = _code.Position;
                 _code.Position += JumpInstrSize;
-                EmitStatement(ifStmt.IfTrueStatement);
+                EmitBody(ifStmt.Kind, ifStmt.IfTrueStatement);
                 int end = _code.Position;
                 _code.Position = jmpInstrPos;
                 EmitOpcode(Opcode.JumpIfFalse);
@@ -1268,13 +1314,13 @@ namespace NitroSharp.NsScript.Compiler
                 int firstJmpInstrPos = _code.Position;
                 _code.Position += JumpInstrSize;
 
-                EmitStatement(ifStmt.IfTrueStatement);
+                EmitBody(ifStmt.Kind, ifStmt.IfTrueStatement);
 
                 int secondJmpInstrPos = _code.Position;
                 _code.Position += JumpInstrSize;
                 int alternativePos = _code.Position;
 
-                EmitStatement(ifStmt.IfFalseStatement);
+                EmitBody(ifStmt.Kind, ifStmt.IfFalseStatement);
 
                 int end = _code.Position;
                 _code.Position = secondJmpInstrPos;
@@ -1286,6 +1332,25 @@ namespace NitroSharp.NsScript.Compiler
                 _code.WriteInt16LE((short)(alternativePos - firstJmpInstrPos));
                 _code.Position = end;
             }
+        }
+
+        private void EmitBody(SyntaxNodeKind parentKind, StatementSyntax body)
+        {
+            PushScope(parentKind);
+            if (body.Kind == SyntaxNodeKind.Block)
+            {
+                var block = (BlockSyntax)body;
+                foreach (StatementSyntax stmt in block.Statements)
+                {
+                    EmitStatement(stmt);
+                }
+            }
+            else
+            {
+                EmitStatement(body);
+            }
+            Scope scope = PopScope();
+            EmitBreaks(scope, _code.Position);
         }
 
         private void EmitReturnStatement()
@@ -1311,7 +1376,7 @@ namespace NitroSharp.NsScript.Compiler
             int firstJmpPos = _code.Position;
             _code.Position += JumpInstrSize;
 
-            EmitStatement(whileStmt.Body);
+            EmitBody(whileStmt.Kind, whileStmt.Body);
             int secondJumpPos = _code.Position;
             EmitOpcode(Opcode.Jump);
             _code.WriteInt16LE((short)(conditionPos - secondJumpPos));
@@ -1320,20 +1385,26 @@ namespace NitroSharp.NsScript.Compiler
             _code.Position = firstJmpPos;
             EmitOpcode(Opcode.JumpIfFalse);
             _code.WriteInt16LE((short)(exit - firstJmpPos));
-
-            while (_insertBreaksAt.Count > 0)
-            {
-                int pos = _insertBreaksAt.Dequeue();
-                _code.Position = pos;
-                _code.WriteInt16LE((short)(exit - pos));
-            }
-
             _code.Position = exit;
         }
 
-        private void EmitBreakStatement()
+        private void EmitBreaks(in Scope scope, int destination)
         {
-            _insertBreaksAt.Enqueue(_code.Position);
+            if (scope.NoBreakPlaceholders) { return; }
+            Queue<int> breakLocations = scope.BreakLocations;
+            while (breakLocations.Count > 0)
+            {
+                int pos = breakLocations.Dequeue();
+                _code.Position = pos;
+                EmitOpcode(Opcode.Jump);
+                _code.WriteInt16LE((short)(destination - pos));
+            }
+        }
+
+        private void EmitBreakPlaceholder()
+        {
+            Debug.Assert(CurrentScope.CanBreak);
+            CurrentScope.BreakLocations.Enqueue(_code.Position);
             _code.Position += JumpInstrSize;
         }
 

@@ -42,8 +42,9 @@
         Call = 0x34,            // <ushort subroutine> <byte argCount>
         CallFar = 0x35,         // <ushort module> <ushort subroutine> <byte argCount>
         Return = 0x36,          // <>
-        Select = 0x37,          // <>
-        GetSelChoice = 0x38,    // <>
+        SelectStart = 0x37,     // <>
+        IsPressed = 0x38,       // <ushort token>
+        SelectEnd = 0x39,       // <>
 
         ActivateText = 0x40,    // <ushort id>
         PresentText = 0x41,     // <ushort token>
