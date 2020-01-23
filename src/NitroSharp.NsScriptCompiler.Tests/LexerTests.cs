@@ -58,7 +58,7 @@ namespace NitroSharp.NsScriptCompiler.Tests
             Assert.Empty(untestedTokens);
         }
 
-        [Theory]
+        [Theory(Skip = "Temporary disabled for perf reasons")]
         [MemberData(nameof(GetStaticTokenData))]
         public void Lexer_Recognizes_Static_Token(SyntaxTokenKind kind, string text)
         {
@@ -69,7 +69,7 @@ namespace NitroSharp.NsScriptCompiler.Tests
             Assert.Equal(SyntaxTokenFlags.Empty, token.Flags);
         }
 
-        [Theory]
+        [Theory(Skip = "Temporary disabled for perf reasons")]
         [MemberData(nameof(GetStaticTokenPairData))]
         public void Lexer_Handles_Token_Pair(SyntaxTokenKind t1Kind, string t1Text, SyntaxTokenKind t2Kind, string t2Text)
         {
@@ -83,7 +83,7 @@ namespace NitroSharp.NsScriptCompiler.Tests
             Assert.Equal(ctx.GetText(tokens[1]).ToString(), t2Text, ignoreCase: true);
         }
 
-        [Theory]
+        [Theory(Skip = "Temporary disabled for perf reasons")]
         [MemberData(nameof(GetStaticTokenPairsWithSeparatorData))]
         public void Lexer_Handles_Token_Pair_With_Separator(
             SyntaxTokenKind t1Kind, string t1Text,

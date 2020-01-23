@@ -125,5 +125,6 @@ namespace NitroSharp.NsScript.VM
 
         public virtual void BoxBlur(string entityQuery, uint nbPasses) { }
         public virtual void Grayscale(string entityQuery) { }
+        public virtual void AssertTrue(bool value) { }
     }
 }

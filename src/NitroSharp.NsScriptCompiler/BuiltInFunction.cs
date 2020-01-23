@@ -116,7 +116,7 @@
 
         log,
         assert,
-        asserteq,
+        assert_eq,
         fail,
         fail_msg
     }

@@ -155,6 +155,13 @@ namespace NitroSharp.NsScript.VM
                 case BuiltInFunction.ScrollbarValue:
                     ScrollbarValue(ref args);
                     break;
+
+                case BuiltInFunction.assert:
+                    Assert(ref args);
+                    break;
+                case BuiltInFunction.assert_eq:
+                    AssertEqual(ref args);
+                    break;
             }
 
             ConstantValue? result = _result;
@@ -588,18 +595,18 @@ namespace NitroSharp.NsScript.VM
             throw new NotImplementedException();
         }
 
-        private void AssertEq(ref ArgConsumer args)
+        private void AssertEqual(ref ArgConsumer args)
         {
-            throw new NotImplementedException();
+            _impl.AssertTrue(args.Take().Equals(args.Take()));
         }
 
         private void Assert(ref ArgConsumer args)
         {
+            _impl.AssertTrue(args.TakeBool());
         }
 
         private void Log(ref ArgConsumer args)
         {
-            throw new NotImplementedException();
         }
 
         private ref struct ArgConsumer
@@ -626,6 +633,13 @@ namespace NitroSharp.NsScript.VM
 
             public ReadOnlySpan<ConstantValue> AsSpan(int start) => _args.Slice(start);
             public void Skip() => _pos++;
+
+            public ConstantValue Take()
+            {
+                return _pos < _args.Length
+                    ? _args[_pos++]
+                    : throw new InvalidOperationException("Argument not provided.");
+            }
 
             public ConstantValue TakeOpt(in ConstantValue defaultValue)
             {

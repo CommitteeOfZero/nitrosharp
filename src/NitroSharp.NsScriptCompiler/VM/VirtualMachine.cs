@@ -549,25 +549,6 @@ namespace NitroSharp.NsScript.VM
                                 ConstantValue arg = stack.Pop();
                                 Console.WriteLine($"[VM]: {arg.ConvertToString()}");
                                 break;
-                            case BuiltInFunction.assert:
-                                arg = stack.Pop();
-                                if (arg.AsBool()!.Value == false)
-                                {
-                                    string subrName = thisModule.GetSubroutineRuntimeInformation(
-                                        frame.SubroutineIndex).SubroutineName;
-                                    Console.WriteLine($"{subrName} + {program.Position - 1}: assertion failed.");
-                                }
-                                break;
-                            case BuiltInFunction.asserteq:
-                                ConstantValue expected = stack.Pop();
-                                ConstantValue actual = stack.Pop();
-                                if (expected != actual)
-                                {
-                                    string subrName = thisModule.GetSubroutineRuntimeInformation(
-                                        frame.SubroutineIndex).SubroutineName;
-                                    Console.WriteLine($"{subrName} + {program.Position - 1}: assertion failed.");
-                                }
-                                break;
                             case BuiltInFunction.fail:
                                 string subName = thisModule.GetSubroutineRuntimeInformation(
                                     frame.SubroutineIndex).SubroutineName;
