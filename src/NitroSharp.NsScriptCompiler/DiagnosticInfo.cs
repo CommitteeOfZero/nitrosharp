@@ -35,6 +35,10 @@ namespace NitroSharp.NsScript
                     return "Invalid expression term '{0}'.";
                 case DiagnosticId.StrayPXmlElement:
                     return "Stray PXml element.";
+                case DiagnosticId.MisplacedBreak:
+                    return "Break statement cannot be used outside of a looping construct.";
+                case DiagnosticId.InvalidBezierCurve:
+                    return "The specified bezier curve does not meet the requirements of the engine.";
 
                 case DiagnosticId.UnresolvedIdentifier:
                     return "Unresolved identifier '{0}'.";
@@ -44,8 +48,6 @@ namespace NitroSharp.NsScript
                     return "External module '{0}' is not found.";
                 case DiagnosticId.ChapterMainNotFound:
                     return "The target module of a call_chapter expression does not have chapter 'main'.";
-                case DiagnosticId.InvalidBezierCurve:
-                    return "The specified bezier curve does not meet the requirements of the engine.";
 
                 default:
                     throw ThrowHelper.UnexpectedValue(nameof(id));
@@ -74,6 +76,8 @@ namespace NitroSharp.NsScript
                 case DiagnosticId.MisplacedSemicolon:
                 case DiagnosticId.StrayPXmlElement:
                 case DiagnosticId.StrayToken:
+                case DiagnosticId.MisplacedBreak:
+                case DiagnosticId.InvalidBezierCurve:
                     return DiagnosticSeverity.Warning;
 
                 case DiagnosticId.MissingStatementTerminator:

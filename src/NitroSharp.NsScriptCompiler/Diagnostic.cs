@@ -20,6 +20,7 @@ namespace NitroSharp.NsScript
         InvalidExpressionTerm,
         InvalidExpressionStatement,
         StrayPXmlElement,
+        MisplacedBreak,
         InvalidBezierCurve,
 
         UnresolvedIdentifier,

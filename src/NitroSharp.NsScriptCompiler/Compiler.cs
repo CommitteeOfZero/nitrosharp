@@ -403,7 +403,6 @@ namespace NitroSharp.NsScript.Compiler
             foreach (SubroutineSymbol subroutine in subroutines)
             {
                 offsetWriter.WriteUInt16LE((ushort)rtiWriter.Position);
-
                 byte kind = subroutine.Kind switch
                 {
                     SymbolKind.Chapter => (byte)0x00,
@@ -411,7 +410,6 @@ namespace NitroSharp.NsScript.Compiler
                     SymbolKind.Function => (byte)0x02,
                     _ => ThrowHelper.Unreachable<byte>()
                 };
-
                 rtiWriter.WriteByte(kind);
                 rtiWriter.WriteLengthPrefixedUtf8String(subroutine.Name);
 
@@ -755,17 +753,17 @@ namespace NitroSharp.NsScript.Compiler
                 Diagnostic.Create(identifier.Span, DiagnosticId.UnresolvedIdentifier, identifier.Value));
         }
 
-        private void Report(Spanned<string> identifier, DiagnosticId diagnosticId)
+        public void Report(Spanned<string> identifier, DiagnosticId diagnosticId)
         {
             _diagnostics.Add(Diagnostic.Create(identifier.Span, diagnosticId));
         }
 
-        private void Report(Spanned<string> identifier, DiagnosticId diagnosticId, params object[] args)
+        public void Report(Spanned<string> identifier, DiagnosticId diagnosticId, params object[] args)
         {
             _diagnostics.Add(Diagnostic.Create(identifier.Span, diagnosticId, args));
         }
 
-        private void Report(ExpressionSyntax node, DiagnosticId diagnosticId)
+        public void Report(SyntaxNode node, DiagnosticId diagnosticId)
         {
             _diagnostics.Add(Diagnostic.Create(node.Span, diagnosticId));
         }
@@ -803,7 +801,7 @@ namespace NitroSharp.NsScript.Compiler
         private BufferWriter _code;
         private int _textId;
         private readonly TokenMap<ParameterSymbol>? _parameters;
-        private ValueStack<Scope> _scopeStack;
+        private ValueStack<BreakScope> _breakScopes;
         private bool _supressConstantLookup;
 
         public Emitter(NsxModuleBuilder moduleBuilder, SubroutineSymbol subroutine)
@@ -813,7 +811,7 @@ namespace NitroSharp.NsScript.Compiler
             _checker = new Checker(subroutine, moduleBuilder.Diagnostics);
             _compilation = moduleBuilder.Compilation;
             _parameters = null;
-            _scopeStack = new ValueStack<Scope>(initialCapacity: 4);
+            _breakScopes = new ValueStack<BreakScope>(initialCapacity: 4);
             if (subroutine is FunctionSymbol function && function.Parameters.Length > 0)
             {
                 ImmutableArray<ParameterSymbol> parameters = function.Parameters;
@@ -838,7 +836,7 @@ namespace NitroSharp.NsScript.Compiler
             public int OffsetPos => InstructionPos + 1;
         }
 
-        private struct Scope
+        private struct BreakScope
         {
             private Queue<JumpPlaceholder>? _breakPlaceholders;
 
@@ -857,11 +855,6 @@ namespace NitroSharp.NsScript.Compiler
                 }
             }
         }
-
-
-        private void PushScope() => _scopeStack.Push(new Scope());
-        private ref Scope CurrentScope => ref _scopeStack.Peek();
-        private Scope PopScope() => _scopeStack.Pop();
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void EmitOpcode(Opcode opcode)
@@ -1174,7 +1167,7 @@ namespace NitroSharp.NsScript.Compiler
                     EmitIfStatement((IfStatementSyntax)statement);
                     break;
                 case SyntaxNodeKind.BreakStatement:
-                    EmitBreakPlaceholder();
+                    EmitBreakStatement((BreakStatementSyntax)statement);
                     break;
                 case SyntaxNodeKind.WhileStatement:
                     EmitWhileStatement((WhileStatementSyntax)statement);
@@ -1280,7 +1273,7 @@ namespace NitroSharp.NsScript.Compiler
             int loopStart = _code.Position;
             EmitExpression(whileStmt.Condition);
             JumpPlaceholder exitJump = EmitJump(Opcode.JumpIfFalse);
-            Scope bodyScope = EmitScopedBody(whileStmt.Body);
+            BreakScope bodyScope = EmitLoopBody(whileStmt.Body);
             EmitJump(Opcode.Jump, loopStart);
             PatchJump(exitJump, _code.Position);
             PatchBreaks(bodyScope, _code.Position);
@@ -1295,7 +1288,7 @@ namespace NitroSharp.NsScript.Compiler
         {
             int loopStart = _code.Position;
             EmitOpcode(Opcode.SelectStart);
-            Scope bodyScope = EmitScopedBody(selectStmt.Body);
+            BreakScope bodyScope = EmitLoopBody(selectStmt.Body);
             EmitOpcode(Opcode.SelectEnd);
             EmitJump(Opcode.Jump, loopStart);
             PatchBreaks(bodyScope, _code.Position);
@@ -1312,20 +1305,31 @@ namespace NitroSharp.NsScript.Compiler
             PatchJump(jmp, _code.Position);
         }
 
-        private Scope EmitScopedBody(StatementSyntax body)
+        private BreakScope EmitLoopBody(StatementSyntax body)
         {
-            PushScope();
+            _breakScopes.Push(new BreakScope());
             EmitStatement(body);
-            return PopScope();
+            return _breakScopes.Pop();
+        }
+
+        private void EmitBreakStatement(BreakStatementSyntax breakStmt)
+        {
+            if (_breakScopes.Count == 0)
+            {
+                _checker.Report(breakStmt, DiagnosticId.MisplacedBreak);
+                return;
+            }
+
+            EmitBreakPlaceholder();
         }
 
         private void EmitBreakPlaceholder()
         {
-            CurrentScope.BreakPlaceholders
-                .Enqueue(EmitJump(Opcode.Jump));
+            ref BreakScope scope = ref _breakScopes.Peek();
+            scope.BreakPlaceholders.Enqueue(EmitJump(Opcode.Jump));
         }
 
-        private void PatchBreaks(in Scope scope, int destination)
+        private void PatchBreaks(in BreakScope scope, int destination)
         {
             if (scope.NoBreakPlaceholders) { return; }
             Queue<JumpPlaceholder> placeholders = scope.BreakPlaceholders;
