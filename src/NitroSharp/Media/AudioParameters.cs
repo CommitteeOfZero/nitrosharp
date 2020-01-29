@@ -1,5 +1,4 @@
 ﻿using System;
-using NitroSharp.Utilities;
 
 namespace NitroSharp.Media
 {
@@ -24,7 +23,7 @@ namespace NitroSharp.Media
             return ChannelLayout == other.ChannelLayout && SampleRate == other.SampleRate;
         }
 
-        public override int GetHashCode() => HashHelper.Combine((int)ChannelLayout, SampleRate.GetHashCode());
+        public override int GetHashCode() => HashCode.Combine(ChannelLayout, SampleRate);
 
         public static bool operator ==(AudioParameters left, AudioParameters right) => left.Equals(right);
         public static bool operator !=(AudioParameters left, AudioParameters right) => !(left.Equals(right));

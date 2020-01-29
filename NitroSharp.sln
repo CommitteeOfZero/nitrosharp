@@ -27,7 +27,6 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Common", "Common", "{91389274-9E21-4388-A45F-D138E55540F3}"
 	ProjectSection(SolutionItems) = preProject
 		src\Common\ArrayBuilder.cs = src\Common\ArrayBuilder.cs
-		src\Common\HashHelper.cs = src\Common\HashHelper.cs
 		src\Common\ThrowHelper.cs = src\Common\ThrowHelper.cs
 	EndProjectSection
 EndProject

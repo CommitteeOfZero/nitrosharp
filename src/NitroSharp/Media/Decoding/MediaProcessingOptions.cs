@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
 using NitroSharp.Primitives;
-using NitroSharp.Utilities;
 
 #nullable enable
 
@@ -43,10 +42,11 @@ namespace NitroSharp.Media.Decoding
 
         public override int GetHashCode()
         {
-            return HashHelper.Combine(
-                OutputVideoResolution.GetHashCode(),
-                FrameConverter.GetHashCode(),
-                OutputAudioParameters.GetHashCode());
+            return HashCode.Combine(
+                OutputVideoResolution,
+                FrameConverter,
+                OutputAudioParameters
+            );
         }
 
         public static bool operator ==(MediaProcessingOptions left, MediaProcessingOptions right) => left.Equals(right);

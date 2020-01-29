@@ -43,7 +43,6 @@
   </ItemGroup>
   
   <ItemGroup>
-    <Compile Include="../Common/HashHelper.cs" Link="Utilities/HashHelper.cs" />
     <Compile Include="../Common/ThrowHelper.cs" Link="Utilities/ThrowHelper.cs" />
     <Compile Include="../Common/ArrayBuilder.cs" Link="Utilities/ArrayBuilder.cs" />
 

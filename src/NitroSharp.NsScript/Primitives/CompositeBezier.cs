@@ -9,6 +9,16 @@ namespace NitroSharp.NsScript.Primitives
 
         public CompositeBezier(ImmutableArray<CubicBezierSegment> segments)
             => Segments = segments;
+
+        public override int GetHashCode()
+        {
+            int code = 0;
+            foreach (CubicBezierSegment segment in Segments)
+            {
+                code = HashCode.Combine(code, segment);
+            }
+            return code;
+        }
     }
 
     public readonly struct CubicBezierSegment
@@ -38,6 +48,8 @@ namespace NitroSharp.NsScript.Primitives
             3 => P3,
             _ => throw new IndexOutOfRangeException() 
         };
+
+        public override int GetHashCode() => HashCode.Combine(P0, P1, P2, P3);
     }
 
     public readonly struct BezierControlPoint
@@ -53,5 +65,7 @@ namespace NitroSharp.NsScript.Primitives
             x = X;
             y = Y;
         }
+
+        public override int GetHashCode() => HashCode.Combine(X, Y);
     }
 }

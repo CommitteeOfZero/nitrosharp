@@ -40,6 +40,9 @@ namespace NitroSharp.NsScript.Primitives
         public NsCoordinateOrigin Origin { get; }
         public float AnchorPoint { get; }
 
+        public override int GetHashCode()
+            => HashCode.Combine(Variant, Value, Origin, AnchorPoint);
+
         public static NsCoordinate WithValue(int value, NsCoordinateOrigin origin, float anchorPoint)
             => new NsCoordinate(NsCoordinateVariant.Value, value, origin, anchorPoint);
 

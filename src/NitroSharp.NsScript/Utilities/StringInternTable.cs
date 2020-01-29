@@ -54,7 +54,7 @@ namespace NitroSharp.Utilities
 
         public string Add(ReadOnlySpan<char> span)
         {
-            int hashCode = HashHelper.GetFNVHashCode(span);
+            int hashCode = FnvHasher.HashString(span);
             Entry[] entires = _localTable;
             int idx = LocalIdxFromHash(hashCode);
 

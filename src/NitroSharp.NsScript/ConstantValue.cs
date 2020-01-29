@@ -3,7 +3,6 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using NitroSharp.NsScript.Primitives;
-using NitroSharp.Utilities;
 
 namespace NitroSharp.NsScript
 {
@@ -363,9 +362,14 @@ namespace NitroSharp.NsScript
 
         public override int GetHashCode()
         {
-            return Type != BuiltInType.String
-                ? HashHelper.Combine((int)Type, _numericValue)
-                : HashHelper.Combine((int)Type, _stringValue!.GetHashCode());
+            return Type switch
+            {
+                BuiltInType.String => HashCode.Combine(_stringValue),
+                BuiltInType.Null => 0,
+                BuiltInType.Uninitialized => -1,
+                BuiltInType.BezierCurve => _bezierCurve.GetHashCode(),
+                _ => HashCode.Combine(_numericValue)
+            };
         }
 
         private static ConstantValue InvalidOp(string op, BuiltInType type)

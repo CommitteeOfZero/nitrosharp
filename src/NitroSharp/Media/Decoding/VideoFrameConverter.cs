@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using FFmpeg.AutoGen;
 using NitroSharp.Primitives;
-using NitroSharp.Utilities;
 
 namespace NitroSharp.Media.Decoding
 {
@@ -38,12 +37,7 @@ namespace NitroSharp.Media.Decoding
             public static bool operator !=(CacheKey x, CacheKey y) => !x.Equals(y);
 
             public override int GetHashCode()
-            {
-                return HashHelper.Combine(
-                    (int)SrcPixelFormat,
-                    SrcSize.GetHashCode(),
-                    DstSize.GetHashCode());
-            }
+                => HashCode.Combine(SrcPixelFormat, SrcSize, DstSize);
         }
 
         private readonly byte*[] _srcPlanes;
@@ -90,7 +84,14 @@ namespace NitroSharp.Media.Decoding
 
             SwsContext* ctx = GetContext(ref srcAvFrame, targetResolution);
             ffmpeg.sws_scale(
-                ctx, _srcPlanes, _srcLinesizes, 0, srcAvFrame.height, _dstPlanes, _dstLinesizes);
+                ctx,
+                _srcPlanes,
+                _srcLinesizes,
+                srcSliceY: 0,
+                srcAvFrame.height,
+                _dstPlanes,
+                _dstLinesizes
+            );
         }
 
         private SwsContext* GetContext(ref AVFrame frame, Size dstSize)
@@ -123,14 +124,11 @@ namespace NitroSharp.Media.Decoding
 
         private void Free()
         {
-            unsafe
+            foreach (SwsContext* ctx in _ctxCache.Values)
             {
-                foreach (SwsContext* ctx in _ctxCache.Values)
-                {
-                    ffmpeg.sws_freeContext(ctx);
-                }
-                _ctxCache.Clear();
+                ffmpeg.sws_freeContext(ctx);
             }
+            _ctxCache.Clear();
         }
     }
 }

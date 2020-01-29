@@ -47,6 +47,6 @@ namespace NitroSharp.NsScript.Text
             return Length - other.Length;
         }
 
-        public override int GetHashCode() => HashHelper.Combine(Start, Length);
+        public override int GetHashCode() => HashCode.Combine(Start, Length);
     }
 }

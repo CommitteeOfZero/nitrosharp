@@ -332,7 +332,7 @@ namespace NitroSharp.NsScript.Syntax
 
             public static SyntaxTokenKind RecognizeKeyword(ReadOnlySpan<char> text)
             {
-                int hash = HashHelper.GetFNVHashCode(text);
+                int hash = FnvHasher.HashString(text);
                 switch (hash)
                 {
                     case ChapterKeywordHash: return SyntaxTokenKind.ChapterKeyword;
