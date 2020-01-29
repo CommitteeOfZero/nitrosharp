@@ -37,6 +37,8 @@ namespace NitroSharp.NsScript
                     return "Stray PXml element.";
                 case DiagnosticId.MisplacedBreak:
                     return "Break statement cannot be used outside of a looping construct.";
+                case DiagnosticId.OrphanedSelectSection:
+                    return "Select section cannot appear outside of a select statement.";
                 case DiagnosticId.InvalidBezierCurve:
                     return "The specified bezier curve does not meet the requirements of the engine.";
 
@@ -77,6 +79,7 @@ namespace NitroSharp.NsScript
                 case DiagnosticId.StrayPXmlElement:
                 case DiagnosticId.StrayToken:
                 case DiagnosticId.MisplacedBreak:
+                case DiagnosticId.OrphanedSelectSection:
                 case DiagnosticId.InvalidBezierCurve:
                     return DiagnosticSeverity.Warning;
 

@@ -826,6 +826,12 @@ namespace NitroSharp.NsScript.Compiler
             _supressConstantLookup = false;
         }
 
+        private enum LoopKind
+        {
+            While,
+            Select
+        }
+
         private readonly struct JumpPlaceholder
         {
             public readonly int InstructionPos;
@@ -838,7 +844,14 @@ namespace NitroSharp.NsScript.Compiler
 
         private struct BreakScope
         {
+            public readonly LoopKind LoopKind;
             private Queue<JumpPlaceholder>? _breakPlaceholders;
+
+            public BreakScope(LoopKind loopKind)
+            {
+                LoopKind = loopKind;
+                _breakPlaceholders = null;
+            }
 
             public bool NoBreakPlaceholders
                 => _breakPlaceholders == null;
@@ -1273,7 +1286,7 @@ namespace NitroSharp.NsScript.Compiler
             int loopStart = _code.Position;
             EmitExpression(whileStmt.Condition);
             JumpPlaceholder exitJump = EmitJump(Opcode.JumpIfFalse);
-            BreakScope bodyScope = EmitLoopBody(whileStmt.Body);
+            BreakScope bodyScope = EmitLoopBody(LoopKind.While, whileStmt.Body);
             EmitJump(Opcode.Jump, loopStart);
             PatchJump(exitJump, _code.Position);
             PatchBreaks(bodyScope, _code.Position);
@@ -1288,7 +1301,7 @@ namespace NitroSharp.NsScript.Compiler
         {
             int loopStart = _code.Position;
             EmitOpcode(Opcode.SelectStart);
-            BreakScope bodyScope = EmitLoopBody(selectStmt.Body);
+            BreakScope bodyScope = EmitLoopBody(LoopKind.Select, selectStmt.Body);
             EmitOpcode(Opcode.SelectEnd);
             EmitJump(Opcode.Jump, loopStart);
             PatchBreaks(bodyScope, _code.Position);
@@ -1297,6 +1310,12 @@ namespace NitroSharp.NsScript.Compiler
 
         private void EmitSelectSection(SelectSectionSyntax section)
         {
+            if (_breakScopes.Count == 0 || _breakScopes.Peek().LoopKind != LoopKind.Select)
+            {
+                _checker.Report(section, DiagnosticId.OrphanedSelectSection);
+                return;
+            }
+
             EmitOpcode(Opcode.IsPressed);
             _code.WriteUInt16LE(_module.GetStringToken(section.Label.Value));
             JumpPlaceholder jmp = EmitJump(Opcode.JumpIfFalse);
@@ -1305,9 +1324,9 @@ namespace NitroSharp.NsScript.Compiler
             PatchJump(jmp, _code.Position);
         }
 
-        private BreakScope EmitLoopBody(StatementSyntax body)
+        private BreakScope EmitLoopBody(LoopKind loopKind, StatementSyntax body)
         {
-            _breakScopes.Push(new BreakScope());
+            _breakScopes.Push(new BreakScope(loopKind));
             EmitStatement(body);
             return _breakScopes.Pop();
         }

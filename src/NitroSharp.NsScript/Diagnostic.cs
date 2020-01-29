@@ -21,6 +21,7 @@ namespace NitroSharp.NsScript
         InvalidExpressionStatement,
         StrayPXmlElement,
         MisplacedBreak,
+        OrphanedSelectSection,
         InvalidBezierCurve,
 
         UnresolvedIdentifier,
