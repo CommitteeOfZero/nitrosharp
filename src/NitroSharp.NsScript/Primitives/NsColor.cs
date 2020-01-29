@@ -3,7 +3,7 @@ using System.Globalization;
 
 namespace NitroSharp.NsScript
 {
-    public struct NsColor
+    public readonly struct NsColor
     {
         public NsColor(byte r, byte g, byte b)
         {
@@ -19,7 +19,7 @@ namespace NitroSharp.NsScript
         public static NsColor Black { get; } = new NsColor(0, 0, 0);
         public static NsColor White { get; } = new NsColor(255, 255, 255);
         public static NsColor Red { get; } = new NsColor(255, 0, 0);
-        public static NsColor Green { get; } = new NsColor(0, 255, 0);
+        public static NsColor Green { get; } = new NsColor(0, 128, 0);
         public static NsColor Blue { get; } = new NsColor(0, 0, 255);
 
         public static NsColor FromRgb(int rgb)
@@ -30,45 +30,37 @@ namespace NitroSharp.NsScript
             return new NsColor(r, g, b);
         }
 
-        public static NsColor FromEnumValue(BuiltInEnumValue constant)
+        public static NsColor FromConstant(BuiltInConstant constant)
         {
-            switch (constant)
+            return constant switch
             {
-                case BuiltInEnumValue.Black: return Black;
-                case BuiltInEnumValue.White: return White;
-                case BuiltInEnumValue.Red: return Red;
-                case BuiltInEnumValue.Green: return Green;
-                case BuiltInEnumValue.Blue: return Blue;
-
-                default:
-                    throw ExceptionUtils.UnexpectedValue(nameof(constant));
-            }
+                BuiltInConstant.Black => Black,
+                BuiltInConstant.White => White,
+                BuiltInConstant.Red => Red,
+                BuiltInConstant.Green => Green,
+                BuiltInConstant.Blue => Blue,
+                _ => throw ThrowHelper.UnexpectedValue(nameof(constant)),
+            };
         }
 
         public static NsColor FromString(string colorString)
         {
-            if (string.IsNullOrEmpty(colorString))
+            ReadOnlySpan<char> codeStr = colorString.StartsWith('#')
+                ? colorString.AsSpan(1)
+                : colorString;
+            if (int.TryParse(codeStr, NumberStyles.HexNumber, null, out int colorCode))
             {
-                throw new ArgumentNullException(nameof(colorString));
-            }
-
-            bool isHexString = colorString[0] == '#';
-            if (isHexString)
-            {
-                if (int.TryParse(colorString.Substring(1), NumberStyles.HexNumber, null, out int colorCode))
-                {
-                    return FromRgb(colorCode);
-                }
+                return FromRgb(colorCode);
             }
             else
             {
-                if (Enum.TryParse<BuiltInEnumValue>(colorString, true, out var enumValue))
+                if (Enum.TryParse(colorString, true, out BuiltInConstant enumValue))
                 {
-                    return FromEnumValue(enumValue);
+                    return FromConstant(enumValue);
                 }
             }
 
-            throw ExceptionUtils.UnexpectedValue(colorString);
+            throw ThrowHelper.UnexpectedValue(colorString);
         }
     }
 }

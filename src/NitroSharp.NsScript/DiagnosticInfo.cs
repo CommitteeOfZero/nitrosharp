@@ -1,3 +1,5 @@
+using System;
+
 namespace NitroSharp.NsScript
 {
     public static class DiagnosticInfo
@@ -7,35 +9,48 @@ namespace NitroSharp.NsScript
             switch (id)
             {
                 case DiagnosticId.UnterminatedString:
-                    return Resources.UnterminatedString;
+                    return "String is not properly terminated.";
                 case DiagnosticId.UnterminatedQuotedIdentifier:
-                    return Resources.UnterminatedQuotedIdentifier;
+                    return "Quoted identifier is not properly terminated.";
                 case DiagnosticId.UnterminatedComment:
-                    return Resources.UnterminatedComment;
+                    return "Comment is not properly terminated.";
                 case DiagnosticId.UnterminatedDialogueBlockStartTag:
-                    return Resources.UnterminatedDialogueBlockStartTag;
+                    return "Dialogue block start tag is not properly terminated.";
                 case DiagnosticId.UnterminatedDialogueBlockIdentifier:
-                    return Resources.UnterminatedDialogueBlockIdentifier;
+                    return "Dialogue block identifier is not properly terminated.";
 
                 case DiagnosticId.TokenExpected:
-                    return Resources.TokenExpected;
+                    return "Expected '{0}', found '{1}'.";
                 case DiagnosticId.MissingStatementTerminator:
-                    return Resources.MissingStatementTerminator;
+                    return "Statement is not properly terminated.";
                 case DiagnosticId.StrayToken:
-                    return Resources.StrayToken;
+                    return "Stray token '{0}'.";
                 case DiagnosticId.MisplacedSemicolon:
-                    return Resources.MisplacedSemicolon;
-                case DiagnosticId.ExpectedMemberDeclaration:
-                    return Resources.ExpectedMemeberDeclaration;
+                    return "Unexpected ';'.";
+                case DiagnosticId.ExpectedSubroutineDeclaration:
+                    return "Expected a subroutine declaration.";
                 case DiagnosticId.InvalidExpressionStatement:
-                    return Resources.InvalidExpressionStatement;
+                    return "Only assignment, call, increment and decrement expressions can be used as a statement.";
                 case DiagnosticId.InvalidExpressionTerm:
-                    return Resources.InvalidExpressionTerm;
+                    return "Invalid expression term '{0}'.";
                 case DiagnosticId.StrayPXmlElement:
-                    return Resources.StrayPXmlElement;
+                    return "Stray PXml element.";
+                case DiagnosticId.MisplacedBreak:
+                    return "Break statement cannot be used outside of a looping construct.";
+                case DiagnosticId.InvalidBezierCurve:
+                    return "The specified bezier curve does not meet the requirements of the engine.";
+
+                case DiagnosticId.UnresolvedIdentifier:
+                    return "Unresolved identifier '{0}'.";
+                case DiagnosticId.BadAssignmentTarget:
+                    return "The assignment target must be a variable.";
+                case DiagnosticId.ExternalModuleNotFound:
+                    return "External module '{0}' is not found.";
+                case DiagnosticId.ChapterMainNotFound:
+                    return "The target module of a call_chapter expression does not have chapter 'main'.";
 
                 default:
-                    throw ExceptionUtils.UnexpectedValue(nameof(id));
+                    throw ThrowHelper.UnexpectedValue(nameof(id));
             }
         }
 
@@ -51,19 +66,25 @@ namespace NitroSharp.NsScript
                 case DiagnosticId.TokenExpected:
                 case DiagnosticId.InvalidExpressionStatement:
                 case DiagnosticId.InvalidExpressionTerm:
-                case DiagnosticId.ExpectedMemberDeclaration:
+                case DiagnosticId.ExpectedSubroutineDeclaration:
+                case DiagnosticId.UnresolvedIdentifier:
+                case DiagnosticId.BadAssignmentTarget:
+                case DiagnosticId.ExternalModuleNotFound:
+                case DiagnosticId.ChapterMainNotFound:
                     return DiagnosticSeverity.Error;
 
                 case DiagnosticId.MisplacedSemicolon:
                 case DiagnosticId.StrayPXmlElement:
                 case DiagnosticId.StrayToken:
+                case DiagnosticId.MisplacedBreak:
+                case DiagnosticId.InvalidBezierCurve:
                     return DiagnosticSeverity.Warning;
 
                 case DiagnosticId.MissingStatementTerminator:
                     return DiagnosticSeverity.Info;
 
                 default:
-                    throw ExceptionUtils.UnexpectedValue(nameof(diagnosticId));
+                    throw ThrowHelper.UnexpectedValue(nameof(diagnosticId));
             }
         }
     }

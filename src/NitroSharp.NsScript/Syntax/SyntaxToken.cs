@@ -1,208 +1,156 @@
 ﻿using NitroSharp.NsScript.Text;
+using System;
+using System.Runtime.CompilerServices;
 
 namespace NitroSharp.NsScript.Syntax
 {
-    public class SyntaxToken
+    public enum SyntaxTokenKind : byte
     {
-        internal static SyntaxToken WithText(SyntaxTokenKind kind, string text, TextSpan span, Diagnostic diagnostic)
-        {
-            return new SyntaxTokenWithText(kind, text, span, diagnostic);
-        }
+        None,
+        BadToken,
+        MissingToken,
 
-        internal static SyntaxToken WithValue(SyntaxTokenKind kind, string value, TextSpan span, Diagnostic diagnostic)
-        {
-            return new SyntaxTokenWithStringValue(kind, value, span, diagnostic);
-        }
-        
-        internal static SyntaxToken WithTextAndValue(SyntaxTokenKind kind, string text, TextSpan span, string value, Diagnostic diagnostic)
-        {
-            return new SyntaxTokenWithTextAndValue(kind, text, span, value, diagnostic);
-        }
+        IncludeDirective,
 
-        internal static SyntaxToken Identifier(string text, TextSpan span, SigilKind sigil, bool isQuoted, Diagnostic diagnostic)
-        {
-            return new IdentifierToken(text, span, sigil, isQuoted, diagnostic);
-        }
+        Identifier,
+        NumericLiteral,
+        StringLiteralOrQuotedIdentifier,
 
-        internal static SyntaxToken Literal(string value, TextSpan span, Diagnostic diagnostic)
-        {
-            return new StringLiteralToken(value, span, diagnostic);
-        }
+        // Punctuation
+        OpenBrace,
+        CloseBrace,
+        OpenParen,
+        CloseParen,
+        Comma,
+        Dot,
+        Colon,
+        Semicolon,
+        Equals,
+        Plus,
+        Minus,
+        Asterisk,
+        Slash,
+        LessThan,
+        GreaterThan,
+        Exclamation,
+        Ampersand,
+        At,
+        Dollar,
+        Hash,
+        Percent,
+        Arrow,
+        AtArrow,
 
-        internal static SyntaxToken Literal(double value, TextSpan span, Diagnostic diagnostic)
-        {
-            return new NumericLiteralToken(value, span, diagnostic);
-        }
+        // Compound punctuation
+        EqualsEquals,
+        PlusPlus,
+        MinusMinus,
+        PlusEquals,
+        MinusEquals,
+        AsteriskEquals,
+        SlashEquals,
+        LessThanEquals,
+        GreaterThanEquals,
+        ExclamationEquals,
+        BarBar,
+        AmpersandAmpersand,
 
-        internal static SyntaxToken HexTriplet(double value, TextSpan span, Diagnostic diagnostic)
-        {
-            return new HexTripletToken(value, span, diagnostic);
-        }
+        // Keywords
+        ChapterKeyword,
+        FunctionKeyword,
+        SceneKeyword,
+        CallSceneKeyword,
+        CallChapterKeyword,
+        NullKeyword,
+        TrueKeyword,
+        FalseKeyword,
+        WhileKeyword,
+        IfKeyword,
+        ElseKeyword,
+        SelectKeyword,
+        CaseKeyword,
+        BreakKeyword,
+        ReturnKeyword,
 
-        internal static SyntaxToken DialogueBlockStartTag(string boxName, TextSpan span, Diagnostic diagnostic)
-        {
-            return new DialogueBlockStartTagToken(boxName, span, diagnostic);
-        }
+        DialogueBlockStartTag,
+        DialogueBlockEndTag,
+        DialogueBlockIdentifier,
+        PXmlString,
+        PXmlLineSeparator,
 
-        internal static SyntaxToken DialogueBlockIdentifier(string name, TextSpan span, Diagnostic diagnostic)
-        {
-            return new DialogueBlockIdentifierToken(name, span, diagnostic);
-        }
+        EndOfFileToken
+    }
 
-        internal static SyntaxToken Missing(SyntaxTokenKind kind, TextSpan span)
+    public readonly struct SyntaxToken
+    {
+        public SyntaxToken(SyntaxTokenKind kind, TextSpan textSpan, SyntaxTokenFlags flags)
         {
-            return WithText(SyntaxTokenKind.MissingToken, SyntaxFacts.GetText(kind), span, null);
-        }
-
-        internal SyntaxToken(SyntaxTokenKind kind, TextSpan span, Diagnostic diagnostic = null)
-        {
+            TextSpan = textSpan;
             Kind = kind;
-            Span = span;
-            Diagnostic = diagnostic;
+            Flags = flags;
         }
 
-        public SyntaxTokenKind Kind { get; }
-        public virtual string Text => SyntaxFacts.GetText(Kind);
-        public TextSpan Span { get; }
-        public virtual object Value
+        public readonly TextSpan TextSpan;
+        public readonly SyntaxTokenKind Kind;
+        public readonly SyntaxTokenFlags Flags;
+
+        public bool IsFloatingPointLiteral =>
+            (Flags & SyntaxTokenFlags.HasDecimalPoint) == SyntaxTokenFlags.HasDecimalPoint;
+
+        public bool IsHexTriplet =>
+            (Flags & SyntaxTokenFlags.IsHexTriplet) == SyntaxTokenFlags.IsHexTriplet;
+
+        public bool HasSigil =>
+            (Flags & SyntaxTokenFlags.HasDollarPrefix) == SyntaxTokenFlags.HasDollarPrefix ||
+            (Flags & SyntaxTokenFlags.HasHashPrefix) == SyntaxTokenFlags.HasHashPrefix ||
+            (Flags & SyntaxTokenFlags.HasAtPrefix) == SyntaxTokenFlags.HasAtPrefix;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ReadOnlySpan<char> GetText(SourceText sourceText)
         {
-            get
+            return sourceText.GetCharacterSpan(TextSpan);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ReadOnlySpan<char> GetValueText(SourceText sourceText)
+        {
+            return sourceText.GetCharacterSpan(GetValueSpan());
+        }
+
+        public TextSpan GetValueSpan()
+        {
+            int start = TextSpan.Start;
+            int end = TextSpan.End;
+            if ((Flags & SyntaxTokenFlags.IsQuoted) == SyntaxTokenFlags.IsQuoted)
             {
-                switch (Kind)
-                {
-                    case SyntaxTokenKind.TrueKeyword:
-                        return true;
-                    case SyntaxTokenKind.FalseKeyword:
-                        return false;
-                    case SyntaxTokenKind.NullKeyword:
-                        return null;
-                    default:
-                        return Text;
-                }
+                start++;
+                end--;
+
             }
-        }
-
-        public Diagnostic Diagnostic { get; }
-        public bool HasDiagnostics => Diagnostic != null;
-
-        public override string ToString()
-        {
-            return Text;
-        }
-    }
-
-    internal class SyntaxTokenWithText : SyntaxToken
-    {
-        internal SyntaxTokenWithText(SyntaxTokenKind kind, string text, TextSpan span, Diagnostic diagnostic)
-            : base(kind, span, diagnostic)
-        {
-            Text = text;
-        }
-
-        public override string Text { get; }
-    }
-
-    internal class SyntaxTokenWithStringValue : SyntaxToken
-    {
-        internal SyntaxTokenWithStringValue(SyntaxTokenKind kind, string value, TextSpan textSpan, Diagnostic diagnostic)
-            : base(kind, textSpan, diagnostic)
-        {
-            StringValue = value;
-        }
-
-        public string StringValue { get; }
-        public override object Value => StringValue;
-    }
-
-    internal sealed class SyntaxTokenWithTextAndValue : SyntaxTokenWithStringValue
-    {
-        internal SyntaxTokenWithTextAndValue(SyntaxTokenKind kind, string text, TextSpan textSpan, string value, Diagnostic diagnostic)
-            : base(kind, value, textSpan, diagnostic)
-        {
-            Text = text;
-        }
-
-        public override string Text { get; }
-    }
-    
-    internal sealed class StringLiteralToken : SyntaxTokenWithStringValue
-    {
-        internal StringLiteralToken(string value, TextSpan span, Diagnostic diagnostic)
-            : base(SyntaxTokenKind.StringLiteralToken, value, span, diagnostic) { }
-
-        public override string Text => "\"" + StringValue + "\"";
-    }
-
-    internal class NumericLiteralToken : SyntaxToken
-    {
-        internal NumericLiteralToken(double value, TextSpan textSpan, Diagnostic diagnostic)
-            : base(SyntaxTokenKind.NumericLiteralToken, textSpan, diagnostic)
-        {
-            DoubleValue = value;
-        }
-
-        public double DoubleValue { get; }
-        public override object Value => DoubleValue;
-
-        public override string Text => DoubleValue.ToString();
-    }
-
-    internal sealed class HexTripletToken : NumericLiteralToken
-    {
-        internal HexTripletToken(double value, TextSpan textSpan, Diagnostic diagnostic) : base(value, textSpan, diagnostic)
-        {
-        }
-
-        public int IntegralValue => (int)DoubleValue;
-        public override string Text => "#" + IntegralValue.ToString("X");
-    }
-
-    internal sealed class IdentifierToken : SyntaxTokenWithStringValue
-    {
-        internal IdentifierToken(string name, TextSpan textSpan, SigilKind sigil, bool isQuoted, Diagnostic diagnostic)
-            : base(SyntaxTokenKind.IdentifierToken, name, textSpan, diagnostic)
-        {
-            Sigil = sigil;
-            IsQuoted = isQuoted;
-        }
-
-        public bool IsQuoted { get; }
-        public SigilKind Sigil { get; }
-
-        public override string Text
-        {
-            get
+            if ((Flags & SyntaxTokenFlags.HasDollarPrefix) == SyntaxTokenFlags.HasDollarPrefix
+                || (Flags & SyntaxTokenFlags.HasHashPrefix) == SyntaxTokenFlags.HasHashPrefix
+                || (Flags & SyntaxTokenFlags.HasAtPrefix) == SyntaxTokenFlags.HasAtPrefix
+                || (Flags & SyntaxTokenFlags.IsHexTriplet) == SyntaxTokenFlags.IsHexTriplet)
             {
-                string s = SyntaxFacts.GetText(Sigil) + StringValue;
-                if (IsQuoted)
-                {
-                    s = "\"" + s + "\"";
-                }
-
-                return s;
+                start++;
             }
+
+            return TextSpan.FromBounds(start, end);
         }
+
+        public override string ToString() => $"{TextSpan.ToString()} <{Kind}>";
     }
 
-    internal sealed class DialogueBlockStartTagToken : SyntaxTokenWithStringValue
+    [Flags]
+    public enum SyntaxTokenFlags : byte
     {
-        internal DialogueBlockStartTagToken(string boxName, TextSpan textSpan, Diagnostic diagnostic)
-            : base(SyntaxTokenKind.DialogueBlockStartTag, boxName, textSpan, diagnostic)
-        {
-        }
-
-        public string BoxName => StringValue;
-        public override string Text => "<PRE " + BoxName + ">";
-    }
-
-    internal sealed class DialogueBlockIdentifierToken : SyntaxTokenWithStringValue
-    {
-        internal DialogueBlockIdentifierToken(string name, TextSpan textSpan, Diagnostic diagnostic)
-            : base(SyntaxTokenKind.DialogueBlockIdentifier, name, textSpan, diagnostic)
-        {
-        }
-
-        public string Name => StringValue;
-        public override string Text => "[" + Name + "]";
+        Empty = 0,
+        HasDiagnostics = 1 << 0,
+        IsQuoted = 1 << 1,
+        HasDollarPrefix = 1 << 2,
+        HasHashPrefix = 1 << 3,
+        HasAtPrefix = 1 << 4,
+        HasDecimalPoint = 1 << 5,
+        IsHexTriplet = 1 << 6
     }
 }

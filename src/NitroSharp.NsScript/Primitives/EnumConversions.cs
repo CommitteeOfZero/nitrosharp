@@ -2,81 +2,58 @@
 {
     internal static class EnumConversions
     {
-        public static NsEntityAction ToEntityAction(BuiltInEnumValue enumValue)
+        public static NsEntityAction ToEntityAction(BuiltInConstant enumValue)
         {
-            switch (enumValue)
+            return enumValue switch
             {
-                case BuiltInEnumValue.Lock:
-                    return NsEntityAction.Lock;
-                case BuiltInEnumValue.Unlock:
-                    return NsEntityAction.Unlock;
-                case BuiltInEnumValue.Play:
-                    return NsEntityAction.Play;
-                case BuiltInEnumValue.Disused:
-                    return NsEntityAction.Dispose;
-                case BuiltInEnumValue.Erase:
-                    return NsEntityAction.ResetText;
-                case BuiltInEnumValue.Hideable:
-                    return NsEntityAction.Hide;
-                case BuiltInEnumValue.Start:
-                    return NsEntityAction.Start;
-                case BuiltInEnumValue.Stop:
-                    return NsEntityAction.Stop;
-
-                default:
-                    return NsEntityAction.Other;
-            }
+                BuiltInConstant.Lock => NsEntityAction.Lock,
+                BuiltInConstant.Unlock => NsEntityAction.Unlock,
+                BuiltInConstant.Play => NsEntityAction.Play,
+                BuiltInConstant.Disused => NsEntityAction.Dispose,
+                BuiltInConstant.Erase => NsEntityAction.ResetText,
+                BuiltInConstant.Hideable => NsEntityAction.Hide,
+                BuiltInConstant.Start => NsEntityAction.Start,
+                BuiltInConstant.Stop => NsEntityAction.Stop,
+                BuiltInConstant.AddRender => NsEntityAction.SetAdditiveBlend,
+                BuiltInConstant.SubRender => NsEntityAction.SetReverseSubtractiveBlend,
+                BuiltInConstant.MulRender => NsEntityAction.SetMultiplicativeBlend,
+                BuiltInConstant.Smoothing => NsEntityAction.UseLinearFiltering,
+                _ => NsEntityAction.Other,
+            };
         }
 
-        public static NsEasingFunction ToEasingFunction(BuiltInEnumValue enumValue)
+        public static NsEasingFunction ToEasingFunction(BuiltInConstant enumValue)
         {
-            switch (enumValue)
+            return enumValue switch
             {
-                case BuiltInEnumValue._None:
-                    return NsEasingFunction.None;
+                BuiltInConstant._None => NsEasingFunction.None,
 
-                case BuiltInEnumValue.Axl1:
-                    return NsEasingFunction.QuadraticEaseIn;
-                case BuiltInEnumValue.Axl2:
-                    return NsEasingFunction.CubicEaseIn;
-                case BuiltInEnumValue.Axl3:
-                    return NsEasingFunction.QuarticEaseIn;
+                BuiltInConstant.Axl1 => NsEasingFunction.QuadraticEaseIn,
+                BuiltInConstant.Axl2 => NsEasingFunction.CubicEaseIn,
+                BuiltInConstant.Axl3 => NsEasingFunction.QuarticEaseIn,
 
-                case BuiltInEnumValue.Dxl1:
-                    return NsEasingFunction.QuadraticEaseOut;
-                case BuiltInEnumValue.Dxl2:
-                    return NsEasingFunction.CubicEaseOut;
-                case BuiltInEnumValue.Dxl3:
-                    return NsEasingFunction.QuarticEaseOut;
+                BuiltInConstant.Dxl1 => NsEasingFunction.QuadraticEaseOut,
+                BuiltInConstant.Dxl2 => NsEasingFunction.CubicEaseOut,
+                BuiltInConstant.Dxl3 => NsEasingFunction.QuarticEaseOut,
 
-                case BuiltInEnumValue.AxlAuto:
-                    return NsEasingFunction.SineEaseIn;
-                case BuiltInEnumValue.DxlAuto:
-                    return NsEasingFunction.SineEaseOut;
-                case BuiltInEnumValue.AxlDxl:
-                    return NsEasingFunction.SineEaseInOut;
-                case BuiltInEnumValue.DxlAxl:
-                    return NsEasingFunction.SineEaseOutIn;
+                BuiltInConstant.AxlAuto => NsEasingFunction.SineEaseIn,
+                BuiltInConstant.DxlAuto => NsEasingFunction.SineEaseOut,
+                BuiltInConstant.AxlDxl => NsEasingFunction.SineEaseInOut,
+                BuiltInConstant.DxlAxl => NsEasingFunction.SineEaseOutIn,
 
-                default:
-                    throw ExceptionUtils.UnexpectedValue(nameof(enumValue));
-            }
+                _ => throw ThrowHelper.UnexpectedValue(nameof(enumValue)),
+            };
         }
 
-        public static NsAudioKind ToAudioKind(BuiltInEnumValue enumValue)
+        public static NsAudioKind ToAudioKind(BuiltInConstant enumValue)
         {
-            switch (enumValue)
+            return enumValue switch
             {
-                case BuiltInEnumValue.BGM:
-                    return NsAudioKind.BackgroundMusic;
-                case BuiltInEnumValue.SE:
-                    return NsAudioKind.SoundEffect;
-                case BuiltInEnumValue.Voice:
-                    return NsAudioKind.Voice;
-
-                default:
-                    throw ExceptionUtils.UnexpectedValue(nameof(enumValue));
-            }
+                BuiltInConstant.BGM => NsAudioKind.BackgroundMusic,
+                BuiltInConstant.SE => NsAudioKind.SoundEffect,
+                BuiltInConstant.Voice => NsAudioKind.Voice,
+                _ => throw ThrowHelper.UnexpectedValue(nameof(enumValue)),
+            };
         }
     }
 }

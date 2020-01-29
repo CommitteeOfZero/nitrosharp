@@ -1,8 +1,0 @@
-﻿<Directives>
-  <Application>
-    <Assembly Name="NitroSharp.NsScriptCompiler">
-      <Type Name="NitroSharp.NsScriptNew.BuiltInConstant[]" Dynamic="Required All" />
-      <Type Name="NitroSharp.NsScriptNew.BuiltInFunction[]" Dynamic="Required All" />
-    </Assembly>
-  </Application>
-</Directives>

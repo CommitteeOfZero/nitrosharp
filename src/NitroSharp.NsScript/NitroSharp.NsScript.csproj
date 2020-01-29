@@ -1,28 +1,20 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+
   <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
+    <TargetFrameworks>netcoreapp3.1</TargetFrameworks>
+    <LangVersion>8.0</LangVersion>
+    <NullableContextOptions>enable</NullableContextOptions>
+    <Nullable>enable</Nullable>
+    <WarningsAsErrors>NU1605;CS8625;CS8600;CS8603</WarningsAsErrors>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <Import Project="..\..\OutputPath.props" />
 
   <ItemGroup>
-    <PackageReference Include="System.Collections.Immutable" Version="1.5.0" />
-    <PackageReference Include="System.Text.Encoding.CodePages" Version="4.5.0" />
-    <PackageReference Include="System.ValueTuple" Version="4.5.0" />
+    <Compile Include="..\Common\ArrayBuilder.cs" Link="Utilities\ArrayBuilder.cs" />
+    <Compile Include="..\Common\HashHelper.cs" Link="Utilities\HashHelper.cs" />
+  <Compile Include="..\Common\ThrowHelper.cs" Link="Utilities\ThrowHelper.cs" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Compile Update="Resources.Designer.cs">
-      <DesignTime>True</DesignTime>
-      <AutoGen>True</AutoGen>
-      <DependentUpon>Resources.resx</DependentUpon>
-    </Compile>
-  </ItemGroup>
-
-  <ItemGroup>
-    <EmbeddedResource Update="Resources.resx">
-      <Generator>ResXFileCodeGenerator</Generator>
-      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
-    </EmbeddedResource>
-  </ItemGroup>
 </Project>

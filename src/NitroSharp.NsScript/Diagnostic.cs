@@ -3,6 +3,39 @@ using System.Globalization;
 
 namespace NitroSharp.NsScript
 {
+    public enum DiagnosticId
+    {
+        UnterminatedString,
+        UnterminatedQuotedIdentifier,
+        UnterminatedComment,
+        UnterminatedDialogueBlockStartTag,
+        UnterminatedDialogueBlockIdentifier,
+        NumberTooLarge,
+
+        TokenExpected,
+        StrayToken,
+        MisplacedSemicolon,
+        ExpectedSubroutineDeclaration,
+        MissingStatementTerminator,
+        InvalidExpressionTerm,
+        InvalidExpressionStatement,
+        StrayPXmlElement,
+        MisplacedBreak,
+        InvalidBezierCurve,
+
+        UnresolvedIdentifier,
+        BadAssignmentTarget,
+        ExternalModuleNotFound,
+        ChapterMainNotFound
+    }
+
+    public enum DiagnosticSeverity
+    {
+        Info,
+        Warning,
+        Error
+    }
+
     public class Diagnostic
     {
         public static Diagnostic Create(TextSpan span, DiagnosticId id) => new Diagnostic(span, id);
@@ -23,9 +56,10 @@ namespace NitroSharp.NsScript
         private sealed class DiagnosticWithArguments : Diagnostic
         {
             private readonly object[] _arguments;
-            private string _message;
+            private string? _message;
 
-            public DiagnosticWithArguments(TextSpan span, DiagnosticId id, params object[] arguments) : base(span, id)
+            public DiagnosticWithArguments(TextSpan span, DiagnosticId id, params object[] arguments)
+                : base(span, id)
             {
                 _arguments = arguments;
             }

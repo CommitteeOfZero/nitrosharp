@@ -2,21 +2,26 @@
 using System.Collections.Generic;
 using NitroSharp.NsScript.Text;
 using System.Runtime.CompilerServices;
+using System;
+using System.Runtime.InteropServices;
+using System.Diagnostics;
 
 namespace NitroSharp.NsScript.Syntax
 {
+    public enum LexingMode
+    {
+        Normal,
+        DialogueBlock
+    }
+
     internal sealed class Lexer : TextScanner
     {
-        private struct TokenInfo
+        [StructLayout(LayoutKind.Sequential)]
+        private struct MutableToken
         {
+            public TextSpan TextSpan;
             public SyntaxTokenKind Kind;
-            public string Text;
-            public string StringValue;
-            public double DoubleValue;
-            public SigilKind SigilKind;
-            public bool IsQuotedIdentifier;
-            public bool IsHexTriplet;
-            public TextSpan Span;
+            public SyntaxTokenFlags Flags;
         }
 
         private const string PRE_StartTag = "<pre>";
@@ -24,9 +29,10 @@ namespace NitroSharp.NsScript.Syntax
 
         private readonly LexingMode _initialMode;
         private readonly Stack<LexingMode> _lexingModeStack = new Stack<LexingMode>();
-        private Diagnostic _lastSyntaxError;
+        private readonly DiagnosticBuilder _diagnostics = new DiagnosticBuilder();
 
-        public Lexer(SourceText sourceText, LexingMode lexingMode = LexingMode.Normal) : base(sourceText.Source)
+        public Lexer(SourceText sourceText, LexingMode lexingMode = LexingMode.Normal)
+            : base(sourceText.Source)
         {
             SourceText = sourceText;
             _initialMode = lexingMode;
@@ -34,30 +40,74 @@ namespace NitroSharp.NsScript.Syntax
         }
 
         public SourceText SourceText { get; }
+        public DiagnosticBag Diagnostics => _diagnostics.ToImmutableBag();
 
         private LexingMode CurrentMode
         {
             get => _lexingModeStack.Count > 0 ? _lexingModeStack.Peek() : _initialMode;
         }
 
-        public SyntaxToken Lex()
+        public void Lex(ref SyntaxToken syntaxToken)
         {
+            ref MutableToken mutableTk = ref Unsafe.As<SyntaxToken, MutableToken>(ref syntaxToken);
             if (CurrentMode == LexingMode.DialogueBlock)
             {
-                if (PeekChar() != '{' && !Is_PRE_EndTag())
+                if (PeekChar() != '{' && !Match(PRE_EndTag))
                 {
-                    return LexPXmlToken();
+                    LexPXmlToken(ref mutableTk);
+                    return;
                 }
             }
 
-            var token = LexSyntaxToken();
-            switch (token.Kind)
+            LexSyntaxToken(ref mutableTk);
+            switch (mutableTk.Kind)
             {
-                case SyntaxTokenKind.OpenBraceToken:
+                case SyntaxTokenKind.OpenBrace:
                     _lexingModeStack.Push(LexingMode.Normal);
                     break;
 
-                case SyntaxTokenKind.CloseBraceToken:
+                case SyntaxTokenKind.CloseBrace:
+                    if (_lexingModeStack.Count > 0)
+                    {
+                        _lexingModeStack.Pop();
+                    }
+                    break;
+
+                case SyntaxTokenKind.DialogueBlockStartTag:
+                    _lexingModeStack.Push(LexingMode.DialogueBlock);
+                    break;
+
+                case SyntaxTokenKind.DialogueBlockEndTag:
+                    if (_lexingModeStack.Count > 0)
+                    {
+                        _lexingModeStack.Pop();
+                    }
+                    break;
+            }
+        }
+
+        public SyntaxToken Lex()
+        {
+            SyntaxToken tk = default;
+            ref MutableToken mutableTk = ref Unsafe.As<SyntaxToken, MutableToken>(ref tk);
+            if (CurrentMode == LexingMode.DialogueBlock)
+            {
+                if (PeekChar() != '{' && !Match("</pre>"))
+                {
+                    LexPXmlToken(ref mutableTk);
+                    Debug.Assert(tk.Kind != SyntaxTokenKind.None);
+                    return tk;
+                }
+            }
+
+            LexSyntaxToken(ref mutableTk);
+            switch (mutableTk.Kind)
+            {
+                case SyntaxTokenKind.OpenBrace:
+                    _lexingModeStack.Push(LexingMode.Normal);
+                    break;
+
+                case SyntaxTokenKind.CloseBrace:
                     if (_lexingModeStack.Count > 0)
                     {
                         _lexingModeStack.Pop();
@@ -76,40 +126,41 @@ namespace NitroSharp.NsScript.Syntax
                     break;
             }
 
-            return token;
+            Debug.Assert(tk.Kind != SyntaxTokenKind.None);
+            return tk;
         }
 
-        private SyntaxToken LexSyntaxToken()
+        private void LexSyntaxToken(ref MutableToken token)
         {
+            token = default;
             SkipSyntaxTrivia(isTrailing: false);
-
-            var info = new TokenInfo();
             StartScanning();
 
             char character = PeekChar();
             switch (character)
             {
                 case '"':
-                    if (PeekChar(1) != '$')
+                    if (!SyntaxFacts.IsSigil(PeekChar(1)))
                     {
-                        ScanStringLiteral(ref info);
-                        // Could actually be a quoted keyword (e.g "null")
-                        if (SyntaxFacts.TryGetKeywordKind(info.StringValue, out var keywordKind))
+                        ScanStringLiteralOrQuotedIdentifier(ref token, out TextSpan valueSpan);
+                        ReadOnlySpan<char> value = SourceText.GetCharacterSpan(valueSpan);
+                        // Certain keywords can appear in quotes
+                        if (SyntaxFacts.TryGetKeywordKind(value, out SyntaxTokenKind keywordKind))
                         {
                             switch (keywordKind)
                             {
                                 case SyntaxTokenKind.NullKeyword:
                                 case SyntaxTokenKind.TrueKeyword:
                                 case SyntaxTokenKind.FalseKeyword:
-                                    info.Kind = keywordKind;
+                                    token.Kind = keywordKind;
                                     break;
                             }
 
                         }
                     }
-                    else // it's a quoted identifier
+                    else
                     {
-                        ScanIdentifier(ref info);
+                        ScanStringLiteralOrQuotedIdentifier(ref token, out _);
                     }
                     break;
 
@@ -123,7 +174,7 @@ namespace NitroSharp.NsScript.Syntax
                 case '7':
                 case '8':
                 case '9':
-                    if (!ScanDecNumericLiteral(ref info))
+                    if (!ScanDecNumericLiteral(ref token))
                     {
                         // If it's not a number, then it's an identifier starting with a number.
                         goto default;
@@ -131,41 +182,39 @@ namespace NitroSharp.NsScript.Syntax
                     break;
 
                 case '$':
-                    if (!ScanIdentifier(ref info))
+                    if (!ScanIdentifier(ref token))
                     {
                         AdvanceChar();
-                        info.Kind = SyntaxTokenKind.DollarToken;
+                        token.Kind = SyntaxTokenKind.Dollar;
                     }
                     break;
 
                 case '#':
                     if (AdvanceIfMatches("#include"))
                     {
-                        info.Kind = SyntaxTokenKind.IncludeDirective;
+                        token.Kind = SyntaxTokenKind.IncludeDirective;
                     }
-                    else if (!ScanHexTriplet(ref info) && !ScanIdentifier(ref info))
+                    else if (!ScanHexTriplet(ref token) && !ScanIdentifier(ref token))
                     {
                         AdvanceChar();
-                        info.Kind = SyntaxTokenKind.HashToken;
+                        token.Kind = SyntaxTokenKind.Hash;
                     }
                     break;
 
                 case '@':
-                    char next = PeekChar(1);
                     if (PeekChar(1) == '-' && PeekChar(2) == '>')
                     {
                         AdvanceChar(3);
-                        info.Kind = SyntaxTokenKind.AtArrowToken;
+                        token.Kind = SyntaxTokenKind.AtArrow;
                     }
-                    else if (next == '+' || next == '-' || SyntaxFacts.IsDecDigit(next) || SyntaxFacts.IsSigil(next))
+                    else if (ScanIdentifier(ref token))
                     {
-                        AdvanceChar();
-                        info.Kind = SyntaxTokenKind.AtToken;
+                        token.Kind = SyntaxTokenKind.Identifier;
                     }
                     else
                     {
-                        ScanIdentifier(ref info);
-                        info.Kind = SyntaxTokenKind.IdentifierToken;
+                        AdvanceChar();
+                        token.Kind = SyntaxTokenKind.At;
                     }
                     break;
 
@@ -175,12 +224,12 @@ namespace NitroSharp.NsScript.Syntax
                     {
                         case '=':
                             AdvanceChar(2);
-                            info.Kind = SyntaxTokenKind.LessThanEqualsToken;
+                            token.Kind = SyntaxTokenKind.LessThanEquals;
                             break;
 
                         case 'p':
                         case 'P':
-                            if (!ScanDialogueBlockStartTag(ref info))
+                            if (!ScanDialogueBlockStartTag(ref token))
                             {
                                 goto default;
                             }
@@ -189,7 +238,7 @@ namespace NitroSharp.NsScript.Syntax
                         case '/':
                             if (AdvanceIfMatches(PRE_EndTag))
                             {
-                                info.Kind = SyntaxTokenKind.DialogueBlockEndTag;
+                                token.Kind = SyntaxTokenKind.DialogueBlockEndTag;
                             }
                             else
                             {
@@ -199,49 +248,49 @@ namespace NitroSharp.NsScript.Syntax
 
                         default:
                             AdvanceChar();
-                            info.Kind = SyntaxTokenKind.LessThanToken;
+                            token.Kind = SyntaxTokenKind.LessThan;
                             break;
                     }
                     break;
 
                 case '{':
                     AdvanceChar();
-                    info.Kind = SyntaxTokenKind.OpenBraceToken;
+                    token.Kind = SyntaxTokenKind.OpenBrace;
                     break;
 
                 case '}':
                     AdvanceChar();
-                    info.Kind = SyntaxTokenKind.CloseBraceToken;
+                    token.Kind = SyntaxTokenKind.CloseBrace;
                     break;
 
                 case '(':
                     AdvanceChar();
-                    info.Kind = SyntaxTokenKind.OpenParenToken;
+                    token.Kind = SyntaxTokenKind.OpenParen;
                     break;
 
                 case ')':
                     AdvanceChar();
-                    info.Kind = SyntaxTokenKind.CloseParenToken;
+                    token.Kind = SyntaxTokenKind.CloseParen;
                     break;
 
                 case '.':
                     AdvanceChar();
-                    info.Kind = SyntaxTokenKind.DotToken;
+                    token.Kind = SyntaxTokenKind.Dot;
                     break;
 
                 case ',':
                     AdvanceChar();
-                    info.Kind = SyntaxTokenKind.CommaToken;
+                    token.Kind = SyntaxTokenKind.Comma;
                     break;
 
                 case ':':
                     AdvanceChar();
-                    info.Kind = SyntaxTokenKind.ColonToken;
+                    token.Kind = SyntaxTokenKind.Colon;
                     break;
 
                 case ';':
                     AdvanceChar();
-                    info.Kind = SyntaxTokenKind.SemicolonToken;
+                    token.Kind = SyntaxTokenKind.Semicolon;
                     break;
 
                 case '=':
@@ -249,11 +298,11 @@ namespace NitroSharp.NsScript.Syntax
                     if ((PeekChar()) == '=')
                     {
                         AdvanceChar();
-                        info.Kind = SyntaxTokenKind.EqualsEqualsToken;
+                        token.Kind = SyntaxTokenKind.EqualsEquals;
                     }
                     else
                     {
-                        info.Kind = SyntaxTokenKind.EqualsToken;
+                        token.Kind = SyntaxTokenKind.Equals;
                     }
                     break;
 
@@ -262,16 +311,16 @@ namespace NitroSharp.NsScript.Syntax
                     if ((character = PeekChar()) == '=')
                     {
                         AdvanceChar();
-                        info.Kind = SyntaxTokenKind.PlusEqualsToken;
+                        token.Kind = SyntaxTokenKind.PlusEquals;
                     }
                     else if (character == '+')
                     {
                         AdvanceChar();
-                        info.Kind = SyntaxTokenKind.PlusPlusToken;
+                        token.Kind = SyntaxTokenKind.PlusPlus;
                     }
                     else
                     {
-                        info.Kind = SyntaxTokenKind.PlusToken;
+                        token.Kind = SyntaxTokenKind.Plus;
                     }
                     break;
 
@@ -280,21 +329,21 @@ namespace NitroSharp.NsScript.Syntax
                     if ((character = PeekChar()) == '=')
                     {
                         AdvanceChar();
-                        info.Kind = SyntaxTokenKind.MinusEqualsToken;
+                        token.Kind = SyntaxTokenKind.MinusEquals;
                     }
                     else if (character == '-')
                     {
                         AdvanceChar();
-                        info.Kind = SyntaxTokenKind.MinusMinusToken;
+                        token.Kind = SyntaxTokenKind.MinusMinus;
                     }
                     else if (character == '>')
                     {
                         AdvanceChar();
-                        info.Kind = SyntaxTokenKind.ArrowToken;
+                        token.Kind = SyntaxTokenKind.Arrow;
                     }
                     else
                     {
-                        info.Kind = SyntaxTokenKind.MinusToken;
+                        token.Kind = SyntaxTokenKind.Minus;
                     }
                     break;
 
@@ -303,11 +352,11 @@ namespace NitroSharp.NsScript.Syntax
                     if (PeekChar() == '=')
                     {
                         AdvanceChar();
-                        info.Kind = SyntaxTokenKind.AsteriskEqualsToken;
+                        token.Kind = SyntaxTokenKind.AsteriskEquals;
                     }
                     else
                     {
-                        info.Kind = SyntaxTokenKind.AsteriskToken;
+                        token.Kind = SyntaxTokenKind.Asterisk;
                     }
                     break;
 
@@ -316,17 +365,17 @@ namespace NitroSharp.NsScript.Syntax
                     if (PeekChar() == '=')
                     {
                         AdvanceChar();
-                        info.Kind = SyntaxTokenKind.SlashEqualsToken;
+                        token.Kind = SyntaxTokenKind.SlashEquals;
                     }
                     else
                     {
-                        info.Kind = SyntaxTokenKind.SlashToken;
+                        token.Kind = SyntaxTokenKind.Slash;
                     }
                     break;
 
                 case '%':
                     AdvanceChar();
-                    info.Kind = SyntaxTokenKind.PercentToken;
+                    token.Kind = SyntaxTokenKind.Percent;
                     break;
 
                 case '>':
@@ -334,11 +383,11 @@ namespace NitroSharp.NsScript.Syntax
                     if (PeekChar() == '=')
                     {
                         AdvanceChar();
-                        info.Kind = SyntaxTokenKind.GreaterThanEqualsToken;
+                        token.Kind = SyntaxTokenKind.GreaterThanEquals;
                     }
                     else
                     {
-                        info.Kind = SyntaxTokenKind.GreaterThanToken;
+                        token.Kind = SyntaxTokenKind.GreaterThan;
                     }
                     break;
 
@@ -347,11 +396,11 @@ namespace NitroSharp.NsScript.Syntax
                     if (PeekChar() == '=')
                     {
                         AdvanceChar();
-                        info.Kind = SyntaxTokenKind.ExclamationEqualsToken;
+                        token.Kind = SyntaxTokenKind.ExclamationEquals;
                     }
                     else
                     {
-                        info.Kind = SyntaxTokenKind.ExclamationToken;
+                        token.Kind = SyntaxTokenKind.Exclamation;
                     }
                     break;
 
@@ -360,7 +409,7 @@ namespace NitroSharp.NsScript.Syntax
                     if (PeekChar() == '|')
                     {
                         AdvanceChar();
-                        info.Kind = SyntaxTokenKind.BarBarToken;
+                        token.Kind = SyntaxTokenKind.BarBar;
                     }
                     break;
 
@@ -369,83 +418,41 @@ namespace NitroSharp.NsScript.Syntax
                     if (PeekChar() == '&')
                     {
                         AdvanceChar();
-                        info.Kind = SyntaxTokenKind.AmpersandAmpersandToken;
+                        token.Kind = SyntaxTokenKind.AmpersandAmpersand;
                     }
                     else
                     {
-                        info.Kind = SyntaxTokenKind.AmpersandToken;
+                        token.Kind = SyntaxTokenKind.Ampersand;
                     }
                     break;
 
                 case EofCharacter:
-                    info.Kind = SyntaxTokenKind.EndOfFileToken;
+                    token.Kind = SyntaxTokenKind.EndOfFileToken;
                     break;
 
                 default:
-                    bool success = ScanIdentifier(ref info);
+                    bool success = ScanIdentifier(ref token);
                     if (success)
                     {
-                        if (SyntaxFacts.TryGetKeywordKind(info.StringValue, out var keywordKind))
+                        ReadOnlySpan<char> text = SourceText.GetCharacterSpan(CurrentLexemeSpan);
+                        if (SyntaxFacts.TryGetKeywordKind(text, out SyntaxTokenKind keywordKind))
                         {
-                            info.Kind = keywordKind;
+                            token.Kind = keywordKind;
                         }
                     }
                     else
                     {
-                        ScanBadToken(ref info);
+                        ScanBadToken(ref token);
                     }
                     break;
             }
 
-            var token = CreateToken(ref info);
+            token.TextSpan = CurrentLexemeSpan;
             SkipSyntaxTrivia(isTrailing: true);
-            return token;
         }
 
-        private SyntaxToken CreateToken(ref TokenInfo tokenInfo)
+        private void LexPXmlToken(ref MutableToken token)
         {
-            var span = tokenInfo.Span;
-            if (span == default(TextSpan))
-            {
-                span = CurrentLexemeSpan;
-            }
-
-            var error = _lastSyntaxError;
-            _lastSyntaxError = null;
-
-            switch (tokenInfo.Kind)
-            {
-                case SyntaxTokenKind.IdentifierToken:
-                    return SyntaxToken.Identifier(tokenInfo.StringValue, span, tokenInfo.SigilKind, tokenInfo.IsQuotedIdentifier, error);
-
-                case SyntaxTokenKind.StringLiteralToken:
-                    return SyntaxToken.Literal(tokenInfo.StringValue, span, error);
-
-                case SyntaxTokenKind.NumericLiteralToken:
-                    return tokenInfo.IsHexTriplet
-                        ? SyntaxToken.HexTriplet(tokenInfo.DoubleValue, span, error)
-                        : SyntaxToken.Literal(tokenInfo.DoubleValue, span, error);
-
-                case SyntaxTokenKind.DialogueBlockStartTag:
-                    return SyntaxToken.DialogueBlockStartTag(tokenInfo.StringValue, span, error);
-
-                case SyntaxTokenKind.DialogueBlockIdentifier:
-                    return SyntaxToken.DialogueBlockIdentifier(tokenInfo.StringValue, span, error);
-
-                case SyntaxTokenKind.PXmlString:
-                    return SyntaxToken.WithText(SyntaxTokenKind.PXmlString, tokenInfo.Text, span, error);
-
-                case SyntaxTokenKind.BadToken:
-                    return SyntaxToken.WithText(SyntaxTokenKind.BadToken, tokenInfo.Text, span, error);
-
-                default:
-                    return new SyntaxToken(tokenInfo.Kind, span, error);
-            }
-        }
-
-        private SyntaxToken LexPXmlToken()
-        {
-            var info = new TokenInfo();
             bool skipTrailingTrivia = false;
             StartScanning();
 
@@ -453,88 +460,92 @@ namespace NitroSharp.NsScript.Syntax
             switch (character)
             {
                 case '[':
-                    ScanDialogueBlockIdentifier(ref info);
+                    ScanDialogueBlockIdentifier(ref token);
                     skipTrailingTrivia = true;
                     break;
 
                 case '\r':
                 case '\n':
-                    info.Kind = SyntaxTokenKind.PXmlLineSeparator;
+                    token.Kind = SyntaxTokenKind.PXmlLineSeparator;
                     ScanEndOfLineSequence();
                     break;
 
                 case EofCharacter:
-                    info.Kind = SyntaxTokenKind.EndOfFileToken;
+                    token.Kind = SyntaxTokenKind.EndOfFileToken;
                     break;
 
                 default:
-                    ScanPXmlString(ref info);
+                    ScanPXmlString(ref token);
                     break;
             }
 
+            token.TextSpan = CurrentLexemeSpan;
             if (skipTrailingTrivia)
             {
                 SkipSyntaxTrivia(isTrailing: true);
             }
-
-            return CreateToken(ref info);
         }
 
-        private bool ScanIdentifier(ref TokenInfo tokenInfo)
+        private bool ScanIdentifier(ref MutableToken token)
         {
             int start = Position;
-            bool isQuoted = false;
-            if (PeekChar() == '"')
-            {
-                AdvanceChar();
-                isQuoted = true;
-            }
+            ScanSigil(ref token);
 
-            switch (PeekChar())
+            if (!SyntaxFacts.IsIdentifierStartCharacter(PeekChar()))
             {
-                case '$':
-                    AdvanceChar();
-                    tokenInfo.SigilKind = SigilKind.Dollar;
-                    break;
-
-                case '#':
-                    AdvanceChar();
-                    tokenInfo.SigilKind = SigilKind.Hash;
-                    break;
-            }
-
-            StartScanning();
-            while (SyntaxFacts.IsIdentifierPartCharacter(PeekChar()))
-            {
-                AdvanceChar();
-            }
-
-            string value = GetCurrentLexeme();
-            if (isQuoted && !TryEatChar('"'))
-            {
-                Report(DiagnosticId.UnterminatedQuotedIdentifier, new TextSpan(start, 0));
-            }
-
-            int end = Position;
-            bool empty = value.Length == 0;
-            if (empty)
-            {
+                token.Flags = SyntaxTokenFlags.Empty;
                 SetPosition(start);
                 return false;
             }
 
-            tokenInfo.Kind = SyntaxTokenKind.IdentifierToken;
-            tokenInfo.StringValue = value;
-            tokenInfo.IsQuotedIdentifier = isQuoted;
-            tokenInfo.Span = new TextSpan(start, end - start);
+            int valueStart = Position;
+            while (SyntaxFacts.IsIdentifierPartCharacter(PeekChar()))
+            {
+                AdvanceChar();
+            }
+            int valueEnd = Position;
+
+            var valueSpan = new TextSpan(valueStart, valueEnd - valueStart);
+            bool empty = valueSpan.Length == 0;
+            if (empty)
+            {
+                token.Flags = SyntaxTokenFlags.Empty;
+                SetPosition(start);
+                return false;
+            }
+
+            token.Kind = SyntaxTokenKind.Identifier;
             return true;
         }
 
-        private void ScanStringLiteral(ref TokenInfo tokenInfo)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void ScanSigil(ref MutableToken token)
+        {
+            switch (PeekChar())
+            {
+                case '$':
+                    AdvanceChar();
+                    token.Flags |= SyntaxTokenFlags.HasDollarPrefix;
+                    break;
+                case '#':
+                    AdvanceChar();
+                    token.Flags |= SyntaxTokenFlags.HasHashPrefix;
+                    break;
+                case '@':
+                    AdvanceChar();
+                    token.Flags |= SyntaxTokenFlags.HasAtPrefix;
+                    break;
+            }
+        }
+
+        private void ScanStringLiteralOrQuotedIdentifier(ref MutableToken token, out TextSpan valueSpan)
         {
             int start = Position;
             EatChar('"');
-            StartScanning();
+            if (PeekChar(1) != '"')
+            {
+                ScanSigil(ref token);
+            }
 
             char c;
             while ((c = PeekChar()) != '"' && c != EofCharacter)
@@ -542,27 +553,46 @@ namespace NitroSharp.NsScript.Syntax
                 AdvanceChar();
             }
 
-            tokenInfo.StringValue = GetCurrentLexeme(); // value without the quotes
+            int valueEnd = Position;
             if (!TryEatChar('"'))
             {
                 Report(DiagnosticId.UnterminatedString, new TextSpan(start, 0));
             }
 
-            int end = Position;
-            tokenInfo.Span = new TextSpan(start, end - start);
-            tokenInfo.Kind = SyntaxTokenKind.StringLiteralToken;
+            token.Flags |= SyntaxTokenFlags.IsQuoted;
+            token.Kind = SyntaxTokenKind.StringLiteralOrQuotedIdentifier;
+            int valueStart = start + 1;
+            valueSpan = new TextSpan(valueStart, valueEnd - valueStart);
         }
 
-        private bool ScanDecNumericLiteral(ref TokenInfo tokenInfo)
+        private bool ScanDecNumericLiteral(ref MutableToken token)
         {
+            bool isFloat = false;
             char c;
             while ((SyntaxFacts.IsDecDigit((c = PeekChar())) || c == '.'))
             {
                 AdvanceChar();
+                if (c == '.')
+                {
+                    token.Flags |= SyntaxTokenFlags.HasDecimalPoint;
+                    isFloat = true;
+                }
             }
 
-            string stringValue = tokenInfo.Text = GetCurrentLexeme();
-            bool valid = double.TryParse(stringValue, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out tokenInfo.DoubleValue);
+            TextSpan valueSpan = CurrentLexemeSpan;
+            ReadOnlySpan<char> valueText = SourceText.GetCharacterSpan(valueSpan);
+            bool valid;
+            if (!isFloat)
+            {
+                valid = int.TryParse(valueText, out _);
+            }
+            else
+            {
+                valid = float.TryParse(
+                    valueText, NumberStyles.AllowDecimalPoint,
+                    CultureInfo.InvariantCulture, out _);
+            }
+
             if (!valid)
             {
                 Report(DiagnosticId.NumberTooLarge);
@@ -577,15 +607,14 @@ namespace NitroSharp.NsScript.Syntax
                 return false;
             }
 
-            tokenInfo.Kind = SyntaxTokenKind.NumericLiteralToken;
+            token.Kind = SyntaxTokenKind.NumericLiteral;
             return true;
         }
 
-        private bool ScanHexTriplet(ref TokenInfo tokenInfo)
+        private bool ScanHexTriplet(ref MutableToken token)
         {
             int start = Position;
             EatChar('#');
-            StartScanning();
 
             // We need exactly six digits.
             for (int i = 0; i < 6; i++)
@@ -610,19 +639,12 @@ namespace NitroSharp.NsScript.Syntax
                 return false;
             }
 
-            int end = Position;
-            string stringValue = tokenInfo.Text = GetCurrentLexeme(); // value without the '#'
-            // Not expected to throw
-            tokenInfo.DoubleValue = int.Parse(stringValue, NumberStyles.HexNumber, CultureInfo.InvariantCulture);
-            tokenInfo.IsHexTriplet = true;
-            tokenInfo.Span = new TextSpan(start, end - start);
-            tokenInfo.Kind = SyntaxTokenKind.NumericLiteralToken;
+            token.Kind = SyntaxTokenKind.NumericLiteral;
+            token.Flags |= SyntaxTokenFlags.IsHexTriplet;
             return true;
         }
 
-        private bool Is_PRE_EndTag() => Match("</pre>");
-
-        private void ScanPXmlString(ref TokenInfo tokenInfo)
+        private void ScanPXmlString(ref MutableToken token)
         {
             int preNestingLevel = 0;
 
@@ -636,7 +658,7 @@ namespace NitroSharp.NsScript.Syntax
                         preNestingLevel++;
                         continue;
                     }
-                    else if (Match(PRE_EndTag))
+                    if (Match(PRE_EndTag))
                     {
                         if (preNestingLevel == 0)
                         {
@@ -649,33 +671,35 @@ namespace NitroSharp.NsScript.Syntax
                     }
                 }
 
+                int pos = Position;
                 int newlineSequenceLength = 0;
-                while (SyntaxFacts.IsNewLine(PeekChar(newlineSequenceLength)))
+                while (SyntaxFacts.IsNewLine(PeekChar()))
                 {
-                    newlineSequenceLength++;
-                    if (newlineSequenceLength >= 4)
+                    ScanEndOfLine();
+                    if (++newlineSequenceLength == 2)
                     {
+                        SetPosition(pos);
                         goto exit;
                     }
                 }
 
-                AdvanceChar();
+                if (newlineSequenceLength == 0)
+                {
+                    AdvanceChar();
+                }
             }
 
-            exit:
-            tokenInfo.Kind = SyntaxTokenKind.PXmlString;
-            tokenInfo.Text = GetCurrentLexeme();
+        exit:
+            token.Kind = SyntaxTokenKind.PXmlString;
         }
 
-        private bool ScanDialogueBlockStartTag(ref TokenInfo tokenInfo)
+        private bool ScanDialogueBlockStartTag(ref MutableToken token)
         {
             int start = Position;
-            if (!AdvanceIfMatches("<PRE "))
+            if (!AdvanceIfMatches("<pre "))
             {
                 return false;
             }
-
-            StartScanning();
 
             char c;
             while ((c = PeekChar()) != '>' && !IsEofOrNewLine(c))
@@ -683,23 +707,19 @@ namespace NitroSharp.NsScript.Syntax
                 AdvanceChar();
             }
 
-            tokenInfo.StringValue = GetCurrentLexeme(); // just the box name, without the '<PRE  >'
             if (!TryEatChar('>'))
             {
                 Report(DiagnosticId.UnterminatedDialogueBlockStartTag, new TextSpan(start, 0));
             }
 
-            int end = Position;
-            tokenInfo.Span = new TextSpan(start, end - start);
-            tokenInfo.Kind = SyntaxTokenKind.DialogueBlockStartTag;
+            token.Kind = SyntaxTokenKind.DialogueBlockStartTag;
             return true;
         }
 
-        private void ScanDialogueBlockIdentifier(ref TokenInfo tokenInfo)
+        private void ScanDialogueBlockIdentifier(ref MutableToken token)
         {
             int start = Position;
-            AdvanceChar();
-            StartScanning();
+            EatChar('[');
 
             char c;
             while ((c = PeekChar()) != ']' && !IsEofOrNewLine(c))
@@ -707,26 +727,22 @@ namespace NitroSharp.NsScript.Syntax
                 AdvanceChar();
             }
 
-            tokenInfo.StringValue = GetCurrentLexeme();
             if (!TryEatChar(']'))
             {
                 Report(DiagnosticId.UnterminatedDialogueBlockIdentifier, new TextSpan(start, 0));
             }
 
-            int end = Position;
-            tokenInfo.Span = new TextSpan(start, end - start);
-            tokenInfo.Kind = SyntaxTokenKind.DialogueBlockIdentifier;
+            token.Kind = SyntaxTokenKind.DialogueBlockIdentifier;
         }
 
-        private void ScanBadToken(ref TokenInfo tokenInfo)
+        private void ScanBadToken(ref MutableToken token)
         {
             while (!IsEofOrNewLine(PeekChar()))
             {
                 AdvanceChar();
             }
 
-            tokenInfo.Text = GetCurrentLexeme();
-            tokenInfo.Kind = SyntaxTokenKind.BadToken;
+            token.Kind = SyntaxTokenKind.BadToken;
         }
 
         private void SkipSyntaxTrivia(bool isTrailing)
@@ -836,7 +852,7 @@ namespace NitroSharp.NsScript.Syntax
         private void Report(DiagnosticId diagnosticId) => Report(diagnosticId, CurrentLexemeSpan);
         private void Report(DiagnosticId diagnosticId, TextSpan textSpan)
         {
-            _lastSyntaxError = Diagnostic.Create(textSpan, diagnosticId);
+            _diagnostics.Report(diagnosticId, textSpan);
         }
     }
 }

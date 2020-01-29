@@ -1,187 +1,148 @@
-﻿using NitroSharp.NsScript.Syntax;
+﻿using NitroSharp.NsScript;
+using NitroSharp.NsScript.Syntax;
+using NitroSharp.NsScript.Text;
+using System.Collections.Generic;
 using Xunit;
 
-namespace NitroSharp.NsScript.Tests
+namespace NitroSharp.NsScriptCompiler.Tests
 {
     public class StatementParsingTests
     {
         [Fact]
-        public void ParseFunctionCall_NoParentheses_NoArguments()
+        public void BlockSyntax_Parses_Correctly()
         {
-            string text = "WaitKey;";
-            var stmt = Parsing.ParseStatement(text).Root as ExpressionStatement;
-            var call = stmt.Expression as FunctionCall;
-            Assert.NotNull(call);
-            Assert.Equal(SyntaxNodeKind.FunctionCall, call.Kind);
-            Assert.Equal("WaitKey", call.Target.Name);
-            Assert.Empty(call.Arguments);
+            var block = AssertStatement<BlockSyntax>("{}", SyntaxNodeKind.Block);
+            Assert.Empty(block.Statements);
+        }
 
-            Assert.Equal("WaitKey()", call.ToString());
+        [Theory]
+        [InlineData("if ($condition) {}", false)]
+        [InlineData("if ($condition) {} else {}", true)]
+        public void IfStatement_Parses_Correctly(string text, bool hasElseClause)
+        {
+            var ifStmt = AssertStatement<IfStatementSyntax>(text, SyntaxNodeKind.IfStatement);
+            Assert.NotNull(ifStmt.Condition);
+            Assert.NotNull(ifStmt.IfTrueStatement);
+            if (hasElseClause)
+            {
+                Assert.NotNull(ifStmt.IfFalseStatement);
+            }
         }
 
         [Fact]
-        public void ParseFunctionCall_NoParentheses_WithArguments()
+        public void BreakStatement_Parses_Correctly()
         {
-            string text = "WaitKey 2000, true;";
-            var stmt = Parsing.ParseStatement(text).Root as ExpressionStatement;
-            var call = stmt.Expression as FunctionCall;
-            Assert.NotNull(call);
-            Assert.Equal(SyntaxNodeKind.FunctionCall, call.Kind);
-            Assert.Equal("WaitKey", call.Target.Name);
-            Assert.Equal(2, call.Arguments.Length);
-
-            Assert.Equal("WaitKey(2000, true)", call.ToString());
+            var breakStmt = AssertStatement<BreakStatementSyntax>("break;", SyntaxNodeKind.BreakStatement);
         }
 
         [Fact]
-        public void ParseFunctionCall_NameInQuotes_NoParentheses()
+        public void WhileStatement_Parses_Correctly()
         {
-            string text = "\"WaitKey\";";
-            var stmt = Parsing.ParseStatement(text).Root as ExpressionStatement;
-            var call = stmt.Expression as FunctionCall;
-            Assert.NotNull(call);
-            Assert.Equal(SyntaxNodeKind.FunctionCall, call.Kind);
-            Assert.Equal("WaitKey", call.Target.Name);
-            Assert.Empty(call.Arguments);
-
-            Assert.Equal("WaitKey()", call.ToString());
+            var whileStmt = AssertStatement<WhileStatementSyntax>("while (true) {}", SyntaxNodeKind.WhileStatement);
+            Assert.NotNull(whileStmt.Condition);
+            Assert.NotNull(whileStmt.Body);
         }
 
         [Fact]
-        public void ParseIfStatement()
+        public void ReturnStatement_Parses_Correctly()
         {
-            string text = "if (#flag == true){}";
-            var ifStatement = Parsing.ParseStatement(text).Root as IfStatement;
-            Assert.NotNull(ifStatement);
-            Assert.Equal(SyntaxNodeKind.IfStatement, ifStatement.Kind);
-            Assert.NotNull(ifStatement.Condition);
-            Assert.NotNull(ifStatement.IfTrueStatement);
-            Assert.Null(ifStatement.IfFalseStatement);
-
-            string toStringResult = Helpers.RemoveNewLineCharacters(ifStatement.ToString());
-            Assert.Equal(text, toStringResult);
+            AssertStatement<ReturnStatementSyntax>("return;", SyntaxNodeKind.ReturnStatement);
         }
 
         [Fact]
-        public void ParseIfStatementWithElseClause()
-        {
-            string text = "if (#flag == true){}else{}";
-            var ifStatement = Parsing.ParseStatement(text).Root as IfStatement;
-            Assert.NotNull(ifStatement);
-            Assert.Equal(SyntaxNodeKind.IfStatement, ifStatement.Kind);
-            Assert.NotNull(ifStatement.Condition);
-            Assert.NotNull(ifStatement.IfTrueStatement);
-            Assert.NotNull(ifStatement.IfFalseStatement);
-
-            string toStringResult = Helpers.RemoveNewLineCharacters(ifStatement.ToString());
-            Assert.Equal(text, toStringResult);
-        }
-
-        [Fact]
-        public void ParseBreakStatement()
-        {
-            string text = "break;";
-            var statement = Parsing.ParseStatement(text).Root as BreakStatement;
-            Assert.NotNull(statement);
-            Assert.Equal(SyntaxNodeKind.BreakStatement, statement.Kind);
-
-            string toStringResult = Helpers.RemoveNewLineCharacters(statement.ToString());
-            Assert.Equal(text, toStringResult);
-        }
-
-        [Fact]
-        public void ParseWhileStatement()
-        {
-            string text = "while (true){}";
-            var whileStatement = Parsing.ParseStatement(text).Root as WhileStatement;
-            Assert.NotNull(whileStatement);
-            Assert.Equal(SyntaxNodeKind.WhileStatement, whileStatement.Kind);
-            Assert.NotNull(whileStatement.Condition);
-            Assert.NotNull(whileStatement.Body);
-
-            string toStringResult = Helpers.RemoveNewLineCharacters(whileStatement.ToString());
-            Assert.Equal(text, toStringResult);
-        }
-
-        [Fact]
-        public void ParseSelectStatement()
+        public void SelectStatement_Parses_Correctly()
         {
             string text = @"
-select
-{
-case option:{}
-}";
+                select
+                {
+                    case foo: {}
+                }";
 
-            var selectStatement = Parsing.ParseStatement(text).Root as SelectStatement;
-            Assert.NotNull(selectStatement);
-            Assert.Equal(SyntaxNodeKind.SelectStatement, selectStatement.Kind);
+            var selectStmt = AssertStatement<SelectStatementSyntax>(text, SyntaxNodeKind.SelectStatement);
+            var selectSection = Assert.IsType<SelectSectionSyntax>(
+                Assert.Single(selectStmt.Body.Statements));
 
-            var body = selectStatement.Body;
-            Assert.Single(body.Statements);
-            var firstSection = body.Statements[0] as SelectSection;
-            Assert.NotNull(firstSection);
-            Assert.Equal(SyntaxNodeKind.SelectSection, firstSection.Kind);
-            Assert.Equal("option", firstSection.Label.Name);
-            Assert.NotNull(firstSection.Body);
+            Common.AssertSpannedText(text, "foo", selectSection.Label);
+            Assert.NotNull(selectSection.Body);
         }
 
-        [Fact]
-        public void ParseSelectSectionWithSlashesInName()
+        [Theory]
+        [InlineData("foo.nss")]
+        [InlineData("nss/foo.nss")]
+        [InlineData("root/nss/foo.nss")]
+        public void CallChapterStatement_Parses_Correctly(string filePath)
         {
-            string text = @"
-select
-{
-case goo/foo/bar:{}
-}";
-            var selectStatement = Parsing.ParseStatement(text).Root as SelectStatement;
-            Assert.NotNull(selectStatement);
-            var section = selectStatement.Body.Statements[0] as SelectSection;
-            Assert.NotNull(section);
-            Assert.Equal("goo/foo/bar", section.Label.Name);
+            string text = $"call_chapter {filePath}";
+            var callChapterStmt = AssertStatement<CallChapterStatementSyntax>(text, SyntaxNodeKind.CallChapterStatement);
+            Common.AssertSpannedText(text, filePath, callChapterStmt.TargetModule);
         }
 
-        [Fact]
-        public void ParseReturnStatement()
+        [Theory]
+        [InlineData("Scene", null, "Scene")]
+        [InlineData("@->LocalScene", null, "LocalScene")]
+        [InlineData("nss/foo.nss->Scene", "nss/foo.nss", "Scene")]
+        public void CallSceneStatement_Parses_Correctly(string path, string file, string scene)
         {
-            string text = "return;";
-            var statement = Parsing.ParseStatement(text).Root as ReturnStatement;
+            string text = $"call_scene {path}";
+            var callSceneStmt = AssertStatement<CallSceneStatementSyntax>(text, SyntaxNodeKind.CallSceneStatement);
+            if (!string.IsNullOrEmpty(file))
+            {
+                Assert.True(callSceneStmt.TargetModule.HasValue);
+                Common.AssertSpannedText(text, file, callSceneStmt.TargetModule.Value);
+            }
 
-            Assert.NotNull(statement);
-            Assert.Equal(SyntaxNodeKind.ReturnStatement, statement.Kind);
+            Common.AssertSpannedText(text, scene, callSceneStmt.TargetScene);
         }
 
-        [Fact]
-        public void ParseCallChapterStatement()
+        [Theory]
+        [MemberData(nameof(GetDialogueBlockTestData))]
+        public void DialogueBlock_Parses_Correctly(string text, string blockName, string boxName, int partCount)
         {
-            string text = "call_chapter nss/foo.nss;";
-            var statement = Parsing.ParseStatement(text).Root as CallChapterStatement;
-
-            Assert.NotNull(statement);
-            Assert.Equal(SyntaxNodeKind.CallChapterStatement, statement.Kind);
-            Assert.Equal("nss/foo.nss", statement.Target);
+            var dialogueBlock = AssertStatement<DialogueBlockSyntax>(text, SyntaxNodeKind.DialogueBlock);
+            Assert.Equal(blockName, dialogueBlock.Name);
+            Assert.Equal(boxName, dialogueBlock.AssociatedBox);
+            Assert.Equal(partCount, dialogueBlock.Parts.Length);
         }
 
-        [Fact]
-        public void ParseCallSceneStatement()
+        public static IEnumerable<object[]> GetDialogueBlockTestData()
         {
-            string text = "call_scene @->foo;";
-            var statement = Parsing.ParseStatement(text).Root as CallSceneStatement;
+            yield return new object[]
+            {
+                @"<PRE @box01>
+                [text001]
+                </PRE>",
+                "text001",
+                "box01",
+                0
+            };
 
-            Assert.NotNull(statement);
-            Assert.Equal(SyntaxNodeKind.CallSceneStatement, statement.Kind);
-            Assert.Equal("foo", statement.SceneName);
+            yield return new object[]
+            {
+                @"<PRE box01>
+                [text001]
+                </PRE>",
+                "text001",
+                "box01",
+                0
+            };
+
+            yield return new object[]
+            {
+                @"<PRE @box01>
+                [text001]
+                {}
+                </PRE>",
+                "text001",
+                "box01",
+                1
+            };
         }
 
-        [Fact]
-        public void ParseCallSceneStatementWithFilePath()
+        private static T AssertStatement<T>(string text, SyntaxNodeKind expectedKind) where T : StatementSyntax
         {
-            string text = "call_scene nss/foo.nss->bar;";
-            var statement = Parsing.ParseStatement(text).Root as CallSceneStatement;
-
-            Assert.NotNull(statement);
-            Assert.Equal(SyntaxNodeKind.CallSceneStatement, statement.Kind);
-            Assert.Equal("nss/foo.nss", statement.TargetFile);
-            Assert.Equal("bar", statement.SceneName);
+            var result = Assert.IsType<T>(Parsing.ParseStatement(text).Root);
+            Assert.Equal(expectedKind, result.Kind);
+            return result;
         }
     }
 }

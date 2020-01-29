@@ -10,6 +10,12 @@
         Play,
         Other,
         Start,
-        Stop
+        Stop,
+
+        SetAdditiveBlend,
+        SetReverseSubtractiveBlend,
+        SetMultiplicativeBlend,
+
+        UseLinearFiltering
     }
 }

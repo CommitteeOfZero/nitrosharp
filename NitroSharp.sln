@@ -20,9 +20,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		.editorconfig = .editorconfig
 	EndProjectSection
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NitroSharp.NsScriptCompiler", "src\NitroSharp.NsScriptCompiler\NitroSharp.NsScriptCompiler.csproj", "{DBFC2FD9-F429-4F4D-87D1-5C0E36D9C08E}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NitroSharp.NsScript", "src\NitroSharp.NsScript\NitroSharp.NsScript.csproj", "{DBFC2FD9-F429-4F4D-87D1-5C0E36D9C08E}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NitroSharp.NsScriptCompiler.Tests", "src\NitroSharp.NsScriptCompiler.Tests\NitroSharp.NsScriptCompiler.Tests.csproj", "{A001DA10-D9D6-4399-BC1F-8E3B6B1C7F80}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NitroSharp.NsScript.Tests", "src\NitroSharp.NsScript.Tests\NitroSharp.NsScript.Tests.csproj", "{A001DA10-D9D6-4399-BC1F-8E3B6B1C7F80}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Common", "Common", "{91389274-9E21-4388-A45F-D138E55540F3}"
 	ProjectSection(SolutionItems) = preProject

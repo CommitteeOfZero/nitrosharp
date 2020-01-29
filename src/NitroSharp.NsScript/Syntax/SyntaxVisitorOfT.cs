@@ -17,124 +17,114 @@ namespace NitroSharp.NsScript.Syntax
             }
         }
 
-        private TResult DefaultVisitNode(SyntaxNode node) => default(TResult);
+        private TResult DefaultVisitNode(SyntaxNode node) => default(TResult)!;
 
-        public virtual TResult VisitSourceFile(SourceFile sourceFile)
-        {
-            return DefaultVisitNode(sourceFile);
-        }
+        //public virtual TResult VisitSourceFile(SourceFile sourceFile)
+        //{
+        //    return DefaultVisitNode(sourceFile);
+        //}
 
-        public virtual TResult VisitChapter(Chapter chapter)
+        public virtual TResult VisitChapter(ChapterDeclarationSyntax chapter)
         {
             return DefaultVisitNode(chapter);
         }
 
-        public virtual TResult VisitScene(Scene scene)
+        public virtual TResult VisitScene(SceneDeclarationSyntax scene)
         {
             return DefaultVisitNode(scene);
         }
 
-        public virtual TResult VisitFunction(Function function)
+        public virtual TResult VisitFunction(FunctionDeclarationSyntax function)
         {
             return DefaultVisitNode(function);
         }
 
-        public virtual TResult VisitParameter(Parameter parameter)
+        public virtual TResult VisitParameter(ParameterSyntax parameter)
         {
             return DefaultVisitNode(parameter);
         }
 
-        public virtual TResult VisitBlock(Block block)
+        public virtual TResult VisitBlock(BlockSyntax block)
         {
             return DefaultVisitNode(block);
         }
 
-        public virtual TResult VisitExpressionStatement(ExpressionStatement expressionStatement)
+        public virtual TResult VisitExpressionStatement(ExpressionStatementSyntax expressionStatement)
         {
             return DefaultVisitNode(expressionStatement);
         }
 
-        public virtual TResult VisitLiteral(Literal literal)
+        public virtual TResult VisitLiteral(LiteralExpressionSyntax literal)
         {
             return DefaultVisitNode(literal);
         }
 
-        public virtual TResult VisitIdentifier(Identifier identifier)
-        {
-            return DefaultVisitNode(identifier);
-        }
-
-        public virtual TResult VisitUnaryExpression(UnaryExpression unaryExpression)
+        public virtual TResult VisitUnaryExpression(UnaryExpressionSyntax unaryExpression)
         {
             return DefaultVisitNode(unaryExpression);
         }
 
-        public virtual TResult VisitBinaryExpression(BinaryExpression binaryExpression)
+        public virtual TResult VisitBinaryExpression(BinaryExpressionSyntax binaryExpression)
         {
             return DefaultVisitNode(binaryExpression);
         }
 
-        public virtual TResult VisitAssignmentExpression(AssignmentExpression assignmentExpression)
+        public virtual TResult VisitAssignmentExpression(AssignmentExpressionSyntax assignmentExpression)
         {
             return DefaultVisitNode(assignmentExpression);
         }
 
-        public virtual TResult VisitDeltaExpression(DeltaExpression deltaExpression)
-        {
-            return DefaultVisitNode(deltaExpression);
-        }
-
-        public virtual TResult VisitFunctionCall(FunctionCall functionCall)
+        public virtual TResult VisitFunctionCall(FunctionCallExpressionSyntax functionCall)
         {
             return DefaultVisitNode(functionCall);
         }
 
-        public virtual TResult VisitIfStatement(IfStatement ifStatement)
+        public virtual TResult VisitIfStatement(IfStatementSyntax ifStatement)
         {
             return DefaultVisitNode(ifStatement);
         }
 
-        public virtual TResult VisitBreakStatement(BreakStatement breakStatement)
+        public virtual TResult VisitBreakStatement(BreakStatementSyntax breakStatement)
         {
             return DefaultVisitNode(breakStatement);
         }
 
-        public virtual TResult VisitWhileStatement(WhileStatement whileStatement)
+        public virtual TResult VisitWhileStatement(WhileStatementSyntax whileStatement)
         {
             return DefaultVisitNode(whileStatement);
         }
 
-        public virtual TResult VisitReturnStatement(ReturnStatement returnStatement)
+        public virtual TResult VisitReturnStatement(ReturnStatementSyntax returnStatement)
         {
             return DefaultVisitNode(returnStatement);
         }
 
-        public virtual TResult VisitSelectStatement(SelectStatement selectStatement)
+        public virtual TResult VisitSelectStatement(SelectStatementSyntax selectStatement)
         {
             return DefaultVisitNode(selectStatement);
         }
 
-        public virtual TResult VisitSelectSection(SelectSection selectSection)
+        public virtual TResult VisitSelectSection(SelectSectionSyntax selectSection)
         {
             return DefaultVisitNode(selectSection);
         }
 
-        public TResult VisitCallSceneStatement(CallSceneStatement callSceneStatement)
-        {
-            return DefaultVisitNode(callSceneStatement);
-        }
+        //public TResult VisitCallSceneStatement(CallSceneStatement callSceneStatement)
+        //{
+        //    return DefaultVisitNode(callSceneStatement);
+        //}
 
-        public TResult VisitCallChapterStatement(CallChapterStatement callChapterStatement)
-        {
-            return DefaultVisitNode(callChapterStatement);
-        }
+        //public TResult VisitCallChapterStatement(CallChapterStatement callChapterStatement)
+        //{
+        //    return DefaultVisitNode(callChapterStatement);
+        //}
 
         public virtual TResult VisitPXmlString(PXmlString pxmlString)
         {
             return DefaultVisitNode(pxmlString);
         }
 
-        public virtual TResult VisitDialogueBlock(DialogueBlock dialogueBlock)
+        public virtual TResult VisitDialogueBlock(DialogueBlockSyntax dialogueBlock)
         {
             return DefaultVisitNode(dialogueBlock);
         }

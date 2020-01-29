@@ -1,35 +1,41 @@
-﻿using NitroSharp.NsScript.Symbols;
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
+using NitroSharp.NsScript.Text;
 
 namespace NitroSharp.NsScript.Syntax
 {
-    public abstract class Declaration : Statement
+    public abstract class SubroutineDeclarationSyntax : SyntaxNode
     {
-        protected Declaration(Identifier name)
+        protected SubroutineDeclarationSyntax(Spanned<string> name, BlockSyntax body,
+            ImmutableArray<DialogueBlockSyntax> dialogueBlocks, TextSpan span) : base(span)
         {
-            Identifier = name;
-        }
-
-        public Identifier Identifier { get; }
-    }
-
-    public abstract class MemberDeclaration : Declaration
-    {
-        protected MemberDeclaration(Identifier name, Block body) : base(name)
-        {
+            Name = name;
             Body = body;
+            DialogueBlocks = dialogueBlocks;
         }
 
-        public Block Body { get; }
+        public Spanned<string> Name { get; }
+        public BlockSyntax Body { get; }
+        public ImmutableArray<DialogueBlockSyntax> DialogueBlocks { get; }
+
+        public override SyntaxNode? GetNodeSlot(int index)
+        {
+            switch (index)
+            {
+                case 0: return Body;
+                default: return null;
+            }
+        }
     }
 
-    public sealed class Chapter : MemberDeclaration
+    public sealed class ChapterDeclarationSyntax : SubroutineDeclarationSyntax
     {
-        internal Chapter(Identifier name, Block body) : base(name, body) { }
+        internal ChapterDeclarationSyntax(Spanned<string> name, BlockSyntax body,
+            ImmutableArray<DialogueBlockSyntax> dialogueBlocks, TextSpan span)
+            : base(name, body, dialogueBlocks, span)
+        {
+        }
 
-        public override SyntaxNodeKind Kind => SyntaxNodeKind.Chapter;
-
-        public ChapterSymbol ChapterSymbol => (ChapterSymbol)Symbol;
+        public override SyntaxNodeKind Kind => SyntaxNodeKind.ChapterDeclaration;
 
         public override void Accept(SyntaxVisitor visitor)
         {
@@ -42,13 +48,15 @@ namespace NitroSharp.NsScript.Syntax
         }
     }
 
-    public sealed class Scene : MemberDeclaration
+    public sealed class SceneDeclarationSyntax : SubroutineDeclarationSyntax
     {
-        internal Scene(Identifier name, Block body) : base(name, body) { }
+        internal SceneDeclarationSyntax(Spanned<string> name, BlockSyntax body,
+            ImmutableArray<DialogueBlockSyntax> dialogueBlocks, TextSpan span)
+            : base(name, body, dialogueBlocks, span)
+        {
+        }
 
-        public override SyntaxNodeKind Kind => SyntaxNodeKind.Scene;
-
-        public SceneSymbol SceneSymbol => (SceneSymbol)Symbol;
+        public override SyntaxNodeKind Kind => SyntaxNodeKind.SceneDeclaration;
 
         public override void Accept(SyntaxVisitor visitor)
         {
@@ -61,18 +69,18 @@ namespace NitroSharp.NsScript.Syntax
         }
     }
 
-    public sealed class Function : MemberDeclaration
+    public sealed class FunctionDeclarationSyntax : SubroutineDeclarationSyntax
     {
-        internal Function(Identifier name, ImmutableArray<Parameter> parameters, Block body)
-            : base(name, body)
+        internal FunctionDeclarationSyntax(
+            Spanned<string> name, ImmutableArray<ParameterSyntax> parameters,
+            BlockSyntax body, ImmutableArray<DialogueBlockSyntax> dialogueBlocks,
+            TextSpan span) : base(name, body, dialogueBlocks, span)
         {
             Parameters = parameters;
         }
 
-        public ImmutableArray<Parameter> Parameters { get; }
-        public override SyntaxNodeKind Kind => SyntaxNodeKind.Function;
-
-        public FunctionSymbol FunctionSymbol => (FunctionSymbol)Symbol;
+        public ImmutableArray<ParameterSyntax> Parameters { get; }
+        public override SyntaxNodeKind Kind => SyntaxNodeKind.FunctionDeclaration;
 
         public override void Accept(SyntaxVisitor visitor)
         {
@@ -85,12 +93,15 @@ namespace NitroSharp.NsScript.Syntax
         }
     }
 
-    public sealed class Parameter : Declaration
+    public sealed class ParameterSyntax : SyntaxNode
     {
-        internal Parameter(Identifier name) : base(name) { }
+        internal ParameterSyntax(string name, TextSpan span) : base(span)
+        {
+            Name = name;
+        }
 
+        public string Name { get; }
         public override SyntaxNodeKind Kind => SyntaxNodeKind.Parameter;
-        public ParameterSymbol ParameterSymbol => (ParameterSymbol)Symbol;
 
         public override void Accept(SyntaxVisitor visitor)
         {
@@ -103,17 +114,22 @@ namespace NitroSharp.NsScript.Syntax
         }
     }
 
-    /// <summary>
-    /// Also known as a &lt;PRE&gt; element.
-    /// </summary>
-    public sealed class DialogueBlock : MemberDeclaration
+    public sealed class DialogueBlockSyntax : StatementSyntax
     {
-        internal DialogueBlock(Identifier name, string associatedBox, Block body) : base(name, body)
+        internal DialogueBlockSyntax(
+            string name, string associatedBox,
+            ImmutableArray<StatementSyntax> parts,
+            TextSpan span) : base(span)
         {
+            Name = name;
             AssociatedBox = associatedBox;
+            Parts = parts;
         }
 
+        public string Name { get; }
         public string AssociatedBox { get; }
+        public ImmutableArray<StatementSyntax> Parts { get; }
+
         public override SyntaxNodeKind Kind => SyntaxNodeKind.DialogueBlock;
 
         public override void Accept(SyntaxVisitor visitor)

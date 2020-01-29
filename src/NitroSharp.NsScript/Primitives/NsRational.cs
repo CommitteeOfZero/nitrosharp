@@ -1,6 +1,6 @@
 ﻿namespace NitroSharp.NsScript
 {
-    public struct NsRational
+    public readonly struct NsRational
     {
         public NsRational(float numerator, float denominator)
         {
@@ -17,7 +17,8 @@
             return new NsRational(newNumerator, newBase);
         }
 
-        public static implicit operator float(NsRational rational) => rational.Numerator / rational.Denominator;
+        public static implicit operator float(NsRational rational)
+            => rational.Numerator / rational.Denominator;
 
         public override string ToString()
         {

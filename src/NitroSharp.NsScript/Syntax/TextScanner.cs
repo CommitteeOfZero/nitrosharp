@@ -1,6 +1,6 @@
 ﻿using NitroSharp.NsScript.Text;
 using System;
-using System.IO;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
 namespace NitroSharp.NsScript.Syntax
@@ -11,68 +11,69 @@ namespace NitroSharp.NsScript.Syntax
         protected const char EofCharacter = char.MaxValue;
 
         private readonly string _text;
+        private int _position;
+        private int _lexemeStart;
 
         protected TextScanner(string text)
         {
-            _text = text ?? throw new ArgumentNullException(nameof(text));
+            _text = text;
         }
 
-        protected int Position { get; private set; }
-        protected int LexemeStart { get; private set; }
+        public string Text => _text;
+        protected int Position => _position;
+        protected int LexemeStart => _lexemeStart;
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected void SetPosition(int position)
         {
-            if (position >= _text.Length || position < 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(position));
-            }
-
-            Position = position;
+            Debug.Assert(position <= _text.Length && position >= 0);
+            _position = position;
         }
 
         /// <summary>
         /// Marks the current position as the start of a lexeme.
         /// </summary>
-        protected void StartScanning() => LexemeStart = Position;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        protected void StartScanning() => _lexemeStart = _position;
 
-        /// <summary>
-        /// Gets the current lexeme, which is the characters between the LexemeStart marker and the current position.
-        /// </summary>
-        protected string GetCurrentLexeme()
-        {
-            return CurrentLexemeLength > 0 ? _text.Substring(LexemeStart, Position - LexemeStart) : string.Empty;
-        }
+        protected TextSpan CurrentLexemeSpan =>
+            new TextSpan(start: _lexemeStart, length: _position - _lexemeStart);
 
-        protected TextSpan CurrentLexemeSpan => new TextSpan(LexemeStart, Position - LexemeStart);
         protected TextSpan CurrentSpanStart => new TextSpan(CurrentLexemeSpan.Start, 0);
 
-        private int CurrentLexemeLength => Position - LexemeStart;
-
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected char PeekChar() => PeekChar(0);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected char PeekChar(int offset)
         {
-            if (Position + offset >= _text.Length)
+            if (_position + offset >= _text.Length)
             {
                 return EofCharacter;
             }
 
-            return _text[Position + offset];
+            return _text[_position + offset];
         }
 
-        protected void AdvanceChar() => Position++;
-        protected void AdvanceChar(int n) => Position += n;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        protected void AdvanceChar() => _position++;
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        protected void AdvanceChar(int n) => _position += n;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected void EatChar(char c)
         {
             char actualCharacter = PeekChar();
             if (actualCharacter != c)
             {
-                throw new InvalidDataException();
+                Debug.Fail($"Error while scanning source text. Expected: '{c}', found: '{actualCharacter}'.");
             }
 
             AdvanceChar();
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected bool TryEatChar(char c)
         {
             char actualCharacter = PeekChar();

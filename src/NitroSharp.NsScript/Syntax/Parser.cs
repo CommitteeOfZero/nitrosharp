@@ -1,99 +1,141 @@
 ﻿using NitroSharp.NsScript.Text;
+using NitroSharp.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
+using System.Globalization;
+using System.Runtime.CompilerServices;
 
 namespace NitroSharp.NsScript.Syntax
 {
     internal sealed class Parser
     {
         private readonly Lexer _lexer;
-        private IReadOnlyList<SyntaxToken> _tokens;
+        private readonly SyntaxToken[] _tokens;
         private int _tokenOffset;
 
-        // Used to differentiate between string literals and quoted identifiers (aka string parameter references).
-        // Normally, a parser should not keep track of something like that, but this is NSS.
-        private readonly Dictionary<string, Parameter> _currentParameterList;
+        // It's not always possible for the lexer to tell whether something is a string literal or an identifier,
+        // since some identifiers (more specifically, parameter names and parameter references) in NSS can also
+        // be enclosed in quotes. In such cases, the lexer outputs a StringLiteralOrQuotedIdentifier token and
+        // lets the parser decide whether it's a string literal or an identifier. In order to do that, the parser
+        // needs to keep track of the parameters that can be referenced in the current scope.
+        //
+        // Example:
+        // function foo("stringParameter1", "stringParameter2") {
+        //                     ↑                   ↑
+        //     $bar = "stringParameter1" + "stringParameter2";
+        // }             <identifier>         <identifier>
+        private readonly Dictionary<string, ParameterSyntax> _parameterMap;
 
+        private readonly StringInternTable _internTable;
         private readonly DiagnosticBuilder _diagnostics;
+
+        private readonly ImmutableArray<ParameterSyntax>.Builder _parameters;
+        private readonly ImmutableArray<DialogueBlockSyntax>.Builder _dialogueBlocks;
 
         public Parser(Lexer lexer)
         {
             _lexer = lexer;
             _diagnostics = new DiagnosticBuilder();
+            _internTable = new StringInternTable();
             _tokens = Lex();
-            _currentParameterList = new Dictionary<string, Parameter>();
+            _parameterMap = new Dictionary<string, ParameterSyntax>();
+            _parameters = ImmutableArray.CreateBuilder<ParameterSyntax>();
+            _dialogueBlocks = ImmutableArray.CreateBuilder<DialogueBlockSyntax>();
+            if (_tokens.Length > 0)
+            {
+                CurrentToken = _tokens[0];
+            }
         }
 
         private SyntaxToken PeekToken(int n) => _tokens[_tokenOffset + n];
-        private SyntaxToken CurrentToken => _tokens[_tokenOffset];
-        private SyntaxToken PreviousToken => PeekToken(-1);
+        private SyntaxToken CurrentToken;
+
         private SourceText SourceText => _lexer.SourceText;
 
         internal DiagnosticBuilder DiagnosticBuilder => _diagnostics;
 
-        private IReadOnlyList<SyntaxToken> Lex()
+        private SyntaxToken[] Lex()
         {
-            int capacity = Math.Min(4096, Math.Max(32, SourceText.Source.Length / 2));
-            var tokens = new List<SyntaxToken>(capacity);
-            SyntaxToken token = null;
+            int capacity = Math.Max(32, SourceText.Source.Length / 6);
+            var tokens = new ArrayBuilder<SyntaxToken>(capacity);
+            ref SyntaxToken token = ref tokens.Add();
             do
             {
-                token = _lexer.Lex();
-                tokens.Add(token);
-
-                if (token.HasDiagnostics)
-                {
-                    _diagnostics.Add(token.Diagnostic);
-                }
-
+                _lexer.Lex(ref token);
                 if (token.Kind == SyntaxTokenKind.EndOfFileToken)
                 {
                     break;
                 }
 
+                token = ref tokens.Add();
+
             } while (token.Kind != SyntaxTokenKind.EndOfFileToken);
 
-            return tokens;
+            return tokens.UnderlyingArray;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private SyntaxToken EatToken()
         {
-            var ct = CurrentToken;
-            _tokenOffset++;
+            SyntaxToken ct = CurrentToken;
+            CurrentToken = _tokens[++_tokenOffset];
             return ct;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private SyntaxToken EatToken(SyntaxTokenKind expectedKind)
         {
-            var ct = CurrentToken;
+            SyntaxToken ct = CurrentToken;
             if (ct.Kind != expectedKind)
             {
                 return CreateMissingToken(expectedKind, ct.Kind);
             }
 
-            _tokenOffset++;
+            CurrentToken = _tokens[++_tokenOffset];
             return ct;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private string GetText(in SyntaxToken token)
+            => SourceText.GetText(token.TextSpan);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private string GetValueText(in SyntaxToken token)
+            => SourceText.GetText(token.GetValueSpan());
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private string InternValueText(in SyntaxToken token)
+            => _internTable.Add(SourceText.GetCharacterSpan(token.GetValueSpan()));
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
         private SyntaxToken CreateMissingToken(SyntaxTokenKind expected, SyntaxTokenKind actual)
         {
             TokenExpected(expected, actual);
-
-            var span = GetSpanForMissingToken();
-            return SyntaxToken.Missing(expected, span);
+            TextSpan span = GetSpanForMissingToken();
+            return new SyntaxToken(SyntaxTokenKind.MissingToken, span, SyntaxTokenFlags.Empty);
         }
 
+        [MethodImpl(MethodImplOptions.NoInlining)]
         private void EatTokens(int count)
         {
             _tokenOffset += count;
+            CurrentToken = _tokens[_tokenOffset];
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private TextSpan SpanFrom(SyntaxNode firstNode)
+            => TextSpan.FromBounds(firstNode.Span.Start, CurrentToken.TextSpan.Start);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private TextSpan SpanFrom(in SyntaxToken firstToken)
+            => TextSpan.FromBounds(firstToken.TextSpan.Start, CurrentToken.TextSpan.Start);
 
         private void EatStrayToken()
         {
-            var token = PeekToken(0);
-            Report(DiagnosticId.StrayToken, token.Text);
+            SyntaxToken token = PeekToken(0);
+            Report(DiagnosticId.StrayToken, GetText(token));
             EatToken();
         }
 
@@ -114,21 +156,23 @@ namespace NitroSharp.NsScript.Syntax
             }
         }
 
-        public SourceFile ParseSourceFile()
+        public SourceFileRootSyntax ParseSourceFile()
         {
-            var fileReferences = ImmutableArray.CreateBuilder<SourceFileReference>();
+            var fileReferences = ImmutableArray.CreateBuilder<Spanned<string>>();
+            (uint chapterCount, uint sceneCount, uint functionCount) subroutineCounts = default;
             SyntaxTokenKind tk;
-            while ((tk = CurrentToken.Kind) != SyntaxTokenKind.EndOfFileToken && !SyntaxFacts.CanStartDeclaration(tk))
+            while ((tk = CurrentToken.Kind) != SyntaxTokenKind.EndOfFileToken
+                   && !SyntaxFacts.CanStartDeclaration(tk))
             {
                 switch (CurrentToken.Kind)
                 {
                     case SyntaxTokenKind.IncludeDirective:
                         EatToken();
-                        var filePath = EatToken(SyntaxTokenKind.StringLiteralToken);
-                        fileReferences.Add(new SourceFileReference((string)filePath.Value));
+                        SyntaxToken filePath = EatToken(SyntaxTokenKind.StringLiteralOrQuotedIdentifier);
+                        fileReferences.Add(new Spanned<string>(GetValueText(filePath), filePath.TextSpan));
                         break;
 
-                    case SyntaxTokenKind.SemicolonToken:
+                    case SyntaxTokenKind.Semicolon:
                         Report(DiagnosticId.MisplacedSemicolon);
                         EatToken();
                         break;
@@ -139,100 +183,112 @@ namespace NitroSharp.NsScript.Syntax
                 }
             }
 
-            var members = ImmutableArray.CreateBuilder<MemberDeclaration>();
+            var subrotuines = ImmutableArray.CreateBuilder<SubroutineDeclarationSyntax>();
             while (CurrentToken.Kind != SyntaxTokenKind.EndOfFileToken)
             {
+                _dialogueBlocks.Clear();
                 switch (CurrentToken.Kind)
                 {
                     case SyntaxTokenKind.ChapterKeyword:
+                        subrotuines.Add(ParseChapterDeclaration());
+                        subroutineCounts.chapterCount++;
+                        break;
                     case SyntaxTokenKind.SceneKeyword:
+                        subrotuines.Add(ParseSceneDeclaration());
+                        subroutineCounts.sceneCount++;
+                        break;
                     case SyntaxTokenKind.FunctionKeyword:
-                        members.Add(ParseMemberDeclaration());
+                        subrotuines.Add(ParseFunctionDeclaration());
+                        subroutineCounts.functionCount++;
                         break;
 
                     // Lines starting with a '.' are treated as comments.
-                    case SyntaxTokenKind.DotToken:
+                    case SyntaxTokenKind.Dot:
                         SkipToNextLine();
                         break;
 
+                    case SyntaxTokenKind.EndOfFileToken:
+                        break;
+
                     default:
-                        Report(DiagnosticId.ExpectedMemberDeclaration, CurrentToken.Text);
+                        Report(DiagnosticId.ExpectedSubroutineDeclaration, GetText(CurrentToken));
                         SkipToNextLine();
                         break;
                 }
             }
 
-            return new SourceFile(members.ToImmutable(), fileReferences.ToImmutable());
+            var span = new TextSpan(0, SourceText.Length);
+            return new SourceFileRootSyntax(
+                subrotuines.ToImmutable(), fileReferences.ToImmutable(), subroutineCounts, span);
         }
 
-        public MemberDeclaration ParseMemberDeclaration()
+        public SubroutineDeclarationSyntax ParseSubroutineDeclaration()
         {
+            _dialogueBlocks.Clear();
             switch (CurrentToken.Kind)
             {
                 case SyntaxTokenKind.ChapterKeyword:
-                    return ParseChapter();
-
+                    return ParseChapterDeclaration();
                 case SyntaxTokenKind.SceneKeyword:
-                    return ParseScene();
-
+                    return ParseSceneDeclaration();
                 case SyntaxTokenKind.FunctionKeyword:
-                    _currentParameterList.Clear();
-                    return ParseFunction();
+                    _parameterMap.Clear();
+                    return ParseFunctionDeclaration();
 
                 default:
                     throw new InvalidOperationException($"{CurrentToken.Kind} cannot start a declaration.");
             }
         }
 
-        private Chapter ParseChapter()
+        private ChapterDeclarationSyntax ParseChapterDeclaration()
         {
-            EatToken(SyntaxTokenKind.ChapterKeyword);
-            var name = ParseIdentifier();
-            var body = ParseBlock();
-
-            return new Chapter(name, body);
+            SyntaxToken keyword = EatToken(SyntaxTokenKind.ChapterKeyword);
+            Spanned<string> name = ParseIdentifier();
+            BlockSyntax body = ParseBlock();
+            ImmutableArray<DialogueBlockSyntax> dialogueBlocks = _dialogueBlocks.ToImmutable();
+            return new ChapterDeclarationSyntax(name, body, dialogueBlocks, SpanFrom(keyword));
         }
 
-        private Scene ParseScene()
+        private SceneDeclarationSyntax ParseSceneDeclaration()
         {
-            EatToken(SyntaxTokenKind.SceneKeyword);
-            var name = ParseIdentifier();
-            var body = ParseBlock();
-
-            return new Scene(name, body);
+            SyntaxToken keyword = EatToken(SyntaxTokenKind.SceneKeyword);
+            Spanned<string> name = ParseIdentifier();
+            BlockSyntax body = ParseBlock();
+            ImmutableArray<DialogueBlockSyntax> dialogueBlocks = _dialogueBlocks.ToImmutable();
+            return new SceneDeclarationSyntax(name, body, dialogueBlocks, SpanFrom(keyword));
         }
 
-        private Function ParseFunction()
+        private FunctionDeclarationSyntax ParseFunctionDeclaration()
         {
-            EatToken(SyntaxTokenKind.FunctionKeyword);
-            var name = ParseIdentifier();
-            var parameters = ParseParameterList();
+            SyntaxToken keyword = EatToken(SyntaxTokenKind.FunctionKeyword);
+            Spanned<string> name = ParseIdentifier();
+            ImmutableArray<ParameterSyntax> parameters = ParseParameterList();
 
-            foreach (var param in parameters)
-            {
-                _currentParameterList[param.Identifier.Name] = param;
-            }
-
-            var body = ParseBlock();
-            return new Function(name, parameters, body);
+            BlockSyntax body = ParseBlock();
+            ImmutableArray<DialogueBlockSyntax> dialogueBlocks = _dialogueBlocks.ToImmutable();
+            return new FunctionDeclarationSyntax(
+                name, parameters, body, dialogueBlocks, SpanFrom(keyword));
         }
 
-        private ImmutableArray<Parameter> ParseParameterList()
+        private ImmutableArray<ParameterSyntax> ParseParameterList()
         {
-            EatToken(SyntaxTokenKind.OpenParenToken);
+            EatToken(SyntaxTokenKind.OpenParen);
 
-            var parameters = ImmutableArray.CreateBuilder<Parameter>();
-            while (CurrentToken.Kind != SyntaxTokenKind.CloseParenToken && CurrentToken.Kind != SyntaxTokenKind.EndOfFileToken)
+            _parameters.Clear();
+            while (CurrentToken.Kind != SyntaxTokenKind.CloseParen
+                && CurrentToken.Kind != SyntaxTokenKind.EndOfFileToken)
             {
                 switch (CurrentToken.Kind)
                 {
-                    case SyntaxTokenKind.IdentifierToken:
-                    case SyntaxTokenKind.StringLiteralToken:
-                        var p = new Parameter(ParseIdentifier());
-                        parameters.Add(p);
+                    case SyntaxTokenKind.Identifier:
+                    case SyntaxTokenKind.StringLiteralOrQuotedIdentifier:
+                        Spanned<string> identifier = ParseIdentifier();
+                        var parameter = new ParameterSyntax(identifier.Value, identifier.Span);
+                        _parameters.Add(parameter);
+                        _parameterMap[parameter.Name] = parameter;
                         break;
 
-                    case SyntaxTokenKind.CommaToken:
+                    case SyntaxTokenKind.Comma:
                         EatToken();
                         break;
 
@@ -242,107 +298,98 @@ namespace NitroSharp.NsScript.Syntax
                 }
             }
 
-            EatToken(SyntaxTokenKind.CloseParenToken);
-            return parameters.ToImmutable();
+            EatToken(SyntaxTokenKind.CloseParen);
+            return _parameters.ToImmutable();
         }
 
-        private Block ParseBlock()
+        private BlockSyntax ParseBlock()
         {
-            EatToken(SyntaxTokenKind.OpenBraceToken);
-            var statements = ParseStatements();
-            EatToken(SyntaxTokenKind.CloseBraceToken);
-
-            return new Block(statements);
+            SyntaxToken openBrace = EatToken(SyntaxTokenKind.OpenBrace);
+            ImmutableArray<StatementSyntax> statements = ParseStatements();
+            EatToken(SyntaxTokenKind.CloseBrace);
+            return new BlockSyntax(statements, SpanFrom(openBrace));
         }
 
-        private ImmutableArray<Statement> ParseStatements()
+        private ImmutableArray<StatementSyntax> ParseStatements()
         {
-            var statements = ImmutableArray.CreateBuilder<Statement>();
-            while (CurrentToken.Kind != SyntaxTokenKind.CloseBraceToken)
+            var statements = ImmutableArray.CreateBuilder<StatementSyntax>();
+            SyntaxTokenKind tk;
+            while ((tk = CurrentToken.Kind) != SyntaxTokenKind.CloseBrace
+                   && tk != SyntaxTokenKind.EndOfFileToken)
             {
-                var statement = ParseStatement();
+                StatementSyntax? statement = ParseStatement();
                 if (statement != null)
                 {
                     statements.Add(statement);
+                    if (statement.Kind == SyntaxNodeKind.DialogueBlock)
+                    {
+                        _dialogueBlocks.Add((DialogueBlockSyntax)statement);
+                    }
                 }
             }
 
             return statements.ToImmutable();
         }
 
-        internal Statement ParseStatement()
+        internal StatementSyntax? ParseStatement()
         {
-            Statement statement = null;
-            while (statement == null)
+            StatementSyntax? statement;
+            do
             {
-                try
+                statement = ParseStatementCore();
+                if (statement != null) { break; }
+                SyntaxTokenKind tk = CurrentToken.Kind;
+                if (tk == SyntaxTokenKind.EndOfFileToken || tk == SyntaxTokenKind.CloseBrace)
                 {
-                    statement = ParseStatementCore();
+                    return null;
                 }
-                catch (ParseError)
-                {
-                    var tk = CurrentToken.Kind;
-                    if (tk == SyntaxTokenKind.EndOfFileToken || tk == SyntaxTokenKind.CloseBraceToken)
-                    {
-                        return null;
-                    }
-                }
-            }
+            } while (true);
 
             return statement;
         }
 
-        private Statement ParseStatementCore()
+        private StatementSyntax? ParseStatementCore()
         {
             switch (CurrentToken.Kind)
             {
-                case SyntaxTokenKind.OpenBraceToken:
+                case SyntaxTokenKind.OpenBrace:
                     return ParseBlock();
-
                 case SyntaxTokenKind.IfKeyword:
                     return ParseIfStatement();
-
                 case SyntaxTokenKind.BreakKeyword:
                     return ParseBreakStatement();
-
                 case SyntaxTokenKind.WhileKeyword:
                     return ParseWhileStatement();
-
                 case SyntaxTokenKind.ReturnKeyword:
                     return ParseReturnStatement();
-
                 case SyntaxTokenKind.SelectKeyword:
                     return ParseSelectStatement();
-
                 case SyntaxTokenKind.CaseKeyword:
                     return ParseSelectSection();
-
                 case SyntaxTokenKind.CallChapterKeyword:
                     return ParseCallChapterStatement();
-
                 case SyntaxTokenKind.CallSceneKeyword:
                     return ParseCallSceneStatement();
-
                 case SyntaxTokenKind.DialogueBlockStartTag:
                     return ParseDialogueBlock();
-
                 case SyntaxTokenKind.PXmlString:
-                    return new PXmlString(EatToken().Text);
-
+                    SyntaxToken token = EatToken();
+                    return new PXmlString(GetText(token), token.TextSpan);
                 case SyntaxTokenKind.PXmlLineSeparator:
-                    EatToken();
-                    return new PXmlLineSeparator();
-
-                case SyntaxTokenKind.LessThanToken:
-                    HandleStrayPXmlElement();
+                    token = EatToken();
+                    return new PXmlLineSeparator(token.TextSpan);
+                case SyntaxTokenKind.LessThan:
+                    if (SkipStrayPXmlElementIfApplicable())
+                    {
+                        return null;
+                    }
                     goto default;
-
-                case SyntaxTokenKind.DotToken:
+                case SyntaxTokenKind.Dot:
                     SkipToNextLine();
-                    throw new ParseError();
+                    return null;
 
-                case SyntaxTokenKind.IdentifierToken:
-                case SyntaxTokenKind.StringLiteralToken:
+                case SyntaxTokenKind.Identifier:
+                case SyntaxTokenKind.StringLiteralOrQuotedIdentifier:
                     if (IsArgumentListOrSemicolon())
                     {
                         return ParseFunctionCallWithOmittedParentheses();
@@ -354,21 +401,19 @@ namespace NitroSharp.NsScript.Syntax
             }
         }
 
-        // Checks if the current line is a stray PXml element.
-        // In case it is one, reports an error, skips the current line and throws a ParseError.
-        private void HandleStrayPXmlElement()
+        private bool SkipStrayPXmlElementIfApplicable()
         {
-            Debug.Assert(CurrentToken.Kind == SyntaxTokenKind.LessThanToken);
+            Debug.Assert(CurrentToken.Kind == SyntaxTokenKind.LessThan);
             int currentLine = GetLineNumber();
 
             int n = 0;
-            SyntaxToken token = null;
+            SyntaxToken token;
             // Look for the closing '>'
-            while ((token = PeekToken(n)).Kind != SyntaxTokenKind.GreaterThanToken)
+            while ((token = PeekToken(n)).Kind != SyntaxTokenKind.GreaterThan)
             {
                 if (token.Kind == SyntaxTokenKind.EndOfFileToken)
                 {
-                    return;
+                    return false;
                 }
 
                 n++;
@@ -377,38 +422,39 @@ namespace NitroSharp.NsScript.Syntax
             // Check if the current line ends with the '>' character that we found
             if (GetLineNumber(PeekToken(n + 1)) != currentLine)
             {
-                Report(DiagnosticId.StrayPXmlElement, SourceText.Lines[currentLine].Span);
+                Report(DiagnosticId.StrayPXmlElement, SourceText.Lines[currentLine]);
                 EatTokens(n + 1); // skip to the next line
-                throw new ParseError();
+                return true;
             }
+
+            return false;
         }
 
-        private ExpressionStatement ParseExpressionStatement()
+        private ExpressionStatementSyntax? ParseExpressionStatement()
         {
-            var start = CurrentToken.Span.Start;
-            var expr = ParseExpression();
-            var end = PreviousToken.Span.End;
+            ExpressionSyntax? expr = ParseExpression();
+            if (expr == null) { return null; }
 
             if (!SyntaxFacts.IsStatementExpression(expr))
             {
-                var diagnosticSpan = new TextSpan(start, end - start);
-                Report(DiagnosticId.InvalidExpressionStatement, diagnosticSpan);
+                Report(DiagnosticId.InvalidExpressionStatement, expr.Span);
                 EatStatementTerminator();
-                throw new ParseError();
+                return null;
             }
 
             EatStatementTerminator();
-            return new ExpressionStatement(expr);
+            return new ExpressionStatementSyntax(expr, SpanFrom(expr));
         }
 
-        private ExpressionStatement ParseFunctionCallWithOmittedParentheses()
+        private ExpressionStatementSyntax? ParseFunctionCallWithOmittedParentheses()
         {
-            var call = ParseFunctionCall();
+            FunctionCallExpressionSyntax? call = ParseFunctionCall();
+            if (call == null) { return null; }
             EatStatementTerminator();
-            return new ExpressionStatement(call);
+            return new ExpressionStatementSyntax(call, SpanFrom(call));
         }
 
-        internal Expression ParseExpression()
+        internal ExpressionSyntax? ParseExpression()
         {
             return ParseSubExpression(Precedence.Expression);
         }
@@ -453,36 +499,43 @@ namespace NitroSharp.NsScript.Syntax
                     return Precedence.Logical;
 
                 default:
-                    throw ExceptionUtils.UnexpectedValue(nameof(operatorKind));
+                    throw ThrowHelper.UnexpectedValue(nameof(operatorKind));
             }
         }
 
-        private Expression ParseSubExpression(Precedence minPrecedence)
+        private ExpressionSyntax? ParseSubExpression(Precedence minPrecedence)
         {
-            Expression leftOperand;
+            ExpressionSyntax? leftOperand;
             Precedence newPrecedence;
 
-            var tk = CurrentToken.Kind;
-            if (SyntaxFacts.TryGetUnaryOperatorKind(tk, out var unaryOperator))
+            SyntaxTokenKind tk = CurrentToken.Kind;
+            TextSpan tkSpan = CurrentToken.TextSpan;
+            if (SyntaxFacts.TryGetUnaryOperatorKind(tk, out UnaryOperatorKind unaryOperator))
             {
                 EatToken();
                 newPrecedence = Precedence.Unary;
-                var operand = ParseSubExpression(newPrecedence);
-                leftOperand = new UnaryExpression(operand, unaryOperator);
+                ExpressionSyntax? operand = ParseSubExpression(newPrecedence);
+                if (operand == null) { return null; }
+                var fullSpan = TextSpan.FromBounds(tkSpan.Start, operand.Span.End);
+                leftOperand = new UnaryExpressionSyntax(
+                    operand, new Spanned<UnaryOperatorKind>(unaryOperator, tkSpan), fullSpan);
             }
             else
             {
                 leftOperand = ParseTerm(minPrecedence);
+                if (leftOperand == null)
+                {
+                    return null;
+                }
             }
 
             while (true)
             {
                 tk = CurrentToken.Kind;
+                tkSpan = CurrentToken.TextSpan;
                 bool binary;
-                BinaryOperatorKind binOpKind = default(BinaryOperatorKind);
-                AssignmentOperatorKind assignOpKind = default(AssignmentOperatorKind);
-
-                if (SyntaxFacts.TryGetBinaryOperatorKind(tk, out binOpKind))
+                AssignmentOperatorKind assignOpKind = default;
+                if (SyntaxFacts.TryGetBinaryOperatorKind(tk, out BinaryOperatorKind binOpKind))
                 {
                     binary = true;
                 }
@@ -503,104 +556,170 @@ namespace NitroSharp.NsScript.Syntax
 
                 EatToken();
 
-                bool hasRightOperand = assignOpKind != AssignmentOperatorKind.Increment && assignOpKind != AssignmentOperatorKind.Decrement;
-                Expression rightOperand = hasRightOperand ? ParseSubExpression(newPrecedence) : leftOperand;
+                bool hasRightOperand = assignOpKind != AssignmentOperatorKind.Increment
+                                       && assignOpKind != AssignmentOperatorKind.Decrement;
+                ExpressionSyntax? rightOperand = hasRightOperand
+                    ? ParseSubExpression(newPrecedence)
+                    : leftOperand;
 
+                if (rightOperand == null)
+                {
+                    return null;
+                }
+
+                var span = TextSpan.FromBounds(tkSpan.Start, rightOperand.Span.End);
                 leftOperand = binary
-                    ? (Expression)new BinaryExpression(leftOperand, binOpKind, rightOperand)
-                    : new AssignmentExpression(leftOperand, assignOpKind, rightOperand);
+                    ? (ExpressionSyntax)new BinaryExpressionSyntax(
+                        leftOperand, new Spanned<BinaryOperatorKind>(binOpKind, tkSpan), rightOperand, span)
+                    : new AssignmentExpressionSyntax(
+                        leftOperand, new Spanned<AssignmentOperatorKind>(assignOpKind, tkSpan), rightOperand, span);
             }
 
             return leftOperand;
         }
 
-        private Expression ParseTerm(Precedence precedence)
+        private ExpressionSyntax? ParseTerm(Precedence precedence)
         {
             switch (CurrentToken.Kind)
             {
-                case SyntaxTokenKind.IdentifierToken:
-                    return IsFunctionCall() ? (Expression)ParseFunctionCall() : ParseIdentifier();
+                case SyntaxTokenKind.Identifier:
+                    return IsFunctionCall()
+                        ? (ExpressionSyntax?)ParseFunctionCall()
+                        : ParseNameExpression();
 
-                case SyntaxTokenKind.StringLiteralToken:
-                    return IsParameter() ? (Expression)ParseIdentifier() : ParseLiteral();
+                case SyntaxTokenKind.StringLiteralOrQuotedIdentifier:
+                    return IsParameter() || (CurrentToken.Flags & SyntaxTokenFlags.HasDollarPrefix) == SyntaxTokenFlags.HasDollarPrefix
+                        ? (ExpressionSyntax)ParseNameExpression()
+                        : ParseLiteral();
 
-                case SyntaxTokenKind.NumericLiteralToken:
+                case SyntaxTokenKind.NumericLiteral:
                 case SyntaxTokenKind.NullKeyword:
                 case SyntaxTokenKind.TrueKeyword:
                 case SyntaxTokenKind.FalseKeyword:
                     return ParseLiteral();
 
-                case SyntaxTokenKind.OpenParenToken:
-                    EatToken(SyntaxTokenKind.OpenParenToken);
-                    var expr = ParseSubExpression(Precedence.Expression);
-                    EatToken(SyntaxTokenKind.CloseParenToken);
+                case SyntaxTokenKind.OpenParen:
+                    SyntaxToken openParen = EatToken(SyntaxTokenKind.OpenParen);
+                    ExpressionSyntax? expr = ParseSubExpression(Precedence.Expression);
+                    if (expr == null) { return null; }
+                    if (CurrentToken.Kind == SyntaxTokenKind.Comma)
+                    {
+                        return ParseBezierExpression(openParen, expr);
+                    }
+                    EatToken(SyntaxTokenKind.CloseParen);
                     return expr;
 
-                case SyntaxTokenKind.AtToken:
-                    return ParseDeltaExpression(precedence);
-
                 default:
-                    Report(DiagnosticId.InvalidExpressionTerm, CurrentToken.Text);
+                    Report(DiagnosticId.InvalidExpressionTerm, GetText(CurrentToken));
                     EatToken();
-                    throw new ParseError();
+                    return null;
             }
         }
 
-        private DeltaExpression ParseDeltaExpression(Precedence precedence)
+        private BezierExpressionSyntax? ParseBezierExpression(in SyntaxToken openParen, ExpressionSyntax x0)
         {
-            EatToken(SyntaxTokenKind.AtToken);
-            var expr = ParseSubExpression(precedence);
-            return new DeltaExpression(expr);
+            var controlPoints = ImmutableArray.CreateBuilder<BezierControlPointSyntax>();
+            EatToken(SyntaxTokenKind.Comma);
+            ExpressionSyntax? y0 = ParseSubExpression(Precedence.Expression);
+            if (y0 != null)
+            {
+                controlPoints.Add(new BezierControlPointSyntax(x0, y0, starting: true));
+            }
+            EatToken(SyntaxTokenKind.CloseParen);
+            while (CurrentToken.Kind != SyntaxTokenKind.EndOfFileToken)
+            {
+                bool? paren = CurrentToken.Kind switch
+                {
+                    SyntaxTokenKind.OpenParen => true,
+                    SyntaxTokenKind.OpenBrace => false,
+                    _ => null
+                };
+                if (paren == null) { break; }
+                BezierControlPointSyntax? cp = parseControlPoint(paren.Value);
+                if (cp == null) { return null; }
+                controlPoints.Add(cp.Value);
+            }
+
+            return new BezierExpressionSyntax(controlPoints.ToImmutable(), SpanFrom(openParen));
+
+            BezierControlPointSyntax? parseControlPoint(bool starting)
+            {
+                (SyntaxTokenKind startTk, SyntaxTokenKind endTk) = starting
+                    ? (SyntaxTokenKind.OpenParen, SyntaxTokenKind.CloseParen)
+                    : (SyntaxTokenKind.OpenBrace, SyntaxTokenKind.CloseBrace);
+                EatToken(startTk);
+                ExpressionSyntax? x = ParseSubExpression(Precedence.Expression);
+                if (x == null) { return null; }
+                EatToken(SyntaxTokenKind.Comma);
+                ExpressionSyntax? y = ParseSubExpression(Precedence.Expression);
+                if (y == null) { return null; }
+                EatToken(endTk);
+                return new BezierControlPointSyntax(x, y, starting);
+            }
         }
 
-        private Literal ParseLiteral()
+        private LiteralExpressionSyntax ParseLiteral()
         {
-            switch (CurrentToken.Kind)
+            SyntaxToken token = EatToken();
+            ConstantValue value;
+            switch (token.Kind)
             {
-                case SyntaxTokenKind.NumericLiteralToken:
-                    var token = (NumericLiteralToken)EatToken();
-                    return new Literal(token.Text, ConstantValue.Create(token.DoubleValue));
+                case SyntaxTokenKind.NumericLiteral:
+                    ReadOnlySpan<char> valueText = SourceText.GetCharacterSpan(token.GetValueSpan());
+                    var numberStyle = token.IsHexTriplet ? NumberStyles.HexNumber : NumberStyles.None;
+                    value = token.IsFloatingPointLiteral
+                        ? ConstantValue.Float(float.Parse(valueText, provider: CultureInfo.InvariantCulture))
+                        : ConstantValue.Integer(int.Parse(valueText, numberStyle));
+                    break;
 
-                case SyntaxTokenKind.StringLiteralToken:
-                    var tk = (StringLiteralToken)EatToken();
-                    return new Literal(tk.StringValue, ConstantValue.Create(tk.StringValue));
+                case SyntaxTokenKind.StringLiteralOrQuotedIdentifier:
+                    string str = InternValueText(token);
+                    value = ConstantValue.String(str);
+                    break;
 
                 case SyntaxTokenKind.NullKeyword:
-                    EatToken();
-                    return Literal.Null;
-
+                    value = ConstantValue.Null;
+                    break;
                 case SyntaxTokenKind.TrueKeyword:
-                    EatToken();
-                    return Literal.True;
-
+                    value = ConstantValue.True;
+                    break;
                 case SyntaxTokenKind.FalseKeyword:
-                    EatToken();
-                    return Literal.False;
+                    value = ConstantValue.False;
+                    break;
 
                 default:
-                    // Should never happen.
-                    throw new InvalidOperationException("Expected a literal.");
+                    ThrowHelper.Unreachable();
+                    return null!;
+            }
+
+            return new LiteralExpressionSyntax(value, token.TextSpan);
+        }
+
+        private Spanned<string> ParseIdentifier()
+        {
+            SyntaxToken token = EatToken();
+            switch (token.Kind)
+            {
+                case SyntaxTokenKind.Identifier:
+                case SyntaxTokenKind.StringLiteralOrQuotedIdentifier:
+                default:
+                    return new Spanned<string>(InternValueText(token), token.TextSpan);
             }
         }
 
-        private Identifier ParseIdentifier(bool isFunctionName = false)
+        private NameExpressionSyntax ParseNameExpression()
         {
-            Debug.Assert(CurrentToken.Kind == SyntaxTokenKind.IdentifierToken || CurrentToken.Kind == SyntaxTokenKind.StringLiteralToken);
+            Debug.Assert(CurrentToken.Kind == SyntaxTokenKind.Identifier
+                      || CurrentToken.Kind == SyntaxTokenKind.StringLiteralOrQuotedIdentifier);
 
-            var token = EatToken();
-            if (token.Kind == SyntaxTokenKind.IdentifierToken)
-            {
-                var idToken = (IdentifierToken)token;
-                return new Identifier(idToken.StringValue, idToken.Sigil, idToken.IsQuoted && !isFunctionName);
-            }
-
-            var literal = (StringLiteralToken)token;
-            return new Identifier(literal.StringValue, SigilKind.None, isQuoted: !isFunctionName);
+            SyntaxToken token = EatToken();
+            var identifier = new Spanned<string>(InternValueText(token), token.TextSpan);
+            return new NameExpressionSyntax(identifier.Value, token.HasSigil, identifier.Span);
         }
 
         private bool IsFunctionCall()
         {
-            return PeekToken(1).Kind == SyntaxTokenKind.OpenParenToken;
+            return PeekToken(1).Kind == SyntaxTokenKind.OpenParen;
         }
 
         private bool IsArgumentListOrSemicolon()
@@ -614,16 +733,16 @@ namespace NitroSharp.NsScript.Syntax
                     case SyntaxTokenKind.NullKeyword:
                     case SyntaxTokenKind.TrueKeyword:
                     case SyntaxTokenKind.FalseKeyword:
-                    case SyntaxTokenKind.IdentifierToken:
-                    case SyntaxTokenKind.StringLiteralToken:
-                    case SyntaxTokenKind.NumericLiteralToken:
-                    case SyntaxTokenKind.CommaToken:
-                    case SyntaxTokenKind.DotToken:
+                    case SyntaxTokenKind.Identifier:
+                    case SyntaxTokenKind.StringLiteralOrQuotedIdentifier:
+                    case SyntaxTokenKind.NumericLiteral:
+                    case SyntaxTokenKind.Comma:
+                    case SyntaxTokenKind.Dot:
                         n++;
                         break;
 
-                    case SyntaxTokenKind.SemicolonToken:
-                    case SyntaxTokenKind.CloseBraceToken:
+                    case SyntaxTokenKind.Semicolon:
+                    case SyntaxTokenKind.CloseBrace:
                         return true;
 
                     default:
@@ -638,195 +757,235 @@ namespace NitroSharp.NsScript.Syntax
         {
             switch (CurrentToken.Kind)
             {
-                case SyntaxTokenKind.IdentifierToken:
-                case SyntaxTokenKind.StringLiteralToken:
-                    return _currentParameterList.ContainsKey((string)CurrentToken.Value);
+                case SyntaxTokenKind.Identifier:
+                case SyntaxTokenKind.StringLiteralOrQuotedIdentifier:
+                    return _parameterMap.ContainsKey(InternValueText(CurrentToken));
 
                 default:
                     return false;
             }
         }
 
-        private FunctionCall ParseFunctionCall()
+        private FunctionCallExpressionSyntax? ParseFunctionCall()
         {
-            var targetName = ParseIdentifier(isFunctionName: true);
-            var args = ParseArgumentList();
-            return new FunctionCall(targetName, args);
+            Spanned<string> targetName = ParseIdentifier();
+            ImmutableArray<ExpressionSyntax>? args = ParseArgumentList();
+            if (!args.HasValue) { return null; }
+            var span = TextSpan.FromBounds(targetName.Span.Start, CurrentToken.TextSpan.Start);
+            return new FunctionCallExpressionSyntax(targetName, args.Value, span);
         }
 
-        private ImmutableArray<Expression> ParseArgumentList()
+        private ImmutableArray<ExpressionSyntax>? ParseArgumentList()
         {
             if (SyntaxFacts.IsStatementTerminator(CurrentToken.Kind))
             {
-                return ImmutableArray<Expression>.Empty;
+                return ImmutableArray<ExpressionSyntax>.Empty;
             }
 
-            EatToken(SyntaxTokenKind.OpenParenToken);
+            EatToken(SyntaxTokenKind.OpenParen);
+            SyntaxTokenKind tk = CurrentToken.Kind;
+            if (tk == SyntaxTokenKind.CloseParen)
+            {
+                EatToken();
+                return ImmutableArray<ExpressionSyntax>.Empty;
+            }
 
-            var args = ImmutableArray.CreateBuilder<Expression>();
-            SyntaxTokenKind tk;
-            while ((tk = CurrentToken.Kind) != SyntaxTokenKind.CloseParenToken && tk != SyntaxTokenKind.SemicolonToken
-                && tk != SyntaxTokenKind.EndOfFileToken)
+            var arguments = ImmutableArray.CreateBuilder<ExpressionSyntax>();
+            while ((tk = CurrentToken.Kind) != SyntaxTokenKind.CloseParen
+                   && tk != SyntaxTokenKind.Semicolon
+                   && tk != SyntaxTokenKind.EndOfFileToken)
             {
                 switch (tk)
                 {
-                    case SyntaxTokenKind.NumericLiteralToken:
-                    case SyntaxTokenKind.StringLiteralToken:
-                    case SyntaxTokenKind.IdentifierToken:
+                    case SyntaxTokenKind.NumericLiteral:
+                    case SyntaxTokenKind.StringLiteralOrQuotedIdentifier:
+                    case SyntaxTokenKind.Identifier:
                     case SyntaxTokenKind.NullKeyword:
                     case SyntaxTokenKind.TrueKeyword:
                     case SyntaxTokenKind.FalseKeyword:
-                        args.Add(ParseExpression());
+                        ExpressionSyntax? arg = ParseExpression();
+                        if (arg == null) { return null; }
+                        arguments.Add(arg);
                         break;
 
-                    case SyntaxTokenKind.CommaToken:
-                    case SyntaxTokenKind.DotToken:
+                    case SyntaxTokenKind.Comma:
+                    case SyntaxTokenKind.Dot:
                     // Ampersand? Why?
-                    case SyntaxTokenKind.AmpersandToken:
+                    case SyntaxTokenKind.Ampersand:
                         EatToken();
                         break;
 
                     default:
-                        var expr = ParseExpression();
-                        args.Add(expr);
+                        ExpressionSyntax? expr = ParseExpression();
+                        if (expr == null) { return null; }
+                        arguments.Add(expr);
                         break;
                 }
             }
 
-            EatToken(SyntaxTokenKind.CloseParenToken);
-            return args.ToImmutable();
+            EatToken(SyntaxTokenKind.CloseParen);
+            return arguments.ToImmutable();
         }
 
-        private IfStatement ParseIfStatement()
+        private IfStatementSyntax? ParseIfStatement()
         {
-            EatToken(SyntaxTokenKind.IfKeyword);
-            EatToken(SyntaxTokenKind.OpenParenToken);
-            var condition = ParseExpression();
-            EatToken(SyntaxTokenKind.CloseParenToken);
+            SyntaxToken ifKeyword = EatToken(SyntaxTokenKind.IfKeyword);
+            EatToken(SyntaxTokenKind.OpenParen);
+            ExpressionSyntax? condition = ParseExpression();
+            if (condition == null) { return null; }
+            EatToken(SyntaxTokenKind.CloseParen);
 
-            Statement ifTrue = ParseStatement();
-            Statement ifFalse = null;
+            StatementSyntax? ifTrue = ParseStatement();
+            if (ifTrue == null) { return null; }
+            StatementSyntax? ifFalse = null;
             if (CurrentToken.Kind == SyntaxTokenKind.ElseKeyword)
             {
                 EatToken();
                 ifFalse = ParseStatement();
             }
 
-            return new IfStatement(condition, ifTrue, ifFalse);
+            return new IfStatementSyntax(condition, ifTrue, ifFalse, SpanFrom(ifKeyword));
         }
 
-        private BreakStatement ParseBreakStatement()
+        private BreakStatementSyntax ParseBreakStatement()
         {
-            EatToken(SyntaxTokenKind.BreakKeyword);
+            SyntaxToken keyword = EatToken(SyntaxTokenKind.BreakKeyword);
             EatStatementTerminator();
-            return new BreakStatement();
+            return new BreakStatementSyntax(SpanFrom(keyword));
         }
 
-        private WhileStatement ParseWhileStatement()
+        private WhileStatementSyntax? ParseWhileStatement()
         {
-            EatToken(SyntaxTokenKind.WhileKeyword);
-            EatToken(SyntaxTokenKind.OpenParenToken);
-            var condition = ParseExpression();
-            EatToken(SyntaxTokenKind.CloseParenToken);
-            var body = ParseStatement();
-
-            return new WhileStatement(condition, body);
+            SyntaxToken keyword = EatToken(SyntaxTokenKind.WhileKeyword);
+            EatToken(SyntaxTokenKind.OpenParen);
+            ExpressionSyntax? condition = ParseExpression();
+            if (condition == null) { return null; }
+            EatToken(SyntaxTokenKind.CloseParen);
+            StatementSyntax? body = ParseStatement();
+            if (body == null) { return null; }
+            return new WhileStatementSyntax(condition, body, SpanFrom(keyword));
         }
 
-        private ReturnStatement ParseReturnStatement()
+        private ReturnStatementSyntax ParseReturnStatement()
         {
-            EatToken(SyntaxTokenKind.ReturnKeyword);
+            SyntaxToken keyword = EatToken(SyntaxTokenKind.ReturnKeyword);
             EatStatementTerminator();
-            return new ReturnStatement();
+            return new ReturnStatementSyntax(SpanFrom(keyword));
         }
 
-        private SelectStatement ParseSelectStatement()
+        private SelectStatementSyntax ParseSelectStatement()
         {
-            EatToken(SyntaxTokenKind.SelectKeyword);
-            var body = ParseBlock();
-            return new SelectStatement(body);
+            SyntaxToken keyword = EatToken(SyntaxTokenKind.SelectKeyword);
+            BlockSyntax body = ParseBlock();
+            return new SelectStatementSyntax(body, SpanFrom(keyword));
         }
 
-        private SelectSection ParseSelectSection()
+        private SelectSectionSyntax ParseSelectSection()
         {
-            EatToken(SyntaxTokenKind.CaseKeyword);
-            string labelName = ConsumeTextUntil(tk => tk == SyntaxTokenKind.OpenBraceToken || tk == SyntaxTokenKind.ColonToken);
-            if (CurrentToken.Kind == SyntaxTokenKind.ColonToken)
+            SyntaxToken keyword = EatToken(SyntaxTokenKind.CaseKeyword);
+            Spanned<string> labelName = ConsumeTextUntil(
+                tk => tk == SyntaxTokenKind.OpenBrace || tk == SyntaxTokenKind.Colon
+            );
+            if (CurrentToken.Kind == SyntaxTokenKind.Colon)
             {
                 EatToken();
             }
 
-            var body = ParseBlock();
-            return new SelectSection(new Identifier(labelName), body);
+            BlockSyntax body = ParseBlock();
+            return new SelectSectionSyntax(labelName, body, SpanFrom(keyword));
         }
 
-        private CallChapterStatement ParseCallChapterStatement()
+        private CallChapterStatementSyntax ParseCallChapterStatement()
         {
-            EatToken(SyntaxTokenKind.CallChapterKeyword);
-            string filePath = ConsumeTextUntil(tk => tk == SyntaxTokenKind.SemicolonToken);
+            SyntaxToken keyword = EatToken(SyntaxTokenKind.CallChapterKeyword);
+            Spanned<string> filePath = ConsumeTextUntil(tk => tk == SyntaxTokenKind.Semicolon);
             EatStatementTerminator();
-            return new CallChapterStatement(filePath);
+            return new CallChapterStatementSyntax(filePath, SpanFrom(keyword));
         }
 
-        private CallSceneStatement ParseCallSceneStatement()
+        private CallSceneStatementSyntax ParseCallSceneStatement()
         {
-            EatToken(SyntaxTokenKind.CallSceneKeyword);
-            (SourceFileReference file, string scene) = ParseSymbolPath();
+            SyntaxToken keyword = EatToken(SyntaxTokenKind.CallSceneKeyword);
+            (Spanned<string>? file, Spanned<string> scene) = ParseSymbolPath();
             EatStatementTerminator();
-            return new CallSceneStatement(file, scene);
+            return new CallSceneStatementSyntax(file, scene, SpanFrom(keyword));
         }
 
         // Parses call_scene specific symbol path syntax.
         // call_scene can be followed by either '@->{localSymbolName}' (e.g. '@->SelectStoryModeA')
         // or '{filepath}->{symbolName}' (e.g. 'nss/extra_gallery.nss->extra_gallery_main').
-        private (string filePath, string symbolName) ParseSymbolPath()
+        private (Spanned<string>? filePath, Spanned<string> symbolName) ParseSymbolPath()
         {
-            if (CurrentToken.Kind == SyntaxTokenKind.AtArrowToken)
+            if (CurrentToken.Kind == SyntaxTokenKind.AtArrow)
             {
                 EatToken();
             }
 
-            string filePath = null, symbolName = null;
-            string part = ConsumeTextUntil(tk => tk == SyntaxTokenKind.SemicolonToken || tk == SyntaxTokenKind.ArrowToken);
-            if (CurrentToken.Kind == SyntaxTokenKind.ArrowToken)
+            Spanned<string>? filePath = null;
+            Spanned<string> symbolName = default;
+            Spanned<string> part = ConsumeTextUntil(
+                tk => tk == SyntaxTokenKind.Semicolon || tk == SyntaxTokenKind.Arrow
+            );
+            if (CurrentToken.Kind == SyntaxTokenKind.Arrow)
             {
                 EatToken();
                 filePath = part;
-                symbolName = ConsumeTextUntil(tk => tk == SyntaxTokenKind.SemicolonToken);
+                symbolName = ConsumeTextUntil(tk => tk == SyntaxTokenKind.Semicolon);
             }
             else
             {
                 symbolName = part;
             }
 
-            filePath = filePath ?? SourceText.FilePath;
             return (filePath, symbolName);
         }
 
         // Consumes tokens until the specified condition is met. 
-        // Returns the concatenation of their .Text values.
-        private string ConsumeTextUntil(Func<SyntaxTokenKind, bool> condition)
+        private Spanned<string> ConsumeTextUntil(Func<SyntaxTokenKind, bool> condition)
         {
-            string s = string.Empty;
             SyntaxTokenKind tk;
+            int start = CurrentToken.TextSpan.Start;
+            int end = 0;
             while ((tk = CurrentToken.Kind) != SyntaxTokenKind.EndOfFileToken && !condition(tk))
             {
-                s += EatToken().Text;
+                end = EatToken().TextSpan.End;
             }
 
-            return s;
+            var span = TextSpan.FromBounds(start, end);
+            return new Spanned<string>(SourceText.GetText(span), span);
         }
 
-        private DialogueBlock ParseDialogueBlock()
+        private DialogueBlockSyntax ParseDialogueBlock()
         {
-            var startTag = EatToken(SyntaxTokenKind.DialogueBlockStartTag);
-            string associatedBox = (string)startTag.Value;
+            string extractBoxName(in SyntaxToken tag)
+            {
+                ReadOnlySpan<char> span = SourceText.GetCharacterSpan(tag.TextSpan);
+                span = span.Slice(5, span.Length - 6);
+                Debug.Assert(span.Length > 0);
+                if (span[0] == '@')
+                {
+                    span = span.Slice(1);
+                }
 
-            var boxName = (string)EatToken(SyntaxTokenKind.DialogueBlockIdentifier).Value;
-            var statements = ImmutableArray.CreateBuilder<Statement>();
+                return span.ToString();
+            }
+
+            string extractBlockName(in SyntaxToken identifierToken)
+            {
+                ReadOnlySpan<char> span = SourceText.GetCharacterSpan(identifierToken.TextSpan);
+                Debug.Assert(span.Length >= 3);
+                return span.Slice(1, span.Length - 2).ToString();
+            }
+
+            SyntaxToken startTag = EatToken(SyntaxTokenKind.DialogueBlockStartTag);
+            string associatedBox = extractBoxName(startTag);
+            SyntaxToken blockIdentifier = EatToken(SyntaxTokenKind.DialogueBlockIdentifier);
+            string name = extractBlockName(blockIdentifier);
+
+            var statements = ImmutableArray.CreateBuilder<StatementSyntax>();
             while (CurrentToken.Kind != SyntaxTokenKind.DialogueBlockEndTag)
             {
-                var statement = ParseStatement();
+                StatementSyntax? statement = ParseStatement();
                 if (statement != null)
                 {
                     statements.Add(statement);
@@ -834,20 +993,23 @@ namespace NitroSharp.NsScript.Syntax
             }
 
             EatToken(SyntaxTokenKind.DialogueBlockEndTag);
-            var id = new Identifier(boxName);
-            return new DialogueBlock(id, associatedBox, new Block(statements.ToImmutable()));
+            return new DialogueBlockSyntax(
+                name, associatedBox, statements.ToImmutable(), SpanFrom(startTag));
         }
 
-        private int GetLineNumber() => SourceText.GetLineNumberFromPosition(CurrentToken.Span.Start);
-        private int GetLineNumber(SyntaxToken token) => SourceText.GetLineNumberFromPosition(token.Span.Start);
+        private int GetLineNumber()
+            => SourceText.GetLineNumberFromPosition(CurrentToken.TextSpan.Start);
+
+        private int GetLineNumber(SyntaxToken token)
+            => SourceText.GetLineNumberFromPosition(token.TextSpan.Start);
 
         private void SkipToNextLine()
         {
             int currentLine = GetLineNumber();
-            int lineCount = SourceText.Lines.Length;
+            int lineCount = SourceText.Lines.Count;
             do
             {
-                var tk = EatToken();
+                SyntaxToken tk = EatToken();
                 if (tk.Kind == SyntaxTokenKind.EndOfFileToken)
                 {
                     break;
@@ -858,7 +1020,7 @@ namespace NitroSharp.NsScript.Syntax
 
         private void Report(DiagnosticId diagnosticId)
         {
-            _diagnostics.Report(diagnosticId, CurrentToken.Span);
+            _diagnostics.Report(diagnosticId, CurrentToken.TextSpan);
         }
 
         private void Report(DiagnosticId diagnosticId, TextSpan span)
@@ -868,24 +1030,24 @@ namespace NitroSharp.NsScript.Syntax
 
         private void Report(DiagnosticId diagnosticId, params object[] arguments)
         {
-            _diagnostics.Report(diagnosticId, CurrentToken.Span, arguments);
+            _diagnostics.Report(diagnosticId, CurrentToken.TextSpan, arguments);
         }
 
         private TextSpan GetSpanForMissingToken()
         {
             if (_tokenOffset > 0)
             {
-                var prevToken = PeekToken(-1);
-                var prevTokenLine = SourceText.GetLineFromPosition(prevToken.Span.End);
-                var currentTokenLine = SourceText.GetLineFromPosition(CurrentToken.Span.Start);
-                if (currentTokenLine != prevTokenLine)
+                SyntaxToken prevToken = PeekToken(-1);
+                TextSpan prevTokenLineSpan = SourceText.GetLineSpanFromPosition(prevToken.TextSpan.End);
+                TextSpan currentLineSpan = SourceText.GetLineSpanFromPosition(CurrentToken.TextSpan.Start);
+                if (currentLineSpan != prevTokenLineSpan)
                 {
-                    int newLineSequenceLength = currentTokenLine.Span.Start - prevTokenLine.Span.End;
-                    return new TextSpan(prevToken.Span.End, newLineSequenceLength);
+                    int newLineSequenceLength = currentLineSpan.Start - prevTokenLineSpan.End;
+                    return new TextSpan(prevTokenLineSpan.End, newLineSequenceLength);
                 }
             }
 
-            return CurrentToken.Span;
+            return CurrentToken.TextSpan;
         }
 
         private void TokenExpected(SyntaxTokenKind expected, SyntaxTokenKind actual)
@@ -894,11 +1056,6 @@ namespace NitroSharp.NsScript.Syntax
             string actualText = SyntaxFacts.GetText(actual);
 
             Report(DiagnosticId.TokenExpected, expectedText, actualText);
-        }
-
-        // Yeah... I'm using exceptions for control flow.
-        private sealed class ParseError : Exception
-        {
         }
     }
 }

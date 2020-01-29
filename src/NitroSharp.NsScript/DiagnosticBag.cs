@@ -5,7 +5,7 @@ namespace NitroSharp.NsScript
 {
     public sealed class DiagnosticBag
     {
-        private sealed class DiagnosticCollections
+        private struct DiagnosticCollections
         {
             public ImmutableArray<Diagnostic> Information;
             public ImmutableArray<Diagnostic> Warnings;

@@ -1,256 +1,183 @@
-﻿using NitroSharp.NsScript.Syntax;
+﻿using NitroSharp.NsScript;
+using NitroSharp.NsScript.Syntax;
 using Xunit;
 
-namespace NitroSharp.NsScript.Tests
+namespace NitroSharp.NsScriptCompiler.Tests
 {
     public class ExpressionParsingTests
     {
-        [Fact]
-        public void ParseFunctionCall()
+        private T AssertExpression<T>(string text, SyntaxNodeKind expectedKind) where T : ExpressionSyntax
         {
-            string text = "WaitKey(10000)";
-            var call = Parsing.ParseExpression(text).Root as FunctionCall;
-            Assert.NotNull(call);
-            Assert.Equal(SyntaxNodeKind.FunctionCall, call.Kind);
-            Assert.Equal("WaitKey", call.Target.Name);
-            Assert.Single(call.Arguments);
-
-            Assert.Equal(text, call.ToString());
+            var result = Assert.IsType<T>(Parsing.ParseExpression(text).Root);
+            Assert.Equal(expectedKind, result.Kind);
+            return result;
         }
 
         [Fact]
-        public void ParseDeltaExpression()
+        public void HexTriplets_Parse_Correctly()
         {
-            string text = "@100";
-            var deltaExpr = Parsing.ParseExpression(text).Root as DeltaExpression;
+            var literal = AssertExpression<LiteralExpressionSyntax>("#000000", SyntaxNodeKind.LiteralExpression);
+            Assert.Equal(ConstantValue.Integer(0), literal.Value);
 
-            Assert.NotNull(deltaExpr);
-            Assert.Equal(SyntaxNodeKind.DeltaExpression, deltaExpr.Kind);
-            Assert.NotNull(deltaExpr.Expression);
-            Assert.Equal(text, deltaExpr.ToString());
+            //literal = AssertExpression<LiteralExpressionSyntax>("#FFFFFF", SyntaxNodeKind.LiteralExpression);
+            //Assert.Equal(ConstantValue.Integer(0x00FFFFFF), literal.Value);
         }
 
         [Fact]
-        public void ParseNumericLiteralExpression()
+        public void DeltaValues_Parse_Correctly()
         {
-            string literal = "42";
-            var expr = Parsing.ParseExpression(literal).Root as Literal;
-
-            Assert.NotNull(expr);
-            Assert.Equal(SyntaxNodeKind.Literal, expr.Kind);
-            Assert.Equal(literal, expr.StringValue);
-            Assert.Equal(42.0d, expr.Value.DoubleValue);
-            Assert.Equal(literal, expr.ToString());
+            var expr = AssertExpression<UnaryExpressionSyntax>("@42", SyntaxNodeKind.UnaryExpression);
+            Assert.Equal(UnaryOperatorKind.Delta, expr.OperatorKind.Value);
+            var operand = Assert.IsType<LiteralExpressionSyntax>(expr.Operand);
+            Assert.Equal(ConstantValue.Integer(42), operand.Value);
         }
 
-        [Fact]
-        public void ParseStringLiteralExpression()
-        {
-            string literal = "\"stuff\"";
-            var expr = Parsing.ParseExpression(literal).Root as Literal;
+        //[Theory]
+        //[InlineData("\"foo\"", SyntaxNodeKind.LiteralExpression, ConstantValue.String("foo"))]
+        //[InlineData("42", SyntaxNodeKind.LiteralExpression, ConstantValue.Integer(42))]
+        //[InlineData("true", SyntaxNodeKind.LiteralExpression, ConstantValue.True)]
+        //[InlineData("false", SyntaxNodeKind.LiteralExpression, ConstantValue.False)]
+        //[InlineData("null", SyntaxNodeKind.LiteralExpression, ConstantValue.True)]
+        //public void Literals_Parse_Correctly(string text, SyntaxNodeKind expectedKind, ConstantValue expectedValue)
+        //{
 
-            Assert.NotNull(expr);
-            Assert.Equal(SyntaxNodeKind.Literal, expr.Kind);
-            Assert.Equal("stuff", expr.Value.StringValue);
-            Assert.Equal(literal, expr.ToString());
+        //}
+
+        [Theory]
+        [InlineData("Foo()", "Foo")]
+        public void FunctionCall_Parses_Correctly(string text, string functionName)
+        {
+            var invocation = AssertExpression<FunctionCallExpressionSyntax>(text, SyntaxNodeKind.FunctionCallExpression);
+            Common.AssertSpannedText(text, functionName, invocation.TargetName);
         }
 
-        [Fact]
-        public void ParseIdentifierWithoutSigil()
-        {
-            string text = "foo";
-            var identifier = Parsing.ParseExpression(text).Root as Identifier;
+        //[Fact]
+        //public void ParseFunctionCall()
+        //{
+        //    string text = "WaitKey(10000)";
+        //    var call = ParseExpression<FunctionCallSyntax>(text);
+        //    Assert.Equal(SyntaxNodeKind.FunctionCall, call.Kind);
+        //    Assert.Equal("WaitKey", call.TargetName);
+        //    Assert.Single(call.Arguments);
 
-            Assert.NotNull(identifier);
-            Assert.Equal(text, identifier.Name);
-            Assert.Equal(SigilKind.None, identifier.Sigil);
-            Assert.Equal(text, identifier.ToString());
-        }
+        //    //Assert.Equal(text, call.ToString());
+        //}
 
-        [Fact]
-        public void ParseIdentifierWithDollarSigil()
-        {
-            string text = "$foo";
-            var identifier = Parsing.ParseExpression(text).Root as Identifier;
+        //[Fact]
+        //public void ParseDeltaExpression()
+        //{
+        //    string text = "@100";
+        //    var deltaExpr = Parsing.ParseExpression(text).Root as DeltaExpressionSyntax;
 
-            Assert.NotNull(identifier);
-            Assert.Equal("foo", identifier.Name);
-            Assert.Equal(SigilKind.Dollar, identifier.Sigil);
-            Assert.True(identifier.HasSigil);
-            Assert.False(identifier.IsQuoted);
-            Assert.Equal(text, identifier.ToString());
-        }
+        //    Assert.NotNull(deltaExpr);
+        //    Assert.Equal(SyntaxNodeKind.DeltaExpression, deltaExpr.Kind);
+        //    Assert.NotNull(deltaExpr.Expression);
+        //}
 
-        [Fact]
-        public void ParseIdentifierWithHashSigil()
-        {
-            string text = "#foo";
-            var identifier = Parsing.ParseExpression(text).Root as Identifier;
+        //[Fact]
+        //public void ParseUnaryOperators()
+        //{
+        //    TestUnary(UnaryOperatorKind.Not);
+        //    TestUnary(UnaryOperatorKind.Minus);
+        //    TestUnary(UnaryOperatorKind.Plus);
+        //}
 
-            Assert.NotNull(identifier);
-            Assert.Equal("foo", identifier.Name);
-            Assert.Equal(SigilKind.Hash, identifier.Sigil);
-            Assert.True(identifier.HasSigil);
-            Assert.False(identifier.IsQuoted);
-            Assert.Equal(text, identifier.ToString());
-        }
+        //[Fact]
+        //public void ParseBinaryOperators()
+        //{
+        //    TestBinary(BinaryOperatorKind.Add);
+        //    TestBinary(BinaryOperatorKind.Divide);
+        //    TestBinary(BinaryOperatorKind.Equals);
+        //    TestBinary(BinaryOperatorKind.GreaterThan);
+        //    TestBinary(BinaryOperatorKind.GreaterThanOrEqual);
+        //    TestBinary(BinaryOperatorKind.LessThan);
+        //    TestBinary(BinaryOperatorKind.LessThanOrEqual);
+        //    TestBinary(BinaryOperatorKind.And);
+        //    TestBinary(BinaryOperatorKind.Or);
+        //    TestBinary(BinaryOperatorKind.Multiply);
+        //    TestBinary(BinaryOperatorKind.NotEquals);
+        //    TestBinary(BinaryOperatorKind.Subtract);
+        //    TestBinary(BinaryOperatorKind.Remainder);
+        //}
 
-        [Fact]
-        public void ParseQuotedIdentifierWithoutSigil()
-        {
-            // Normally, "foo" would be considered a string literal.
-            // However, if there's a string parameter named "foo" in the current scope,
-            // every instance of "foo" in this scope is treated as an identifier.
+        //[Fact]
+        //public void ParseAssignmentOperators()
+        //{
+        //    TestAssignment(AssignmentOperatorKind.AddAssign);
+        //    TestAssignment(AssignmentOperatorKind.DivideAssign);
+        //    TestAssignment(AssignmentOperatorKind.MultiplyAssign);
+        //    TestAssignment(AssignmentOperatorKind.Assign);
+        //    TestAssignment(AssignmentOperatorKind.SubtractAssign);
+        //}
 
-            string text = "function Test(\"foo\") { SomeMethod(\"foo\"); }";
-            var root = Parsing.ParseText(text).Root as SourceFile;
-            Assert.NotNull(root);
-            var function = (Function)root.Members[0];
+        //[Fact]
+        //public void ParseIncrement()
+        //{
+        //    string text = "$a++";
+        //    var expr = Parsing.ParseExpression(text).Root as AssignmentExpressionSyntax;
+        //    Assert.NotNull(expr);
+        //    Assert.Equal(AssignmentOperatorKind.Increment, expr.OperatorKind);
+        //    Assert.Equal(expr.Target, expr.Value);
+        //}
 
-            var invocation = (function.Body.Statements[0] as ExpressionStatement)?.Expression as FunctionCall;
-            Assert.NotNull(invocation);
-            var arg = invocation.Arguments[0] as Identifier;
-            Assert.NotNull(arg);
-            Assert.Equal("foo", arg.Name);
-            Assert.Equal(SigilKind.None, arg.Sigil);
-            Assert.True(arg.IsQuoted);
-        }
+        //[Fact]
+        //public void ParseDecrement()
+        //{
+        //    string text = "$a--";
+        //    var expr = Parsing.ParseExpression(text).Root as AssignmentExpressionSyntax;
+        //    Assert.NotNull(expr);
+        //    Assert.Equal(AssignmentOperatorKind.Decrement, expr.OperatorKind);
+        //    Assert.Equal(expr.Target, expr.Value);
+        //}
 
-        [Fact]
-        public void ParseQuotedIdentifierWithSigil()
-        {
-            string text = "\"$foo\"";
-            var identifier = Parsing.ParseExpression(text).Root as Identifier;
+        //private void TestUnary(UnaryOperatorKind kind)
+        //{
+        //    string text = OperatorInfo.GetText(kind) + "$a";
+        //    var expr = Parsing.ParseExpression(text).Root as UnaryExpressionSyntax;
 
-            Assert.NotNull(identifier);
-            Assert.Equal("foo", identifier.Name);
-            Assert.Equal(SigilKind.Dollar, identifier.Sigil);
-            Assert.True(identifier.HasSigil);
-            Assert.True(identifier.IsQuoted);
-            Assert.Equal(text, identifier.ToString());
-        }
+        //    Assert.NotNull(expr);
+        //    Assert.Equal(SyntaxNodeKind.UnaryExpression, expr.Kind);
+        //    Assert.Equal(kind, expr.OperatorKind);
 
-        [Fact]
-        public void ParseQuotedUppercaseNullKeyword()
-        {
-            string text = "\"NULL\"";
-            var expr = Parsing.ParseExpression(text).Root as Literal;
+        //    var operand = expr.Operand as NameSyntax;
+        //    Assert.NotNull(operand);
+        //    Assert.Equal("a", operand.Name);
+        //}
 
-            Assert.NotNull(expr);
-            Assert.Equal("null", expr.StringValue);
-        }
+        //private void TestBinary(BinaryOperatorKind kind)
+        //{
+        //    string text = "$a " + OperatorInfo.GetText(kind) + " $b";
+        //    var expr = Parsing.ParseExpression(text).Root as BinaryExpressionSyntax;
 
-        [Fact]
-        public void ParseUnaryOperators()
-        {
-            TestUnary(UnaryOperatorKind.Not);
-            TestUnary(UnaryOperatorKind.Minus);
-            TestUnary(UnaryOperatorKind.Plus);
-        }
+        //    Assert.NotNull(expr);
+        //    Assert.Equal(SyntaxNodeKind.BinaryExpression, expr.Kind);
+        //    Assert.Equal(kind, expr.OperatorKind);
 
-        [Fact]
-        public void ParseBinaryOperators()
-        {
-            TestBinary(BinaryOperatorKind.Add);
-            TestBinary(BinaryOperatorKind.Divide);
-            TestBinary(BinaryOperatorKind.Equals);
-            TestBinary(BinaryOperatorKind.GreaterThan);
-            TestBinary(BinaryOperatorKind.GreaterThanOrEqual);
-            TestBinary(BinaryOperatorKind.LessThan);
-            TestBinary(BinaryOperatorKind.LessThanOrEqual);
-            TestBinary(BinaryOperatorKind.And);
-            TestBinary(BinaryOperatorKind.Or);
-            TestBinary(BinaryOperatorKind.Multiply);
-            TestBinary(BinaryOperatorKind.NotEquals);
-            TestBinary(BinaryOperatorKind.Subtract);
-            TestBinary(BinaryOperatorKind.Remainder);
-        }
+        //    var left = expr.Left as NameSyntax;
+        //    Assert.NotNull(left);
+        //    Assert.Equal("a", left.Name);
 
-        [Fact]
-        public void ParseAssignmentOperators()
-        {
-            TestAssignment(AssignmentOperatorKind.AddAssign);
-            TestAssignment(AssignmentOperatorKind.DivideAssign);
-            TestAssignment(AssignmentOperatorKind.MultiplyAssign);
-            TestAssignment(AssignmentOperatorKind.Assign);
-            TestAssignment(AssignmentOperatorKind.SubtractAssign);
-        }
+        //    var right = expr.Right as NameSyntax;
+        //    Assert.NotNull(right);
+        //    Assert.Equal("b", right.Name);
+        //}
 
-        [Fact]
-        public void ParseIncrement()
-        {
-            string text = "$a++";
-            var expr = Parsing.ParseExpression(text).Root as AssignmentExpression;
-            Assert.NotNull(expr);
-            Assert.Equal(AssignmentOperatorKind.Increment, expr.OperatorKind);
-            Assert.Equal(expr.Target, expr.Value);
-            Assert.Equal(text, expr.ToString());
-        }
-        
-        [Fact]
-        public void ParseDecrement()
-        {
-            string text = "$a--";
-            var expr = Parsing.ParseExpression(text).Root as AssignmentExpression;
-            Assert.NotNull(expr);
-            Assert.Equal(AssignmentOperatorKind.Decrement, expr.OperatorKind);
-            Assert.Equal(expr.Target, expr.Value);
-            Assert.Equal(text, expr.ToString());
-        }
+        //private void TestAssignment(AssignmentOperatorKind kind)
+        //{
+        //    string text = "$a " + OperatorInfo.GetText(kind) + " 42";
+        //    var expr = Parsing.ParseExpression(text).Root as AssignmentExpressionSyntax;
 
-        private void TestUnary(UnaryOperatorKind kind)
-        {
-            string text = OperatorInfo.GetText(kind) + "$a";
-            var expr = Parsing.ParseExpression(text).Root as UnaryExpression;
+        //    Assert.NotNull(expr);
+        //    Assert.Equal(SyntaxNodeKind.AssignmentExpression, expr.Kind);
+        //    Assert.Equal(kind, expr.OperatorKind);
 
-            Assert.NotNull(expr);
-            Assert.Equal(SyntaxNodeKind.UnaryExpression, expr.Kind);
-            Assert.Equal(kind, expr.OperatorKind);
+        //    var target = expr.Target as NameSyntax;
+        //    Assert.NotNull(target);
+        //    Assert.Equal("a", target.Name);
 
-            var operand = expr.Operand as Identifier;
-            Assert.NotNull(operand);
-            Assert.Equal("a", operand.Name);
-
-            Assert.Equal(text, expr.ToString());
-        }
-
-        private void TestBinary(BinaryOperatorKind kind)
-        {
-            string text = "$a " + OperatorInfo.GetText(kind) + " $b";
-            var expr = Parsing.ParseExpression(text).Root as BinaryExpression;
-
-            Assert.NotNull(expr);
-            Assert.Equal(SyntaxNodeKind.BinaryExpression, expr.Kind);
-            Assert.Equal(kind, expr.OperatorKind);
-
-            var left = expr.Left as Identifier;
-            Assert.NotNull(left);
-            Assert.Equal("a", left.Name);
-
-            var right = expr.Right as Identifier;
-            Assert.NotNull(right);
-            Assert.Equal("b", right.Name);
-
-            Assert.Equal(text, expr.ToString());
-        }
-
-        private void TestAssignment(AssignmentOperatorKind kind)
-        {
-            string text = "$a " + OperatorInfo.GetText(kind) + " 42";
-            var expr = Parsing.ParseExpression(text).Root as AssignmentExpression;
-
-            Assert.NotNull(expr);
-            Assert.Equal(SyntaxNodeKind.AssignmentExpression, expr.Kind);
-            Assert.Equal(kind, expr.OperatorKind);
-
-            var target = expr.Target as Identifier;
-            Assert.NotNull(target);
-            Assert.Equal("a", target.Name);
-
-            var value = expr.Value as Literal;
-            Assert.NotNull(value);
-            Assert.Equal(42.0d, value.Value.DoubleValue);
-            Assert.Equal(text, expr.ToString());
-        }
+        //    var value = expr.Value as LiteralExpressionSyntax;
+        //    Assert.NotNull(value);
+        //    //Assert.Equal(42.0d, value.Value.DoubleValue);
+        //}
     }
 }

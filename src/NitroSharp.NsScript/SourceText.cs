@@ -48,7 +48,7 @@ namespace NitroSharp.NsScript.Text
 
         public TextSpan GetLineSpanFromPosition(int position)
         {
-            if (position < 0 || position >= Length)
+            if (position < 0 || position > Length)
             {
                 ThrowHelper.ThrowOutOfRange(nameof(position));
             }
