@@ -221,7 +221,7 @@ namespace NitroSharp.NsScript.Syntax.PXml
 
             TextSpan span = CurrentLexemeSpan;
             string name = Text.Substring(span.Start, span.Length);
-            var attributes = ImmutableDictionary.CreateBuilder<string, string>();
+            Dictionary<string, string>? attributes = null;
             while ((c = PeekChar()) != '>')
             {
                 if (c == ' ' || SyntaxFacts.IsNewLine(c))
@@ -230,12 +230,17 @@ namespace NitroSharp.NsScript.Syntax.PXml
                 }
                 else
                 {
-                    attributes.Add(ParseXmlAttribute());
+                    attributes ??= new Dictionary<string, string>();
+                    KeyValuePair<string, string> kvp = ParseXmlAttribute();
+                    attributes.Add(kvp.Key, kvp.Value);
                 }
             }
 
             EatChar('>');
-            return new PXmlTag(name, attributes.ToImmutable());
+            ImmutableDictionary<string, string> attr = attributes != null
+                ? attributes.ToImmutableDictionary()
+                : ImmutableDictionary<string, string>.Empty;
+            return new PXmlTag(name, attr);
         }
 
         private KeyValuePair<string, string> ParseXmlAttribute()

@@ -11,7 +11,7 @@ namespace NitroSharp.NsScript.Syntax.PXml
 
         public void VisitArray(ImmutableArray<PXmlNode> list)
         {
-            foreach (var node in list)
+            foreach (PXmlNode node in list)
             {
                 Visit(node);
             }

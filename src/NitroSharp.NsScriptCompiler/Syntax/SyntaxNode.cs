@@ -1,10 +1,42 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using NitroSharp.NsScript.Text;
 
 namespace NitroSharp.NsScript.Syntax
 {
+    public enum SyntaxNodeKind
+    {
+        SourceFileRoot,
+
+        ChapterDeclaration,
+        SceneDeclaration,
+        FunctionDeclaration,
+        Parameter,
+
+        Block,
+        IfStatement,
+        WhileStatement,
+        ExpressionStatement,
+        ReturnStatement,
+        SelectStatement,
+        SelectSection,
+        CallSceneStatement,
+        CallChapterStatement,
+        BreakStatement,
+
+        NameExpression,
+        LiteralExpression,
+        UnaryExpression,
+        BinaryExpression,
+        AssignmentExpression,
+        FunctionCallExpression,
+        BezierExpression,
+
+        DialogueBlock,
+        PXmlString,
+        PXmlLineSeparator
+    }
+
     public abstract class SyntaxNode
     {
         protected SyntaxNode(TextSpan span)
