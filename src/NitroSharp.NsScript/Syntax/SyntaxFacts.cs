@@ -316,6 +316,7 @@ namespace NitroSharp.NsScript.Syntax
             private const int TrueKeywordHash = 1303515621;
             private const int PascalCaseTrueKeywordHash = -841064955;
             private const int CapitalizedTrueKeywordHash = 1343949093;
+            private const int MisspelledTrueKeywordHash = -2008300465;
             private const int FalseKeywordHash = 184981848;
             private const int PascalCaseFalseKeywordHash = -1753917960;
             private const int CapitalizedFalseKeywordHash = -296126344;
@@ -347,6 +348,7 @@ namespace NitroSharp.NsScript.Syntax
                     case TrueKeywordHash:
                     case PascalCaseTrueKeywordHash:
                     case CapitalizedTrueKeywordHash:
+                    case MisspelledTrueKeywordHash:
                         return SyntaxTokenKind.TrueKeyword;
                     case FalseKeywordHash:
                     case PascalCaseFalseKeywordHash:

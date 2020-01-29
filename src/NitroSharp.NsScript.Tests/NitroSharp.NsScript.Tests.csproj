@@ -19,7 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\NitroSharp.NsScriptCompiler\NitroSharp.NsScript.csproj" />
+    <ProjectReference Include="..\NitroSharp.NsScript\NitroSharp.NsScript.csproj" />
   </ItemGroup>
 
 </Project>

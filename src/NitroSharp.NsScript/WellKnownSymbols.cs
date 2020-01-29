@@ -50,8 +50,6 @@ namespace NitroSharp.NsScript.CodeGen
                     return "Wait";
                 case "Reqiest":
                     return "Request";
-                case "ture":
-                    return "true";
                 default:
                     return s;
             }
