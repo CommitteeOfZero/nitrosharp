@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using NitroSharp.Animation;
 using NitroSharp.Graphics;
+using NitroSharp.Interactivity;
 using NitroSharp.Utilities;
 
 #nullable enable
@@ -84,6 +86,7 @@ namespace NitroSharp.Experimental
             AlphaMasks = AddHub(hub => new AlphaMaskStorage(hub, 4));
             TextBlocks = AddHub(hub => new TextBlockStorage(hub, 16));
             ThreadRecords = AddHub(hub => new ThreadRecordStorage(hub, 16));
+            Choices = AddHub(hub => new ChoiceStorage(hub, 16));
         }
 
         public Dictionary<EntityName, Entity>.Enumerator EntityEnumerator => _entities.GetEnumerator();
@@ -95,6 +98,7 @@ namespace NitroSharp.Experimental
         public EntityHub<AlphaMaskStorage> AlphaMasks { get; }
         public EntityHub<TextBlockStorage> TextBlocks { get; }
         public EntityHub<ThreadRecordStorage> ThreadRecords { get; }
+        public EntityHub<ChoiceStorage> Choices { get; }
 
         private EntityHub<T> AddHub<T>(Func<EntityHub, T> factory) where T : EntityStorage
         {
@@ -135,7 +139,6 @@ namespace NitroSharp.Experimental
             }
             _entitiesToEnable.Clear();
         }
-
 
         public Entity CreateEntity(EntityName name, EntityStorage storage)
         {
@@ -201,6 +204,14 @@ namespace NitroSharp.Experimental
         public bool Exists(Entity entity)
         {
             return _versionByEntity[entity.Index] == entity.Version;
+        }
+
+        public bool IsActive(Entity entity)
+        {
+            EntityPointer ptr = LookupPointer(entity);
+            Debug.Assert(ptr.Storage != null);
+            EntityStorage active = ptr.Storage.Hub.GetStorage(StorageArea.Active);
+            return ReferenceEquals(active, ptr.Storage);
         }
 
         public Entity GetParent(Entity entity)
@@ -297,6 +308,11 @@ namespace NitroSharp.Experimental
             if (TryGetEntity(name, out Entity entity))
             {
                 DestroyEntity(entity);
+                if (_aliases.TryGetValue(name, out EntityName alias))
+                {
+                    _entities.Remove(alias);
+                    _aliases.Remove(alias);
+                }
                 _entities.Remove(name);
                 _aliases.Remove(name);
             }
@@ -324,6 +340,7 @@ namespace NitroSharp.Experimental
             _versionByEntity[entity.Index]++;
             _parentByEntity[entity.Index] = Entity.Invalid;
             _childrenByEntity[entity.Index] = default;
+            _childrenNamesByEntity[entity.Index] = default;
             _isLockedByEntity[entity.Index] = false;
             _nextFreeSlot = entity.Index;
 

@@ -32,16 +32,6 @@ namespace NitroSharp
 
         public void SetWorld(World gameWorld) => _world = gameWorld;
 
-        public override string GetSelectedChoice()
-        {
-            return SelectedChoice;
-        }
-
-        public override void Select()
-        {
-            Interpreter.SuspendThread(CurrentThread);
-        }
-
         public override void SetAlias(string entityName, string alias)
         {
             if (entityName != alias)
@@ -109,25 +99,7 @@ namespace NitroSharp
             bool startImmediately = _world.Query(name + "*").Any();
             ThreadContext thread = Interpreter.CreateThread(name, target, startImmediately);
             var info = new InterpreterThreadInfo(name, thread.EntryModule, target);
-            (Entity e, uint idx) = _world.ThreadRecords.Uninitialized.New(new EntityName(name));
-            var recs = _world.ThreadRecords.Uninitialized;
-            recs.Infos[idx] = info;
-            //Entity threadEntity = _world.CreateThreadEntity(info);
-            //Entity parent = _world.Threads.Parents.GetRef(threadEntity);
-            //if (parent.IsValid && parent.Kind == EntityKind.Choice)
-            //{
-            //    var parsedName = new EntityName(name);
-            //    ChoiceTable choices = _world.Choices;
-            //    switch (parsedName.MouseState)
-            //    {
-            //        case MouseState.Over:
-            //            choices.MouseOverThread.Set(parent, threadEntity);
-            //            break;
-            //        case MouseState.Leave:
-            //            choices.MouseLeaveThread.Set(parent, threadEntity);
-            //            break;
-            //    }
-            //}
+            _world.ThreadRecords.Uninitialized.New(new EntityName(name), info);
         }
 
         public override void Request(string entityName, NsEntityAction action)

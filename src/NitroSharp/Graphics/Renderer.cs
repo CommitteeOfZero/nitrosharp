@@ -80,6 +80,7 @@ namespace NitroSharp.Graphics
         private readonly Pipelines _pipelines;
         private readonly CommandList _cl;
         private readonly CommandList _effectCL;
+        private readonly RenderContext _renderContext;
 
         private readonly VertexList<QuadVertex> _quadVertexBuffer;
         private DeviceBuffer? _quadIndexBuffer;
@@ -89,7 +90,6 @@ namespace NitroSharp.Graphics
 
         private readonly DeviceBuffer _transitionParamUB;
         private readonly ResourceSet _transitionParamSet;
-
         private readonly ResourceSetCache _resourceSetCache;
         private ArrayBuilder<BindableResource> _shaderResources;
 
@@ -106,7 +106,8 @@ namespace NitroSharp.Graphics
             Configuration gameConfiguration,
             GraphicsDevice graphicsDevice,
             Swapchain swapchain,
-            GlyphRasterizer glyphRasterizer)
+            GlyphRasterizer glyphRasterizer,
+            ContentManager contentManager)
         {
             _world = world;
             _gd = graphicsDevice;
@@ -193,6 +194,11 @@ namespace NitroSharp.Graphics
                 _pipelines.TransitionParamLayout,
                 _transitionParamUB
             ));
+
+            _renderContext = new RenderContext(
+               contentManager, _gd, _pipelines, _cl,
+               swapchain.Framebuffer, _secondaryFramebuffer
+           );
         }
 
         private Texture CreateWhiteTexture()
@@ -219,6 +225,19 @@ namespace NitroSharp.Graphics
             return texture;
         }
 
+
+        private readonly Stopwatch _sw = new Stopwatch();
+
+        public void ProcessTransforms()
+        {
+            QuadStorage quads = _world.Quads.Active;
+            TransformProcessor.ProcessTransforms(_world, _world.AlphaMasks.Active);
+            TransformProcessor.ProcessTransforms(_world, quads);
+            TransformProcessor.ProcessTransforms(_world, _world.Quads.Inactive);
+            CalcVertices(quads);
+            CalcVertices(_world.Quads.Inactive);
+        }
+
         public void Render(
             in FrameStamp frameStamp,
             ContentManager content,
@@ -237,16 +256,6 @@ namespace NitroSharp.Graphics
             _textRenderer.BeginFrame();
 
             QuadStorage quads = _world.Quads.Active;
-            TransformProcessor.ProcessTransforms(_world, _world.AlphaMasks.Active);
-            TransformProcessor.ProcessTransforms(_world, quads);
-
-            CalcVertices(
-                quads.LocalBounds.All,
-                quads.Transforms.All,
-                quads.Geometry.All,
-                quads.Materials.All
-            );
-
             for (uint i = 0; i < quads.Count; i++)
             {
                 SetDrawState(
@@ -255,7 +264,6 @@ namespace NitroSharp.Graphics
                     content
                 );
             }
-
             BatchQuads(
                 quads.Keys.All,
                 quads.DrawState.All,
@@ -271,12 +279,7 @@ namespace NitroSharp.Graphics
             _textureCache.EndFrame(_cl);
             _textRenderer.EndFrame(_renderBucket, _cl);
             _quadVertexBuffer.End(_cl);
-
-            var renderContext = new RenderContext(
-                content, _gd, _pipelines, _cl,
-                _targetFramebuffer, _secondaryFramebuffer
-            );
-            _renderBucket.End(renderContext);
+            _renderBucket.End(_renderContext);
 
             if (captureFramebuffer)
             {
@@ -413,52 +416,20 @@ namespace NitroSharp.Graphics
             return _shaderResources.AsReadonlySpan();
         }
 
-        private void CalcVertices(
-            ReadOnlySpan<SizeF> localBounds,
-            ReadOnlySpan<Matrix4x4> transforms,
-            Span<Quad> geometry,
-            ReadOnlySpan<Material> materials)
+        private void CalcVertices(QuadStorage quads)
         {
-            for (int i = 0; i < localBounds.Length; i++)
+            for (uint i = 0; i < quads.Count; i++)
             {
-                ref Quad geom = ref geometry[i];
-                ref readonly Matrix4x4 transform = ref transforms[i];
-                ref readonly Material mat = ref materials[i];
-                ref QuadVertex VertexTL = ref geom.TL;
-
-                Vector2 uvTopLeft = mat.UvTopLeft;
-                Vector2 uvBottomRight = mat.UvBottomRight;
-
-                VertexTL.Position.X = 0.0f;
-                VertexTL.Position.Y = 0.0f;
-                VertexTL.TexCoord.X = uvTopLeft.X;
-                VertexTL.TexCoord.Y = uvTopLeft.Y;
-                VertexTL.Position = Vector2.Transform(VertexTL.Position, transform);
-                VertexTL.Color = mat.Color.ToVector4();
-
-                ref QuadVertex VertexTR = ref geom.TR;
-                VertexTR.Position.X = localBounds[i].Width;
-                VertexTR.Position.Y = 0.0f;
-                VertexTR.TexCoord.X = uvBottomRight.X;
-                VertexTR.TexCoord.Y = uvTopLeft.Y;
-                VertexTR.Position = Vector2.Transform(VertexTR.Position, transform);
-                VertexTR.Color = mat.Color.ToVector4();
-
-                ref QuadVertex VertexBL = ref geom.BL;
-                VertexBL.Position.X = 0.0f;
-                VertexBL.Position.Y = 0.0f + localBounds[i].Height;
-                VertexBL.TexCoord.X = uvTopLeft.X;
-                VertexBL.TexCoord.Y = uvBottomRight.Y;
-                VertexBL.Position = Vector2.Transform(VertexBL.Position, transform);
-                VertexBL.Color = mat.Color.ToVector4();
-
-                ref QuadVertex VertexBR = ref geom.BR;
-                VertexBR.Position.X = localBounds[i].Width;
-                VertexBR.Position.Y = localBounds[i].Height;
-                VertexBR.TexCoord.X = uvBottomRight.X;
-                VertexBR.TexCoord.Y = uvBottomRight.Y;
-                VertexBR.Position = Vector2.Transform(VertexBR.Position, transform);
-                VertexBR.Color = mat.Color.ToVector4();
+                ref readonly Material mat = ref quads.Materials[i];
+                QuadRenderer.CalcVertices(
+                    ref quads.Geometry[i],
+                    quads.LocalBounds[i],
+                    quads.Transforms[i],
+                    mat.UvTopLeft,
+                    mat.UvBottomRight,
+                    mat.Color.ToVector4(),
+                    out quads.DesignSpaceRects[i]
+                );
             }
         }
 
@@ -473,30 +444,30 @@ namespace NitroSharp.Graphics
             for (int i = 0; i < count; i++)
             {
                 Span<QuadVertex> vertices = _quadVertexBuffer.Append(4);
-                Span<QuadVertex> src = MemoryMarshal.CreateSpan(ref geometry[i].TL, 4);
+                Span<QuadVertex> src = MemoryMarshal.CreateSpan(ref geometry[i].TopLeft, 4);
                 src.CopyTo(vertices);
             }
 
             var multiSub = _renderBucket.PrepareMultiSubmission((uint)count);
             for (int i = 0; i < count; i++)
             {
-                Pipeline pipeline = drawState[i].Pipeline;
                 multiSub.Keys[i] = keys[i];
+                ref readonly DrawState ds = ref drawState[i];
                 multiSub.Submissions[i] = new RenderBucketSubmission
                 {
                     VertexBuffer0 = _quadVertexBuffer,
-                    Pipeline = pipeline,
+                    Pipeline = ds.Pipeline,
                     SharedResourceSet = commonResourceSet,
-                    ObjectResourceSet0 = drawState[i].ResourceSet0,
-                    ObjectResourceSet1 = drawState[i].ResourceSet1,
+                    ObjectResourceSet0 = ds.ResourceSet0,
+                    ObjectResourceSet1 = ds.ResourceSet1,
                     InstanceCount = 1,
                     IndexBuffer = _quadIndexBuffer,
                     IndexBase = (ushort)(6 * (quadCount + i)),
                     IndexCount = 6,
                     VertexCount = 6,
                     //VertexBase = (ushort)(4 * (quadCount + i)),
-                    UniformUpdate = drawState[i].UniformUpdate,
-                    BeforeRenderCallback = drawState[i].Callback
+                    UniformUpdate = ds.UniformUpdate,
+                    BeforeRenderCallback = ds.Callback
                 };
             }
 

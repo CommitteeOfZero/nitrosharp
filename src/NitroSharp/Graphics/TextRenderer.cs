@@ -312,7 +312,7 @@ namespace NitroSharp.Graphics
 
                 submission.Pipeline = _outlinePipeline;
                 submission.ObjectResourceSet0 = _fsOutlineResourceSet;
-                renderBucket.Submit<GpuGlyph>(ref submission, key);
+                //renderBucket.Submit<GpuGlyph>(ref submission, key);
 
                 block++;
             }

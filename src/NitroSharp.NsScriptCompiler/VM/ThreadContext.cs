@@ -8,6 +8,7 @@ namespace NitroSharp.NsScript.VM
         internal ValueStack<ConstantValue> EvalStack;
         internal long? SuspensionTime;
         internal long? SleepTimeout;
+        internal bool Yielded;
 
         internal ThreadContext(string name, ref CallFrame frame)
         {

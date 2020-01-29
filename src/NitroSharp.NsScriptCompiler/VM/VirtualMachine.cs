@@ -225,13 +225,19 @@ namespace NitroSharp.NsScript.VM
                 int nbActive = 0;
                 foreach (ThreadContext thread in _threads)
                 {
-                    if (thread.IsActive)
+                    if (thread.IsActive && !thread.Yielded)
                     {
                         CurrentThread = thread;
                         nbActive++;
                         result = true;
-                        Tick(thread);
-                        if (thread.DoneExecuting)
+                        TickResult tickResult = Tick(thread);
+                        if (tickResult == TickResult.Yield)
+                        {
+                            thread.Yielded = true;
+                            nbActive--;
+                            result = false;
+                        }
+                        else if (thread.DoneExecuting)
                         {
                             TerminateThread(thread);
                             nbActive--;
@@ -241,6 +247,10 @@ namespace NitroSharp.NsScript.VM
 
                 if (nbActive == 0)
                 {
+                    foreach (ThreadContext thread in _threads)
+                    {
+                        thread.Yielded = false;
+                    }
                     return result;
                 }
             }
@@ -314,11 +324,17 @@ namespace NitroSharp.NsScript.VM
             return ref val;
         }
 
-        private void Tick(ThreadContext thread)
+        private enum TickResult
+        {
+            Ok,
+            Yield
+        }
+
+        private TickResult Tick(ThreadContext thread)
         {
             if (thread.CallFrameStack.Count == 0)
             {
-                return;
+                return TickResult.Ok;
             }
 
             ref CallFrame frame = ref thread.CurrentFrame;
@@ -449,7 +465,7 @@ namespace NitroSharp.NsScript.VM
                             }
                             Console.WriteLine("near: " + name);
                         }
-                        return;
+                        return TickResult.Ok;
                     case Opcode.CallFar:
                         ushort importTableIndex = program.DecodeToken();
                         subroutineToken = program.DecodeToken();
@@ -469,7 +485,7 @@ namespace NitroSharp.NsScript.VM
                             }
                             Console.WriteLine("far: " + name);
                         }
-                        return;
+                        return TickResult.Ok;
                     case Opcode.Jump:
                         int @base = program.Position - 1;
                         int offset = program.DecodeOffset();
@@ -495,9 +511,11 @@ namespace NitroSharp.NsScript.VM
                         }
                         break;
                     case Opcode.Return:
-                        if (thread.CallFrameStack.Count == 0) { return; }
-                        thread.CallFrameStack.Pop();
-                        return;
+                        if (thread.CallFrameStack.Count > 0)
+                        {
+                            thread.CallFrameStack.Pop();
+                        }
+                        return TickResult.Ok;
                     case Opcode.BezierStart:
                         _bezierSegmentStack.Clear();
                         break;
@@ -562,7 +580,7 @@ namespace NitroSharp.NsScript.VM
                                 break;
                         }
                         frame.ProgramCounter = program.Position;
-                        return;
+                        return TickResult.Ok;
 
                     case Opcode.ActivateText:
                         ushort textId = program.DecodeToken();
@@ -575,6 +593,18 @@ namespace NitroSharp.NsScript.VM
 
                     case Opcode.SelectStart:
                         break;
+                    case Opcode.IsPressed:
+                        string choiceName = thisModule.GetString(program.DecodeToken());
+                        if (choiceName.StartsWith("@"))
+                        {
+                            choiceName = choiceName[1..];
+                        }
+                        bool pressed = _builtInFuncImpl.IsPressed(choiceName);
+                        stack.Push(ConstantValue.Boolean(pressed));
+                        break;
+                    case Opcode.SelectEnd:
+                        frame.ProgramCounter = program.Position;
+                        return TickResult.Yield;
                     case Opcode.PresentText:
                         string text = thisModule.GetString(program.DecodeToken());
                         _builtInFuncImpl.BeginDialogueLine(text);
@@ -582,7 +612,7 @@ namespace NitroSharp.NsScript.VM
                     case Opcode.AwaitInput:
                         _builtInFuncImpl.WaitForInput();
                         frame.ProgramCounter = program.Position;
-                        return;
+                        return TickResult.Ok;
                 }
             }
 

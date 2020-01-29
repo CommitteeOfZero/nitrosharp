@@ -18,7 +18,7 @@ namespace NitroSharp.Animation
 
         protected override EntityStorage.ComponentVec<Material> SelectComponentVec()
         {
-            var storage = World.GetStorage<RenderItemStorage>(Entity);
+            var storage = World.GetStorage<RenderItem2DStorage>(Entity);
             return storage.Materials;
         }
 

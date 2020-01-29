@@ -7,7 +7,7 @@ namespace NitroSharp.Graphics
 {
     internal static class TransformProcessor
     {
-        public static void ProcessTransforms(World world, SceneObject2DStorage storage)
+        public static void ProcessTransforms(World world, RenderItem2DStorage storage)
             => ProcessTransforms(world,
                 storage.Entities,
                 storage.LocalBounds.All,
@@ -48,17 +48,17 @@ namespace NitroSharp.Graphics
             Matrix4x4 worldMatrix = scale * translation;
 
             Entity parent = world.GetParent(entity);
-            if (parent.IsValid)
+            if (world.Exists(parent) &&
+                world.GetStorage<RenderItem2DStorage>(parent) is RenderItem2DStorage storage)
             {
-                SceneObject2DStorage table = world.GetStorage<SceneObject2DStorage>(parent);
                 int parentIdx = (int)world.LookupPointer(parent).IndexInStorage;
                 {
-                    Span<Matrix4x4> parentTableTransforms = table.Transforms.All;
+                    Span<Matrix4x4> parentTableTransforms = storage.Transforms.All;
                     if (parentTableTransforms[parentIdx].M11 == 0)
                     {
                         Calc(parent, parentIdx, world,
-                            table.LocalBounds.All,
-                            table.TransformComponents.All,
+                            storage.LocalBounds.All,
+                            storage.TransformComponents.All,
                             parentTableTransforms);
                     }
                     worldMatrix *= parentTableTransforms[parentIdx];

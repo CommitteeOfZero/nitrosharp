@@ -1,170 +1,117 @@
-﻿//using NitroSharp.NsScript;
-//using NitroSharp.Primitives;
-//using System.Numerics;
-//using Veldrid;
+﻿using System;
+using System.Numerics;
+using NitroSharp.Animation;
+using NitroSharp.Experimental;
+using NitroSharp.Graphics;
+using NitroSharp.Primitives;
+using Veldrid;
 
-//namespace NitroSharp.Interactivity
-//{
-//    internal readonly struct ChoiceProcessorOutput
-//    {
-//        public readonly string SelectedChoice;
+#nullable enable
 
-//        public ChoiceProcessorOutput(string selectedChoice)
-//        {
-//            SelectedChoice = selectedChoice;
-//        }
-//    }
+namespace NitroSharp.Interactivity
+{
+    internal sealed class ChoiceProcessor : GameSystem
+    {
+        internal enum StateTransition
+        {
+            None,
+            Enter,
+            Leave
+        }
 
-//    internal sealed class ChoiceProcessor : GameSystem
-//    {
-//        private readonly World _world;
-//        private readonly InputTracker _inputTracker;
+        public ChoiceProcessor(Game.Presenter presenter) : base(presenter)
+        {
+        }
 
-//        public ChoiceProcessor(Game.Presenter presenter) : base(presenter)
-//        {
-//            _world = presenter.World;
-//            _inputTracker = presenter.InputTracker;
-//        }
+        public void ProcessChoice(World world, Entity choice, InputTracker inputTracker)
+        {
+            Vector2 mousePos = inputTracker.CurrentSnapshot.MousePosition;
+            bool mouseDown = inputTracker.IsMouseButtonDown(MouseButton.Left);
 
-//        public ChoiceProcessorOutput ProcessChoices()
-//        {
-//            var input = _inputTracker.CurrentSnapshot;
+            var choices = world.GetStorage<ChoiceStorage>(choice);
+            ChoiceEntities entities = choices.AssociatedEntities[choice];
+            if (world.Exists(entities.DefaultVisual))
+            {
+                MouseState oldState = choices.MouseState[choice];
+                bool mouseOver = getRect(entities.DefaultVisual).Contains(mousePos);
+                MouseState newState = (mouseOver, mouseDown) switch
+                {
+                    (true, true) => MouseState.Pressed,
+                    (true, false) => MouseState.Over,
+                    _ => MouseState.Normal
+                };
 
-//            var choices = _world.Choices;
-//            var mouseNormalVisual = choices.MouseUsualSprite.Enumerate();
-//            var mouseOverSprite = choices.MouseOverSprite.Enumerate();
-//            var mouseOverThread = choices.MouseOverThread.Enumerate();
-//            var mouseLeaveThread = choices.MouseLeaveThread.Enumerate();
-//            var choiceRects = choices.Rects.MutateAll();
-//            var state = choices.State.MutateAll();
+                StateTransition transition = (oldState, newState) switch
+                {
+                    (MouseState.Normal, MouseState.Over) => StateTransition.Enter,
+                    (MouseState.Over, MouseState.Normal) => StateTransition.Leave,
+                    _ => StateTransition.None
+                };
 
-//            for (int i = 0; i < choiceRects.Length; i++)
-//            {
-//                if (mouseNormalVisual[i].IsValid)
-//                {
-//                    OldEntity mouseNormalEntity = mouseNormalVisual[i];
-//                    var table = _world.GetTable<RenderItemTable>(mouseNormalEntity);
-//                    Vector3 translation = table.TransformMatrices.GetRef(mouseNormalEntity).Translation;
-//                    Vector2 position = new Vector2(translation.X, translation.Y);
-//                    SizeF bounds = table.Bounds.GetRef(mouseNormalEntity);
-//                    choiceRects[i] = new Primitives.RectangleF(position, bounds);
-//                }
-//                else if (mouseOverSprite[i].IsValid)
-//                {
-//                    OldEntity mouseOverEntity = mouseOverSprite[i];
-//                    var table = _world.GetTable<RenderItemTable>(mouseOverEntity);
-//                    Vector3 translation = table.TransformMatrices.GetRef(mouseOverEntity).Translation;
-//                    Vector2 position = new Vector2(translation.X, translation.Y);
-//                    SizeF bounds = table.Bounds.GetRef(mouseOverEntity);
-//                    choiceRects[i] = new Primitives.RectangleF(position, bounds);
-//                }
-//            }
+                choices.MouseState[choice] = newState;
+                var duration = TimeSpan.FromMilliseconds(200);
+                switch (transition)
+                {
+                    case StateTransition.Enter:
+                        fadeOut(entities.DefaultVisual, duration);
+                        fadeIn(entities.MouseOverVisual, TimeSpan.Zero);
+                        suspendThread(entities.MouseLeaveThread);
+                        resumeThread(entities.MouseEnterThread);
+                        break;
+                    case StateTransition.Leave:
+                        fadeOut(entities.MouseOverVisual, duration);
+                        fadeIn(entities.DefaultVisual, duration);
+                        suspendThread(entities.MouseEnterThread);
+                        resumeThread(entities.MouseLeaveThread);
+                        break;
+                }
+            }
 
-//            var threads = _world.Threads;
+            void resumeThread(Entity threadEntity)
+                => threadAction(threadEntity, Game.ThreadActionMessage.ActionKind.StartOrResume);
 
-//            bool isMouseDown = _inputTracker.IsMouseButtonDownThisFrame(MouseButton.Left);
-//            var mouseDownSprite = choices.MouseClickSprite.Enumerate();
+            void suspendThread(Entity threadEntity)
+                => threadAction(threadEntity, Game.ThreadActionMessage.ActionKind.Suspend);
 
-//            int idxDown = -1;
-//            int maxPriority = -1;
-//            for (int i = 0; i < choiceRects.Length; i++)
-//            {
-//                OldEntity mouseNormalEntity = mouseNormalVisual[i];
-//                OldEntity mouseOverEntity = mouseOverSprite[i];
-//                OldEntity mouseDownEntity = mouseDownSprite[i];
+            void threadAction(Entity threadEntity, Game.ThreadActionMessage.ActionKind actionKind)
+            {
+                ThreadRecordStorage? threadRecs;
+                if (world.Exists(threadEntity) && (threadRecs = world.
+                    GetStorage<ThreadRecordStorage>(threadEntity)) != null)
+                {
+                    PostMessage(new Game.ThreadActionMessage
+                    {
+                        ThreadInfo = threadRecs.Infos[threadEntity],
+                        Action = actionKind
+                    });
+                }
+            }
 
-//                var mouseNormalTable = mouseNormalEntity.IsValid ? _world.GetTable<RenderItemTable>(mouseNormalEntity) : null;
-//                var mouseOverTable = mouseOverEntity.IsValid ? _world.GetTable<RenderItemTable>(mouseOverEntity) : null;
-//                var mouseDownTable = mouseDownEntity.IsValid ? _world.GetTable<RenderItemTable>(mouseDownEntity) : null;
+            RectangleF getRect(Entity entity)
+            {
+                var storage = world.GetStorage<QuadStorage>(entity);
+                return storage.DesignSpaceRects[entity];
+            }
 
-//                bool isMouseOver = choiceRects[i].Contains(input.MousePosition);
-//                if (isMouseOver && mouseOverSprite[i].IsValid)
-//                {
-//                    if (state[i] == MouseState.Normal && mouseNormalTable != null)
-//                    {
-//                        // MouseEnter
-//                        mouseNormalTable.Colors.GetRef(mouseNormalEntity).SetAlpha(0);
-//                        if (mouseLeaveThread[i].IsValid)
-//                        {
-//                            TerminateThread(threads, mouseLeaveThread[i]);
-//                        }
-//                        if (mouseOverThread[i].IsValid)
-//                        {
-//                            StartThread(threads, mouseOverThread[i]);
-//                        }
+            void fadeIn(Entity entity, TimeSpan duration)
+            {
+                var anim = new FadeAnimation(entity, duration)
+                {
+                    InitialOpacity = 0.0f,
+                    FinalOpacity = 1.0f
+                };
+                world.ActivateAnimation(anim);
+            }
 
-//                        mouseOverTable.Colors.GetRef(mouseOverEntity).SetAlpha(1);
-//                        state[i] = MouseState.Over;
-//                    }
-//                }
-//                else if (!isMouseOver && state[i] == MouseState.Over)
-//                {
-//                    // Mouse leave
-//                    mouseOverTable.Colors.GetRef(mouseOverEntity).SetAlpha(0);
-//                    if (mouseLeaveThread[i].IsValid)
-//                    {
-//                        StartThread(threads, mouseLeaveThread[i]);
-//                    }
-//                    if (mouseOverThread[i].IsValid)
-//                    {
-//                        TerminateThread(threads, mouseOverThread[i]);
-//                    }
-
-//                    mouseNormalTable.Colors.GetRef(mouseNormalEntity).SetAlpha(1);
-//                    state[i] = MouseState.Normal;
-//                }
-
-//                if (isMouseOver && isMouseDown)
-//                {
-//                    // Mouse down
-//                    if (mouseDownSprite[i].IsValid)
-//                    {
-//                        mouseNormalTable.Colors.GetRef(mouseNormalEntity).SetAlpha(0);
-//                        mouseOverTable.Colors.GetRef(mouseOverEntity).SetAlpha(0);
-//                        mouseDownTable.Colors.GetRef(mouseDownEntity).SetAlpha(1);
-//                    }
-
-//                    if (mouseLeaveThread[i].IsValid)
-//                    {
-//                        TerminateThread(threads, mouseLeaveThread[i]);
-//                    }
-//                    if (mouseOverThread[i].IsValid)
-//                    {
-//                        TerminateThread(threads, mouseOverThread[i]);
-//                    }
-
-//                    //PostMessage(new Game.SimpleMessage(Game.MessageKind.ResumeMainThread));
-
-//                    int priority = mouseOverTable.SortKeys.GetRef(mouseOverEntity).Priority;
-//                    if (priority > maxPriority)
-//                    {
-//                        idxDown = i;
-//                        maxPriority = priority;
-//                    }
-//                }
-//            }
-
-//            return idxDown != -1 ? new ChoiceProcessorOutput(choices.Name.GetRef((ushort)idxDown)) : default;
-//        }
-
-//        private void StartThread(ThreadTable threads, OldEntity threadEntity)
-//        {
-//            InterpreterThreadInfo threadInfo = threads.Infos.GetRef(threadEntity);
-//            PostMessage(new Game.ThreadActionMessage
-//            {
-//                ThreadInfo = threadInfo,
-//                Action = Game.ThreadActionMessage.ActionKind.StartOrResume
-//            });
-//        }
-
-//        private void TerminateThread(ThreadTable threads, OldEntity threadEntity)
-//        {
-//            InterpreterThreadInfo threadInfo = threads.Infos.GetRef(threadEntity);
-//            PostMessage(new Game.ThreadActionMessage
-//            {
-//                ThreadInfo = threadInfo,
-//                Action = Game.ThreadActionMessage.ActionKind.Terminate
-//            });
-//        }
-//    }
-//}
+            void fadeOut(Entity entity, TimeSpan duration)
+            {
+                var anim = new FadeAnimation(entity, duration)
+                {
+                    InitialOpacity = 1.0f,
+                    FinalOpacity = 0.0f
+                };
+                world.ActivateAnimation(anim);
+            }
+        }
+    }
+}

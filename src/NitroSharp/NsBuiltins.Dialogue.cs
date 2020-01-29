@@ -70,33 +70,6 @@ namespace NitroSharp
             }
         }
 
-        public override void CreateTextBlock(
-            string entityName, int priority,
-            NsCoordinate x, NsCoordinate y,
-            NsDimension width, NsDimension height,
-            string pxmlText)
-        {
-            //int getDimension(in MutTextBlock textBlock, NsDimension dim)
-            //{
-            //    return dim.Variant switch
-            //    {
-            //        NsDimensionVariant.Auto => int.MaxValue,
-            //        NsDimensionVariant.Value => dim.Value!.Value,
-            //        NsDimensionVariant.Inherit => textBlock.pa
-            //    }
-            //}
-
-            var textBuffer = TextBuffer.FromPXmlString(pxmlText, _fontConfig);
-            TextSegment? textSegment = textBuffer.AssertSingleTextSegment();
-            //if (textSegment != null)
-            //{
-
-            //    MutTextBlock textBlock = _world.CreateTextBlock(entityName, priority);
-
-            //    var layout = new TextLayout(GlyphCacheEntry, textSegment.TextRuns, maxBounds: null)
-            //}
-        }
-
         public override void BeginDialogueLine(string pxmlString)
         {
             var textBuffer = TextBuffer.FromPXmlString(pxmlString, _fontConfig);

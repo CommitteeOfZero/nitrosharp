@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Immutable;
 using System.Diagnostics;
-using NitroSharp.Text;
 using NitroSharp.NsScript;
 using NitroSharp.NsScript.Syntax.PXml;
 using NitroSharp.Primitives;
@@ -9,7 +8,7 @@ using Veldrid;
 
 #nullable enable
 
-namespace NitroSharp.Dialogue
+namespace NitroSharp.Text
 {
     internal sealed class TextBuffer
     {
@@ -31,10 +30,17 @@ namespace NitroSharp.Dialogue
         public uint TextLength { get; }
         public bool IsEmpty => Segments.Length == 0;
 
-        public static TextBuffer FromPXmlString(string pxmlString, FontConfiguration fontConfig)
+        public static TextBuffer FromPXmlString(
+            string pxmlString,
+            FontConfiguration fontConfig,
+            PtFontSize? defaultFontSize = null)
         {
             PXmlContent root = Parsing.ParsePXmlString(pxmlString);
-            return s_pxmlFlattener.FlattenPXmlContent(root, fontConfig);
+            return s_pxmlFlattener.FlattenPXmlContent(
+                root,
+                fontConfig,
+                defaultFontSize
+            );
         }
 
         public TextSegment? AssertSingleTextSegment()
@@ -56,6 +62,7 @@ namespace NitroSharp.Dialogue
             }
 
             private FontConfiguration? _fontConfig;
+            private PtFontSize _defaultFontSize;
             private readonly ImmutableArray<TextBufferSegment>.Builder _segments;
             private readonly ImmutableArray<TextRun>.Builder _textRuns;
             private TextRunData _textRunData;
@@ -68,9 +75,13 @@ namespace NitroSharp.Dialogue
                 _textRuns = ImmutableArray.CreateBuilder<TextRun>(1);
             }
 
-            public TextBuffer FlattenPXmlContent(PXmlNode pxmlRoot, FontConfiguration fontConfig)
+            public TextBuffer FlattenPXmlContent(
+                PXmlNode pxmlRoot,
+                FontConfiguration fontConfig,
+                PtFontSize? defaultFontSize)
             {
                 _fontConfig = fontConfig;
+                _defaultFontSize = defaultFontSize ?? fontConfig.DefaultFontSize;
                 _segments.Clear();
                 _textLength = 0;
                 _voice = null;
@@ -164,7 +175,7 @@ namespace NitroSharp.Dialogue
 
                 PtFontSize fontSize = data.FontSize.HasValue
                     ? new PtFontSize(data.FontSize.Value)
-                    : _fontConfig.DefaultFontSize;
+                    : _defaultFontSize;
 
                 RgbaFloat color = data.Color ?? _fontConfig.DefaultTextColor;
                 RgbaFloat outlineColor = data.OutlineColor ?? _fontConfig.DefaultOutlineColor;

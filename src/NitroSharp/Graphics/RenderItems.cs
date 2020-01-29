@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Numerics;
 using NitroSharp.Content;
 using NitroSharp.Experimental;
+using NitroSharp.Interactivity;
 using NitroSharp.Primitives;
 using NitroSharp.Text;
 
@@ -31,20 +33,7 @@ namespace NitroSharp.Graphics
         public Vector3 Rotation;
     }
 
-    internal interface SceneObjectStorage
-    {
-        public ReadOnlySpan<Entity> Entities { get; }
-        public EntityStorage.ComponentVec<RenderItemKey> Keys { get; }
-        public EntityStorage.ComponentVec<TransformComponents> TransformComponents { get; }
-        public EntityStorage.ComponentVec<Matrix4x4> Transforms { get; }
-    }
-
-    internal interface SceneObject2DStorage : SceneObjectStorage
-    {
-        public EntityStorage.ComponentVec<SizeF> LocalBounds { get; }
-    }
-
-    internal abstract class RenderItemStorage : EntityStorage, SceneObjectStorage
+    internal abstract class RenderItemStorage : EntityStorage
     {
         private static uint s_id;
 
@@ -54,7 +43,7 @@ namespace NitroSharp.Graphics
 
         public ComponentVec<Material> Materials { get; }
         public SystemComponentVec<DrawState> DrawState { get; }
-      
+
         protected RenderItemStorage(EntityHub hub, uint initialCapacity)
             : base(hub, initialCapacity)
         {
@@ -72,20 +61,52 @@ namespace NitroSharp.Graphics
             (Entity e, uint i) = New(name);
             Keys[i] = new RenderItemKey((ushort)priority, (ushort)++s_id);
             TransformComponents[i].Scale = Vector3.One;
+            if (name.MouseState.HasValue)
+            {
+                Debug.Assert(name.Parent != null);
+                Entity choice = _world.GetEntity(new EntityName(name.Parent));
+                ChoiceStorage? choices = _world.GetStorage<ChoiceStorage>(choice);
+                if (choices != null)
+                {
+                    choices.AssociatedEntities[choice]
+                        .SetVisualEntity(name.MouseState.Value, e);
+                }
+            }
             return (e, i);
         }
     }
 
-    internal sealed class QuadStorage : RenderItemStorage, SceneObject2DStorage
+    internal abstract class RenderItem2DStorage : RenderItemStorage
+    {
+        public RenderItem2DStorage(EntityHub hub, uint initialCapacity)
+            : base(hub, initialCapacity)
+        {
+            LocalBounds = AddComponentVec<SizeF>();
+            DesignSpaceRects = AddComponentVec<RectangleF>();
+        }
+
+        public ComponentVec<SizeF> LocalBounds { get; }
+        public ComponentVec<RectangleF> DesignSpaceRects { get; }
+
+        protected (Entity entity, uint index) New(
+           EntityName name,
+           int priority,
+           SizeF localBounds)
+        {
+            (Entity e, uint i) = base.New(name, priority);
+            LocalBounds[i] = localBounds;
+            return (e, i);
+        }
+    }
+
+    internal sealed class QuadStorage : RenderItem2DStorage
     {
         public ComponentVec<Quad> Geometry { get; }
-        public ComponentVec<SizeF> LocalBounds { get; }
 
         public QuadStorage(EntityHub hub, uint initialCapacity)
             : base(hub, initialCapacity)
         {
             Geometry = AddComponentVec<Quad>();
-            LocalBounds = AddComponentVec<SizeF>();
         }
 
         public (Entity entity, uint index) New(
@@ -94,8 +115,7 @@ namespace NitroSharp.Graphics
             int priority,
             in Material material)
         {
-            (Entity e, uint i) = base.New(name, priority);
-            LocalBounds[i] = localBounds;
+            (Entity e, uint i) = base.New(name, priority, localBounds);
             Materials[i] = material;
 
             Entity parent = _world.GetParent(e);
@@ -108,22 +128,13 @@ namespace NitroSharp.Graphics
         }
     }
 
-    internal sealed class AlphaMaskStorage : EntityStorage, SceneObject2DStorage
+    internal sealed class AlphaMaskStorage : RenderItem2DStorage
     {
         public AlphaMaskStorage(EntityHub hub, uint initialCapacity)
             : base(hub, initialCapacity)
         {
-            Keys = AddComponentVec<RenderItemKey>();
-            TransformComponents = AddComponentVec<TransformComponents>();
-            Transforms = AddComponentVec<Matrix4x4>();
-            LocalBounds = AddComponentVec<SizeF>();
             ImageHandles = AddComponentVec<AssetId>();
         }
-
-        public ComponentVec<RenderItemKey> Keys { get; }
-        public ComponentVec<TransformComponents> TransformComponents { get; }
-        public ComponentVec<Matrix4x4> Transforms { get; }
-        public ComponentVec<SizeF> LocalBounds { get; }
 
         public ComponentVec<AssetId> ImageHandles { get; }
 
@@ -133,10 +144,7 @@ namespace NitroSharp.Graphics
            int priority,
            AssetId imageHandle)
         {
-            (Entity e, uint i) = New(name);
-            Keys[i] = new RenderItemKey((ushort)priority, 0);
-            TransformComponents[i].Scale = Vector3.One;
-            LocalBounds[i] = localBounds;
+            (Entity e, uint i) = New(name, priority, localBounds);
             ImageHandles[i] = imageHandle;
             return (e, i);
         }
@@ -165,16 +173,14 @@ namespace NitroSharp.Graphics
         }
     }
 
-    internal sealed class TextBlockStorage : RenderItemStorage, SceneObject2DStorage
+    internal sealed class TextBlockStorage : RenderItem2DStorage
     {
         public ComponentVec<TextLayout> Layouts { get; }
-        public ComponentVec<SizeF> LocalBounds { get; }
 
         public TextBlockStorage(EntityHub hub, uint initialCapacity)
             : base(hub, initialCapacity)
         {
             Layouts = AddComponentVec<TextLayout>();
-            LocalBounds = AddComponentVec<SizeF>();
         }
 
         public (Entity entity, uint index) New(
@@ -182,7 +188,7 @@ namespace NitroSharp.Graphics
            TextLayout layout,
            int priority)
         {
-            (Entity e, uint i) = New(name, priority);
+            (Entity e, uint i) = New(name, priority, SizeF.Zero);
             Layouts[i] = layout;
             return (e, i);
         }

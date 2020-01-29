@@ -51,26 +51,6 @@ namespace NitroSharp.NsScript.VM
                 _ => ThrowHelper.InvalidData<Immediate>("Unexpected immediate value type.")
             };
         }
-
-        public static bool HasOperands(Opcode opcode)
-        {
-            switch (opcode)
-            {
-                case Opcode.LoadImm:
-                case Opcode.StoreArg:
-                case Opcode.StoreVar:
-                case Opcode.Binary:
-                case Opcode.Jump:
-                case Opcode.JumpIfTrue:
-                case Opcode.JumpIfFalse:
-                case Opcode.Call:
-                case Opcode.CallFar:
-                case Opcode.PresentText:
-                    return true;
-                default:
-                    return false;
-            }
-        }
     }
 
     [StructLayout(LayoutKind.Explicit)]

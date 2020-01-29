@@ -60,7 +60,7 @@ namespace NitroSharp.Animation
 
         protected override EntityStorage.ComponentVec<TransformComponents> SelectComponentVec()
         {
-            var storage = World.GetStorage<SceneObjectStorage>(Entity);
+            var storage = World.GetStorage<RenderItemStorage>(Entity);
             return storage.TransformComponents;
         }
 

@@ -1,5 +1,6 @@
 ﻿using NitroSharp.Animation;
 using NitroSharp.Experimental;
+using NitroSharp.Text;
 using System.Collections.Generic;
 
 namespace NitroSharp
@@ -40,7 +41,6 @@ namespace NitroSharp
             SuspendMainThread,
             ThreadAction,
             AnimationCompleted,
-            ChoiceSelected,
 
             // ScriptRunner -> Presenter
             BeginDialogueBlock,
@@ -69,18 +69,13 @@ namespace NitroSharp
             public enum ActionKind
             {
                 StartOrResume,
-                Terminate
+                Terminate,
+                Suspend
             }
 
             public override MessageKind Kind => MessageKind.ThreadAction;
             public InterpreterThreadInfo ThreadInfo { get; set; }
             public ActionKind Action { get; set; }
-        }
-
-        internal sealed class ChoiceSelectedMessage : Message
-        {
-            public override MessageKind Kind => MessageKind.ChoiceSelected;
-            public string ChoiceName { get; set; }
         }
 
         internal sealed class AnimationCompletedMessage : Message
@@ -98,7 +93,7 @@ namespace NitroSharp
         internal sealed class PresentDialogueMessage : Message
         {
             public override MessageKind Kind => MessageKind.PresentDialogue;
-            public Dialogue.TextBuffer TextBuffer { get; set; }
+            public TextBuffer TextBuffer { get; set; }
         }
     }
 }

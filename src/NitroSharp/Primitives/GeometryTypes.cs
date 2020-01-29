@@ -285,6 +285,9 @@ namespace NitroSharp.Primitives
                 && point.Y <= Bottom;
         }
 
+        public static RectangleF FromLTRB(float left, float top, float right, float bottom)
+            => new RectangleF(new Vector2(left, top), new SizeF(right - left, bottom - top));
+
         public static RectangleF Union(in RectangleF a, in RectangleF b)
         {
             float x1 = MathF.Min(a.X, b.X);

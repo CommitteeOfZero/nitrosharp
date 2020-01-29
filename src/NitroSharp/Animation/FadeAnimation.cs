@@ -25,9 +25,9 @@ namespace NitroSharp.Animation
 
         protected override void OnCompleted(World world)
         {
-            if (FinalOpacity < 0.05f)
+            if (FinalOpacity < 0.01f)
             {
-                world.DisableEntity(Entity);
+                world.ScheduleDisableEntity(Entity);
             }
         }
 

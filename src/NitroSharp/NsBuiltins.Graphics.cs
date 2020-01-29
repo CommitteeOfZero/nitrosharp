@@ -7,6 +7,8 @@ using System;
 using System.Numerics;
 using NitroSharp.Experimental;
 using NitroSharp.Animation;
+using NitroSharp.Interactivity;
+using NitroSharp.Text;
 using static NitroSharp.Game;
 
 #nullable enable
@@ -15,6 +17,63 @@ namespace NitroSharp
 {
     internal sealed partial class NsBuiltins
     {
+        public override void CreateTextBlock(
+           string name, int priority,
+           NsCoordinate x, NsCoordinate y,
+           NsDimension width, NsDimension height,
+           string pxmlText)
+        {
+            var entityName = new EntityName(name);
+            var parentBounds = new SizeF(float.MaxValue, float.MaxValue);
+            if (entityName.Parent != null)
+            {
+                Entity parent = _world.GetEntity(new EntityName(entityName.Parent));
+                var storage = _world.GetStorage<RenderItem2DStorage>(parent);
+                if (storage != null)
+                {
+                    parentBounds = storage.LocalBounds[parent];
+                }
+            }
+
+            uint getDimension(NsDimension dim, bool width)
+            {
+                return dim.Variant switch
+                {
+                    NsDimensionVariant.Auto => uint.MaxValue,
+                    NsDimensionVariant.Value => (uint)dim.Value!.Value,
+                    NsDimensionVariant.Inherit
+                        => width ? (uint)parentBounds.Width : (uint)parentBounds.Height
+                };
+            }
+
+            var textBuffer = TextBuffer.FromPXmlString(pxmlText, _fontConfig, new PtFontSize(18));
+            TextSegment? textSegment = textBuffer.AssertSingleTextSegment();
+            if (textSegment != null)
+            {
+                var bounds = new Size(getDimension(width, true), getDimension(height, false));
+                var layout = new TextLayout(GlyphRasterizer, textSegment.TextRuns.AsSpan(), bounds);
+                (Entity entity, _) = _world.TextBlocks.Uninitialized.New(entityName, layout, priority);
+                SetPosition(entity, x, y);
+            }
+        }
+
+        public override void CreateChoice(string name)
+        {
+            _world.Choices.Uninitialized.New(new EntityName(name));
+        }
+
+        public override bool IsPressed(string choiceName)
+        {
+            Entity choice = _world.GetEntity(new EntityName(choiceName));
+            ChoiceStorage? storage;
+            if (_world.Exists(choice) &&
+                (storage = _world.GetStorage<ChoiceStorage>(choice)) != null)
+            {
+                return storage.MouseState[choice] == MouseState.Pressed;
+            }
+            return false;
+        }
+
         public override void CreateAlphaMask(
             string name, int priority,
             NsCoordinate x, NsCoordinate y,
@@ -173,24 +232,6 @@ namespace NitroSharp
                 Material.Texture(textureId, texSize, sourceRectangle)
             );
             SetPosition(entity, x, y);
-            //Entity parent = _world.Sprites.Parents.GetRef(entity);
-            //if (parent.IsValid && parent.Kind == EntityKind.Choice)
-            //{
-            //    var parsedName = new EntityName(entityName);
-            //    ChoiceTable choices = _world.Choices;
-            //    switch (parsedName.MouseState)
-            //    {
-            //        case MouseState.Normal:
-            //            choices.MouseUsualSprite.Set(parent, entity);
-            //            break;
-            //        case MouseState.Over:
-            //            choices.MouseOverSprite.Set(parent, entity);
-            //            break;
-            //        case MouseState.Pressed:
-            //            choices.MouseClickSprite.Set(parent, entity);
-            //            break;
-            //    }
-            //}
         }
 
         public override void CreateCube(
@@ -199,13 +240,6 @@ namespace NitroSharp
             string right, string left,
             string top, string bottom)
         {
-            //var cube = new Cube(
-            //    Content.Get<BindableTexture>(front),
-            //    Content.Get<BindableTexture>(back),
-            //    Content.Get<BindableTexture>(left),
-            //    Content.Get<BindableTexture>(right),
-            //    Content.Get<BindableTexture>(top),
-            //    Content.Get<BindableTexture>(bottom));
         }
 
         public override void DrawTransition(
@@ -245,7 +279,7 @@ namespace NitroSharp
         {
             if (_world.TryGetEntity(new EntityName(entityName), out Entity entity))
             {
-                var storage = _world.GetStorage<SceneObject2DStorage>(entity);
+                var storage = _world.GetStorage<RenderItem2DStorage>(entity);
                 return (int)storage.LocalBounds[entity].Width;
             }
 
@@ -256,7 +290,7 @@ namespace NitroSharp
         {
             if (_world.TryGetEntity(new EntityName(entityName), out Entity entity))
             {
-                var storage = _world.GetStorage<SceneObject2DStorage>(entity);
+                var storage = _world.GetStorage<RenderItem2DStorage>(entity);
                 return (int)storage.LocalBounds[entity].Height;
             }
 
@@ -267,21 +301,21 @@ namespace NitroSharp
         {
             var parentBounds = new SizeF(1280, 720);
 
-            var storage = _world.GetStorage<SceneObject2DStorage>(entity);
+            var storage = _world.GetStorage<RenderItem2DStorage>(entity);
             ref TransformComponents transform = ref storage.TransformComponents[entity];
             SizeF bounds = storage.LocalBounds[entity];
 
             Entity parent = _world.GetParent(entity);
             if (parent.IsValid)
             {
-                if (_world.GetStorage<SceneObject2DStorage>(parent) is AlphaMaskStorage maskStorage)
+                if (_world.GetStorage<RenderItem2DStorage>(parent) is AlphaMaskStorage maskStorage)
                 {
 
                 }
-                else
+                else if (_world.GetStorage<RenderItem2DStorage>(parent)
+                    is RenderItem2DStorage renderItems)
                 {
-                    parentBounds = _world.GetStorage<SceneObject2DStorage>(parent)
-                        .LocalBounds[parent];
+                    parentBounds = renderItems.LocalBounds[parent];
                 }
             }
 
@@ -320,7 +354,7 @@ namespace NitroSharp
         internal void SetPosition(Entity entity, NsCoordinate x, NsCoordinate y)
         {
             Vector2 pos = GetAbsolutePosition(entity, x, y);
-            var storage = _world.GetStorage<SceneObject2DStorage>(entity);
+            var storage = _world.GetStorage<RenderItem2DStorage>(entity);
             storage.TransformComponents[entity]
                 .Position = new Vector3(pos.X, pos.Y, 0);
         }

@@ -28,7 +28,7 @@ namespace NitroSharp.NsScript.VM
         public virtual int GetSoundAmplitude(string characterName) => throw new NotImplementedException();
         public virtual int GetHeight(string entityName) => throw new NotImplementedException();
         public virtual int GetWidth(string entityName) => throw new NotImplementedException();
-        public virtual int GetSoundDuration(string entityName) => throw new NotImplementedException();
+        public virtual int GetSoundDuration(string entityName) => 0;
         public virtual int GetTimeRemaining(string soundEntityName) => throw new NotImplementedException();
         public virtual int GetTimeElapsed(string entityName) => throw new NotImplementedException();
 
@@ -58,24 +58,31 @@ namespace NitroSharp.NsScript.VM
         /// </summary>
         public virtual void CreateSprite(string name, int priority, NsCoordinate x, NsCoordinate y, string fileOrExistingEntityName) { }
 
-        public virtual void SetFieldOfView(string unk1, double unk2) { }
+        public virtual void CreateSpriteEx(string name, int priority, NsCoordinate x1, NsCoordinate y1, NsCoordinate x2, NsCoordinate y2, int width, int height, string srcEntityName) { }
 
-        public virtual void CreateCube(string name, int priority, string front, string back, string right, string left, string top, string bottom) { }
-
-        public virtual void WaitPlay(string entityName) { }
-
-        public virtual void LoadVideo(string entityName, int priority, NsCoordinate x, NsCoordinate y, bool loop, string fileName) { }
-
+        /// <summary>
+        /// Original name: CreateColor.
+        /// </summary>
+        public virtual void CreateRectangle(string name, int priority, NsCoordinate x, NsCoordinate y, int width, int height, NsColor color) { }
 
         /// <summary>
         /// Original name: CreateText.
         /// </summary>
         public virtual void CreateTextBlock(string name, int priority, NsCoordinate x, NsCoordinate y, NsDimension width, NsDimension height, string pxmlText) { }
 
-        /// <summary>
-        /// Original name: CreateColor.
-        /// </summary>
-        public virtual void CreateRectangle(string name, int priority, NsCoordinate x, NsCoordinate y, int width, int height, NsColor color) { }
+        public virtual void CreateEffect(string entity, int priority, NsCoordinate x, NsCoordinate y, int width, int height, string effectName) { }
+
+        public virtual void CreateAlphaMask(string v, int priority, NsCoordinate x, NsCoordinate y, string path, bool unk) { }
+
+        public virtual void BoxBlur(string entityQuery, uint nbPasses) { }
+        public virtual void Grayscale(string entityQuery) { }
+
+        public virtual void CreateCube(string name, int priority, string front, string back, string right, string left, string top, string bottom) { }
+        public virtual void SetFieldOfView(string unk1, double unk2) { }
+
+        public virtual void WaitPlay(string entityName) { }
+
+        public virtual void LoadVideo(string entityName, int priority, NsCoordinate x, NsCoordinate y, bool loop, string fileName) { }
 
         /// <summary>
         /// Original name: CreateSound.
@@ -110,21 +117,13 @@ namespace NitroSharp.NsScript.VM
             return 0.5f;
         }
 
-        public virtual void CreateEffect(string entity, int priority, NsCoordinate x, NsCoordinate y, int width, int height, string effectName) { }
-
-        public virtual void CreateAlphaMask(string v, int priority, NsCoordinate x, NsCoordinate y, string path, bool unk) { }
-
         public virtual void CreateChoice(string name) { }
-        public virtual void PlayCutscene(string entityName, int priority, bool loop, bool alpha, string fileName, bool enableAudio) { }
-        public virtual void CreateSpriteEx(string name, int priority, NsCoordinate x1, NsCoordinate y1, NsCoordinate x2, NsCoordinate y2, int width, int height, string srcEntityName) { }
+        public virtual bool IsPressed(string choice) => false;
 
+        public virtual void PlayCutscene(string entityName, int priority, bool loop, bool alpha, string fileName, bool enableAudio) { }
+        
         public virtual void LoadText(in DialogueBlockToken token, int maxWidth, int maxHeight, int letterSpacing, int lineSpacing) { }
 
-        public virtual void Select() { }
-        public virtual string GetSelectedChoice() => throw new NotImplementedException();
-
-        public virtual void BoxBlur(string entityQuery, uint nbPasses) { }
-        public virtual void Grayscale(string entityQuery) { }
         public virtual void AssertTrue(bool value) { }
     }
 }

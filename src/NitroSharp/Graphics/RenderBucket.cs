@@ -153,19 +153,19 @@ namespace NitroSharp.Graphics
             ref RenderItem renderItem = ref renderItems.Add();
             if (renderItems.Count > 0)
             {
-                ref RenderItem lastItem = ref renderItems[^1];
-                if ((submission.InstanceBase == (lastItem.InstanceBase + lastItem.InstanceCount))
-                    && submission.Pipeline == _lastPipeline.pipeline
-                    && submission.SharedResourceSet == _lastSharedResourceSet.set
-                    && submission.ObjectResourceSet0 == lastItem.ObjectResourceSet0
-                    && submission.ObjectResourceSet1 == lastItem.ObjectResourceSet1
-                    && submission.VertexBuffer0 == _lastVertexBuffer0.buffer
-                    && submission.VertexBuffer1 == _lastVertexBuffer1.buffer
-                    && submission.IndexBuffer == _lastIndexBuffer.buffer)
-                {
-                    lastItem.InstanceCount++;
-                    return;
-                }
+                //ref RenderItem lastItem = ref renderItems[^1];
+                //if ((submission.InstanceBase == (lastItem.InstanceBase + lastItem.InstanceCount))
+                //    && submission.Pipeline == _lastPipeline.pipeline
+                //    && submission.SharedResourceSet == _lastSharedResourceSet.set
+                //    && submission.ObjectResourceSet0 == lastItem.ObjectResourceSet0
+                //    && submission.ObjectResourceSet1 == lastItem.ObjectResourceSet1
+                //    && submission.VertexBuffer0 == _lastVertexBuffer0.buffer
+                //    && submission.VertexBuffer1 == _lastVertexBuffer1.buffer
+                //    && submission.IndexBuffer == _lastIndexBuffer.buffer)
+                //{
+                //    lastItem.InstanceCount++;
+                //    return;
+                //}
             }
 
             renderItem.BeforeRenderCallback = submission.BeforeRenderCallback;
@@ -223,32 +223,32 @@ namespace NitroSharp.Graphics
             List<DeviceBuffer> indexBuffers = _indexBuffers;
             List<ResourceSet> sharedResourceSets = _sharedResourceSets;
             (byte index, ResourceSet set) lastSharedSet = _lastSharedResourceSet;
-            int curRenderItem = -1;
+            int curRenderItem = 0;
             Pipeline? lastPipeline = null;
             ResourceSet? lastResourceSet0 = null, lastResourceSet1 = null;
             for (int i = 0; i < count; i++)
             {
                 ref RenderBucketSubmission submission = ref multiSubmission.Submissions[i];
-                ref RenderItem renderItem = ref renderItems[++curRenderItem];
-                if (curRenderItem >= 0)
+                ref RenderItem renderItem = ref renderItems[curRenderItem];
+                if (curRenderItem > 0)
                 {
-                    ref RenderItem lastRI = ref renderItems[curRenderItem];
-                    if (submission.IndexBase == (lastRI.IndexBase + lastRI.IndexCount)
-                        && ReferenceEquals(submission.Pipeline, lastPipeline)
-                        && ReferenceEquals(submission.SharedResourceSet, lastSharedSet.set)
-                        && ReferenceEquals(submission.ObjectResourceSet0, lastResourceSet0)
-                        && ReferenceEquals(submission.ObjectResourceSet1, lastResourceSet1)
-                        && ReferenceEquals(submission.VertexBuffer0, vb0.buffer)
-                        && ReferenceEquals(submission.VertexBuffer1, vb1.buffer)
-                        && ReferenceEquals(submission.IndexBuffer, ib.buffer))
-                    {
-                        if (multiSubmission.Keys[i].Priority == multiSubmission.Keys[i - 1].Priority)
-                        {
-                            lastRI.VertexCount += submission.VertexCount;
-                            lastRI.IndexCount += submission.IndexCount;
-                            continue;
-                        }
-                    }
+                    //ref RenderItem lastRI = ref renderItems[curRenderItem - 1];
+                    //if (submission.IndexBase == (lastRI.IndexBase + lastRI.IndexCount)
+                    //    && ReferenceEquals(submission.Pipeline, lastPipeline)
+                    //    && ReferenceEquals(submission.SharedResourceSet, lastSharedSet.set)
+                    //    && ReferenceEquals(submission.ObjectResourceSet0, lastResourceSet0)
+                    //    && ReferenceEquals(submission.ObjectResourceSet1, lastResourceSet1)
+                    //    && ReferenceEquals(submission.VertexBuffer0, vb0.buffer)
+                    //    && ReferenceEquals(submission.VertexBuffer1, vb1.buffer)
+                    //    && ReferenceEquals(submission.IndexBuffer, ib.buffer))
+                    //{
+                    //    if (multiSubmission.Keys[i].Priority == multiSubmission.Keys[i - 1].Priority)
+                    //    {
+                    //        lastRI.VertexCount += submission.VertexCount;
+                    //        lastRI.IndexCount += submission.IndexCount;
+                    //        continue;
+                    //    }
+                    //}
                 }
                 renderItem.BeforeRenderCallback = submission.BeforeRenderCallback;
                 renderItem.VertexBuffer0 = GetResourceIdMaybe(submission.VertexBuffer0, vertexBuffers, ref vb0);
@@ -280,8 +280,9 @@ namespace NitroSharp.Graphics
                 }
 
                 multiSubmission.Keys[curRenderItem] = multiSubmission.Keys[i];
+                curRenderItem++;
             }
-            int actualCount = curRenderItem + 1;
+            int actualCount = curRenderItem;
             uint diff = (uint)(multiSubmission.Submissions.Length - actualCount);
             _renderItems.Truncate(_renderItems.Count - diff);
             _keys.Truncate(_keys.Count - diff);

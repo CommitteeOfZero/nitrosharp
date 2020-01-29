@@ -143,10 +143,13 @@ namespace NitroSharp.Text
                 newGlyphIndices.Add(glyph.Index);
             }
 
-            Interlocked.Increment(ref _pendingBatches);
-            Task.Run(() => RasterizeBatch(font, fontSize, newGlyphIndices))
-                .ContinueWith(t => _exceptions.Add(t.Exception!),
-                    TaskContinuationOptions.OnlyOnFaulted);
+            if (newGlyphIndices.Count > 0)
+            {
+                Interlocked.Increment(ref _pendingBatches);
+                Task.Run(() => RasterizeBatch(font, fontSize, newGlyphIndices))
+                    .ContinueWith(t => _exceptions.Add(t.Exception!),
+                        TaskContinuationOptions.OnlyOnFaulted);
+            }
         }
 
         public ValueTask ResolveGlyphs(TextureCache textureCache)

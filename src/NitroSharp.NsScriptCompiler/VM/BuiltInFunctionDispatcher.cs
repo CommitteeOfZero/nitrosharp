@@ -654,7 +654,7 @@ namespace NitroSharp.NsScript.VM
             public string TakeString()
             {
                 ConstantValue arg = TakeOpt(ConstantValue.EmptyString);
-                return arg.AsString()!;
+                return arg.IsString ? arg.AsString()! : arg.ConvertToString();
             }
 
             public int TakeInt()

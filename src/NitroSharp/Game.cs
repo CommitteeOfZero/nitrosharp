@@ -12,6 +12,8 @@ using Veldrid.StartupUtilities;
 using System.Runtime.InteropServices;
 using NitroSharp.Experimental;
 
+#nullable enable
+
 namespace NitroSharp
 {
     internal readonly struct FrameStamp
@@ -34,17 +36,18 @@ namespace NitroSharp
         private readonly GameWindow _window;
         private volatile bool _needsResize;
         private volatile bool _surfaceDestroyed;
-        private GraphicsDevice _graphicsDevice;
-        private Swapchain _swapchain;
+        private GraphicsDevice? _graphicsDevice;
+        private Swapchain? _swapchain;
         private readonly TaskCompletionSource<int> _initializingGraphics;
 
-        private AudioDevice _audioDevice;
-        private AudioSourcePool _audioSourcePool;
+        private AudioDevice? _audioDevice;
+        private AudioSourcePool? _audioSourcePool;
 
         private readonly World _world;
+        private ContentManager? _content;
 
-        private Presenter _presenter;
-        private ScriptRunner _scriptRunner;
+        private Presenter? _presenter;
+        private ScriptRunner? _scriptRunner;
         private readonly Logger _logger;
         private readonly LogEventRecorder _logEventRecorder;
 
@@ -59,16 +62,17 @@ namespace NitroSharp
             _glyphRasterizer = new GlyphRasterizer(enableOutlines: true);
             _window = window;
             _window.Mobile_SurfaceCreated += OnSurfaceCreated;
-            _window.Resized += OnWindowResized;
-            _window.Mobile_SurfaceDestroyed += OnSurfaceDestroyed;
+            _window.Resized += () => _needsResize = true;
+            _window.Mobile_SurfaceDestroyed += () => _surfaceDestroyed = true;
 
             _gameTimer = new Stopwatch();
             _world = new World();
+            FontConfiguration = default!;
         }
 
-        internal ContentManager Content { get; private set; }
-        internal AudioDevice AudioDevice => _audioDevice;
-        internal AudioSourcePool AudioSourcePool => _audioSourcePool;
+        internal ContentManager Content => _content!;
+        internal AudioDevice AudioDevice => _audioDevice!;
+        internal AudioSourcePool AudioSourcePool => _audioSourcePool!;
 
         internal Logger Logger => _logger;
         internal LogEventRecorder LogEventRecorder => _logEventRecorder;
@@ -78,9 +82,10 @@ namespace NitroSharp
 
         public async Task Run(bool useDedicatedThread = false)
         {
-            // Blocking the main thread here so that the main loop wouldn't get executed
-            // on a thread pool thread.
-            // Reasoning: desktop platforms require it to be executed on the main thread.
+            // Blocking the thread here because desktop platforms
+            // require that the main loop be run on the main thread.
+            // useDedicatedThread is only used by the Android verison
+            // at this point.
             try
             {
                 Initialize().Wait();
@@ -103,12 +108,12 @@ namespace NitroSharp
 
         private async Task Initialize()
         {
-            var initializeAudio = Task.Run((Action)SetupAudio);
+            var initializeAudio = Task.Run(SetupAudio);
             SetupFonts();
             await Task.WhenAll(new[] { _initializingGraphics.Task, initializeAudio });
-            Content = CreateContentManager();
+            _content = CreateContentManager();
             _scriptRunner = new ScriptRunner(this, _world);
-            var loadScriptTask = Task.Run((Action)_scriptRunner.LoadStartupScript);
+            var loadScriptTask = Task.Run(_scriptRunner.LoadStartupScript);
             _presenter = new Presenter(this, _world);
             await loadScriptTask;
         }
@@ -160,6 +165,7 @@ namespace NitroSharp
                     HandleSurfaceDestroyed();
                     return;
                 }
+                Debug.Assert(_swapchain != null);
                 if (_needsResize)
                 {
                     Size newSize = _window.Size;
@@ -185,10 +191,12 @@ namespace NitroSharp
 
         private void Tick(FrameStamp framestamp, float deltaMilliseconds)
         {
+            Debug.Assert(_scriptRunner != null);
+            Debug.Assert(_presenter != null);
             if (Content.ResolveTextures())
             {
-                _presenter.ProcessNewEntities();
                 _world.BeginFrame();
+                _presenter.ProcessChoices();
 
                 var scriptRunnerStatus = _scriptRunner.Tick();
                 switch (scriptRunnerStatus)
@@ -200,7 +208,7 @@ namespace NitroSharp
                         _presenter.SyncTo(_scriptRunner);
                         break;
                     case ScriptRunner.Status.Crashed:
-                        throw _scriptRunner.LastException;
+                        throw _scriptRunner.LastException!;
                     case ScriptRunner.Status.Running:
                     default:
                         break;
@@ -214,6 +222,7 @@ namespace NitroSharp
         {
             bool resuming = _initializingGraphics.Task.IsCompleted;
             SetupGraphics(swapchainSource);
+            Debug.Assert(_graphicsDevice != null);
             _initializingGraphics.TrySetResult(0);
 
             if (resuming)
@@ -274,6 +283,8 @@ namespace NitroSharp
 
         private ContentManager CreateContentManager()
         {
+            Debug.Assert(_graphicsDevice != null);
+            Debug.Assert(_audioDevice != null);
             TextureLoader textureLoader;
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && UseWicOnWindows)
             {
@@ -293,18 +304,10 @@ namespace NitroSharp
             return content;
         }
 
-        private void OnWindowResized()
-        {
-            _needsResize = true;
-        }
-
-        private void OnSurfaceDestroyed()
-        {
-            _surfaceDestroyed = true;
-        }
-
         private void HandleSurfaceDestroyed()
         {
+            Debug.Assert(_graphicsDevice != null);
+            Debug.Assert(_swapchain != null);
             if (_graphicsDevice.BackendType == GraphicsBackend.OpenGLES)
             {
                 // TODO (Android): destroy all device resources
@@ -329,14 +332,14 @@ namespace NitroSharp
 
         public void Dispose()
         {
-            _audioSourcePool.Dispose();
-            _presenter.Dispose();
-            _graphicsDevice.WaitForIdle();
-            Content.Dispose();
+            _presenter?.Dispose();
+            _graphicsDevice?.WaitForIdle();
+            _content?.Dispose();
             _glyphRasterizer.Dispose();
-            _swapchain.Dispose();
-            _graphicsDevice.Dispose();
-            _audioDevice.Dispose();
+            _swapchain?.Dispose();
+            _graphicsDevice?.Dispose();
+            _audioSourcePool?.Dispose();
+            _audioDevice?.Dispose();
         }
     }
 }

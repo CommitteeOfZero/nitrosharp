@@ -18,7 +18,15 @@ namespace NitroSharp.Animation
             bool repeat = false)
         {
             Entity = entity;
-            Duration = duration;
+            if (duration > TimeSpan.FromMilliseconds(0))
+            {
+                Duration = duration;
+            }
+            else
+            {
+                Duration = TimeSpan.FromMilliseconds(1);
+                _elapsed = 1.0f;
+            }
             EasingFunction = easingFunction;
             Repeat = repeat;
         }

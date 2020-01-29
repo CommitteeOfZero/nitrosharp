@@ -6,7 +6,7 @@ using NitroSharp.Interactivity;
 
 namespace NitroSharp
 {
-    public readonly struct EntityName : IEquatable<EntityName>
+    internal readonly struct EntityName : IEquatable<EntityName>
     {
         private readonly string _value;
         private readonly string? _parent;
@@ -70,7 +70,7 @@ namespace NitroSharp
             {
                 state = Interactivity.MouseState.Over;
             }
-            else if (str.Equals("MouseClicked", StringComparison.Ordinal))
+            else if (str.Equals("MouseClick", StringComparison.Ordinal))
             {
                 state = Interactivity.MouseState.Pressed;
             }

@@ -149,14 +149,17 @@ namespace NitroSharp
             }
         }
 
+#nullable enable
+
         private void MoveCore(
             Entity entity, TimeSpan duration,
             NsCoordinate dstX, NsCoordinate dstY,
             NsEasingFunction easingFunction, bool wait)
         {
-            ref Vector3 position = ref _world.GetStorage<SceneObjectStorage>(entity)
-                .TransformComponents[entity].Position;
+            RenderItemStorage? storage = _world.GetStorage<RenderItemStorage>(entity);
+            if (storage == null) { return; }
 
+            ref Vector3 position = ref storage.TransformComponents[entity].Position;
             float targetX = dstX.Origin == NsCoordinateOrigin.CurrentValue
                 ? position.X + dstX.Value
                 : dstX.Value;
@@ -215,7 +218,7 @@ namespace NitroSharp
             NsRational dstScaleX, NsRational dstScaleY,
             NsEasingFunction easingFunction, bool suspendThread)
         {
-            ref Vector3 scale = ref _world.GetStorage<SceneObjectStorage>(entity)
+            ref Vector3 scale = ref _world.GetStorage<RenderItemStorage>(entity)
                 .TransformComponents[entity].Scale;
             dstScaleX = dstScaleX.Rebase(1.0f);
             dstScaleY = dstScaleY.Rebase(1.0f);

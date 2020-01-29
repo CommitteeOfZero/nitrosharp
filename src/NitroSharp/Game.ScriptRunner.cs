@@ -46,7 +46,25 @@ namespace NitroSharp
 
             public Status Tick()
             {
-                return Run();
+                Debug.Assert(_nssInterpreter != null);
+                bool threadStateChanged = _nssInterpreter.RefreshThreadState();
+                if (threadStateChanged || _nssInterpreter.ProcessPendingThreadActions())
+                {
+                    return Status.AwaitingPresenterState;
+                }
+
+                bool ranAnyCode = _nssInterpreter.Run(CancellationToken.None);
+                if (ranAnyCode)
+                {
+                    Queue<Message> messagesForPresenter = _builtinFunctions.MessagesForPresenter;
+                    while (messagesForPresenter.Count > 0)
+                    {
+                        Message message = messagesForPresenter.Dequeue();
+                        PostMessage(message);
+                    }
+                }
+
+                return ranAnyCode ? Status.NewStateReady : Status.AwaitingPresenterState;
             }
 
             public void LoadStartupScript()
@@ -124,29 +142,6 @@ namespace NitroSharp
                 return true;
             }
 
-            private Status Run()
-            {
-                Debug.Assert(_nssInterpreter != null);
-                bool threadStateChanged = _nssInterpreter.RefreshThreadState();
-                if (threadStateChanged || _nssInterpreter.ProcessPendingThreadActions())
-                {
-                    return Status.AwaitingPresenterState;
-                }
-
-                bool ranAnyCode = _nssInterpreter.Run(CancellationToken.None);
-                if (ranAnyCode)
-                {
-                    Queue<Message> messagesForPresenter = _builtinFunctions.MessagesForPresenter;
-                    while (messagesForPresenter.Count > 0)
-                    {
-                        Message message = messagesForPresenter.Dequeue();
-                        PostMessage(message);
-                    }
-                }
-
-                return ranAnyCode ? Status.NewStateReady : Status.AwaitingPresenterState;
-            }
-
             protected override void HandleMessages(Queue<Message> messages)
             {
                 Debug.Assert(_nssInterpreter != null);
@@ -171,10 +166,6 @@ namespace NitroSharp
                             {
                                 _nssInterpreter.ResumeThread(thread);
                             }
-                            break;
-                        case MessageKind.ChoiceSelected:
-                            var choiceSelectedMsg = (ChoiceSelectedMessage)message;
-                            _builtinFunctions.SelectedChoice = choiceSelectedMsg.ChoiceName;
                             break;
                     }
                 }
@@ -202,6 +193,12 @@ namespace NitroSharp
                         if (_nssInterpreter.TryGetThread(threadInfo.Name, out thread))
                         {
                             _nssInterpreter.TerminateThread(thread);
+                        }
+                        break;
+                    case ThreadActionMessage.ActionKind.Suspend:
+                        if (_nssInterpreter.TryGetThread(threadInfo.Name, out thread))
+                        {
+                            _nssInterpreter.SuspendThread(thread);
                         }
                         break;
                 }
