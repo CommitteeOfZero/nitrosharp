@@ -12,13 +12,13 @@ namespace NitroSharp.NsScript.VM
 
         public virtual int GenerateRandomNumber(int max) => _randomGen.Next(max);
 
-        internal VirtualMachine? _vm;
+        internal NsScriptVM? _vm;
         private readonly Random _randomGen;
 
-        public VirtualMachine Interpreter => _vm!;
+        public NsScriptVM VM => _vm!;
 
-        public ThreadContext? MainThread => Interpreter.MainThread;
-        public ThreadContext? CurrentThread => Interpreter.CurrentThread;
+        public ThreadContext? MainThread => VM.MainThread;
+        public ThreadContext? CurrentThread => VM.CurrentThread;
 
         public virtual void BeginDialogueLine(string pxmlString) { }
 

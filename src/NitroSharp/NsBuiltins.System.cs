@@ -47,11 +47,11 @@ namespace NitroSharp
                 if (!_world.IsLocked(entity))
                 {
                     _entitiesToRemove.Enqueue(name);
-                    ThreadContext attachedThread = Interpreter.Threads
+                    ThreadContext attachedThread = VM.Threads
                         .FirstOrDefault(x => entityName.StartsWith(x.Name));
                     if (attachedThread != null)
                     {
-                        Interpreter.TerminateThread(attachedThread);
+                        VM.TerminateThread(attachedThread);
                     }
                 }
             }
@@ -81,23 +81,23 @@ namespace NitroSharp
 
         public override void Delay(TimeSpan delay)
         {
-            Interpreter.SuspendThread(CurrentThread, delay);
+            VM.SuspendThread(CurrentThread, delay);
         }
 
         public override void WaitForInput()
         {
-            Interpreter.SuspendThread(CurrentThread);
+            VM.SuspendThread(CurrentThread);
         }
 
         public override void WaitForInput(TimeSpan timeout)
         {
-            Interpreter.SuspendThread(CurrentThread, timeout);
+            VM.SuspendThread(CurrentThread, timeout);
         }
 
         public override void CreateThread(string name, string target)
         {
             bool startImmediately = _world.Query(name + "*").Any();
-            ThreadContext thread = Interpreter.CreateThread(name, target, startImmediately);
+            ThreadContext thread = VM.CreateThread(name, target, startImmediately);
             var info = new InterpreterThreadInfo(name, thread.EntryModule, target);
             _world.ThreadRecords.Uninitialized.New(new EntityName(name), info);
         }
@@ -122,16 +122,16 @@ namespace NitroSharp
                     break;
 
                 case NsEntityAction.Start:
-                    if (Interpreter.TryGetThread(entityName.Value, out ThreadContext thread))
+                    if (VM.TryGetThread(entityName.Value, out ThreadContext thread))
                     {
-                        Interpreter.ResumeThread(thread);
+                        VM.ResumeThread(thread);
                     }
                     break;
 
                 case NsEntityAction.Stop:
-                    if (Interpreter.TryGetThread(entityName.Value, out thread))
+                    if (VM.TryGetThread(entityName.Value, out thread))
                     {
-                        Interpreter.TerminateThread(thread);
+                        VM.TerminateThread(thread);
                     }
                     break;
 

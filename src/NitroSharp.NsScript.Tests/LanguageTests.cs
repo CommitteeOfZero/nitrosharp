@@ -35,7 +35,7 @@ namespace NitroSharp.NsScriptCompiler.Tests
         {
             if (!value)
             {
-                Interpreter.TerminateThread(CurrentThread);
+                VM.TerminateThread(CurrentThread);
             }
             Assert.True(value);
         }
@@ -77,13 +77,13 @@ namespace NitroSharp.NsScriptCompiler.Tests
             using FileStream globals = File.OpenRead(
                 Path.Combine(compCtx.NsxDir, compCtx.GlobalsFileName)
             );
-            VM = new VirtualMachine(
+            VM = new NsScriptVM(
                 new FileSystemNsxModuleLocator(compCtx.NsxDir),
                 globals,
                 new MockBuiltInImpl()
             );
         }
-        public VirtualMachine VM { get; }
+        public NsScriptVM VM { get; }
         public SourceModuleSymbol TestModule { get; }
     }
 

@@ -109,7 +109,7 @@ namespace NitroSharp
 
         public override void WaitText(string id, TimeSpan time)
         {
-            Interpreter.ActivateDialogueBlock(_lastDialogueBlockToken);
+            VM.ActivateDialogueBlock(_lastDialogueBlockToken);
             _messageQueue.Enqueue(new Game.BeginDialogueBlockMessage
             {
                 TextEntity = _lastTextEntity

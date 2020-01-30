@@ -188,7 +188,7 @@ namespace NitroSharp
             );
 
             SetPosition(e, x, y);
-            Interpreter.SuspendThread(MainThread!);
+            VM.SuspendThread(MainThread!);
             _messageQueue.Enqueue(new SimpleMessage(MessageKind.CaptureFramebuffer));
         }
 
@@ -271,7 +271,7 @@ namespace NitroSharp
                     _world.ActivateAnimation(animation);
                 }
 
-                Interpreter.SuspendThread(CurrentThread);
+                VM.SuspendThread(CurrentThread);
             }
         }
 

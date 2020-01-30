@@ -29,7 +29,7 @@ namespace NitroSharp
             private readonly Logger _logger;
             private readonly string _nssFolder;
             private readonly string _bytecodeCacheDir;
-            private VirtualMachine? _nssInterpreter;
+            private NsScriptVM? _vm;
             private readonly NsBuiltins _builtinFunctions;
 
             public Exception? LastException { get; private set; }
@@ -46,14 +46,14 @@ namespace NitroSharp
 
             public Status Tick()
             {
-                Debug.Assert(_nssInterpreter != null);
-                bool threadStateChanged = _nssInterpreter.RefreshThreadState();
-                if (threadStateChanged || _nssInterpreter.ProcessPendingThreadActions())
+                Debug.Assert(_vm != null);
+                bool threadStateChanged = _vm.RefreshThreadState();
+                if (threadStateChanged || _vm.ProcessPendingThreadActions())
                 {
                     return Status.AwaitingPresenterState;
                 }
 
-                bool ranAnyCode = _nssInterpreter.Run(CancellationToken.None);
+                bool ranAnyCode = _vm.Run(CancellationToken.None);
                 if (ranAnyCode)
                 {
                     Queue<Message> messagesForPresenter = _builtinFunctions.MessagesForPresenter;
@@ -98,8 +98,8 @@ namespace NitroSharp
                 }
 
                 var nsxLocator = new FileSystemNsxModuleLocator(_bytecodeCacheDir);
-                _nssInterpreter = new VirtualMachine(nsxLocator, File.OpenRead(globalsPath), _builtinFunctions);
-                _nssInterpreter.CreateThread(
+                _vm = new NsScriptVM(nsxLocator, File.OpenRead(globalsPath), _builtinFunctions);
+                _vm.CreateThread(
                     "__MAIN",
                     _configuration.StartupScript.Replace(".nss", string.Empty), "main");
             }
@@ -144,16 +144,16 @@ namespace NitroSharp
 
             protected override void HandleMessages(Queue<Message> messages)
             {
-                Debug.Assert(_nssInterpreter != null);
+                Debug.Assert(_vm != null);
                 foreach (Message message in messages)
                 {
                     switch (message.Kind)
                     {
                         case MessageKind.SuspendMainThread:
-                            _nssInterpreter.SuspendMainThread();
+                            _vm.SuspendMainThread();
                             break;
                         case MessageKind.ResumeMainThread:
-                            _nssInterpreter.ResumeMainThread();
+                            _vm.ResumeMainThread();
                             break;
                         case MessageKind.ThreadAction:
                             RunThreadAction((ThreadActionMessage)message);
@@ -164,7 +164,7 @@ namespace NitroSharp
                             ThreadContext thread = animation.WaitingThread;
                             if (thread != null)
                             {
-                                _nssInterpreter.ResumeThread(thread);
+                                _vm.ResumeThread(thread);
                             }
                             break;
                     }
@@ -173,32 +173,32 @@ namespace NitroSharp
 
             private void RunThreadAction(ThreadActionMessage message)
             {
-                Debug.Assert(_nssInterpreter != null);
+                Debug.Assert(_vm != null);
                 InterpreterThreadInfo threadInfo = message.ThreadInfo;
                 switch (message.Action)
                 {
                     case ThreadActionMessage.ActionKind.StartOrResume:
-                        if (_nssInterpreter.TryGetThread(threadInfo.Name, out ThreadContext? thread))
+                        if (_vm.TryGetThread(threadInfo.Name, out ThreadContext? thread))
                         {
-                            _nssInterpreter.ResumeThread(thread);
+                            _vm.ResumeThread(thread);
                         }
                         else
                         {
-                            _nssInterpreter.CreateThread(
+                            _vm.CreateThread(
                                 threadInfo.Name, threadInfo.Module, threadInfo.Target, start: true);
                         }
                         break;
 
                     case ThreadActionMessage.ActionKind.Terminate:
-                        if (_nssInterpreter.TryGetThread(threadInfo.Name, out thread))
+                        if (_vm.TryGetThread(threadInfo.Name, out thread))
                         {
-                            _nssInterpreter.TerminateThread(thread);
+                            _vm.TerminateThread(thread);
                         }
                         break;
                     case ThreadActionMessage.ActionKind.Suspend:
-                        if (_nssInterpreter.TryGetThread(threadInfo.Name, out thread))
+                        if (_vm.TryGetThread(threadInfo.Name, out thread))
                         {
-                            _nssInterpreter.SuspendThread(thread);
+                            _vm.SuspendThread(thread);
                         }
                         break;
                 }

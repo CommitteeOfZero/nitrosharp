@@ -857,16 +857,7 @@ namespace NitroSharp.NsScript.Compiler
                 => _breakPlaceholders == null;
 
             public Queue<JumpPlaceholder> BreakPlaceholders
-            {
-                get
-                {
-                    if (_breakPlaceholders == null)
-                    {
-                        _breakPlaceholders = new Queue<JumpPlaceholder>();
-                    }
-                    return _breakPlaceholders;
-                }
-            }
+                => _breakPlaceholders ??= new Queue<JumpPlaceholder>();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

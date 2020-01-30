@@ -10,7 +10,7 @@ using NitroSharp.NsScript.Utilities;
 
 namespace NitroSharp.NsScript.VM
 {
-    public sealed class VirtualMachine
+    public sealed class NsScriptVM
     {
         private readonly struct ThreadAction
         {
@@ -48,14 +48,14 @@ namespace NitroSharp.NsScript.VM
 
         internal class SystemVariableLookup
         {
-            private readonly VirtualMachine _vm;
+            private readonly NsScriptVM _vm;
             private readonly GlobalVarLookupTable _nameLookup;
 
             public readonly int PresentPreprocess;
             public readonly int PresentText;
             public readonly int PresentProcess;
 
-            public SystemVariableLookup(VirtualMachine vm)
+            public SystemVariableLookup(NsScriptVM vm)
             {
                 _vm = vm;
                 _nameLookup = vm._globalVarLookup;
@@ -94,7 +94,7 @@ namespace NitroSharp.NsScript.VM
         public ThreadContext? MainThread { get; internal set; }
         public ThreadContext? CurrentThread { get; internal set; }
 
-        public VirtualMachine(
+        public NsScriptVM(
             NsxModuleLocator moduleLocator,
             Stream globalVarLookupTableStream,
             BuiltInFunctions builtInFunctionsImpl)

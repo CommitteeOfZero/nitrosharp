@@ -26,7 +26,7 @@ namespace NitroSharp
             }
             if (duration > TimeSpan.Zero && wait)
             {
-                Interpreter.SuspendThread(CurrentThread);
+                VM.SuspendThread(CurrentThread);
             }
         }
 
@@ -80,11 +80,11 @@ namespace NitroSharp
             {
                 if (wait)
                 {
-                    Interpreter.SuspendThread(CurrentThread);
+                    VM.SuspendThread(CurrentThread);
                 }
                 else
                 {
-                    Interpreter.SuspendThread(CurrentThread, delay);
+                    VM.SuspendThread(CurrentThread, delay);
                 }
             }
         }
@@ -140,11 +140,11 @@ namespace NitroSharp
             {
                 if (wait)
                 {
-                    Interpreter.SuspendThread(CurrentThread);
+                    VM.SuspendThread(CurrentThread);
                 }
                 else
                 {
-                    Interpreter.SuspendThread(CurrentThread, delay);
+                    VM.SuspendThread(CurrentThread, delay);
                 }
             }
         }
@@ -204,11 +204,11 @@ namespace NitroSharp
             {
                 if (wait)
                 {
-                    Interpreter.SuspendThread(CurrentThread);
+                    VM.SuspendThread(CurrentThread);
                 }
                 else
                 {
-                    Interpreter.SuspendThread(CurrentThread, delay);
+                    VM.SuspendThread(CurrentThread, delay);
                 }
             }
         }

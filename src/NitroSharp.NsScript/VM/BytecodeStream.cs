@@ -36,7 +36,6 @@ namespace NitroSharp.NsScript.VM
         public short DecodeOffset()
             => _reader.ReadInt16LE();
 
-
         /// <exception cref="InvalidDataException" />
         public Immediate DecodeImmediateValue()
         {

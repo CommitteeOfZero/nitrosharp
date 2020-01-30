@@ -293,7 +293,7 @@ namespace NitroSharp.NsScript.VM
             int letterSpacing = args.TakeInt();
             int lineSpacing = args.TakeInt();
 
-            NsxModule module = _impl.Interpreter.CurrentThread!.CallFrameStack.Peek(1).Module;
+            NsxModule module = _impl.VM.CurrentThread!.CallFrameStack.Peek(1).Module;
             int subroutineIdx = module.LookupSubroutineIndex(subroutineName);
             ref readonly SubroutineRuntimeInformation srti = ref module.GetSubroutineRuntimeInformation(subroutineIdx);
             int blockIndex = srti.LookupDialogueBlockIndex(textName);

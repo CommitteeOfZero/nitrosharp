@@ -9,7 +9,11 @@
         public readonly int Offset;
 
         public DialogueBlockToken(
-            string blockName, string boxName, NsxModule module, int subroutineIndex, int offset)
+            string blockName,
+            string boxName,
+            NsxModule module,
+            int subroutineIndex,
+            int offset)
         {
             BlockName = blockName;
             BoxName = boxName;
