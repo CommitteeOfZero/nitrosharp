@@ -1,17 +1,10 @@
 ﻿using NitroSharp.Experimental;
+using NitroSharp.NsScript.Primitives;
 
 #nullable enable
 
 namespace NitroSharp.Interactivity
 {
-    internal enum MouseState
-    {
-        Normal,
-        Over,
-        Pressed,
-        Leave
-    }
-
     internal struct ChoiceEntities
     {
         public Entity DefaultVisual;

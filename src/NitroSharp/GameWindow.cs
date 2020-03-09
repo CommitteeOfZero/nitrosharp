@@ -3,6 +3,8 @@ using System.Threading;
 using NitroSharp.Primitives;
 using Veldrid;
 
+#nullable enable
+
 namespace NitroSharp
 {
     public interface GameWindow
@@ -13,8 +15,8 @@ namespace NitroSharp
         bool Exists { get; }
 
         event Action Resized;
-        event Action<SwapchainSource> Mobile_SurfaceCreated;
-        event Action Mobile_SurfaceDestroyed;
+        event Action<SwapchainSource>? Mobile_SurfaceCreated;
+        event Action? Mobile_SurfaceDestroyed;
         //event Action Destroyed;
 
         InputSnapshot PumpEvents();

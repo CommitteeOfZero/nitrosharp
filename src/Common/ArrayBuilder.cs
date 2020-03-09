@@ -71,7 +71,7 @@ namespace NitroSharp.Utilities
             _elements[_count++] = item;
         }
 
-        public void Insert(int index, T item)
+        public void Insert(uint index, T item)
         {
             Debug.Assert(index < _count);
             if (_count == _elements.Length)
@@ -88,7 +88,7 @@ namespace NitroSharp.Utilities
             _count++;
         }
 
-        public void Remove(int index)
+        public void Remove(uint index)
         {
             Debug.Assert(index < _count);
             _count--;
@@ -96,6 +96,14 @@ namespace NitroSharp.Utilities
             {
                 Array.Copy(_elements, index + 1, _elements, index, _count - index);
             }
+        }
+
+        public T SwapRemove(uint index)
+        {
+            ref T ptr = ref _elements[index];
+            T elem = ptr;
+            ptr = _elements[--_count];
+            return elem;
         }
 
         public void Truncate(uint length)

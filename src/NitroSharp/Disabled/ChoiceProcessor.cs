@@ -2,7 +2,8 @@
 using System.Numerics;
 using NitroSharp.Animation;
 using NitroSharp.Experimental;
-using NitroSharp.Graphics;
+using NitroSharp.Graphics.Old;
+using NitroSharp.NsScript.Primitives;
 using NitroSharp.Primitives;
 using Veldrid;
 

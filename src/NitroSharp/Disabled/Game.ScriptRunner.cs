@@ -1,5 +1,4 @@
-﻿using NitroSharp.Animation;
-using NitroSharp.Experimental;
+﻿using NitroSharp.New;
 using NitroSharp.NsScript.Compiler;
 using NitroSharp.NsScript.VM;
 using System;
@@ -30,7 +29,7 @@ namespace NitroSharp
             private readonly string _nssFolder;
             private readonly string _bytecodeCacheDir;
             private NsScriptVM? _vm;
-            private readonly NsBuiltins _builtinFunctions;
+            private readonly Builtins _builtinFunctions;
 
             public Exception? LastException { get; private set; }
 
@@ -40,8 +39,7 @@ namespace NitroSharp
                 _logger = game._logger;
                 _nssFolder = Path.Combine(_configuration.ContentRoot, "nss");
                 _bytecodeCacheDir = _nssFolder.Replace("nss", "nsx");
-                _builtinFunctions = new NsBuiltins(game);
-                _builtinFunctions.SetWorld(world);
+                _builtinFunctions = new Builtins(game, world);
             }
 
             public Status Tick()
@@ -56,12 +54,12 @@ namespace NitroSharp
                 bool ranAnyCode = _vm.Run(CancellationToken.None);
                 if (ranAnyCode)
                 {
-                    Queue<Message> messagesForPresenter = _builtinFunctions.MessagesForPresenter;
-                    while (messagesForPresenter.Count > 0)
-                    {
-                        Message message = messagesForPresenter.Dequeue();
-                        PostMessage(message);
-                    }
+                    //Queue<Message> messagesForPresenter = _builtinFunctions.MessagesForPresenter;
+                    //while (messagesForPresenter.Count > 0)
+                    //{
+                    //    Message message = messagesForPresenter.Dequeue();
+                    //    PostMessage(message);
+                    //}
                 }
 
                 return ranAnyCode ? Status.NewStateReady : Status.AwaitingPresenterState;
@@ -159,13 +157,13 @@ namespace NitroSharp
                             RunThreadAction((ThreadActionMessage)message);
                             break;
                         case MessageKind.AnimationCompleted:
-                            var animCompletedMsg = (AnimationCompletedMessage)message;
-                            PropertyAnimation animation = animCompletedMsg.Animation;
-                            ThreadContext thread = animation.WaitingThread;
-                            if (thread != null)
-                            {
-                                _vm.ResumeThread(thread);
-                            }
+                            //var animCompletedMsg = (AnimationCompletedMessage)message;
+                            //PropertyAnimation animation = animCompletedMsg.Animation;
+                            //ThreadContext thread = animation.WaitingThread;
+                            //if (thread != null)
+                            //{
+                            //    _vm.ResumeThread(thread);
+                            //}
                             break;
                     }
                 }

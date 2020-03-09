@@ -2,16 +2,18 @@
 using System.Numerics;
 using NitroSharp.Experimental;
 using NitroSharp.Graphics;
+using NitroSharp.Graphics.Old;
 using NitroSharp.NsScript;
 
 namespace NitroSharp.Animation
 {
-    internal sealed class MoveAnimation : LerpAnimation<TransformComponents>
+    internal sealed class ZoomAnimation : LerpAnimation<TransformComponents>
     {
-        public Vector3 StartPosition;
-        public Vector3 Destination;
+        public Vector3 InitialScale;
+        public Vector3 FinalScale;
 
-        public MoveAnimation(Entity entity, TimeSpan duration,
+
+        public ZoomAnimation(Entity entity, TimeSpan duration,
             NsEasingFunction easingFunction = NsEasingFunction.None, bool repeat = false)
             : base(entity, duration, easingFunction, repeat)
         {
@@ -25,8 +27,8 @@ namespace NitroSharp.Animation
 
         protected override void InterpolateValue(ref TransformComponents value, float factor)
         {
-            Vector3 delta = Destination - StartPosition;
-            value.Position = StartPosition + delta * factor;
+            Vector3 delta = FinalScale - InitialScale;
+            value.Scale = InitialScale + delta * factor;
         }
     }
 }

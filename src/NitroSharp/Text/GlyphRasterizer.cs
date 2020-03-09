@@ -122,7 +122,7 @@ namespace NitroSharp.Text
             ReadOnlySpan<PositionedGlyph> glyphs,
             TextureCache textureCache)
         {
-            var newGlyphIndices = new List<uint>();
+            List<uint>? newGlyphIndices = null;
             FontData fontData = GetFontData(font);
             foreach (PositionedGlyph glyph in glyphs)
             {
@@ -140,10 +140,11 @@ namespace NitroSharp.Text
                     }
                 }
                 fontData.UpsertCachedGlyph(key, GlyphCacheEntry.Pending());
+                newGlyphIndices ??= new List<uint>();
                 newGlyphIndices.Add(glyph.Index);
             }
 
-            if (newGlyphIndices.Count > 0)
+            if (newGlyphIndices != null)
             {
                 Interlocked.Increment(ref _pendingBatches);
                 Task.Run(() => RasterizeBatch(font, fontSize, newGlyphIndices))

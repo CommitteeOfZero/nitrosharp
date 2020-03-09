@@ -26,6 +26,9 @@ namespace NitroSharp.NsScript.VM
             var args = new ArgConsumer(cvs);
             switch (function)
             {
+                case BuiltInFunction.CreateName:
+                    CreateName(ref args);
+                    break;
                 case BuiltInFunction.CreateChoice:
                     CreateChoice(ref args);
                     break;
@@ -169,6 +172,11 @@ namespace NitroSharp.NsScript.VM
             return result;
         }
 
+        private void CreateName(ref ArgConsumer args)
+        {
+            _impl.CreateEntity(args.TakeEntityPath());
+        }
+
         private void BezierMove(ref ArgConsumer args)
         {
             _impl.BezierMove(
@@ -183,7 +191,7 @@ namespace NitroSharp.NsScript.VM
         private void CreateMask(ref ArgConsumer args)
         {
             _impl.CreateAlphaMask(
-                args.TakeEntityName(),
+                args.TakeEntityPath(),
                 priority: args.TakeInt(),
                 x: args.TakeCoordinate(),
                 y: args.TakeCoordinate(),
@@ -195,7 +203,7 @@ namespace NitroSharp.NsScript.VM
         private void CreateEffect(ref ArgConsumer args)
         {
             _impl.CreateEffect(
-                args.TakeEntityName(),
+                args.TakeEntityPath(),
                 priority: args.TakeInt(),
                 x: args.TakeCoordinate(),
                 y: args.TakeCoordinate(),
@@ -207,13 +215,13 @@ namespace NitroSharp.NsScript.VM
 
         private void SetTone(ref ArgConsumer args)
         {
-            string entityQuery = args.TakeEntityQuery();
+            EntityQuery query = args.TakeEntityQuery();
             if (args.TakeConstant() != BuiltInConstant.Monochrome)
             {
                 throw new Exception();
             }
 
-            _impl.Grayscale(entityQuery);
+            _impl.Grayscale(query);
         }
 
         private void SetShade(ref ArgConsumer args)
@@ -232,7 +240,7 @@ namespace NitroSharp.NsScript.VM
         private void CreateText(ref ArgConsumer args)
         {
             _impl.CreateTextBlock(
-                args.TakeEntityName(),
+                args.TakeEntityPath(),
                priority: args.TakeInt(),
                x: args.TakeCoordinate(),
                y: args.TakeCoordinate(),
@@ -244,7 +252,7 @@ namespace NitroSharp.NsScript.VM
 
         private void ScrollbarValue(ref ArgConsumer args)
         {
-            string scrollbarEntity = args.TakeEntityName();
+            EntityPath scrollbarEntity = args.TakeEntityPath();
             SetResult(ConstantValue.Float(_impl.GetScrollbarValue(scrollbarEntity)));
         }
 
@@ -269,7 +277,7 @@ namespace NitroSharp.NsScript.VM
         private void CreateWindow(ref ArgConsumer args)
         {
             _impl.CreateDialogueBox(
-                args.TakeEntityName(),
+                args.TakeEntityPath(),
                 priority: args.TakeInt(),
                 x: args.TakeCoordinate(),
                 y: args.TakeCoordinate(),
@@ -295,7 +303,7 @@ namespace NitroSharp.NsScript.VM
 
             NsxModule module = _impl.VM.CurrentThread!.CallFrameStack.Peek(1).Module;
             int subroutineIdx = module.LookupSubroutineIndex(subroutineName);
-            ref readonly SubroutineRuntimeInformation srti = ref module.GetSubroutineRuntimeInformation(subroutineIdx);
+            ref readonly SubroutineRuntimeInfo srti = ref module.GetSubroutineRuntimeInfo(subroutineIdx);
             int blockIndex = srti.LookupDialogueBlockIndex(textName);
             int offset = module.GetSubroutine(subroutineIdx).DialogueBlockOffsets[blockIndex];
 
@@ -306,7 +314,7 @@ namespace NitroSharp.NsScript.VM
         private void SetVolume(ref ArgConsumer args)
         {
             _impl.SetVolume(
-                args.TakeEntityName(),
+                args.TakeEntityPath(),
                 duration: args.TakeTimeSpan(),
                 volume: args.TakeRational()
             );
@@ -315,7 +323,7 @@ namespace NitroSharp.NsScript.VM
         private void CreateSound(ref ArgConsumer args)
         {
             _impl.LoadAudio(
-                args.TakeEntityName(),
+                args.TakeEntityPath(),
                 kind: args.TakeAudioKind(),
                 fileName: args.TakeString()
             );
@@ -342,7 +350,7 @@ namespace NitroSharp.NsScript.VM
         private void SetLoopPoint(ref ArgConsumer args)
         {
             _impl.SetLoopRegion(
-                args.TakeEntityName(),
+                args.TakeEntityPath(),
                 loopStart: args.TakeTimeSpan(),
                 loopEnd: args.TakeTimeSpan()
             );
@@ -351,17 +359,17 @@ namespace NitroSharp.NsScript.VM
         private void SetLoop(ref ArgConsumer args)
         {
             _impl.ToggleLooping(
-                args.TakeEntityName(),
+                args.TakeEntityPath(),
                 looping: args.TakeBool()
             );
         }
 
         private void Zoom(ref ArgConsumer args)
         {
-            string entityQuery = args.TakeEntityQuery();
+            EntityQuery query = args.TakeEntityQuery();
             TimeSpan duration = args.TakeTimeSpan();
             _impl.Zoom(
-                entityQuery,
+                query,
                 duration,
                 dstScaleX: args.TakeRational(),
                 dstScaleY: args.TakeRational(),
@@ -372,10 +380,10 @@ namespace NitroSharp.NsScript.VM
 
         private void Move(ref ArgConsumer args)
         {
-            string entityQuery = args.TakeEntityQuery();
+            EntityQuery query = args.TakeEntityQuery();
             TimeSpan duration = args.TakeTimeSpan();
             _impl.Move(
-                entityQuery,
+                query,
                 duration,
                 dstX: args.TakeCoordinate(),
                 dstY: args.TakeCoordinate(),
@@ -386,10 +394,10 @@ namespace NitroSharp.NsScript.VM
 
         private void Fade(ref ArgConsumer args)
         {
-            string entityQuery = args.TakeEntityQuery();
+            EntityQuery query = args.TakeEntityQuery();
             TimeSpan duration = args.TakeTimeSpan();
             _impl.Fade(
-                entityQuery,
+                query,
                 duration,
                 dstOpacity: args.TakeRational(),
                 easingFunction: args.TakeEasingFunction(),
@@ -399,10 +407,10 @@ namespace NitroSharp.NsScript.VM
 
         private void DrawTransition(ref ArgConsumer args)
         {
-            string entityQuery = args.TakeEntityQuery();
+            EntityQuery query = args.TakeEntityQuery();
             TimeSpan duration = args.TakeTimeSpan();
             _impl.DrawTransition(
-                entityQuery,
+                query,
                 duration,
                 initialFadeAmount: args.TakeRational(),
                 finalFadeAmount: args.TakeRational(),
@@ -416,7 +424,7 @@ namespace NitroSharp.NsScript.VM
         private void SetAlias(ref ArgConsumer args)
         {
             _impl.SetAlias(
-                args.TakeEntityName(),
+                args.TakeEntityPath(),
                 alias: args.TakeString()
             );
         }
@@ -443,7 +451,7 @@ namespace NitroSharp.NsScript.VM
 
         private void CreateChoice(ref ArgConsumer args)
         {
-            _impl.CreateChoice(args.TakeEntityName());
+            _impl.CreateChoice(args.TakeEntityPath());
         }
 
         private void CreateColor(ref ArgConsumer args)
@@ -462,7 +470,7 @@ namespace NitroSharp.NsScript.VM
             }
 
             _impl.CreateRectangle(
-                args.TakeEntityName(),
+                args.TakeEntityPath(),
                 priority: args.TakeInt(),
                 x: args.TakeCoordinate(),
                 y: args.TakeCoordinate(),
@@ -475,14 +483,14 @@ namespace NitroSharp.NsScript.VM
         private void LoadImage(ref ArgConsumer args)
         {
             _impl.LoadImage(
-                args.TakeEntityName(),
+                args.TakeEntityPath(),
                 fileName: args.TakeString()
             );
         }
 
         private void CreateTexture(ref ArgConsumer args)
         {
-            string entityName = args.TakeEntityName();
+            EntityPath entityPath = args.TakeEntityPath();
             int priority = args.TakeInt();
             NsCoordinate x = args.TakeCoordinate();
             NsCoordinate y = args.TakeCoordinate();
@@ -490,18 +498,18 @@ namespace NitroSharp.NsScript.VM
             ConstantValue arg4 = args.TakeOpt(ConstantValue.Null);
             string fileOrEntityName = arg4.Type switch
             {
-                BuiltInType.String => ArgConsumer.EntityQuery(arg4.AsString()!),
+                BuiltInType.String => arg4.AsString()!,
                 BuiltInType.BuiltInConstant => arg4.ConvertToString(),
                 _ => args.UnexpectedType<string>(arg4.Type)
             };
 
-            _impl.CreateSprite(entityName, priority, x, y, fileOrEntityName);
+            _impl.CreateSprite(entityPath, priority, x, y, fileOrEntityName);
         }
 
         private void CreateClipTexture(ref ArgConsumer args)
         {
             _impl.CreateSpriteEx(
-                args.TakeEntityName(),
+                args.TakeEntityPath(),
                 priority: args.TakeInt(),
                 x1: args.TakeCoordinate(),
                 y1: args.TakeCoordinate(),
@@ -509,7 +517,7 @@ namespace NitroSharp.NsScript.VM
                 y2: args.TakeCoordinate(),
                 width: args.TakeInt(),
                 height: args.TakeInt(),
-                args.TakeEntityQuery()
+                args.TakeEntityPath()
             );
         }
 
@@ -562,32 +570,32 @@ namespace NitroSharp.NsScript.VM
 
         private void ImageHorizon(ref ArgConsumer args)
         {
-            string entityName = args.TakeEntityQuery();
-            SetResult(ConstantValue.Integer(_impl.GetWidth(entityName)));
+            EntityPath entityPath = args.TakeEntityPath();
+            SetResult(ConstantValue.Integer(_impl.GetWidth(entityPath)));
         }
 
         private void ImageVertical(ref ArgConsumer args)
         {
-            string entityName = args.TakeEntityQuery();
-            SetResult(ConstantValue.Integer(_impl.GetHeight(entityName)));
+            EntityPath entityPath = args.TakeEntityPath();
+            SetResult(ConstantValue.Integer(_impl.GetHeight(entityPath)));
         }
 
         private void RemainTime(ref ArgConsumer args)
         {
-            string entityName = args.TakeEntityQuery();
-            SetResult(ConstantValue.Integer(_impl.GetTimeRemaining(entityName)));
+            EntityPath entityPath = args.TakeEntityPath();
+            SetResult(ConstantValue.Integer(_impl.GetTimeRemaining(entityPath)));
         }
 
         private void PassageTime(ref ArgConsumer args)
         {
-            string entityName = args.TakeEntityQuery();
-            SetResult(ConstantValue.Integer(_impl.GetTimeElapsed(entityName)));
+            EntityPath entityPath = args.TakeEntityPath();
+            SetResult(ConstantValue.Integer(_impl.GetTimeElapsed(entityPath)));
         }
 
         private void DurationTime(ref ArgConsumer args)
         {
-            string entityName = args.TakeEntityQuery();
-            SetResult(ConstantValue.Integer(_impl.GetSoundDuration(entityName)));
+            EntityPath entityPath = args.TakeEntityPath();
+            SetResult(ConstantValue.Integer(_impl.GetSoundDuration(entityPath)));
         }
 
         private void Fail()
@@ -620,13 +628,6 @@ namespace NitroSharp.NsScript.VM
                 _pos = 0;
             }
 
-            public static string EntityQuery(string rawEntityQuery)
-            {
-                return rawEntityQuery.StartsWith("@")
-                    ? rawEntityQuery.Substring(1)
-                    : rawEntityQuery;
-            }
-
             private static TimeSpan Time(int ms) => TimeSpan.FromMilliseconds(ms);
 
             public int Count => _args.Length;
@@ -648,8 +649,8 @@ namespace NitroSharp.NsScript.VM
                     : defaultValue;
             }
 
-            public string TakeEntityName() => EntityQuery(TakeString());
-            public string TakeEntityQuery() => EntityQuery(TakeString());
+            public EntityPath TakeEntityPath() => new EntityPath(TakeString());
+            public EntityQuery TakeEntityQuery() => new EntityQuery(TakeString());
 
             public string TakeString()
             {

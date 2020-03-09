@@ -9,7 +9,7 @@ using Veldrid;
 
 #nullable enable
 
-namespace NitroSharp.Graphics
+namespace NitroSharp.Graphics.Old
 {
     internal sealed class TextRenderer : IDisposable
     {

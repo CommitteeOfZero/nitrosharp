@@ -5,6 +5,8 @@ using Veldrid;
 using Veldrid.Sdl2;
 using Veldrid.StartupUtilities;
 
+#nullable enable
+
 namespace NitroSharp
 {
     public sealed class DesktopWindow : GameWindow
@@ -34,13 +36,13 @@ namespace NitroSharp
 
         public AutoResetEvent Mobile_HandledSurfaceDestroyed => throw new NotImplementedException();
 
-        public event Action Resized;
-        public event Action<SwapchainSource> Mobile_SurfaceCreated
+        public event Action? Resized;
+        public event Action<SwapchainSource>? Mobile_SurfaceCreated
         {
             add => value?.Invoke(SwapchainSource);
             remove => throw new NotImplementedException();
         }
-        public event Action Mobile_SurfaceDestroyed;
+        public event Action? Mobile_SurfaceDestroyed;
 
         public InputSnapshot PumpEvents() => _window.PumpEvents();
     }

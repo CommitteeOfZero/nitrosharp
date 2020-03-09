@@ -8,7 +8,6 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
-using NitroSharp.NsScript.CodeGen;
 using NitroSharp.NsScript.Syntax;
 using NitroSharp.NsScript.Text;
 using NitroSharp.NsScript.Utilities;

@@ -96,7 +96,7 @@ namespace NitroSharp.Graphics
 
             var premultipliedAlpha = new BlendStateDescription
             {
-                AttachmentStates = new BlendAttachmentDescription[]
+                AttachmentStates = new[]
                 {
                     new BlendAttachmentDescription
                     {
@@ -110,7 +110,6 @@ namespace NitroSharp.Graphics
                     }
                 }
             };
-
             var pipelineDesc = new GraphicsPipelineDescription(
                 premultipliedAlpha,
                 DepthStencilStateDescription.Disabled,
@@ -124,7 +123,7 @@ namespace NitroSharp.Graphics
 
             pipelineDesc.BlendState = new BlendStateDescription
             {
-                AttachmentStates = new BlendAttachmentDescription[]
+                AttachmentStates = new[]
                 {
                     new BlendAttachmentDescription
                     {
@@ -142,7 +141,7 @@ namespace NitroSharp.Graphics
 
             pipelineDesc.BlendState = new BlendStateDescription
             {
-                AttachmentStates = new BlendAttachmentDescription[]
+                AttachmentStates = new[]
                 {
                     new BlendAttachmentDescription
                     {
@@ -160,7 +159,7 @@ namespace NitroSharp.Graphics
 
             pipelineDesc.BlendState = new BlendStateDescription
             {
-                AttachmentStates = new BlendAttachmentDescription[]
+                AttachmentStates = new[]
                 {
                     new BlendAttachmentDescription
                     {

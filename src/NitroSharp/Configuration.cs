@@ -2,22 +2,23 @@
 using NitroSharp.Text;
 using Veldrid;
 
+#nullable enable
+
 namespace NitroSharp
 {
     public sealed class Configuration
     {
-        public string ProductName { get; set; } = "NitroSharp";
-        public int WindowWidth { get; set; }
-        public int WindowHeight { get; set; }
-        public string WindowTitle { get; set; }
+        public int WindowWidth { get; set; } = 1280;
+        public int WindowHeight { get; set; } = 720;
+        public string WindowTitle { get; set; } = "Sample Text";
 
-        public bool EnableVSync { get; set; }
+        public bool EnableVSync { get; set; } = true;
         public GraphicsBackend? PreferredGraphicsBackend { get; set; }
         public AudioBackend? PreferredAudioBackend { get; set; }
 
-        public string ContentRoot { get; set; }
+        public string ContentRoot { get; set; } = "Content";
         public bool EnableDiagnostics { get; set; }
-        public string StartupScript { get; set; }
+        public string StartupScript { get; set; } = "boot.nss";
         public bool UseUtf8 { get; set; } = false;
         public bool SkipUpToDateCheck { get; set; } = false;
 

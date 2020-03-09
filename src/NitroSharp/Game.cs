@@ -10,7 +10,12 @@ using System.Threading.Tasks;
 using Veldrid;
 using Veldrid.StartupUtilities;
 using System.Runtime.InteropServices;
-using NitroSharp.Experimental;
+using System.Text;
+using NitroSharp.Graphics;
+using NitroSharp.Interactivity;
+using NitroSharp.New;
+using NitroSharp.NsScript.Compiler;
+using NitroSharp.NsScript.VM;
 
 #nullable enable
 
@@ -31,6 +36,8 @@ namespace NitroSharp
 
         private readonly Stopwatch _gameTimer;
         private readonly Configuration _configuration;
+        private readonly Logger _logger;
+        private readonly LogEventRecorder _logEventRecorder;
         private readonly CancellationTokenSource _shutdownCancellation;
 
         private readonly GameWindow _window;
@@ -39,19 +46,20 @@ namespace NitroSharp
         private GraphicsDevice? _graphicsDevice;
         private Swapchain? _swapchain;
         private readonly TaskCompletionSource<int> _initializingGraphics;
+        private RenderSystem? _renderSystem;
+        private readonly GlyphRasterizer _glyphRasterizer;
+
+        private ContentManager? _content;
+        private readonly InputTracker _inputTracker;
 
         private AudioDevice? _audioDevice;
         private AudioSourcePool? _audioSourcePool;
 
         private readonly World _world;
-        private ContentManager? _content;
-
-        private Presenter? _presenter;
-        private ScriptRunner? _scriptRunner;
-        private readonly Logger _logger;
-        private readonly LogEventRecorder _logEventRecorder;
-
-        private readonly GlyphRasterizer _glyphRasterizer;
+        private readonly string _nssFolder;
+        private readonly string _bytecodeCacheDir;
+        private NsScriptVM? _vm;
+        private readonly Builtins _builtinFunctions;
 
         public Game(GameWindow window, Configuration configuration)
         {
@@ -68,6 +76,11 @@ namespace NitroSharp
             _gameTimer = new Stopwatch();
             _world = new World();
             FontConfiguration = default!;
+            _inputTracker = new InputTracker(window);
+
+            _nssFolder = Path.Combine(_configuration.ContentRoot, "nss");
+            _bytecodeCacheDir = _nssFolder.Replace("nss", "nsx");
+            _builtinFunctions = new Builtins(this, _world);
         }
 
         internal ContentManager Content => _content!;
@@ -97,25 +110,22 @@ namespace NitroSharp
             await RunMainLoop(useDedicatedThread);
         }
 
-        private (Logger, LogEventRecorder) SetupLogging()
+        private async Task Initialize()
+        {
+            var initializeAudio = Task.Run(SetupAudio);
+            SetupFonts();
+            await Task.WhenAll(_initializingGraphics.Task, initializeAudio);
+            _content = CreateContentManager();
+            await Task.Run(LoadStartupScript);
+        }
+
+        private static (Logger, LogEventRecorder) SetupLogging()
         {
             var recorder = new LogEventRecorder();
             Logger logger = new LoggerConfiguration()
                 .WithSink(recorder)
                 .CreateLogger();
             return (logger, recorder);
-        }
-
-        private async Task Initialize()
-        {
-            var initializeAudio = Task.Run(SetupAudio);
-            SetupFonts();
-            await Task.WhenAll(new[] { _initializingGraphics.Task, initializeAudio });
-            _content = CreateContentManager();
-            _scriptRunner = new ScriptRunner(this, _world);
-            var loadScriptTask = Task.Run(_scriptRunner.LoadStartupScript);
-            _presenter = new Presenter(this, _world);
-            await loadScriptTask;
         }
 
         private void SetupFonts()
@@ -132,24 +142,100 @@ namespace NitroSharp
             );
         }
 
+        private void LoadStartupScript()
+        {
+            const string globalsFileName = "_globals";
+            string globalsPath = Path.Combine(_bytecodeCacheDir, globalsFileName);
+            if (_configuration.SkipUpToDateCheck || !File.Exists(globalsPath) || !ValidateBytecodeCache())
+            {
+                if (!Directory.Exists(_bytecodeCacheDir))
+                {
+                    Directory.CreateDirectory(_bytecodeCacheDir);
+                    _logger.LogInformation("Bytecode cache is empty. Compiling the scripts...");
+                }
+                else
+                {
+                    _logger.LogInformation("Bytecode cache is not up-to-date. Recompiling the scripts...");
+                    foreach (string file in Directory
+                        .EnumerateFiles(_bytecodeCacheDir, "*.nsx", SearchOption.AllDirectories))
+                    {
+                        File.Delete(file);
+                    }
+                }
+
+                Encoding? sourceEncoding = _configuration.UseUtf8 ? Encoding.UTF8 : null;
+                var compilation = new Compilation(
+                    _nssFolder,
+                    _bytecodeCacheDir,
+                    globalsFileName,
+                    sourceEncoding
+                );
+                compilation.Emit(compilation.GetSourceModule(_configuration.StartupScript));
+            }
+            else
+            {
+                _logger.LogInformation("Bytecode cache is up-to-date.");
+            }
+
+            var nsxLocator = new FileSystemNsxModuleLocator(_bytecodeCacheDir);
+            _vm = new NsScriptVM(nsxLocator, File.OpenRead(globalsPath), _builtinFunctions);
+            _vm.CreateThread(
+                "__MAIN",
+                _configuration.StartupScript.Replace(".nss", string.Empty), "main"
+            );
+        }
+
+        private bool ValidateBytecodeCache()
+        {
+            string startupScript = _configuration.StartupScript.Replace('\\', '/');
+            startupScript = startupScript.Remove(startupScript.Length - 4);
+            foreach (string nssFile in Directory
+                .EnumerateFiles(_nssFolder, "*.nss", SearchOption.AllDirectories))
+            {
+                string nsxFile = nssFile.Replace("nss", "nsx");
+                try
+                {
+                    using (FileStream nsxStream = File.OpenRead(nsxFile))
+                    {
+                        long nsxTimestamp = NsxModule.GetSourceModificationTime(nsxStream);
+                        long nssTimestamp = new DateTimeOffset(File.GetLastWriteTimeUtc(nssFile))
+                            .ToUnixTimeSeconds();
+                        if (nsxTimestamp != nssTimestamp)
+                        {
+                            return false;
+                        }
+                    }
+
+                }
+                catch
+                {
+                    string nsxRelativePath = Path.GetRelativePath(relativeTo: _bytecodeCacheDir, nsxFile)
+                        .Replace('\\', '/');
+                    nsxRelativePath = nsxRelativePath.Remove(nsxRelativePath.Length - 4);
+                    if (nsxRelativePath.Equals(startupScript))
+                    {
+                        return false;
+                    }
+                }
+            }
+
+            return true;
+        }
+
         private Task RunMainLoop(bool useDedicatedThread = false)
         {
             if (useDedicatedThread)
             {
                 return Task.Factory.StartNew(MainLoop, TaskCreationOptions.LongRunning);
             }
-            else
+            try
             {
-                try
-                {
-                    MainLoop();
-                }
-                catch (TaskCanceledException)
-                {
-                }
-
-                return Task.FromResult(0);
+                MainLoop();
             }
+            catch (TaskCanceledException)
+            {
+            }
+            return Task.FromResult(0);
         }
 
         private void MainLoop()
@@ -191,31 +277,26 @@ namespace NitroSharp
 
         private void Tick(FrameStamp framestamp, float deltaMilliseconds)
         {
-            Debug.Assert(_scriptRunner != null);
-            Debug.Assert(_presenter != null);
+            Debug.Assert(_renderSystem != null);
             if (Content.ResolveTextures())
             {
                 _world.BeginFrame();
-                _presenter.ProcessChoices();
 
-                var scriptRunnerStatus = _scriptRunner.Tick();
-                switch (scriptRunnerStatus)
-                {
-                    case ScriptRunner.Status.AwaitingPresenterState:
-                        _scriptRunner.SyncTo(_presenter);
-                        break;
-                    case ScriptRunner.Status.NewStateReady:
-                        _presenter.SyncTo(_scriptRunner);
-                        break;
-                    case ScriptRunner.Status.Crashed:
-                        throw _scriptRunner.LastException!;
-                    case ScriptRunner.Status.Running:
-                    default:
-                        break;
-                }
+                Debug.Assert(_vm != null);
+                _vm.RefreshThreadState();
+                _vm.ProcessPendingThreadActions();
+                _vm.Run(_shutdownCancellation.Token);
             }
 
-            _presenter.Tick(framestamp, deltaMilliseconds);
+            _inputTracker.Update();
+            _world.FlushDetachedAnimations();
+            try
+            {
+                _renderSystem.Render(framestamp);
+            }
+            catch (VeldridException e) when (e.Message == "The Swapchain's underlying surface has been lost.")
+            {
+            }
         }
 
         private void OnSurfaceCreated(SwapchainSource swapchainSource)
@@ -270,6 +351,15 @@ namespace NitroSharp
                 }
                 _swapchain = _graphicsDevice.ResourceFactory.CreateSwapchain(ref swapchainDesc);
             }
+
+            _renderSystem = new RenderSystem(
+                _world,
+                _configuration,
+                _graphicsDevice,
+                _swapchain,
+                _glyphRasterizer,
+                _content!
+            );
         }
 
         private void SetupAudio()
@@ -332,8 +422,8 @@ namespace NitroSharp
 
         public void Dispose()
         {
-            _presenter?.Dispose();
             _graphicsDevice?.WaitForIdle();
+            _renderSystem?.Dispose();
             _content?.Dispose();
             _glyphRasterizer.Dispose();
             _swapchain?.Dispose();

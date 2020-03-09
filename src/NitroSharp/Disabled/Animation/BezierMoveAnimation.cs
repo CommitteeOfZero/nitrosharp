@@ -3,6 +3,7 @@ using System.Collections.Immutable;
 using System.Numerics;
 using NitroSharp.Experimental;
 using NitroSharp.Graphics;
+using NitroSharp.Graphics.Old;
 using NitroSharp.NsScript;
 using NitroSharp.Utilities;
 

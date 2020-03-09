@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using NitroSharp.Experimental;
 using NitroSharp.Graphics;
+using NitroSharp.Graphics.Old;
 using NitroSharp.Interactivity;
 using NitroSharp.Text;
 using Veldrid;
@@ -40,7 +41,7 @@ namespace NitroSharp.Dialogue
             InputTracker inputTracker)
             : base(presenter)
         {
-            _world = presenter.World;
+            _world = default!;//presenter.World;
             _glyphRasterizer = glyphRasterizer;
             _inputTracker = inputTracker;
         }

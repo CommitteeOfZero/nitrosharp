@@ -1,12 +1,4 @@
-﻿using System;
-using System.Numerics;
-using System.Runtime.InteropServices;
-using NitroSharp.Content;
-using NitroSharp.Primitives;
-using NitroSharp.Utilities;
-using Veldrid;
-
-namespace NitroSharp.Graphics
+namespace NitroSharp.Graphics.New
 {
     internal enum BlendMode : byte
     {
@@ -16,142 +8,35 @@ namespace NitroSharp.Graphics
         Multiplicative
     }
 
-    internal enum MaterialKind : byte
+    internal enum FilterMode : byte
+    {
+        Point,
+        Linear
+    }
+
+    internal enum MaterialKind
     {
         SolidColor,
-        Texture,
-        Screenshot,
-        Lens
+        Texture
     }
 
-    [StructLayout(LayoutKind.Explicit)]
+    internal struct TextureVariant
+    {
+
+    }
+
     internal struct Material
     {
-        [FieldOffset(0)]
-        public TextureMaterial TextureVariant;
+        public MaterialKind Kind;
+        public TextureVariant Texture;
 
-        [FieldOffset(0)]
-        public AssetId LensTextureHandle;
-
-        [FieldOffset(8)]
-        public RgbaFloat Color;
-
-        [FieldOffset(24)]
-        public Vector2 UvTopLeft;
-
-        [FieldOffset(32)]
-        public Vector2 UvBottomRight;
-
-        [FieldOffset(40)]
-        public TransitionParameters TransitionParameters;
-
-        [FieldOffset(56)]
-        public SmallList<EffectDescription> Effects;
-
-        [FieldOffset(72)]
-        public readonly MaterialKind Kind;
-
-        [FieldOffset(73)]
-        public BlendMode BlendMode;
-
-        [FieldOffset(74)]
-        public bool UseLinearFiltering;
-
-        [FieldOffset(80)]
-        public AssetId AlphaMask;
-
-        public Material(MaterialKind kind)
-            : this() => (Kind, Color, UvBottomRight) = (kind, RgbaFloat.White, Vector2.One);
-
-        public static Material Lens(AssetId lensTexture)
+        public static void Meow(Material mat)
         {
-            return new Material(MaterialKind.Lens)
+            _ = mat switch
             {
-                LensTextureHandle = lensTexture,
-                UvTopLeft = Vector2.Zero,
-                UvBottomRight = Vector2.One
+                Material { Kind: MaterialKind.SolidColor } => 0,
+                Material { Kind: MaterialKind.Texture, Texture: var tex} => 1
             };
         }
-
-        public static Material SolidColor(in RgbaFloat color)
-        {
-            return new Material(MaterialKind.SolidColor)
-            {
-                Color = color
-            };
-        }
-
-        public static Material Texture(
-            AssetId textureHandle,
-            Size textureSize,
-            RectangleF sourceRect)
-        {
-            var dimensions = textureSize.ToVector2();
-            var srcTopLeft = new Vector2(sourceRect.Left, sourceRect.Top);
-            var srcBottomRight = new Vector2(sourceRect.Right, sourceRect.Bottom);
-            return new Material(MaterialKind.Texture)
-            {
-                TextureVariant = new TextureMaterial
-                {
-                    TextureHandle = textureHandle
-                },
-                UvTopLeft = srcTopLeft / dimensions,
-                UvBottomRight = srcBottomRight / dimensions
-            };
-        }
-
-        public static Material Screenshot()
-        {
-            return new Material(MaterialKind.Screenshot);
-        }
-
-        public override int GetHashCode()
-        {
-            return Kind switch
-            {
-                MaterialKind.SolidColor => HashCode.Combine(
-                    BlendMode,
-                    Effects.HashElements(),
-                    TransitionParameters,
-                    AlphaMask,
-                    UvTopLeft,
-                    UvBottomRight
-                ),
-                MaterialKind.Texture => HashCode.Combine(
-                    TextureVariant.TextureHandle,
-                    BlendMode,
-                    UseLinearFiltering,
-                    Effects.HashElements(),
-                    TransitionParameters,
-                    AlphaMask,
-                    UvTopLeft,
-                    UvBottomRight
-                ),
-                MaterialKind.Screenshot => HashCode.Combine(
-                    BlendMode,
-                    UseLinearFiltering,
-                    Effects.HashElements(),
-                    TransitionParameters,
-                    AlphaMask,
-                    UvTopLeft,
-                    UvBottomRight
-                ),
-                MaterialKind.Lens => 0
-            };
-        }
-    }
-
-    internal struct TextureMaterial
-    {
-        public AssetId TextureHandle;
-    }
-
-    internal struct TransitionParameters
-    {
-        public AssetId MaskHandle;
-        public float FadeAmount;
-
-        public override int GetHashCode()
-            => HashCode.Combine(MaskHandle);
     }
 }

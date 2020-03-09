@@ -18,7 +18,7 @@ namespace NitroSharp.NsScript.VM
 
         private readonly int[] _stringOffsets;
         private readonly Subroutine[] _subroutines;
-        private readonly SubroutineRuntimeInformation[] _srti;
+        private readonly SubroutineRuntimeInfo[] _srti;
         private readonly Dictionary<string, int> _subroutineMap;
 
         public NsxModule(
@@ -42,13 +42,13 @@ namespace NitroSharp.NsScript.VM
                 rtiEntryOffsets[i] = rtiReader.ReadUInt16LE();
             }
 
-            _srti = new SubroutineRuntimeInformation[subroutineCount];
+            _srti = new SubroutineRuntimeInfo[subroutineCount];
             _subroutineMap = new Dictionary<string, int>(subroutineCount);
             int rtiStart = rtiReader.Position;
             for (int i = 0; i < subroutineCount; i++)
             {
                 rtiReader.Position = rtiStart + rtiEntryOffsets[i];
-                var rti = new SubroutineRuntimeInformation(ref rtiReader);
+                var rti = new SubroutineRuntimeInfo(ref rtiReader);
                 _srti[i] = rti;
                 _subroutineMap[rti.SubroutineName] = i;
             }
@@ -69,7 +69,7 @@ namespace NitroSharp.NsScript.VM
             return subroutine;
         }
 
-        public ref readonly SubroutineRuntimeInformation GetSubroutineRuntimeInformation(
+        public ref readonly SubroutineRuntimeInfo GetSubroutineRuntimeInfo(
             int subroutineIndex)
         {
             return ref _srti[subroutineIndex];
@@ -209,8 +209,14 @@ namespace NitroSharp.NsScript.VM
             }
 
             return new NsxModule(
-                stream, name, modificationTime, subroutineOffsets,
-                rtiBytes, imports, stringOffsets);
+                stream,
+                name,
+                modificationTime,
+                subroutineOffsets,
+                rtiBytes,
+                imports,
+                stringOffsets
+            );
         }
     }
 
@@ -244,7 +250,7 @@ namespace NitroSharp.NsScript.VM
             => new ReadOnlySpan<byte>(_bytes, _codeStart, _bytes.Length - _codeStart);
     }
 
-    public struct SubroutineRuntimeInformation
+    public struct SubroutineRuntimeInfo
     {
         private string[]? _parameterNames;
         private readonly Dictionary<string, int>? _dialogueBlockMap;
@@ -253,7 +259,7 @@ namespace NitroSharp.NsScript.VM
         public readonly string SubroutineName;
         public readonly (string box, string name)[] DialogueBlockInfos;
 
-        internal SubroutineRuntimeInformation(ref BufferReader reader)
+        internal SubroutineRuntimeInfo(ref BufferReader reader)
         {
             SubroutineKind = (SubroutineKind)reader.ReadByte();
             SubroutineName = reader.ReadLengthPrefixedUtf8String();

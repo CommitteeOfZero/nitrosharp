@@ -8,7 +8,7 @@ using Veldrid;
 
 #nullable enable
 
-namespace NitroSharp.Graphics
+namespace NitroSharp.Graphics.Old
 {
     [StructLayout(LayoutKind.Auto)]
     internal struct RenderBucketSubmission
@@ -30,7 +30,7 @@ namespace NitroSharp.Graphics
         public UniformUpdate UniformUpdate;
     }
 
-    internal readonly struct UniformUpdate
+    internal struct UniformUpdate
     {
         public readonly DeviceBuffer Buffer;
         public readonly ushort DataStart;
@@ -40,20 +40,22 @@ namespace NitroSharp.Graphics
             => (Buffer, DataStart, DataLength) = (buffer, dataStart, dataLength);
     }
 
-    internal sealed class RenderBucket
+    internal sealed class RenderBucket<TKey> where TKey : IComparable<RenderItemKey>
     {
         internal readonly ref struct MultiSubmission
         {
+            public readonly Span<RenderItemKey> Keys;
             public readonly Span<RenderBucketSubmission> Submissions;
 
-            public MultiSubmission(Span<RenderBucketSubmission> submissions)
+            public MultiSubmission(Span<RenderItemKey> keys, Span<RenderBucketSubmission> submissions)
             {
+                Keys = keys;
                 Submissions = submissions;
             }
         }
 
         [StructLayout(LayoutKind.Auto)]
-        private struct DrawCall
+        private struct RenderItem
         {
             public Action<RenderContext>? BeforeRenderCallback;
             public ResourceSet ObjectResourceSet0;
@@ -80,7 +82,8 @@ namespace NitroSharp.Graphics
             }
         }
 
-        private ArrayBuilder<DrawCall> _drawCalls;
+        private ArrayBuilder<RenderItem> _renderItems;
+        private ArrayBuilder<RenderItemKey> _keys;
         private ArrayBuilder<RenderBucketSubmission> _submissions;
 
         private readonly List<VertexBuffer> _vertexBuffers;
@@ -101,7 +104,8 @@ namespace NitroSharp.Graphics
 
         public RenderBucket(uint initialCapacity)
         {
-            _drawCalls = new ArrayBuilder<DrawCall>(initialCapacity);
+            _renderItems = new ArrayBuilder<RenderItem>(initialCapacity);
+            _keys = new ArrayBuilder<RenderItemKey>(initialCapacity);
             _submissions = new ArrayBuilder<RenderBucketSubmission>(initialCapacity);
             _vertexBuffers = new List<VertexBuffer>();
             _indexBuffers = new List<DeviceBuffer>();
@@ -113,7 +117,8 @@ namespace NitroSharp.Graphics
 
         public void Begin()
         {
-            _drawCalls.Reset();
+            _renderItems.Reset();
+            _keys.Reset();
             _submissions.Reset();
             _vertexBuffers.Clear();
             _lastVertexBuffer0 = default;
@@ -139,15 +144,15 @@ namespace NitroSharp.Graphics
             return new UniformUpdate(targetBuffer, (ushort)start, (ushort)actualSize);
         }
 
-        public void Submit(ref RenderBucketSubmission submission)
-            => Submit<byte>(ref submission);
+        public void Submit(ref RenderBucketSubmission submission, RenderItemKey key)
+            => Submit<byte>(ref submission, key);
 
-        public void Submit<TVertex>(ref RenderBucketSubmission submission)
+        public void Submit<TVertex>(ref RenderBucketSubmission submission, RenderItemKey key)
             where TVertex : unmanaged
         {
-            ref ArrayBuilder<DrawCall> drawCalls = ref _drawCalls;
-            ref DrawCall drawCall = ref drawCalls.Add();
-            if (drawCalls.Count > 0)
+            ref ArrayBuilder<RenderItem> renderItems = ref _renderItems;
+            ref RenderItem renderItem = ref renderItems.Add();
+            if (renderItems.Count > 0)
             {
                 //ref RenderItem lastItem = ref renderItems[^1];
                 //if ((submission.InstanceBase == (lastItem.InstanceBase + lastItem.InstanceCount))
@@ -164,49 +169,54 @@ namespace NitroSharp.Graphics
                 //}
             }
 
-            drawCall.BeforeRenderCallback = submission.BeforeRenderCallback;
-            drawCall.VertexBuffer0 = GetResourceIdMaybe(submission.VertexBuffer0, _vertexBuffers, ref _lastVertexBuffer0);
-            drawCall.VertexBuffer1 = byte.MaxValue;
-            drawCall.IndexBuffer = GetResourceIdMaybe(submission.IndexBuffer, _indexBuffers, ref _lastIndexBuffer);
-            drawCall.VertexBase = submission.VertexBase;
-            drawCall.VertexCount = submission.VertexCount;
-            drawCall.IndexBase = submission.IndexBase;
-            drawCall.IndexCount = submission.IndexCount;
-            drawCall.PipelineId = GetPipelineId(submission.Pipeline);
-            drawCall.SharedResourceSetId = GetResourceId(submission.SharedResourceSet, _sharedResourceSets, ref _lastSharedResourceSet);
-            drawCall.ObjectResourceSet0 = submission.ObjectResourceSet0;
-            drawCall.ObjectResourceSet1 = submission.ObjectResourceSet1;
-            drawCall.InstanceBase = submission.InstanceBase;
-            drawCall.InstanceCount = submission.InstanceCount;
+            renderItem.BeforeRenderCallback = submission.BeforeRenderCallback;
+            renderItem.VertexBuffer0 = GetResourceIdMaybe(submission.VertexBuffer0, _vertexBuffers, ref _lastVertexBuffer0);
+            renderItem.VertexBuffer1 = byte.MaxValue;
+            renderItem.IndexBuffer = GetResourceIdMaybe(submission.IndexBuffer, _indexBuffers, ref _lastIndexBuffer);
+            renderItem.VertexBase = submission.VertexBase;
+            renderItem.VertexCount = submission.VertexCount;
+            renderItem.IndexBase = submission.IndexBase;
+            renderItem.IndexCount = submission.IndexCount;
+            renderItem.PipelineId = GetPipelineId(submission.Pipeline);
+            renderItem.SharedResourceSetId = GetResourceId(submission.SharedResourceSet, _sharedResourceSets, ref _lastSharedResourceSet);
+            renderItem.ObjectResourceSet0 = submission.ObjectResourceSet0;
+            renderItem.ObjectResourceSet1 = submission.ObjectResourceSet1;
+            renderItem.InstanceBase = submission.InstanceBase;
+            renderItem.InstanceCount = submission.InstanceCount;
 
-            drawCall.UniformBuffer = byte.MaxValue;
+            renderItem.UniformBuffer = byte.MaxValue;
             UniformUpdate update = submission.UniformUpdate;
             if (update.DataLength > 0)
             {
                 (byte index, DeviceBuffer buffer) discard = default;
                 byte bufferId = GetResourceId(update.Buffer, _uniformBuffers, ref discard);
-                drawCall.UniformBuffer = bufferId;
-                drawCall.UniformDataStart = update.DataStart;
-                drawCall.UniformDataLength = update.DataLength;
+                renderItem.UniformBuffer = bufferId;
+                renderItem.UniformDataStart = update.DataStart;
+                renderItem.UniformDataLength = update.DataLength;
             }
+
+            _keys.Add(key);
         }
 
-        public void Submit<TVertex0, TVertex1>(ref RenderBucketSubmission submission)
+        public void Submit<TVertex0, TVertex1>(ref RenderBucketSubmission submission, RenderItemKey key)
             where TVertex0 : unmanaged
             where TVertex1 : unmanaged
         {
-            Submit<TVertex0>(ref submission);
+            Submit<TVertex0>(ref submission, key);
         }
 
-        public Span<RenderBucketSubmission> PrepareMultiSubmission(uint submissionCount)
+        public MultiSubmission PrepareMultiSubmission(uint renderItemCount)
         {
-            return _submissions.Append(submissionCount);
+            return new MultiSubmission(
+                _keys.Append(renderItemCount),
+                _submissions.Append(renderItemCount)
+            );
         }
 
         public void Submit(MultiSubmission multiSubmission)
         {
             int count = multiSubmission.Submissions.Length;
-            Span<DrawCall> drawCalls = _drawCalls.Append((uint)count);
+            Span<RenderItem> renderItems = _renderItems.Append((uint)count);
             (byte index, VertexBuffer? buffer) vb0 = _lastVertexBuffer0;
             (byte index, VertexBuffer? buffer) vb1 = _lastVertexBuffer1;
             (byte index, DeviceBuffer? buffer) ib = _lastIndexBuffer;
@@ -214,14 +224,14 @@ namespace NitroSharp.Graphics
             List<DeviceBuffer> indexBuffers = _indexBuffers;
             List<ResourceSet> sharedResourceSets = _sharedResourceSets;
             (byte index, ResourceSet set) lastSharedSet = _lastSharedResourceSet;
-            int cur = 0;
+            int curRenderItem = 0;
             Pipeline? lastPipeline = null;
             ResourceSet? lastResourceSet0 = null, lastResourceSet1 = null;
             for (int i = 0; i < count; i++)
             {
                 ref RenderBucketSubmission submission = ref multiSubmission.Submissions[i];
-                ref DrawCall drawCall = ref drawCalls[cur];
-                if (cur > 0)
+                ref RenderItem renderItem = ref renderItems[curRenderItem];
+                if (curRenderItem > 0)
                 {
                     //ref RenderItem lastRI = ref renderItems[curRenderItem - 1];
                     //if (submission.IndexBase == (lastRI.IndexBase + lastRI.IndexCount)
@@ -241,39 +251,42 @@ namespace NitroSharp.Graphics
                     //    }
                     //}
                 }
-                drawCall.BeforeRenderCallback = submission.BeforeRenderCallback;
-                drawCall.VertexBuffer0 = GetResourceIdMaybe(submission.VertexBuffer0, vertexBuffers, ref vb0);
-                drawCall.VertexBuffer1 = GetResourceIdMaybe(submission.VertexBuffer1, vertexBuffers, ref vb1);
-                drawCall.IndexBuffer = GetResourceIdMaybe(submission.IndexBuffer, indexBuffers, ref ib);
-                drawCall.VertexBase = submission.VertexBase;
-                drawCall.VertexCount = submission.VertexCount;
-                drawCall.IndexBase = submission.IndexBase;
-                drawCall.IndexCount = submission.IndexCount;
-                drawCall.PipelineId = GetPipelineId(submission.Pipeline);
-                drawCall.SharedResourceSetId = GetResourceId(submission.SharedResourceSet, sharedResourceSets, ref lastSharedSet);
-                drawCall.ObjectResourceSet0 = submission.ObjectResourceSet0;
-                drawCall.ObjectResourceSet1 = submission.ObjectResourceSet1;
-                drawCall.InstanceBase = submission.InstanceBase;
-                drawCall.InstanceCount = submission.InstanceCount;
+                renderItem.BeforeRenderCallback = submission.BeforeRenderCallback;
+                renderItem.VertexBuffer0 = GetResourceIdMaybe(submission.VertexBuffer0, vertexBuffers, ref vb0);
+                renderItem.VertexBuffer1 = GetResourceIdMaybe(submission.VertexBuffer1, vertexBuffers, ref vb1);
+                renderItem.IndexBuffer = GetResourceIdMaybe(submission.IndexBuffer, indexBuffers, ref ib);
+                renderItem.VertexBase = submission.VertexBase;
+                renderItem.VertexCount = submission.VertexCount;
+                renderItem.IndexBase = submission.IndexBase;
+                renderItem.IndexCount = submission.IndexCount;
+                renderItem.PipelineId = GetPipelineId(submission.Pipeline);
+                renderItem.SharedResourceSetId = GetResourceId(submission.SharedResourceSet, sharedResourceSets, ref lastSharedSet);
+                renderItem.ObjectResourceSet0 = submission.ObjectResourceSet0;
+                renderItem.ObjectResourceSet1 = submission.ObjectResourceSet1;
+                renderItem.InstanceBase = submission.InstanceBase;
+                renderItem.InstanceCount = submission.InstanceCount;
                 lastPipeline = submission.Pipeline;
                 lastResourceSet0 = submission.ObjectResourceSet0;
                 lastResourceSet1 = submission.ObjectResourceSet1;
 
-                drawCall.UniformBuffer = byte.MaxValue;
+                renderItem.UniformBuffer = byte.MaxValue;
                 UniformUpdate update = submission.UniformUpdate;
                 if (update.DataLength > 0)
                 {
                     (byte index, DeviceBuffer buffer) discard = default;
                     byte bufferId = GetResourceId(update.Buffer, _uniformBuffers, ref discard);
-                    drawCall.UniformBuffer = bufferId;
-                    drawCall.UniformDataStart = update.DataStart;
-                    drawCall.UniformDataLength = update.DataLength;
+                    renderItem.UniformBuffer = bufferId;
+                    renderItem.UniformDataStart = update.DataStart;
+                    renderItem.UniformDataLength = update.DataLength;
                 }
-                cur++;
+
+                multiSubmission.Keys[curRenderItem] = multiSubmission.Keys[i];
+                curRenderItem++;
             }
-            int actualCount = cur;
+            int actualCount = curRenderItem;
             uint diff = (uint)(multiSubmission.Submissions.Length - actualCount);
-            _drawCalls.Truncate(_drawCalls.Count - diff);
+            _renderItems.Truncate(_renderItems.Count - diff);
+            _keys.Truncate(_keys.Count - diff);
             _lastVertexBuffer0 = vb0;
             _lastVertexBuffer1 = vb1;
             _lastIndexBuffer = ib;
@@ -283,6 +296,7 @@ namespace NitroSharp.Graphics
         public void End(in RenderContext renderContext)
         {
             CommandList commandList = renderContext.CommandList;
+            Array.Sort(_keys.UnderlyingArray, _renderItems.UnderlyingArray, 0, (int)_renderItems.Count);
 
             byte lastPipelineId = byte.MaxValue;
             byte lastSharedResourceSetId = byte.MaxValue;
@@ -291,9 +305,9 @@ namespace NitroSharp.Graphics
             byte lastIndexBuffer = byte.MaxValue;
             ResourceSet? lastObjectResourceSet0 = null;
             ResourceSet? lastObjectResourceSet1 = null;
-            for (uint i = 0; i < _drawCalls.Count; i++)
+            for (uint i = 0; i < _renderItems.Count; i++)
             {
-                ref DrawCall item = ref _drawCalls[i];
+                ref RenderItem item = ref _renderItems[i];
                 item.BeforeRenderCallback?.Invoke(renderContext);
                 if (item.PipelineId != lastPipelineId)
                 {

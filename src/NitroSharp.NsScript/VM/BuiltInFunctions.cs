@@ -26,15 +26,15 @@ namespace NitroSharp.NsScript.VM
         public virtual string GetCurrentModuleName() => throw new NotImplementedException();
         //public virtual int GenerateRandomNumber(int max) => throw new NotImplementedException();
         public virtual int GetSoundAmplitude(string characterName) => throw new NotImplementedException();
-        public virtual int GetHeight(string entityName) => throw new NotImplementedException();
-        public virtual int GetWidth(string entityName) => throw new NotImplementedException();
-        public virtual int GetSoundDuration(string entityName) => 0;
-        public virtual int GetTimeRemaining(string soundEntityName) => throw new NotImplementedException();
-        public virtual int GetTimeElapsed(string entityName) => throw new NotImplementedException();
+        public virtual int GetHeight(in EntityPath entityPath) => throw new NotImplementedException();
+        public virtual int GetWidth(in EntityPath entityPath) => throw new NotImplementedException();
+        public virtual int GetSoundDuration(in EntityPath entityPath) => 0;
+        public virtual int GetTimeRemaining(in EntityPath entityPath) => throw new NotImplementedException();
+        public virtual int GetTimeElapsed(in EntityPath entityPath) => throw new NotImplementedException();
 
-        public virtual void SetAlias(string entityName, string alias) { }
-        public virtual void Request(string entityQuery, NsEntityAction action) { }
-        public virtual void DestroyEntities(string entityQuery) { }
+        public virtual void SetAlias(in EntityPath entityPath, string alias) { }
+        public virtual void Request(in EntityQuery query, NsEntityAction action) { }
+        public virtual void DestroyEntities(in EntityQuery query) { }
 
         /// <summary>
         /// Original name: Wait.
@@ -51,79 +51,81 @@ namespace NitroSharp.NsScript.VM
         /// <summary>
         /// Original name: CreateWindow.
         /// </summary>
-        public virtual void CreateDialogueBox(string name, int priority, NsCoordinate x, NsCoordinate y, int width, int height) { }
+        public virtual void CreateDialogueBox(in EntityPath entityPath, int priority, NsCoordinate x, NsCoordinate y, int width, int height) { }
 
         /// <summary>
         /// Original name: CreateTexture.
         /// </summary>
-        public virtual void CreateSprite(string name, int priority, NsCoordinate x, NsCoordinate y, string fileOrExistingEntityName) { }
+        public virtual void CreateSprite(in EntityPath entityPath, int priority, NsCoordinate x, NsCoordinate y, string fileOrExistingEntityName) { }
 
-        public virtual void CreateSpriteEx(string name, int priority, NsCoordinate x1, NsCoordinate y1, NsCoordinate x2, NsCoordinate y2, int width, int height, string srcEntityName) { }
+        public virtual void CreateSpriteEx(in EntityPath entityPath, int priority, NsCoordinate x1, NsCoordinate y1, NsCoordinate x2, NsCoordinate y2, int width, int height, in EntityPath srcEntityPath) { }
 
         /// <summary>
         /// Original name: CreateColor.
         /// </summary>
-        public virtual void CreateRectangle(string name, int priority, NsCoordinate x, NsCoordinate y, int width, int height, NsColor color) { }
+        public virtual void CreateRectangle(in EntityPath entityPath, int priority, NsCoordinate x, NsCoordinate y, int width, int height, NsColor color) { }
 
         /// <summary>
         /// Original name: CreateText.
         /// </summary>
-        public virtual void CreateTextBlock(string name, int priority, NsCoordinate x, NsCoordinate y, NsDimension width, NsDimension height, string pxmlText) { }
+        public virtual void CreateTextBlock(in EntityPath entityPath, int priority, NsCoordinate x, NsCoordinate y, NsDimension width, NsDimension height, string pxmlText) { }
 
-        public virtual void CreateEffect(string entity, int priority, NsCoordinate x, NsCoordinate y, int width, int height, string effectName) { }
+        public virtual void CreateEffect(in EntityPath entityPath, int priority, NsCoordinate x, NsCoordinate y, int width, int height, string effectName) { }
 
-        public virtual void CreateAlphaMask(string v, int priority, NsCoordinate x, NsCoordinate y, string path, bool unk) { }
+        public virtual void CreateAlphaMask(in EntityPath entityPath, int priority, NsCoordinate x, NsCoordinate y, string path, bool unk) { }
 
-        public virtual void BoxBlur(string entityQuery, uint nbPasses) { }
-        public virtual void Grayscale(string entityQuery) { }
+        public virtual void BoxBlur(in EntityQuery query, uint nbPasses) { }
+        public virtual void Grayscale(in EntityQuery query) { }
 
-        public virtual void CreateCube(string name, int priority, string front, string back, string right, string left, string top, string bottom) { }
+        public virtual void CreateCube(in EntityPath entityPath, int priority, string front, string back, string right, string left, string top, string bottom) { }
         public virtual void SetFieldOfView(string unk1, double unk2) { }
 
-        public virtual void WaitPlay(string entityName) { }
+        public virtual void WaitPlay(in EntityPath entityPath) { }
 
-        public virtual void LoadVideo(string entityName, int priority, NsCoordinate x, NsCoordinate y, bool loop, string fileName) { }
+        public virtual void LoadVideo(in EntityPath entityPath, int priority, NsCoordinate x, NsCoordinate y, bool loop, string fileName) { }
 
         /// <summary>
         /// Original name: CreateSound.
         /// </summary>
-        public virtual void LoadAudio(string entityName, NsAudioKind kind, string fileName) { }
-        public virtual void LoadImage(string entityName, string fileName) { }
+        public virtual void LoadAudio(in EntityPath entityPath, NsAudioKind kind, string fileName) { }
+        public virtual void LoadImage(in EntityPath entityPath, string fileName) { }
 
         /// <summary>
         /// Original name: SetLoop.
         /// </summary>
-        public virtual void ToggleLooping(string entityName, bool looping)
+        public virtual void ToggleLooping(in EntityPath entityPath, bool looping)
         {
         }
 
-        public virtual void SetLoopRegion(string entityName, TimeSpan loopStart, TimeSpan loopEnd) { }
-        public virtual void SetVolume(string entityName, TimeSpan duration, NsRational volume) { }
+        public virtual void SetLoopRegion(in EntityPath entityPath, TimeSpan loopStart, TimeSpan loopEnd) { }
+        public virtual void SetVolume(in EntityPath entityPath, TimeSpan duration, NsRational volume) { }
 
-        public virtual void Fade(string entityQuery, TimeSpan duration, NsRational dstOpacity, NsEasingFunction easingFunction, TimeSpan delay) { }
-        public virtual void Move(string entityQuery, TimeSpan duration, NsCoordinate dstX, NsCoordinate dstY, NsEasingFunction easingFunction, TimeSpan delay) { }
-        public virtual void Zoom(string entityQuery, TimeSpan duration, NsRational dstScaleX, NsRational dstScaleY, NsEasingFunction easingFunction, TimeSpan delay) { }
-        public virtual void Rotate(string entityQuery, TimeSpan duration, NsNumeric dstRotationX, NsNumeric dstRotationY, NsNumeric dstRotationZ, NsEasingFunction easingFunction, TimeSpan delay) { }
-        public virtual void MoveCube(string entityQuery, TimeSpan duration, NsNumeric dstTranslationX, NsNumeric dstTranslationY, NsNumeric dstTranslationZ, NsEasingFunction easingFunction, TimeSpan delay) { }
-        public virtual void BezierMove(string entityQuery, TimeSpan duration, CompositeBezier curve, NsEasingFunction easingFunction, bool wait) { }
-        public virtual void DrawTransition(string entityQuery, TimeSpan duration, NsRational initialFadeAmount, NsRational finalFadeAmount, NsRational feather, NsEasingFunction easingFunction, string maskFileName, TimeSpan delay) { }
+        public virtual void Fade(in EntityQuery query, TimeSpan duration, NsRational dstOpacity, NsEasingFunction easingFunction, TimeSpan delay) { }
+        public virtual void Move(in EntityQuery query, TimeSpan duration, NsCoordinate dstX, NsCoordinate dstY, NsEasingFunction easingFunction, TimeSpan delay) { }
+        public virtual void Zoom(in EntityQuery query, TimeSpan duration, NsRational dstScaleX, NsRational dstScaleY, NsEasingFunction easingFunction, TimeSpan delay) { }
+        public virtual void Rotate(in EntityQuery query, TimeSpan duration, NsNumeric dstRotationX, NsNumeric dstRotationY, NsNumeric dstRotationZ, NsEasingFunction easingFunction, TimeSpan delay) { }
+        public virtual void MoveCube(in EntityQuery query, TimeSpan duration, NsNumeric dstTranslationX, NsNumeric dstTranslationY, NsNumeric dstTranslationZ, NsEasingFunction easingFunction, TimeSpan delay) { }
+        public virtual void BezierMove(in EntityQuery query, TimeSpan duration, CompositeBezier curve, NsEasingFunction easingFunction, bool wait) { }
+        public virtual void DrawTransition(in EntityQuery query, TimeSpan duration, NsRational initialFadeAmount, NsRational finalFadeAmount, NsRational feather, NsEasingFunction easingFunction, string maskFileName, TimeSpan delay) { }
 
-        public virtual void CreateThread(string name, string target) { }
+        public virtual void CreateThread(in EntityPath entityPath, string target) { }
 
         public virtual ConstantValue FormatString(string format, object[] args) => throw new NotImplementedException();
 
-        public virtual float GetScrollbarValue(string scrollbarEntity)
+        public virtual float GetScrollbarValue(in EntityPath scrollbarEntity)
         {
             return 0.5f;
         }
 
-        public virtual void CreateChoice(string name) { }
+        public virtual void CreateChoice(in EntityPath entityPath) { }
         public virtual bool IsPressed(string choice) => false;
 
-        public virtual void PlayCutscene(string entityName, int priority, bool loop, bool alpha, string fileName, bool enableAudio) { }
-        
+        public virtual void PlayCutscene(in EntityPath entityPath, int priority, bool loop, bool alpha, string fileName, bool enableAudio) { }
+
         public virtual void LoadText(in DialogueBlockToken token, int maxWidth, int maxHeight, int letterSpacing, int lineSpacing) { }
 
         public virtual void AssertTrue(bool value) { }
+
+        public virtual void CreateEntity(in EntityPath path) {}
     }
 }

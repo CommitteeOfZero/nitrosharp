@@ -1,9 +1,10 @@
 ﻿using System;
 using System.Numerics;
 using NitroSharp.Experimental;
+using NitroSharp.Graphics.Old;
 using NitroSharp.Primitives;
 
-namespace NitroSharp.Graphics
+namespace NitroSharp.Graphics.Old
 {
     internal static class TransformProcessor
     {

@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
-using NitroSharp.Interactivity;
+using NitroSharp.NsScript.Primitives;
 
 #nullable enable
 
@@ -64,19 +64,19 @@ namespace NitroSharp
             ReadOnlySpan<char> str = Span(span);
             if (str.Equals("MouseUsual", StringComparison.Ordinal))
             {
-                state = Interactivity.MouseState.Normal;
+                state = NsScript.Primitives.MouseState.Normal;
             }
             else if (str.Equals("MouseOver", StringComparison.Ordinal))
             {
-                state = Interactivity.MouseState.Over;
+                state = NsScript.Primitives.MouseState.Over;
             }
             else if (str.Equals("MouseClick", StringComparison.Ordinal))
             {
-                state = Interactivity.MouseState.Pressed;
+                state = NsScript.Primitives.MouseState.Pressed;
             }
             else if (str.Equals("MouseLeave", StringComparison.Ordinal))
             {
-                state = Interactivity.MouseState.Leave;
+                state = NsScript.Primitives.MouseState.Leave;
             }
             else
             {

@@ -134,7 +134,7 @@ namespace NitroSharp.Graphics
             if (_passes.Count < 2)
             {
                 throw new InvalidOperationException($"{nameof(MultipassEffect)} is not meant " +
-                    $"to be used for single pass effects."
+                    "to be used for single pass effects."
                 );
             }
 
@@ -167,17 +167,17 @@ namespace NitroSharp.Graphics
                 ResourceSet rs = resourceFactory.CreateResourceSet(new ResourceSetDescription(
                     pipelines.SimpleEffectInputLayout,
                     input2 == null
-                    ? new BindableResource[]
-                    {
-                        fb.ColorTargets[0].Target,
-                        sampler
-                    }
-                    : new BindableResource[]
-                    {
-                        fb.ColorTargets[0].Target,
-                        input2,
-                        sampler
-                    }
+                        ? new BindableResource[]
+                        {
+                            fb.ColorTargets[0].Target,
+                            sampler
+                        }
+                        : new BindableResource[]
+                        {
+                            fb.ColorTargets[0].Target,
+                            input2,
+                            sampler
+                        }
                 ));
                 return (fb, rs);
             }

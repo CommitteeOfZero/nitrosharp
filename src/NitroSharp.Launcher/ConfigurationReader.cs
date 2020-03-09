@@ -38,9 +38,6 @@ namespace NitroSharp.Launcher
         {
             switch (property.Key)
             {
-                case "productName":
-                    configuration.ProductName = property.Value;
-                    break;
                 case "window.width":
                     configuration.WindowWidth = property.Value;
                     break;

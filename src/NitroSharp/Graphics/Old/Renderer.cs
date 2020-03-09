@@ -11,7 +11,7 @@ using Veldrid;
 
 #nullable enable
 
-namespace NitroSharp.Graphics
+namespace NitroSharp.Graphics.Old
 {
     internal readonly struct RenderContext
     {
@@ -37,20 +37,6 @@ namespace NitroSharp.Graphics
             PrimaryFramebuffer = primaryFramebuffer;
             SecondaryFramebuffer = secondaryFramebuffer;
         }
-    }
-
-    internal sealed class ViewProjection
-    {
-        public ViewProjection(ResourceLayout layout, ResourceSet set, DeviceBuffer buffer)
-        {
-            ResourceLayout = layout;
-            ResourceSet = set;
-            DeviceBuffer = buffer;
-        }
-
-        public ResourceLayout ResourceLayout { get; }
-        public ResourceSet ResourceSet { get; }
-        public DeviceBuffer DeviceBuffer { get; }
     }
 
     internal struct DrawState
@@ -313,7 +299,7 @@ namespace NitroSharp.Graphics
 
             Sampler sampler = material.UseLinearFiltering
                ? _gd.LinearSampler
-               : _gd.LinearSampler;
+               : _gd.PointSampler;
 
             Texture source = material.Kind switch
             {
@@ -349,7 +335,7 @@ namespace NitroSharp.Graphics
             Texture input = source;
             if (material.Effects.Count > 0)
             {
-                input = applyEffects(input, material.Effects.Enumerate(), sampler);
+                input = applyEffects(input, material.Effects.AsSpan(), sampler);
             }
 
             if (material.TransitionParameters.MaskHandle.NormalizedPath != null)
@@ -436,7 +422,7 @@ namespace NitroSharp.Graphics
         public void BatchQuads(
             ReadOnlySpan<RenderItemKey> keys,
             ReadOnlySpan<DrawState> drawState,
-            Span<Quad> geometry)
+            Span<QuadGeometry> geometry)
         {
             ResourceSet commonResourceSet = _viewProjectionSet;
             int count = keys.Length;

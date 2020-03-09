@@ -7,7 +7,7 @@ using Veldrid;
 
 namespace NitroSharp.Graphics
 {
-    internal struct Quad
+    internal struct QuadGeometry
     {
         public QuadVertex TopLeft;
         public QuadVertex TopRight;
@@ -60,9 +60,9 @@ namespace NitroSharp.Graphics
         public DeviceBuffer VertexBuffer { get; }
         public DeviceBuffer IndexBuffer { get; }
 
-        public void UpdateVertices(CommandList commandList, ref Quad quad)
+        public void UpdateVertices(CommandList commandList, ref QuadGeometry quadGeometry)
         {
-            commandList.UpdateBuffer(VertexBuffer, 0, ref quad);
+            commandList.UpdateBuffer(VertexBuffer, 0, ref quadGeometry);
         }
     }
 
@@ -71,11 +71,11 @@ namespace NitroSharp.Graphics
         public static void DrawQuad(
             in QuadBuffers gpuBuffers,
             CommandList commandList,
-            ref Quad quad,
+            ref QuadGeometry quadGeometry,
             Pipeline pipeline,
             ResourceSet resourceSet)
         {
-            gpuBuffers.UpdateVertices(commandList, ref quad);
+            gpuBuffers.UpdateVertices(commandList, ref quadGeometry);
             commandList.SetPipeline(pipeline);
             commandList.SetGraphicsResourceSet(1, resourceSet);
             commandList.SetVertexBuffer(0, gpuBuffers.VertexBuffer);
@@ -90,7 +90,7 @@ namespace NitroSharp.Graphics
         }
 
         public static void CalcVertices(
-            ref Quad quad,
+            ref QuadGeometry quadGeometry,
             SizeF localBounds,
             in Matrix4x4 transform,
             Vector2 uvTopLeft,
@@ -98,7 +98,7 @@ namespace NitroSharp.Graphics
             in Vector4 color,
             out RectangleF designSpaceRect)
         {
-            ref QuadVertex topLeft = ref quad.TopLeft;
+            ref QuadVertex topLeft = ref quadGeometry.TopLeft;
             topLeft.Position.X = 0.0f;
             topLeft.Position.Y = 0.0f;
             topLeft.TexCoord.X = uvTopLeft.X;
@@ -106,7 +106,7 @@ namespace NitroSharp.Graphics
             topLeft.Position = Vector2.Transform(topLeft.Position, transform);
             topLeft.Color = color;
 
-            ref QuadVertex topRight = ref quad.TopRight;
+            ref QuadVertex topRight = ref quadGeometry.TopRight;
             topRight.Position.X = localBounds.Width;
             topRight.Position.Y = 0.0f;
             topRight.TexCoord.X = uvBottomRight.X;
@@ -114,7 +114,7 @@ namespace NitroSharp.Graphics
             topRight.Position = Vector2.Transform(topRight.Position, transform);
             topRight.Color = color;
 
-            ref QuadVertex bottomLeft = ref quad.BottomLeft;
+            ref QuadVertex bottomLeft = ref quadGeometry.BottomLeft;
             bottomLeft.Position.X = 0.0f;
             bottomLeft.Position.Y = 0.0f + localBounds.Height;
             bottomLeft.TexCoord.X = uvTopLeft.X;
@@ -122,7 +122,7 @@ namespace NitroSharp.Graphics
             bottomLeft.Position = Vector2.Transform(bottomLeft.Position, transform);
             bottomLeft.Color = color;
 
-            ref QuadVertex bottomRight = ref quad.BottomRight;
+            ref QuadVertex bottomRight = ref quadGeometry.BottomRight;
             bottomRight.Position.X = localBounds.Width;
             bottomRight.Position.Y = localBounds.Height;
             bottomRight.TexCoord.X = uvBottomRight.X;

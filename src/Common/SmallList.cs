@@ -1,34 +1,43 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 
-#nullable enable
-
 namespace NitroSharp.Utilities
 {
-    internal struct SmallList<T> where T : struct
+    internal struct SmallList<T>
     {
         private const int MaxFixed = 2;
 
         private struct FixedItems
         {
-            private T _item0;
-            private T _item1;
+            public T Item0;
+            public T Item1;
 
             public Span<T> AsSpan()
-                => MemoryMarshal.CreateSpan(ref _item0, MaxFixed);
+                => MemoryMarshal.CreateSpan(ref Item0, MaxFixed);
 
             public Span<T> AsSpan(int length)
-                => MemoryMarshal.CreateSpan(ref _item0, length);
+                => MemoryMarshal.CreateSpan(ref Item0, length);
         }
 
         private T[]? _array;
         private FixedItems _fixedItems;
         private int _count;
 
+        public SmallList(T elem)
+        {
+            _array = null;
+            _fixedItems = new FixedItems
+            {
+                Item0 = elem
+            };
+            _count = 1;
+        }
+
         public int Count => _count;
 
-        public void Add(T item)
+        public void Add(in T item)
         {
             Span<T> fixedElements = _fixedItems.AsSpan();
             if (_count < MaxFixed)
@@ -50,6 +59,32 @@ namespace NitroSharp.Utilities
             }
         }
 
+        public void Remove(in T item)
+        {
+            Span<T> elems = AsSpan();
+            for (int i = 0; i < _count; i++)
+            {
+                if (EqualityComparer<T>.Default.Equals(elems[i], item))
+                {
+                    RemoveAt(i);
+                    break;
+                }
+            }
+        }
+
+        private void RemoveAt(int index)
+        {
+            Debug.Assert(index < _count);
+            if (index == _count - 1)
+            {
+                _count--;
+                return;
+            }
+            Span<T> elems = AsSpan();
+            elems[(index + 1)..].CopyTo(elems[index..^1]);
+            _count--;
+        }
+
         public ref T this[int index]
         {
             get
@@ -68,7 +103,7 @@ namespace NitroSharp.Utilities
             }
         }
 
-        public Span<T> Enumerate()
+        public Span<T> AsSpan()
         {
             return _count <= MaxFixed
                 ? _fixedItems.AsSpan(_count)
@@ -78,7 +113,7 @@ namespace NitroSharp.Utilities
         public int HashElements()
         {
             int hash = 0;
-            foreach (ref T item in Enumerate())
+            foreach (ref T item in AsSpan())
             {
                 hash = HashCode.Combine(hash, item);
             }

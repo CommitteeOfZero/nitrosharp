@@ -9,9 +9,10 @@ namespace NitroSharp.NsScript.VM
     {
         private BufferReader _reader;
 
-        public BytecodeStream(ReadOnlySpan<byte> body)
+        public BytecodeStream(ReadOnlySpan<byte> body, int pos)
         {
             _reader = new BufferReader(body);
+            Position = pos;
         }
 
         public int Position

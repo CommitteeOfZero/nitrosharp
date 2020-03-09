@@ -1,14 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
-using NitroSharp.Animation;
 using NitroSharp.Diagnostics;
 using NitroSharp.Dialogue;
 using NitroSharp.Interactivity;
 using NitroSharp.Media;
 using Veldrid;
 using NitroSharp.Graphics;
-using NitroSharp.Experimental;
 using NitroSharp.Content;
+using NitroSharp.Graphics.Old;
+using NitroSharp.New;
 
 #nullable enable
 
@@ -27,7 +27,7 @@ namespace NitroSharp
             private readonly DialogueSystem _dialogueSystem;
             private readonly Renderer _renderSystem;
             //private readonly AudioSystem _audioSystem;
-            private readonly AnimationProcessor _animationProcessor;
+            //private readonly AnimationProcessor _animationProcessor;
             private readonly ChoiceProcessor _choiceProcessor;
 
             private readonly DevModeOverlay _devModeOverlay;
@@ -38,16 +38,16 @@ namespace NitroSharp
                 _content = game.Content;
                 _inputTracker = new InputTracker(game._window);
                 _dialogueSystem = new DialogueSystem(this, game.GlyphRasterizer, _inputTracker);
-                _animationProcessor = new AnimationProcessor(this);
+                //_animationProcessor = new AnimationProcessor(this);
                 _choiceProcessor = new ChoiceProcessor(this);
-                _renderSystem = new Renderer(
-                    _world,
-                    game._configuration,
-                    game._graphicsDevice,
-                    game._swapchain,
-                    game.GlyphRasterizer,
-                    game.Content
-                );
+                //_renderSystem = new Renderer(
+                //    _world,
+                //    game._configuration,
+                //    game._graphicsDevice,
+                //    game._swapchain,
+                //    game.GlyphRasterizer,
+                //    game.Content
+                //);
                 //_audioSystem = new AudioSystem(_world, game.Content, game.AudioSourcePool);
                 //_devModeOverlay = new DevModeOverlay(_renderSystem.RenderContext, game.LogEventRecorder);
             }
@@ -56,11 +56,11 @@ namespace NitroSharp
 
             public void ProcessChoices()
             {
-                _renderSystem.ProcessTransforms();
-                foreach (Entity choice in _world.Choices.Active.Entities)
-                {
-                    _choiceProcessor.ProcessChoice(_world, choice, _inputTracker);
-                }
+                //_renderSystem.ProcessTransforms();
+                //foreach (Entity choice in _world.Choices.Active.Entities)
+                //{
+                //    _choiceProcessor.ProcessChoice(_world, choice, _inputTracker);
+                //}
             }
 
             public void Tick(in FrameStamp framestamp, float deltaMilliseconds)
@@ -68,12 +68,12 @@ namespace NitroSharp
                 _inputTracker.Update();
                 _world.FlushDetachedAnimations();
 
-                AnimationProcessorOutput animProcessorOutput = _animationProcessor
-                    .ProcessAnimations(deltaMilliseconds);
+                //AnimationProcessorOutput animProcessorOutput = _animationProcessor
+                //    .ProcessAnimations(deltaMilliseconds);
 
-                bool blockInput = animProcessorOutput.BlockingAnimationCount > 0;
+                //bool blockInput = animProcessorOutput.BlockingAnimationCount > 0;
                 //mainThreadWaiting || ThreadAwaitingSelect != null || animProcessorOutput.BlockingAnimationCount > 0;
-                _dialogueSystemInput.AcceptUserInput = !blockInput;
+                _dialogueSystemInput.AcceptUserInput = true;
                 if (_dialogueSystem.AdvanceDialogueState(ref _dialogueSystemInput))
                 {
                     _dialogueSystemInput.Command = DialogueSystemCommand.HandleInput;
@@ -83,7 +83,7 @@ namespace NitroSharp
 
                 try
                 {
-                    _renderSystem.Render(framestamp, _content, _captureFramebuffer);
+                    //_renderSystem.Render(framestamp, _content, _captureFramebuffer);
                     if (_captureFramebuffer)
                     {
                         _captureFramebuffer = false;
@@ -106,7 +106,7 @@ namespace NitroSharp
                     {
                         case MessageKind.BeginDialogueBlock:
                             var beginBlockMsg = (BeginDialogueBlockMessage)message;
-                            _dialogueSystemInput.TextEntity = beginBlockMsg.TextEntity;
+                            //_dialogueSystemInput.TextEntity = beginBlockMsg.TextEntity;
                             break;
                         case MessageKind.PresentDialogue:
                             var presentDialogueMsg = (PresentDialogueMessage)message;
@@ -122,7 +122,7 @@ namespace NitroSharp
 
             public void Dispose()
             {
-                _renderSystem.Dispose();
+                //_renderSystem.Dispose();
                 //_devModeOverlay.Dispose();
             }
         }

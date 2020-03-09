@@ -36,11 +36,16 @@ namespace NitroSharp.NsScript.VM
 
         public int ProgramCounter;
 
-        public CallFrame(NsxModule module, ushort subroutineIndex, ushort argStart, ushort argCount)
+        public CallFrame(
+            NsxModule module,
+            ushort subroutineIndex,
+            int pc = 0,
+            ushort argStart = 0,
+            ushort argCount = 0)
         {
             Module = module;
             SubroutineIndex = subroutineIndex;
-            ProgramCounter = 0;
+            ProgramCounter = pc;
             ArgStart = argStart;
             ArgCount = argCount;
         }

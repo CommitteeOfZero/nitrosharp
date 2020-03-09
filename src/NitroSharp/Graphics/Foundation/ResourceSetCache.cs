@@ -22,7 +22,7 @@ namespace NitroSharp.Graphics
             if (resources.Length > 4)
             {
                 throw new ArgumentException($"{nameof(ResourceSetCache)} can only contain" +
-                    $"ResourceSets that include up to 4 resources."
+                    "ResourceSets that include up to 4 resources."
                 );
             }
             Resource0 = resources[0];

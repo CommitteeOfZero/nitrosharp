@@ -73,6 +73,13 @@ csharp_prefer_simple_using_statement = false:none
 # Common styles
 dotnet_naming_style.pascal_case_style.capitalization = pascal_case
 
+# ReSharper properties
+resharper_csharp_wrap_arguments_style=chop_if_long
+resharper_csharp_wrap_parameters_style=chop_if_long
+resharper_wrap_after_declaration_lpar=true
+resharper_wrap_after_invocation_lpar=true
+resharper_wrap_before_invocation_rpar=true
+
 [*.{csproj,vbproj,vcxproj,vcxproj.filters,proj,projitems,shproj,props,targets}]
 indent_size = 2
 

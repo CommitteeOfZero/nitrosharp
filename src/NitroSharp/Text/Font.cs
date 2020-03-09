@@ -16,8 +16,8 @@ namespace NitroSharp.Text
             Style = style;
         }
 
-        public bool Equals(FontKey other) =>
-            FamilyName.Equals(other.FamilyName) && Style == other.Style;
+        public bool Equals(FontKey other)
+            => FamilyName.Equals(other.FamilyName) && Style == other.Style;
 
         public override int GetHashCode() => HashCode.Combine(FamilyName, Style);
         public override string ToString() => $"{FamilyName} {Style}";

@@ -122,9 +122,10 @@ namespace NitroSharp.NsScript.VM
         public void ActivateDialogueBlock(in DialogueBlockToken blockToken)
         {
             var frame = new CallFrame(
-                blockToken.Module, (ushort)blockToken.SubroutineIndex, 0, 0);
-            frame.ProgramCounter = blockToken.Offset;
-
+                blockToken.Module,
+                (ushort)blockToken.SubroutineIndex,
+                pc: blockToken.Offset
+            );
             CurrentThread!.CallFrameStack.Push(frame);
         }
 
@@ -132,19 +133,17 @@ namespace NitroSharp.NsScript.VM
         {
             NsxModule module = GetModule(moduleName);
             ushort subIndex = (ushort)module.LookupSubroutineIndex(symbol);
-            var frame = new CallFrame(module, subIndex, 0, 0);
+            var frame = new CallFrame(module, subIndex);
             var thread = new ThreadContext(name, ref frame);
             _pendingThreadActions.Enqueue(ThreadAction.Create(thread));
             if (MainThread == null)
             {
                 MainThread = thread;
             }
-
             if (!start)
             {
                 CommitSuspendThread(thread, null);
             }
-
             return thread;
         }
 
@@ -340,8 +339,7 @@ namespace NitroSharp.NsScript.VM
             ref CallFrame frame = ref thread.CurrentFrame;
             NsxModule thisModule = frame.Module;
             Subroutine subroutine = thisModule.GetSubroutine(frame.SubroutineIndex);
-            var program = new BytecodeStream(subroutine.Code);
-            program.Position = frame.ProgramCounter;
+            var program = new BytecodeStream(subroutine.Code, frame.ProgramCounter);
             ref ValueStack<ConstantValue> stack = ref thread.EvalStack;
             while (true)
             {
@@ -454,11 +452,12 @@ namespace NitroSharp.NsScript.VM
                         ushort argCount = program.ReadByte();
                         ushort argStart = (ushort)(stack.Count - argCount);
                         frame.ProgramCounter = program.Position;
-                        var newFrame = new CallFrame(frame.Module, subroutineToken, argStart, argCount);
+                        var newFrame = new CallFrame(frame.Module, subroutineToken, 0, argStart, argCount);
                         thread.CallFrameStack.Push(newFrame);
                         if (CurrentThread == MainThread)
                         {
-                            string name = thisModule.GetSubroutineRuntimeInformation(subroutineToken).SubroutineName;
+                            string name = thisModule.GetSubroutineRuntimeInfo(subroutineToken)
+                                .SubroutineName;
                             for (int i = 0; i < thread.CallFrameStack.Count; i++)
                             {
                                 Console.Write(" ");
@@ -473,12 +472,13 @@ namespace NitroSharp.NsScript.VM
                         argStart = (ushort)(stack.Count - argCount);
                         string externalModuleName = thisModule.Imports[importTableIndex];
                         NsxModule externalModule = GetModule(externalModuleName);
-                        newFrame = new CallFrame(externalModule, subroutineToken, argStart, argCount);
+                        newFrame = new CallFrame(externalModule, subroutineToken, 0, argStart, argCount);
                         thread.CallFrameStack.Push(newFrame);
                         frame.ProgramCounter = program.Position;
                         if (CurrentThread == MainThread)
                         {
-                            string name = externalModule.GetSubroutineRuntimeInformation(subroutineToken).SubroutineName;
+                            string name = externalModule.GetSubroutineRuntimeInfo(subroutineToken)
+                                .SubroutineName;
                             for (int i = 0; i < thread.CallFrameStack.Count; i++)
                             {
                                 Console.Write(" ");
@@ -568,14 +568,14 @@ namespace NitroSharp.NsScript.VM
                                 Console.WriteLine($"[VM]: {arg.ConvertToString()}");
                                 break;
                             case BuiltInFunction.fail:
-                                string subName = thisModule.GetSubroutineRuntimeInformation(
+                                string subName = thisModule.GetSubroutineRuntimeInfo(
                                     frame.SubroutineIndex).SubroutineName;
                                 Console.WriteLine($"{subName} + {program.Position - 1}: test failed.");
                                 break;
                             case BuiltInFunction.fail_msg:
                                 ConstantValue message = stack.Pop();
-                                subName = thisModule.GetSubroutineRuntimeInformation(
-                                        frame.SubroutineIndex).SubroutineName;
+                                subName = thisModule.GetSubroutineRuntimeInfo(frame.SubroutineIndex)
+                                    .SubroutineName;
                                 Console.WriteLine($"{subName} + {program.Position - 1}: {message.ToString()}.");
                                 break;
                         }
@@ -584,8 +584,9 @@ namespace NitroSharp.NsScript.VM
 
                     case Opcode.ActivateText:
                         ushort textId = program.DecodeToken();
-                        ref readonly var srti = ref thisModule.GetSubroutineRuntimeInformation(
-                            frame.SubroutineIndex);
+                        ref readonly var srti = ref thisModule.GetSubroutineRuntimeInfo(
+                            frame.SubroutineIndex
+                        );
                         (string box, string textName) = srti.DialogueBlockInfos[textId];
                         _systemVariables.CurrentBoxName = ConstantValue.String(box);
                         _systemVariables.CurrentTextName = ConstantValue.String(textName);
