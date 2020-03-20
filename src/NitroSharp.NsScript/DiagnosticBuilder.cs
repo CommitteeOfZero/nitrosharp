@@ -1,5 +1,4 @@
-﻿using NitroSharp.NsScript.Text;
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
 
 namespace NitroSharp.NsScript
 {

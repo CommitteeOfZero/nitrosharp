@@ -37,7 +37,7 @@ namespace NitroSharp.Graphics.Old
     {
         private static uint s_id;
 
-        public ComponentVec<RenderItemKey> Keys { get; }
+        public ComponentVec<OldRenderItemKey> Keys { get; }
         public ComponentVec<TransformComponents> TransformComponents { get; }
         public ComponentVec<Matrix4x4> Transforms { get; }
 
@@ -47,7 +47,7 @@ namespace NitroSharp.Graphics.Old
         protected RenderItemStorage(EntityHub hub, uint initialCapacity)
             : base(hub, initialCapacity)
         {
-            Keys = AddComponentVec<RenderItemKey>();
+            Keys = AddComponentVec<OldRenderItemKey>();
             TransformComponents = AddComponentVec<TransformComponents>();
             Transforms = AddComponentVec<Matrix4x4>();
             Materials = AddComponentVec<Material>();
@@ -59,7 +59,7 @@ namespace NitroSharp.Graphics.Old
            int priority)
         {
             (Entity e, uint i) = New(name);
-            Keys[i] = new RenderItemKey((ushort)priority, (ushort)++s_id);
+            Keys[i] = new OldRenderItemKey((ushort)priority, (ushort)++s_id);
             TransformComponents[i].Scale = Vector3.One;
             if (name.MouseState.HasValue)
             {

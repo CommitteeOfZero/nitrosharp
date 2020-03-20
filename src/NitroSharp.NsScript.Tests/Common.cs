@@ -1,5 +1,5 @@
-﻿using NitroSharp.NsScript.Syntax;
-using NitroSharp.NsScript.Text;
+﻿using NitroSharp.NsScript;
+using NitroSharp.NsScript.Syntax;
 using Xunit;
 
 namespace NitroSharp.NsScriptCompiler.Tests

@@ -16,11 +16,6 @@ namespace NitroSharp.New
 
         public override void CreateEntity(in EntityPath path)
         {
-            if (_world.ResolvePath(path, out ResolvedEntityPath resolvedPath))
-            {
-                var entity = new RenderItem(resolvedPath);
-                _world.AddRenderItem(entity);
-            }
         }
 
         public override void WaitForInput()

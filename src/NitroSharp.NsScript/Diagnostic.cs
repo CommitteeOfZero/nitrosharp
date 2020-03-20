@@ -1,5 +1,4 @@
-﻿using NitroSharp.NsScript.Text;
-using System.Globalization;
+﻿using System.Globalization;
 
 namespace NitroSharp.NsScript
 {
@@ -65,18 +64,7 @@ namespace NitroSharp.NsScript
                 _arguments = arguments;
             }
 
-            public override string Message
-            {
-                get
-                {
-                    if (_message == null)
-                    {
-                        _message = FormatMessage();
-                    }
-
-                    return _message;
-                }
-            }
+            public override string Message => _message ??= FormatMessage();
 
             private string FormatMessage()
             {

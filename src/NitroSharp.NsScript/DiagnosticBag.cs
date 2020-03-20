@@ -24,16 +24,18 @@ namespace NitroSharp.NsScript
         public bool IsEmpty => _diagnostics.Length == 0;
 
         public ImmutableArray<Diagnostic> All => _diagnostics;
-        public ImmutableArray<Diagnostic> Information => IsEmpty ? ImmutableArray<Diagnostic>.Empty : _collections.Value.Information;
-        public ImmutableArray<Diagnostic> Warnings => IsEmpty ? ImmutableArray<Diagnostic>.Empty : _collections.Value.Warnings;
-        public ImmutableArray<Diagnostic> Errors => IsEmpty ? ImmutableArray<Diagnostic>.Empty : _collections.Value.Errors;
+        public ImmutableArray<Diagnostic> Information
+            => IsEmpty ? ImmutableArray<Diagnostic>.Empty : _collections.Value.Information;
+        public ImmutableArray<Diagnostic> Warnings
+            => IsEmpty ? ImmutableArray<Diagnostic>.Empty : _collections.Value.Warnings;
+        public ImmutableArray<Diagnostic> Errors
+            => IsEmpty ? ImmutableArray<Diagnostic>.Empty : _collections.Value.Errors;
 
         private DiagnosticCollections Categorize()
         {
             var information = ImmutableArray.CreateBuilder<Diagnostic>();
             var warnings = ImmutableArray.CreateBuilder<Diagnostic>();
             var errors = ImmutableArray.CreateBuilder<Diagnostic>();
-
             foreach (var diagnostic in _diagnostics)
             {
                 switch (diagnostic.Severity)
@@ -41,11 +43,9 @@ namespace NitroSharp.NsScript
                     case DiagnosticSeverity.Info:
                         information.Add(diagnostic);
                         break;
-
                     case DiagnosticSeverity.Warning:
                         warnings.Add(diagnostic);
                         break;
-
                     case DiagnosticSeverity.Error:
                         errors.Add(diagnostic);
                         break;

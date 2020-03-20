@@ -46,33 +46,32 @@
         // Used by Request
         Lock,
         Unlock,
-        Play,
-        Disused,
-        Erase,
-        Hideable,
-        Start,
-        Stop,
+        Disused,            // Mark for removal
+        Erase,              // Disable
+        Enter,              // Enable
+        Start,              // Resume (thread?)
+        Stop,               // Suspend (thread?)
         AddRender,
         SubRender,
         MulRender,
-        CompulsorySuspend,
-        EntrustSuspend,
-        Smoothing,
-        Enter,
+        Smoothing,          // Enable linear filtering
+        Play,
         Pause,
         Resume,
-        PushText,
+        PushText,           // Disable typewriter animation
         NoLog,
         NoIcon,
-
-        // Used by CreateSound
-        BGM,
-        SE,
-        Voice,
+        CompulsorySuspend,
+        EntrustSuspend,
+        Hideable,           // Possibly a no-op
 
         // Used by CreateTexture
         SCREEN,
         Video,
+
+        // Used by CreateText
+        Auto,
+        Inherit,
 
         // Used by SetShade
         Medium,
@@ -88,10 +87,6 @@
         Around,
         None,
 
-        // Used by CreateText
-        Auto,
-        Inherit,
-
         // Used by SetNextFocus
         Up,
         Down,
@@ -99,6 +94,11 @@
         // Used by CreateScrollbar
         Vertical,
         Horizon,
+
+        // Used by CreateSound
+        BGM,
+        SE,
+        Voice,
 
         // Used by SetScore
         Local,

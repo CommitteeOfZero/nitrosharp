@@ -1,4 +1,4 @@
-﻿using NitroSharp.Content;
+﻿using NitroSharp.OldContent;
 using NitroSharp.Media;
 using NitroSharp.Primitives;
 using NitroSharp.Text;
@@ -30,7 +30,7 @@ namespace NitroSharp
             => (FrameId, StopwatchTicks) = (frameId, stopwatchTicks);
     }
 
-    public partial class Game : IDisposable
+    public class Game : IDisposable
     {
         private readonly bool UseWicOnWindows = true;
 
@@ -93,7 +93,7 @@ namespace NitroSharp
         internal GlyphRasterizer GlyphRasterizer => _glyphRasterizer;
         internal FontConfiguration FontConfiguration { get; private set; }
 
-        public async Task Run(bool useDedicatedThread = false)
+        public Task Run(bool useDedicatedThread = false)
         {
             // Blocking the thread here because desktop platforms
             // require that the main loop be run on the main thread.
@@ -107,7 +107,7 @@ namespace NitroSharp
             {
                 throw aex.Flatten();
             }
-            await RunMainLoop(useDedicatedThread);
+            return RunMainLoop(useDedicatedThread);
         }
 
         private async Task Initialize()
@@ -168,7 +168,8 @@ namespace NitroSharp
                     _nssFolder,
                     _bytecodeCacheDir,
                     globalsFileName,
-                    sourceEncoding
+                    sourceEncoding,
+                    _configuration.ContentRoot
                 );
                 compilation.Emit(compilation.GetSourceModule(_configuration.StartupScript));
             }
@@ -180,22 +181,37 @@ namespace NitroSharp
             var nsxLocator = new FileSystemNsxModuleLocator(_bytecodeCacheDir);
             _vm = new NsScriptVM(nsxLocator, File.OpenRead(globalsPath), _builtinFunctions);
             _vm.CreateThread(
-                "__MAIN",
-                _configuration.StartupScript.Replace(".nss", string.Empty), "main"
+                name: "__MAIN",
+                Path.ChangeExtension(_configuration.StartupScript, null),
+                symbol: "main"
             );
         }
 
         private bool ValidateBytecodeCache()
         {
-            string startupScript = _configuration.StartupScript.Replace('\\', '/');
-            startupScript = startupScript.Remove(startupScript.Length - 4);
+            string getModulePath(string rootDir, string fullPath)
+            {
+                return Path.ChangeExtension(
+                    Path.GetRelativePath(rootDir, fullPath),
+                    extension: null
+                );
+            }
+
+            string startupModule = getModulePath(
+                rootDir: _nssFolder,
+                Path.Combine(_nssFolder, _configuration.StartupScript)
+            );
             foreach (string nssFile in Directory
                 .EnumerateFiles(_nssFolder, "*.nss", SearchOption.AllDirectories))
             {
-                string nsxFile = nssFile.Replace("nss", "nsx");
+                string currentModule = getModulePath(rootDir: _nssFolder, nssFile);
+                string nsxPath = Path.ChangeExtension(
+                    Path.Combine(_bytecodeCacheDir, currentModule),
+                    "nsx"
+                );
                 try
                 {
-                    using (FileStream nsxStream = File.OpenRead(nsxFile))
+                    using (FileStream nsxStream = File.OpenRead(nsxPath))
                     {
                         long nsxTimestamp = NsxModule.GetSourceModificationTime(nsxStream);
                         long nssTimestamp = new DateTimeOffset(File.GetLastWriteTimeUtc(nssFile))
@@ -209,10 +225,7 @@ namespace NitroSharp
                 }
                 catch
                 {
-                    string nsxRelativePath = Path.GetRelativePath(relativeTo: _bytecodeCacheDir, nsxFile)
-                        .Replace('\\', '/');
-                    nsxRelativePath = nsxRelativePath.Remove(nsxRelativePath.Length - 4);
-                    if (nsxRelativePath.Equals(startupScript))
+                    if (currentModule.Equals(startupModule, StringComparison.Ordinal))
                     {
                         return false;
                     }

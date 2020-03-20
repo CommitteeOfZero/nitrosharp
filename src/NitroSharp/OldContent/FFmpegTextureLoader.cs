@@ -9,7 +9,7 @@ using Veldrid;
 
 #nullable enable
 
-namespace NitroSharp.Content
+namespace NitroSharp.OldContent
 {
     internal unsafe sealed class FFmpegTextureLoader : TextureLoader
     {

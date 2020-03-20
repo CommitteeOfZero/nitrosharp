@@ -29,24 +29,24 @@ namespace NitroSharp.New
                 ReadOnlySpan<char> prefix = queryRoot.Value.Span[..^1];
                 if (!queryRoot.SearchInAliases)
                 {
-                    foreach (KeyValuePair<EntityId, EntityRec> kvp in _entities)
+                    foreach ((EntityId id, EntityRec rec) in _entities)
                     {
-                        if (!kvp.Value.Entity.HasParent && kvp.Key.Name.StartsWith(prefix))
+                        if (!rec.Entity.HasParent && id.Name.StartsWith(prefix))
                         {
-                            roots.Add(kvp.Value.Entity);
+                            roots.Add(rec.Entity);
                         }
                     }
                 }
                 else
                 {
                     prefix = prefix[1..];
-                    foreach (KeyValuePair<EntityPath, EntityId> kvp in _aliases)
+                    foreach ((EntityPath id, EntityId rec) in _aliases)
                     {
                         // TODO
-                        Entity entity = Get(kvp.Value)!;
-                        if (!entity.HasParent && kvp.Key.Name.StartsWith(prefix))
+                        Entity entity = Get(rec)!;
+                        if (!entity.HasParent && id.Name.StartsWith(prefix))
                         {
-                            roots.Add(Get(kvp.Value)!);
+                            roots.Add(Get(rec)!);
                         }
                     }
                 }

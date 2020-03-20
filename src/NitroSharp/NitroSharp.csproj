@@ -11,7 +11,9 @@
   <Import Project="..\..\OutputPath.props" />
 
   <ItemGroup>
+    <Compile Remove="Disabled/**" />
     <Compile Remove="Old/**" />
+    <Compile Remove="Graphics/Old/**" />
     <Compile Remove="OldDialogue/**" />
     <Compile Remove="OldWorld/**" />
     <Compile Remove="Disabled/Animation/AnimationProcessor.cs" />
@@ -46,7 +48,6 @@
   <ItemGroup>
     <Compile Include="../Common/ThrowHelper.cs" Link="Utilities/ThrowHelper.cs" />
     <Compile Include="../Common/ArrayBuilder.cs" Link="Utilities/ArrayBuilder.cs" />
-    <Compile Include="../Common/SmallList.cs" Link="Utilities/SmallList.cs" />
 
     <Content Include="../../fonts/**/*.*" LinkBase="Fonts">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

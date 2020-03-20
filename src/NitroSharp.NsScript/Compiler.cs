@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Buffers;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
@@ -9,7 +8,6 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using NitroSharp.NsScript.Syntax;
-using NitroSharp.NsScript.Text;
 using NitroSharp.NsScript.Utilities;
 using NitroSharp.Utilities;
 
@@ -31,18 +29,21 @@ namespace NitroSharp.NsScript.Compiler
         public Compilation(string rootSourceDirectory,
                            string outputDirectory,
                            string globalsFileName,
-                           Encoding? sourceTextEncoding = null)
+                           Encoding? sourceTextEncoding = null,
+                           string? contentRoot = null)
             : this(new DefaultSourceReferenceResolver(rootSourceDirectory),
                    outputDirectory,
                    globalsFileName,
-                   sourceTextEncoding)
+                   sourceTextEncoding,
+                   contentRoot)
         {
         }
 
         public Compilation(SourceReferenceResolver sourceReferenceResolver,
                            string outputDirectory,
                            string globalsFileName,
-                           Encoding? sourceTextEncoding = null)
+                           Encoding? sourceTextEncoding = null,
+                           string? contentRoot = null)
         {
             _sourceReferenceResolver = sourceReferenceResolver;
             _outputDirectory = outputDirectory;
@@ -51,10 +52,15 @@ namespace NitroSharp.NsScript.Compiler
             _syntaxTrees = new Dictionary<ResolvedPath, SyntaxTree>();
             _sourceModuleSymbols = new Dictionary<SyntaxTree, SourceModuleSymbol>();
             _nsxModuleBuilders = new Dictionary<ResolvedPath, NsxModuleBuilder>();
+            if (contentRoot is object)
+            {
+                ContentResolver = new FilePathResolver(contentRoot, "*");
+            }
         }
 
         public SourceReferenceResolver SourceReferenceResolver => _sourceReferenceResolver;
         public string OutputDirectory => _outputDirectory;
+        internal FilePathResolver? ContentResolver { get; }
 
         public void Emit(SourceModuleSymbol mainModule)
         {
@@ -66,13 +72,12 @@ namespace NitroSharp.NsScript.Compiler
             {
                 filesCompiled = 0;
                 KeyValuePair<ResolvedPath, NsxModuleBuilder>[] nsxBuilders = _nsxModuleBuilders.ToArray();
-                foreach (KeyValuePair<ResolvedPath, NsxModuleBuilder> kvp in nsxBuilders)
+                foreach ((ResolvedPath path, NsxModuleBuilder moduleBuilder) in nsxBuilders)
                 {
-                    if (!compiledSourceFiles.Contains(kvp.Key))
+                    if (!compiledSourceFiles.Contains(path))
                     {
-                        NsxModuleBuilder moduleBuilder = kvp.Value;
                         NsxModuleAssembler.WriteModule(moduleBuilder);
-                        compiledSourceFiles.Add(kvp.Key);
+                        compiledSourceFiles.Add(path);
                         filesCompiled++;
                     }
                 }
@@ -102,7 +107,6 @@ namespace NitroSharp.NsScript.Compiler
                     {
                         sysVarListWriter.WriteUInt16LE((ushort)i);
                     }
-
                     nameWriter.WriteLengthPrefixedUtf8String(var);
                 }
 
@@ -224,15 +228,27 @@ namespace NitroSharp.NsScript.Compiler
             var codeWriter = new BufferWriter(codeBuffer);
             var subroutineOffsets = new List<int>(subroutines.Length);
             CompileSubroutines(
-                builder, sourceFile.Chapters.As<SubroutineSymbol>(), ref codeWriter, subroutineOffsets);
+                builder,
+                sourceFile.Chapters.As<SubroutineSymbol>(),
+                ref codeWriter,
+                subroutineOffsets
+            );
             CompileSubroutines(
-                builder, sourceFile.Scenes.As<SubroutineSymbol>(), ref codeWriter, subroutineOffsets);
+                builder,
+                sourceFile.Scenes.As<SubroutineSymbol>(),
+                ref codeWriter,
+                subroutineOffsets
+            );
             CompileSubroutines(
-                builder, sourceFile.Functions.As<SubroutineSymbol>(), ref codeWriter, subroutineOffsets);
+                builder,
+                sourceFile.Functions.As<SubroutineSymbol>(),
+                ref codeWriter,
+                subroutineOffsets
+            );
             codeWriter.WriteBytes(NsxConstants.TableEndMarker);
 
             ReadOnlySpan<string> stringHeap = builder.StringHeap;
-            int subTableOffset = NsxConstants.NsxHeaderSize;
+            const int subTableOffset = NsxConstants.NsxHeaderSize;
             int subTableSize = NsxConstants.TableHeaderSize + 6 + subroutines.Length * sizeof(int);
             int stringTableSize = NsxConstants.TableHeaderSize + 6 + stringHeap.Length * sizeof(int);
 
@@ -243,13 +259,21 @@ namespace NitroSharp.NsScript.Compiler
             uint rtiOffsetBlockSize = sourceFile.SubroutineCount * sizeof(ushort);
             using var rtiEntryOffsets = PooledBuffer<byte>.Allocate(rtiOffsetBlockSize);
             var rtiOffsetWriter = new BufferWriter(rtiEntryOffsets);
-
             WriteRuntimeInformation(
-                sourceFile.Chapters.As<SubroutineSymbol>(), ref rtiWriter, ref rtiOffsetWriter);
+                sourceFile.Chapters.As<SubroutineSymbol>(),
+                ref rtiWriter,
+                ref rtiOffsetWriter
+            );
             WriteRuntimeInformation(
-                sourceFile.Scenes.As<SubroutineSymbol>(), ref rtiWriter, ref rtiOffsetWriter);
+                sourceFile.Scenes.As<SubroutineSymbol>(),
+                ref rtiWriter,
+                ref rtiOffsetWriter
+            );
             WriteRuntimeInformation(
-                sourceFile.Functions.As<SubroutineSymbol>(), ref rtiWriter, ref rtiOffsetWriter);
+                sourceFile.Functions.As<SubroutineSymbol>(),
+                ref rtiWriter,
+                ref rtiOffsetWriter
+            );
             rtiWriter.WriteBytes(NsxConstants.TableEndMarker);
 
             int rtiSize = NsxConstants.TableHeaderSize + rtiOffsetWriter.Position + rtiWriter.Position;
@@ -386,7 +410,7 @@ namespace NitroSharp.NsScript.Compiler
                 writer.WriteUInt16LE((ushort)dialogueBlockCount);
                 for (int i = 0; i < dialogueBlockCount; i++)
                 {
-                    writer.WriteUInt16LE((ushort)(dialogueBlockOffsets[i]));
+                    writer.WriteUInt16LE((ushort)dialogueBlockOffsets[i]);
                 }
 
                 writer.Position = codeEnd;
@@ -583,7 +607,6 @@ namespace NitroSharp.NsScript.Compiler
                 {
                     Report(callChapterStmt.TargetModule, DiagnosticId.ChapterMainNotFound);
                 }
-
                 return chapter;
 
             }
@@ -687,7 +710,7 @@ namespace NitroSharp.NsScript.Compiler
             BezierExpressionSyntax bezierExpr,
             out ImmutableArray<CompileTimeBezierSegment> segments)
         {
-            bool consumePoint(
+            static bool consumePoint(
                 ref ReadOnlySpan<BezierControlPointSyntax> points,
                 out BezierControlPointSyntax pt)
             {
@@ -1072,17 +1095,35 @@ namespace NitroSharp.NsScript.Compiler
             if (lookupResult.IsEmpty) { return; }
 
             ImmutableArray<ExpressionSyntax> arguments = callExpression.Arguments;
+            bool isBuiltIn = lookupResult.Discriminator == LookupResultDiscriminator.BuiltInFunction;
+            FilePathResolver? contentResolver = _compilation.ContentResolver;
             for (int i = 0; i < arguments.Length; i++)
             {
+                ExpressionSyntax arg = arguments[i];
+                if (isBuiltIn && contentResolver is object)
+                {
+                    if (arg is LiteralExpressionSyntax literal
+                        && literal.Value.Type == BuiltInType.String)
+                    {
+                        string str = literal.Value.AsString()!;
+                        if (contentResolver.ResolvePath(str, out ResolvedPath resolvedPath))
+                        {
+                            arg = new LiteralExpressionSyntax(
+                                ConstantValue.String(resolvedPath.Value),
+                                literal.Span
+                            );
+                        }
+                    }
+                }
                 // Assumption: the first argument is never a built-in constant
                 // Even if it looks like one (e.g. "Black"), it should be treated
                 // as a string literal, not as a built-in constant.
                 // Reasoning: "Black" and "White" are sometimes used as entity names.
                 _supressConstantLookup = i == 0;
-                EmitExpression(arguments[i]);
+                EmitExpression(arg);
             }
 
-            if (lookupResult.Discriminator == LookupResultDiscriminator.BuiltInFunction)
+            if (isBuiltIn)
             {
                 EmitOpcode(Opcode.Dispatch);
                 _code.WriteByte((byte)lookupResult.BuiltInFunction);

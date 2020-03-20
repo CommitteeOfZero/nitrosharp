@@ -14,7 +14,11 @@ namespace NitroSharp.NsScript
         private readonly int _nameHeapStart;
         private readonly Dictionary<string, int> _systemVariables;
 
-        private GlobalVarLookupTable(Stream stream, int[] nameOffsets, int[] systemVarIndices, int nameHeapStart)
+        private GlobalVarLookupTable(
+            Stream stream,
+            int[] nameOffsets,
+            int[] systemVarIndices,
+            int nameHeapStart)
         {
             _stream = stream;
             _nameOffsets = nameOffsets;

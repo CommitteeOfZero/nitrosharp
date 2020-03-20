@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Text;
-using NitroSharp.NsScript.Text;
 
 namespace NitroSharp.NsScript.Syntax.PXml
 {
@@ -51,9 +50,7 @@ namespace NitroSharp.NsScript.Syntax.PXml
                 }
             }
 
-            ImmutableArray<PXmlNode> array = builder != null
-                ? builder.ToImmutable()
-                : children;
+            ImmutableArray<PXmlNode> array = builder?.ToImmutable() ?? children;
             return new PXmlContent(array);
         }
 
@@ -231,8 +228,8 @@ namespace NitroSharp.NsScript.Syntax.PXml
                 else
                 {
                     attributes ??= new Dictionary<string, string>();
-                    KeyValuePair<string, string> kvp = ParseXmlAttribute();
-                    attributes.Add(kvp.Key, kvp.Value);
+                    (string key, string value) = ParseXmlAttribute();
+                    attributes.Add(key, value);
                 }
             }
 
@@ -243,7 +240,7 @@ namespace NitroSharp.NsScript.Syntax.PXml
             return new PXmlTag(name, attr);
         }
 
-        private KeyValuePair<string, string> ParseXmlAttribute()
+        private (string key, string value) ParseXmlAttribute()
         {
             char c;
             StartScanning();
@@ -265,7 +262,7 @@ namespace NitroSharp.NsScript.Syntax.PXml
             span = CurrentLexemeSpan;
             string value = Text.Substring(span.Start, span.Length);
             TryEatChar('"');
-            return new KeyValuePair<string, string>(key, value);
+            return (key, value);
         }
 
         private readonly struct PXmlTag

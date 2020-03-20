@@ -21,7 +21,7 @@ namespace NitroSharp.Playground
             OutputDescription outputDesc)
         {
             _gd = gd;
-            (Shader vs, Shader fs) = shaderLib.GetShaderSet(shaderSet);
+            (Shader vs, Shader fs) = shaderLib.LoadShaderSet(shaderSet);
 
             _rl = factory.CreateResourceLayout(new ResourceLayoutDescription(
                 new ResourceLayoutElementDescription("Input", ResourceKind.TextureReadOnly, ShaderStages.Fragment),

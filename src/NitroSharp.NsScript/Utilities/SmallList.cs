@@ -5,7 +5,7 @@ using System.Runtime.InteropServices;
 
 namespace NitroSharp.Utilities
 {
-    internal struct SmallList<T>
+    public struct SmallList<T>
     {
         private const int MaxFixed = 2;
 

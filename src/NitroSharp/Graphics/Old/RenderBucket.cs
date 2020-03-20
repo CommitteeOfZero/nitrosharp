@@ -40,14 +40,14 @@ namespace NitroSharp.Graphics.Old
             => (Buffer, DataStart, DataLength) = (buffer, dataStart, dataLength);
     }
 
-    internal sealed class RenderBucket<TKey> where TKey : IComparable<RenderItemKey>
+    internal sealed class RenderBucket<TKey> where TKey : IComparable<OldRenderItemKey>
     {
         internal readonly ref struct MultiSubmission
         {
-            public readonly Span<RenderItemKey> Keys;
+            public readonly Span<OldRenderItemKey> Keys;
             public readonly Span<RenderBucketSubmission> Submissions;
 
-            public MultiSubmission(Span<RenderItemKey> keys, Span<RenderBucketSubmission> submissions)
+            public MultiSubmission(Span<OldRenderItemKey> keys, Span<RenderBucketSubmission> submissions)
             {
                 Keys = keys;
                 Submissions = submissions;
@@ -83,7 +83,7 @@ namespace NitroSharp.Graphics.Old
         }
 
         private ArrayBuilder<RenderItem> _renderItems;
-        private ArrayBuilder<RenderItemKey> _keys;
+        private ArrayBuilder<OldRenderItemKey> _keys;
         private ArrayBuilder<RenderBucketSubmission> _submissions;
 
         private readonly List<VertexBuffer> _vertexBuffers;
@@ -105,7 +105,7 @@ namespace NitroSharp.Graphics.Old
         public RenderBucket(uint initialCapacity)
         {
             _renderItems = new ArrayBuilder<RenderItem>(initialCapacity);
-            _keys = new ArrayBuilder<RenderItemKey>(initialCapacity);
+            _keys = new ArrayBuilder<OldRenderItemKey>(initialCapacity);
             _submissions = new ArrayBuilder<RenderBucketSubmission>(initialCapacity);
             _vertexBuffers = new List<VertexBuffer>();
             _indexBuffers = new List<DeviceBuffer>();
@@ -144,10 +144,10 @@ namespace NitroSharp.Graphics.Old
             return new UniformUpdate(targetBuffer, (ushort)start, (ushort)actualSize);
         }
 
-        public void Submit(ref RenderBucketSubmission submission, RenderItemKey key)
+        public void Submit(ref RenderBucketSubmission submission, OldRenderItemKey key)
             => Submit<byte>(ref submission, key);
 
-        public void Submit<TVertex>(ref RenderBucketSubmission submission, RenderItemKey key)
+        public void Submit<TVertex>(ref RenderBucketSubmission submission, OldRenderItemKey key)
             where TVertex : unmanaged
         {
             ref ArrayBuilder<RenderItem> renderItems = ref _renderItems;
@@ -198,7 +198,7 @@ namespace NitroSharp.Graphics.Old
             _keys.Add(key);
         }
 
-        public void Submit<TVertex0, TVertex1>(ref RenderBucketSubmission submission, RenderItemKey key)
+        public void Submit<TVertex0, TVertex1>(ref RenderBucketSubmission submission, OldRenderItemKey key)
             where TVertex0 : unmanaged
             where TVertex1 : unmanaged
         {

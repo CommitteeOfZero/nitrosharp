@@ -1,9 +1,8 @@
-﻿using NitroSharp.Utilities;
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
-namespace NitroSharp.NsScript.Text
+namespace NitroSharp.NsScript
 {
     public readonly struct TextSpan : IEquatable<TextSpan>, IComparable<TextSpan>
     {

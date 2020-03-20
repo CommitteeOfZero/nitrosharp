@@ -1,6 +1,5 @@
 ﻿using System.Globalization;
 using System.Collections.Generic;
-using NitroSharp.NsScript.Text;
 using System.Runtime.CompilerServices;
 using System;
 using System.Runtime.InteropServices;
@@ -43,9 +42,7 @@ namespace NitroSharp.NsScript.Syntax
         public DiagnosticBag Diagnostics => _diagnostics.ToImmutableBag();
 
         private LexingMode CurrentMode
-        {
-            get => _lexingModeStack.Count > 0 ? _lexingModeStack.Peek() : _initialMode;
-        }
+            => _lexingModeStack.Count > 0 ? _lexingModeStack.Peek() : _initialMode;
 
         public void Lex(ref SyntaxToken syntaxToken)
         {
@@ -295,7 +292,7 @@ namespace NitroSharp.NsScript.Syntax
 
                 case '=':
                     AdvanceChar();
-                    if ((PeekChar()) == '=')
+                    if (PeekChar() == '=')
                     {
                         AdvanceChar();
                         token.Kind = SyntaxTokenKind.EqualsEquals;
@@ -589,8 +586,11 @@ namespace NitroSharp.NsScript.Syntax
             else
             {
                 valid = float.TryParse(
-                    valueText, NumberStyles.AllowDecimalPoint,
-                    CultureInfo.InvariantCulture, out _);
+                    valueText,
+                    NumberStyles.AllowDecimalPoint,
+                    CultureInfo.InvariantCulture,
+                    out _
+                );
             }
 
             if (!valid)
@@ -761,14 +761,8 @@ namespace NitroSharp.NsScript.Syntax
                 if (SyntaxFacts.IsNewLine(character))
                 {
                     ScanEndOfLine();
-                    if (isTrailing)
-                    {
-                        break;
-                    }
-                    else
-                    {
-                        continue;
-                    }
+                    if (isTrailing) { break; }
+                    continue;
                 }
 
                 switch (character)
@@ -794,7 +788,8 @@ namespace NitroSharp.NsScript.Syntax
                         // ".//"
                         // ">//"
                         // ".."
-                        if (PeekChar(1) == '/' && PeekChar(2) == '/' || character == '.' && PeekChar(1) == '.')
+                        if (PeekChar(1) == '/' && PeekChar(2) == '/'
+                            || character == '.' && PeekChar(1) == '.')
                         {
                             ScanToEndOfLine();
                         }
@@ -822,12 +817,10 @@ namespace NitroSharp.NsScript.Syntax
                     Report(DiagnosticId.UnterminatedComment, CurrentSpanStart);
                     return;
                 }
-
                 if (c == '"')
                 {
                     isInsideQuotes = !isInsideQuotes;
                 }
-
                 AdvanceChar();
             }
 

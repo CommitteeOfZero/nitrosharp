@@ -1,3 +1,8 @@
+using System.Numerics;
+using System.Runtime.InteropServices;
+using NitroSharp.Utilities;
+using Veldrid;
+
 namespace NitroSharp.Graphics.New
 {
     internal enum BlendMode : byte
@@ -12,31 +17,5 @@ namespace NitroSharp.Graphics.New
     {
         Point,
         Linear
-    }
-
-    internal enum MaterialKind
-    {
-        SolidColor,
-        Texture
-    }
-
-    internal struct TextureVariant
-    {
-
-    }
-
-    internal struct Material
-    {
-        public MaterialKind Kind;
-        public TextureVariant Texture;
-
-        public static void Meow(Material mat)
-        {
-            _ = mat switch
-            {
-                Material { Kind: MaterialKind.SolidColor } => 0,
-                Material { Kind: MaterialKind.Texture, Texture: var tex} => 1
-            };
-        }
     }
 }

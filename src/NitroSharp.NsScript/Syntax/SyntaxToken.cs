@@ -1,5 +1,4 @@
-﻿using NitroSharp.NsScript.Text;
-using System;
+﻿using System;
 using System.Runtime.CompilerServices;
 
 namespace NitroSharp.NsScript.Syntax

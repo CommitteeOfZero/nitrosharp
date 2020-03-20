@@ -1,6 +1,4 @@
 ﻿using NitroSharp.NsScript.Syntax;
-using NitroSharp.NsScript.Text;
-using System;
 
 namespace NitroSharp.NsScript
 {

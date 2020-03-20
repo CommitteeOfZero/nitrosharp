@@ -40,7 +40,7 @@ namespace NitroSharp.Graphics
             => (Buffer, DataStart, DataLength) = (buffer, dataStart, dataLength);
     }
 
-    internal sealed class RenderBucket
+    internal sealed class RenderBucket2
     {
         internal readonly ref struct MultiSubmission
         {
@@ -99,7 +99,7 @@ namespace NitroSharp.Graphics
         private readonly List<DeviceBuffer> _uniformBuffers;
         private ArrayBuilder<byte> _uniformData;
 
-        public RenderBucket(uint initialCapacity)
+        public RenderBucket2(uint initialCapacity)
         {
             _drawCalls = new ArrayBuilder<DrawCall>(initialCapacity);
             _submissions = new ArrayBuilder<RenderBucketSubmission>(initialCapacity);

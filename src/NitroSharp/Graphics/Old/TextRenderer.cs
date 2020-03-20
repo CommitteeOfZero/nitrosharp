@@ -98,8 +98,8 @@ namespace NitroSharp.Graphics.Old
             );
 
             ResourceFactory factory = _graphicsDevice.ResourceFactory;
-            (Shader vs, Shader fs) = shaderLibrary.GetShaderSet("text");
-            (Shader outlineVS, Shader outlineFS) = shaderLibrary.GetShaderSet("outline");
+            (Shader vs, Shader fs) = shaderLibrary.LoadShaderSet("text");
+            (Shader outlineVS, Shader outlineFS) = shaderLibrary.LoadShaderSet("outline");
 
             _vsLayout = factory.CreateResourceLayout(new ResourceLayoutDescription(
                 new ResourceLayoutElementDescription(
@@ -249,7 +249,7 @@ namespace NitroSharp.Graphics.Old
             }
         }
 
-        public void EndFrame(RenderBucket<RenderItemKey> renderBucket, CommandList cl)
+        public void EndFrame(RenderBucket<OldRenderItemKey> renderBucket, CommandList cl)
         {
             var commandList = cl;
             void updateResourceSet(ref ResourceSet? fsResourceSet, PixelFormat pixelFormat)
@@ -291,11 +291,11 @@ namespace NitroSharp.Graphics.Old
             int block = 0;
             TextBlockStorage textBlocks = _textblocks.Active;
             ReadOnlySpan<TextLayout> layouts = textBlocks.Layouts.All;
-            ReadOnlySpan<RenderItemKey> keys = textBlocks.Keys.All;
+            ReadOnlySpan<OldRenderItemKey> keys = textBlocks.Keys.All;
             for (int i = 0; i < layouts.Length; i++)
             {
                 TextLayout layout = layouts[i];
-                RenderItemKey key = keys[i];
+                OldRenderItemKey key = keys[i];
                 if (layout.GlyphRuns.Length == 0) { continue; }
                 (uint instanceBase, uint instanceCount) = _textBlockInstancingParams[block];
                 var submission = new RenderBucketSubmission

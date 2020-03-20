@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using NitroSharp.NsScript.Text;
 
 namespace NitroSharp.NsScript.Syntax
 {

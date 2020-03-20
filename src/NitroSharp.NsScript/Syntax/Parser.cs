@@ -1,5 +1,4 @@
-﻿using NitroSharp.NsScript.Text;
-using NitroSharp.Utilities;
+﻿using NitroSharp.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -940,7 +939,7 @@ namespace NitroSharp.NsScript.Syntax
             return (filePath, symbolName);
         }
 
-        // Consumes tokens until the specified condition is met. 
+        // Consumes tokens until the specified condition is met.
         private Spanned<string> ConsumeTextUntil(Func<SyntaxTokenKind, bool> condition)
         {
             SyntaxTokenKind tk;

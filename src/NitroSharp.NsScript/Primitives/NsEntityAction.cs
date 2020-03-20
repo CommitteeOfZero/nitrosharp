@@ -2,20 +2,23 @@
 {
     public enum NsEntityAction
     {
-        Unlock,
         Lock,
-        Hide,
-        Dispose,
-        ResetText,
-        Play,
-        Other,
+        Unlock,
+        MarkForRemoval,
+        Disable,
+        Enable,
         Start,
         Stop,
 
+        EnableFiltering,
         SetAdditiveBlend,
         SetReverseSubtractiveBlend,
         SetMultiplicativeBlend,
 
-        UseLinearFiltering
+        Play,
+        Pause,
+        Resume,
+
+        Other
     }
 }

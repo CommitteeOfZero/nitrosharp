@@ -11,32 +11,22 @@ namespace NitroSharp.Graphics
     internal sealed class ShaderLibrary : IDisposable
     {
         private static readonly Assembly s_assembly = typeof(ShaderLibrary).Assembly;
-
-        private readonly Dictionary<string, (Shader vs, Shader fs)> _shaderSetCache;
-        private readonly object _shaderLoading = new object();
+        private readonly List<(Shader, Shader)> _shaderSets;
 
         public ShaderLibrary(GraphicsDevice graphicsDevice)
         {
             GraphicsDevice = graphicsDevice;
-            _shaderSetCache = new Dictionary<string, (Shader vs, Shader fs)>();
+            _shaderSets = new List<(Shader, Shader)>();
         }
 
         public GraphicsDevice GraphicsDevice { get; }
 
-        public (Shader vs, Shader fs) GetShaderSet(string name)
+        public (Shader vs, Shader fs) LoadShaderSet(string name)
         {
-            lock (_shaderLoading)
-            {
-                if (!_shaderSetCache.TryGetValue(name, out (Shader vs, Shader fs) shaderSet))
-                {
-                    Shader vs = LoadShader(name, ShaderStages.Vertex, "main");
-                    Shader fs = LoadShader(name, ShaderStages.Fragment, "main");
-                    shaderSet = (vs, fs);
-                    _shaderSetCache.Add(name, shaderSet);
-                }
-
-                return shaderSet;
-            }
+            Shader vs = LoadShader(name, ShaderStages.Vertex, "main");
+            Shader fs = LoadShader(name, ShaderStages.Fragment, "main");
+            _shaderSets.Add((vs, fs));
+            return (vs, fs);
         }
 
         private Shader LoadShader(string set, ShaderStages stage, string entryPoint)
@@ -75,12 +65,12 @@ namespace NitroSharp.Graphics
 
         public void Dispose()
         {
-            foreach ((Shader vs, Shader fs) in _shaderSetCache.Values)
+            foreach ((Shader vs, Shader fs) in _shaderSets)
             {
                 vs.Dispose();
                 fs.Dispose();
             }
-            _shaderSetCache.Clear();
+            _shaderSets.Clear();
         }
 
         private static string ThrowIllegalValue(string paramName)

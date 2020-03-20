@@ -1,6 +1,6 @@
 using System;
 using System.Numerics;
-using NitroSharp.Content;
+using NitroSharp.OldContent;
 using NitroSharp.New;
 using NitroSharp.Primitives;
 using NitroSharp.Text;
@@ -52,7 +52,6 @@ namespace NitroSharp.Graphics
         private readonly ResourceSetCache _resourceSetCache;
         private ArrayBuilder<BindableResource> _shaderResources;
 
-        private readonly RenderBucket _renderBucket;
         private readonly TextureCache _textureCache;
 
         private readonly ShaderLibrary _shaderLibrary;
@@ -131,7 +130,6 @@ namespace NitroSharp.Graphics
             ResizeIndexBufferIfNecessary();
             _resourceSetCache = new ResourceSetCache(_rf);
             _shaderResources = new ArrayBuilder<BindableResource>(4);
-            _renderBucket = new RenderBucket(initialCapacity: 512);
             _textureCache = new TextureCache(_gd);
         }
 
@@ -145,7 +143,7 @@ namespace NitroSharp.Graphics
             _cl.SetFramebuffer(_targetFramebuffer);
             _cl.ClearColorTarget(0, RgbaFloat.Black);
 
-            _renderBucket.Begin();
+
             _quadVertexBuffer.Begin();
             _textureCache.BeginFrame(frameStamp);
             _resourceSetCache.BeginFrame(frameStamp);
@@ -156,7 +154,7 @@ namespace NitroSharp.Graphics
             _resourceSetCache.EndFrame();
             _textureCache.EndFrame(_cl);
             _quadVertexBuffer.End(_cl);
-            _renderBucket.End(default);
+
 
             _cl.End();
 

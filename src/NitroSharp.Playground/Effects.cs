@@ -30,7 +30,7 @@ namespace NitroSharp.Playground
                     new OutputAttachmentDescription(PixelFormat.R8_G8_B8_A8_UNorm)
                 );
 
-                (Shader vs, Shader fs) = shaderLibrary.GetShaderSet(shaderSet);
+                (Shader vs, Shader fs) = shaderLibrary.LoadShaderSet(shaderSet);
                 return resourceFactory.CreateGraphicsPipeline(new GraphicsPipelineDescription(
                     BlendStateDescription.SingleOverrideBlend,
                     DepthStencilStateDescription.Disabled,

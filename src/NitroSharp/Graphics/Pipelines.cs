@@ -88,7 +88,7 @@ namespace NitroSharp.Graphics
                 )
             ));
 
-            (Shader vs, Shader fs) = shaderLibrary.GetShaderSet("quad");
+            (Shader vs, Shader fs) = shaderLibrary.LoadShaderSet("quad");
             var shaderSetDesc = new ShaderSetDescription(
                 new[] { QuadVertex.LayoutDescription },
                 new[] { vs, fs }
@@ -175,7 +175,7 @@ namespace NitroSharp.Graphics
             };
             MultiplicativeBlend = factory.CreateGraphicsPipeline(ref pipelineDesc);
 
-            (vs, fs) = shaderLibrary.GetShaderSet("transition");
+            (vs, fs) = shaderLibrary.LoadShaderSet("transition");
             var transitionShaderSet = new ShaderSetDescription(
                new[] { QuadVertex.LayoutDescription },
                new[] { vs, fs }
@@ -196,7 +196,7 @@ namespace NitroSharp.Graphics
             );
             Transition = factory.CreateGraphicsPipeline(ref pipelineDesc);
 
-            (vs, fs) = shaderLibrary.GetShaderSet("lens");
+            (vs, fs) = shaderLibrary.LoadShaderSet("lens");
             var lensShaderSet = new ShaderSetDescription(
                 new[] { QuadVertex.LayoutDescription },
                 new[] { vs, fs }
@@ -214,7 +214,7 @@ namespace NitroSharp.Graphics
 
             Pipeline createEffect(string shaderSet, ResourceLayout effectLayout)
             {
-                (Shader vs, Shader fs) = shaderLibrary.GetShaderSet(shaderSet);
+                (Shader vs, Shader fs) = shaderLibrary.LoadShaderSet(shaderSet);
                 pipelineDesc.PrimitiveTopology = PrimitiveTopology.TriangleStrip;
                 pipelineDesc.ShaderSet = new ShaderSetDescription(
                     Array.Empty<VertexLayoutDescription>(),

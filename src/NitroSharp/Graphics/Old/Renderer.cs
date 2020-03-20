@@ -79,7 +79,7 @@ namespace NitroSharp.Graphics.Old
         private readonly ResourceSetCache _resourceSetCache;
         private ArrayBuilder<BindableResource> _shaderResources;
 
-        private readonly RenderBucket<RenderItemKey> _renderBucket;
+        private readonly RenderBucket<OldRenderItemKey> _renderBucket;
         private readonly TextureCache _textureCache;
         private readonly TextRenderer _textRenderer;
 
@@ -160,7 +160,7 @@ namespace NitroSharp.Graphics.Old
             ResizeIndexBufferIfNecessary();
             _resourceSetCache = new ResourceSetCache(_rf);
             _shaderResources = new ArrayBuilder<BindableResource>(4);
-            _renderBucket = new RenderBucket<RenderItemKey>(initialCapacity: 512);
+            _renderBucket = new RenderBucket<OldRenderItemKey>(initialCapacity: 512);
             _textureCache = new TextureCache(_gd);
             _textRenderer = new TextRenderer(
                 world,
@@ -420,7 +420,7 @@ namespace NitroSharp.Graphics.Old
         }
 
         public void BatchQuads(
-            ReadOnlySpan<RenderItemKey> keys,
+            ReadOnlySpan<OldRenderItemKey> keys,
             ReadOnlySpan<DrawState> drawState,
             Span<QuadGeometry> geometry)
         {

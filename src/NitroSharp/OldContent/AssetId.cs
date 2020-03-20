@@ -2,7 +2,7 @@
 
 #nullable enable
 
-namespace NitroSharp.Content
+namespace NitroSharp.OldContent
 {
     internal readonly struct AssetId : IEquatable<AssetId>
     {

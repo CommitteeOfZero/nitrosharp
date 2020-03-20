@@ -1,6 +1,5 @@
 ﻿using NitroSharp.NsScript.Syntax;
 using NitroSharp.NsScript.Syntax.PXml;
-using NitroSharp.NsScript.Text;
 using System;
 using System.IO;
 using System.Text;

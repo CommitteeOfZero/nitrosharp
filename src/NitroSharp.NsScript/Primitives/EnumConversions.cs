@@ -2,29 +2,29 @@
 {
     internal static class EnumConversions
     {
-        public static NsEntityAction ToEntityAction(BuiltInConstant enumValue)
+        public static NsEntityAction ToEntityAction(BuiltInConstant val)
         {
-            return enumValue switch
+            return val switch
             {
                 BuiltInConstant.Lock => NsEntityAction.Lock,
                 BuiltInConstant.Unlock => NsEntityAction.Unlock,
-                BuiltInConstant.Play => NsEntityAction.Play,
-                BuiltInConstant.Disused => NsEntityAction.Dispose,
-                BuiltInConstant.Erase => NsEntityAction.ResetText,
-                BuiltInConstant.Hideable => NsEntityAction.Hide,
+                BuiltInConstant.Disused => NsEntityAction.MarkForRemoval,
+                BuiltInConstant.Erase => NsEntityAction.Disable,
+                BuiltInConstant.Enter => NsEntityAction.Enable,
                 BuiltInConstant.Start => NsEntityAction.Start,
                 BuiltInConstant.Stop => NsEntityAction.Stop,
+                BuiltInConstant.Smoothing => NsEntityAction.EnableFiltering,
                 BuiltInConstant.AddRender => NsEntityAction.SetAdditiveBlend,
                 BuiltInConstant.SubRender => NsEntityAction.SetReverseSubtractiveBlend,
                 BuiltInConstant.MulRender => NsEntityAction.SetMultiplicativeBlend,
-                BuiltInConstant.Smoothing => NsEntityAction.UseLinearFiltering,
+                BuiltInConstant.Play => NsEntityAction.Play,
                 _ => NsEntityAction.Other,
             };
         }
 
-        public static NsEasingFunction ToEasingFunction(BuiltInConstant enumValue)
+        public static NsEasingFunction ToEasingFunction(BuiltInConstant val)
         {
-            return enumValue switch
+            return val switch
             {
                 BuiltInConstant._None => NsEasingFunction.None,
 
@@ -41,18 +41,18 @@
                 BuiltInConstant.AxlDxl => NsEasingFunction.SineEaseInOut,
                 BuiltInConstant.DxlAxl => NsEasingFunction.SineEaseOutIn,
 
-                _ => throw ThrowHelper.UnexpectedValue(nameof(enumValue)),
+                _ => throw ThrowHelper.UnexpectedValue(nameof(val)),
             };
         }
 
-        public static NsAudioKind ToAudioKind(BuiltInConstant enumValue)
+        public static NsAudioKind ToAudioKind(BuiltInConstant val)
         {
-            return enumValue switch
+            return val switch
             {
                 BuiltInConstant.BGM => NsAudioKind.BackgroundMusic,
                 BuiltInConstant.SE => NsAudioKind.SoundEffect,
                 BuiltInConstant.Voice => NsAudioKind.Voice,
-                _ => throw ThrowHelper.UnexpectedValue(nameof(enumValue)),
+                _ => throw ThrowHelper.UnexpectedValue(nameof(val)),
             };
         }
     }
