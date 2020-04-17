@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.InteropServices;
-using NitroSharp.Primitives;
 using NitroSharp.Utilities;
 using Veldrid;
 
@@ -107,9 +106,11 @@ namespace NitroSharp.Graphics
             _uvRectCache = new GpuCache<TextureLocation>(
                 graphicsDevice,
                 TextureLocation.SizeInGpuBlocks,
-                initialTextureDimension: 256
+                dimension: 256
             );
         }
+
+        public Texture UvRectTexture => _uvRectCache.Texture;
 
         private FrameStamp DefaultEvictionPolicy => GetEvictionThreshold(
             maxFrames: null, maxTimeMs: 5000
@@ -135,9 +136,6 @@ namespace NitroSharp.Graphics
             reallocatedThisFrame = tex.ReallocatedThisFrame;
             return tex.DeviceTexture;
         }
-
-        public Texture GetUvRectCacheTexture(out bool reallocatedThisFrame)
-            => _uvRectCache.GetCacheTexture(out reallocatedThisFrame);
 
         public void BeginFrame(in FrameStamp framestamp)
         {
@@ -230,15 +228,13 @@ namespace NitroSharp.Graphics
             (FreeListHandle? newHandleOpt, CacheEntry? oldValue) = _entries.Upsert(
                 handle.Value, entry
             );
-            if (newHandleOpt.HasValue)
+            if (newHandleOpt is FreeListHandle newHandle)
             {
-                FreeListHandle newHandle = newHandleOpt.Value;
                 _strongHandles.Add(newHandle);
                 handle = new TextureCacheHandle(newHandle.GetWeakHandle());
             }
-            else if (oldValue.HasValue)
+            else if (oldValue is CacheEntry oldEntry)
             {
-                CacheEntry oldEntry = oldValue.Value;
                 FreeEntry(ref oldEntry);
             }
         }
@@ -270,9 +266,8 @@ namespace NitroSharp.Graphics
         private CacheEntry? TryAllocateEntry(ArrayTexture arrayTexture, Size textureSize)
         {
             ArrayTextureAllocation? allocOpt = arrayTexture.AllocateSpace(textureSize);
-            if (allocOpt.HasValue)
+            if (allocOpt is ArrayTextureAllocation alloc)
             {
-                ArrayTextureAllocation alloc = allocOpt.Value;
                 return new CacheEntry
                 {
                     PixelFormat = arrayTexture.PixelFormat,
@@ -467,7 +462,7 @@ namespace NitroSharp.Graphics
             {
                 PixelFormat.R8_UNorm => 1u,
                 PixelFormat.R8_G8_B8_A8_UNorm => 4u,
-                _ => throw new Exception("Unreachable code.")
+                _ => ThrowHelper.Unreachable<uint>()
             };
 
         private unsafe void AllocateTexture(uint layerCount)

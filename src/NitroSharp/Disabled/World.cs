@@ -4,9 +4,7 @@ using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using NitroSharp.Animation;
-using NitroSharp.Graphics;
-using NitroSharp.Graphics.Old;
-using NitroSharp.Interactivity;
+
 using NitroSharp.Utilities;
 
 #nullable enable

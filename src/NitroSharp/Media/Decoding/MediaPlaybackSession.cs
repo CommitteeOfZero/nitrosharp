@@ -5,7 +5,6 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using FFmpeg.AutoGen;
-using NitroSharp.Primitives;
 
 #nullable enable
 

@@ -1,6 +1,6 @@
 #nullable enable
 
-namespace NitroSharp.New
+namespace NitroSharp
 {
     internal class PropertyAnimation
     {

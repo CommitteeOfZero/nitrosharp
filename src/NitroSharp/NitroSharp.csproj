@@ -15,10 +15,11 @@
     <Compile Remove="Old/**" />
     <Compile Remove="Graphics/Old/**" />
     <Compile Remove="OldDialogue/**" />
-    <Compile Remove="OldWorld/**" />
+    <Compile Remove="OldContent/**" />
+    <!--<Compile Remove="OldWorld/**" />-->
     <Compile Remove="Disabled/Animation/AnimationProcessor.cs" />
   </ItemGroup>
-  
+
   <ItemGroup>
 
     <ProjectReference Include="..\..\third_party\FFmpeg.AutoGen\FFmpeg.AutoGen.csproj" />
@@ -31,7 +32,7 @@
     <ProjectReference Include="..\..\..\mellinoe\veldrid\src\Veldrid.SDL2\Veldrid.SDL2.csproj" />
     <ProjectReference Include="..\..\..\mellinoe\veldrid\src\Veldrid.OpenGLBindings\Veldrid.OpenGLBindings.csproj" />
     <ProjectReference Include="..\NitroSharp.NsScript\NitroSharp.NsScript.csproj" />
-    
+
     <PackageReference Include="FreeType.Binaries" Version="0.42.0" />
     <PackageReference Include="OpenALSoft.Binaries" Version="0.42.0" />
     <PackageReference Include="FFmpeg.Binaries" Version="0.42.0" />
@@ -40,11 +41,11 @@
     <PackageReference Include="Veldrid.SDL2" Version="$(VeldridVersion)" />
     <PackageReference Include="Veldrid.StartupUtilities" Version="$(VeldridVersion)" />
     <PackageReference Include="Veldrid.ImGui" Version="5.69.0" />-->
-    
+
     <PackageReference Include="SharpDX.Direct2D1" Version="4.2.0" />
     <PackageReference Include="SharpDX.XAudio2" Version="4.2.0" />
   </ItemGroup>
-  
+
   <ItemGroup>
     <Compile Include="../Common/ThrowHelper.cs" Link="Utilities/ThrowHelper.cs" />
     <Compile Include="../Common/ArrayBuilder.cs" Link="Utilities/ArrayBuilder.cs" />
@@ -62,5 +63,5 @@
       </EmbeddedResource>
     </ItemGroup>
   </Target>
-  
+
 </Project>

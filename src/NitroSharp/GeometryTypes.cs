@@ -3,7 +3,7 @@ using System.Numerics;
 
 #nullable enable
 
-namespace NitroSharp.Primitives
+namespace NitroSharp
 {
     public struct SimpleVector2
     {

@@ -5,7 +5,7 @@ using NitroSharp.Utilities;
 
 #nullable enable
 
-namespace NitroSharp.New
+namespace NitroSharp
 {
     internal sealed partial class World
     {

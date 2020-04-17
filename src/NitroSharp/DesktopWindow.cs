@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Threading;
-using NitroSharp.Primitives;
 using Veldrid;
 using Veldrid.Sdl2;
 using Veldrid.StartupUtilities;

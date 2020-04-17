@@ -7,12 +7,12 @@ namespace NitroSharp.NsScript.VM
 {
     internal sealed class BuiltInFunctionDispatcher
     {
-        private readonly BuiltInFunctions _impl;
+        private BuiltInFunctions _impl;
         private ConstantValue? _result;
 
-        public BuiltInFunctionDispatcher(BuiltInFunctions functionsImpl)
+        public BuiltInFunctionDispatcher()
         {
-            _impl = functionsImpl;
+            _impl = null!;
         }
 
         private void SetResult(in ConstantValue value)
@@ -21,8 +21,12 @@ namespace NitroSharp.NsScript.VM
             _result = value;
         }
 
-        public ConstantValue? Dispatch(BuiltInFunction function, ReadOnlySpan<ConstantValue> cvs)
+        public ConstantValue? Dispatch(
+            BuiltInFunctions impl,
+            BuiltInFunction function,
+            ReadOnlySpan<ConstantValue> cvs)
         {
+            _impl = impl;
             var args = new ArgConsumer(cvs);
             switch (function)
             {
@@ -425,7 +429,7 @@ namespace NitroSharp.NsScript.VM
         {
             _impl.SetAlias(
                 args.TakeEntityPath(),
-                alias: args.TakeString()
+                alias: args.TakeEntityPath()
             );
         }
 
@@ -441,12 +445,12 @@ namespace NitroSharp.NsScript.VM
 
         private void CreateProcess(ref ArgConsumer args)
         {
-            string name = args.TakeString();
+            EntityPath entityPath = args.TakeEntityPath();
             args.Skip();
             args.Skip();
             args.Skip();
             string target = args.TakeString();
-            _impl.CreateThread(name, target);
+            _impl.CreateThread(entityPath, target);
         }
 
         private void CreateChoice(ref ArgConsumer args)

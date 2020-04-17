@@ -15,6 +15,36 @@ namespace NitroSharp.Graphics
         public readonly BindableResource? Resource2;
         public readonly BindableResource? Resource3;
 
+        public ResourceSetKey(ResourceLayout layout, BindableResource res) : this()
+            => (ResourceLayout, Resource0) = (layout, res);
+
+         public ResourceSetKey(
+             ResourceLayout layout,
+             BindableResource res0,
+             BindableResource res1) : this()
+            => (ResourceLayout, Resource0, Resource1) = (layout, res0, res1);
+
+         public ResourceSetKey(
+             ResourceLayout layout,
+             BindableResource res0,
+             BindableResource res1,
+             BindableResource res2) : this()
+            => (ResourceLayout, Resource0, Resource1, Resource2) = (layout, res0, res1, res2);
+
+        public ResourceSetKey(
+            ResourceLayout layout,
+            BindableResource res0,
+            BindableResource? res1,
+            BindableResource? res2,
+            BindableResource? res3)
+        {
+            ResourceLayout = layout;
+            Resource0 = res0;
+            Resource1 = res1;
+            Resource2 = res2;
+            Resource3 = res3;
+        }
+
         public ResourceSetKey(ResourceLayout layout, ReadOnlySpan<BindableResource> resources)
             : this()
         {
@@ -75,19 +105,22 @@ namespace NitroSharp.Graphics
 
         public uint GetResourceCount()
         {
-            if (Resource1 == null) { return 1; }
-            if (Resource2 == null) { return 2; }
-            if (Resource3 == null) { return 3; }
-            return 4;
+            return (Resource1, Resource2, Resource3) switch
+            {
+                (null, _, _) => 1,
+                ({}, null, _) => 2,
+                ({}, {}, null) => 3,
+                _ => 4
+            };
         }
     }
 
     internal sealed class ResourceSetCache : IDisposable
     {
-        private struct CacheEntry
+        private readonly struct CacheEntry
         {
-            public ResourceSet ResourceSet;
-            public FrameStamp LastAccess;
+            public readonly ResourceSet ResourceSet;
+            public readonly FrameStamp LastAccess;
 
             public CacheEntry(ResourceSet resourceSet, FrameStamp lastAccess)
                 => (ResourceSet, LastAccess) = (resourceSet, lastAccess);

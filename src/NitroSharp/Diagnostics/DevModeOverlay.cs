@@ -1,7 +1,5 @@
 ﻿using System;
 using ImGuiNET;
-using NitroSharp.Graphics;
-using NitroSharp.Interactivity;
 using Veldrid;
 
 #nullable enable

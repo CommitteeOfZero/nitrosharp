@@ -29,21 +29,18 @@ namespace NitroSharp.NsScript.Compiler
         public Compilation(string rootSourceDirectory,
                            string outputDirectory,
                            string globalsFileName,
-                           Encoding? sourceTextEncoding = null,
-                           string? contentRoot = null)
+                           Encoding? sourceTextEncoding = null)
             : this(new DefaultSourceReferenceResolver(rootSourceDirectory),
                    outputDirectory,
                    globalsFileName,
-                   sourceTextEncoding,
-                   contentRoot)
+                   sourceTextEncoding)
         {
         }
 
         public Compilation(SourceReferenceResolver sourceReferenceResolver,
                            string outputDirectory,
                            string globalsFileName,
-                           Encoding? sourceTextEncoding = null,
-                           string? contentRoot = null)
+                           Encoding? sourceTextEncoding = null)
         {
             _sourceReferenceResolver = sourceReferenceResolver;
             _outputDirectory = outputDirectory;
@@ -52,15 +49,10 @@ namespace NitroSharp.NsScript.Compiler
             _syntaxTrees = new Dictionary<ResolvedPath, SyntaxTree>();
             _sourceModuleSymbols = new Dictionary<SyntaxTree, SourceModuleSymbol>();
             _nsxModuleBuilders = new Dictionary<ResolvedPath, NsxModuleBuilder>();
-            if (contentRoot is object)
-            {
-                ContentResolver = new FilePathResolver(contentRoot, "*");
-            }
         }
 
         public SourceReferenceResolver SourceReferenceResolver => _sourceReferenceResolver;
         public string OutputDirectory => _outputDirectory;
-        internal FilePathResolver? ContentResolver { get; }
 
         public void Emit(SourceModuleSymbol mainModule)
         {
@@ -772,7 +764,8 @@ namespace NitroSharp.NsScript.Compiler
         private void ReportUnresolvedIdentifier(Spanned<string> identifier)
         {
             _diagnostics.Add(
-                Diagnostic.Create(identifier.Span, DiagnosticId.UnresolvedIdentifier, identifier.Value));
+                Diagnostic.Create(identifier.Span, DiagnosticId.UnresolvedIdentifier, identifier.Value)
+            );
         }
 
         public void Report(Spanned<string> identifier, DiagnosticId diagnosticId)
@@ -974,18 +967,16 @@ namespace NitroSharp.NsScript.Compiler
 
         private void EmitLiteral(LiteralExpressionSyntax literal)
         {
-            ConstantValue value = literal.Value;
-            if (value.Type == BuiltInType.String && !_supressConstantLookup)
+            ConstantValue val = literal.Value;
+            if (val.IsString && !_supressConstantLookup)
             {
-                string strValue = value.AsString()!;
-                BuiltInConstant? constant = WellKnownSymbols.LookupBuiltInConstant(strValue);
-                if (constant.HasValue)
+                string strVal = val.AsString()!;
+                if (WellKnownSymbols.LookupBuiltInConstant(strVal) is BuiltInConstant constant)
                 {
-                    value = ConstantValue.BuiltInConstant(constant.Value);
+                    val = ConstantValue.BuiltInConstant(constant);
                 }
             }
-
-            EmitLoadImm(value);
+            EmitLoadImm(val);
         }
 
         private void EmitNameExpression(NameExpressionSyntax expression)
@@ -1093,37 +1084,18 @@ namespace NitroSharp.NsScript.Compiler
         {
             LookupResult lookupResult = _checker.LookupFunction(callExpression.TargetName);
             if (lookupResult.IsEmpty) { return; }
-
             ImmutableArray<ExpressionSyntax> arguments = callExpression.Arguments;
-            bool isBuiltIn = lookupResult.Discriminator == LookupResultDiscriminator.BuiltInFunction;
-            FilePathResolver? contentResolver = _compilation.ContentResolver;
             for (int i = 0; i < arguments.Length; i++)
             {
-                ExpressionSyntax arg = arguments[i];
-                if (isBuiltIn && contentResolver is object)
-                {
-                    if (arg is LiteralExpressionSyntax literal
-                        && literal.Value.Type == BuiltInType.String)
-                    {
-                        string str = literal.Value.AsString()!;
-                        if (contentResolver.ResolvePath(str, out ResolvedPath resolvedPath))
-                        {
-                            arg = new LiteralExpressionSyntax(
-                                ConstantValue.String(resolvedPath.Value),
-                                literal.Span
-                            );
-                        }
-                    }
-                }
                 // Assumption: the first argument is never a built-in constant
                 // Even if it looks like one (e.g. "Black"), it should be treated
                 // as a string literal, not as a built-in constant.
                 // Reasoning: "Black" and "White" are sometimes used as entity names.
                 _supressConstantLookup = i == 0;
-                EmitExpression(arg);
+                EmitExpression(arguments[i]);
             }
 
-            if (isBuiltIn)
+            if (lookupResult.Discriminator == LookupResultDiscriminator.BuiltInFunction)
             {
                 EmitOpcode(Opcode.Dispatch);
                 _code.WriteByte((byte)lookupResult.BuiltInFunction);

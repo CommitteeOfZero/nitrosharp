@@ -230,10 +230,10 @@ namespace NitroSharp.Graphics
         }
 
         public ResourceLayout CommonResourceLayout { get; }
-        public ResourceLayout TransitionParamLayout { get; }
         public ResourceLayout SimpleEffectInputLayout { get; }
         public ResourceLayout BarrelDistortionInputLayout { get; }
         public ResourceLayout TransitionInputLayout { get; }
+        public ResourceLayout TransitionParamLayout { get; }
         public Pipeline AlphaBlend { get; }
         public Pipeline AdditiveBlend { get; }
         public Pipeline ReverseSubtractiveBlend { get; }

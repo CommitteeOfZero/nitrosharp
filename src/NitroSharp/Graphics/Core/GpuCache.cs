@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.InteropServices;
@@ -35,22 +36,21 @@ namespace NitroSharp.Graphics
         private uint _firstDirtySlot;
         private uint _lastDirtySlot;
 
-        private Texture? _stagingTexture;
-        private Texture? _sampledTexture;
+        private readonly Texture _stagingTexture;
+        private readonly Texture _sampledTexture;
         private readonly bool _usingGL;
         private readonly MapMode _mapMode;
-        private bool _reallocatedThisFrame;
-        private uint _dimension;
-        private uint _capacity;
+        private readonly uint _dimension;
+        private readonly uint _capacity;
         private MappedResource _map;
         private bool _textureMapped;
 
         private IntPtr _glHostMemory;
 
-        public GpuCache(
+        public unsafe GpuCache(
             GraphicsDevice graphicsDevice,
             uint typeSizeInGpuBlocks,
-            uint initialTextureDimension = 128)
+            uint dimension = 128)
         {
             _gd = graphicsDevice;
             _blocksPerSlot = MathUtil.NearestPowerOfTwo(typeSizeInGpuBlocks);
@@ -59,76 +59,32 @@ namespace NitroSharp.Graphics
             //        || _gd.BackendType == GraphicsBackend.OpenGLES;
             _usingGL = false;
             _mapMode = _usingGL ? MapMode.Write : MapMode.ReadWrite;
-            Resize(MathUtil.NearestPowerOfTwo(initialTextureDimension));
-        }
-
-        private unsafe void Resize(uint dimension)
-        {
+            _dimension = dimension = MathUtil.NearestPowerOfTwo(dimension);
+            _capacity = dimension * dimension / _blocksPerSlot;
             var desc = TextureDescription.Texture2D(
                dimension, dimension, mipLevels: 1, arrayLayers: 1,
                PixelFormat.R32_G32_B32_A32_Float, TextureUsage.Staging
             );
             ResourceFactory rf = _gd.ResourceFactory;
-            Texture newStaging = rf.CreateTexture(ref desc);
+            _stagingTexture = rf.CreateTexture(ref desc);
             desc.Usage = TextureUsage.Sampled;
-            Texture newSampled = rf.CreateTexture(ref desc);
-            IntPtr newGLHostMemory = IntPtr.Zero;
+            _sampledTexture = rf.CreateTexture(ref desc);
             if (_usingGL)
             {
                 int dataSize = (int)(dimension * dimension * GpuBlockSize);
-                newGLHostMemory = Marshal.AllocHGlobal(dataSize);
-                var span = new Span<byte>(newGLHostMemory.ToPointer(), dataSize);
+                _glHostMemory = Marshal.AllocHGlobal(dataSize);
+                var span = new Span<byte>(_glHostMemory.ToPointer(), dataSize);
                 span.Clear();
             }
-            if (_stagingTexture != null)
-            {
-                MappedResource srcMap = _map;
-                MappedResource dstMap = _gd.Map(newStaging, _mapMode);
-                int blockCount = (int)((_lastDirtySlot + 1) * _blocksPerSlot);
-                var src = new Span<Vector4>(srcMap.Data.ToPointer(), blockCount);
-                var dst = new Span<Vector4>(dstMap.Data.ToPointer(), blockCount);
-                src.CopyTo(dst);
-                _gd.Unmap(_stagingTexture);
-                _map = dstMap;
-                _gd.DisposeWhenIdle(_stagingTexture);
-                _gd.DisposeWhenIdle(_sampledTexture);
-                if (_glHostMemory != IntPtr.Zero)
-                {
-                    src = new Span<Vector4>(_glHostMemory.ToPointer(), blockCount);
-                    dst = new Span<Vector4>(newGLHostMemory.ToPointer(), blockCount);
-                    src.CopyTo(dst);
-                    Marshal.FreeHGlobal(_glHostMemory);
-                }
-                _firstDirtySlot = 0;
-                uint oldCapacity = _capacity;
-                _lastDirtySlot = oldCapacity - 1;
-            }
-
-            _stagingTexture = newStaging;
-            _sampledTexture = newSampled;
-            _glHostMemory = newGLHostMemory;
-            _dimension = dimension;
-            _capacity = dimension * dimension / _blocksPerSlot;
-            _reallocatedThisFrame = true;
         }
 
-        public Texture GetCacheTexture(out bool reallocatedThisFrame)
-        {
-            static void inUse() => throw new InvalidOperationException(
-                "The requested GpuCache texture is currently in use. " +
-                "Did you forget to call EndFrame()?");
-
-            Debug.Assert(_sampledTexture != null);
-            if (_textureMapped) { inUse(); }
-            reallocatedThisFrame = _reallocatedThisFrame;
-            return _sampledTexture;
-        }
+        public Texture Texture => _sampledTexture;
 
         private unsafe Span<Vector4> GetBlocks(uint slot, bool freeing = false)
         {
             if (slot >= _capacity)
             {
-                Resize(_dimension * 2);
+                throw new Exception("BUG: GpuCache is too small.");
             }
             if (!freeing)
             {
@@ -157,7 +113,6 @@ namespace NitroSharp.Graphics
             _textureMapped = true;
             _firstDirtySlot = uint.MaxValue;
             _lastDirtySlot = uint.MinValue;
-            _reallocatedThisFrame = false;
         }
 
         public GpuCacheHandle Insert(ref T value)
@@ -212,7 +167,7 @@ namespace NitroSharp.Graphics
             {
                 (uint xFirst, uint yFirst) = GetCoords(_firstDirtySlot);
                 (uint xLast, uint yLast) = GetCoords(_lastDirtySlot);
-                
+
                 if (_usingGL)
                 {
                     uint start = GpuBlockSize * (yFirst * _dimension + xFirst);
@@ -240,7 +195,7 @@ namespace NitroSharp.Graphics
                     left = 0;
                     width = _dimension;
                 }
-                
+
                 commandList.CopyTexture(
                     source: _stagingTexture,
                     srcX: left, srcY: yFirst, srcZ: 0,
@@ -257,8 +212,6 @@ namespace NitroSharp.Graphics
 
         public void Dispose()
         {
-            Debug.Assert(_stagingTexture != null);
-            Debug.Assert(_sampledTexture != null);
             if (_textureMapped)
             {
                 _gd.Unmap(_stagingTexture);

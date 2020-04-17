@@ -1,79 +1,80 @@
+root=true
 ; This file is for unifying the coding style for different editors and IDEs.
 ; More information at http://EditorConfig.org
 
-root = true
 
 [*]
-end_of_line = crlf
-insert_final_newline = true
-trim_trailing_whitespace = true
-indent_style = space
+end_of_line=crlf
+insert_final_newline=true
+trim_trailing_whitespace=true
+indent_style=space
 
 # Only use "var" when type is apparent
-csharp_style_var_for_built_in_types = false:suggestion
-csharp_style_var_when_type_is_apparent = true:suggestion
-csharp_style_var_elsewhere = false:suggestion
+csharp_style_var_for_built_in_types=false:suggestion
+csharp_style_var_when_type_is_apparent=true:suggestion
+csharp_style_var_elsewhere=false:suggestion
 
 # Do not use "this."
-dotnet_style_qualification_for_field = false:suggestion
-dotnet_style_qualification_for_property = false:suggestion
-dotnet_style_qualification_for_method = false:suggestion
-dotnet_style_qualification_for_event = false:suggestion
+dotnet_style_qualification_for_field=false:suggestion
+dotnet_style_qualification_for_property=false:suggestion
+dotnet_style_qualification_for_method=false:suggestion
+dotnet_style_qualification_for_event=false:suggestion
 
 # Prefix private and internals field names with '_'
-dotnet_naming_rule.underscore_private_fields.symbols = private_internal_fields
-dotnet_naming_rule.underscore_private_fields.style = prefix_underscore
-dotnet_naming_rule.underscore_private_fields.severity = suggestion
-dotnet_naming_symbols.private_internal_fields.applicable_kinds = field
-dotnet_naming_symbols.private_internal_fields.applicable_accessibilities = private, internal
-dotnet_naming_style.prefix_underscore.required_prefix = _
-dotnet_naming_style.prefix_underscore.capitalization = camel_case
+dotnet_naming_rule.underscore_private_fields.symbols=private_internal_fields
+dotnet_naming_rule.underscore_private_fields.style=prefix_underscore
+dotnet_naming_rule.underscore_private_fields.severity=suggestion
+dotnet_naming_symbols.private_internal_fields.applicable_kinds=field
+dotnet_naming_symbols.private_internal_fields.applicable_accessibilities=private, internal
+dotnet_naming_style.prefix_underscore.required_prefix=_
+dotnet_naming_style.prefix_underscore.capitalization=camel_case
 
 # Use PascalCase for constant fields
-dotnet_naming_rule.constant_fields_should_be_pascal_case.symbols = constant_fields
-dotnet_naming_rule.constant_fields_should_be_pascal_case.style = pascal_case_style
-dotnet_naming_rule.constant_fields_should_be_pascal_case.severity = suggestion
-dotnet_naming_symbols.constant_fields.applicable_kinds = field
-dotnet_naming_symbols.constant_fields.required_modifiers = const
+dotnet_naming_rule.constant_fields_should_be_pascal_case.symbols=constant_fields
+dotnet_naming_rule.constant_fields_should_be_pascal_case.style=pascal_case_style
+dotnet_naming_rule.constant_fields_should_be_pascal_case.severity=suggestion
+dotnet_naming_symbols.constant_fields.applicable_kinds=field
+dotnet_naming_symbols.constant_fields.required_modifiers=const
 
 # Private static fields are prefixed with 's_' and are camelCased
-dotnet_naming_rule.private_static_field_naming.symbols = private_static_field_symbols
-dotnet_naming_rule.private_static_field_naming.style = private_static_field_style
-dotnet_naming_rule.private_static_field_naming.severity = suggestion
-dotnet_naming_style.private_static_field_style.required_prefix = s_
-dotnet_naming_style.private_static_field_style.capitalization = camel_case
-dotnet_naming_symbols.private_static_field_symbols.applicable_kinds = field
-dotnet_naming_symbols.private_static_field_symbols.applicable_accessibilities = private
-dotnet_naming_symbols.private_static_field_symbols.required_modifiers = static
+dotnet_naming_rule.private_static_field_naming.symbols=private_static_field_symbols
+dotnet_naming_rule.private_static_field_naming.style=private_static_field_style
+dotnet_naming_rule.private_static_field_naming.severity=suggestion
+dotnet_naming_style.private_static_field_style.required_prefix=s_
+dotnet_naming_style.private_static_field_style.capitalization=camel_case
+dotnet_naming_symbols.private_static_field_symbols.applicable_kinds=field
+dotnet_naming_symbols.private_static_field_symbols.applicable_accessibilities=private
+dotnet_naming_symbols.private_static_field_symbols.required_modifiers=static
 
 # Use PascalCase for public static readonly fields
-dotnet_naming_rule.public_static_readonly_field_casing.symbols = public_static_readonly_field_symbols
-dotnet_naming_rule.public_static_readonly_field_casing.style = pascal_case_style
-dotnet_naming_rule.public_static_readonly_field_casing.severity = suggestion
-dotnet_naming_symbols.public_static_readonly_field_symbols.applicable_kinds = field
-dotnet_naming_symbols.public_static_readonly_field_symbols.applicable_accessibilities = public
-dotnet_naming_symbols.public_static_readonly_field_symbols.required_modifiers = static, readonly
+dotnet_naming_rule.public_static_readonly_field_casing.symbols=public_static_readonly_field_symbols
+dotnet_naming_rule.public_static_readonly_field_casing.style=pascal_case_style
+dotnet_naming_rule.public_static_readonly_field_casing.severity=suggestion
+dotnet_naming_symbols.public_static_readonly_field_symbols.applicable_kinds=field
+dotnet_naming_symbols.public_static_readonly_field_symbols.applicable_accessibilities=public
+dotnet_naming_symbols.public_static_readonly_field_symbols.required_modifiers=static, readonly
 
 # Prefer language keywords over framework type names
-dotnet_style_predefined_type_for_locals_parameters_members = true:suggestion
-dotnet_style_predefined_type_for_member_access = true:suggestion
+dotnet_style_predefined_type_for_locals_parameters_members=true:suggestion
+dotnet_style_predefined_type_for_member_access=true:suggestion
 
 # Newline settings
-csharp_new_line_before_open_brace = all
-csharp_new_line_before_else = true
-csharp_new_line_before_catch = true
-csharp_new_line_before_finally = true
-csharp_new_line_before_members_in_object_initializers = true
-csharp_new_line_before_members_in_anonymous_types = true
+csharp_new_line_before_open_brace=all
+csharp_new_line_before_else=true
+csharp_new_line_before_catch=true
+csharp_new_line_before_finally=true
+csharp_new_line_before_members_in_object_initializers=true
+csharp_new_line_before_members_in_anonymous_types=true
 
 # Other
-csharp_indent_labels = one_less_than_current
-csharp_prefer_simple_using_statement = false:none
+csharp_indent_labels=one_less_than_current
+csharp_prefer_simple_using_statement=false:none
 
 # Common styles
-dotnet_naming_style.pascal_case_style.capitalization = pascal_case
+dotnet_naming_style.pascal_case_style.capitalization=pascal_case
 
 # ReSharper properties
+resharper_align_multiline_binary_expressions_chain=false
 resharper_csharp_wrap_arguments_style=chop_if_long
 resharper_csharp_wrap_parameters_style=chop_if_long
 resharper_wrap_after_declaration_lpar=true
@@ -81,66 +82,66 @@ resharper_wrap_after_invocation_lpar=true
 resharper_wrap_before_invocation_rpar=true
 
 [*.{csproj,vbproj,vcxproj,vcxproj.filters,proj,projitems,shproj,props,targets}]
-indent_size = 2
+indent_size=2
 
 [*.cs]
 
 # CA1032: Implement standard exception constructors
-dotnet_diagnostic.CA1032.severity = none
+dotnet_diagnostic.ca1032.severity=none
 
 # CA1051: Do not declare visible instance fields
-dotnet_diagnostic.CA1051.severity = none
+dotnet_diagnostic.ca1051.severity=none
 
 # CA1060: Move pinvokes to native methods class
-dotnet_diagnostic.CA1060.severity = none
+dotnet_diagnostic.ca1060.severity=none
 
 # CA1062: Validate arguments of public methods
-dotnet_diagnostic.CA1062.severity = none
+dotnet_diagnostic.ca1062.severity=none
 
 # CA1067: Override Object.Equals(object) when implementing IEquatable<T>
-dotnet_diagnostic.CA1067.severity = none
+dotnet_diagnostic.ca1067.severity=none
 
 # CA1303: Do not pass literals as localized parameters
-dotnet_diagnostic.CA1303.severity = none
+dotnet_diagnostic.ca1303.severity=none
 
 # CA1304: Specify CultureInfo
-dotnet_diagnostic.CA1304.severity = none
+dotnet_diagnostic.ca1304.severity=none
 
 # CA1305: Specify IFormatProvider
-dotnet_diagnostic.CA1305.severity = none
+dotnet_diagnostic.ca1305.severity=none
 
 # CA1307: Specify StringComparison
-dotnet_diagnostic.CA1307.severity = none
+dotnet_diagnostic.ca1307.severity=none
 
 # CA1707: Identifiers should not contain underscores
-dotnet_diagnostic.CA1707.severity = none
+dotnet_diagnostic.ca1707.severity=none
 
 # CA1712: Do not prefix enum values with type name
-dotnet_diagnostic.CA1712.severity = none
+dotnet_diagnostic.ca1712.severity=none
 
 # CA1715: Identifiers should have correct prefix
-dotnet_diagnostic.CA1715.severity = none
+dotnet_diagnostic.ca1715.severity=none
 
 # CA1716: Identifiers should not match keywords
-dotnet_diagnostic.CA1716.severity = none
+dotnet_diagnostic.ca1716.severity=none
 
 # CA1720: Identifier contains type name
-dotnet_diagnostic.CA1720.severity = none
+dotnet_diagnostic.ca1720.severity=none
 
 # CA1815: Override equals and operator equals on value types
-dotnet_diagnostic.CA1815.severity = none
+dotnet_diagnostic.ca1815.severity=none
 
 # CA1816: Call GC.SuppressFinalize correctly
-dotnet_diagnostic.CA1816.severity = none
+dotnet_diagnostic.ca1816.severity=none
 
 # CA1822: Mark members as static
-dotnet_diagnostic.CA1822.severity = suggestion
+dotnet_diagnostic.ca1822.severity=suggestion
 
 # CA2000: Dispose objects before losing scope
-dotnet_diagnostic.CA2000.severity = none
+dotnet_diagnostic.ca2000.severity=none
 
 # CA2007: Do not directly await a Task
-dotnet_diagnostic.CA2007.severity = none
+dotnet_diagnostic.ca2007.severity=none
 
 # CA2008: Do not create tasks without passing a TaskScheduler
-dotnet_diagnostic.CA2008.severity = suggestion
+dotnet_diagnostic.ca2008.severity=suggestion

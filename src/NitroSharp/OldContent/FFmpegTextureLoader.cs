@@ -3,7 +3,6 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using FFmpeg.AutoGen;
 using NitroSharp.Media.Decoding;
-using NitroSharp.Primitives;
 using NitroSharp.Utilities;
 using Veldrid;
 

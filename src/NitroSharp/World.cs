@@ -7,7 +7,7 @@ using NitroSharp.Utilities;
 
 #nullable enable
 
-namespace NitroSharp.New
+namespace NitroSharp
 {
     internal readonly struct ResolvedEntityPath
     {
@@ -78,6 +78,26 @@ namespace NitroSharp.New
 
         public static implicit operator EntityGroupView<T>(EntityGroup<T> group)
             => new EntityGroupView<T>(group);
+    }
+
+    internal readonly struct SortableEntityGroupView<T>
+        where T : Entity, IComparable<T>
+    {
+        private readonly SortableEntityGroup<T> _group;
+
+        public SortableEntityGroupView(SortableEntityGroup<T> group)
+        {
+            _group = group;
+        }
+
+        public ReadOnlySpan<T> Enabled => _group.Enabled;
+        public ReadOnlySpan<T> Disabled => _group.Disabled;
+
+        public ReadOnlySpan<T> SortActive() => _group.SortActive();
+
+        public static implicit operator SortableEntityGroupView<T>(
+            SortableEntityGroup<T> group)
+            => new SortableEntityGroupView<T>(group);
     }
 
     internal class EntityGroup<T> : EntityGroup
@@ -168,6 +188,7 @@ namespace NitroSharp.New
             }
 
             Array.Copy(_enabledEntities.UnderlyingArray, _sorted, actualCount);
+            Array.Sort(_sorted, 0, actualCount);
             return _sorted.AsSpan(0, actualCount);
         }
     }
@@ -224,7 +245,7 @@ namespace NitroSharp.New
             _queuedAnimations = new List<(AnimationKey, PropertyAnimation)>();
         }
 
-        public EntityGroupView<RenderItem> RenderItems => _renderItems;
+        public SortableEntityGroupView<RenderItem> RenderItems => _renderItems;
 
         public void BeginFrame()
         {
@@ -271,9 +292,11 @@ namespace NitroSharp.New
         public Entity? Get(in EntityId entityId)
             => _entities.TryGetValue(entityId, out EntityRec rec) ? rec.Entity : null;
 
-        public void AddRenderItem(RenderItem renderItem)
+        public T AddRenderItem<T>(T renderItem)
+            where T : RenderItem
         {
             Add(renderItem, _renderItems);
+            return renderItem;
         }
 
         public void SetAlias(in EntityId entityId, in EntityPath alias)

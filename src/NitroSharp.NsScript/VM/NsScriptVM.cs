@@ -78,7 +78,6 @@ namespace NitroSharp.NsScript.VM
         }
 
         private readonly NsxModuleLocator _moduleLocator;
-        private readonly BuiltInFunctions _builtInFuncImpl;
         private readonly Dictionary<string, NsxModule> _loadedModules;
         private readonly BuiltInFunctionDispatcher _builtInCallDispatcher;
         private readonly List<ThreadContext> _threads;
@@ -96,20 +95,17 @@ namespace NitroSharp.NsScript.VM
 
         public NsScriptVM(
             NsxModuleLocator moduleLocator,
-            Stream globalVarLookupTableStream,
-            BuiltInFunctions builtInFunctionsImpl)
+            Stream globalVarLookupTableStream)
         {
             _loadedModules = new Dictionary<string, NsxModule>(16);
             _moduleLocator = moduleLocator;
-            _builtInFuncImpl = builtInFunctionsImpl;
-            _builtInCallDispatcher = new BuiltInFunctionDispatcher(builtInFunctionsImpl);
+            _builtInCallDispatcher = new BuiltInFunctionDispatcher();
             _threads = new List<ThreadContext>();
             _threadMap = new Dictionary<string, ThreadContext>();
             _pendingThreadActions = new Queue<ThreadAction>();
             _timer = Stopwatch.StartNew();
             _globals = new ConstantValue[5000];
             _globalVarLookup = GlobalVarLookupTable.Load(globalVarLookupTableStream);
-            builtInFunctionsImpl._vm = this;
             _systemVariables = new SystemVariableLookup(this);
             _bezierSegmentStack = new Stack<CubicBezierSegment>();
         }
@@ -215,8 +211,9 @@ namespace NitroSharp.NsScript.VM
             return _threadMap.TryGetValue(name, out thread);
         }
 
-        public bool Run(CancellationToken cancellationToken)
+        public bool Run(BuiltInFunctions builtins, CancellationToken cancellationToken)
         {
+            builtins._vm = this;
             bool result = false;
             while (_threads.Count > 0 || _pendingThreadActions.Count > 0)
             {
@@ -229,7 +226,7 @@ namespace NitroSharp.NsScript.VM
                         CurrentThread = thread;
                         nbActive++;
                         result = true;
-                        TickResult tickResult = Tick(thread);
+                        TickResult tickResult = Tick(thread, builtins);
                         if (tickResult == TickResult.Yield)
                         {
                             thread.Yielded = true;
@@ -329,7 +326,7 @@ namespace NitroSharp.NsScript.VM
             Yield
         }
 
-        private TickResult Tick(ThreadContext thread)
+        private TickResult Tick(ThreadContext thread, BuiltInFunctions builtins)
         {
             if (thread.CallFrameStack.Count == 0)
             {
@@ -555,7 +552,7 @@ namespace NitroSharp.NsScript.VM
                                     //}
                                     //Console.Write(")\r\n");
                                 }
-                                ConstantValue? result = _builtInCallDispatcher.Dispatch(func, args);
+                                ConstantValue? result = _builtInCallDispatcher.Dispatch(builtins, func, args);
                                 stack.Pop(argCount);
                                 if (result != null)
                                 {
@@ -600,7 +597,7 @@ namespace NitroSharp.NsScript.VM
                         {
                             choiceName = choiceName[1..];
                         }
-                        bool pressed = _builtInFuncImpl.IsPressed(choiceName);
+                        bool pressed = builtins.IsPressed(choiceName);
                         stack.Push(ConstantValue.Boolean(pressed));
                         break;
                     case Opcode.SelectEnd:
@@ -608,10 +605,10 @@ namespace NitroSharp.NsScript.VM
                         return TickResult.Yield;
                     case Opcode.PresentText:
                         string text = thisModule.GetString(program.DecodeToken());
-                        _builtInFuncImpl.BeginDialogueLine(text);
+                        builtins.BeginDialogueLine(text);
                         break;
                     case Opcode.AwaitInput:
-                        _builtInFuncImpl.WaitForInput();
+                        builtins.WaitForInput();
                         frame.ProgramCounter = program.Position;
                         return TickResult.Ok;
                 }

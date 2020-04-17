@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Threading;
-using NitroSharp.Primitives;
 using Veldrid;
 
 #nullable enable

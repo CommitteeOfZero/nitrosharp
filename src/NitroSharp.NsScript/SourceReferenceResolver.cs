@@ -45,7 +45,7 @@ namespace NitroSharp.NsScript
                 path = path[(firstSeg.Length + 1)..];
             }
 
-            return _pathResolver.ResolvePath(path, out ResolvedPath resolved)
+            return _pathResolver.ResolveAbsolute(path, out ResolvedPath resolved)
                 ? resolved
                 : throw new FileNotFoundException("File not found", path);
         }

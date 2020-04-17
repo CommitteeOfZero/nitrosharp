@@ -2,7 +2,6 @@
 using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.InteropServices;
-using NitroSharp.Primitives;
 using NitroSharp.Utilities;
 using Veldrid;
 

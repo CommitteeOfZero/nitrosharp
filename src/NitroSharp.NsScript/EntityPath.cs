@@ -122,8 +122,5 @@ namespace NitroSharp.NsScript
 
         public bool Equals(EntityPath other)
             => CharsToHash.Equals(other.CharsToHash, StringComparison.Ordinal);
-
-        public static implicit operator EntityPath(string path)
-            => new EntityPath(path);
     }
 }

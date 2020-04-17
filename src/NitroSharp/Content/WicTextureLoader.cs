@@ -6,7 +6,7 @@ using PixelFormat = Veldrid.PixelFormat;
 
 #nullable enable
 
-namespace NitroSharp.OldContent
+namespace NitroSharp.Content
 {
     internal sealed unsafe class WicTextureLoader : TextureLoader
     {

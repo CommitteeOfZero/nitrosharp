@@ -192,7 +192,7 @@ namespace NitroSharp.Text
                         fontData.UpsertCachedGlyph(key, GlyphCacheEntry.Blank());
                         continue;
                     }
-                    var size = new Primitives.Size(glyph.Width, glyph.Height);
+                    var size = new Size(glyph.Width, glyph.Height);
                     var handle = TextureCacheHandle.Invalid;
                     textureCache.Update<byte>(ref handle, PixelFormat.R8_UNorm, size, glyph.Bytes);
 
@@ -202,7 +202,7 @@ namespace NitroSharp.Text
                         rasterRes = ref batch.OutlineResults[i];
                         ref readonly RasterizedGlyph outline = ref rasterRes.Glyph;
                         Debug.Assert(outline.Width != 0 && outline.Height != 0);
-                        size = new Primitives.Size(outline.Width, outline.Height);
+                        size = new Size(outline.Width, outline.Height);
                         float horOffset = outline.Left;
                         float verOffset = -(outline.Height - glyph.Height) - outline.Bottom;
                         outlineHandle = TextureCacheHandle.Invalid;

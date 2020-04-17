@@ -5,15 +5,9 @@ namespace NitroSharp.Utilities
 {
     internal static class MathUtil
     {
-        public const float PI = (float)Math.PI;
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static float Clamp(float value, float min, float max)
-        {
-            return value < min ? min : value > max ? max : value;
-        }
+            => value < min ? min : value > max ? max : value;
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int RoundUp(int value, int multiple)
         {
             int remainder = value % multiple;
@@ -22,7 +16,6 @@ namespace NitroSharp.Utilities
                 : value + multiple - remainder;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static uint RoundUp(uint value, uint multiple)
         {
             uint remainder = value % multiple;
@@ -31,11 +24,8 @@ namespace NitroSharp.Utilities
                 : value + multiple - remainder;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static float ToRadians(float degrees)
-        {
-            return degrees / 180.0f * PI;
-        }
+            => degrees / 180.0f * MathF.PI;
 
         public static uint NearestPowerOfTwo(uint n)
         {

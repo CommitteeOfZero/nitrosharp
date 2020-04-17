@@ -1,6 +1,4 @@
-﻿using System;
-using FFmpeg.AutoGen;
-using NitroSharp.Primitives;
+﻿using FFmpeg.AutoGen;
 
 namespace NitroSharp.Media.Decoding
 {

@@ -32,7 +32,7 @@ namespace NitroSharp.NsScript.VM
         public virtual int GetTimeRemaining(in EntityPath entityPath) => throw new NotImplementedException();
         public virtual int GetTimeElapsed(in EntityPath entityPath) => throw new NotImplementedException();
 
-        public virtual void SetAlias(in EntityPath entityPath, string alias) { }
+        public virtual void SetAlias(in EntityPath entityPath, in EntityPath alias) { }
         public virtual void Request(in EntityQuery query, NsEntityAction action) { }
         public virtual void DestroyEntities(in EntityQuery query) { }
 

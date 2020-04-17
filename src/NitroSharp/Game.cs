@@ -1,6 +1,4 @@
-﻿using NitroSharp.OldContent;
-using NitroSharp.Media;
-using NitroSharp.Primitives;
+﻿using NitroSharp.Media;
 using NitroSharp.Text;
 using System;
 using System.Diagnostics;
@@ -11,9 +9,8 @@ using Veldrid;
 using Veldrid.StartupUtilities;
 using System.Runtime.InteropServices;
 using System.Text;
+using NitroSharp.Content;
 using NitroSharp.Graphics;
-using NitroSharp.Interactivity;
-using NitroSharp.New;
 using NitroSharp.NsScript.Compiler;
 using NitroSharp.NsScript.VM;
 
@@ -30,7 +27,30 @@ namespace NitroSharp
             => (FrameId, StopwatchTicks) = (frameId, stopwatchTicks);
     }
 
-    public class Game : IDisposable
+    internal sealed class Context
+    {
+        public World World { get; }
+        public ContentManager Content { get; }
+        public GlyphRasterizer GlyphRasterizer { get; }
+        public FontConfiguration FontConfig { get; }
+        public RenderContext RenderContext { get; }
+
+        public Context(
+            World world,
+            ContentManager content,
+            GlyphRasterizer glyphRasterizer,
+            FontConfiguration fontConfig,
+            RenderContext renderContext)
+        {
+            World = world;
+            Content = content;
+            GlyphRasterizer = glyphRasterizer;
+            FontConfig = fontConfig;
+            RenderContext = renderContext;
+        }
+    }
+
+    public partial class Game : IDisposable
     {
         private readonly bool UseWicOnWindows = true;
 
@@ -48,6 +68,7 @@ namespace NitroSharp
         private readonly TaskCompletionSource<int> _initializingGraphics;
         private RenderSystem? _renderSystem;
         private readonly GlyphRasterizer _glyphRasterizer;
+        private FontConfiguration? _fontConfig;
 
         private ContentManager? _content;
         private readonly InputTracker _inputTracker;
@@ -59,7 +80,7 @@ namespace NitroSharp
         private readonly string _nssFolder;
         private readonly string _bytecodeCacheDir;
         private NsScriptVM? _vm;
-        private readonly Builtins _builtinFunctions;
+        private Builtins _builtinFunctions;
 
         public Game(GameWindow window, Configuration configuration)
         {
@@ -75,23 +96,17 @@ namespace NitroSharp
 
             _gameTimer = new Stopwatch();
             _world = new World();
-            FontConfiguration = default!;
             _inputTracker = new InputTracker(window);
 
             _nssFolder = Path.Combine(_configuration.ContentRoot, "nss");
             _bytecodeCacheDir = _nssFolder.Replace("nss", "nsx");
-            _builtinFunctions = new Builtins(this, _world);
         }
 
-        internal ContentManager Content => _content!;
         internal AudioDevice AudioDevice => _audioDevice!;
         internal AudioSourcePool AudioSourcePool => _audioSourcePool!;
 
         internal Logger Logger => _logger;
         internal LogEventRecorder LogEventRecorder => _logEventRecorder;
-
-        internal GlyphRasterizer GlyphRasterizer => _glyphRasterizer;
-        internal FontConfiguration FontConfiguration { get; private set; }
 
         public Task Run(bool useDedicatedThread = false)
         {
@@ -107,6 +122,9 @@ namespace NitroSharp
             {
                 throw aex.Flatten();
             }
+
+            var context = new Context(_world, _content!, _glyphRasterizer, _fontConfig!, _renderSystem!.Context);
+            _builtinFunctions = new Builtins(context);
             return RunMainLoop(useDedicatedThread);
         }
 
@@ -132,7 +150,7 @@ namespace NitroSharp
         {
             _glyphRasterizer.AddFonts(Directory.EnumerateFiles("Fonts"));
             var defaultFont = new FontKey(_configuration.FontFamily, FontStyle.Regular);
-            FontConfiguration = new FontConfiguration(
+            _fontConfig = new FontConfiguration(
                 defaultFont,
                 italicFont: null,
                 new PtFontSize(_configuration.FontSize),
@@ -168,8 +186,7 @@ namespace NitroSharp
                     _nssFolder,
                     _bytecodeCacheDir,
                     globalsFileName,
-                    sourceEncoding,
-                    _configuration.ContentRoot
+                    sourceEncoding
                 );
                 compilation.Emit(compilation.GetSourceModule(_configuration.StartupScript));
             }
@@ -179,7 +196,7 @@ namespace NitroSharp
             }
 
             var nsxLocator = new FileSystemNsxModuleLocator(_bytecodeCacheDir);
-            _vm = new NsScriptVM(nsxLocator, File.OpenRead(globalsPath), _builtinFunctions);
+            _vm = new NsScriptVM(nsxLocator, File.OpenRead(globalsPath));
             _vm.CreateThread(
                 name: "__MAIN",
                 Path.ChangeExtension(_configuration.StartupScript, null),
@@ -189,7 +206,7 @@ namespace NitroSharp
 
         private bool ValidateBytecodeCache()
         {
-            string getModulePath(string rootDir, string fullPath)
+            static string getModulePath(string rootDir, string fullPath)
             {
                 return Path.ChangeExtension(
                     Path.GetRelativePath(rootDir, fullPath),
@@ -291,23 +308,25 @@ namespace NitroSharp
         private void Tick(FrameStamp framestamp, float deltaMilliseconds)
         {
             Debug.Assert(_renderSystem != null);
-            if (Content.ResolveTextures())
+            Debug.Assert(_content != null);
+            if (_content.ResolveAssets())
             {
                 _world.BeginFrame();
 
                 Debug.Assert(_vm != null);
                 _vm.RefreshThreadState();
                 _vm.ProcessPendingThreadActions();
-                _vm.Run(_shutdownCancellation.Token);
+                _vm.Run(_builtinFunctions, _shutdownCancellation.Token);
             }
 
             _inputTracker.Update();
             _world.FlushDetachedAnimations();
             try
             {
-                _renderSystem.Render(framestamp);
+                _renderSystem.Render(_world, framestamp);
             }
-            catch (VeldridException e) when (e.Message == "The Swapchain's underlying surface has been lost.")
+            catch (VeldridException e)
+                when (e.Message == "The Swapchain's underlying surface has been lost.")
             {
             }
         }
@@ -366,7 +385,6 @@ namespace NitroSharp
             }
 
             _renderSystem = new RenderSystem(
-                _world,
                 _configuration,
                 _graphicsDevice,
                 _swapchain,
@@ -395,14 +413,14 @@ namespace NitroSharp
             }
             else
             {
-                textureLoader = new FFmpegTextureLoader(_graphicsDevice);
+                textureLoader = null!;
+                //textureLoader = new FFmpegTextureLoader(_graphicsDevice);
             }
 
             var content = new ContentManager(
                 _configuration.ContentRoot,
                 _graphicsDevice,
-                textureLoader,
-                _audioDevice
+                textureLoader
             );
             return content;
         }
@@ -435,7 +453,6 @@ namespace NitroSharp
 
         public void Dispose()
         {
-            _graphicsDevice?.WaitForIdle();
             _renderSystem?.Dispose();
             _content?.Dispose();
             _glyphRasterizer.Dispose();

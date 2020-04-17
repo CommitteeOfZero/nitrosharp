@@ -3,7 +3,6 @@ using System.Collections.Immutable;
 using System.Diagnostics;
 using NitroSharp.NsScript;
 using NitroSharp.NsScript.Syntax.PXml;
-using NitroSharp.Primitives;
 using Veldrid;
 
 #nullable enable

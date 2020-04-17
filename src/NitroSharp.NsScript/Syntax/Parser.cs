@@ -498,7 +498,7 @@ namespace NitroSharp.NsScript.Syntax
                     return Precedence.Logical;
 
                 default:
-                    throw ThrowHelper.UnexpectedValue(nameof(operatorKind));
+                    throw ThrowHelper.IllegalValue(nameof(operatorKind));
             }
         }
 

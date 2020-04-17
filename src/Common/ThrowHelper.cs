@@ -26,7 +26,10 @@ namespace NitroSharp
         public static T InvalidData<T>(string message)
             => throw new InvalidDataException(message);
 
-        public static T IllegalValue<T>(string message)
-            => throw new ArgumentException(message);
+        public static Exception IllegalValue(string paramName)
+            => new ArgumentException("Illegal value.", paramName);
+
+        public static T IllegalValue<T>(string paramName)
+            => throw new ArgumentException("Illegal value.", paramName);
     }
 }

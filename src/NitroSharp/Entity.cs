@@ -5,7 +5,7 @@ using NitroSharp.Utilities;
 
 #nullable enable
 
-namespace NitroSharp.New
+namespace NitroSharp
 {
     internal readonly struct EntityId : IEquatable<EntityId>
     {

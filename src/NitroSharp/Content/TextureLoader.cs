@@ -4,7 +4,7 @@ using Veldrid;
 
 #nullable enable
 
-namespace NitroSharp.OldContent
+namespace NitroSharp.Content
 {
     internal abstract class TextureLoader : IDisposable
     {

@@ -2,7 +2,9 @@
 using System.Numerics;
 using Veldrid;
 
-namespace NitroSharp.Interactivity
+#nullable enable
+
+namespace NitroSharp
 {
     internal sealed class InputTracker
     {
@@ -19,6 +21,7 @@ namespace NitroSharp.Interactivity
         public InputTracker(GameWindow window)
         {
             _window = window;
+            CurrentSnapshot = null!;
             //window.FocusGained += OnGotFocus;
             //window.FocusLost += OnLostFocus;
         }
@@ -31,10 +34,17 @@ namespace NitroSharp.Interactivity
             UpdateFrameInput(_window.PumpEvents());
         }
 
-        public bool IsKeyDown(Key Key) => _currentlyPressedKeys.Contains(Key);
-        public bool IsKeyDownThisFrame(Key Key) => _newKeysThisFrame.Contains(Key);
-        public bool IsMouseButtonDown(MouseButton button) => _currentlyPressedMouseButtons.Contains(button);
-        public bool IsMouseButtonDownThisFrame(MouseButton button) => _newMouseButtonsThisFrame.Contains(button);
+        public bool IsKeyDown(Key Key)
+            => _currentlyPressedKeys.Contains(Key);
+
+        public bool IsKeyDownThisFrame(Key Key)
+            => _newKeysThisFrame.Contains(Key);
+
+        public bool IsMouseButtonDown(MouseButton button)
+            => _currentlyPressedMouseButtons.Contains(button);
+
+        public bool IsMouseButtonDownThisFrame(MouseButton button)
+            => _newMouseButtonsThisFrame.Contains(button);
 
         private void UpdateFrameInput(InputSnapshot snapshot)
         {
