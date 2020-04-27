@@ -33,18 +33,20 @@ namespace NitroSharp.Graphics
 
     internal struct QuadGeometry
     {
+        public static ushort[] Indices => new ushort[] { 0, 1, 2, 2, 1, 3 };
+
         public QuadVertex TopLeft;
         public QuadVertex TopRight;
         public QuadVertex BottomLeft;
         public QuadVertex BottomRight;
 
-        public static QuadGeometry Create(
+        public static (QuadGeometry, RectangleF) Create(
             SizeF localBounds,
             in Matrix4x4 transform,
             Vector2 uvTopLeft,
             Vector2 uvBottomRight,
             in Vector4 color,
-            out RectangleF designSpaceRect)
+            in RectangleF? boxConstraint = null)
         {
             QuadGeometry quad = default;
             ref QuadVertex topLeft = ref quad.TopLeft;
@@ -79,12 +81,29 @@ namespace NitroSharp.Graphics
             bottomRight.Position = Vector2.Transform(bottomRight.Position, transform);
             bottomRight.Color = color;
 
+            if (boxConstraint is RectangleF constraint)
+            {
+                static void clamp(ref Vector2 vec, in RectangleF constraint)
+                {
+                    vec = Vector2.Clamp(
+                        vec,
+                        min: constraint.TopLeft,
+                        max: constraint.BottomRight
+                    );
+                }
+
+                clamp(ref quad.TopLeft.Position, constraint);
+                clamp(ref quad.TopRight.Position, constraint);
+                clamp(ref quad.BottomLeft.Position, constraint);
+                clamp(ref quad.BottomRight.Position, constraint);
+            }
+
             float left = MathF.Min(topLeft.Position.X, bottomLeft.Position.X);
             float top = MathF.Min(topLeft.Position.Y, topRight.Position.Y);
-            float bottom = MathF.Max(bottomLeft.Position.Y, bottomRight.Position.Y);
             float right = MathF.Max(topRight.Position.X, bottomRight.Position.Y);
-            designSpaceRect = RectangleF.FromLTRB(left, top, right, bottom);
-            return quad;
+            float bottom = MathF.Max(bottomLeft.Position.Y, bottomRight.Position.Y);
+            var layoutRect = RectangleF.FromLTRB(left, top, right, bottom);
+            return (quad, layoutRect);
         }
     }
 }

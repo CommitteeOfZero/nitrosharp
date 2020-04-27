@@ -34,11 +34,11 @@ namespace NitroSharp
             UpdateFrameInput(_window.PumpEvents());
         }
 
-        public bool IsKeyDown(Key Key)
-            => _currentlyPressedKeys.Contains(Key);
+        public bool IsKeyDown(Key key)
+            => _currentlyPressedKeys.Contains(key);
 
-        public bool IsKeyDownThisFrame(Key Key)
-            => _newKeysThisFrame.Contains(Key);
+        public bool IsKeyDownThisFrame(Key key)
+            => _newKeysThisFrame.Contains(key);
 
         public bool IsMouseButtonDown(MouseButton button)
             => _currentlyPressedMouseButtons.Contains(button);
@@ -84,31 +84,31 @@ namespace NitroSharp
             }
         }
 
-        private void MouseUp(MouseButton MouseButton)
+        private void MouseUp(MouseButton mouseButton)
         {
-            _currentlyPressedMouseButtons.Remove(MouseButton);
-            _newMouseButtonsThisFrame.Remove(MouseButton);
+            _currentlyPressedMouseButtons.Remove(mouseButton);
+            _newMouseButtonsThisFrame.Remove(mouseButton);
         }
 
-        private void MouseDown(MouseButton MouseButton)
+        private void MouseDown(MouseButton mouseButton)
         {
-            if (_currentlyPressedMouseButtons.Add(MouseButton))
+            if (_currentlyPressedMouseButtons.Add(mouseButton))
             {
-                _newMouseButtonsThisFrame.Add(MouseButton);
+                _newMouseButtonsThisFrame.Add(mouseButton);
             }
         }
 
-        private void KeyUp(Key Key)
+        private void KeyUp(Key key)
         {
-            _currentlyPressedKeys.Remove(Key);
-            _newKeysThisFrame.Remove(Key);
+            _currentlyPressedKeys.Remove(key);
+            _newKeysThisFrame.Remove(key);
         }
 
-        private void KeyDown(Key Key)
+        private void KeyDown(Key key)
         {
-            if (_currentlyPressedKeys.Add(Key))
+            if (_currentlyPressedKeys.Add(key))
             {
-                _newKeysThisFrame.Add(Key);
+                _newKeysThisFrame.Add(key);
             }
         }
 

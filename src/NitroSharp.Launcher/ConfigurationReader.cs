@@ -49,7 +49,7 @@ namespace NitroSharp.Launcher
                     break;
 
                 case "startupScript":
-                    configuration.StartupScript = property.Value;
+                    configuration.SysScripts.Startup = property.Value;
                     break;
 
                 case "graphics.vsync":

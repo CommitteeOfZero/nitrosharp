@@ -788,10 +788,12 @@ namespace NitroSharp.NsScript.Compiler
     {
         private int _count;
 
+#pragma warning disable CS0649
         public BezierControlPointSyntax P0;
         public BezierControlPointSyntax P1;
         public BezierControlPointSyntax P2;
         public BezierControlPointSyntax P3;
+#pragma warning restore CS0649
 
         public int PointCount => _count;
         public bool IsComplete => _count == 4;

@@ -77,13 +77,12 @@ namespace NitroSharp.NsScriptCompiler.Tests
             using FileStream globals = File.OpenRead(
                 Path.Combine(compCtx.NsxDir, compCtx.GlobalsFileName)
             );
-            VM = new NsScriptVM(
-                new FileSystemNsxModuleLocator(compCtx.NsxDir),
-                globals,
-                new MockBuiltInImpl()
-            );
+            VM = new NsScriptVM(new FileSystemNsxModuleLocator(compCtx.NsxDir), globals);
+            BuiltInFunctions = new MockBuiltInImpl();
         }
+
         public NsScriptVM VM { get; }
+        public BuiltInFunctions BuiltInFunctions { get; }
         public SourceModuleSymbol TestModule { get; }
     }
 
@@ -101,7 +100,7 @@ namespace NitroSharp.NsScriptCompiler.Tests
         public void test(string module, string function)
         {
             _context.VM.CreateThread($"{module}.{function}", module, function, start: true);
-            _context.VM.Run(CancellationToken.None);
+            _context.VM.Run(_context.BuiltInFunctions, CancellationToken.None);
         }
     }
 }

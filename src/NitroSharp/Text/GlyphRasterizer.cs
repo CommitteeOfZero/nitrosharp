@@ -8,7 +8,7 @@ using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 using FreeTypeBindings;
-using NitroSharp.Graphics;
+using NitroSharp.Graphics.Core;
 using Veldrid;
 
 #nullable enable

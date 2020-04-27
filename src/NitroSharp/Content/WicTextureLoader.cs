@@ -65,7 +65,7 @@ namespace NitroSharp.Content
             _wicFactory.Dispose();
         }
 
-        public override Size GetTextureDimensions(Stream stream)
+        public override Size GetTextureSize(Stream stream)
         {
             using var wicStream = new WICStream(_wicFactory, stream);
             using var decoder = new BitmapDecoder(_wicFactory, wicStream, DecodeOptions.CacheOnDemand);

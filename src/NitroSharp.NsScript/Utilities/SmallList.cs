@@ -11,8 +11,10 @@ namespace NitroSharp.Utilities
 
         private struct FixedItems
         {
+#pragma warning disable CS0649
             public T Item0;
             public T Item1;
+#pragma warning restore CS0649
 
             public Span<T> AsSpan()
                 => MemoryMarshal.CreateSpan(ref Item0, MaxFixed);

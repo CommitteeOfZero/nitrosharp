@@ -100,6 +100,7 @@ namespace NitroSharp
 
             _nssFolder = Path.Combine(_configuration.ContentRoot, "nss");
             _bytecodeCacheDir = _nssFolder.Replace("nss", "nsx");
+            _builtinFunctions = null!;
         }
 
         internal AudioDevice AudioDevice => _audioDevice!;
@@ -123,7 +124,13 @@ namespace NitroSharp
                 throw aex.Flatten();
             }
 
-            var context = new Context(_world, _content!, _glyphRasterizer, _fontConfig!, _renderSystem!.Context);
+            var context = new Context(
+                _world,
+                _content!,
+                _glyphRasterizer,
+                _fontConfig!,
+                _renderSystem!.Context
+            );
             _builtinFunctions = new Builtins(context);
             return RunMainLoop(useDedicatedThread);
         }
@@ -134,6 +141,13 @@ namespace NitroSharp
             SetupFonts();
             await Task.WhenAll(_initializingGraphics.Task, initializeAudio);
             _content = CreateContentManager();
+            _renderSystem = new RenderSystem(
+                _configuration,
+                _graphicsDevice!,
+                _swapchain!,
+                _glyphRasterizer,
+                _content
+            );
             await Task.Run(LoadStartupScript);
         }
 
@@ -188,7 +202,7 @@ namespace NitroSharp
                     globalsFileName,
                     sourceEncoding
                 );
-                compilation.Emit(compilation.GetSourceModule(_configuration.StartupScript));
+                compilation.Emit(compilation.GetSourceModule(_configuration.SysScripts.Startup));
             }
             else
             {
@@ -199,7 +213,7 @@ namespace NitroSharp
             _vm = new NsScriptVM(nsxLocator, File.OpenRead(globalsPath));
             _vm.CreateThread(
                 name: "__MAIN",
-                Path.ChangeExtension(_configuration.StartupScript, null),
+                Path.ChangeExtension(_configuration.SysScripts.Startup, null),
                 symbol: "main"
             );
         }
@@ -216,7 +230,7 @@ namespace NitroSharp
 
             string startupModule = getModulePath(
                 rootDir: _nssFolder,
-                Path.Combine(_nssFolder, _configuration.StartupScript)
+                Path.Combine(_nssFolder, _configuration.SysScripts.Startup)
             );
             foreach (string nssFile in Directory
                 .EnumerateFiles(_nssFolder, "*.nss", SearchOption.AllDirectories))
@@ -383,14 +397,6 @@ namespace NitroSharp
                 }
                 _swapchain = _graphicsDevice.ResourceFactory.CreateSwapchain(ref swapchainDesc);
             }
-
-            _renderSystem = new RenderSystem(
-                _configuration,
-                _graphicsDevice,
-                _swapchain,
-                _glyphRasterizer,
-                _content!
-            );
         }
 
         private void SetupAudio()
@@ -417,11 +423,7 @@ namespace NitroSharp
                 //textureLoader = new FFmpegTextureLoader(_graphicsDevice);
             }
 
-            var content = new ContentManager(
-                _configuration.ContentRoot,
-                _graphicsDevice,
-                textureLoader
-            );
+            var content = new ContentManager(_configuration.ContentRoot, textureLoader);
             return content;
         }
 

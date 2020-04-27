@@ -8,7 +8,7 @@ using Veldrid;
 
 #nullable enable
 
-namespace NitroSharp.Graphics
+namespace NitroSharp.Graphics.Core
 {
     internal readonly struct TextureCacheHandle : IEquatable<TextureCacheHandle>
     {
@@ -612,17 +612,14 @@ namespace NitroSharp.Graphics
             static uint quantizeDimension(uint dim)
             {
                 if (dim <= 16) { return 16; }
-                if (dim <= 32) { return 32; }
-                if (dim <= 64) { return 64; }
-                if (dim <= 128) { return 128; }
-                if (dim <= 256) { return 256; }
+                if (dim <= 256) { return MathUtil.NearestPowerOfTwo(dim); }
                 throw new InvalidOperationException(
                     "Texture is too large for the cache."
                 );
             }
 
-            uint width = quantizeDimension(textureSize.Width);
-            uint height = quantizeDimension(textureSize.Height);
+            uint width = quantizeDimension(textureSize.Width + 1);
+            uint height = quantizeDimension(textureSize.Height + 1);
             uint max = Math.Max(width, height);
             return new Size(max, max);
         }

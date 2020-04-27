@@ -1,8 +1,8 @@
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Numerics;
 using System.Threading.Tasks;
+using NitroSharp.Graphics.Core;
 using NitroSharp.Text;
 using Veldrid;
 
@@ -10,46 +10,46 @@ using Veldrid;
 
 namespace NitroSharp.Graphics
 {
-    internal sealed class TextRenderContext
+    internal struct GpuGlyph
     {
-        internal struct GpuGlyph
-        {
-            public Vector2 Offset;
-            public int GlyphRunId;
-            public int GlyphId;
-            public int OutlineId;
-            public float Opacity;
+        public Vector2 Offset;
+        public int GlyphRunId;
+        public int GlyphId;
+        public int OutlineId;
+        public float Opacity;
 
-            public static VertexLayoutDescription LayoutDescription => new VertexLayoutDescription(
-                stride: 24, instanceStepRate: 1,
-                new VertexElementDescription(
-                    "vs_Offset",
-                    VertexElementSemantic.TextureCoordinate,
-                    VertexElementFormat.Float2
-                ),
-                new VertexElementDescription(
-                    "vs_GlyphRunID",
-                    VertexElementSemantic.TextureCoordinate,
-                    VertexElementFormat.Int1
-                ),
-                new VertexElementDescription(
-                    "vs_GlyphID",
-                    VertexElementSemantic.TextureCoordinate,
-                    VertexElementFormat.Int1
-                ),
-                new VertexElementDescription(
-                    "vs_OutlineID",
-                    VertexElementSemantic.TextureCoordinate,
-                    VertexElementFormat.Int1
-                ),
-                new VertexElementDescription(
-                    "vs_Opacity",
-                    VertexElementSemantic.TextureCoordinate,
-                    VertexElementFormat.Float1
-                )
-            );
-        }
+        public static VertexLayoutDescription LayoutDescription => new VertexLayoutDescription(
+            stride: 24, instanceStepRate: 1,
+            new VertexElementDescription(
+                "vs_Offset",
+                VertexElementSemantic.TextureCoordinate,
+                VertexElementFormat.Float2
+            ),
+            new VertexElementDescription(
+                "vs_GlyphRunID",
+                VertexElementSemantic.TextureCoordinate,
+                VertexElementFormat.Int1
+            ),
+            new VertexElementDescription(
+                "vs_GlyphID",
+                VertexElementSemantic.TextureCoordinate,
+                VertexElementFormat.Int1
+            ),
+            new VertexElementDescription(
+                "vs_OutlineID",
+                VertexElementSemantic.TextureCoordinate,
+                VertexElementFormat.Int1
+            ),
+            new VertexElementDescription(
+                "vs_Opacity",
+                VertexElementSemantic.TextureCoordinate,
+                VertexElementFormat.Float1
+            )
+        );
+    }
 
+    internal sealed class TextRenderContext : IDisposable
+    {
         internal readonly struct GpuGlyphRun : GpuType
         {
             public const uint SizeInGpuBlocks = 2;
@@ -91,21 +91,14 @@ namespace NitroSharp.Graphics
 
         private readonly GlyphRasterizer _glyphRasterizer;
         private readonly TextureCache _textureCache;
-
-        private readonly Pipeline _pipeline;
-        private readonly Pipeline _outlinePipeline;
         private readonly GpuList<GpuGlyph> _gpuGlyphs;
-        private readonly ResourceLayout _vsLayout;
-        private readonly ResourceLayout _fsLayout;
         private readonly GpuCache<GpuGlyphRun> _gpuGlyphRuns;
         private readonly GpuCache<GpuTransform> _gpuTransforms;
 
         public TextRenderContext(
             GraphicsDevice gd,
-            ShaderLibrary shaderLibrary,
             GlyphRasterizer glyphRasterizer,
-            TextureCache textureCache,
-            in OutputDescription outputDescription)
+            TextureCache textureCache)
         {
             _glyphRasterizer = glyphRasterizer;
             _textureCache = textureCache;
@@ -124,70 +117,6 @@ namespace NitroSharp.Graphics
                 GpuTransform.SizeInGpuBlocks,
                 dimension: 128
             );
-
-            ResourceFactory factory = gd.ResourceFactory;
-            (Shader vs, Shader fs) = shaderLibrary.LoadShaderSet("text");
-            (Shader outlineVS, Shader outlineFS) = shaderLibrary.LoadShaderSet("outline");
-
-            _vsLayout = factory.CreateResourceLayout(new ResourceLayoutDescription(
-                new ResourceLayoutElementDescription(
-                    "ViewProjection",
-                    ResourceKind.UniformBuffer,
-                    ShaderStages.Vertex
-                ),
-                new ResourceLayoutElementDescription(
-                    "GlyphRuns",
-                    ResourceKind.TextureReadOnly,
-                    ShaderStages.Vertex
-                ),
-                new ResourceLayoutElementDescription(
-                    "Transforms",
-                    ResourceKind.TextureReadOnly,
-                    ShaderStages.Vertex
-                ),
-                new ResourceLayoutElementDescription(
-                    "GlyphRects",
-                    ResourceKind.TextureReadOnly,
-                    ShaderStages.Vertex
-                )
-            ));
-
-            _fsLayout = factory.CreateResourceLayout(new ResourceLayoutDescription(
-                new ResourceLayoutElementDescription(
-                    "CacheTexture",
-                    ResourceKind.TextureReadOnly,
-                    ShaderStages.Fragment
-                ),
-                new ResourceLayoutElementDescription(
-                    "Sampler",
-                    ResourceKind.Sampler,
-                    ShaderStages.Fragment
-                )
-            ));
-
-            var vertexLayouts = new VertexLayoutDescription[]
-            {
-                GpuGlyph.LayoutDescription
-            };
-            var pipelineDesc = new GraphicsPipelineDescription(
-                BlendStateDescription.SingleAlphaBlend,
-                DepthStencilStateDescription.Disabled,
-                RasterizerStateDescription.CullNone,
-                PrimitiveTopology.TriangleList,
-                new ShaderSetDescription(
-                    vertexLayouts,
-                    new[] { vs, fs }
-                ),
-                new[] { _vsLayout, _fsLayout },
-                outputDescription
-            );
-            _pipeline = factory.CreateGraphicsPipeline(ref pipelineDesc);
-
-            pipelineDesc.ShaderSet = new ShaderSetDescription(
-                vertexLayouts,
-                new[] { outlineVS, outlineFS }
-            );
-            _outlinePipeline = factory.CreateGraphicsPipeline(ref pipelineDesc);
         }
 
         public void BeginFrame()
@@ -209,27 +138,28 @@ namespace NitroSharp.Graphics
 
         public void Render(RenderContext ctx, TextLayout layout, in Matrix4x4 transform)
         {
+            TextShaderResources shaderResources = ctx.ShaderResources.Text;
             foreach (ref readonly GlyphRun glyphRun in layout.GlyphRuns)
             {
                 ReadOnlySpan<PositionedGlyph> glyphs = layout.GetGlyphs(glyphRun.GlyphSpan);
                 if (AppendRun(glyphRun, glyphs, transform) is GpuGlyphSlice gpuGlyphSlice)
                 {
-                    ctx.PushDraw(new Draw
+                    ctx.PushDraw(ctx.DrawCommands, new Draw
                     {
-                        Pipeline = _pipeline,
+                        Pipeline = shaderResources.Pipeline,
                         BufferBindings = new BufferBindings(gpuGlyphSlice.Buffer),
                         ResourceBindings = new ResourceBindings(
                             new ResourceSetKey(
-                                _vsLayout,
+                                shaderResources.ResourceLayoutVS,
                                 ctx.ViewProjection.Buffer.VdBuffer,
                                 _gpuGlyphRuns.Texture,
                                 _gpuTransforms.Texture,
                                 _textureCache.UvRectTexture
                             ),
                             new ResourceSetKey(
-                                _fsLayout,
+                                shaderResources.ResourceLayoutFS,
                                 _textureCache.GetCacheTexture(PixelFormat.R8_UNorm, out _),
-                                ctx.GraphicsDevice.PointSampler
+                                ctx.GraphicsDevice.LinearSampler
                             )
                         ),
                         Params = DrawParams.Regular(
@@ -317,6 +247,13 @@ namespace NitroSharp.Graphics
             _gpuGlyphRuns.EndFrame(cl);
             _gpuTransforms.EndFrame(cl);
             _gpuGlyphs.End(cl);
+        }
+
+        public void Dispose()
+        {
+            _gpuGlyphs.Dispose();
+            _gpuGlyphRuns.Dispose();
+            _gpuTransforms.Dispose();
         }
     }
 }

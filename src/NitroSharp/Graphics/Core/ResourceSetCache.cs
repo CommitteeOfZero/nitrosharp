@@ -5,7 +5,7 @@ using Veldrid;
 
 #nullable enable
 
-namespace NitroSharp.Graphics
+namespace NitroSharp.Graphics.Core
 {
     internal readonly struct ResourceSetKey : IEquatable<ResourceSetKey>
     {
@@ -107,10 +107,10 @@ namespace NitroSharp.Graphics
         {
             return (Resource1, Resource2, Resource3) switch
             {
-                (null, _, _) => 1,
-                ({}, null, _) => 2,
-                ({}, {}, null) => 3,
-                _ => 4
+                (null, _, _) => 1u,
+                ({}, null, _) => 2u,
+                ({}, {}, null) => 3u,
+                _ => 4u
             };
         }
     }

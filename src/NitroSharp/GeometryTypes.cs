@@ -132,11 +132,6 @@ namespace NitroSharp
         public readonly int Width;
         public readonly int Height;
 
-        public int Left => X;
-        public int Right => X + Width;
-        public int Top => Y;
-        public int Bottom => Y + Height;
-
         public Rectangle(int x, int y, int width, int height)
         {
             X = x;
@@ -144,6 +139,11 @@ namespace NitroSharp
             Width = width;
             Height = height;
         }
+
+        public int Left => X;
+        public int Right => X + Width;
+        public int Top => Y;
+        public int Bottom => Y + Height;
 
         public static Rectangle Union(in Rectangle a, in Rectangle b)
         {
@@ -240,11 +240,6 @@ namespace NitroSharp
         public readonly float Width;
         public readonly float Height;
 
-        public float Left => X;
-        public float Right => X + Width;
-        public float Top => Y;
-        public float Bottom => Y + Height;
-
         public RectangleF(float x, float y, float width, float height)
         {
             X = x;
@@ -276,6 +271,19 @@ namespace NitroSharp
             Width = size.X;
             Height = size.Y;
         }
+
+        public float Left => X;
+        public float Right => X + Width;
+        public float Top => Y;
+        public float Bottom => Y + Height;
+
+        public Vector2 TopLeft => new Vector2(Left, Top);
+        public Vector2 TopRight => new Vector2(Right, Top);
+        public Vector2 BottomLeft => new Vector2(Left, Bottom);
+        public Vector2 BottomRight => new Vector2(Right, Bottom);
+
+        public Vector2 Position => new Vector2(X, Y);
+        public SizeF Size => new SizeF(Width, Height);
 
         public bool Contains(Vector2 point)
         {

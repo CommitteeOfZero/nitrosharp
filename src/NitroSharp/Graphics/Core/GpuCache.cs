@@ -8,7 +8,7 @@ using Veldrid;
 
 #nullable enable
 
-namespace NitroSharp.Graphics
+namespace NitroSharp.Graphics.Core
 {
     internal interface GpuType
     {

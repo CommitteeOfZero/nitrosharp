@@ -35,7 +35,7 @@ namespace NitroSharp.Graphics
             ReadOnlySpan<RenderItem> renderItems = world.RenderItems.SortActive();
             foreach (RenderItem ri in renderItems)
             {
-                ri.Update(world, Context);
+                ri.LayoutPass(world, Context);
             }
             foreach (RenderItem ri in renderItems)
             {

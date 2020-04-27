@@ -200,7 +200,7 @@ namespace NitroSharp.Text
                     _lastNonRubyGlyphOnLine = _glyphs.Count;
                     _glyphs.Add() = new PositionedGlyph(glyphIndex, position);
                     _lastWordAscend = MathF.Max(_lastWordAscend, glyphDims.Top);
-                    _lastWordDescend = MathF.Max(_lastWordDescend, glyphDims.Height - glyphDims.Top + 1);
+                    _lastWordDescend = MathF.Max(_lastWordDescend, glyphDims.Height - glyphDims.Top - 1);
                     if (!isWhitespace)
                     {
                         nbNonWhitespaceOnLine++;
@@ -407,9 +407,9 @@ namespace NitroSharp.Text
             _bbLeft = MathF.Min(_bbLeft, _glyphs[line.Start].Position.X);
 
             float lineTop = _rubyChunksOnLine.Count == 0
-                ? baselineY - _currentLineAscender + 1
-                : baselineY + rubyTextBaselineOffset - rubyTextAscend + 1;
-            float lineBottom = baselineY + _currentLineDescender - 1;
+                ? baselineY - _currentLineAscender
+                : baselineY + rubyTextBaselineOffset - rubyTextAscend;
+            float lineBottom = baselineY + _currentLineDescender;
             float top = MathF.Min(_boundingBox.Y, lineTop);
             _boundingBox = new RectangleF(
                 x: _bbLeft, y: top,

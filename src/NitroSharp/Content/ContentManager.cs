@@ -12,25 +12,27 @@ using Veldrid;
 
 namespace NitroSharp.Content
 {
-    internal readonly struct AssetPath : IEquatable<AssetPath>
-    {
-        public readonly string Value;
-
-        public AssetPath(string value) => Value = value;
-        public override int GetHashCode() => Value.GetHashCode();
-        public bool Equals(AssetPath other) => Value.Equals(other.Value);
-    }
-
-    internal readonly struct AssetRef<T> : IEquatable<AssetRef<T>>
+    internal readonly struct AssetRef<T> : IEquatable<AssetRef<T>>, IDisposable
         where T : class, IDisposable
     {
+        private readonly ContentManager _contentManager;
+
         public readonly string Path;
         public readonly FreeListHandle Handle;
 
-        public AssetRef(string path, FreeListHandle handle)
-            => (Path, Handle) = (path, handle);
+        public AssetRef(ContentManager contentManager, string path, FreeListHandle handle)
+            => (_contentManager, Path, Handle) = (contentManager, path, handle);
 
-        public bool IsValid => Handle.Version != 0;
+        public AssetRef<T> Clone()
+        {
+            _contentManager.IncrementRefCount(Path);
+            return this;
+        }
+
+        public void Dispose()
+        {
+            _contentManager.ReleaseRef(this);
+        }
 
         public bool Equals(AssetRef<T> other) => Handle.Equals(other.Handle);
         public override int GetHashCode() => Handle.GetHashCode();
@@ -51,16 +53,13 @@ namespace NitroSharp.Content
         private struct CacheEntry
         {
             public uint RefCount;
-            public Size TextureDimensions;
+            public Size TextureSize;
             public IDisposable? Asset;
         }
 
-        public ContentManager(string rootDirectory,
-            GraphicsDevice graphicsDevice,
-            TextureLoader textureLoader)
+        public ContentManager(string rootDirectory, TextureLoader textureLoader)
         {
             RootDirectory = rootDirectory;
-            GraphicsDevice = graphicsDevice;
             _textureLoader = textureLoader;
             _loadTextureFunc = stream => _textureLoader.LoadTexture(stream, staging: false);
             _cache = new FreeList<CacheEntry>();
@@ -69,23 +68,52 @@ namespace NitroSharp.Content
         }
 
         public string RootDirectory { get; }
-        public GraphicsDevice GraphicsDevice { get; }
 
-        public T? Get<T>(AssetRef<T> assetRef)
+        private ref CacheEntry GetLoadedEntry<T>(AssetRef<T> assetRef, out T asset)
             where T : class, IDisposable
         {
             ref CacheEntry cacheEntry = ref _cache.Get(assetRef.Handle);
-            return cacheEntry.Asset as T;
+            if (!(cacheEntry.Asset is T loadedAsset))
+            {
+                throw new InvalidOperationException(
+                    $"BUG: asset '{assetRef.Path}' is missing from the cache."
+                );
+            }
+
+            asset = loadedAsset;
+            return ref cacheEntry;
         }
 
-        public AssetRef<Texture>? RequestTexture(string path, out Size dimensions)
+        public T Get<T>(AssetRef<T> assetRef)
+            where T : class, IDisposable
+        {
+            GetLoadedEntry(assetRef, out T asset);
+            return asset;
+        }
+
+        // TODO: consider replacing with RequestAsset<T>
+        public void IncrementRefCount(string path)
+        {
+            if (_strongHandles.TryGetValue(path, out FreeListHandle existing))
+            {
+                _cache.Get(existing).RefCount++;
+            }
+        }
+
+        public Size GetTextureSize(AssetRef<Texture> textureRef)
+            => GetLoadedEntry(textureRef, out _).TextureSize;
+
+        public AssetRef<Texture>? RequestTexture(string path)
+            => RequestTexture(path, out _);
+
+        public AssetRef<Texture>? RequestTexture(string path, out Size size)
         {
             if (_strongHandles.TryGetValue(path, out FreeListHandle existing))
             {
                 ref CacheEntry cacheEntry = ref _cache.Get(existing);
                 cacheEntry.RefCount++;
-                dimensions = cacheEntry.TextureDimensions;
-                return new AssetRef<Texture>(path, existing);
+                size = cacheEntry.TextureSize;
+                return new AssetRef<Texture>(this, path, existing);
             }
 
             Stream? stream;
@@ -93,17 +121,17 @@ namespace NitroSharp.Content
             try
             {
                 stream = OpenStream(path);
-                dimensions = _textureLoader.GetTextureDimensions(stream);
+                size = _textureLoader.GetTextureSize(stream);
                 handle = _cache.Insert(new CacheEntry
                 {
-                    TextureDimensions = dimensions,
+                    TextureSize = size,
                     RefCount = 1
                 });
                 _strongHandles.Add(path, handle);
             }
             catch
             {
-                dimensions = Size.Zero;
+                size = Size.Zero;
                 return null;
             }
             Interlocked.Increment(ref _nbPending);
@@ -119,7 +147,19 @@ namespace NitroSharp.Content
                     Interlocked.Decrement(ref _nbPending);
                 }
             });
-            return new AssetRef<Texture>(path, handle);
+            return new AssetRef<Texture>(this, path, handle);
+        }
+
+        public void ReleaseRef<T>(AssetRef<T> assetRef)
+            where T : class, IDisposable
+        {
+            ref CacheEntry cacheEntry = ref _cache.Get(assetRef.Handle);
+            if (--cacheEntry.RefCount == 0 && cacheEntry.Asset is T asset)
+            {
+                asset.Dispose();
+                _cache.Free(assetRef.Handle);
+                _strongHandles.Remove(assetRef.Path);
+            }
         }
 
         public bool ResolveAssets()
@@ -138,7 +178,7 @@ namespace NitroSharp.Content
             return _nbPending == 0;
         }
 
-        protected virtual Stream OpenStream(string path)
+        private Stream OpenStream(string path)
         {
             string fullPath = Path.Combine(RootDirectory, path);
             return File.OpenRead(fullPath);
@@ -152,6 +192,7 @@ namespace NitroSharp.Content
                 _cache.Get(handle).Asset?.Dispose();
             }
             _strongHandles.Clear();
+            _textureLoader.Dispose();
         }
     }
 }

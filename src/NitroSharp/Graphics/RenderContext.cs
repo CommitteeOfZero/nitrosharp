@@ -1,9 +1,8 @@
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Numerics;
 using System.Runtime.InteropServices;
 using NitroSharp.Content;
+using NitroSharp.Graphics.Core;
 using NitroSharp.Text;
 using Veldrid;
 
@@ -155,10 +154,10 @@ namespace NitroSharp.Graphics
         public BufferBindings(DeviceBuffer vertices, DeviceBuffer indices)
             : this() => (Vertices, Indices) = (vertices, indices);
 
-        //public BufferBindings(DeviceBuffer vertices, DeviceBuffer instanceData)
-        //    : this() => (Vertices, InstanceData) = (vertices, instanceData);
-
-        public BufferBindings(DeviceBuffer vertices, DeviceBuffer instanceData, DeviceBuffer indices)
+        public BufferBindings(
+            DeviceBuffer vertices,
+            DeviceBuffer instanceData,
+            DeviceBuffer? indices = null)
             => (Vertices, InstanceData, Indices) = (vertices, instanceData, indices);
 
         public bool Equals(BufferBindings other)
@@ -176,20 +175,11 @@ namespace NitroSharp.Graphics
         public readonly ResourceSetKey? ResourceSet2;
         public readonly ResourceSetKey? ResourceSet3;
 
-        public ResourceBindings(ResourceSetKey rs0) : this()
-            => ResourceSet0 = rs0;
-
-        public ResourceBindings(ResourceSetKey rs0, ResourceSetKey rs1) : this()
-            => (ResourceSet0, ResourceSet1) = (rs0, rs1);
-
-        public ResourceBindings(ResourceSetKey rs0, ResourceSetKey rs1, ResourceSetKey rs2)
-            : this() => (ResourceSet0, ResourceSet1, ResourceSet2) = (rs0, rs1, rs2);
-
         public ResourceBindings(
             ResourceSetKey rs0,
-            ResourceSetKey rs1,
-            ResourceSetKey rs2,
-            ResourceSetKey rs3) : this()
+            ResourceSetKey? rs1 = null,
+            ResourceSetKey? rs2 = null,
+            ResourceSetKey? rs3 = null)
         {
             ResourceSet0 = rs0;
             ResourceSet1 = rs1;
@@ -209,13 +199,16 @@ namespace NitroSharp.Graphics
     internal sealed class RenderContext : IDisposable
     {
         private readonly CommandList _transferCommands;
-        public readonly CommandList _drawCommands;
+        private readonly CommandList _drawCommands;
+
         private readonly Texture _screenshotTexture;
         private readonly Texture _secondaryFramebufferTexture;
 
-        private readonly Queue<GpuBuffer<ushort>> _oldIndexBuffers;
+        private readonly MeshList<QuadVertex> _quads;
+        private readonly MeshList<CubeVertex> _cubes;
 
         private Draw _lastDraw;
+        private CommandList? _lastCommandList;
 
         public RenderContext(
             Configuration gameConfiguration,
@@ -233,14 +226,17 @@ namespace NitroSharp.Graphics
             MainSwapchain = swapchain;
             SwapchainFramebuffer = swapchain.Framebuffer;
             _transferCommands = ResourceFactory.CreateCommandList();
+            _transferCommands.Name = "Transfer commands";
             _drawCommands = ResourceFactory.CreateCommandList();
-            EffectCommandList = ResourceFactory.CreateCommandList();
+            _drawCommands.Name = "Draw commands (primary)";
+            SecondaryCommandList = ResourceFactory.CreateCommandList();
+            SecondaryCommandList.Name = "Secondary";
             Content = contentManager;
             GlyphRasterizer = glyphRasterizer;
             ShaderLibrary = new ShaderLibrary(graphicsDevice);
-            ViewProjection = new ViewProjection(GraphicsDevice, DesignResolution);
-            Pipelines = new Pipelines(
-                ResourceFactory,
+            ViewProjection = ViewProjection.CreateOrtho(GraphicsDevice, DesignResolution);
+            ShaderResources = new ShaderResources(
+                graphicsDevice,
                 ShaderLibrary,
                 SwapchainFramebuffer.OutputDescription,
                 ViewProjection
@@ -251,8 +247,9 @@ namespace NitroSharp.Graphics
 
             ResourceFactory rf = ResourceFactory;
             _secondaryFramebufferTexture = rf.CreateTexture(TextureDescription.Texture2D(
-                SwapchainFramebuffer.Width, SwapchainFramebuffer.Height, mipLevels: 1,
-                arrayLayers: 1, PixelFormat.B8_G8_R8_A8_UNorm,
+                SwapchainFramebuffer.Width, SwapchainFramebuffer.Height,
+                mipLevels: 1, arrayLayers: 1,
+                PixelFormat.B8_G8_R8_A8_UNorm,
                 TextureUsage.RenderTarget | TextureUsage.Sampled
             ));
             SecondaryFramebuffer = rf.CreateFramebuffer(new FramebufferDescription(
@@ -261,91 +258,99 @@ namespace NitroSharp.Graphics
             ));
 
             _screenshotTexture = rf.CreateTexture(TextureDescription.Texture2D(
-                SwapchainFramebuffer.Width, SwapchainFramebuffer.Height, mipLevels: 1,
-                arrayLayers: 1, PixelFormat.B8_G8_R8_A8_UNorm, TextureUsage.Sampled
+                SwapchainFramebuffer.Width, SwapchainFramebuffer.Height,
+                mipLevels: 1, arrayLayers: 1,
+                PixelFormat.B8_G8_R8_A8_UNorm,
+                TextureUsage.Staging
             ));
             WhiteTexture = CreateWhiteTexture();
 
-            QuadVertexBuffer = new GpuList<QuadVertex>(
-                GraphicsDevice,
-                BufferUsage.VertexBuffer,
-                initialCapacity: 4
+            _quads = new MeshList<QuadVertex>(
+                graphicsDevice,
+                new MeshDescription(QuadGeometry.Indices, verticesPerMesh: 4),
+                initialCapacity: 512
             );
-            _oldIndexBuffers = new Queue<GpuBuffer<ushort>>();
-            ResizeIndexBufferIfNecessary();
-            Debug.Assert(QuadIndexBuffer != null);
+            _cubes = new MeshList<CubeVertex>(
+                graphicsDevice,
+                new MeshDescription(Cube.Indices, verticesPerMesh: 24),
+                initialCapacity: 1
+            );
 
             Text = new TextRenderContext(
                 GraphicsDevice,
-                ShaderLibrary,
                 GlyphRasterizer,
-                TextureCache,
-                SwapchainFramebuffer.OutputDescription
+                TextureCache
             );
         }
+
+        public MeshList<QuadVertex> Quads => _quads;
 
         public Size DesignResolution { get; }
         public GraphicsDevice GraphicsDevice { get; }
         public ResourceFactory ResourceFactory { get; }
         public Swapchain MainSwapchain { get; }
         public Framebuffer SwapchainFramebuffer { get; }
-
         public Framebuffer SecondaryFramebuffer { get; }
-        public CommandList EffectCommandList { get; }
+
+        public CommandList DrawCommands => _drawCommands;
+        public CommandList SecondaryCommandList { get; }
 
         public ContentManager Content { get; }
         public GlyphRasterizer GlyphRasterizer { get; }
         public ViewProjection ViewProjection { get; }
         public ShaderLibrary ShaderLibrary { get; }
-        public Pipelines Pipelines { get; }
+        public ShaderResources ShaderResources { get; }
 
         public ResourceSetCache ResourceSetCache { get; }
         public TextureCache TextureCache { get; }
         public Texture WhiteTexture { get; }
 
-        public GpuList<QuadVertex> QuadVertexBuffer { get; }
-        public GpuBuffer<ushort>? QuadIndexBuffer { get; private set; }
+        public Texture ScreenshotTexture => _screenshotTexture;
 
         public TextRenderContext Text { get; }
 
+        public DrawBatch BeginBatch(RenderTarget renderTarget)
+        {
+            return new DrawBatch(this, SecondaryCommandList, renderTarget);
+        }
+
         public void BeginFrame(in FrameStamp frameStamp)
         {
-            while (_oldIndexBuffers.TryDequeue(out GpuBuffer<ushort> buffer))
-            {
-                buffer.Dispose();
-            }
-
-            EffectCommandList.Begin();
-
             _drawCommands.Begin();
             _drawCommands.SetFramebuffer(SwapchainFramebuffer);
             _drawCommands.ClearColorTarget(0, RgbaFloat.Black);
 
-            _transferCommands.Begin();
-            QuadVertexBuffer.Begin();
+            SecondaryCommandList.Begin();
+
+            _quads.Begin();
+            _cubes.Begin();
             TextureCache.BeginFrame(frameStamp);
             ResourceSetCache.BeginFrame(frameStamp);
-            _lastDraw = default;
             Text.BeginFrame();
+
+            _transferCommands.Begin();
             TextureCache.EndFrame(_transferCommands);
+            _lastDraw = default;
         }
 
         public void EndFrame()
         {
-            Flush();
+            if (_lastCommandList is CommandList lastCl)
+            {
+                Flush(lastCl);
+            }
 
-            EffectCommandList.End();
-            GraphicsDevice.SubmitCommands(EffectCommandList);
-
+            SecondaryCommandList.End();
             _drawCommands.End();
-
+            ResourceSetCache.EndFrame();
 
             Text.EndFrame(_transferCommands);
-            ResourceSetCache.EndFrame();
-            QuadVertexBuffer.End(_transferCommands);
+            _quads.End(_transferCommands);
+            _cubes.End(_transferCommands);
             _transferCommands.End();
 
             GraphicsDevice.SubmitCommands(_transferCommands);
+            GraphicsDevice.SubmitCommands(SecondaryCommandList);
             GraphicsDevice.SubmitCommands(_drawCommands);
         }
 
@@ -353,6 +358,7 @@ namespace NitroSharp.Graphics
             => GraphicsDevice.SwapBuffers(MainSwapchain);
 
         public void PushQuad(
+            CommandList commandList,
             QuadGeometry quad,
             Texture texture,
             Texture alphaMask,
@@ -360,11 +366,11 @@ namespace NitroSharp.Graphics
             FilterMode filterMode)
         {
             ViewProjection vp = ViewProjection;
-            PushQuad(quad, GetPipeline(blendMode),
+            PushQuad(commandList, quad, ShaderResources.Quad.GetPipeline(blendMode),
                 new ResourceBindings(
                     new ResourceSetKey(vp.ResourceLayout, vp.Buffer.VdBuffer),
                     new ResourceSetKey(
-                        Pipelines.CommonResourceLayout,
+                        ShaderResources.Quad.ResourceLayout,
                         texture,
                         alphaMask,
                         GetSampler(filterMode)
@@ -373,44 +379,52 @@ namespace NitroSharp.Graphics
             );
         }
 
-        public void PushQuad(QuadGeometry quad, Pipeline pipeline, in ResourceBindings resources)
+        public void PushQuad(
+            CommandList commandList,
+            QuadGeometry quad,
+            Pipeline pipeline,
+            in ResourceBindings resources)
         {
-            Debug.Assert(QuadIndexBuffer != null);
-            uint oldQuadCount = QuadVertexBuffer.Count / 4u;
-            GpuListSlice<QuadVertex> vertices = QuadVertexBuffer.Append(4);
-            Span<QuadVertex> src = MemoryMarshal.CreateSpan(ref quad.TopLeft, 4);
-            src.CopyTo(vertices.Data);
-            ResizeIndexBufferIfNecessary();
-            PushDraw(new Draw
+            Mesh<QuadVertex> mesh = _quads.Append(MemoryMarshal.CreateSpan(ref quad.TopLeft, 4));
+            PushDraw(commandList, new Draw
             {
                 Pipeline = pipeline,
                 ResourceBindings = resources,
-                BufferBindings = new BufferBindings(vertices.Buffer, QuadIndexBuffer.VdBuffer),
-                Params = DrawParams.Indexed(0, 6 * oldQuadCount, 6)
+                BufferBindings = new BufferBindings(mesh.Vertices.Buffer, mesh.Indices.Buffer),
+                Params = DrawParams.Indexed(0, mesh.IndexBase, 6)
             });
         }
 
-        public void PushDraw(in Draw draw)
+        public void PushDraw(CommandList commandList, in Draw draw)
         {
-            if (ReferenceEquals(draw.Pipeline, _lastDraw.Pipeline)
-                && draw.ResourceBindings.Equals(_lastDraw.ResourceBindings)
-                && draw.BufferBindings.Equals(_lastDraw.BufferBindings)
-                && DrawParams.TryMerge(ref _lastDraw.Params, draw.Params))
+            if (_lastCommandList is CommandList lastCL && commandList != lastCL)
             {
-                return;
+                Flush(lastCL);
+            }
+            else
+            {
+                if (ReferenceEquals(draw.Pipeline, _lastDraw.Pipeline)
+                    && draw.ResourceBindings.Equals(_lastDraw.ResourceBindings)
+                    && draw.BufferBindings.Equals(_lastDraw.BufferBindings)
+                    && DrawParams.TryMerge(ref _lastDraw.Params, draw.Params))
+                {
+                    return;
+                }
+
+                if (_lastDraw.Pipeline is object && _lastCommandList is object)
+                {
+                    Flush(_lastCommandList);
+                }
             }
 
-            if (!(_lastDraw.Pipeline is null))
-            {
-                Flush();
-            }
+            _lastCommandList = commandList;
             _lastDraw = draw;
         }
 
-        private void Flush()
+        private void Flush(CommandList commandList)
         {
             if (_lastDraw.Pipeline is null) { return; }
-            CommandList cl = _drawCommands;
+            CommandList cl = commandList;
             cl.SetPipeline(_lastDraw.Pipeline);
             ref BufferBindings buffers = ref _lastDraw.BufferBindings;
             if (buffers.Vertices is DeviceBuffer vertices)
@@ -464,20 +478,11 @@ namespace NitroSharp.Graphics
             }
         }
 
-        private Sampler GetSampler(FilterMode filterMode) => filterMode switch
+        public Sampler GetSampler(FilterMode filterMode) => filterMode switch
         {
             FilterMode.Linear => GraphicsDevice.LinearSampler,
             FilterMode.Point => GraphicsDevice.PointSampler,
             _ => ThrowHelper.Unreachable<Sampler>()
-        };
-
-        private Pipeline GetPipeline(BlendMode blendMode) => blendMode switch
-        {
-            BlendMode.Alpha => Pipelines.AlphaBlend,
-            BlendMode.Additive => Pipelines.AdditiveBlend,
-            BlendMode.ReverseSubtractive => Pipelines.ReverseSubtractiveBlend,
-            BlendMode.Multiplicative => Pipelines.MultiplicativeBlend,
-            _ => ThrowHelper.Unreachable<Pipeline>()
         };
 
         private Texture CreateWhiteTexture()
@@ -504,83 +509,25 @@ namespace NitroSharp.Graphics
             return texture;
         }
 
-        private void ResizeIndexBufferIfNecessary()
-        {
-            uint indicesNeeded = 6 * (QuadVertexBuffer.Capacity / 4u);
-            if (QuadIndexBuffer == null || QuadIndexBuffer.Capacity < indicesNeeded)
-            {
-                if (QuadIndexBuffer is GpuBuffer<ushort> oldBuffer)
-                {
-                    _oldIndexBuffers.Enqueue(oldBuffer);
-                }
-                Span<ushort> quadIndices = stackalloc ushort[] { 0, 1, 2, 2, 1, 3 };
-                var indices = new ushort[indicesNeeded];
-                for (int i = 0; i < indicesNeeded; i++)
-                {
-                    int quad = i / 6;
-                    int vertexInQuad = i % 6;
-                    indices[i] = (ushort)(quadIndices[vertexInQuad] + 4 * quad);
-                }
-                QuadIndexBuffer = GpuBuffer<ushort>.CreateIndex(GraphicsDevice, indices);
-            }
-        }
-
         public void Dispose()
         {
+            _lastDraw = default;
+            _lastCommandList = null;
             _transferCommands.Dispose();
             _drawCommands.Dispose();
-            EffectCommandList.Dispose();
-            Pipelines.Dispose();
+            SecondaryCommandList.Dispose();
+            ShaderResources.Dispose();
             WhiteTexture.Dispose();
             _screenshotTexture.Dispose();
-            QuadVertexBuffer.Dispose();
-            QuadIndexBuffer?.Dispose();
+            Text.Dispose();
+            _quads.Dispose();
+            _cubes.Dispose();
             TextureCache.Dispose();
             ResourceSetCache.Dispose();
             ViewProjection.Dispose();
             SecondaryFramebuffer.Dispose();
             _secondaryFramebufferTexture.Dispose();
             ShaderLibrary.Dispose();
-        }
-    }
-
-    internal sealed class ViewProjection : IDisposable
-    {
-        public ViewProjection(GraphicsDevice gd, Size designResolution)
-        {
-            var projection = Matrix4x4.CreateOrthographicOffCenter(
-                left: 0, right: designResolution.Width,
-                bottom: designResolution.Height, top: 0,
-                zNearPlane: 0.0f, zFarPlane: -1.0f
-            );
-            ResourceFactory rf = gd.ResourceFactory;
-            ResourceLayout = rf.CreateResourceLayout(new ResourceLayoutDescription(
-                new ResourceLayoutElementDescription(
-                    "ViewProjection",
-                    ResourceKind.UniformBuffer,
-                    ShaderStages.Vertex
-                )
-            ));
-            Buffer = GpuBuffer<Matrix4x4>.CreateUniform(gd, projection);
-            ResourceSet = rf.CreateResourceSet(
-                new ResourceSetDescription(ResourceLayout, Buffer.VdBuffer)
-            );
-        }
-
-        public ResourceSet ResourceSet { get; }
-        public ResourceLayout ResourceLayout { get; }
-        public GpuBuffer<Matrix4x4> Buffer { get; }
-
-        public void Update(GraphicsDevice gd, in Matrix4x4 vp)
-        {
-            Buffer.Update(gd, vp);
-        }
-
-        public void Dispose()
-        {
-            ResourceSet.Dispose();
-            ResourceLayout.Dispose();
-            Buffer.Dispose();
         }
     }
 }

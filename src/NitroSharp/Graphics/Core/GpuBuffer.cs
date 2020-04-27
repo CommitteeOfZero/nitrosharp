@@ -7,24 +7,8 @@ using Veldrid;
 
 #nullable enable
 
-namespace NitroSharp.Graphics
+namespace NitroSharp.Graphics.Core
 {
-    //internal abstract class GpuBuffer : IDisposable
-    //{
-    //    protected DeviceBuffer? _buffer;
-//
-    //    public virtual DeviceBuffer VdBuffer
-    //    {
-    //        get => _buffer!;
-    //        protected set => _buffer = value;
-    //    }
-//
-    //    public virtual void Dispose()
-    //    {
-    //        _buffer!.Dispose();
-    //    }
-    //}
-
     internal sealed class GpuBuffer<T> : IDisposable
         where T : unmanaged
     {

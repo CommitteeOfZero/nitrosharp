@@ -6,6 +6,18 @@ using Veldrid;
 
 namespace NitroSharp
 {
+    public sealed class SystemScripts
+    {
+        public string Startup { get; set; } = "boot.nss";
+        public string Menu { get; set; } = "sys_menu.nss";
+        public string Save { get; set; } = "sys_save.nss";
+        public string Load { get; set; } = "sys_load.nss";
+        public string Config { get; set; } = "sys_config.nss";
+        public string Backlog { get; set; } = "sys_backlog.nss";
+        public string ExitConfirmation { get; set; } = "sys_close.nss";
+        public string ReturnToMenu { get; set; } = "sys_reset.nss";
+    }
+
     public sealed class Configuration
     {
         public int WindowWidth { get; set; } = 1280;
@@ -18,7 +30,8 @@ namespace NitroSharp
 
         public string ContentRoot { get; set; } = "Content";
         public bool EnableDiagnostics { get; set; }
-        public string StartupScript { get; set; } = "boot.nss";
+        public SystemScripts SysScripts { get; } = new SystemScripts();
+
         public bool UseUtf8 { get; set; } = false;
         public bool SkipUpToDateCheck { get; set; } = false;
 

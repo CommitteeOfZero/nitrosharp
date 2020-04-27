@@ -34,7 +34,6 @@ namespace NitroSharp.Graphics
         private MappedResource _map;
         private uint _capacity;
         private int _cursor;
-        private bool _bufferLocked;
 
         private readonly List<(DeviceBuffer, DeviceBuffer)> _oldBuffers;
 
@@ -81,7 +80,7 @@ namespace NitroSharp.Graphics
 
             static void outOfBounds() => throw new IndexOutOfRangeException();
 
-            if (!_bufferLocked) { notMapped(); }
+            if (_map.Data == IntPtr.Zero) { notMapped(); }
             if (index >= _cursor) { outOfBounds(); }
 
             var ptr = (T*)Unsafe.Add<T>((void*)_map.Data, (int)index);
@@ -90,7 +89,6 @@ namespace NitroSharp.Graphics
 
         public void Begin(bool resetPosition = true)
         {
-            _bufferLocked = true;
             foreach ((DeviceBuffer staging, DeviceBuffer gpuBuf) in _oldBuffers)
             {
                 staging.Dispose();
@@ -107,7 +105,6 @@ namespace NitroSharp.Graphics
         public (DeviceBuffer buffer, uint index) Append(in T vertex)
         {
             Debug.Assert(_buffer != null);
-            Debug.Assert(_bufferLocked);
             EnsureCapacity(_cursor + 1);
             var ptr = (T*)Unsafe.Add<T>((void*)_map.Data, _cursor);
             *ptr = vertex;
@@ -117,7 +114,6 @@ namespace NitroSharp.Graphics
         public GpuListSlice<T> Append(uint count, out uint position)
         {
             Debug.Assert(_buffer != null);
-            Debug.Assert(_bufferLocked);
             EnsureCapacity(_cursor + count);
             position = (uint)_cursor;
             var span = new Span<T>((void*)_map.Data, (int)_capacity)
@@ -129,7 +125,6 @@ namespace NitroSharp.Graphics
         public GpuListSlice<T> Append(uint count)
         {
             Debug.Assert(_buffer != null);
-            Debug.Assert(_bufferLocked);
             EnsureCapacity(_cursor + count);
             var dst = new Span<T>((void*)_map.Data, (int)_capacity);
             int cursor = _cursor;
@@ -141,7 +136,6 @@ namespace NitroSharp.Graphics
         {
             _gd.Unmap(_stagingBuffer);
             _map = default;
-            _bufferLocked = false;
             foreach ((DeviceBuffer src, DeviceBuffer dst) in _oldBuffers)
             {
                 commandList.CopyBuffer(src, 0, dst, 0, src.SizeInBytes);

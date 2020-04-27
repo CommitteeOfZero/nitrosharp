@@ -47,3 +47,8 @@ function break_from_nested_if() {
     assert_eq(3, $whileIter);
     assert_eq(4, $ifCounter);
 }
+
+function at_operator() {
+    $foo = 42;
+    assert_eq(2 + 2, 4);
+}

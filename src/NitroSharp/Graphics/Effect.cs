@@ -26,20 +26,6 @@ namespace NitroSharp.Graphics
             => HashCode.Combine(EffectKind, NumberOfPasses);
     }
 
-    internal static class EffectPipelines
-    {
-        public static Pipeline Get(Pipelines pipelines, EffectKind effect)
-        {
-            return effect switch
-            {
-                EffectKind.Blit => pipelines.Blit,
-                EffectKind.Grayscale => pipelines.Grayscale,
-                EffectKind.BoxBlur => pipelines.BoxBlur,
-                _ => throw new Exception()
-            };
-        }
-    }
-
     internal readonly struct SinglePassEffect : IDisposable
     {
         private readonly Pipeline _pipeline;
@@ -49,7 +35,7 @@ namespace NitroSharp.Graphics
 
         public SinglePassEffect(
             ResourceFactory resourceFactory,
-            Pipelines pipelines,
+            ShaderResources shaderResources,
             ResourceLayout inputLayout,
             Texture input1,
             Texture? input2,
@@ -82,7 +68,7 @@ namespace NitroSharp.Graphics
                         sampler
                     }
             ));
-            _pipeline = EffectPipelines.Get(pipelines, effectKind);
+            _pipeline = shaderResources.Effects.GetPipeline(effectKind);
             _ownsFramebuffer = framebuffer == null;
         }
 
@@ -107,7 +93,7 @@ namespace NitroSharp.Graphics
 
     internal readonly struct MultipassEffect : IDisposable
     {
-        private readonly Pipelines _pipelines;
+        private readonly ShaderResources _shaderResources;
         private readonly ResourceSet _srcResourceSet;
         private readonly ArrayBuilder<EffectKind> _passes;
         private readonly (Framebuffer fb, ResourceSet rs) _target0;
@@ -115,13 +101,13 @@ namespace NitroSharp.Graphics
 
         public MultipassEffect(
             ResourceFactory resourceFactory,
-            Pipelines pipelines,
+            ShaderResources shaderResources,
             Texture input1,
             Texture? input2,
             Sampler sampler,
             ReadOnlySpan<EffectDescription> effectChain)
         {
-            _pipelines = pipelines;
+            _shaderResources = shaderResources;
             _passes = new ArrayBuilder<EffectKind>(initialCapacity: 16);
             foreach (ref readonly EffectDescription effectDesc in effectChain)
             {
@@ -139,7 +125,7 @@ namespace NitroSharp.Graphics
             }
 
             _srcResourceSet = resourceFactory.CreateResourceSet(new ResourceSetDescription(
-                pipelines.SimpleEffectInputLayout,
+                shaderResources.Effects.ResourceLayout,
                 input2 == null
                     ? new BindableResource[]
                     {
@@ -165,7 +151,7 @@ namespace NitroSharp.Graphics
                     colorTargets: resourceFactory.CreateTexture(ref textureDesc)
                 ));
                 ResourceSet rs = resourceFactory.CreateResourceSet(new ResourceSetDescription(
-                    pipelines.SimpleEffectInputLayout,
+                    shaderResources.Effects.ResourceLayout,
                     input2 == null
                         ? new BindableResource[]
                         {
@@ -189,7 +175,7 @@ namespace NitroSharp.Graphics
         public Texture Apply(CommandList commandList)
         {
             commandList.SetFramebuffer(_target0.fb);
-            commandList.SetPipeline(EffectPipelines.Get(_pipelines, _passes[0]));
+            commandList.SetPipeline(_shaderResources.Effects.GetPipeline(_passes[0]));
             commandList.SetGraphicsResourceSet(0, _srcResourceSet);
             commandList.Draw(3);
 
@@ -200,7 +186,7 @@ namespace NitroSharp.Graphics
                     i % 2 == 0 ? (_target0, _target1) : (_target1, _target0);
 
                 commandList.SetFramebuffer(dst.fb);
-                commandList.SetPipeline(EffectPipelines.Get(_pipelines, _passes[i]));
+                commandList.SetPipeline(_shaderResources.Effects.GetPipeline(_passes[i]));
                 commandList.SetGraphicsResourceSet(0, src.rs);
                 commandList.Draw(3);
 

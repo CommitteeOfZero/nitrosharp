@@ -5,7 +5,8 @@
     <OutputType>Exe</OutputType>
     <LangVersion>8.0</LangVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <ApplicationIcon>hoppygirl_fA5_icon.ico</ApplicationIcon>
+    <AssemblyName>Game</AssemblyName>
+    <ApplicationIcon>CoZ.ico</ApplicationIcon>
     <PlatformTarget>x64</PlatformTarget>
     <DebugType>pdbonly</DebugType>
     <RootAllApplicationAssemblies>false</RootAllApplicationAssemblies>
@@ -32,7 +33,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Condition="'$(Native)' == 'true'" Include="Microsoft.DotNet.ILCompiler" Version="1.0.0-alpha-28720-02" />
+    <PackageReference Condition="'$(Native)' == 'true'" Include="Microsoft.DotNet.ILCompiler" Version="1.0.0-alpha-28817-02" />
   </ItemGroup>
 
 </Project>

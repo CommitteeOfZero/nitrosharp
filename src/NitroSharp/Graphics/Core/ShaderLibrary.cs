@@ -6,7 +6,7 @@ using Veldrid;
 
 #nullable enable
 
-namespace NitroSharp.Graphics
+namespace NitroSharp.Graphics.Core
 {
     internal sealed class ShaderLibrary : IDisposable
     {

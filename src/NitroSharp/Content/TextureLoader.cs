@@ -17,10 +17,11 @@ namespace NitroSharp.Content
             _gd = graphicsDevice;
             _rf = graphicsDevice.ResourceFactory;
             _cl = _gd.ResourceFactory.CreateCommandList();
+            _cl.Name = "Content loading";
         }
 
         protected abstract Texture LoadStaging(Stream stream);
-        public abstract Size GetTextureDimensions(Stream stream);
+        public abstract Size GetTextureSize(Stream stream);
 
         public Texture LoadTexture(Stream stream, bool staging)
         {

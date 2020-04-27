@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 
 #nullable enable
@@ -140,7 +141,11 @@ namespace NitroSharp.Utilities
             return (Insert(value), null);
         }
 
-        public ref T Get(FreeListHandle handle) => ref _slots[handle.Index].Value;
+        public ref T Get(FreeListHandle handle)
+        {
+            Debug.Assert(handle.Version > 0);
+            return ref _slots[handle.Index].Value;
+        }
 
         public RefOption<T> GetOpt(WeakFreeListHandle handle)
         {
@@ -160,8 +165,16 @@ namespace NitroSharp.Utilities
             return RefOption<T>.None;
         }
 
+        public T? TryFree(WeakFreeListHandle handle)
+        {
+            return GetOpt(handle).HasValue
+                ? Free(new FreeListHandle(handle.Index, handle.Version))
+                : (T?)null;
+        }
+
         public T Free(FreeListHandle handle)
         {
+            Debug.Assert(handle.Version > 0);
             ref Slot slot = ref _slots[handle.Index];
             slot.Next = _head;
             slot.Version++;
@@ -221,7 +234,6 @@ namespace NitroSharp.Utilities
             return handle;
         }
 
-        /// <exception cref="NitroSharp.InvalidHandleException"></exception>
         public void ThrowIfInvalid(FreeListHandle handle)
         {
             static void invalid() => throw new InvalidHandleException(

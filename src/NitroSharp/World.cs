@@ -232,20 +232,30 @@ namespace NitroSharp
         private readonly List<(AnimationKey, PropertyAnimation)> _animationsToDeactivate;
         private readonly List<(AnimationKey, PropertyAnimation)> _queuedAnimations;
 
+        private readonly EntityGroup<VmThread> _vmThreads;
         private readonly SortableEntityGroup<RenderItem> _renderItems;
+        private readonly EntityGroup<Image> _images;
+        private readonly EntityGroup<Choice> _choices;
+
 
         public World()
         {
             _entities = new Dictionary<EntityId, EntityRec>(1024);
             _aliases = new Dictionary<EntityPath, EntityId>(128);
+            _vmThreads = new EntityGroup<VmThread>();
             _renderItems = new SortableEntityGroup<RenderItem>();
+            _images = new EntityGroup<Image>();
+            _choices = new EntityGroup<Choice>();
             _pendingBucketChanges = new List<(EntityId, EntityBucket)>();
             _activeAnimations = new Dictionary<AnimationKey, PropertyAnimation>();
             _animationsToDeactivate = new List<(AnimationKey, PropertyAnimation)>();
             _queuedAnimations = new List<(AnimationKey, PropertyAnimation)>();
         }
 
+        public EntityGroupView<VmThread> Threads => _vmThreads;
         public SortableEntityGroupView<RenderItem> RenderItems => _renderItems;
+        public EntityGroupView<Image> Images => _images;
+        public EntityGroupView<Choice> Choices => _choices;
 
         public void BeginFrame()
         {
@@ -292,11 +302,29 @@ namespace NitroSharp
         public Entity? Get(in EntityId entityId)
             => _entities.TryGetValue(entityId, out EntityRec rec) ? rec.Entity : null;
 
-        public T AddRenderItem<T>(T renderItem)
+        public VmThread Add(VmThread thread)
+        {
+            Add(thread, _vmThreads);
+            return thread;
+        }
+
+        public T Add<T>(T renderItem)
             where T : RenderItem
         {
             Add(renderItem, _renderItems);
             return renderItem;
+        }
+
+        public Image Add(Image image)
+        {
+            Add(image, _images);
+            return image;
+        }
+
+        public Choice Add(Choice choice)
+        {
+            Add(choice, _choices);
+            return choice;
         }
 
         public void SetAlias(in EntityId entityId, in EntityPath alias)
@@ -369,6 +397,11 @@ namespace NitroSharp
           where T : Entity
         {
             EntityId id = entity.Id;
+            if (Get(id) is object)
+            {
+                DestroyEntity(id);
+            }
+
             if (entity.Parent.IsValid)
             {
                 EntityRec parentRec = GetRecord(entity.Parent);

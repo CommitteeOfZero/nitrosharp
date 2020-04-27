@@ -54,6 +54,12 @@ namespace NitroSharp.NsScript.VM
                 case BuiltInFunction.WaitKey:
                     WaitKey(ref args);
                     break;
+                case BuiltInFunction.WaitAction:
+                    WaitAction(ref args);
+                    break;
+                case BuiltInFunction.WaitMove:
+                    WaitMove(ref args);
+                    break;
 
                 case BuiltInFunction.CreateColor:
                     CreateColor(ref args);
@@ -169,11 +175,126 @@ namespace NitroSharp.NsScript.VM
                 case BuiltInFunction.assert_eq:
                     AssertEqual(ref args);
                     break;
+
+                case BuiltInFunction.XBOX360_LockVideo:
+                    XBOX360_LockVideo(ref args);
+                    break;
+                case BuiltInFunction.XBOX360_IsSignin:
+                    XBOX360_IsSignin(ref args);
+                    break;
+                case BuiltInFunction.XBOX360_Presence:
+                    XBOX360_Presence(ref args);
+                    break;
+                case BuiltInFunction.XBOX360_Achieved:
+                    XBOX360_Achieved(ref args);
+                    break;
+                case BuiltInFunction.XBOX360_CheckStorage:
+                    XBOX360_CheckStorage(ref args);
+                    break;
+                case BuiltInFunction.XBOX360_UserIndex:
+                    XBOX360_UserIndex(ref args);
+                    break;
+                case BuiltInFunction.XBOX360_CurrentStorage:
+                    XBOX360_CurrentStorage(ref args);
+                    break;
+                case BuiltInFunction.XBOX360_StorageSize:
+                    XBOX360_StorageSize(ref args);
+                    break;
+                case BuiltInFunction.XBOX360_ExistContent:
+                    XBOX360_ExistContent(ref args);
+                    break;
+                case BuiltInFunction.XBOX360_PadTrigger:
+                    XBOX360_PadTrigger(ref args);
+                    break;
+                case BuiltInFunction.XBOX360_SelectStorage:
+                    XBOX360_SelectStorage(ref args);
+                    break;
+                case BuiltInFunction.XBOX360_InitUser:
+                    XBOX360_InitUser();
+                    break;
+                case BuiltInFunction.XBOX360_AwardGameIcon:
+                    XBOX360_AwardGameIcon();
+                    break;
             }
 
             ConstantValue? result = _result;
             _result = null;
             return result;
+        }
+
+        private void WaitMove(ref ArgConsumer args)
+        {
+            _impl.WaitMove(args.TakeEntityQuery());
+        }
+
+        private void WaitAction(ref ArgConsumer args)
+        {
+            _impl.WaitAction(args.TakeEntityQuery(), args.TakeTimeSpan());
+        }
+
+        private void XBOX360_AwardGameIcon()
+        {
+        }
+
+        private void XBOX360_InitUser()
+        {
+        }
+
+        private void XBOX360_SelectStorage(ref ArgConsumer args)
+        {
+            int storage = args.TakeInt();
+            _result = ConstantValue.True;
+        }
+
+        private void XBOX360_PadTrigger(ref ArgConsumer args)
+        {
+            int unk = args.TakeInt();
+            _result = ConstantValue.Integer(0);
+        }
+
+        private void XBOX360_ExistContent(ref ArgConsumer args)
+        {
+            _result = ConstantValue.True;
+        }
+
+        private void XBOX360_StorageSize(ref ArgConsumer args)
+        {
+            _result = ConstantValue.Integer(int.MaxValue);
+        }
+
+        private void XBOX360_CurrentStorage(ref ArgConsumer args)
+        {
+            _result = ConstantValue.Integer(0);
+        }
+
+        private void XBOX360_UserIndex(ref ArgConsumer args)
+        {
+            _result = ConstantValue.Integer(0);
+        }
+
+        private void XBOX360_CheckStorage(ref ArgConsumer args)
+        {
+            _result = ConstantValue.True;
+        }
+
+        private void XBOX360_Achieved(ref ArgConsumer args)
+        {
+            int unk = args.TakeInt();
+        }
+
+        private void XBOX360_Presence(ref ArgConsumer args)
+        {
+            int unk = args.TakeInt();
+        }
+
+        private void XBOX360_IsSignin(ref ArgConsumer args)
+        {
+            _result = ConstantValue.True;
+        }
+
+        private void XBOX360_LockVideo(ref ArgConsumer args)
+        {
+            bool unk = args.TakeBool();
         }
 
         private void CreateName(ref ArgConsumer args)
@@ -199,8 +320,8 @@ namespace NitroSharp.NsScript.VM
                 priority: args.TakeInt(),
                 x: args.TakeCoordinate(),
                 y: args.TakeCoordinate(),
-                path: args.TakeString(),
-                unk: args.TakeBool()
+                maskPath: args.TakeString(),
+                inheritTransform: args.TakeBool()
             );
         }
 
@@ -286,7 +407,8 @@ namespace NitroSharp.NsScript.VM
                 x: args.TakeCoordinate(),
                 y: args.TakeCoordinate(),
                 width: args.TakeInt(),
-                height: args.TakeInt()
+                height: args.TakeInt(),
+                inheritTransform: args.TakeBool()
             );
         }
 
@@ -515,10 +637,10 @@ namespace NitroSharp.NsScript.VM
             _impl.CreateSpriteEx(
                 args.TakeEntityPath(),
                 priority: args.TakeInt(),
-                x1: args.TakeCoordinate(),
-                y1: args.TakeCoordinate(),
-                x2: args.TakeCoordinate(),
-                y2: args.TakeCoordinate(),
+                x: args.TakeCoordinate(),
+                y: args.TakeCoordinate(),
+                srcX: args.TakeInt(),
+                srcY: args.TakeInt(),
                 width: args.TakeInt(),
                 height: args.TakeInt(),
                 args.TakeEntityPath()
@@ -675,6 +797,7 @@ namespace NitroSharp.NsScript.VM
                 {
                     BuiltInType.Integer => val.AsInteger()!.Value,
                     BuiltInType.String => int.Parse(val.AsString()!),
+                    BuiltInType.Null => 0,
                     _ => UnexpectedType<int>(val.Type)
                 };
                 return Time(num);

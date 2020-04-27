@@ -33,11 +33,11 @@ namespace NitroSharp
         public override string? ToString() => Path;
     }
 
-    internal class Entity : EntityInternal, IDisposable
+    internal abstract class Entity : EntityInternal, IDisposable
     {
         private SmallList<EntityId> _children;
 
-        public Entity(in ResolvedEntityPath path)
+        protected Entity(in ResolvedEntityPath path)
         {
             Id = path.Id;
             Parent = path.ParentId;
