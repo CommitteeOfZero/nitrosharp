@@ -1,7 +1,7 @@
 ﻿{
   "activeProfile": "Test",
   "graphics.vsync": true,
-  "graphics.backend": "Vulkan",
+  "graphics.backend": "D3D11",
   "audio.backend": "XAudio2",
   "window.title": "COWS;HEAD NOAH",
   "window.width": 1280,

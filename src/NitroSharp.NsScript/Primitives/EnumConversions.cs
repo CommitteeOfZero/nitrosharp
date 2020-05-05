@@ -18,28 +18,29 @@
                 BuiltInConstant.SubRender => NsEntityAction.SetReverseSubtractiveBlend,
                 BuiltInConstant.MulRender => NsEntityAction.SetMultiplicativeBlend,
                 BuiltInConstant.Play => NsEntityAction.Play,
+                BuiltInConstant.PushText => NsEntityAction.NoTypewriterAnimation,
                 _ => NsEntityAction.Other,
             };
         }
 
-        public static NsEasingFunction ToEasingFunction(BuiltInConstant val)
+        public static NsEaseFunction ToEaseFunction(BuiltInConstant val)
         {
             return val switch
             {
-                BuiltInConstant._None => NsEasingFunction.None,
+                BuiltInConstant._None => NsEaseFunction.None,
 
-                BuiltInConstant.Axl1 => NsEasingFunction.QuadraticEaseIn,
-                BuiltInConstant.Axl2 => NsEasingFunction.CubicEaseIn,
-                BuiltInConstant.Axl3 => NsEasingFunction.QuarticEaseIn,
+                BuiltInConstant.Axl1 => NsEaseFunction.QuadraticEaseIn,
+                BuiltInConstant.Axl2 => NsEaseFunction.CubicEaseIn,
+                BuiltInConstant.Axl3 => NsEaseFunction.QuarticEaseIn,
 
-                BuiltInConstant.Dxl1 => NsEasingFunction.QuadraticEaseOut,
-                BuiltInConstant.Dxl2 => NsEasingFunction.CubicEaseOut,
-                BuiltInConstant.Dxl3 => NsEasingFunction.QuarticEaseOut,
+                BuiltInConstant.Dxl1 => NsEaseFunction.QuadraticEaseOut,
+                BuiltInConstant.Dxl2 => NsEaseFunction.CubicEaseOut,
+                BuiltInConstant.Dxl3 => NsEaseFunction.QuarticEaseOut,
 
-                BuiltInConstant.AxlAuto => NsEasingFunction.SineEaseIn,
-                BuiltInConstant.DxlAuto => NsEasingFunction.SineEaseOut,
-                BuiltInConstant.AxlDxl => NsEasingFunction.SineEaseInOut,
-                BuiltInConstant.DxlAxl => NsEasingFunction.SineEaseOutIn,
+                BuiltInConstant.AxlAuto => NsEaseFunction.SineEaseIn,
+                BuiltInConstant.DxlAuto => NsEaseFunction.SineEaseOut,
+                BuiltInConstant.AxlDxl => NsEaseFunction.SineEaseInOut,
+                BuiltInConstant.DxlAxl => NsEaseFunction.SineEaseOutIn,
 
                 _ => throw ThrowHelper.UnexpectedValue(nameof(val)),
             };

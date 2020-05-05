@@ -27,6 +27,7 @@
         // Colors
         Black,
         White,
+        Gray,
         Red,
         Green,
         Blue,

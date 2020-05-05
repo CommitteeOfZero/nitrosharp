@@ -1,5 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using NitroSharp.Utilities;
+using System;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Text;
@@ -32,8 +32,8 @@ namespace NitroSharp.NsScript.Syntax.PXml
                     }
                 }
 
-                PXmlNode node = ParseNode();
-                Debug.Assert(node != null);
+                PXmlNode? node = ParseNode();
+                if (node is null) { continue; }
                 if (children.Length == 0)
                 {
                     children = ImmutableArray.Create(node);
@@ -54,7 +54,7 @@ namespace NitroSharp.NsScript.Syntax.PXml
             return new PXmlContent(array);
         }
 
-        private PXmlNode ParseNode()
+        private PXmlNode? ParseNode()
         {
             SkipTrivia();
             StartScanning();
@@ -62,10 +62,10 @@ namespace NitroSharp.NsScript.Syntax.PXml
             return peek == '<' ? ParseElement() : ParsePlainText();
         }
 
-        private PXmlNode ParseElement()
+        private PXmlNode? ParseElement()
         {
             PXmlTag startTag = ParsePXmlTag();
-            PXmlNode node;
+            PXmlNode? node;
             switch (startTag.Name)
             {
                 case "FONT":
@@ -104,14 +104,18 @@ namespace NitroSharp.NsScript.Syntax.PXml
             return node;
         }
 
-        private VoiceElement ParseVoiceElement(in PXmlTag tag)
+        private VoiceElement? ParseVoiceElement(in PXmlTag tag)
         {
-            string characterName = tag.Attributes["name"];
-            string fileName = tag.Attributes["src"];
-            tag.Attributes.TryGetValue("mode", out string mode);
-            bool stop = mode == "off";
-            var action = stop ? NsVoiceAction.Stop : NsVoiceAction.Play;
-            return new VoiceElement(action, characterName, fileName);
+            AttributeList attrs = tag.Attributes;
+            if (attrs.Get("name") is string characterName
+                && attrs.Get("src") is string fileName)
+            {
+                bool stop = attrs.Get("mode") is "off";
+                var action = stop ? NsVoiceAction.Stop : NsVoiceAction.Play;
+                return new VoiceElement(action, characterName, fileName);
+            }
+
+            return null;
         }
 
         private FontElement ParseFontElement(in PXmlTag startTag)
@@ -119,29 +123,33 @@ namespace NitroSharp.NsScript.Syntax.PXml
             int? size = null;
             NsColor? color = null, outlineColor = null;
 
-            ImmutableDictionary<string, string> attributes = startTag.Attributes;
-            if (attributes.TryGetValue("size", out string value))
+            AttributeList attributes = startTag.Attributes;
+            if (attributes.Get("size") is string strSize)
             {
-                size = int.Parse(value);
+                size = int.Parse(strSize);
             }
-            if (attributes.TryGetValue("incolor", out value))
+            if (attributes.Get("incolor") is string strColor)
             {
-                color = NsColor.FromString(value);
+                color = NsColor.FromString(strColor);
             }
-            if (attributes.TryGetValue("outcolor", out value))
+            if (attributes.Get("outcolor") is string strOutlineColor)
             {
-                outlineColor = NsColor.FromString(value);
+                outlineColor = NsColor.FromString(strOutlineColor);
             }
 
             PXmlContent content = ParseContent(startTag.Name);
             return new FontElement(size, color, outlineColor, content);
         }
 
-        private RubyElement ParseRubyElement(in PXmlTag startTag)
+        private RubyElement? ParseRubyElement(in PXmlTag startTag)
         {
-            string rubyText = startTag.Attributes["text"];
-            PXmlContent rubyBase = ParseContent("RUBY");
-            return new RubyElement(rubyBase, rubyText);
+            if (startTag.Attributes.Get("text") is string rubyText)
+            {
+                PXmlContent rubyBase = ParseContent("RUBY");
+                return new RubyElement(rubyBase, rubyText);
+            }
+
+            return null;
         }
 
         private PXmlText ParsePlainText()
@@ -218,7 +226,7 @@ namespace NitroSharp.NsScript.Syntax.PXml
 
             TextSpan span = CurrentLexemeSpan;
             string name = Text.Substring(span.Start, span.Length);
-            Dictionary<string, string>? attributes = null;
+            var attributes = new AttributeListBuilder();
             while ((c = PeekChar()) != '>')
             {
                 if (c == ' ' || SyntaxFacts.IsNewLine(c))
@@ -227,17 +235,12 @@ namespace NitroSharp.NsScript.Syntax.PXml
                 }
                 else
                 {
-                    attributes ??= new Dictionary<string, string>();
-                    (string key, string value) = ParseXmlAttribute();
-                    attributes.Add(key, value);
+                    attributes.Add(ParseXmlAttribute());
                 }
             }
 
             EatChar('>');
-            ImmutableDictionary<string, string> attr = attributes != null
-                ? attributes.ToImmutableDictionary()
-                : ImmutableDictionary<string, string>.Empty;
-            return new PXmlTag(name, attr);
+            return new PXmlTag(name, attributes.Build());
         }
 
         private (string key, string value) ParseXmlAttribute()
@@ -265,16 +268,64 @@ namespace NitroSharp.NsScript.Syntax.PXml
             return (key, value);
         }
 
-        private readonly struct PXmlTag
+        private readonly ref struct PXmlTag
         {
-            public PXmlTag(string name, ImmutableDictionary<string, string> attributes)
+            public PXmlTag(string name, AttributeList attributes)
             {
                 Name = name;
                 Attributes = attributes;
             }
 
             public string Name { get; }
-            public ImmutableDictionary<string, string> Attributes { get; }
+            public AttributeList Attributes { get; }
+        }
+
+        private struct AttributeListBuilder
+        {
+            private SmallList<(string, string)> _attributes;
+
+            public void Add((string key, string value) attribute)
+            {
+                if (Get(attribute.key) is object)
+                {
+                    throw new Exception($"Attribute '{attribute.key}' specified more than once.");
+                }
+                _attributes.Add(attribute);
+            }
+
+            public AttributeList Build()
+            {
+                var list = new AttributeList(_attributes);
+                _attributes = default;
+                return list;
+            }
+
+            private string? Get(string key)
+                => AttributeList.Get(_attributes, key);
+        }
+
+        private readonly ref struct AttributeList
+        {
+            private readonly SmallList<(string, string)> _attributes;
+
+            public AttributeList(SmallList<(string, string)> attributes)
+                => _attributes = attributes;
+
+            public string? Get(string key)
+                => Get(_attributes, key);
+
+            public static string? Get(SmallList<(string, string)> list, string key)
+            {
+                foreach ((string k, string v) in list.AsSpan())
+                {
+                    if (k.Equals(key, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return v;
+                    }
+                }
+
+                return null;
+            }
         }
     }
 }

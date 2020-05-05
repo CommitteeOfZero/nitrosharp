@@ -2,13 +2,14 @@
 {
     public enum BuiltInFunction : byte
     {
-        Wait,
-        WaitKey,
         Request,
         SetAlias,
         Delete,
         CreateProcess,
         CreateName,
+
+        Wait,
+        WaitKey,
 
         LoadImage,
         LoadColor,
@@ -16,9 +17,9 @@
         CreateTexture,
         CreateClipTexture,
         CreateMask,
+        CreateWindow,
         CreateChoice,
 
-        CreateWindow,
         CreateText,
         LoadFont,
         LoadText,
@@ -38,15 +39,16 @@
         MoveCube,
         BezierMove,
         DrawTransition,
-
-        WaitAction,
         WaitMove,
+        WaitAction,
 
         Shake,
         SetBlur,
         CreateEffect,
         SetTone,
         SetShade,
+        Draw,
+        SetVertex,
 
         CreateSound,
         SetVolume,
@@ -95,8 +97,6 @@
 
         SetFrequency,
         SetPan,
-        Draw,
-        SetVertex,
         SetStream,
         Exit,
 

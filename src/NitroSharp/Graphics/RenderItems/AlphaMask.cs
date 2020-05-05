@@ -3,34 +3,31 @@ using Veldrid;
 
 namespace NitroSharp.Graphics
 {
-    internal sealed class AlphaMask : RenderItem2D
+    internal sealed class AlphaMask :  ConstraintBox
     {
-        private readonly SizeF? _size;
-
         public AlphaMask(
             in ResolvedEntityPath path,
             int priority,
-            AssetRef<Texture>? texture,
-            SizeF? size,
+            AssetRef<Texture> texture,
             bool inheritTransform)
-            : base(in path, priority)
+            : base(path, priority, inheritTransform)
         {
-            _size = size;
             Texture = texture;
-            InheritTransform = inheritTransform;
         }
 
-        public AssetRef<Texture>? Texture { get; }
-        public bool InheritTransform { get; }
+        public AssetRef<Texture> Texture { get; }
 
-        protected override SizeF GetUnconstrainedBounds(RenderContext ctx)
+        public override void Render(RenderContext ctx)
         {
-            return Texture is AssetRef<Texture> tex ? ctx.Content.GetTextureSize(tex).ToSizeF() : _size.Value;
         }
+
+        public override Size GetUnconstrainedBounds(RenderContext ctx)
+            => ctx.Content.GetTextureSize(Texture);
 
         public override void Dispose()
         {
-            Texture?.Dispose();
+            base.Dispose();
+            Texture.Dispose();
         }
     }
 }

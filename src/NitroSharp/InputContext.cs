@@ -1,12 +1,13 @@
 ﻿using System.Collections.Generic;
 using System.Numerics;
 using Veldrid;
+using Veldrid.Sdl2;
 
 #nullable enable
 
 namespace NitroSharp
 {
-    internal sealed class InputTracker
+    internal sealed class InputContext
     {
         private readonly GameWindow _window;
 
@@ -16,9 +17,9 @@ namespace NitroSharp
         private readonly HashSet<MouseButton> _currentlyPressedMouseButtons = new HashSet<MouseButton>();
         private readonly HashSet<MouseButton> _newMouseButtonsThisFrame = new HashSet<MouseButton>();
 
-        private Vector2 _previousSnapshotMousePosition;
+        private Vector2 _prevSnapshotMousePosition;
 
-        public InputTracker(GameWindow window)
+        public InputContext(GameWindow window)
         {
             _window = window;
             CurrentSnapshot = null!;
@@ -52,8 +53,8 @@ namespace NitroSharp
             _newKeysThisFrame.Clear();
             _newMouseButtonsThisFrame.Clear();
 
-            MouseDelta = CurrentSnapshot.MousePosition - _previousSnapshotMousePosition;
-            _previousSnapshotMousePosition = CurrentSnapshot.MousePosition;
+            MouseDelta = CurrentSnapshot.MousePosition - _prevSnapshotMousePosition;
+            _prevSnapshotMousePosition = CurrentSnapshot.MousePosition;
 
             IReadOnlyList<KeyEvent> keyEvents = snapshot.KeyEvents;
             for (int i = 0; i < keyEvents.Count; i++)

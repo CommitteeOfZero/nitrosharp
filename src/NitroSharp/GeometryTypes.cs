@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Numerics;
+using SharpDX.Direct2D1;
 
 #nullable enable
 
@@ -14,11 +15,7 @@ namespace NitroSharp
     public struct SimpleVector3
     {
         public SimpleVector3(float x, float y, float z)
-        {
-            X = x;
-            Y = y;
-            Z = z;
-        }
+            => (X, Y, Z) = (x, y, z);
 
         public float X;
         public float Y;
@@ -27,6 +24,8 @@ namespace NitroSharp
 
     public readonly struct Point2D : IEquatable<Point2D>
     {
+        public static Point2D Zero => default;
+
         public readonly int X;
         public readonly int Y;
 
@@ -44,6 +43,8 @@ namespace NitroSharp
 
     public readonly struct Point2DU : IEquatable<Point2DU>
     {
+        public static Point2DU Zero => default;
+
         public readonly uint X;
         public readonly uint Y;
 
@@ -63,21 +64,16 @@ namespace NitroSharp
 
     public readonly struct Size : IEquatable<Size>
     {
-        public static readonly Size Zero = new Size(0, 0);
+        public static Size Zero => new Size(0, 0);
 
         public readonly uint Width;
         public readonly uint Height;
 
         public Size(uint width, uint height)
-        {
-            Width = width;
-            Height = height;
-        }
+            => (Width, Height) = (width, height);
 
         public Size(uint value)
-        {
-            Width = Height = value;
-        }
+            => Width = Height = value;
 
         public bool Equals(Size other) => Width == other.Width && Height == other.Height;
         public override bool Equals(object? obj) => obj is Size size && Equals(size);
@@ -88,41 +84,36 @@ namespace NitroSharp
         public override int GetHashCode() => HashCode.Combine(Width, Height);
         public override string? ToString() => $"{{Width:{Width.ToString()}, Height:{Height.ToString()}}}";
 
-
         public static bool operator ==(Size left, Size right) => left.Equals(right);
         public static bool operator !=(Size left, Size right) => !left.Equals(right);
     }
 
     public readonly struct SizeF : IEquatable<SizeF>
     {
-        public static readonly SizeF Zero = new SizeF(0.0f, 0.0f);
+        public static SizeF Zero => default;
 
-        public readonly float Width;
-        public readonly float Height;
+        private readonly Vector2 _value;
+
+        public float Width => _value.X;
+        public float Height => _value.Y;
 
         public SizeF(float width, float height)
-        {
-            Width = width;
-            Height = height;
-        }
+            => _value = new Vector2(width, height);
 
         public SizeF(float value)
-        {
-            Width = Height = value;
-        }
+            => _value = new Vector2(value);
 
-        public static SizeF FromVector(in Vector2 vector) => new SizeF(vector.X, vector.Y);
-
-        public bool Equals(SizeF other) => Width == other.Width && Height == other.Height;
+        public bool Equals(SizeF other) => _value.Equals(_value);
         public override bool Equals(object? obj) => obj is SizeF size && Equals(size);
 
-        public override int GetHashCode() => HashCode.Combine(Width, Height);
+        public override int GetHashCode() => _value.GetHashCode();
         public override string? ToString() => $"{{Width:{Width.ToString()}, Height:{Height.ToString()}}}";
 
         public static bool operator ==(SizeF left, SizeF right) => left.Equals(right);
         public static bool operator !=(SizeF left, SizeF right) => !left.Equals(right);
 
-        public Vector2 ToVector() => new Vector2(Width, Height);
+        public Vector2 ToVector2() => _value;
+        public Size ToSize() => new Size((uint)MathF.Ceiling(Width), (uint)MathF.Ceiling(Height));
     }
 
     internal readonly struct Rectangle : IEquatable<Rectangle>
@@ -134,10 +125,8 @@ namespace NitroSharp
 
         public Rectangle(int x, int y, int width, int height)
         {
-            X = x;
-            Y = y;
-            Width = width;
-            Height = height;
+            (X, Y) = (x, y);
+            (Width, Height) = (width, height);
         }
 
         public int Left => X;
@@ -191,12 +180,19 @@ namespace NitroSharp
         public uint Top => Y;
         public uint Bottom => Y + Height;
 
+        public Vector2 Position => new Vector2(X, Y);
+        public Size Size => new Size(Width, Height);
+
         public RectangleU(uint x, uint y, uint width, uint height)
         {
-            X = x;
-            Y = y;
-            Width = width;
-            Height = height;
+            (X, Y) = (x, y);
+            (Width, Height) = (width, height);
+        }
+
+        public RectangleU(Point2DU origin, Size size)
+        {
+            (X, Y) = (origin.X, origin.Y);
+            (Width, Height) = (size.Width, size.Height);
         }
 
         public static RectangleU Union(in RectangleU a, in RectangleU b)
@@ -209,68 +205,42 @@ namespace NitroSharp
         }
 
         public override bool Equals(object? obj) => obj is RectangleU rect && Equals(in rect);
-        public bool Equals(in RectangleU other)
-        {
-            return X == other.X && Y == other.Y
-                && Width == other.Width && Height == other.Height;
-        }
+        public bool Equals(in RectangleU other) =>
+            X == other.X && Y == other.Y
+            && Width == other.Width && Height == other.Height;
 
-        public bool Equals(RectangleU other)
-        {
-            return X == other.X && Y == other.Y
-                && Width == other.Width && Height == other.Height;
-        }
+        public bool Equals(RectangleU other) =>
+            X == other.X && Y == other.Y
+            && Width == other.Width && Height == other.Height;
 
-        public override int GetHashCode()
-            => HashCode.Combine(X, Y, Width, Height);
-
-        public override string ToString()
-        {
-            return $"{{X:{X}, Y:{Y}, Width:{Width}, Height:{Height}}}";
-        }
+        public override int GetHashCode() => HashCode.Combine(X, Y, Width, Height);
 
         public static bool operator ==(in RectangleU a, in RectangleU b) => a.Equals(b);
         public static bool operator !=(in RectangleU a, in RectangleU b) => !a.Equals(b);
+
+        public override string ToString() => $"{{X:{X}, Y:{Y}, Width:{Width}, Height:{Height}}}";
     }
 
     internal readonly struct RectangleF : IEquatable<RectangleF>
     {
-        public readonly float X;
-        public readonly float Y;
-        public readonly float Width;
-        public readonly float Height;
+        private readonly Vector4 _value;
+
+        public float X => _value.X;
+        public float Y => _value.Y;
+        public float Width => _value.Z;
+        public float Height => _value.W;
 
         public RectangleF(float x, float y, float width, float height)
-        {
-            X = x;
-            Y = y;
-            Width = width;
-            Height = height;
-        }
+            => _value = new Vector4(x, y, width, height);
 
         public RectangleF(Vector2 position, SizeF size)
-        {
-            X = position.X;
-            Y = position.Y;
-            Width = size.Width;
-            Height = size.Height;
-        }
+            => _value = new Vector4(position, size.Width, size.Height);
 
         public RectangleF(Vector2 position, Size size)
-        {
-            X = position.X;
-            Y = position.Y;
-            Width = size.Width;
-            Height = size.Height;
-        }
+            => _value = new Vector4(position, size.Width, size.Height);
 
         public RectangleF(Vector2 position, Vector2 size)
-        {
-            X = position.X;
-            Y = position.Y;
-            Width = size.X;
-            Height = size.Y;
-        }
+            => _value = new Vector4(position, size.X, size.Y);
 
         public float Left => X;
         public float Right => X + Width;
@@ -306,29 +276,13 @@ namespace NitroSharp
         }
 
         public override bool Equals(object? obj) => obj is RectangleF rect && Equals(in rect);
-        public bool Equals(in RectangleF other)
-        {
-            return X == other.X && Y == other.Y
-                && Width == other.Width && Height == other.Height;
-        }
-
-        public bool Equals(RectangleF other)
-        {
-            return X == other.X && Y == other.Y
-                && Width == other.Width && Height == other.Height;
-        }
-
-        public override int GetHashCode()
-        {
-            return HashCode.Combine(X, Y, Width, Height);
-        }
+        public bool Equals(in RectangleF other) => _value.Equals(other._value);
+        public bool Equals(RectangleF other) => _value.Equals(other._value);
+        public override int GetHashCode() => _value.GetHashCode();
 
         public static bool operator ==(in RectangleF a, in RectangleF b) => a.Equals(b);
         public static bool operator !=(in RectangleF a, in RectangleF b) => !a.Equals(b);
 
-        public override string ToString()
-        {
-            return $"{{X:{X}, Y:{Y}, Width:{Width}, Height:{Height}}}";
-        }
+        public override string ToString() => $"{{X:{X}, Y:{Y}, Width:{Width}, Height:{Height}}}";
     }
 }

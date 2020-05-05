@@ -33,7 +33,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Condition="'$(Native)' == 'true'" Include="Microsoft.DotNet.ILCompiler" Version="1.0.0-alpha-28817-02" />
+    <PackageReference Condition="'$(Native)' == 'true'" Include="Microsoft.DotNet.ILCompiler" Version="1.0.0-alpha-28902-01" />
   </ItemGroup>
 
 </Project>

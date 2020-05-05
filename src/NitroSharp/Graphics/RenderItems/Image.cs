@@ -1,7 +1,7 @@
 using NitroSharp.Content;
 using Veldrid;
 
-namespace NitroSharp
+namespace NitroSharp.Graphics
 {
     internal sealed class Image : Entity
     {

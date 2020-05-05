@@ -33,9 +33,6 @@ namespace NitroSharp.NsScript.VM
                 case BuiltInFunction.CreateName:
                     CreateName(ref args);
                     break;
-                case BuiltInFunction.CreateChoice:
-                    CreateChoice(ref args);
-                    break;
                 case BuiltInFunction.SetAlias:
                     SetAlias(ref args);
                     break;
@@ -54,13 +51,10 @@ namespace NitroSharp.NsScript.VM
                 case BuiltInFunction.WaitKey:
                     WaitKey(ref args);
                     break;
-                case BuiltInFunction.WaitAction:
-                    WaitAction(ref args);
-                    break;
-                case BuiltInFunction.WaitMove:
-                    WaitMove(ref args);
-                    break;
 
+                case BuiltInFunction.CreateChoice:
+                    CreateChoice(ref args);
+                    break;
                 case BuiltInFunction.CreateColor:
                     CreateColor(ref args);
                     break;
@@ -78,6 +72,9 @@ namespace NitroSharp.NsScript.VM
                     break;
                 case BuiltInFunction.CreateMask:
                     CreateMask(ref args);
+                    break;
+                case BuiltInFunction.CreateWindow:
+                    CreateWindow(ref args);
                     break;
                 case BuiltInFunction.SetShade:
                     SetShade(ref args);
@@ -99,12 +96,17 @@ namespace NitroSharp.NsScript.VM
                 case BuiltInFunction.Zoom:
                     Zoom(ref args);
                     break;
+                case BuiltInFunction.Rotate:
+                    Rotate(ref args);
+                    break;
                 case BuiltInFunction.BezierMove:
                     BezierMove(ref args);
                     break;
-
-                case BuiltInFunction.CreateWindow:
-                    CreateWindow(ref args);
+                case BuiltInFunction.WaitAction:
+                    WaitAction(ref args);
+                    break;
+                case BuiltInFunction.WaitMove:
+                    WaitMove(ref args);
                     break;
                 case BuiltInFunction.CreateText:
                     CreateText(ref args);
@@ -232,71 +234,6 @@ namespace NitroSharp.NsScript.VM
             _impl.WaitAction(args.TakeEntityQuery(), args.TakeTimeSpan());
         }
 
-        private void XBOX360_AwardGameIcon()
-        {
-        }
-
-        private void XBOX360_InitUser()
-        {
-        }
-
-        private void XBOX360_SelectStorage(ref ArgConsumer args)
-        {
-            int storage = args.TakeInt();
-            _result = ConstantValue.True;
-        }
-
-        private void XBOX360_PadTrigger(ref ArgConsumer args)
-        {
-            int unk = args.TakeInt();
-            _result = ConstantValue.Integer(0);
-        }
-
-        private void XBOX360_ExistContent(ref ArgConsumer args)
-        {
-            _result = ConstantValue.True;
-        }
-
-        private void XBOX360_StorageSize(ref ArgConsumer args)
-        {
-            _result = ConstantValue.Integer(int.MaxValue);
-        }
-
-        private void XBOX360_CurrentStorage(ref ArgConsumer args)
-        {
-            _result = ConstantValue.Integer(0);
-        }
-
-        private void XBOX360_UserIndex(ref ArgConsumer args)
-        {
-            _result = ConstantValue.Integer(0);
-        }
-
-        private void XBOX360_CheckStorage(ref ArgConsumer args)
-        {
-            _result = ConstantValue.True;
-        }
-
-        private void XBOX360_Achieved(ref ArgConsumer args)
-        {
-            int unk = args.TakeInt();
-        }
-
-        private void XBOX360_Presence(ref ArgConsumer args)
-        {
-            int unk = args.TakeInt();
-        }
-
-        private void XBOX360_IsSignin(ref ArgConsumer args)
-        {
-            _result = ConstantValue.True;
-        }
-
-        private void XBOX360_LockVideo(ref ArgConsumer args)
-        {
-            bool unk = args.TakeBool();
-        }
-
         private void CreateName(ref ArgConsumer args)
         {
             _impl.CreateEntity(args.TakeEntityPath());
@@ -308,7 +245,7 @@ namespace NitroSharp.NsScript.VM
                 args.TakeEntityQuery(),
                 duration: args.TakeTimeSpan(),
                 args.TakeBezierCurve(),
-                args.TakeEasingFunction(),
+                args.TakeEaseFunction(),
                 wait: args.TakeBool()
             );
         }
@@ -332,8 +269,8 @@ namespace NitroSharp.NsScript.VM
                 priority: args.TakeInt(),
                 x: args.TakeCoordinate(),
                 y: args.TakeCoordinate(),
-                width: args.TakeInt(),
-                height: args.TakeInt(),
+                width: args.TakeUInt(),
+                height: args.TakeUInt(),
                 effectName: args.TakeString()
             );
         }
@@ -406,8 +343,8 @@ namespace NitroSharp.NsScript.VM
                 priority: args.TakeInt(),
                 x: args.TakeCoordinate(),
                 y: args.TakeCoordinate(),
-                width: args.TakeInt(),
-                height: args.TakeInt(),
+                width: args.TakeUInt(),
+                height: args.TakeUInt(),
                 inheritTransform: args.TakeBool()
             );
         }
@@ -422,8 +359,8 @@ namespace NitroSharp.NsScript.VM
             string subroutineName = args.TakeString();
             string boxName = args.TakeString();
             string textName = args.TakeString();
-            int maxWidth = args.TakeInt();
-            int maxHeight = args.TakeInt();
+            uint maxWidth = args.TakeUInt();
+            uint maxHeight = args.TakeUInt();
             int letterSpacing = args.TakeInt();
             int lineSpacing = args.TakeInt();
 
@@ -499,7 +436,22 @@ namespace NitroSharp.NsScript.VM
                 duration,
                 dstScaleX: args.TakeRational(),
                 dstScaleY: args.TakeRational(),
-                easingFunction: args.TakeEasingFunction(),
+                easeFunction: args.TakeEaseFunction(),
+                args.TakeAnimDelay(duration)
+            );
+        }
+
+        private void Rotate(ref ArgConsumer args)
+        {
+            EntityQuery query = args.TakeEntityQuery();
+            TimeSpan duration = args.TakeTimeSpan();
+            _impl.Rotate(
+                query,
+                duration,
+                dstRotationX: args.TakeNumeric(),
+                dstRotationY: args.TakeNumeric(),
+                dstRotationZ: args.TakeNumeric(),
+                args.TakeEaseFunction(),
                 args.TakeAnimDelay(duration)
             );
         }
@@ -513,7 +465,7 @@ namespace NitroSharp.NsScript.VM
                 duration,
                 dstX: args.TakeCoordinate(),
                 dstY: args.TakeCoordinate(),
-                easingFunction: args.TakeEasingFunction(),
+                easeFunction: args.TakeEaseFunction(),
                 delay: args.TakeAnimDelay(duration)
             );
         }
@@ -526,7 +478,7 @@ namespace NitroSharp.NsScript.VM
                 query,
                 duration,
                 dstOpacity: args.TakeRational(),
-                easingFunction: args.TakeEasingFunction(),
+                easeFunction: args.TakeEaseFunction(),
                 args.TakeAnimDelay(duration)
             );
         }
@@ -541,7 +493,7 @@ namespace NitroSharp.NsScript.VM
                 initialFadeAmount: args.TakeRational(),
                 finalFadeAmount: args.TakeRational(),
                 feather: args.TakeRational(),
-                args.TakeEasingFunction(),
+                args.TakeEaseFunction(),
                 maskFileName: args.TakeString(),
                 delay: args.TakeAnimDelay(duration)
             );
@@ -600,8 +552,8 @@ namespace NitroSharp.NsScript.VM
                 priority: args.TakeInt(),
                 x: args.TakeCoordinate(),
                 y: args.TakeCoordinate(),
-                width: args.TakeInt(),
-                height: args.TakeInt(),
+                width: args.TakeUInt(),
+                height: args.TakeUInt(),
                 color: takeColor(ref args)
             );
         }
@@ -639,10 +591,10 @@ namespace NitroSharp.NsScript.VM
                 priority: args.TakeInt(),
                 x: args.TakeCoordinate(),
                 y: args.TakeCoordinate(),
-                srcX: args.TakeInt(),
-                srcY: args.TakeInt(),
-                width: args.TakeInt(),
-                height: args.TakeInt(),
+                srcX: args.TakeUInt(),
+                srcY: args.TakeUInt(),
+                width: args.TakeUInt(),
+                height: args.TakeUInt(),
                 args.TakeEntityPath()
             );
         }
@@ -724,6 +676,71 @@ namespace NitroSharp.NsScript.VM
             SetResult(ConstantValue.Integer(_impl.GetSoundDuration(entityPath)));
         }
 
+        private void XBOX360_AwardGameIcon()
+        {
+        }
+
+        private void XBOX360_InitUser()
+        {
+        }
+
+        private void XBOX360_SelectStorage(ref ArgConsumer args)
+        {
+            int storage = args.TakeInt();
+            _result = ConstantValue.True;
+        }
+
+        private void XBOX360_PadTrigger(ref ArgConsumer args)
+        {
+            int unk = args.TakeInt();
+            _result = ConstantValue.Integer(0);
+        }
+
+        private void XBOX360_ExistContent(ref ArgConsumer args)
+        {
+            _result = ConstantValue.True;
+        }
+
+        private void XBOX360_StorageSize(ref ArgConsumer args)
+        {
+            _result = ConstantValue.Integer(int.MaxValue);
+        }
+
+        private void XBOX360_CurrentStorage(ref ArgConsumer args)
+        {
+            _result = ConstantValue.Integer(0);
+        }
+
+        private void XBOX360_UserIndex(ref ArgConsumer args)
+        {
+            _result = ConstantValue.Integer(0);
+        }
+
+        private void XBOX360_CheckStorage(ref ArgConsumer args)
+        {
+            _result = ConstantValue.True;
+        }
+
+        private void XBOX360_Achieved(ref ArgConsumer args)
+        {
+            int unk = args.TakeInt();
+        }
+
+        private void XBOX360_Presence(ref ArgConsumer args)
+        {
+            int unk = args.TakeInt();
+        }
+
+        private void XBOX360_IsSignin(ref ArgConsumer args)
+        {
+            _result = ConstantValue.True;
+        }
+
+        private void XBOX360_LockVideo(ref ArgConsumer args)
+        {
+            bool unk = args.TakeBool();
+        }
+
         private void Fail()
         {
             throw new NotImplementedException();
@@ -784,6 +801,13 @@ namespace NitroSharp.NsScript.VM
                 return arg.IsString ? arg.AsString()! : arg.ConvertToString();
             }
 
+            public uint TakeUInt()
+            {
+                int value = TakeInt();
+                Debug.Assert(value >= 0);
+                return (uint)value;
+            }
+
             public int TakeInt()
             {
                 ConstantValue arg = TakeOpt(ConstantValue.Integer(0));
@@ -828,32 +852,29 @@ namespace NitroSharp.NsScript.VM
                 return ret ?? UnexpectedType<NsCoordinate>(val.Type);
             }
 
-            public NsDimension TakeDimension()
+            public NsTextDimension TakeDimension()
             {
                 ConstantValue val = TakeOpt(ConstantValue.Integer(0));
                 return val.Type switch
                 {
                     BuiltInType.Integer
-                        => NsDimension.WithValue(val.AsInteger()!.Value),
+                        => NsTextDimension.WithValue(val.AsInteger()!.Value),
                     BuiltInType.BuiltInConstant
-                        => NsDimension.FromConstant(val.AsBuiltInConstant()!.Value),
-                    _ => UnexpectedType<NsDimension>(val.Type)
+                        => NsTextDimension.FromConstant(val.AsBuiltInConstant()!.Value),
+                    _ => UnexpectedType<NsTextDimension>(val.Type)
                 };
             }
 
-            public NsEasingFunction TakeEasingFunction()
+            public NsEaseFunction TakeEaseFunction()
             {
                 ConstantValue val = TakeOpt(ConstantValue.Null);
-                if (val.Type == BuiltInType.BuiltInConstant)
+                return val.Type switch
                 {
-                    return EnumConversions.ToEasingFunction(val.AsBuiltInConstant()!.Value);
-                }
-                else if (val.Type == BuiltInType.Null)
-                {
-                    return NsEasingFunction.None;
-                }
-
-                return UnexpectedType<NsEasingFunction>(val.Type);
+                    BuiltInType.BuiltInConstant
+                        => EnumConversions.ToEaseFunction(val.AsBuiltInConstant()!.Value),
+                    BuiltInType.Null => NsEaseFunction.None,
+                    _ => UnexpectedType<NsEaseFunction>(val.Type)
+                };
             }
 
             public NsAudioKind TakeAudioKind()
@@ -875,6 +896,17 @@ namespace NitroSharp.NsScript.VM
             public NsRational TakeRational(float denominator = 1000.0f)
             {
                 return new NsRational(TakeInt(), denominator);
+            }
+
+            public NsNumeric TakeNumeric()
+            {
+                ConstantValue val = Take();
+                return val.Type switch
+                {
+                    BuiltInType.Integer => new NsNumeric(val.AsInteger()!.Value, isDelta: false),
+                    BuiltInType.DeltaInteger => new NsNumeric(val.AsDelta()!.Value, isDelta: true),
+                    _ => UnexpectedType<NsNumeric>(val.Type)
+                };
             }
 
             public TimeSpan TakeAnimDelay(TimeSpan animDuration)

@@ -40,13 +40,43 @@ namespace NitroSharp.Graphics
         public QuadVertex BottomLeft;
         public QuadVertex BottomRight;
 
+        public RectangleF GetBoundingRect()
+        {
+            float left = MathF.Min(TopLeft.Position.X, BottomLeft.Position.X);
+            float top = MathF.Min(TopLeft.Position.Y, TopRight.Position.Y);
+            float right = MathF.Max(TopRight.Position.X, BottomRight.Position.X);
+            float bottom = MathF.Max(BottomLeft.Position.Y, BottomRight.Position.Y);
+            return RectangleF.FromLTRB(left, top, right, bottom);
+        }
+
+        public void Constrain(ref RectangleF boundingRect, in RectangleF constraintRect)
+        {
+            static void clamp(ref QuadVertex vert, Vector2 bounds, in RectangleF constraint)
+            {
+                Vector2 oldPos = vert.Position;
+                vert.Position = Vector2.Clamp(
+                    vert.Position,
+                    min: constraint.TopLeft,
+                    max: constraint.BottomRight
+                );
+                vert.TexCoord += (vert.Position - oldPos) / bounds;
+            }
+
+            var bounds = boundingRect.Size.ToVector2();
+            clamp(ref TopLeft, bounds, constraintRect);
+            clamp(ref TopRight, bounds, constraintRect);
+            clamp(ref BottomLeft, bounds, constraintRect);
+            clamp(ref BottomRight, bounds, constraintRect);
+            boundingRect = GetBoundingRect();
+        }
+
         public static (QuadGeometry, RectangleF) Create(
             SizeF localBounds,
             in Matrix4x4 transform,
             Vector2 uvTopLeft,
             Vector2 uvBottomRight,
             in Vector4 color,
-            in RectangleF? boxConstraint = null)
+            in RectangleF? constraintRect = null)
         {
             QuadGeometry quad = default;
             ref QuadVertex topLeft = ref quad.TopLeft;
@@ -81,29 +111,12 @@ namespace NitroSharp.Graphics
             bottomRight.Position = Vector2.Transform(bottomRight.Position, transform);
             bottomRight.Color = color;
 
-            if (boxConstraint is RectangleF constraint)
+            RectangleF boundingRect = quad.GetBoundingRect();
+            if (constraintRect is RectangleF constraint)
             {
-                static void clamp(ref Vector2 vec, in RectangleF constraint)
-                {
-                    vec = Vector2.Clamp(
-                        vec,
-                        min: constraint.TopLeft,
-                        max: constraint.BottomRight
-                    );
-                }
-
-                clamp(ref quad.TopLeft.Position, constraint);
-                clamp(ref quad.TopRight.Position, constraint);
-                clamp(ref quad.BottomLeft.Position, constraint);
-                clamp(ref quad.BottomRight.Position, constraint);
+                quad.Constrain(ref boundingRect, constraint);
             }
-
-            float left = MathF.Min(topLeft.Position.X, bottomLeft.Position.X);
-            float top = MathF.Min(topLeft.Position.Y, topRight.Position.Y);
-            float right = MathF.Max(topRight.Position.X, bottomRight.Position.Y);
-            float bottom = MathF.Max(bottomLeft.Position.Y, bottomRight.Position.Y);
-            var layoutRect = RectangleF.FromLTRB(left, top, right, bottom);
-            return (quad, layoutRect);
+            return (quad, boundingRect);
         }
     }
 }

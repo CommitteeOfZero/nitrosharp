@@ -1,38 +1,221 @@
 using System;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
+using NitroSharp.Graphics.Core;
 using Veldrid;
 
 #nullable enable
 
-namespace NitroSharp.Graphics.Core
+namespace NitroSharp.Graphics
 {
-    internal struct DrawBatch
+    internal struct Draw
+    {
+        public Pipeline Pipeline;
+        public ResourceBindings ResourceBindings;
+        public BufferBindings BufferBindings;
+        public DrawParams Params;
+    }
+
+    [StructLayout(LayoutKind.Auto)]
+    internal readonly struct DrawParams
+    {
+        public readonly DrawMethod Method;
+        public readonly (uint start, uint count) Vertices;
+        public readonly (uint start, uint count) Indices;
+        public readonly (uint start, uint count) Instances;
+
+        public bool IsIndexed => Method switch
+        {
+            DrawMethod.DrawIndexed => true,
+            DrawMethod.DrawIndexedInstanced => true,
+            _ => false
+        };
+
+        public bool IsInstanced => Method switch
+        {
+            DrawMethod.DrawInstanced => true,
+            DrawMethod.DrawIndexedInstanced => true,
+            _ => false
+        };
+
+        public DrawParams(
+            uint vertexBase,
+            uint vertexCount,
+            uint indexBase,
+            uint indexCount,
+            uint instanceBase,
+            uint instanceCount)
+        {
+            Vertices = (vertexBase, vertexCount);
+            Indices = (indexBase, indexCount);
+            Instances = (instanceBase, instanceCount);
+            Method = (Indices, Instances) switch
+            {
+                ((0, 0), (0, 1)) => DrawMethod.Draw,
+                ((0, 0), _) => DrawMethod.DrawInstanced,
+                (_, (0, 1)) => DrawMethod.DrawIndexed,
+                _ => DrawMethod.DrawIndexedInstanced
+            };
+        }
+
+        public static DrawParams Regular(
+            uint vertexBase,
+            uint vertexCount,
+            uint instanceBase = 0,
+            uint instanceCount = 1)
+            => new DrawParams(vertexBase, vertexCount, 0, 0, instanceBase, instanceCount);
+
+        public static DrawParams Indexed(
+            uint vertexBase,
+            uint indexBase,
+            uint indexCount,
+            uint instanceBase = 0,
+            uint instanceCount = 1)
+            => new DrawParams(vertexBase, 0, indexBase, indexCount, instanceBase, instanceCount);
+
+        public static bool CanMerge(in DrawParams a, in DrawParams b)
+        {
+            return false;
+            if (a.Method != b.Method) { return false; }
+            return a.Method switch
+            {
+                DrawMethod.Draw => areConsecutive(a.Vertices, b.Vertices),
+                DrawMethod.DrawInstanced => areConsecutive(a.Vertices, b.Vertices)
+                                         && areConsecutive(a.Instances, b.Instances),
+                DrawMethod.DrawIndexed => a.Vertices.start == b.Vertices.start
+                                       && areConsecutive(a.Indices, b.Indices),
+                _ => a.Vertices.start == b.Vertices.start
+                                      && areConsecutive(a.Indices, b.Indices)
+                                      && areConsecutive(a.Instances, b.Instances)
+            };
+
+            static bool areConsecutive(
+                (uint start, uint count) a,
+                (uint start, uint count) b)
+                => b.start == a.start + a.count;
+        }
+
+        public static bool TryMerge(ref DrawParams cur, in DrawParams next)
+        {
+            if (CanMerge(cur, next))
+            {
+                cur = Merge(cur, next);
+                return true;
+            }
+            return false;
+        }
+
+        public static DrawParams Merge(in DrawParams a, in DrawParams b)
+        {
+            Debug.Assert(CanMerge(a, b));
+            return new DrawParams(
+                a.Vertices.start,
+                a.Vertices.count + b.Vertices.count,
+                a.Indices.start,
+                a.Indices.count + b.Indices.count,
+                a.Instances.start,
+                a.IsInstanced ? a.Instances.count + b.Instances.count : 1
+            );
+        }
+    }
+
+    internal enum DrawMethod
+    {
+        Draw,
+        DrawIndexed,
+        DrawInstanced,
+        DrawIndexedInstanced
+    }
+
+    internal readonly struct BufferBindings : IEquatable<BufferBindings>
+    {
+        public readonly DeviceBuffer? Vertices;
+        public readonly DeviceBuffer? InstanceData;
+        public readonly DeviceBuffer? Indices;
+
+        public BufferBindings(DeviceBuffer vertices) : this()
+            => Vertices = vertices;
+
+        public BufferBindings(DeviceBuffer vertices, DeviceBuffer indices)
+            : this() => (Vertices, Indices) = (vertices, indices);
+
+        public BufferBindings(
+            DeviceBuffer vertices,
+            DeviceBuffer instanceData,
+            DeviceBuffer? indices = null)
+            => (Vertices, InstanceData, Indices) = (vertices, instanceData, indices);
+
+        public bool Equals(BufferBindings other)
+        {
+            return ReferenceEquals(Vertices, other.Vertices)
+                && ReferenceEquals(InstanceData, other.InstanceData)
+                && ReferenceEquals(Indices, other.Indices);
+        }
+    }
+
+    internal readonly struct ResourceBindings : IEquatable<ResourceBindings>
+    {
+        public readonly ResourceSetKey? ResourceSet0;
+        public readonly ResourceSetKey? ResourceSet1;
+        public readonly ResourceSetKey? ResourceSet2;
+        public readonly ResourceSetKey? ResourceSet3;
+
+        public ResourceBindings(
+            ResourceSetKey rs0,
+            ResourceSetKey? rs1 = null,
+            ResourceSetKey? rs2 = null,
+            ResourceSetKey? rs3 = null)
+        {
+            ResourceSet0 = rs0;
+            ResourceSet1 = rs1;
+            ResourceSet2 = rs2;
+            ResourceSet3 = rs3;
+        }
+
+        public bool Equals(ResourceBindings other)
+        {
+            return ResourceSet0.Equals(other.ResourceSet0)
+                && ResourceSet1.Equals(other.ResourceSet1)
+                && ResourceSet2.Equals(other.ResourceSet2)
+                && ResourceSet3.Equals(other.ResourceSet3);
+        }
+    }
+
+    internal sealed class DrawBatch : IDisposable
     {
         private readonly RenderContext _ctx;
-        private readonly CommandList _commandList;
+        private CommandList? _commandList;
 
         private Draw _lastDraw;
 
-        public DrawBatch(
-            RenderContext context,
-            CommandList commandList,
-            RenderTarget renderTarget)
+        public DrawBatch(RenderContext context)
         {
             _ctx = context;
+            Target = null!;
+        }
+
+        public RenderTarget Target { get; private set; }
+
+        public void Begin(CommandList commandList, RenderTarget target, RgbaFloat? clearColor)
+        {
             _commandList = commandList;
-            _lastDraw = default;
-            commandList.SetFramebuffer(renderTarget.Framebuffer);
+            commandList.SetFramebuffer(target.Framebuffer);
+            Target = target;
+            if (clearColor is RgbaFloat clear)
+            {
+                commandList.ClearColorTarget(0, clear);
+            }
         }
 
         public void PushQuad(
-            CommandList commandList,
             QuadGeometry quad,
             Texture texture,
             Texture alphaMask,
             BlendMode blendMode,
             FilterMode filterMode)
         {
-            ViewProjection vp = _ctx.ViewProjection;
+            Debug.Assert(_commandList is object && Target is object);
+            ViewProjection vp = Target.ViewProjection;
             PushQuad(quad, _ctx.ShaderResources.Quad.GetPipeline(blendMode),
                 new ResourceBindings(
                     new ResourceSetKey(vp.ResourceLayout, vp.Buffer.VdBuffer),
@@ -48,6 +231,7 @@ namespace NitroSharp.Graphics.Core
 
         public void PushQuad(QuadGeometry quad, Pipeline pipeline, in ResourceBindings resources)
         {
+            Debug.Assert(_commandList is object && Target is object);
             Span<QuadVertex> vertices = MemoryMarshal.CreateSpan(ref quad.TopLeft, 4);
             Mesh<QuadVertex> mesh = _ctx.Quads.Append(vertices);
             PushDraw(new Draw
@@ -61,6 +245,7 @@ namespace NitroSharp.Graphics.Core
 
         public void PushDraw(in Draw draw)
         {
+            Debug.Assert(_commandList is object && Target is object);
             if (ReferenceEquals(draw.Pipeline, _lastDraw.Pipeline)
                 && draw.ResourceBindings.Equals(_lastDraw.ResourceBindings)
                 && draw.BufferBindings.Equals(_lastDraw.BufferBindings)
@@ -79,8 +264,13 @@ namespace NitroSharp.Graphics.Core
 
         private void Flush()
         {
-            if (_lastDraw.Pipeline is null) { return; }
+            if (_commandList is null || Target is null || _lastDraw.Pipeline is null)
+            {
+                return;
+            }
+
             CommandList cl = _commandList;
+            cl.SetFramebuffer(Target.Framebuffer);
             cl.SetPipeline(_lastDraw.Pipeline);
             ref BufferBindings buffers = ref _lastDraw.BufferBindings;
             if (buffers.Vertices is DeviceBuffer vertices)
@@ -133,6 +323,10 @@ namespace NitroSharp.Graphics.Core
                     p.Instances.start
                 );
             }
+            _lastDraw = default;
         }
+
+        public void End() => Flush();
+        public void Dispose() => Flush();
     }
 }

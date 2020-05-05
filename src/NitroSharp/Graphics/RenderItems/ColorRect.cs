@@ -2,23 +2,26 @@ using Veldrid;
 
 namespace NitroSharp.Graphics
 {
-    internal sealed class ColorRect : RenderItem2D, TransitionSource
+    internal sealed class ColorRect : RenderItem2D
     {
-        private readonly SizeF _size;
+        private readonly Size _size;
 
-        public ColorRect(in ResolvedEntityPath path, int priority, SizeF size, in RgbaFloat color)
-            : base(in path, priority)
+        public ColorRect(
+            in ResolvedEntityPath path,
+            int priority,
+            Size size,
+            in RgbaFloat color)
+            : base(path, priority)
         {
             _size = size;
             Color = color;
         }
 
-        protected override SizeF GetUnconstrainedBounds(RenderContext ctx) => _size;
+        public override Size GetUnconstrainedBounds(RenderContext ctx) => _size;
 
-        public override void Render(RenderContext ctx)
+        protected override void Render(RenderContext ctx, DrawBatch drawBatch)
         {
-            ctx.PushQuad(
-                ctx.DrawCommands,
+            drawBatch.PushQuad(
                 Quad,
                 ctx.WhiteTexture,
                 GetAlphaMask(ctx),

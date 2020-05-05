@@ -1,5 +1,4 @@
 using System;
-using System.Diagnostics;
 using NitroSharp.Content;
 using NitroSharp.Text;
 using Veldrid;
@@ -10,7 +9,10 @@ namespace NitroSharp.Graphics
 {
     internal sealed class RenderSystem : IDisposable
     {
+        private readonly World _world;
+
         public RenderSystem(
+            World world,
             Configuration gameConfiguration,
             GraphicsDevice graphicsDevice,
             Swapchain swapchain,
@@ -24,18 +26,19 @@ namespace NitroSharp.Graphics
                 contentManager,
                 glyphRasterizer
             );
+            _world = world;
         }
 
         public RenderContext Context { get; }
 
-        public void Render(World world, in FrameStamp frameStamp)
+        public void Render(in FrameStamp frameStamp)
         {
             Context.BeginFrame(frameStamp);
 
-            ReadOnlySpan<RenderItem> renderItems = world.RenderItems.SortActive();
+            ReadOnlySpan<RenderItem> renderItems = _world.RenderItems.SortActive();
             foreach (RenderItem ri in renderItems)
             {
-                ri.LayoutPass(world, Context);
+                ri.LayoutPass(_world, Context);
             }
             foreach (RenderItem ri in renderItems)
             {
@@ -48,7 +51,6 @@ namespace NitroSharp.Graphics
 
         public void Dispose()
         {
-            Context.GraphicsDevice.WaitForIdle();
             Context.Dispose();
         }
     }

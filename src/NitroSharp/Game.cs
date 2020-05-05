@@ -34,23 +34,29 @@ namespace NitroSharp
         public GlyphRasterizer GlyphRasterizer { get; }
         public FontConfiguration FontConfig { get; }
         public RenderContext RenderContext { get; }
+        public InputContext Input { get; }
+        public NsScriptVM VM { get; }
 
         public Context(
             World world,
             ContentManager content,
             GlyphRasterizer glyphRasterizer,
             FontConfiguration fontConfig,
-            RenderContext renderContext)
+            RenderContext renderContext,
+            InputContext input,
+            NsScriptVM vm)
         {
             World = world;
             Content = content;
             GlyphRasterizer = glyphRasterizer;
             FontConfig = fontConfig;
             RenderContext = renderContext;
+            Input = input;
+            VM = vm;
         }
     }
 
-    public partial class Game : IDisposable
+    public class Game : IDisposable
     {
         private readonly bool UseWicOnWindows = true;
 
@@ -71,7 +77,7 @@ namespace NitroSharp
         private FontConfiguration? _fontConfig;
 
         private ContentManager? _content;
-        private readonly InputTracker _inputTracker;
+        private readonly InputContext _inputContext;
 
         private AudioDevice? _audioDevice;
         private AudioSourcePool? _audioSourcePool;
@@ -81,6 +87,7 @@ namespace NitroSharp
         private readonly string _bytecodeCacheDir;
         private NsScriptVM? _vm;
         private Builtins _builtinFunctions;
+        private Context? _context;
 
         public Game(GameWindow window, Configuration configuration)
         {
@@ -96,7 +103,7 @@ namespace NitroSharp
 
             _gameTimer = new Stopwatch();
             _world = new World();
-            _inputTracker = new InputTracker(window);
+            _inputContext = new InputContext(window);
 
             _nssFolder = Path.Combine(_configuration.ContentRoot, "nss");
             _bytecodeCacheDir = _nssFolder.Replace("nss", "nsx");
@@ -124,14 +131,16 @@ namespace NitroSharp
                 throw aex.Flatten();
             }
 
-            var context = new Context(
+            _context = new Context(
                 _world,
                 _content!,
                 _glyphRasterizer,
                 _fontConfig!,
-                _renderSystem!.Context
+                _renderSystem!.Context,
+                _inputContext,
+                _vm!
             );
-            _builtinFunctions = new Builtins(context);
+            _builtinFunctions = new Builtins(_context);
             return RunMainLoop(useDedicatedThread);
         }
 
@@ -142,6 +151,7 @@ namespace NitroSharp
             await Task.WhenAll(_initializingGraphics.Task, initializeAudio);
             _content = CreateContentManager();
             _renderSystem = new RenderSystem(
+                _world,
                 _configuration,
                 _graphicsDevice!,
                 _swapchain!,
@@ -319,25 +329,24 @@ namespace NitroSharp
             }
         }
 
-        private void Tick(FrameStamp framestamp, float deltaMilliseconds)
+        private void Tick(FrameStamp framestamp, float dt)
         {
             Debug.Assert(_renderSystem != null);
             Debug.Assert(_content != null);
             if (_content.ResolveAssets())
             {
                 _world.BeginFrame();
-
                 Debug.Assert(_vm != null);
-                _vm.RefreshThreadState();
-                _vm.ProcessPendingThreadActions();
                 _vm.Run(_builtinFunctions, _shutdownCancellation.Token);
             }
 
-            _inputTracker.Update();
+            _inputContext.Update();
+            InputHandler.HandleInput(_context);
             _world.FlushDetachedAnimations();
+            Animation.ProcessActive(_world, dt);
             try
             {
-                _renderSystem.Render(_world, framestamp);
+                _renderSystem.Render(framestamp);
             }
             catch (VeldridException e)
                 when (e.Message == "The Swapchain's underlying surface has been lost.")
@@ -376,14 +385,14 @@ namespace NitroSharp
                 (uint)_configuration.WindowWidth, (uint)_configuration.WindowHeight,
                 options.SwapchainDepthFormat, options.SyncToVerticalBlank);
 
-            if (backend == GraphicsBackend.OpenGLES || backend == GraphicsBackend.OpenGL)
-            {
-                _graphicsDevice = _window is DesktopWindow desktopWindow
-                    ? VeldridStartup.CreateDefaultOpenGLGraphicsDevice(options, desktopWindow.SdlWindow, backend)
-                    : GraphicsDevice.CreateOpenGLES(options, swapchainDesc);
-                _swapchain = _graphicsDevice.MainSwapchain;
-            }
-            else
+           // if (backend == GraphicsBackend.OpenGLES || backend == GraphicsBackend.OpenGL)
+           // {
+           //     _graphicsDevice = _window is DesktopWindow desktopWindow
+           //         ? VeldridStartup.CreateDefaultOpenGLGraphicsDevice(options, desktopWindow.SdlWindow, backend)
+           //         : GraphicsDevice.CreateOpenGLES(options, swapchainDesc);
+           //     _swapchain = _graphicsDevice.MainSwapchain;
+           // }
+           // else
             {
                 if (_graphicsDevice == null)
                 {
@@ -391,7 +400,7 @@ namespace NitroSharp
                     {
                         GraphicsBackend.Direct3D11 => GraphicsDevice.CreateD3D11(options),
                         GraphicsBackend.Vulkan => GraphicsDevice.CreateVulkan(options),
-                        GraphicsBackend.Metal => GraphicsDevice.CreateMetal(options),
+                        //GraphicsBackend.Metal => GraphicsDevice.CreateMetal(options),
                         _ => ThrowHelper.Unreachable<GraphicsDevice>()
                     };
                 }
@@ -455,6 +464,8 @@ namespace NitroSharp
 
         public void Dispose()
         {
+            _graphicsDevice?.WaitForIdle();
+            _world.Dispose();
             _renderSystem?.Dispose();
             _content?.Dispose();
             _glyphRasterizer.Dispose();

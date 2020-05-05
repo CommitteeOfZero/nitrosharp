@@ -30,14 +30,14 @@ namespace NitroSharp.Graphics
             GraphicsDevice graphicsDevice,
             ShaderLibrary shaderLibrary,
             in OutputDescription outputDescription,
-            ViewProjection vp)
+            ResourceLayout viewProjectionLayout)
         {
-            Quad = new QuadShaderResources(graphicsDevice, shaderLibrary, outputDescription, vp);
-            Transition = new TransitionShaderResources(graphicsDevice, shaderLibrary, outputDescription, vp);
+            Quad = new QuadShaderResources(graphicsDevice, shaderLibrary, outputDescription, viewProjectionLayout);
+            Transition = new TransitionShaderResources(graphicsDevice, shaderLibrary, outputDescription, viewProjectionLayout);
             Text = new TextShaderResources(graphicsDevice, shaderLibrary, outputDescription);
             Effects = new EffectShaderResources(graphicsDevice, shaderLibrary, outputDescription);
-            BarrelDistortion = new BarrelDistortionShaderResources(graphicsDevice, shaderLibrary, outputDescription, vp);
-            Cube = new CubeShaderResources(graphicsDevice, shaderLibrary, outputDescription, vp);
+            BarrelDistortion = new BarrelDistortionShaderResources(graphicsDevice, shaderLibrary, outputDescription, viewProjectionLayout);
+            Cube = new CubeShaderResources(graphicsDevice, shaderLibrary, outputDescription, viewProjectionLayout);
         }
 
         public QuadShaderResources Quad { get; }
@@ -64,7 +64,7 @@ namespace NitroSharp.Graphics
             GraphicsDevice graphicsDevice,
             ShaderLibrary shaderLibrary,
             in OutputDescription outputDescription,
-            ViewProjection vp)
+            ResourceLayout viewProjectionLayout)
         {
             ResourceFactory factory = graphicsDevice.ResourceFactory;
             ResourceLayout = factory.CreateResourceLayout(new ResourceLayoutDescription(
@@ -97,7 +97,7 @@ namespace NitroSharp.Graphics
                 RasterizerStateDescription.CullNone,
                 PrimitiveTopology.TriangleList,
                 shaderSetDesc,
-                new[] { vp.ResourceLayout, ResourceLayout },
+                new[] { viewProjectionLayout, ResourceLayout },
                 outputDescription
             );
             AlphaBlend = factory.CreateGraphicsPipeline(ref pipelineDesc);
@@ -188,7 +188,7 @@ namespace NitroSharp.Graphics
             GraphicsDevice graphicsDevice,
             ShaderLibrary shaderLibrary,
             in OutputDescription outputDescription,
-            ViewProjection vp)
+            ResourceLayout viewProjectionLayout)
         {
             ResourceFactory factory = graphicsDevice.ResourceFactory;
             InputLayout = factory.CreateResourceLayout(new ResourceLayoutDescription(
@@ -230,7 +230,7 @@ namespace NitroSharp.Graphics
                 transitionShaderSet,
                 new[]
                 {
-                    vp.ResourceLayout,
+                    viewProjectionLayout,
                     InputLayout,
                     ParamLayout
                 },
@@ -412,7 +412,7 @@ namespace NitroSharp.Graphics
             GraphicsDevice graphicsDevice,
             ShaderLibrary shaderLibrary,
             in OutputDescription outputDescription,
-            ViewProjection vp)
+            ResourceLayout viewProjectionLayout)
         {
             ResourceFactory factory = graphicsDevice.ResourceFactory;
             ResourceLayout = factory.CreateResourceLayout(new ResourceLayoutDescription(
@@ -444,7 +444,7 @@ namespace NitroSharp.Graphics
                 RasterizerStateDescription.CullNone,
                 PrimitiveTopology.TriangleList,
                 lensShaderSet,
-                new[] { vp.ResourceLayout, ResourceLayout },
+                new[] { viewProjectionLayout, ResourceLayout },
                 outputDescription
             );
             Pipeline = factory.CreateGraphicsPipeline(ref lensPipelineDesc);
@@ -466,7 +466,7 @@ namespace NitroSharp.Graphics
             GraphicsDevice graphicsDevice,
             ShaderLibrary shaderLibrary,
             in OutputDescription outputDescription,
-            ViewProjection vp)
+            ResourceLayout viewProjectionLayout)
         {
             ResourceFactory factory = graphicsDevice.ResourceFactory;
             TextureLayout = factory.CreateResourceLayout(new ResourceLayoutDescription(
@@ -502,7 +502,7 @@ namespace NitroSharp.Graphics
                     RasterizerStateDescription.CullNone,
                     PrimitiveTopology.TriangleList,
                     shaderSetDesc,
-                    new[] { vp.ResourceLayout, TextureLayout, TransformLayout },
+                    new[] { viewProjectionLayout, TextureLayout, TransformLayout },
                     outputDescription
                 )
             );

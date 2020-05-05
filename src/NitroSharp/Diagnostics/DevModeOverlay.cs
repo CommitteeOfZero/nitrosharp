@@ -47,17 +47,17 @@ namespace NitroSharp.Diagnostics
             _logView = new LogView(logEventRecorder);
         }
 
-        public void Tick(float deltaMilliseconds, InputTracker inputTracker)
+        public void Tick(float deltaMilliseconds, InputContext inputContext)
         {
-            if (inputTracker.IsKeyDown(Key.ControlLeft)
-                && inputTracker.IsKeyDownThisFrame(Key.D))
+            if (inputContext.IsKeyDown(Key.ControlLeft)
+                && inputContext.IsKeyDownThisFrame(Key.D))
             {
                 _enabled = !_enabled;
             }
 
             if (_enabled)
             {
-                Render(deltaMilliseconds, inputTracker.CurrentSnapshot);
+                Render(deltaMilliseconds, inputContext.CurrentSnapshot);
             }
         }
 

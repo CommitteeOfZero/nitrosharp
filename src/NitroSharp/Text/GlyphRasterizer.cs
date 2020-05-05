@@ -124,16 +124,17 @@ namespace NitroSharp.Text
         {
             List<uint>? newGlyphIndices = null;
             FontData fontData = GetFontData(font);
-            foreach (PositionedGlyph glyph in glyphs)
+            foreach (ref readonly PositionedGlyph glyph in glyphs)
             {
-                var key = new GlyphCacheKey(glyph.Index, fontSize);
+                uint index = glyph.Index;
+                var key = new GlyphCacheKey(index, fontSize);
                 if (fontData.TryGetCachedGlyph(key, out GlyphCacheEntry cacheEntry))
                 {
                     if (!cacheEntry.IsRegular) { continue; }
                     if (textureCache.RequestEntry(cacheEntry.TextureCacheHandle))
                     {
-                        if (!_enableOutlines ||
-                            textureCache.RequestEntry(cacheEntry.OutlineTextureCacheHandle))
+                        if (!_enableOutlines
+                            || textureCache.RequestEntry(cacheEntry.OutlineTextureCacheHandle))
                         {
                             continue;
                         }
@@ -141,7 +142,7 @@ namespace NitroSharp.Text
                 }
                 fontData.UpsertCachedGlyph(key, GlyphCacheEntry.Pending());
                 newGlyphIndices ??= new List<uint>();
-                newGlyphIndices.Add(glyph.Index);
+                newGlyphIndices.Add(index);
             }
 
             if (newGlyphIndices != null)
@@ -709,8 +710,6 @@ namespace NitroSharp.Text
             );
 
             FT.FT_Glyph_Get_CBox(glyph, GlyphBBoxMode.Pixels, out BBox cbox);
-
-
             return new NativeBitmapGlyph((BitmapGlyph*)glyph, cbox.Bottom);
         }
 

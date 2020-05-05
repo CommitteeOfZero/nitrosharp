@@ -33,6 +33,12 @@ namespace NitroSharp
         public override string? ToString() => Path;
     }
 
+    internal enum EntityStatus
+    {
+        Normal,
+
+    }
+
     internal abstract class Entity : EntityInternal, IDisposable
     {
         private SmallList<EntityId> _children;

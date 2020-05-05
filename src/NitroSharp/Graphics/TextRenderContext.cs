@@ -136,7 +136,7 @@ namespace NitroSharp.Graphics
             }
         }
 
-        public void Render(RenderContext ctx, TextLayout layout, in Matrix4x4 transform)
+        public void Render(RenderContext ctx, DrawBatch drawBatch, TextLayout layout, in Matrix4x4 transform)
         {
             TextShaderResources shaderResources = ctx.ShaderResources.Text;
             foreach (ref readonly GlyphRun glyphRun in layout.GlyphRuns)
@@ -144,14 +144,14 @@ namespace NitroSharp.Graphics
                 ReadOnlySpan<PositionedGlyph> glyphs = layout.GetGlyphs(glyphRun.GlyphSpan);
                 if (AppendRun(glyphRun, glyphs, transform) is GpuGlyphSlice gpuGlyphSlice)
                 {
-                    ctx.PushDraw(ctx.DrawCommands, new Draw
+                    drawBatch.PushDraw(new Draw
                     {
                         Pipeline = shaderResources.Pipeline,
                         BufferBindings = new BufferBindings(gpuGlyphSlice.Buffer),
                         ResourceBindings = new ResourceBindings(
                             new ResourceSetKey(
                                 shaderResources.ResourceLayoutVS,
-                                ctx.ViewProjection.Buffer.VdBuffer,
+                                drawBatch.Target.ViewProjection.Buffer.VdBuffer,
                                 _gpuGlyphRuns.Texture,
                                 _gpuTransforms.Texture,
                                 _textureCache.UvRectTexture
@@ -159,7 +159,7 @@ namespace NitroSharp.Graphics
                             new ResourceSetKey(
                                 shaderResources.ResourceLayoutFS,
                                 _textureCache.GetCacheTexture(PixelFormat.R8_UNorm, out _),
-                                ctx.GraphicsDevice.LinearSampler
+                                ctx.GraphicsDevice.PointSampler
                             )
                         ),
                         Params = DrawParams.Regular(

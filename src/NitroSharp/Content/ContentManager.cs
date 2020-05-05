@@ -69,26 +69,17 @@ namespace NitroSharp.Content
 
         public string RootDirectory { get; }
 
-        private ref CacheEntry GetLoadedEntry<T>(AssetRef<T> assetRef, out T asset)
+        public T Get<T>(AssetRef<T> assetRef)
             where T : class, IDisposable
         {
-            ref CacheEntry cacheEntry = ref _cache.Get(assetRef.Handle);
-            if (!(cacheEntry.Asset is T loadedAsset))
+            if (!(_cache.Get(assetRef.Handle).Asset is T loadedAsset))
             {
                 throw new InvalidOperationException(
                     $"BUG: asset '{assetRef.Path}' is missing from the cache."
                 );
             }
 
-            asset = loadedAsset;
-            return ref cacheEntry;
-        }
-
-        public T Get<T>(AssetRef<T> assetRef)
-            where T : class, IDisposable
-        {
-            GetLoadedEntry(assetRef, out T asset);
-            return asset;
+            return loadedAsset;
         }
 
         // TODO: consider replacing with RequestAsset<T>
@@ -101,7 +92,7 @@ namespace NitroSharp.Content
         }
 
         public Size GetTextureSize(AssetRef<Texture> textureRef)
-            => GetLoadedEntry(textureRef, out _).TextureSize;
+            => _cache.Get(textureRef.Handle).TextureSize;
 
         public AssetRef<Texture>? RequestTexture(string path)
             => RequestTexture(path, out _);

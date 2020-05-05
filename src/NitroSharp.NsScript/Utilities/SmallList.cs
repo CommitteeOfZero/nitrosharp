@@ -5,6 +5,34 @@ using System.Runtime.InteropServices;
 
 namespace NitroSharp.Utilities
 {
+    //public ref struct SmallListEnumerator<T>
+    //{
+    //    private readonly ReadOnlySpan<T> _span;
+    //    private int _pos;
+    //
+    //    public SmallListEnumerator(ReadOnlySpan<T> span)
+    //    { ;
+    //        _span = span;
+    //        _pos = -1;
+    //    }
+    //
+    //    public T Current => _span[_pos];
+    //    public bool MoveNext() => ++_pos < _span.Length;
+    //}
+    //
+    //public ref struct SmallListEnumerable<T>
+    //{
+    //    private SmallList<T> _list;
+    //
+    //    public SmallListEnumerable(SmallList<T> list)
+    //    {
+    //        _list = list;
+    //    }
+    //
+    //    public SmallListEnumerator<T> GetEnumerable()
+    //        => new SmallListEnumerator<T>(ref _list);
+    //}
+
     public struct SmallList<T>
     {
         private const int MaxFixed = 2;
@@ -111,6 +139,9 @@ namespace NitroSharp.Utilities
                 ? _fixedItems.AsSpan(_count)
                 : _array.AsSpan(0, _count);
         }
+
+        public Span<T>.Enumerator GetEnumerator()
+            => AsSpan().GetEnumerator();
 
         public int HashElements()
         {

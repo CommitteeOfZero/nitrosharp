@@ -19,6 +19,8 @@
         Pause,
         Resume,
 
-        Other
+        NoTypewriterAnimation,
+
+        Other,
     }
 }

@@ -17,8 +17,8 @@ namespace NitroSharp.NsScript.VM
 
         public NsScriptVM VM => _vm!;
 
-        public ThreadContext? MainThread => VM.MainThread;
-        public ThreadContext? CurrentThread => VM.CurrentThread;
+        public ThreadContext MainThread => VM.MainThread!;
+        public ThreadContext CurrentThread => VM.CurrentThread!;
 
         public virtual void BeginDialogueLine(string pxmlString) { }
 
@@ -51,26 +51,26 @@ namespace NitroSharp.NsScript.VM
         /// <summary>
         /// Original name: CreateWindow.
         /// </summary>
-        public virtual void CreateDialogueBox(in EntityPath entityPath, int priority, NsCoordinate x, NsCoordinate y, int width, int height, bool inheritTransform) { }
+        public virtual void CreateDialogueBox(in EntityPath entityPath, int priority, NsCoordinate x, NsCoordinate y, uint width, uint height, bool inheritTransform) { }
 
         /// <summary>
         /// Original name: CreateTexture.
         /// </summary>
         public virtual void CreateSprite(in EntityPath entityPath, int priority, NsCoordinate x, NsCoordinate y, string source) { }
 
-        public virtual void CreateSpriteEx(in EntityPath entityPath, int priority, NsCoordinate x, NsCoordinate y, int srcX, int srcY, int width, int height, in EntityPath srcEntityPath) { }
+        public virtual void CreateSpriteEx(in EntityPath entityPath, int priority, NsCoordinate x, NsCoordinate y, uint srcX, uint srcY, uint width, uint height, in EntityPath srcEntityPath) { }
 
         /// <summary>
         /// Original name: CreateColor.
         /// </summary>
-        public virtual void CreateRectangle(in EntityPath entityPath, int priority, NsCoordinate x, NsCoordinate y, int width, int height, NsColor color) { }
+        public virtual void CreateRectangle(in EntityPath entityPath, int priority, NsCoordinate x, NsCoordinate y, uint width, uint height, NsColor color) { }
 
         /// <summary>
         /// Original name: CreateText.
         /// </summary>
-        public virtual void CreateTextBlock(in EntityPath entityPath, int priority, NsCoordinate x, NsCoordinate y, NsDimension width, NsDimension height, string pxmlText) { }
+        public virtual void CreateTextBlock(in EntityPath entityPath, int priority, NsCoordinate x, NsCoordinate y, NsTextDimension width, NsTextDimension height, string pxmlText) { }
 
-        public virtual void CreateEffect(in EntityPath entityPath, int priority, NsCoordinate x, NsCoordinate y, int width, int height, string effectName) { }
+        public virtual void CreateEffect(in EntityPath entityPath, int priority, NsCoordinate x, NsCoordinate y, uint width, uint height, string effectName) { }
 
         public virtual void CreateAlphaMask(in EntityPath entityPath, int priority, NsCoordinate x, NsCoordinate y, string maskPath, bool inheritTransform) { }
 
@@ -100,13 +100,13 @@ namespace NitroSharp.NsScript.VM
         public virtual void SetLoopRegion(in EntityPath entityPath, TimeSpan loopStart, TimeSpan loopEnd) { }
         public virtual void SetVolume(in EntityPath entityPath, TimeSpan duration, NsRational volume) { }
 
-        public virtual void Fade(EntityQuery query, TimeSpan duration, NsRational dstOpacity, NsEasingFunction easingFunction, TimeSpan delay) { }
-        public virtual void Move(EntityQuery query, TimeSpan duration, NsCoordinate dstX, NsCoordinate dstY, NsEasingFunction easingFunction, TimeSpan delay) { }
-        public virtual void Zoom(EntityQuery query, TimeSpan duration, NsRational dstScaleX, NsRational dstScaleY, NsEasingFunction easingFunction, TimeSpan delay) { }
-        public virtual void Rotate(EntityQuery query, TimeSpan duration, NsNumeric dstRotationX, NsNumeric dstRotationY, NsNumeric dstRotationZ, NsEasingFunction easingFunction, TimeSpan delay) { }
-        public virtual void MoveCube(EntityQuery query, TimeSpan duration, NsNumeric dstTranslationX, NsNumeric dstTranslationY, NsNumeric dstTranslationZ, NsEasingFunction easingFunction, TimeSpan delay) { }
-        public virtual void BezierMove(EntityQuery query, TimeSpan duration, CompositeBezier curve, NsEasingFunction easingFunction, bool wait) { }
-        public virtual void DrawTransition(EntityQuery query, TimeSpan duration, NsRational initialFadeAmount, NsRational finalFadeAmount, NsRational feather, NsEasingFunction easingFunction, string maskFileName, TimeSpan delay) { }
+        public virtual void Fade(EntityQuery query, TimeSpan duration, NsRational dstOpacity, NsEaseFunction easeFunction, TimeSpan delay) { }
+        public virtual void Move(EntityQuery query, TimeSpan duration, NsCoordinate dstX, NsCoordinate dstY, NsEaseFunction easeFunction, TimeSpan delay) { }
+        public virtual void Zoom(EntityQuery query, TimeSpan duration, NsRational dstScaleX, NsRational dstScaleY, NsEaseFunction easeFunction, TimeSpan delay) { }
+        public virtual void Rotate(EntityQuery query, TimeSpan duration, NsNumeric dstRotationX, NsNumeric dstRotationY, NsNumeric dstRotationZ, NsEaseFunction easeFunction, TimeSpan delay) { }
+        public virtual void MoveCube(EntityQuery query, TimeSpan duration, NsNumeric dstTranslationX, NsNumeric dstTranslationY, NsNumeric dstTranslationZ, NsEaseFunction easeFunction, TimeSpan delay) { }
+        public virtual void BezierMove(EntityQuery query, TimeSpan duration, CompositeBezier curve, NsEaseFunction easeFunction, bool wait) { }
+        public virtual void DrawTransition(EntityQuery query, TimeSpan duration, NsRational initialFadeAmount, NsRational finalFadeAmount, NsRational feather, NsEaseFunction easeFunction, string maskFileName, TimeSpan delay) { }
 
         public virtual void CreateThread(in EntityPath entityPath, string target) { }
 
@@ -122,15 +122,13 @@ namespace NitroSharp.NsScript.VM
 
         public virtual void PlayCutscene(in EntityPath entityPath, int priority, bool loop, bool alpha, string fileName, bool enableAudio) { }
 
-        public virtual void LoadText(in DialogueBlockToken token, int maxWidth, int maxHeight, int letterSpacing, int lineSpacing) { }
+        public virtual void LoadText(in DialogueBlockToken token, uint maxWidth, uint maxHeight, int letterSpacing, int lineSpacing) { }
 
         public virtual void AssertTrue(bool value) { }
 
         public virtual void CreateEntity(in EntityPath path) {}
 
-        public virtual void WaitAction(EntityQuery query, TimeSpan timeout)
-        {
-        }
+        public virtual void WaitAction(EntityQuery query, TimeSpan timeout) { }
 
         public virtual void WaitMove(EntityQuery query)
         {

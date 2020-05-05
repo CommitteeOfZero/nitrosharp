@@ -1,6 +1,6 @@
 ﻿namespace NitroSharp.NsScript
 {
-    public enum NsEasingFunction
+    public enum NsEaseFunction
     {
         None = 0,
 

@@ -8,11 +8,11 @@ namespace NitroSharp.Graphics.Core
 {
     internal sealed class ViewProjection : IDisposable
     {
-        public static ViewProjection CreateOrtho(GraphicsDevice graphicsDevice, Size viewportSize)
+        public static ViewProjection CreateOrtho(GraphicsDevice graphicsDevice, in RectangleF viewport)
         {
             var projection = Matrix4x4.CreateOrthographicOffCenter(
-                left: 0, right: viewportSize.Width,
-                bottom: viewportSize.Height, top: 0,
+                left: viewport.Left, right: viewport.Right,
+                bottom: viewport.Bottom, top: viewport.Top,
                 zNearPlane: 0.0f, zFarPlane: -1.0f
             );
             return new ViewProjection(graphicsDevice, projection);
@@ -33,6 +33,26 @@ namespace NitroSharp.Graphics.Core
 
         public ResourceLayout ResourceLayout { get; }
         public GpuBuffer<Matrix4x4> Buffer { get; }
+
+        public void UpdateOrtho(CommandList cl, in RectangleF viewport)
+        {
+            var projection = Matrix4x4.CreateOrthographicOffCenter(
+                left: viewport.Left, right: viewport.Right,
+                bottom: viewport.Bottom, top: viewport.Top,
+                zNearPlane: 0.0f, zFarPlane: -1.0f
+            );
+            cl.UpdateBuffer(Buffer.VdBuffer, 0, ref projection);
+        }
+
+        public void UpdateOrtho(GraphicsDevice graphicsDevice, in RectangleF viewport)
+        {
+            var projection = Matrix4x4.CreateOrthographicOffCenter(
+                left: viewport.Left, right: viewport.Right,
+                bottom: viewport.Bottom, top: viewport.Top,
+                zNearPlane: 0.0f, zFarPlane: -1.0f
+            );
+            graphicsDevice.UpdateBuffer(Buffer.VdBuffer, 0, ref projection);
+        }
 
         public void Dispose()
         {

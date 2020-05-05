@@ -618,8 +618,8 @@ namespace NitroSharp.Graphics.Core
                 );
             }
 
-            uint width = quantizeDimension(textureSize.Width + 1);
-            uint height = quantizeDimension(textureSize.Height + 1);
+            uint width = quantizeDimension(textureSize.Width + 4);
+            uint height = quantizeDimension(textureSize.Height + 4);
             uint max = Math.Max(width, height);
             return new Size(max, max);
         }

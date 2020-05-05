@@ -3,15 +3,15 @@ using Veldrid;
 
 namespace NitroSharp.Graphics
 {
-    internal sealed class Sprite : RenderItem2D, TransitionSource
+    internal sealed class Sprite : RenderItem2D
     {
-        private readonly RectangleF? _rect;
+        private readonly RectangleU? _rect;
 
         public Sprite(
             in ResolvedEntityPath path,
             int priority,
             AssetRef<Texture> texture,
-            RectangleF? rect = null)
+            RectangleU? rect = null)
             : base(path, priority)
         {
             Texture = texture;
@@ -20,13 +20,12 @@ namespace NitroSharp.Graphics
 
         public AssetRef<Texture> Texture { get; }
 
-        protected override SizeF GetUnconstrainedBounds(RenderContext ctx)
-            => _rect?.Size ?? ctx.Content.GetTextureSize(Texture).ToSizeF();
+        public override Size GetUnconstrainedBounds(RenderContext ctx)
+            => _rect?.Size ?? ctx.Content.GetTextureSize(Texture);
 
-        public override void Render(RenderContext ctx)
+        protected override void Render(RenderContext ctx, DrawBatch drawBatch)
         {
-            ctx.PushQuad(
-                ctx.DrawCommands,
+            drawBatch.PushQuad(
                 Quad,
                 ctx.Content.Get(Texture),
                 GetAlphaMask(ctx),
@@ -37,6 +36,7 @@ namespace NitroSharp.Graphics
 
         public override void Dispose()
         {
+            base.Dispose();
             Texture.Dispose();
         }
     }

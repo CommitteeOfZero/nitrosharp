@@ -1,4 +1,3 @@
-using System.Numerics;
 using NitroSharp.Text;
 
 #nullable enable
@@ -9,49 +8,46 @@ namespace NitroSharp.Graphics
     {
         public TextRect(
             in ResolvedEntityPath path,
-            int priority,
             TextRenderContext ctx,
+            int priority,
             TextLayout layout)
-            : base(in path, priority)
+            : base(path, priority)
         {
             Layout = layout;
             ctx.RequestGlyphs(layout);
-            //RectangleF bb = layout.BoundingBox;
-            //LocalBounds = new SizeF(bb.Right, bb.Bottom);
         }
 
         public TextLayout Layout { get; }
 
-        protected override SizeF GetUnconstrainedBounds(RenderContext ctx)
+        public override Size GetUnconstrainedBounds(RenderContext ctx)
         {
-            return Layout.BoundingBox.Size;
+            RectangleF bb = Layout.BoundingBox;
+            return new Size((uint)bb.Right, (uint)bb.Bottom);
         }
 
         public override void LayoutPass(World world, RenderContext ctx)
         {
             base.LayoutPass(world, ctx);
             ctx.Text.RequestGlyphs(Layout);
+        }
 
+        protected override void Render(RenderContext ctx, DrawBatch drawBatch)
+        {
+            ctx.Text.Render(ctx, drawBatch, Layout, WorldMatrix);
             RectangleF bb = Layout.BoundingBox;
-            //ctx.PushQuad(
+            //drawBatch.PushQuad(
             //    QuadGeometry.Create(
             //        new SizeF(bb.Width, bb.Height),
-            //        Transform.Matrix * Matrix4x4.CreateTranslation(bb.X, bb.Y, 0),
+            //        WorldMatrix * Matrix4x4.CreateTranslation(bb.X, bb.Y, 0),
             //        Vector2.Zero,
             //        Vector2.One,
-            //        new Vector4(0, 0.8f, 0.0f, 0.3f),
-            //        out _
-            //    ),
+            //        new Vector4(0, 0.8f, 0.0f, 0.3f)
+            //    ).Item1,
             //    ctx.WhiteTexture,
             //    ctx.WhiteTexture,
             //    BlendMode,
             //    FilterMode
             //);
-        }
-
-        public override void Render(RenderContext ctx)
-        {
-            ctx.Text.Render(ctx, Layout, WorldMatrix);
         }
     }
 }

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
 using NitroSharp.Graphics;
 using NitroSharp.NsScript;
 using NitroSharp.Utilities;
@@ -193,7 +192,7 @@ namespace NitroSharp
         }
     }
 
-    internal sealed partial class World
+    internal sealed partial class World : IDisposable
     {
         private readonly struct EntityRec
         {
@@ -228,15 +227,14 @@ namespace NitroSharp
         private readonly Dictionary<EntityPath, EntityId> _aliases;
 
         private readonly List<(EntityId, EntityBucket)> _pendingBucketChanges;
-        private readonly Dictionary<AnimationKey, PropertyAnimation> _activeAnimations;
-        private readonly List<(AnimationKey, PropertyAnimation)> _animationsToDeactivate;
-        private readonly List<(AnimationKey, PropertyAnimation)> _queuedAnimations;
+        private readonly Dictionary<AnimationKey, Animation> _activeAnimations;
+        private readonly List<(AnimationKey, Animation)> _animationsToDeactivate;
+        private readonly List<(AnimationKey, Animation)> _queuedAnimations;
 
         private readonly EntityGroup<VmThread> _vmThreads;
         private readonly SortableEntityGroup<RenderItem> _renderItems;
         private readonly EntityGroup<Image> _images;
         private readonly EntityGroup<Choice> _choices;
-
 
         public World()
         {
@@ -247,10 +245,13 @@ namespace NitroSharp
             _images = new EntityGroup<Image>();
             _choices = new EntityGroup<Choice>();
             _pendingBucketChanges = new List<(EntityId, EntityBucket)>();
-            _activeAnimations = new Dictionary<AnimationKey, PropertyAnimation>();
-            _animationsToDeactivate = new List<(AnimationKey, PropertyAnimation)>();
-            _queuedAnimations = new List<(AnimationKey, PropertyAnimation)>();
+            _activeAnimations = new Dictionary<AnimationKey, Animation>();
+            _animationsToDeactivate = new List<(AnimationKey, Animation)>();
+            _queuedAnimations = new List<(AnimationKey, Animation)>();
         }
+
+        public Dictionary<AnimationKey, Animation>.ValueCollection ActiveAnimations
+            => _activeAnimations.Values;
 
         public EntityGroupView<VmThread> Threads => _vmThreads;
         public SortableEntityGroupView<RenderItem> RenderItems => _renderItems;
@@ -259,7 +260,7 @@ namespace NitroSharp
 
         public void BeginFrame()
         {
-            foreach ((AnimationKey key, PropertyAnimation anim) in _queuedAnimations)
+            foreach ((AnimationKey key, Animation anim) in _queuedAnimations)
             {
                 _activeAnimations[key] = anim;
             }
@@ -345,6 +346,12 @@ namespace NitroSharp
             }
         }
 
+        public ChildEnumerable<T> Children<T>(Entity entity)
+            where T : Entity
+        {
+            return new ChildEnumerable<T>(this, entity.Children);
+        }
+
         public bool IsEnabled(in EntityId entityId)
         {
             EntityRec rec = GetRecord(entityId);
@@ -354,14 +361,8 @@ namespace NitroSharp
         public bool IsEnabled(Entity entity)
             => IsEnabled(entity.Id);
 
-        public void EnableEntity(in EntityId id)
-            => SetEnabled(id, true);
-
         public void EnableEntity(Entity entity)
             => SetEnabled(entity.Id, true);
-
-        public void DisableEntity(in EntityId id)
-            => SetEnabled(id, false);
 
         public void DisableEntity(Entity entity)
             => SetEnabled(entity.Id, false);
@@ -378,6 +379,9 @@ namespace NitroSharp
                 Entity parent = GetRecord(entity.Parent).Entity;
                 ((EntityInternal)parent).RemoveChild(id);
             }
+
+            EntityMove move = rec.Group.Remove(rec.Location);
+            UpdateLocation(move);
             foreach (EntityId child in entity.Children)
             {
                 DestroyEntity(child);
@@ -387,8 +391,6 @@ namespace NitroSharp
                 _aliases.Remove(entity.Alias);
             }
 
-            EntityMove move = rec.Group.Remove(rec.Location);
-            UpdateLocation(move);
             _entities.Remove(id);
             entity.Dispose();
         }
@@ -448,11 +450,13 @@ namespace NitroSharp
 
         private void ChangeBucket(in EntityId entityId, EntityBucket dstBucket)
         {
-            EntityRec rec = GetRecord(entityId);
-            BucketChangeResult result = rec.Group.ChangeBucket(rec.Location, dstBucket);
-            _entities[entityId] = rec.WithBucket(dstBucket);
-            SetLocation(entityId, result.NewLocation);
-            UpdateLocation(result.Swap);
+            if (_entities.TryGetValue(entityId, out EntityRec rec))
+            {
+                BucketChangeResult result = rec.Group.ChangeBucket(rec.Location, dstBucket);
+                _entities[entityId] = rec.WithBucket(dstBucket);
+                SetLocation(entityId, result.NewLocation);
+                UpdateLocation(result.Swap);
+            }
         }
 
         private void UpdateLocation(EntityMove entityMove)
@@ -471,22 +475,22 @@ namespace NitroSharp
             _entities[entityId] = rec.WithLocation(location);
         }
 
-        public bool TryGetAnimation<T>(Entity entity, [NotNullWhen(true)] out T? animation)
-            where T : PropertyAnimation
+        public T? GetAnimation<T>(Entity entity)
+            where T : Animation
         {
             var key = new AnimationKey(entity, typeof(T));
-            _activeAnimations.TryGetValue(key, out PropertyAnimation? val);
-            return (animation = val as T) is object;
+            _activeAnimations.TryGetValue(key, out Animation? val);
+            return val as T;
         }
 
         public void ActivateAnimation<T>(T animation)
-            where T : PropertyAnimation
+            where T : Animation
         {
             var key = new AnimationKey(animation.Entity, typeof(T));
             _queuedAnimations.Add((key, animation));
         }
 
-        public void DeactivateAnimation(PropertyAnimation animation)
+        public void DeactivateAnimation(Animation animation)
         {
             var key = new AnimationKey(animation.Entity, animation.GetType());
             _animationsToDeactivate.Add((key, animation));
@@ -494,14 +498,22 @@ namespace NitroSharp
 
         public void FlushDetachedAnimations()
         {
-            foreach ((AnimationKey key, PropertyAnimation anim) in _animationsToDeactivate)
+            foreach ((AnimationKey key, Animation anim) in _animationsToDeactivate)
             {
-                if (_activeAnimations.TryGetValue(key, out PropertyAnimation? value) && value == anim)
+                if (_activeAnimations.TryGetValue(key, out Animation? value) && value == anim)
                 {
                     _activeAnimations.Remove(key);
                 }
             }
             _animationsToDeactivate.Clear();
+        }
+
+        public void Dispose()
+        {
+            foreach ((_, EntityRec rec) in _entities)
+            {
+                rec.Entity.Dispose();
+            }
         }
 
         internal readonly struct AnimationKey : IEquatable<AnimationKey>
@@ -520,6 +532,51 @@ namespace NitroSharp
 
             public override int GetHashCode()
                 => HashCode.Combine(Entity, RuntimeType);
+        }
+
+        internal readonly ref struct ChildEnumerable<T>
+            where T : Entity
+        {
+            private readonly World _world;
+            private readonly ReadOnlySpan<EntityId> _ids;
+
+            public ChildEnumerable(World world, ReadOnlySpan<EntityId> ids)
+            {
+                _world = world;
+                _ids = ids;
+            }
+
+            public ChildEnumerator<T> GetEnumerator()
+                => new ChildEnumerator<T>(_world, _ids);
+        }
+
+        internal ref struct ChildEnumerator<T>
+            where T : Entity
+        {
+            private readonly World _world;
+            private readonly ReadOnlySpan<EntityId> _ids;
+            private int _pos;
+            private T? _current;
+
+            public ChildEnumerator(World world, ReadOnlySpan<EntityId> ids)
+            {
+                _world = world;
+                _ids = ids;
+                _pos = 0;
+                _current = null;
+            }
+
+            public T Current => _current!;
+
+            public bool MoveNext()
+            {
+                _current = null;
+                while (_pos < _ids.Length && _current is null)
+                {
+                    _current = _world.Get(_ids[_pos++]) as T;
+                }
+                return _current is object;
+            }
         }
     }
 }
