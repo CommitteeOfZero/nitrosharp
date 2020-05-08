@@ -12,5 +12,9 @@ namespace NitroSharp.Graphics
         }
 
         public bool InheritTransform { get; }
+
+        public override AnimPropagateFlags AnimPropagateFlags => InheritTransform
+            ? AnimPropagateFlags.Move | AnimPropagateFlags.Scale
+            : AnimPropagateFlags.Empty;
     }
 }

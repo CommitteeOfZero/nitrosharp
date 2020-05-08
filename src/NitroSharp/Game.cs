@@ -1,6 +1,7 @@
 ﻿using NitroSharp.Media;
 using NitroSharp.Text;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
@@ -11,6 +12,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using NitroSharp.Content;
 using NitroSharp.Graphics;
+using NitroSharp.NsScript;
 using NitroSharp.NsScript.Compiler;
 using NitroSharp.NsScript.VM;
 
@@ -27,6 +29,31 @@ namespace NitroSharp
             => (FrameId, StopwatchTicks) = (frameId, stopwatchTicks);
     }
 
+    internal enum WaitCondition
+    {
+        None,
+        UserInput,
+        MoveCompleted,
+        EntityIdle
+    }
+
+    internal readonly struct WaitOperation
+    {
+        public readonly ThreadContext Thread;
+        public readonly WaitCondition Condition;
+        public readonly EntityQuery? EntityQuery;
+
+        public WaitOperation(
+            ThreadContext thread,
+            WaitCondition condition,
+            EntityQuery? entityQuery)
+        {
+            Thread = thread;
+            Condition = condition;
+            EntityQuery = entityQuery;
+        }
+    }
+
     internal sealed class Context
     {
         public World World { get; }
@@ -36,6 +63,8 @@ namespace NitroSharp
         public RenderContext RenderContext { get; }
         public InputContext Input { get; }
         public NsScriptVM VM { get; }
+
+        public Queue<WaitOperation> WaitOperations { get; }
 
         public Context(
             World world,
@@ -53,6 +82,17 @@ namespace NitroSharp
             RenderContext = renderContext;
             Input = input;
             VM = vm;
+            WaitOperations = new Queue<WaitOperation>();
+        }
+
+        public void Wait(
+            ThreadContext thread,
+            WaitCondition condition,
+            TimeSpan? timeout = null,
+            EntityQuery? entityQuery = null)
+        {
+            VM.SuspendThread(thread, timeout);
+            WaitOperations.Enqueue(new WaitOperation(thread, condition, entityQuery));
         }
     }
 
@@ -89,6 +129,8 @@ namespace NitroSharp
         private Builtins _builtinFunctions;
         private Context? _context;
 
+        private readonly List<WaitOperation> _survivedWaits;
+
         public Game(GameWindow window, Configuration configuration)
         {
             _shutdownCancellation = new CancellationTokenSource();
@@ -108,6 +150,7 @@ namespace NitroSharp
             _nssFolder = Path.Combine(_configuration.ContentRoot, "nss");
             _bytecodeCacheDir = _nssFolder.Replace("nss", "nsx");
             _builtinFunctions = null!;
+            _survivedWaits = new List<WaitOperation>();
         }
 
         internal AudioDevice AudioDevice => _audioDevice!;
@@ -156,7 +199,8 @@ namespace NitroSharp
                 _graphicsDevice!,
                 _swapchain!,
                 _glyphRasterizer,
-                _content
+                _content,
+                _inputContext
             );
             await Task.Run(LoadStartupScript);
         }
@@ -179,7 +223,7 @@ namespace NitroSharp
                 italicFont: null,
                 new PtFontSize(_configuration.FontSize),
                 defaultTextColor: RgbaFloat.White,
-                defaultOutlineColor: RgbaFloat.Black,
+                defaultOutlineColor: null,
                 rubyFontSizeMultiplier: 0.4f
             );
         }
@@ -305,7 +349,7 @@ namespace NitroSharp
                     HandleSurfaceDestroyed();
                     return;
                 }
-                Debug.Assert(_swapchain != null);
+                Debug.Assert(_swapchain is object);
                 if (_needsResize)
                 {
                     Size newSize = _window.Size;
@@ -331,22 +375,22 @@ namespace NitroSharp
 
         private void Tick(FrameStamp framestamp, float dt)
         {
-            Debug.Assert(_renderSystem != null);
-            Debug.Assert(_content != null);
+            Debug.Assert(_renderSystem is object);
+            Debug.Assert(_content is object);
+            Debug.Assert(_vm is object);
+
             if (_content.ResolveAssets())
             {
                 _world.BeginFrame();
-                Debug.Assert(_vm != null);
                 _vm.Run(_builtinFunctions, _shutdownCancellation.Token);
             }
 
             _inputContext.Update();
-            InputHandler.HandleInput(_context);
-            _world.FlushDetachedAnimations();
-            Animation.ProcessActive(_world, dt);
+            InputHandler.ProcessInput(_context);
+            ProcessWaitOperations();
             try
             {
-                _renderSystem.Render(framestamp);
+                _renderSystem.Render(framestamp, dt);
             }
             catch (VeldridException e)
                 when (e.Message == "The Swapchain's underlying surface has been lost.")
@@ -354,11 +398,74 @@ namespace NitroSharp
             }
         }
 
+        private void ProcessWaitOperations()
+        {
+            Debug.Assert(_context is object);
+            Debug.Assert(_vm is object);
+
+            bool checkInput()
+            {
+                InputContext input = _inputContext;
+                return input.IsMouseButtonDownThisFrame(MouseButton.Left)
+                    || input.IsKeyDownThisFrame(Key.Enter)
+                    || input.IsKeyDownThisFrame(Key.KeypadEnter)
+                    || input.IsKeyDownThisFrame(Key.Space);
+            }
+
+            bool checkIdle(EntityQuery query)
+            {
+                foreach (Entity entity in _world.Query(query))
+                {
+                    if (!entity.IsIdle) { return false; }
+                }
+
+                return true;
+            }
+
+            bool checkMove(EntityQuery query)
+            {
+                foreach (RenderItem entity in _world.Query<RenderItem>(query))
+                {
+                    if (entity.IsMoving) { return false; }
+                }
+
+                return true;
+            }
+
+            Queue<WaitOperation> waits = _context.WaitOperations;
+            while (waits.TryDequeue(out WaitOperation wait))
+            {
+                if (wait.Thread.IsActive) { continue;}
+                bool resume = wait switch
+                {
+                    { Condition: WaitCondition.UserInput } => checkInput(),
+                    { Condition: WaitCondition.EntityIdle, EntityQuery: {} q } => checkIdle(q),
+                    { Condition: WaitCondition.MoveCompleted, EntityQuery: {} q } => checkMove(q),
+                    _ => false
+                };
+                if (resume)
+                {
+                    _vm.ResumeThread(wait.Thread);
+                }
+                else
+                {
+                    _survivedWaits.Add(wait);
+                }
+            }
+
+            foreach (WaitOperation wait in _survivedWaits)
+            {
+                waits.Enqueue(wait);
+            }
+
+            _survivedWaits.Clear();
+        }
+
         private void OnSurfaceCreated(SwapchainSource swapchainSource)
         {
             bool resuming = _initializingGraphics.Task.IsCompleted;
             SetupGraphics(swapchainSource);
-            Debug.Assert(_graphicsDevice != null);
+            Debug.Assert(_graphicsDevice is object);
             _initializingGraphics.TrySetResult(0);
 
             if (resuming)
@@ -419,8 +526,8 @@ namespace NitroSharp
 
         private ContentManager CreateContentManager()
         {
-            Debug.Assert(_graphicsDevice != null);
-            Debug.Assert(_audioDevice != null);
+            Debug.Assert(_graphicsDevice is object);
+            Debug.Assert(_audioDevice is object);
             TextureLoader textureLoader;
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && UseWicOnWindows)
             {
@@ -438,8 +545,8 @@ namespace NitroSharp
 
         private void HandleSurfaceDestroyed()
         {
-            Debug.Assert(_graphicsDevice != null);
-            Debug.Assert(_swapchain != null);
+            Debug.Assert(_graphicsDevice is object);
+            Debug.Assert(_swapchain is object);
             if (_graphicsDevice.BackendType == GraphicsBackend.OpenGLES)
             {
                 // TODO (Android): destroy all device resources

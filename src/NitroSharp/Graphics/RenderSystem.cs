@@ -10,6 +10,7 @@ namespace NitroSharp.Graphics
     internal sealed class RenderSystem : IDisposable
     {
         private readonly World _world;
+        private readonly InputContext _input;
 
         public RenderSystem(
             World world,
@@ -17,7 +18,8 @@ namespace NitroSharp.Graphics
             GraphicsDevice graphicsDevice,
             Swapchain swapchain,
             GlyphRasterizer glyphRasterizer,
-            ContentManager contentManager)
+            ContentManager contentManager,
+            InputContext input)
         {
             Context = new RenderContext(
                 gameConfiguration,
@@ -27,18 +29,19 @@ namespace NitroSharp.Graphics
                 glyphRasterizer
             );
             _world = world;
+            _input = input;
         }
 
         public RenderContext Context { get; }
 
-        public void Render(in FrameStamp frameStamp)
+        public void Render(in FrameStamp frameStamp, float dt)
         {
             Context.BeginFrame(frameStamp);
 
             ReadOnlySpan<RenderItem> renderItems = _world.RenderItems.SortActive();
             foreach (RenderItem ri in renderItems)
             {
-                ri.LayoutPass(_world, Context);
+                ri.Update(_world, Context, dt);
             }
             foreach (RenderItem ri in renderItems)
             {

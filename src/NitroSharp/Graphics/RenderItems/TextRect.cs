@@ -25,7 +25,7 @@ namespace NitroSharp.Graphics
             return new Size((uint)bb.Right, (uint)bb.Bottom);
         }
 
-        public override void LayoutPass(World world, RenderContext ctx)
+        protected override void LayoutPass(World world, RenderContext ctx)
         {
             base.LayoutPass(world, ctx);
             ctx.Text.RequestGlyphs(Layout);

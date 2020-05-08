@@ -24,6 +24,18 @@
         OutBottom,
         Bottom,
 
+        // Used by SetNextFocus / SetFont
+        Up,
+        Down,
+        // Used by SetFont
+        LeftUp,
+        RightUp,
+        LeftDown,
+        RightDown,
+        LightDown,
+        Around,
+        None,
+
         // Colors
         Black,
         White,
@@ -50,15 +62,15 @@
         Disused,            // Mark for removal
         Erase,              // Disable
         Enter,              // Enable
-        Start,              // Resume (thread?)
-        Stop,               // Suspend (thread?)
+        Start,              // Start thread
+        Stop,               // Terminate thread
+        Pause,              // Suspend thread
+        Resume,             // Resume thread
         AddRender,
         SubRender,
         MulRender,
         Smoothing,          // Enable linear filtering
         Play,
-        Pause,
-        Resume,
         PushText,           // Disable typewriter animation
         NoLog,
         NoIcon,
@@ -74,23 +86,13 @@
         Auto,
         Inherit,
 
-        // Used by SetShade
+        // Used by SetFont / SetShade
+        Normal,
         Medium,
         Heavy,
 
         // Used by SetTone
         Monochrome,
-
-        // Used by SetFont
-        LeftDown,
-        RightDown,
-        Lightdown,
-        Around,
-        None,
-
-        // Used by SetNextFocus
-        Up,
-        Down,
 
         // Used by CreateScrollbar
         Vertical,

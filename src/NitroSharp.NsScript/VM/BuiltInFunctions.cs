@@ -5,26 +5,28 @@ namespace NitroSharp.NsScript.VM
 {
     public abstract class BuiltInFunctions
     {
+        internal NsScriptVM? _vm;
+        private readonly Random _randomGen;
+
         protected BuiltInFunctions()
         {
             _randomGen = new Random();
         }
 
-        public virtual int GenerateRandomNumber(int max) => _randomGen.Next(max);
-
-        internal NsScriptVM? _vm;
-        private readonly Random _randomGen;
-
+        protected ThreadContext CurrentThread => VM.CurrentThread!;
         public NsScriptVM VM => _vm!;
-
         public ThreadContext MainThread => VM.MainThread!;
-        public ThreadContext CurrentThread => VM.CurrentThread!;
 
-        public virtual void BeginDialogueLine(string pxmlString) { }
+        /// <summary>
+        /// Original name: Random.
+        /// </summary>
+        public virtual int GetRandomNumber(int max) => _randomGen.Next(max);
 
+        /// <summary>
+        /// Original name: Platform.
+        /// </summary>
         public virtual int GetPlatformId() => 0;
         public virtual string GetCurrentModuleName() => throw new NotImplementedException();
-        //public virtual int GenerateRandomNumber(int max) => throw new NotImplementedException();
         public virtual int GetSoundAmplitude(string characterName) => throw new NotImplementedException();
         public virtual int GetHeight(in EntityPath entityPath) => throw new NotImplementedException();
         public virtual int GetWidth(in EntityPath entityPath) => throw new NotImplementedException();
@@ -32,6 +34,10 @@ namespace NitroSharp.NsScript.VM
         public virtual int GetTimeRemaining(in EntityPath entityPath) => throw new NotImplementedException();
         public virtual int GetTimeElapsed(in EntityPath entityPath) => throw new NotImplementedException();
 
+        public virtual ConstantValue FormatString(string format, object[] args) => throw new NotImplementedException();
+
+        public virtual void CreateEntity(in EntityPath path) { }
+        public virtual void CreateThread(in EntityPath entityPath, string target) { }
         public virtual void SetAlias(in EntityPath entityPath, in EntityPath alias) { }
         public virtual void Request(EntityQuery query, NsEntityAction action) { }
         public virtual void DestroyEntities(EntityQuery query) { }
@@ -45,20 +51,12 @@ namespace NitroSharp.NsScript.VM
         /// Original name: WaitKey.
         /// </summary>
         public virtual void WaitForInput() { }
+        /// <summary>
+        /// Original name: WaitKey.
+        /// </summary>
         public virtual void WaitForInput(TimeSpan timeout) { }
-        public virtual void WaitText(string id, TimeSpan time) { }
 
-        /// <summary>
-        /// Original name: CreateWindow.
-        /// </summary>
-        public virtual void CreateDialogueBox(in EntityPath entityPath, int priority, NsCoordinate x, NsCoordinate y, uint width, uint height, bool inheritTransform) { }
-
-        /// <summary>
-        /// Original name: CreateTexture.
-        /// </summary>
-        public virtual void CreateSprite(in EntityPath entityPath, int priority, NsCoordinate x, NsCoordinate y, string source) { }
-
-        public virtual void CreateSpriteEx(in EntityPath entityPath, int priority, NsCoordinate x, NsCoordinate y, uint srcX, uint srcY, uint width, uint height, in EntityPath srcEntityPath) { }
+        public virtual void LoadImage(in EntityPath entityPath, string fileName) { }
 
         /// <summary>
         /// Original name: CreateColor.
@@ -66,37 +64,50 @@ namespace NitroSharp.NsScript.VM
         public virtual void CreateRectangle(in EntityPath entityPath, int priority, NsCoordinate x, NsCoordinate y, uint width, uint height, NsColor color) { }
 
         /// <summary>
+        /// Original name: CreateTexture.
+        /// </summary>
+        public virtual void CreateSprite(in EntityPath entityPath, int priority, NsCoordinate x, NsCoordinate y, string source) { }
+
+        public virtual void CreateSpriteEx(in EntityPath entityPath, int priority, NsCoordinate x, NsCoordinate y, uint srcX, uint srcY, uint width, uint height, string source) { }
+
+        public virtual void CreateAlphaMask(in EntityPath entityPath, int priority, NsCoordinate x, NsCoordinate y, string maskPath, bool inheritTransform) { }
+
+        /// <summary>
+        /// Original name: CreateWindow.
+        /// </summary>
+        public virtual void CreateDialogueBox(in EntityPath entityPath, int priority, NsCoordinate x, NsCoordinate y, uint width, uint height, bool inheritTransform) { }
+
+        /// <summary>
         /// Original name: CreateText.
         /// </summary>
         public virtual void CreateTextBlock(in EntityPath entityPath, int priority, NsCoordinate x, NsCoordinate y, NsTextDimension width, NsTextDimension height, string pxmlText) { }
 
-        public virtual void CreateEffect(in EntityPath entityPath, int priority, NsCoordinate x, NsCoordinate y, uint width, uint height, string effectName) { }
-
-        public virtual void CreateAlphaMask(in EntityPath entityPath, int priority, NsCoordinate x, NsCoordinate y, string maskPath, bool inheritTransform) { }
+        public virtual void SetFont(string family, int size, NsColor color, NsColor outlineColor, NsFontWeight weight, NsOutlineOffset outlineOffset) { }
+        public virtual void LoadText(in DialogueBlockToken token, uint maxWidth, uint maxHeight, int letterSpacing, int lineSpacing) { }
+        public virtual void WaitText(string id, TimeSpan time) { }
 
         public virtual void BoxBlur(EntityQuery query, uint nbPasses) { }
         public virtual void Grayscale(EntityQuery query) { }
 
+        public virtual void CreateEffect(in EntityPath entityPath, int priority, NsCoordinate x, NsCoordinate y, uint width, uint height, string effectName) { }
+
         public virtual void CreateCube(in EntityPath entityPath, int priority, string front, string back, string right, string left, string top, string bottom) { }
         public virtual void SetFieldOfView(string unk1, double unk2) { }
+        public virtual void MoveCube(EntityQuery query, TimeSpan duration, NsNumeric dstX, NsNumeric dstY, NsNumeric dstZ, NsEaseFunction easeFunction, TimeSpan delay) { }
 
+        public virtual void LoadVideo(in EntityPath entityPath, int priority, NsCoordinate x, NsCoordinate y, bool loop, string source) { }
+        public virtual void PlayVideo(in EntityPath entityPath, int priority, bool loop, bool alpha, string source, bool enableAudio) { }
         public virtual void WaitPlay(in EntityPath entityPath) { }
-
-        public virtual void LoadVideo(in EntityPath entityPath, int priority, NsCoordinate x, NsCoordinate y, bool loop, string fileName) { }
 
         /// <summary>
         /// Original name: CreateSound.
         /// </summary>
         public virtual void LoadAudio(in EntityPath entityPath, NsAudioKind kind, string fileName) { }
-        public virtual void LoadImage(in EntityPath entityPath, string fileName) { }
 
         /// <summary>
         /// Original name: SetLoop.
         /// </summary>
-        public virtual void ToggleLooping(in EntityPath entityPath, bool looping)
-        {
-        }
-
+        public virtual void ToggleLooping(in EntityPath entityPath, bool looping) { }
         public virtual void SetLoopRegion(in EntityPath entityPath, TimeSpan loopStart, TimeSpan loopEnd) { }
         public virtual void SetVolume(in EntityPath entityPath, TimeSpan duration, NsRational volume) { }
 
@@ -104,34 +115,24 @@ namespace NitroSharp.NsScript.VM
         public virtual void Move(EntityQuery query, TimeSpan duration, NsCoordinate dstX, NsCoordinate dstY, NsEaseFunction easeFunction, TimeSpan delay) { }
         public virtual void Zoom(EntityQuery query, TimeSpan duration, NsRational dstScaleX, NsRational dstScaleY, NsEaseFunction easeFunction, TimeSpan delay) { }
         public virtual void Rotate(EntityQuery query, TimeSpan duration, NsNumeric dstRotationX, NsNumeric dstRotationY, NsNumeric dstRotationZ, NsEaseFunction easeFunction, TimeSpan delay) { }
-        public virtual void MoveCube(EntityQuery query, TimeSpan duration, NsNumeric dstTranslationX, NsNumeric dstTranslationY, NsNumeric dstTranslationZ, NsEaseFunction easeFunction, TimeSpan delay) { }
         public virtual void BezierMove(EntityQuery query, TimeSpan duration, CompositeBezier curve, NsEaseFunction easeFunction, bool wait) { }
         public virtual void DrawTransition(EntityQuery query, TimeSpan duration, NsRational initialFadeAmount, NsRational finalFadeAmount, NsRational feather, NsEaseFunction easeFunction, string maskFileName, TimeSpan delay) { }
 
-        public virtual void CreateThread(in EntityPath entityPath, string target) { }
+        public virtual void WaitAction(EntityQuery query, TimeSpan? timeout) { }
+        public virtual void WaitMove(EntityQuery query) { }
 
-        public virtual ConstantValue FormatString(string format, object[] args) => throw new NotImplementedException();
 
+        public virtual void CreateChoice(in EntityPath entityPath) { }
+        public virtual void SetNextFocus(in EntityPath choice, in EntityPath next) { }
+
+        public virtual void CreateScrollbar(in EntityPath path, int priority, int x1, int y1, int x2, int y2, int pos, NsScrollbarKind kind, string src) { }
         public virtual float GetScrollbarValue(in EntityPath scrollbarEntity)
         {
             return 0.5f;
         }
 
-        public virtual void CreateChoice(in EntityPath entityPath) { }
-        public virtual bool IsPressed(string choice) => false;
-
-        public virtual void PlayCutscene(in EntityPath entityPath, int priority, bool loop, bool alpha, string fileName, bool enableAudio) { }
-
-        public virtual void LoadText(in DialogueBlockToken token, uint maxWidth, uint maxHeight, int letterSpacing, int lineSpacing) { }
-
+        public virtual void BeginDialogueLine(string pxmlString) { }
+        public virtual bool IsPressed(in EntityPath choice) => false;
         public virtual void AssertTrue(bool value) { }
-
-        public virtual void CreateEntity(in EntityPath path) {}
-
-        public virtual void WaitAction(EntityQuery query, TimeSpan timeout) { }
-
-        public virtual void WaitMove(EntityQuery query)
-        {
-        }
     }
 }

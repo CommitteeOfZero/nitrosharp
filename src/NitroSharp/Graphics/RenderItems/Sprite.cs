@@ -1,3 +1,4 @@
+using System.Numerics;
 using NitroSharp.Content;
 using Veldrid;
 
@@ -22,6 +23,21 @@ namespace NitroSharp.Graphics
 
         public override Size GetUnconstrainedBounds(RenderContext ctx)
             => _rect?.Size ?? ctx.Content.GetTextureSize(Texture);
+
+        protected override bool PreciseHitTest => true;
+
+        protected override (Vector2 uvTopLeft, Vector2 uvBottomRight) GetUV(RenderContext ctx)
+        {
+            if (_rect is RectangleU srcRect)
+            {
+                var texSize = ctx.Content.GetTextureSize(Texture).ToVector2();
+                var tl = new Vector2(srcRect.Left, srcRect.Top) / texSize;
+                var br = new Vector2(srcRect.Right, srcRect.Bottom) / texSize;
+                return (tl, br);
+            }
+
+            return base.GetUV(ctx);
+        }
 
         protected override void Render(RenderContext ctx, DrawBatch drawBatch)
         {

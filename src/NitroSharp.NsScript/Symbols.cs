@@ -78,7 +78,8 @@ namespace NitroSharp.NsScript.Compiler
                 this,
                 filePath,
                 relativePathNoExtension,
-                (SourceFileRootSyntax)syntaxTree.Root);
+                (SourceFileRootSyntax)syntaxTree.Root
+            );
         }
 
         public override SymbolKind Kind => SymbolKind.Module;
@@ -244,7 +245,8 @@ namespace NitroSharp.NsScript.Compiler
         private readonly Dictionary<string, ParameterSymbol>? _parameterMap;
 
         internal FunctionSymbol(
-            SourceFileSymbol declaringSourceFile, string name, FunctionDeclarationSyntax declaration)
+            SourceFileSymbol declaringSourceFile,
+            string name, FunctionDeclarationSyntax declaration)
             : base(declaringSourceFile, name, declaration)
         {
             var parameters = ImmutableArray<ParameterSymbol>.Empty;

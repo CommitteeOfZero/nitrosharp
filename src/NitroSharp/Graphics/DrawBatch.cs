@@ -75,7 +75,6 @@ namespace NitroSharp.Graphics
 
         public static bool CanMerge(in DrawParams a, in DrawParams b)
         {
-            return false;
             if (a.Method != b.Method) { return false; }
             return a.Method switch
             {
@@ -105,7 +104,7 @@ namespace NitroSharp.Graphics
             return false;
         }
 
-        public static DrawParams Merge(in DrawParams a, in DrawParams b)
+        private static DrawParams Merge(in DrawParams a, in DrawParams b)
         {
             Debug.Assert(CanMerge(a, b));
             return new DrawParams(

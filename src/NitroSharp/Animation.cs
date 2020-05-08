@@ -3,21 +3,12 @@ using System.Collections.Immutable;
 using System.Numerics;
 using NitroSharp.Graphics;
 using NitroSharp.NsScript;
-using NitroSharp.NsScript.VM;
 using NitroSharp.Utilities;
 
 namespace NitroSharp
 {
     internal abstract class Animation
     {
-        public static void ProcessActive(World world, float dt)
-        {
-            foreach (Animation anim in world.ActiveAnimations)
-            {
-                anim.Update(world, dt);
-            }
-        }
-
         protected readonly TimeSpan _duration;
         protected readonly NsEaseFunction _easeFunction;
         protected readonly bool _repeat;
@@ -26,10 +17,7 @@ namespace NitroSharp
         private bool _initialized;
         private bool _completed;
 
-        protected Animation(
-            TimeSpan duration,
-            NsEaseFunction easeFunction = NsEaseFunction.None,
-            bool repeat = false)
+        protected Animation(TimeSpan duration, NsEaseFunction easeFunction, bool repeat = false)
         {
             if (duration > TimeSpan.FromMilliseconds(0))
             {
@@ -44,17 +32,12 @@ namespace NitroSharp
             _repeat = repeat;
         }
 
-        public abstract Entity Entity { get; }
-
         protected float Progress
             => MathUtil.Clamp(_elapsed / (float)_duration.TotalMilliseconds, 0.0f, 1.0f);
 
         public bool HasCompleted => _elapsed >= _duration.TotalMilliseconds;
 
-        public bool IsBlocking { get; set; }
-        public ThreadContext WaitingThread { get; set; }
-
-        public bool Update(World world, float deltaMilliseconds)
+        public bool Update(float deltaMilliseconds)
         {
             if (_initialized)
             {
@@ -68,7 +51,7 @@ namespace NitroSharp
             if (!_completed)
             {
                 Advance(deltaMilliseconds);
-                PostAdvance(world);
+                PostAdvance();
                 return !_completed;
             }
 
@@ -79,11 +62,10 @@ namespace NitroSharp
         {
         }
 
-        private void PostAdvance(World world)
+        private void PostAdvance()
         {
             if (HasCompleted)
             {
-                OnCompleted(world);
                 if (_repeat)
                 {
                     _elapsed = 0;
@@ -92,13 +74,8 @@ namespace NitroSharp
                 else
                 {
                     _completed = true;
-                    world.DeactivateAnimation(this);
                 }
             }
-        }
-
-        protected virtual void OnCompleted(World world)
-        {
         }
 
         protected static float GetFactor(float progress, NsEaseFunction easeFunction)
@@ -128,13 +105,11 @@ namespace NitroSharp
 
         protected PropertyAnimation(
             TEntity entity, TimeSpan duration,
-            NsEaseFunction easeFunction = NsEaseFunction.None,
+            NsEaseFunction easeFunction,
             bool repeat = false) : base(duration, easeFunction, repeat)
         {
             _entity = entity;
         }
-
-        public override Entity Entity => _entity;
 
         protected abstract ref TProperty GetRef();
 
@@ -156,7 +131,7 @@ namespace NitroSharp
             TEntity entity,
             float startValue, float endValue,
             TimeSpan duration,
-            NsEaseFunction easeFunction = NsEaseFunction.None,
+            NsEaseFunction easeFunction,
             bool repeat = false) : base(entity, duration, easeFunction, repeat)
         {
             (_startValue, _endValue) = (startValue, endValue);
@@ -194,7 +169,7 @@ namespace NitroSharp
             TEntity entity,
             in Vector3 startValue, in Vector3 endValue,
             TimeSpan duration,
-            NsEaseFunction easeFunction = NsEaseFunction.None,
+            NsEaseFunction easeFunction,
             bool repeat = false) : base(entity, duration, easeFunction, repeat)
         {
             (_startValue, _endValue) = (startValue, endValue);
@@ -228,7 +203,7 @@ namespace NitroSharp
             RenderItem entity,
             in Vector3 startScale, in Vector3 endScale,
             TimeSpan duration,
-            NsEaseFunction easeFunction = NsEaseFunction.None,
+            NsEaseFunction easeFunction,
             bool repeat = false)
             : base(entity, startScale, endScale, duration, easeFunction, repeat)
         {
@@ -243,7 +218,7 @@ namespace NitroSharp
             RenderItem entity,
             in Vector3 startRot, in Vector3 endRot,
             TimeSpan duration,
-            NsEaseFunction easeFunction = NsEaseFunction.None,
+            NsEaseFunction easeFunction,
             bool repeat = false)
             : base(entity, startRot, endRot, duration, easeFunction, repeat)
         {
@@ -291,7 +266,7 @@ namespace NitroSharp
     {
         public BezierMoveAnimation(
             RenderItem2D entity, TimeSpan duration,
-            NsEaseFunction easeFunction = NsEaseFunction.None,
+            NsEaseFunction easeFunction,
             bool repeat = false)
             : base(entity, duration, easeFunction, repeat)
         {

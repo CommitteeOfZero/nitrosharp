@@ -9,9 +9,6 @@ namespace NitroSharp.Graphics.Core
     internal sealed class RenderTarget : IDisposable
     {
         private readonly bool _ownsFramebuffer;
-        private readonly Texture _colorTarget;
-        private readonly Framebuffer _framebuffer;
-
         private Texture? _stagingTexture;
 
         public static RenderTarget Swapchain(GraphicsDevice graphicsDevice, Framebuffer framebuffer)
@@ -29,12 +26,12 @@ namespace NitroSharp.Graphics.Core
                 TextureUsage.RenderTarget | TextureUsage.Sampled
             );
             ResourceFactory factory = graphicsDevice.ResourceFactory;
-            _colorTarget = factory.CreateTexture(ref textureDesc);
-            var desc = new FramebufferDescription(depthTarget: null, _colorTarget);
-            _framebuffer = factory.CreateFramebuffer(ref desc);
+            ColorTarget = factory.CreateTexture(ref textureDesc);
+            var desc = new FramebufferDescription(depthTarget: null, ColorTarget);
+            Framebuffer = factory.CreateFramebuffer(ref desc);
             _ownsFramebuffer = true;
             Size = size;
-            OutputDescription = _framebuffer.OutputDescription;
+            OutputDescription = Framebuffer.OutputDescription;
             ViewProjection = ViewProjection.CreateOrtho(
                 graphicsDevice,
                 new RectangleF(Vector2.Zero, Size)
@@ -43,21 +40,20 @@ namespace NitroSharp.Graphics.Core
 
         private RenderTarget(GraphicsDevice graphicsDevice, Framebuffer existingFramebuffer)
         {
-            _framebuffer = existingFramebuffer;
-            _colorTarget = existingFramebuffer.ColorTargets[0].Target;
+            Framebuffer = existingFramebuffer;
+            ColorTarget = existingFramebuffer.ColorTargets[0].Target;
             _ownsFramebuffer = false;
-            Size = new Size(_colorTarget.Width, _colorTarget.Height);
+            Size = new Size(ColorTarget.Width, ColorTarget.Height);
             ViewProjection = ViewProjection.CreateOrtho(
                 graphicsDevice,
                 new RectangleF(Vector2.Zero, Size)
             );
-            OutputDescription = _framebuffer.OutputDescription;
+            OutputDescription = Framebuffer.OutputDescription;
         }
 
         public Size Size { get; }
-        public Framebuffer Framebuffer => _framebuffer;
-
-        public Texture ColorTarget => _colorTarget;
+        public Framebuffer Framebuffer { get; }
+        public Texture ColorTarget { get; }
 
         public ViewProjection ViewProjection { get; }
         public OutputDescription OutputDescription { get; }
@@ -65,9 +61,9 @@ namespace NitroSharp.Graphics.Core
         public Texture GetStagingTexture(ResourceFactory resourceFactory)
         {
             _stagingTexture ??= resourceFactory.CreateTexture(TextureDescription.Texture2D(
-                _colorTarget.Width, _colorTarget.Height,
+                ColorTarget.Width, ColorTarget.Height,
                 mipLevels: 1, arrayLayers: 1,
-                _colorTarget.Format, TextureUsage.Staging
+                ColorTarget.Format, TextureUsage.Staging
             ));
             return _stagingTexture;
         }
@@ -76,8 +72,8 @@ namespace NitroSharp.Graphics.Core
         {
             if (_ownsFramebuffer)
             {
-                _framebuffer.Dispose();
-                _colorTarget.Dispose();
+                Framebuffer.Dispose();
+                ColorTarget.Dispose();
             }
 
             _stagingTexture?.Dispose();

@@ -225,11 +225,7 @@ namespace NitroSharp
 
         private readonly Dictionary<EntityId, EntityRec> _entities;
         private readonly Dictionary<EntityPath, EntityId> _aliases;
-
         private readonly List<(EntityId, EntityBucket)> _pendingBucketChanges;
-        private readonly Dictionary<AnimationKey, Animation> _activeAnimations;
-        private readonly List<(AnimationKey, Animation)> _animationsToDeactivate;
-        private readonly List<(AnimationKey, Animation)> _queuedAnimations;
 
         private readonly EntityGroup<VmThread> _vmThreads;
         private readonly SortableEntityGroup<RenderItem> _renderItems;
@@ -245,13 +241,7 @@ namespace NitroSharp
             _images = new EntityGroup<Image>();
             _choices = new EntityGroup<Choice>();
             _pendingBucketChanges = new List<(EntityId, EntityBucket)>();
-            _activeAnimations = new Dictionary<AnimationKey, Animation>();
-            _animationsToDeactivate = new List<(AnimationKey, Animation)>();
-            _queuedAnimations = new List<(AnimationKey, Animation)>();
         }
-
-        public Dictionary<AnimationKey, Animation>.ValueCollection ActiveAnimations
-            => _activeAnimations.Values;
 
         public EntityGroupView<VmThread> Threads => _vmThreads;
         public SortableEntityGroupView<RenderItem> RenderItems => _renderItems;
@@ -260,12 +250,6 @@ namespace NitroSharp
 
         public void BeginFrame()
         {
-            foreach ((AnimationKey key, Animation anim) in _queuedAnimations)
-            {
-                _activeAnimations[key] = anim;
-            }
-            _queuedAnimations.Clear();
-
             foreach ((EntityId entityId, EntityBucket dstBucket) in _pendingBucketChanges)
             {
                 ChangeBucket(entityId, dstBucket);
@@ -330,8 +314,9 @@ namespace NitroSharp
 
         public void SetAlias(in EntityId entityId, in EntityPath alias)
         {
-            if (Get(alias) is object)
+            if (Get(alias) is Entity existing)
             {
+                if (ReferenceEquals(Get(entityId), existing)) { return; }
                 throw new ArgumentException($"'{alias}' resolves to an existing entity.");
             }
 
@@ -475,63 +460,12 @@ namespace NitroSharp
             _entities[entityId] = rec.WithLocation(location);
         }
 
-        public T? GetAnimation<T>(Entity entity)
-            where T : Animation
-        {
-            var key = new AnimationKey(entity, typeof(T));
-            _activeAnimations.TryGetValue(key, out Animation? val);
-            return val as T;
-        }
-
-        public void ActivateAnimation<T>(T animation)
-            where T : Animation
-        {
-            var key = new AnimationKey(animation.Entity, typeof(T));
-            _queuedAnimations.Add((key, animation));
-        }
-
-        public void DeactivateAnimation(Animation animation)
-        {
-            var key = new AnimationKey(animation.Entity, animation.GetType());
-            _animationsToDeactivate.Add((key, animation));
-        }
-
-        public void FlushDetachedAnimations()
-        {
-            foreach ((AnimationKey key, Animation anim) in _animationsToDeactivate)
-            {
-                if (_activeAnimations.TryGetValue(key, out Animation? value) && value == anim)
-                {
-                    _activeAnimations.Remove(key);
-                }
-            }
-            _animationsToDeactivate.Clear();
-        }
-
         public void Dispose()
         {
             foreach ((_, EntityRec rec) in _entities)
             {
                 rec.Entity.Dispose();
             }
-        }
-
-        internal readonly struct AnimationKey : IEquatable<AnimationKey>
-        {
-            public readonly Entity Entity;
-            public readonly Type RuntimeType;
-
-            public AnimationKey(Entity entity, Type runtimeType)
-            {
-                Entity = entity;
-                RuntimeType = runtimeType;
-            }
-
-            public bool Equals(AnimationKey other)
-                => Entity.Equals(other.Entity) && RuntimeType == other.RuntimeType;
-
-            public override int GetHashCode()
-                => HashCode.Combine(Entity, RuntimeType);
         }
 
         internal readonly ref struct ChildEnumerable<T>

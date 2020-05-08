@@ -54,12 +54,7 @@ namespace NitroSharp.NsScript.VM
         private readonly Queue<ThreadAction> _pendingThreadActions;
         private readonly Stopwatch _timer;
         private readonly ConstantValue[] _globals;
-        private readonly GlobalVarLookupTable _globalVarLookup;
-        private readonly SystemVariableLookup _systemVariables;
-
         private readonly Stack<CubicBezierSegment> _bezierSegmentStack;
-
-        internal GlobalVarLookupTable GlobalVarLookup => _globalVarLookup;
 
         public NsScriptVM(
             NsxModuleLocator moduleLocator,
@@ -73,14 +68,15 @@ namespace NitroSharp.NsScript.VM
             _pendingThreadActions = new Queue<ThreadAction>();
             _timer = Stopwatch.StartNew();
             _globals = new ConstantValue[5000];
-            _globalVarLookup = GlobalVarLookupTable.Load(globalVarLookupTableStream);
-            _systemVariables = new SystemVariableLookup(this);
+            GlobalVarLookup = GlobalVarLookupTable.Load(globalVarLookupTableStream);
+            SystemVariables = new SystemVariableLookup(this);
             _bezierSegmentStack = new Stack<CubicBezierSegment>();
         }
 
-        public SystemVariableLookup SystemVariables => _systemVariables;
-        public ThreadContext? MainThread { get; internal set; }
-        public ThreadContext? CurrentThread { get; internal set; }
+        internal GlobalVarLookupTable GlobalVarLookup { get; }
+        public SystemVariableLookup SystemVariables { get; }
+        public ThreadContext? MainThread { get; private set; }
+        public ThreadContext? CurrentThread { get; private set; }
         public IReadOnlyList<ThreadContext> Threads => _threads;
 
         public ThreadContext CreateThread(string name, string symbol, bool start = false)
@@ -234,12 +230,12 @@ namespace NitroSharp.NsScript.VM
             }
         }
 
-        private void CommitSuspendThread(ThreadContext thread, TimeSpan? timeout)
+        private void CommitSuspendThread(ThreadContext thread, TimeSpan? timeoutOpt)
         {
             thread.SuspensionTime = TicksFromTimeSpan(_timer.Elapsed);
-            if (timeout != null)
+            if (timeoutOpt is TimeSpan timeout)
             {
-                thread.SleepTimeout = TicksFromTimeSpan(timeout.Value);
+                thread.SleepTimeout = TicksFromTimeSpan(timeout);
             }
         }
 
@@ -311,7 +307,7 @@ namespace NitroSharp.NsScript.VM
 
                 if (imm.HasValue)
                 {
-                    if (varToken != 0 && varToken == _systemVariables.PresentProcess)
+                    if (varToken != 0 && varToken == SystemVariables.PresentProcess)
                     {
                         string subName = thisModule.GetSubroutineName(frame.SubroutineIndex);
                         imm = _globals[varToken] = ConstantValue.String(subName);
@@ -466,7 +462,7 @@ namespace NitroSharp.NsScript.VM
                         _bezierSegmentStack.Clear();
                         break;
                     case Opcode.BezierEndSeg:
-                        BezierControlPoint popPoint(ref ValueStack<ConstantValue> stack)
+                        static BezierControlPoint popPoint(ref ValueStack<ConstantValue> stack)
                         {
                             var x = NsCoordinate.FromValue(stack.Pop());
                             var y = NsCoordinate.FromValue(stack.Pop());
@@ -534,19 +530,15 @@ namespace NitroSharp.NsScript.VM
                             frame.SubroutineIndex
                         );
                         (string box, string textName) = srti.DialogueBlockInfos[textId];
-                        _systemVariables.CurrentBoxName = ConstantValue.String(box);
-                        _systemVariables.CurrentTextName = ConstantValue.String(textName);
+                        SystemVariables.CurrentBoxName = ConstantValue.String(box);
+                        SystemVariables.CurrentTextName = ConstantValue.String(textName);
                         break;
 
                     case Opcode.SelectStart:
                         break;
                     case Opcode.IsPressed:
                         string choiceName = thisModule.GetString(program.DecodeToken());
-                        if (choiceName.StartsWith("@"))
-                        {
-                            choiceName = choiceName[1..];
-                        }
-                        bool pressed = builtins.IsPressed(choiceName);
+                        bool pressed = builtins.IsPressed(new EntityPath(choiceName));
                         stack.Push(ConstantValue.Boolean(pressed));
                         break;
                     case Opcode.SelectEnd:

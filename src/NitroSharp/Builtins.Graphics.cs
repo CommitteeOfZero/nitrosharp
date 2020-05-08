@@ -14,10 +14,8 @@ namespace NitroSharp
         public override void CreateRectangle(
             in EntityPath entityPath,
             int priority,
-            NsCoordinate x,
-            NsCoordinate y,
-            uint width,
-            uint height,
+            NsCoordinate x, NsCoordinate y,
+            uint width, uint height,
             NsColor color)
         {
             if (_world.ResolvePath(entityPath, out ResolvedEntityPath resolvedPath))
@@ -45,28 +43,33 @@ namespace NitroSharp
             }
         }
 
-         public override void CreateSprite(
+        public override void CreateSprite(
             in EntityPath entityPath,
             int priority,
             NsCoordinate x, NsCoordinate y,
             string source)
         {
-            if (_world.ResolvePath(entityPath, out ResolvedEntityPath resolvedPath))
+            if (_world.ResolvePath(entityPath, out ResolvedEntityPath resolvedPath)
+                && ResolveImageSource(source) is AssetRef<Texture> texture)
             {
-                if (_ctx.Content.RequestTexture(source) is AssetRef<Texture> textureRef)
-                {
-                    Sprite sprite = _world.Add(new Sprite(
-                        resolvedPath,
-                        priority,
-                        textureRef
-                    ).WithPosition(_world, _renderCtx, x, y));
+                Sprite sprite = _world.Add(new Sprite(
+                    resolvedPath,
+                    priority,
+                    texture
+                ).WithPosition(_world, _renderCtx, x, y));
 
-                    if (_world.Get(sprite.Parent) is AlphaMask alphaMask)
-                    {
-                        sprite.AlphaMaskOpt = alphaMask.Texture;
-                    }
+                if (_world.Get(sprite.Parent) is AlphaMask alphaMask)
+                {
+                    sprite.AlphaMaskOpt = alphaMask.Texture;
                 }
             }
+        }
+
+        private AssetRef<Texture>? ResolveImageSource(string src)
+        {
+            return _world.Get(new EntityPath(src)) is Image img
+                ? img.Texture.Clone()
+                : _ctx.Content.RequestTexture(src);
         }
 
         public override void CreateSpriteEx(
@@ -75,15 +78,15 @@ namespace NitroSharp
             NsCoordinate x, NsCoordinate y,
             uint srcX, uint srcY,
             uint width, uint height,
-            in EntityPath srcEntityPath)
+            string source)
         {
             if (_world.ResolvePath(entityPath, out ResolvedEntityPath resolvedPath)
-                && _world.Get(srcEntityPath) is Image srcImage)
+                && ResolveImageSource(source) is AssetRef<Texture> texture)
             {
                 _world.Add(new Sprite(
                     resolvedPath,
                     priority,
-                    srcImage.Texture.Clone(),
+                    texture,
                     new RectangleU(srcX, srcY, width, height)
                 ).WithPosition(_world, _renderCtx, x, y));
             }
@@ -98,10 +101,33 @@ namespace NitroSharp
         {
             if (_world.ResolvePath(entityPath, out ResolvedEntityPath resolvedPath))
             {
-                var textBuffer = TextBuffer.FromPXmlString(pxmlText, _ctx.FontConfig, new PtFontSize(20));
+                var textBuffer = TextBuffer.FromPXmlString(pxmlText, _ctx.FontConfig);
+                Size parentBounds = _world.Get(resolvedPath.ParentId) switch
+                {
+                    RenderItem2D parent => parent.GetUnconstrainedBounds(_renderCtx),
+                    _ => _renderCtx.DesignResolution
+                };
+                uint w = width switch
+                {
+                    { Variant: NsTextDimensionVariant.Value, Value: {} val } => (uint)val,
+                    //{ Variant: NsTextDimensionVariant.Inherit } => parentBounds.Width,
+                    { Variant: NsTextDimensionVariant.Auto } => 0
+                };
+                uint h = width switch
+                {
+                    { Variant: NsTextDimensionVariant.Value, Value: {} val } => (uint)val,
+                    //{ Variant: NsTextDimensionVariant.Inherit } => parentBounds.Height,
+                    { Variant: NsTextDimensionVariant.Auto } => 0
+                };
+                Size? bounds = (w, h) switch
+                {
+                    (0, 0) => null,
+                    _ => new Size(w, h)
+                };
+
                 if (textBuffer.AssertSingleTextSegment() is TextSegment textSegment)
                 {
-                    var layout = new TextLayout(_ctx.GlyphRasterizer, textSegment.TextRuns.AsSpan(), null);
+                    var layout = new TextLayout(_ctx.GlyphRasterizer, textSegment.TextRuns.AsSpan(), bounds);
                     _world.Add(new TextRect(
                         resolvedPath,
                         _renderCtx.Text,
@@ -110,6 +136,17 @@ namespace NitroSharp
                     ).WithPosition(_world, _renderCtx, x, y));
                 }
             }
+        }
+
+        public override void SetFont(
+            string family, int size,
+            NsColor color, NsColor outlineColor,
+            NsFontWeight weight,
+            NsOutlineOffset outlineOffset)
+        {
+            _ctx.FontConfig
+                .WithDefaultSize(new PtFontSize((int)(size * 0.5)))
+                .WithDefaultColor(color.ToRgbaFloat());
         }
 
         public override void CreateDialogueBox(
@@ -160,6 +197,7 @@ namespace NitroSharp
             {
                 ri.Color.SetAlpha(0.3f);
             }
+            Delay(delay);
         }
 
         public override void Move(
@@ -169,30 +207,20 @@ namespace NitroSharp
             NsEaseFunction easeFunction,
             TimeSpan delay)
         {
-            void moveCore(RenderItem2D renderItem)
-            {
-                Vector3 destination = renderItem.Point(_world, _renderCtx, dstX, dstY);
-                if (duration > TimeSpan.Zero)
-                {
-                    var anim = new MoveAnimation(
-                        renderItem,
-                        startPosition: renderItem.Transform.Position,
-                        destination,
-                        duration,
-                        easeFunction
-                    );
-                    _world.ActivateAnimation(anim);
-                }
-                else
-                {
-                    renderItem.Transform.Position = destination;
-                }
-            }
-
             foreach (RenderItem2D ri in _world.Query<RenderItem2D>(query))
             {
-                moveCore(ri);
+                Vector3 destination = ri.Point(_world, _renderCtx, dstX, dstY);
+                ri.Move(_world, _renderCtx, dstX, dstY, duration, easeFunction);
+                //if (ri.AnimPropagateFlags.HasFlag(AnimPropagateFlags.Move))
+                //{
+                //    foreach (RenderItem2D child in _world.Children<RenderItem2D>(ri))
+                //    {
+                //        child.Move(destination, duration, easeFunction);
+                //    }
+                //}
             }
+
+            Delay(delay);
         }
 
         public override void Zoom(
@@ -202,38 +230,20 @@ namespace NitroSharp
             NsEaseFunction easeFunction,
             TimeSpan delay)
         {
-            void zoomCore(RenderItem2D renderItem)
+            var dstScale = new Vector3(dstScaleX.Rebase(1.0f), dstScaleY.Rebase(1.0f), 1.0f);
+            foreach (RenderItem2D ri in _world.Query<RenderItem2D>(query))
             {
-                var dstScale = new Vector3(dstScaleX.Rebase(1.0f), dstScaleY.Rebase(1.0f), 1.0f);
-                if (duration > TimeSpan.Zero)
+                ri.Scale(dstScale, duration, easeFunction);
+                if (ri.AnimPropagateFlags.HasFlag(AnimPropagateFlags.Scale))
                 {
-                    var anim = new ScaleAnimation(
-                        renderItem,
-                        startScale: renderItem.Transform.Scale,
-                        dstScale,
-                        duration,
-                        easeFunction
-                    );
-                    _world.ActivateAnimation(anim);
-                }
-                else
-                {
-                    renderItem.Transform.Scale = dstScale;
+                    foreach (RenderItem2D child in _world.Children<RenderItem2D>(ri))
+                    {
+                        child.Scale(dstScale, duration, easeFunction);
+                    }
                 }
             }
 
-            foreach (RenderItem2D ri in _world.Query<RenderItem2D>(query))
-            {
-                zoomCore(ri);
-                if (ri is ConstraintBox { InheritTransform: false })
-                {
-                    continue;
-                }
-                foreach (RenderItem2D child in _world.Children<RenderItem2D>(ri))
-                {
-                    zoomCore(child);
-                }
-            }
+            Delay(delay);
         }
 
         public override void Rotate(
@@ -243,34 +253,20 @@ namespace NitroSharp
             NsEaseFunction easeFunction,
             TimeSpan delay)
         {
-            void rotateCore(RenderItem renderItem)
+            var dstRot = new Vector3(dstRotationX.Value, dstRotationY.Value, dstRotationZ.Value);
+            foreach (RenderItem2D ri in _world.Query<RenderItem2D>(query))
             {
-                var dstRot = new Vector3(
-                    dstRotationX.Value,
-                    dstRotationY.Value,
-                    dstRotationZ.Value
-                );
-                if (duration > TimeSpan.Zero)
+                ri.Rotate(dstRot, duration, easeFunction);
+                if (ri.AnimPropagateFlags.HasFlag(AnimPropagateFlags.Rotate))
                 {
-                    var anim = new RotateAnimation(
-                        renderItem,
-                        startRot: renderItem.Transform.Rotation,
-                        dstRot,
-                        duration,
-                        easeFunction
-                    );
-                    _world.ActivateAnimation(anim);
-                }
-                else
-                {
-                    renderItem.Transform.Rotation = dstRot;
+                    foreach (RenderItem child in _world.Children<RenderItem>(ri))
+                    {
+                        child.Rotate(dstRot, duration, easeFunction);
+                    }
                 }
             }
 
-            foreach (RenderItem2D ri in _world.Query<RenderItem2D>(query))
-            {
-                rotateCore(ri);
-            }
+            Delay(delay);
         }
     }
 }

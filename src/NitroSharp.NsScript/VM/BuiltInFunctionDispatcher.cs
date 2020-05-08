@@ -55,6 +55,9 @@ namespace NitroSharp.NsScript.VM
                 case BuiltInFunction.CreateChoice:
                     CreateChoice(ref args);
                     break;
+                case BuiltInFunction.SetNextFocus:
+                    SetNextFocus(ref args);
+                    break;
                 case BuiltInFunction.CreateColor:
                     CreateColor(ref args);
                     break;
@@ -114,6 +117,9 @@ namespace NitroSharp.NsScript.VM
                 case BuiltInFunction.LoadText:
                     LoadText(ref args);
                     break;
+                case BuiltInFunction.SetFont:
+                    SetFont(ref args);
+                    break;
                 case BuiltInFunction.WaitText:
                     WaitText();
                     break;
@@ -166,6 +172,10 @@ namespace NitroSharp.NsScript.VM
                     break;
                 case BuiltInFunction.Time:
                     Time();
+                    break;
+
+                case BuiltInFunction.CreateScrollbar:
+                    CreateScrollbar(ref args);
                     break;
                 case BuiltInFunction.ScrollbarValue:
                     ScrollbarValue(ref args);
@@ -224,6 +234,39 @@ namespace NitroSharp.NsScript.VM
             return result;
         }
 
+        private void SetFont(ref ArgConsumer args)
+        {
+            _impl.SetFont(
+                family: args.TakeString(),
+                size: args.TakeInt(),
+                color: args.TakeColor(),
+                outlineColor: args.TakeColor(),
+                weight: NsFontWeight.From(args.Take()),
+                outlineOffset: EnumConversions.ToOutlineOffset(args.TakeConstant())
+            );
+        }
+
+        private void CreateScrollbar(ref ArgConsumer args)
+        {
+            _impl.CreateScrollbar(
+                args.TakeEntityPath(),
+                priority: args.TakeInt(),
+                x1: args.TakeInt(),
+                y1: args.TakeInt(),
+                x2: args.TakeInt(),
+                y2: args.TakeInt(),
+                pos: args.TakeInt(),
+                kind: EnumConversions.ToScrollbarKind(args.TakeConstant()),
+                src: args.TakeString()
+            );
+        }
+
+        private void ScrollbarValue(ref ArgConsumer args)
+        {
+            EntityPath scrollbarEntity = args.TakeEntityPath();
+            SetResult(ConstantValue.Float(_impl.GetScrollbarValue(scrollbarEntity)));
+        }
+
         private void WaitMove(ref ArgConsumer args)
         {
             _impl.WaitMove(args.TakeEntityQuery());
@@ -231,7 +274,10 @@ namespace NitroSharp.NsScript.VM
 
         private void WaitAction(ref ArgConsumer args)
         {
-            _impl.WaitAction(args.TakeEntityQuery(), args.TakeTimeSpan());
+            EntityQuery query = args.TakeEntityQuery();
+            TimeSpan ts = args.TakeTimeSpan();
+            TimeSpan? tsOpt = ts > TimeSpan.Zero ? ts : (TimeSpan?)null;
+            _impl.WaitAction(query, tsOpt);
         }
 
         private void CreateName(ref ArgConsumer args)
@@ -310,12 +356,6 @@ namespace NitroSharp.NsScript.VM
                height: args.TakeDimension(),
                pxmlText: args.TakeString()
             );
-        }
-
-        private void ScrollbarValue(ref ArgConsumer args)
-        {
-            EntityPath scrollbarEntity = args.TakeEntityPath();
-            SetResult(ConstantValue.Float(_impl.GetScrollbarValue(scrollbarEntity)));
         }
 
         private void Integer(ref ArgConsumer args)
@@ -532,6 +572,11 @@ namespace NitroSharp.NsScript.VM
             _impl.CreateChoice(args.TakeEntityPath());
         }
 
+        private void SetNextFocus(ref ArgConsumer args)
+        {
+            _impl.SetNextFocus(choice: args.TakeEntityPath(), next: args.TakeEntityPath());
+        }
+
         private void CreateColor(ref ArgConsumer args)
         {
             static NsColor takeColor(ref ArgConsumer args)
@@ -595,7 +640,7 @@ namespace NitroSharp.NsScript.VM
                 srcY: args.TakeUInt(),
                 width: args.TakeUInt(),
                 height: args.TakeUInt(),
-                args.TakeEntityPath()
+                source: args.TakeString()
             );
         }
 
@@ -643,7 +688,7 @@ namespace NitroSharp.NsScript.VM
         private void Random(ref ArgConsumer args)
         {
             int max = args.TakeInt();
-            SetResult(ConstantValue.Integer(_impl.GenerateRandomNumber(max)));
+            SetResult(ConstantValue.Integer(_impl.GetRandomNumber(max)));
         }
 
         private void ImageHorizon(ref ArgConsumer args)

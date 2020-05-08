@@ -10,5 +10,6 @@ namespace NitroSharp.Graphics
         }
 
         public RgbaFloat Color { get; }
+        public override bool IsIdle => true;
     }
 }

@@ -7,10 +7,11 @@ using Veldrid;
 namespace NitroSharp.Text
 {
     [Flags]
-    internal enum TextRunFlags : byte
+    internal enum TextRunFlags
     {
         None,
-        RubyText
+        RubyText,
+        Outline
     }
 
     [StructLayout(LayoutKind.Auto)]
@@ -24,47 +25,53 @@ namespace NitroSharp.Text
         public readonly RgbaFloat OutlineColor;
         public readonly TextRunFlags Flags;
 
+        public bool DrawOutline => (Flags & TextRunFlags.Outline) == TextRunFlags.Outline;
         public bool HasRubyText => (Flags & TextRunFlags.RubyText) == TextRunFlags.RubyText;
 
         public static TextRun Regular(
             ReadOnlyMemory<char> text,
             FontKey font, PtFontSize ptFontSize,
-            RgbaFloat color, RgbaFloat outlineColor)
+            RgbaFloat color, RgbaFloat? outlineColor)
         {
             return new TextRun(
                 font, ptFontSize,
                 color, outlineColor,
-                text, rubyText: default,
-                TextRunFlags.None
+                text, rubyText: default
             );
         }
 
         public static TextRun WithRubyText(
             ReadOnlyMemory<char> rubyBase, ReadOnlyMemory<char> rubyText,
             FontKey font, PtFontSize ptFontSize,
-            RgbaFloat color, RgbaFloat outlineColor)
+            RgbaFloat color, RgbaFloat? outlineColor)
         {
             return new TextRun(
                 font, ptFontSize,
                 color, outlineColor,
-                rubyBase, rubyText,
-                TextRunFlags.RubyText
+                rubyBase, rubyText
             );
         }
 
         private TextRun(
             FontKey font, PtFontSize fontSize,
-            RgbaFloat color, RgbaFloat outlineColor,
-            ReadOnlyMemory<char> text, ReadOnlyMemory<char> rubyText,
-            TextRunFlags flags)
+            RgbaFloat color, RgbaFloat? outlineColor,
+            ReadOnlyMemory<char> text, ReadOnlyMemory<char> rubyText)
         {
             Font = font;
             FontSize = fontSize;
             Color = color;
-            OutlineColor = outlineColor;
+            OutlineColor = outlineColor ?? default;
             Text = text;
             RubyText = rubyText;
-            Flags = flags;
+            Flags = TextRunFlags.None;
+            if (rubyText.Length > 0)
+            {
+                Flags |= TextRunFlags.RubyText;
+            }
+            if (outlineColor is {})
+            {
+                Flags |= TextRunFlags.Outline;
+            }
         }
     }
 }

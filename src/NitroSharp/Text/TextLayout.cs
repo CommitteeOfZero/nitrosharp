@@ -9,6 +9,14 @@ using Veldrid;
 
 namespace NitroSharp.Text
 {
+    [Flags]
+    internal enum GlyphRunFlags
+    {
+        None,
+        Ruby,
+        Outline
+    }
+
     [StructLayout(LayoutKind.Auto)]
     internal readonly struct GlyphRun
     {
@@ -17,23 +25,32 @@ namespace NitroSharp.Text
         public readonly RgbaFloat Color;
         public readonly RgbaFloat OutlineColor;
         public readonly GlyphSpan GlyphSpan;
-        public readonly bool IsRuby;
+        public readonly GlyphRunFlags Flags;
 
         public GlyphRun(
-            FontKey font,
-            PtFontSize fontSize,
-            RgbaFloat color,
-            RgbaFloat outlineColor,
+            FontKey font, PtFontSize fontSize,
+            RgbaFloat color, RgbaFloat outlineColor,
             GlyphSpan glyphSpan,
-            bool isRuby)
+            bool isRuby, bool drawOutline)
         {
             Font = font;
             FontSize = fontSize;
             Color = color;
             OutlineColor = outlineColor;
             GlyphSpan = glyphSpan;
-            IsRuby = isRuby;
+            Flags = GlyphRunFlags.None;
+            if (isRuby)
+            {
+                Flags |= GlyphRunFlags.Ruby;
+            }
+            if (drawOutline)
+            {
+                Flags |= GlyphRunFlags.Outline;
+            }
         }
+
+        public bool IsRuby => (Flags & GlyphRunFlags.Ruby) == GlyphRunFlags.Ruby;
+        public bool DrawOutline => (Flags & GlyphRunFlags.Outline) == GlyphRunFlags.Outline;
     }
 
     [StructLayout(LayoutKind.Auto)]
@@ -312,7 +329,8 @@ namespace NitroSharp.Text
                 textRun.Color,
                 textRun.OutlineColor,
                 glyphSpan,
-                isRuby: false
+                isRuby: false,
+                textRun.DrawOutline
             );
 
             if (textRun.HasRubyText)
@@ -336,7 +354,8 @@ namespace NitroSharp.Text
                     textRun.Color,
                     textRun.OutlineColor,
                     rubyTextSpan,
-                    isRuby: true
+                    isRuby: true,
+                    textRun.DrawOutline
                 );
             }
 
@@ -358,7 +377,8 @@ namespace NitroSharp.Text
                         lastRun.Color,
                         lastRun.OutlineColor,
                         new GlyphSpan(lastRun.GlyphSpan.Start, lastRunLen - lineLength),
-                        isRuby: false
+                        isRuby: false,
+                        textRun.DrawOutline
                     );
                     return false;
                 }

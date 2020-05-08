@@ -12,5 +12,11 @@ namespace NitroSharp.Graphics
         }
 
         public AssetRef<Texture> Texture { get; }
+        public override bool IsIdle => true;
+
+        public override void Dispose()
+        {
+            Texture.Dispose();
+        }
     }
 }

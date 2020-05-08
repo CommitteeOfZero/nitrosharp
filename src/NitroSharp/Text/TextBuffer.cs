@@ -29,17 +29,10 @@ namespace NitroSharp.Text
         public uint TextLength { get; }
         public bool IsEmpty => Segments.Length == 0;
 
-        public static TextBuffer FromPXmlString(
-            string pxmlString,
-            FontConfiguration fontConfig,
-            PtFontSize? defaultFontSize = null)
+        public static TextBuffer FromPXmlString(string pxmlString, FontConfiguration fontConfig)
         {
             PXmlContent root = Parsing.ParsePXmlString(pxmlString);
-            return s_pxmlFlattener.FlattenPXmlContent(
-                root,
-                fontConfig,
-                defaultFontSize
-            );
+            return s_pxmlFlattener.FlattenPXmlContent(root, fontConfig);
         }
 
         public TextSegment? AssertSingleTextSegment()
@@ -61,7 +54,6 @@ namespace NitroSharp.Text
             }
 
             private FontConfiguration? _fontConfig;
-            private PtFontSize _defaultFontSize;
             private readonly ImmutableArray<TextBufferSegment>.Builder _segments;
             private readonly ImmutableArray<TextRun>.Builder _textRuns;
             private TextRunData _textRunData;
@@ -74,13 +66,9 @@ namespace NitroSharp.Text
                 _textRuns = ImmutableArray.CreateBuilder<TextRun>(1);
             }
 
-            public TextBuffer FlattenPXmlContent(
-                PXmlNode pxmlRoot,
-                FontConfiguration fontConfig,
-                PtFontSize? defaultFontSize)
+            public TextBuffer FlattenPXmlContent(PXmlNode pxmlRoot, FontConfiguration fontConfig)
             {
                 _fontConfig = fontConfig;
-                _defaultFontSize = defaultFontSize ?? fontConfig.DefaultFontSize;
                 _segments.Clear();
                 _textLength = 0;
                 _voice = null;
@@ -174,10 +162,10 @@ namespace NitroSharp.Text
 
                 PtFontSize fontSize = data.FontSize.HasValue
                     ? new PtFontSize(data.FontSize.Value)
-                    : _defaultFontSize;
+                    : _fontConfig.DefaultFontSize;
 
                 RgbaFloat color = data.Color ?? _fontConfig.DefaultTextColor;
-                RgbaFloat outlineColor = data.OutlineColor ?? _fontConfig.DefaultOutlineColor;
+                RgbaFloat? outlineColor = data.OutlineColor ?? _fontConfig.DefaultOutlineColor;
 
                 TextRun textRun;
                 if (data.RubyText == null)

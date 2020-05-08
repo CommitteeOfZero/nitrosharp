@@ -3,7 +3,6 @@
     public enum NsTextDimensionVariant
     {
         Auto,
-        Inherit,
         Value
     }
 
@@ -18,9 +17,6 @@
         public static NsTextDimension Auto
             => new NsTextDimension(NsTextDimensionVariant.Auto, null);
 
-        public static NsTextDimension Inherit
-            => new NsTextDimension(NsTextDimensionVariant.Inherit, null);
-
         public static NsTextDimension WithValue(int value)
             => new NsTextDimension(NsTextDimensionVariant.Value, value);
 
@@ -29,7 +25,6 @@
             return constant switch
             {
                 BuiltInConstant.Auto => Auto,
-                BuiltInConstant.Inherit => Inherit,
                 _ => ThrowHelper.UnexpectedValue<NsTextDimension>(nameof(constant))
             };
         }

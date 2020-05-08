@@ -1,9 +1,11 @@
 using System;
+using System.Buffers;
 using System.Diagnostics;
 using System.Numerics;
 using System.Threading.Tasks;
 using NitroSharp.Graphics.Core;
 using NitroSharp.Text;
+using NitroSharp.Utilities;
 using Veldrid;
 
 #nullable enable
@@ -95,6 +97,8 @@ namespace NitroSharp.Graphics
         private readonly GpuCache<GpuGlyphRun> _gpuGlyphRuns;
         private readonly GpuCache<GpuTransform> _gpuTransforms;
 
+        private ArrayBuilder<Draw> _pendingDraws;
+
         public TextRenderContext(
             GraphicsDevice gd,
             GlyphRasterizer glyphRasterizer,
@@ -117,6 +121,8 @@ namespace NitroSharp.Graphics
                 GpuTransform.SizeInGpuBlocks,
                 dimension: 128
             );
+
+            _pendingDraws = new ArrayBuilder<Draw>(4);
         }
 
         public void BeginFrame()
@@ -144,7 +150,7 @@ namespace NitroSharp.Graphics
                 ReadOnlySpan<PositionedGlyph> glyphs = layout.GetGlyphs(glyphRun.GlyphSpan);
                 if (AppendRun(glyphRun, glyphs, transform) is GpuGlyphSlice gpuGlyphSlice)
                 {
-                    drawBatch.PushDraw(new Draw
+                    _pendingDraws.Add() = new Draw
                     {
                         Pipeline = shaderResources.Pipeline,
                         BufferBindings = new BufferBindings(gpuGlyphSlice.Buffer),
@@ -168,9 +174,40 @@ namespace NitroSharp.Graphics
                             gpuGlyphSlice.InstanceBase,
                             gpuGlyphSlice.InstanceCount
                         )
-                    });
+                    };
                 }
             }
+
+            for (int i = 0; i < layout.GlyphRuns.Length; i++)
+            {
+                if (layout.GlyphRuns[i].DrawOutline)
+                {
+                    Draw draw = _pendingDraws[i];
+                    draw.ResourceBindings = new ResourceBindings(
+                        new ResourceSetKey(
+                            shaderResources.ResourceLayoutVS,
+                            drawBatch.Target.ViewProjection.Buffer.VdBuffer,
+                            _gpuGlyphRuns.Texture,
+                            _gpuTransforms.Texture,
+                            _textureCache.UvRectTexture
+                        ),
+                        new ResourceSetKey(
+                            shaderResources.ResourceLayoutFS,
+                            _textureCache.GetCacheTexture(PixelFormat.R8_G8_B8_A8_UNorm, out _),
+                            ctx.GraphicsDevice.PointSampler
+                        )
+                    );
+                    draw.Pipeline = ctx.ShaderResources.Text.OutlinePipeline;
+                    drawBatch.PushDraw(draw);
+                }
+            }
+
+            foreach (ref Draw draw in _pendingDraws.AsSpan())
+            {
+                drawBatch.PushDraw(draw);
+            }
+
+            _pendingDraws.Clear();
         }
 
         public void ResolveGlyphs()

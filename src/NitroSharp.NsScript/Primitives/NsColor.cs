@@ -6,7 +6,7 @@ namespace NitroSharp.NsScript
 {
     public readonly struct NsColor
     {
-        public NsColor(byte r, byte g, byte b)
+        private NsColor(byte r, byte g, byte b)
         {
             R = r;
             G = g;
@@ -55,12 +55,9 @@ namespace NitroSharp.NsScript
             {
                 return FromRgb(colorCode);
             }
-            else
+            if (Enum.TryParse(colorString, true, out BuiltInConstant enumValue))
             {
-                if (Enum.TryParse(colorString, true, out BuiltInConstant enumValue))
-                {
-                    return FromConstant(enumValue);
-                }
+                return FromConstant(enumValue);
             }
 
             throw ThrowHelper.UnexpectedValue(colorString);

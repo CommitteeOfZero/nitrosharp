@@ -33,12 +33,6 @@ namespace NitroSharp
         public override string? ToString() => Path;
     }
 
-    internal enum EntityStatus
-    {
-        Normal,
-
-    }
-
     internal abstract class Entity : EntityInternal, IDisposable
     {
         private SmallList<EntityId> _children;
@@ -62,6 +56,8 @@ namespace NitroSharp
 
         public void Lock() => IsLocked = true;
         public void Unlock() => IsLocked = false;
+
+        public abstract bool IsIdle { get; }
 
         void EntityInternal.SetAlias(in EntityPath alias)
         {

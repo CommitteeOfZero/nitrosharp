@@ -137,6 +137,7 @@ namespace NitroSharp
             {
                 prefix = prefix[..^1];
             }
+
             foreach (EntityId child in entity.Children)
             {
                 if (child.Name.StartsWith(prefix, StringComparison.Ordinal))
@@ -144,6 +145,11 @@ namespace NitroSharp
                     // TODO
                     Match(Get(child)!, remainingQueryParts[1..], ref results);
                 }
+            }
+
+            if (prefix.Length == 0 && entity.Id.MouseState != MouseState.Invalid)
+            {
+                Match(entity, remainingQueryParts[1..], ref results);
             }
         }
     }

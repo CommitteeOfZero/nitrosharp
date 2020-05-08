@@ -14,5 +14,7 @@ namespace NitroSharp
         public EntityId MouseDownVisual { get; set; }
         public EntityId MouseEnterThread { get; set; }
         public EntityId MouseLeaveThread { get; set; }
+
+        public override bool IsIdle => true;
     }
 }
