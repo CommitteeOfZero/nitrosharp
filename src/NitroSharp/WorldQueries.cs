@@ -1,9 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Reflection.PortableExecutable;
 using NitroSharp.NsScript;
 using NitroSharp.Utilities;
-using SharpDX.Direct3D11;
 
 #nullable enable
 
@@ -71,86 +68,72 @@ namespace NitroSharp
 
         private SmallList<Entity> QuerySlow(EntityQuery query)
         {
-            var queryParts = query.EnumerateParts().ToSmallList();
-            EntityQueryPart queryRoot = queryParts[0];
-            SmallList<Entity> roots = default;
-            if (queryRoot.IsWildcardPattern)
+            static bool match(ref SmallList<EntityQueryPart> queryParts, string entityPath)
             {
-                ReadOnlySpan<char> prefix = queryRoot.Value.Span[..^1];
-                if (!queryRoot.SearchInAliases)
+                var pathParts = new EntityQuery(entityPath).EnumerateParts();
+                ReadOnlySpan<EntityQueryPart> remainingQueryParts = queryParts.AsSpan();
+                bool matches = false;
+                foreach (EntityQueryPart pathPart in pathParts)
                 {
-                    foreach ((EntityId id, EntityRec rec) in _entities)
+                    if (remainingQueryParts.IsEmpty || !matchParts(remainingQueryParts[0], pathPart))
                     {
-                        if (!rec.Entity.HasParent && id.Name.StartsWith(prefix))
-                        {
-                            roots.Add(rec.Entity);
-                        }
+                        matches = false;
+                        break;
                     }
+
+                    remainingQueryParts = remainingQueryParts[1..];
+                    matches = remainingQueryParts.IsEmpty;
                 }
-                else
-                {
-                    prefix = prefix[1..];
-                    foreach ((EntityPath id, EntityId rec) in _aliases)
-                    {
-                        // TODO
-                        Entity entity = Get(rec)!;
-                        if (!entity.HasParent && id.Name.StartsWith(prefix))
-                        {
-                            roots.Add(Get(rec)!);
-                        }
-                    }
-                }
-            }
-            else
-            {
-                Entity? root = Get(new EntityPath(queryRoot.Value.ToString()));
-                if (root != null)
-                {
-                    roots.Add(root);
-                }
+
+                return matches;
             }
 
-            SmallList<Entity> results = default;
-            ReadOnlySpan<EntityQueryPart> remainingParts = queryParts.AsSpan()[1..];
-            foreach (Entity root in roots.AsSpan())
+            static bool matchParts(EntityQueryPart queryPart, EntityQueryPart pathPart)
             {
-                Match(root, remainingParts, ref results);
+                if (queryPart.Value.Span.Equals("*", StringComparison.Ordinal))
+                {
+                    return true;
+                }
+                if (queryPart.IsWildcardPattern)
+                {
+                    ReadOnlySpan<char> prefix = queryPart.Value.Span[..^1];
+                    return pathPart.Value.Span.StartsWith(prefix);
+                }
+                return pathPart.Value.Span
+                    .Equals(queryPart.Value.Span, StringComparison.Ordinal);
+            }
+
+            var queryParts = query.EnumerateParts().ToSmallList();
+            EntityQueryPart queryRoot = queryParts[0];
+
+            SmallList<Entity> results = default;
+            if (queryRoot.SearchInAliases)
+            {
+                foreach ((EntityPath path, EntityId id) in _aliases)
+                {
+                    if (matchParts(queryRoot, new EntityQueryPart(path.Value.AsMemory(), 0, false)))
+                    {
+                        string amendedQuery = query.Value.Replace(queryRoot.Value.ToString(), id.Path);
+                        SmallList<Entity> subQueryRes = Query(new EntityQuery(amendedQuery));
+                        foreach (Entity e in subQueryRes)
+                        {
+                            results.Add(e);
+                        }
+                    }
+                }
+
+                return results;
+            }
+
+            foreach ((EntityId id, EntityRec _) in _entities)
+            {
+                if (match(ref queryParts, id.Path))
+                {
+                    results.Add(Get(id)!);
+                }
             }
 
             return results;
-        }
-
-        private void Match(
-            Entity entity,
-            ReadOnlySpan<EntityQueryPart> remainingQueryParts,
-            ref SmallList<Entity> results)
-        {
-            if (remainingQueryParts.Length == 0)
-            {
-                results.Add(entity);
-                return;
-            }
-
-            EntityQueryPart part = remainingQueryParts[0];
-            ReadOnlySpan<char> prefix = part.Value.Span;
-            if (part.IsWildcardPattern)
-            {
-                prefix = prefix[..^1];
-            }
-
-            foreach (EntityId child in entity.Children)
-            {
-                if (child.Name.StartsWith(prefix, StringComparison.Ordinal))
-                {
-                    // TODO
-                    Match(Get(child)!, remainingQueryParts[1..], ref results);
-                }
-            }
-
-            if (prefix.Length == 0 && entity.Id.MouseState != MouseState.Invalid)
-            {
-                Match(entity, remainingQueryParts[1..], ref results);
-            }
         }
     }
 }

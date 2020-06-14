@@ -5,7 +5,8 @@ namespace NitroSharp.NsScript
         Invalid,
         Normal,
         Over,
-        Pressed,
+        Down,
+        Clicked,
         Leave
     }
 
@@ -69,6 +70,7 @@ namespace NitroSharp.NsScript
 
     public enum NsOutlineOffset
     {
+        Unspecified,
         Center,
         Left,
         Top,
@@ -78,5 +80,13 @@ namespace NitroSharp.NsScript
         BottomLeft,
         BottomRight,
         Bottom
+    }
+
+    public enum NsFocusDirection
+    {
+        Left,
+        Up,
+        Right,
+        Down
     }
 }

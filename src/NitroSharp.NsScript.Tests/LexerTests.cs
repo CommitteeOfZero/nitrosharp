@@ -39,7 +39,7 @@ namespace NitroSharp.NsScriptCompiler.Tests
         }
 
         [Fact]
-        public void All_Static_Tokens_Are_Covered_With_Tests()
+        public void All_Static_Tokens_Are_Tested()
         {
             var tokens = Enum.GetValues(typeof(SyntaxTokenKind))
                 .Cast<SyntaxTokenKind>();
@@ -57,9 +57,9 @@ namespace NitroSharp.NsScriptCompiler.Tests
             Assert.Empty(untestedTokens);
         }
 
-        [Theory(Skip = "Temporary disabled for perf reasons")]
+        [Theory]
         [MemberData(nameof(GetStaticTokenData))]
-        public void Lexer_Recognizes_Static_Token(SyntaxTokenKind kind, string text)
+        public void StaticToken(SyntaxTokenKind kind, string text)
         {
             (SyntaxToken token, LexingContext ctx) = LexToken(text);
             Assert.Equal(kind, token.Kind);
@@ -68,9 +68,9 @@ namespace NitroSharp.NsScriptCompiler.Tests
             Assert.Equal(SyntaxTokenFlags.Empty, token.Flags);
         }
 
-        [Theory(Skip = "Temporary disabled for perf reasons")]
+        [Theory]
         [MemberData(nameof(GetStaticTokenPairData))]
-        public void Lexer_Handles_Token_Pair(SyntaxTokenKind t1Kind, string t1Text, SyntaxTokenKind t2Kind, string t2Text)
+        public void TokenPair(SyntaxTokenKind t1Kind, string t1Text, SyntaxTokenKind t2Kind, string t2Text)
         {
             string text = t1Text + t2Text;
             (SyntaxTokenEnumerable tkEnumerable, LexingContext ctx) = Parsing.LexTokens(text);
@@ -82,9 +82,9 @@ namespace NitroSharp.NsScriptCompiler.Tests
             Assert.Equal(ctx.GetText(tokens[1]).ToString(), t2Text, ignoreCase: true);
         }
 
-        [Theory(Skip = "Temporary disabled for perf reasons")]
+        [Theory]
         [MemberData(nameof(GetStaticTokenPairsWithSeparatorData))]
-        public void Lexer_Handles_Token_Pair_With_Separator(
+        public void Token_Pair_With_Separator(
             SyntaxTokenKind t1Kind, string t1Text,
             string separator,
             SyntaxTokenKind t2Kind, string t2Text)
@@ -105,7 +105,7 @@ namespace NitroSharp.NsScriptCompiler.Tests
         [InlineData("#FFFFFF", SyntaxTokenKind.NumericLiteral, "FFFFFF", SyntaxTokenFlags.IsHexTriplet)]
         [InlineData("\"foo\"", SyntaxTokenKind.StringLiteralOrQuotedIdentifier, "foo", SyntaxTokenFlags.IsQuoted)]
         [InlineData("\"@\"", SyntaxTokenKind.StringLiteralOrQuotedIdentifier, "@", SyntaxTokenFlags.IsQuoted)]
-        public void Lexer_Recognizes_Literals(string text, SyntaxTokenKind tokenKind, string valueText,
+        public void Literal(string text, SyntaxTokenKind tokenKind, string valueText,
             SyntaxTokenFlags flags = SyntaxTokenFlags.Empty)
         {
             (SyntaxToken token, LexingContext ctx) = LexToken(text);
@@ -119,8 +119,8 @@ namespace NitroSharp.NsScriptCompiler.Tests
         [InlineData("foo", "foo", SyntaxTokenFlags.Empty)]
         [InlineData("$foo", "foo", SyntaxTokenFlags.HasDollarPrefix)]
         [InlineData("#foo", "foo", SyntaxTokenFlags.HasHashPrefix)]
-        [InlineData("@foo", "foo", SyntaxTokenFlags.HasAtPrefix)]
-        public void Lexer_Recognizes_Identifiers(string text, string valueText, SyntaxTokenFlags flags)
+        [InlineData("@foo", "@foo", SyntaxTokenFlags.HasAtPrefix)]
+        public void Identifier(string text, string valueText, SyntaxTokenFlags flags)
         {
             (SyntaxToken token, LexingContext ctx) = LexToken(text);
             Assert.Equal(SyntaxTokenKind.Identifier, token.Kind);
@@ -132,8 +132,8 @@ namespace NitroSharp.NsScriptCompiler.Tests
         [Theory]
         [InlineData("\"$foo\"", "foo", SyntaxTokenFlags.IsQuoted | SyntaxTokenFlags.HasDollarPrefix)]
         [InlineData("\"#foo\"", "foo", SyntaxTokenFlags.IsQuoted | SyntaxTokenFlags.HasHashPrefix)]
-        [InlineData("\"@foo\"", "foo", SyntaxTokenFlags.IsQuoted | SyntaxTokenFlags.HasAtPrefix)]
-        public void Lexer_Recognizes_StringLiteralOrQuotedIdentifier_Token(string text, string valueText, SyntaxTokenFlags flags)
+        [InlineData("\"@foo\"", "@foo", SyntaxTokenFlags.IsQuoted | SyntaxTokenFlags.HasAtPrefix)]
+        public void StringLiteralOrQuotedIdentifier(string text, string valueText, SyntaxTokenFlags flags)
         {
             (SyntaxToken token, LexingContext ctx) = LexToken(text);
             Assert.Equal(SyntaxTokenKind.StringLiteralOrQuotedIdentifier, token.Kind);
@@ -146,7 +146,7 @@ namespace NitroSharp.NsScriptCompiler.Tests
         [InlineData(SyntaxTokenKind.TrueKeyword)]
         [InlineData(SyntaxTokenKind.FalseKeyword)]
         [InlineData(SyntaxTokenKind.NullKeyword)]
-        public void Lexer_Recognizes_Certain_Quoted_Keywords(SyntaxTokenKind keyword)
+        public void Recognizes_Certain_Quoted_Keywords(SyntaxTokenKind keyword)
         {
             string quotedText = $"\"{SyntaxFacts.GetText(keyword)}\"";
             (SyntaxToken token, LexingContext ctx) = LexToken(quotedText);
@@ -158,9 +158,9 @@ namespace NitroSharp.NsScriptCompiler.Tests
         [InlineData("True", SyntaxTokenKind.TrueKeyword)]
         [InlineData("False", SyntaxTokenKind.FalseKeyword)]
         [InlineData("Null", SyntaxTokenKind.NullKeyword)]
-        public void Lexer_Recognizes_Certain_PascalCase_Keywords(string text, SyntaxTokenKind keyword)
+        public void Recognizes_Certain_PascalCase_Keywords(string text, SyntaxTokenKind keyword)
         {
-            (SyntaxToken token, LexingContext ctx) = LexToken(text);
+            (SyntaxToken token, LexingContext _) = LexToken(text);
             Assert.Equal(keyword, token.Kind);
         }
 
@@ -168,9 +168,9 @@ namespace NitroSharp.NsScriptCompiler.Tests
         [InlineData("TRUE", SyntaxTokenKind.TrueKeyword)]
         [InlineData("FALSE", SyntaxTokenKind.FalseKeyword)]
         [InlineData("NULL", SyntaxTokenKind.NullKeyword)]
-        public void Lexer_Recognizes_Certain_UpperCase_Keywords(string text, SyntaxTokenKind keyword)
+        public void Recognizes_Certain_UpperCase_Keywords(string text, SyntaxTokenKind keyword)
         {
-            (SyntaxToken token, LexingContext ctx) = LexToken(text);
+            (SyntaxToken token, LexingContext _) = LexToken(text);
             Assert.Equal(keyword, token.Kind);
         }
 
@@ -189,7 +189,7 @@ namespace NitroSharp.NsScriptCompiler.Tests
         [InlineData("\r", SyntaxTokenKind.PXmlLineSeparator)]
         [InlineData("\n", SyntaxTokenKind.PXmlLineSeparator)]
         [InlineData("foo", SyntaxTokenKind.PXmlString)]
-        public void Lexer_Recognizes_Dynamic_PXml_Token(string text, SyntaxTokenKind kind)
+        public void Dynamic_PXml_Token(string text, SyntaxTokenKind kind)
         {
             (SyntaxToken token, LexingContext ctx) = LexToken(text, LexingMode.DialogueBlock);
             Assert.Equal(kind, token.Kind);
@@ -202,7 +202,7 @@ namespace NitroSharp.NsScriptCompiler.Tests
         [InlineData("<pre box00>", SyntaxTokenKind.DialogueBlockStartTag)]
         [InlineData("</PRE>", SyntaxTokenKind.DialogueBlockEndTag)]
         [InlineData("</pre>", SyntaxTokenKind.DialogueBlockEndTag)]
-        public void Lexer_Recognizes_Dialogue_Block_Tags(string text, SyntaxTokenKind kind)
+        public void Dialogue_Block_Tag(string text, SyntaxTokenKind kind)
         {
             (SyntaxToken token, LexingContext ctx) = LexToken(text);
             Assert.Equal(kind, token.Kind);
@@ -236,29 +236,21 @@ namespace NitroSharp.NsScriptCompiler.Tests
 
         public static IEnumerable<object[]> GetStaticTokenData()
         {
-            foreach (var token in GetStaticTokens())
-            {
-                if (token.kind != SyntaxTokenKind.PXmlLineSeparator)
-                {
-                    yield return new object[] { token.kind, token.text };
-                }
-            }
+            return from token in GetStaticTokens()
+                   where token.kind != SyntaxTokenKind.PXmlLineSeparator
+                   select new object[] { token.kind, token.text };
         }
 
         public static IEnumerable<object[]> GetStaticTokenPairData()
         {
-            foreach (var pair in GetStaticTokenPairs())
-            {
-                yield return new object[] { pair.t1Kind, pair.t1Text, pair.t2Kind, pair.t2Text };
-            }
+            return GetStaticTokenPairs()
+                .Select(pair => new object[] { pair.t1Kind, pair.t1Text, pair.t2Kind, pair.t2Text });
         }
 
         public static IEnumerable<object[]> GetStaticTokenPairsWithSeparatorData()
         {
-            foreach (var pair in GetStaticTokenPairsWithSeparator())
-            {
-                yield return new object[] { pair.t1Kind, pair.t1Text, pair.separatorText, pair.t2Kind, pair.t2Text };
-            }
+            return GetStaticTokenPairsWithSeparator()
+                .Select(pair => new object[] { pair.t1Kind, pair.t1Text, pair.separatorText, pair.t2Kind, pair.t2Text });
         }
 
         private static IEnumerable<(SyntaxTokenKind kind, string text)> GetStaticTokens()
@@ -287,39 +279,25 @@ namespace NitroSharp.NsScriptCompiler.Tests
 
         private static IEnumerable<(SyntaxTokenKind t1Kind, string t1Text, SyntaxTokenKind t2Kind, string t2Text)> GetStaticTokenPairs()
         {
-            foreach (var tk1 in GetStaticTokens())
-            {
-                if (tk1.kind == SyntaxTokenKind.PXmlLineSeparator) continue;
-                foreach (var tk2 in GetStaticTokens())
-                {
-                    if (tk2.kind == SyntaxTokenKind.PXmlLineSeparator) continue;
-                    if (!RequireSeparator(tk1.kind, tk2.kind))
-                    {
-                        yield return (tk1.kind, tk1.text, tk2.kind, tk2.text);
-                    }
-                }
-            }
+            return from tk1 in GetStaticTokens()
+                   where tk1.kind != SyntaxTokenKind.PXmlLineSeparator
+                   from tk2 in GetStaticTokens()
+                   where tk2.kind != SyntaxTokenKind.PXmlLineSeparator
+                   where !RequireSeparator(tk1.kind, tk2.kind)
+                   select (tk1.kind, tk1.text, tk2.kind, tk2.text);
         }
 
         private static IEnumerable<(SyntaxTokenKind t1Kind, string t1Text,
                                     string separatorText,
                                     SyntaxTokenKind t2Kind, string t2Text)> GetStaticTokenPairsWithSeparator()
         {
-            foreach (var tk1 in GetStaticTokens())
-            {
-                if (tk1.kind == SyntaxTokenKind.PXmlLineSeparator) continue;
-                foreach (var tk2 in GetStaticTokens())
-                {
-                    if (tk2.kind == SyntaxTokenKind.PXmlLineSeparator) continue;
-                    if (RequireSeparator(tk1.kind, tk2.kind))
-                    {
-                        foreach (string separator in GetSeparators())
-                        {
-                            yield return (tk1.kind, tk1.text, separator, tk2.kind, tk2.text);
-                        }
-                    }
-                }
-            }
+            return from tk1 in GetStaticTokens()
+                   where tk1.kind != SyntaxTokenKind.PXmlLineSeparator
+                   from tk2 in GetStaticTokens()
+                   where tk2.kind != SyntaxTokenKind.PXmlLineSeparator
+                   where RequireSeparator(tk1.kind, tk2.kind)
+                   from separator in GetSeparators()
+                   select (tk1.kind, tk1.text, separator, tk2.kind, tk2.text);
         }
 
         private static string[] GetSeparators()
@@ -336,7 +314,7 @@ namespace NitroSharp.NsScriptCompiler.Tests
 
         private static bool RequireSeparator(SyntaxTokenKind kind1, SyntaxTokenKind kind2)
         {
-            bool isKeyword(SyntaxTokenKind kind) =>
+            static bool isKeyword(SyntaxTokenKind kind) =>
                 (int)kind >= (int)SyntaxTokenKind.ChapterKeyword
                 && (int)kind <= (int)SyntaxTokenKind.ReturnKeyword;
 
@@ -346,9 +324,9 @@ namespace NitroSharp.NsScriptCompiler.Tests
 
             bool canFollowKeyword(SyntaxTokenKind kind)
                 => !isKeyword(kind)
-                && SyntaxFacts.IsIdentifierStopCharacter(SyntaxFacts.GetText(kind)[0]);
+                && SyntaxFacts.IsIdentifierStopCharacter(SyntaxFacts.GetText(kind)[0], char.MaxValue);
 
-            bool isSigil(SyntaxTokenKind kind)
+            static bool isSigil(SyntaxTokenKind kind)
                 => kind == SyntaxTokenKind.Dollar
                 || kind == SyntaxTokenKind.Hash
                 || kind == SyntaxTokenKind.At;
@@ -410,16 +388,14 @@ namespace NitroSharp.NsScriptCompiler.Tests
 
         public static IEnumerable<object[]> GetKeywordData()
         {
-            foreach (var kind in EnumerateKeywords())
-            {
-                yield return new object[] { kind, SyntaxFacts.GetText(kind) };
-            }
+            return EnumerateKeywords()
+                .Select(kind => new object[] { kind, SyntaxFacts.GetText(kind) });
         }
 
         private static IEnumerable<SyntaxTokenKind> EnumerateKeywords()
         {
-            int start = (int)SyntaxTokenKind.ChapterKeyword;
-            int end = (int)SyntaxTokenKind.ReturnKeyword;
+            const int start = (int)SyntaxTokenKind.ChapterKeyword;
+            const int end = (int)SyntaxTokenKind.ReturnKeyword;
             for (int kind = start; kind <= end; kind *= 2)
             {
                 yield return (SyntaxTokenKind)kind;

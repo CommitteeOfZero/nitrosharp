@@ -8,7 +8,8 @@ namespace NitroSharp.Graphics
             in ResolvedEntityPath path,
             int priority,
             Size size,
-            bool inheritTransform) : base(path, priority, inheritTransform)
+            bool isContainer)
+            : base(path, priority, isContainer)
         {
             _size = size;
         }

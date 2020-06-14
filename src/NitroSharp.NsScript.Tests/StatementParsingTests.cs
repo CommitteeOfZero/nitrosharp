@@ -8,7 +8,7 @@ namespace NitroSharp.NsScriptCompiler.Tests
     public class StatementParsingTests
     {
         [Fact]
-        public void BlockSyntax_Parses_Correctly()
+        public void Block()
         {
             var block = AssertStatement<BlockSyntax>("{}", SyntaxNodeKind.Block);
             Assert.Empty(block.Statements);
@@ -17,7 +17,7 @@ namespace NitroSharp.NsScriptCompiler.Tests
         [Theory]
         [InlineData("if ($condition) {}", false)]
         [InlineData("if ($condition) {} else {}", true)]
-        public void IfStatement_Parses_Correctly(string text, bool hasElseClause)
+        public void If(string text, bool hasElseClause)
         {
             var ifStmt = AssertStatement<IfStatementSyntax>(text, SyntaxNodeKind.IfStatement);
             Assert.NotNull(ifStmt.Condition);
@@ -29,13 +29,13 @@ namespace NitroSharp.NsScriptCompiler.Tests
         }
 
         [Fact]
-        public void BreakStatement_Parses_Correctly()
+        public void BreakStatement()
         {
-            var breakStmt = AssertStatement<BreakStatementSyntax>("break;", SyntaxNodeKind.BreakStatement);
+            AssertStatement<BreakStatementSyntax>("break;", SyntaxNodeKind.BreakStatement);
         }
 
         [Fact]
-        public void WhileStatement_Parses_Correctly()
+        public void While()
         {
             var whileStmt = AssertStatement<WhileStatementSyntax>("while (true) {}", SyntaxNodeKind.WhileStatement);
             Assert.NotNull(whileStmt.Condition);
@@ -43,13 +43,13 @@ namespace NitroSharp.NsScriptCompiler.Tests
         }
 
         [Fact]
-        public void ReturnStatement_Parses_Correctly()
+        public void ReturnStatement()
         {
             AssertStatement<ReturnStatementSyntax>("return;", SyntaxNodeKind.ReturnStatement);
         }
 
         [Fact]
-        public void SelectStatement_Parses_Correctly()
+        public void Select()
         {
             string text = @"
                 select
@@ -69,7 +69,7 @@ namespace NitroSharp.NsScriptCompiler.Tests
         [InlineData("foo.nss")]
         [InlineData("nss/foo.nss")]
         [InlineData("root/nss/foo.nss")]
-        public void CallChapterStatement_Parses_Correctly(string filePath)
+        public void CallChapter(string filePath)
         {
             string text = $"call_chapter {filePath}";
             var callChapterStmt = AssertStatement<CallChapterStatementSyntax>(text, SyntaxNodeKind.CallChapterStatement);
@@ -95,7 +95,7 @@ namespace NitroSharp.NsScriptCompiler.Tests
 
         [Theory]
         [MemberData(nameof(GetDialogueBlockTestData))]
-        public void DialogueBlock_Parses_Correctly(string text, string blockName, string boxName, int partCount)
+        public void DialogueBlock(string text, string blockName, string boxName, int partCount)
         {
             var dialogueBlock = AssertStatement<DialogueBlockSyntax>(text, SyntaxNodeKind.DialogueBlock);
             Assert.Equal(blockName, dialogueBlock.Name);
@@ -111,7 +111,7 @@ namespace NitroSharp.NsScriptCompiler.Tests
                 [text001]
                 </PRE>",
                 "text001",
-                "box01",
+                "@box01",
                 0
             };
 
@@ -132,7 +132,7 @@ namespace NitroSharp.NsScriptCompiler.Tests
                 {}
                 </PRE>",
                 "text001",
-                "box01",
+                "@box01",
                 1
             };
         }

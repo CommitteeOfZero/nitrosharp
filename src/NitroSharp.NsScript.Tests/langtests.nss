@@ -48,7 +48,25 @@ function break_from_nested_if() {
     assert_eq(4, $ifCounter);
 }
 
-function at_operator() {
-    $foo = 42;
-    assert_eq(2 + 2, 4);
+function o_front_bug() {
+    $a = 44;
+    $b = $a-2;
+    assert_eq(42, $b);
+    $o = 100;
+    $front = 20;
+    $o-front = 44;
+    $b = $o-front;
+    assert_eq(44, $b);
+}
+
+function parameters_become_globals() {
+    priv_foo();
+    assert_eq(42, $uniqueparam42);
+}
+
+function priv_foo() {
+    priv_bar(42);
+}
+
+function priv_bar($uniqueparam42) {
 }

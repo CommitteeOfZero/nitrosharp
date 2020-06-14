@@ -1,3 +1,4 @@
+using System.Numerics;
 using NitroSharp.NsScript;
 using Veldrid;
 
@@ -22,5 +23,10 @@ namespace NitroSharp
 
         public static RgbaFloat ToRgbaFloat(this NsColor nsColor)
             => new RgbaFloat(nsColor.R / 255.0f, nsColor.G / 255.0f, nsColor.B / 255.0f, 1.0f);
+    }
+
+    internal static class Vector3Extensions
+    {
+        public static Vector2 XY(this in Vector3 vec) => new Vector2(vec.X, vec.Y);
     }
 }

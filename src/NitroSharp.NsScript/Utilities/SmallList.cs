@@ -5,34 +5,6 @@ using System.Runtime.InteropServices;
 
 namespace NitroSharp.Utilities
 {
-    //public ref struct SmallListEnumerator<T>
-    //{
-    //    private readonly ReadOnlySpan<T> _span;
-    //    private int _pos;
-    //
-    //    public SmallListEnumerator(ReadOnlySpan<T> span)
-    //    { ;
-    //        _span = span;
-    //        _pos = -1;
-    //    }
-    //
-    //    public T Current => _span[_pos];
-    //    public bool MoveNext() => ++_pos < _span.Length;
-    //}
-    //
-    //public ref struct SmallListEnumerable<T>
-    //{
-    //    private SmallList<T> _list;
-    //
-    //    public SmallListEnumerable(SmallList<T> list)
-    //    {
-    //        _list = list;
-    //    }
-    //
-    //    public SmallListEnumerator<T> GetEnumerable()
-    //        => new SmallListEnumerator<T>(ref _list);
-    //}
-
     public struct SmallList<T>
     {
         private const int MaxFixed = 2;
@@ -80,6 +52,7 @@ namespace NitroSharp.Utilities
                 {
                     _array = new T[MaxFixed * 2];
                     fixedElements.CopyTo(_array);
+                    fixedElements.Clear();
                 }
                 if (_count == _array.Length)
                 {
@@ -96,23 +69,31 @@ namespace NitroSharp.Utilities
             {
                 if (EqualityComparer<T>.Default.Equals(elems[i], item))
                 {
-                    RemoveAt(i);
+                    SwapRemove(i);
                     break;
                 }
             }
         }
 
-        private void RemoveAt(int index)
+        public void Clear() => _count = 0;
+
+        private T SwapRemove(int index)
         {
-            Debug.Assert(index < _count);
-            if (index == _count - 1)
+            Span<T> elements = AsSpan();
+            ref T ptr = ref elements[index];
+            T elem = ptr;
+            ref T last = ref elements[--_count];
+            ptr = last;
+            last = default!;
+
+            if (_array is object && _count <= MaxFixed)
             {
-                _count--;
-                return;
+                elements = elements[1..];
+                elements.CopyTo(_fixedItems.AsSpan());
+                elements.Clear();
             }
-            Span<T> elems = AsSpan();
-            elems[(index + 1)..].CopyTo(elems[index..^1]);
-            _count--;
+
+            return elem;
         }
 
         public ref T this[int index]
@@ -122,7 +103,7 @@ namespace NitroSharp.Utilities
                 static void oob() => throw new IndexOutOfRangeException();
 
                 if (index >= _count) { oob(); }
-                if (index < MaxFixed)
+                if (_count <= MaxFixed)
                 {
                     Span<T> fixedElements = _fixedItems.AsSpan();
                     return ref fixedElements[index];

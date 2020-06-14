@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace NitroSharp.NsScript
+namespace NitroSharp.NsScript.Compiler
 {
     internal static class WellKnownSymbols
     {

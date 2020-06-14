@@ -111,7 +111,6 @@
         Xxx,
         //Key,
         //Mmo,
-        Tipbar,
 
         // Character names (Noah)
         ナイトハルト,

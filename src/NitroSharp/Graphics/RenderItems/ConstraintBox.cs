@@ -5,16 +5,15 @@ namespace NitroSharp.Graphics
         protected ConstraintBox(
             in ResolvedEntityPath path,
             int priority,
-            bool inheritTransform)
+            bool isContainer)
             : base(path, priority)
         {
-            InheritTransform = inheritTransform;
+            IsContainer = isContainer;
         }
 
-        public bool InheritTransform { get; }
+        public bool IsContainer { get; }
 
-        public override AnimPropagateFlags AnimPropagateFlags => InheritTransform
-            ? AnimPropagateFlags.Move | AnimPropagateFlags.Scale
-            : AnimPropagateFlags.Empty;
+        protected override AnimPropagationMode AnimPropagationMode
+            => IsContainer ? AnimPropagationMode.All : AnimPropagationMode.None;
     }
 }

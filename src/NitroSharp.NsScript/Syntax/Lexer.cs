@@ -488,7 +488,7 @@ namespace NitroSharp.NsScript.Syntax
             int start = Position;
             ScanSigil(ref token);
 
-            if (!SyntaxFacts.IsIdentifierStartCharacter(PeekChar()))
+            if (!SyntaxFacts.IsIdentifierStartCharacter(PeekChar(), PeekChar(1)))
             {
                 token.Flags = SyntaxTokenFlags.Empty;
                 SetPosition(start);
@@ -496,7 +496,7 @@ namespace NitroSharp.NsScript.Syntax
             }
 
             int valueStart = Position;
-            while (SyntaxFacts.IsIdentifierPartCharacter(PeekChar()))
+            while (SyntaxFacts.IsIdentifierPartCharacter(PeekChar(), PeekChar(1)))
             {
                 AdvanceChar();
             }
@@ -601,7 +601,7 @@ namespace NitroSharp.NsScript.Syntax
             // If the next character is a valid identifier character,
             // then what we're scanning is actually an identifier that starts with a number
             // e.g "215_ＡＡルートグッドエンド".
-            if (SyntaxFacts.IsIdentifierPartCharacter(PeekChar()))
+            if (SyntaxFacts.IsIdentifierPartCharacter(PeekChar(), PeekChar(1)))
             {
                 SetPosition(LexemeStart);
                 return false;
@@ -633,7 +633,7 @@ namespace NitroSharp.NsScript.Syntax
             // are valid hex digits. '#ABCDEFghijklmno' would be an example of such an identifier.
             // NOTE: if the identifier is exactly 6 characters long, it will be treated as a hex triplet.
             // It isn't clear at the moment if there's a good solution for this.
-            if (SyntaxFacts.IsIdentifierPartCharacter(PeekChar()))
+            if (SyntaxFacts.IsIdentifierPartCharacter(PeekChar(), PeekChar(1)))
             {
                 SetPosition(start);
                 return false;

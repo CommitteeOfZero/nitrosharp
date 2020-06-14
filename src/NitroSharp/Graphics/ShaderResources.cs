@@ -82,6 +82,11 @@ namespace NitroSharp.Graphics
                     "Sampler",
                     ResourceKind.Sampler,
                     ShaderStages.Fragment
+                ),
+                new ResourceLayoutElementDescription(
+                    "AlphaMaskPos",
+                    ResourceKind.UniformBuffer,
+                    ShaderStages.Fragment
                 )
             ));
 
@@ -155,6 +160,12 @@ namespace NitroSharp.Graphics
                 }
             };
             MultiplicativeBlend = factory.CreateGraphicsPipeline(ref pipelineDesc);
+
+            AlphaMaskPositionBuffer = new GpuBuffer<Vector4>(
+                graphicsDevice,
+                BufferUsage.UniformBuffer | BufferUsage.Dynamic,
+                Vector4.Zero
+            );
         }
 
         public ResourceLayout ResourceLayout { get; }
@@ -162,6 +173,8 @@ namespace NitroSharp.Graphics
         public Pipeline AdditiveBlend { get; }
         public Pipeline ReverseSubtractiveBlend { get; }
         public Pipeline MultiplicativeBlend { get; }
+
+        public GpuBuffer<Vector4> AlphaMaskPositionBuffer { get; }
 
         public Pipeline GetPipeline(BlendMode blendMode) => blendMode switch
         {
@@ -179,6 +192,7 @@ namespace NitroSharp.Graphics
             ReverseSubtractiveBlend.Dispose();
             MultiplicativeBlend.Dispose();
             ResourceLayout.Dispose();
+            AlphaMaskPositionBuffer.Dispose();
         }
     }
 
@@ -237,10 +251,10 @@ namespace NitroSharp.Graphics
                 outputDescription
             );
             Pipeline = factory.CreateGraphicsPipeline(ref pipelineDesc);
-            ProgressBuffer = new GpuBuffer<float>(
+            ProgressBuffer = new GpuBuffer<Vector4>(
                 graphicsDevice,
                 BufferUsage.UniformBuffer | BufferUsage.Dynamic,
-                data: 0
+                data: Vector4.Zero
             );
         }
 
@@ -248,7 +262,7 @@ namespace NitroSharp.Graphics
         public ResourceLayout ParamLayout { get; }
         public Pipeline Pipeline { get; }
 
-        public GpuBuffer<float> ProgressBuffer { get; }
+        public GpuBuffer<Vector4> ProgressBuffer { get; }
 
         public void Dispose()
         {

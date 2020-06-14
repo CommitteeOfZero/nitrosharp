@@ -9,14 +9,6 @@ using Veldrid;
 
 namespace NitroSharp.Text
 {
-    [Flags]
-    internal enum GlyphRunFlags
-    {
-        None,
-        Ruby,
-        Outline
-    }
-
     [StructLayout(LayoutKind.Auto)]
     internal readonly struct GlyphRun
     {
@@ -25,32 +17,20 @@ namespace NitroSharp.Text
         public readonly RgbaFloat Color;
         public readonly RgbaFloat OutlineColor;
         public readonly GlyphSpan GlyphSpan;
-        public readonly GlyphRunFlags Flags;
+        public readonly bool DrawOutline;
 
         public GlyphRun(
             FontKey font, PtFontSize fontSize,
             RgbaFloat color, RgbaFloat outlineColor,
-            GlyphSpan glyphSpan,
-            bool isRuby, bool drawOutline)
+            GlyphSpan glyphSpan, bool drawOutline)
         {
             Font = font;
             FontSize = fontSize;
             Color = color;
             OutlineColor = outlineColor;
             GlyphSpan = glyphSpan;
-            Flags = GlyphRunFlags.None;
-            if (isRuby)
-            {
-                Flags |= GlyphRunFlags.Ruby;
-            }
-            if (drawOutline)
-            {
-                Flags |= GlyphRunFlags.Outline;
-            }
+            DrawOutline = drawOutline;
         }
-
-        public bool IsRuby => (Flags & GlyphRunFlags.Ruby) == GlyphRunFlags.Ruby;
-        public bool DrawOutline => (Flags & GlyphRunFlags.Outline) == GlyphRunFlags.Outline;
     }
 
     [StructLayout(LayoutKind.Auto)]
@@ -93,6 +73,8 @@ namespace NitroSharp.Text
         }
 
         private readonly Size _maxBounds;
+        private readonly float? _fixedLineHeight;
+
         private readonly float _rubyFontSizeMultiplier;
         // TODO: there's no actual need to keep the TextRuns referenced
         // once they've been processed
@@ -122,6 +104,7 @@ namespace NitroSharp.Text
             GlyphRasterizer glyphRasterizer,
             ReadOnlySpan<TextRun> textRuns,
             Size? maxBounds,
+            float? fixedLineHeight = null,
             float rubyFontSizeMultiplier = 0.4f)
         {
             _textRuns = new ArrayBuilder<TextRun>(textRuns.Length);
@@ -130,6 +113,7 @@ namespace NitroSharp.Text
             _lines = new ArrayBuilder<Line>(initialCapacity: 2);
             _rubyChunksOnLine = new ArrayBuilder<RubyTextChunk>(initialCapacity: 0);
             _maxBounds = maxBounds ?? new Size(uint.MaxValue, uint.MaxValue);
+            _fixedLineHeight = fixedLineHeight;
             _rubyFontSizeMultiplier = rubyFontSizeMultiplier;
             Clear();
             Append(glyphRasterizer, textRuns);
@@ -329,7 +313,6 @@ namespace NitroSharp.Text
                 textRun.Color,
                 textRun.OutlineColor,
                 glyphSpan,
-                isRuby: false,
                 textRun.DrawOutline
             );
 
@@ -354,7 +337,6 @@ namespace NitroSharp.Text
                     textRun.Color,
                     textRun.OutlineColor,
                     rubyTextSpan,
-                    isRuby: true,
                     textRun.DrawOutline
                 );
             }
@@ -377,7 +359,6 @@ namespace NitroSharp.Text
                         lastRun.Color,
                         lastRun.OutlineColor,
                         new GlyphSpan(lastRun.GlyphSpan.Start, lastRunLen - lineLength),
-                        isRuby: false,
                         textRun.DrawOutline
                     );
                     return false;
@@ -597,10 +578,17 @@ namespace NitroSharp.Text
             {
                 ref Line prevLine = ref _lines[_currentLineIdx - 1];
                 ref VerticalMetrics prevLargestMetrics = ref prevLine.LargestFontMetrics;
-                baselineY = _prevBaselineY
-                    + largestMetrics.Ascender
-                    - prevLargestMetrics.Descender
-                    + prevLargestMetrics.LineGap;
+                if (_fixedLineHeight is {} lineHeight)
+                {
+                    baselineY = _prevBaselineY + lineHeight;
+                }
+                else
+                {
+                    baselineY = _prevBaselineY
+                        + largestMetrics.Ascender
+                        - prevLargestMetrics.Descender
+                        + prevLargestMetrics.LineGap;
+                }
             }
             else
             {

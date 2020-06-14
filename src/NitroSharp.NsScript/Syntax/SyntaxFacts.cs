@@ -56,11 +56,13 @@ namespace NitroSharp.NsScript.Syntax
         public static SyntaxTokenKind GetKeywordKind(ReadOnlySpan<char> text)
             => KeywordScanner.RecognizeKeyword(text);
 
-        public static bool IsIdentifierStartCharacter(char c)
-            => IsIdentifierPartCharacter(c) && !IsDecDigit(c);
+        public static bool IsIdentifierStartCharacter(char c, char next)
+            => IsIdentifierPartCharacter(c, next) && !IsDecDigit(c);
 
-        public static bool IsIdentifierStopCharacter(char c) => !IsIdentifierPartCharacter(c);
-        public static bool IsIdentifierPartCharacter(char c)
+        public static bool IsIdentifierStopCharacter(char c, char next)
+            => !IsIdentifierPartCharacter(c, next);
+
+        public static bool IsIdentifierPartCharacter(char c, char next)
         {
             switch (c)
             {
@@ -78,7 +80,6 @@ namespace NitroSharp.NsScript.Syntax
                 case ')':
                 case '=':
                 case '+':
-                case '-':
                 case '*':
                 case '/':
                 case '<':
@@ -93,7 +94,9 @@ namespace NitroSharp.NsScript.Syntax
                 case '@':
                 case EofCharacter:
                     return false;
-
+                // Hack: O-FRONT is a valid identifier, but O-42 is not.
+                case '-':
+                    return char.IsLetter(next);
                 default:
                     return true;
             }

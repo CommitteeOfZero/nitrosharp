@@ -5,7 +5,7 @@ using System.IO;
 using System.Text;
 using NitroSharp.NsScript.Utilities;
 
-namespace NitroSharp.NsScript
+namespace NitroSharp.NsScript.VM
 {
     internal sealed class GlobalVarLookupTable
     {

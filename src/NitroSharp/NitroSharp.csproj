@@ -55,6 +55,10 @@
     </Content>
   </ItemGroup>
 
+  <ItemGroup>
+    <None Remove="Graphics\Shaders\text_common.h" />
+  </ItemGroup>
+
   <Target Name="EmbedGeneratedShaderContent" AfterTargets="AssignTargetPaths">
     <ItemGroup>
       <GeneratedShaders Include="$(BaseIntermediateOutputPath)\Shaders.Generated\**" />

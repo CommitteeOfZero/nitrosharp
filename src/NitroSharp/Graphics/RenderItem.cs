@@ -1,6 +1,5 @@
 using System;
 using System.Numerics;
-using NitroSharp.Content;
 using NitroSharp.Graphics.Core;
 using NitroSharp.NsScript;
 using NitroSharp.NsScript.Primitives;
@@ -27,13 +26,11 @@ namespace NitroSharp.Graphics
         }
     }
 
-    [Flags]
-    internal enum AnimPropagateFlags
+    internal enum AnimPropagationMode
     {
-        Empty,
-        Move,
-        Scale,
-        Rotate
+        None,
+        ScaleRotateFade,
+        All
     }
 
     internal abstract class RenderItem : Entity, IComparable<RenderItem>
@@ -45,6 +42,7 @@ namespace NitroSharp.Graphics
         private RgbaFloat _color;
 
         protected RotateAnimation? _rotateAnim;
+        protected OpacityAnimation? _fadeAnim;
 
         protected RenderItem(in ResolvedEntityPath path, int priority)
             : base(path)
@@ -54,15 +52,30 @@ namespace NitroSharp.Graphics
             _transform = Transform.Default;
         }
 
+        public RenderItemKey Key => _key;
         public ref RgbaFloat Color => ref _color;
         public ref Transform Transform => ref _transform;
 
-        public virtual AnimPropagateFlags AnimPropagateFlags => AnimPropagateFlags.Empty;
-        public override bool IsIdle => true;
-        public abstract bool IsMoving { get; }
+        protected virtual AnimPropagationMode AnimPropagationMode
+            => AnimPropagationMode.ScaleRotateFade;
 
-        protected virtual void AdvanceAnimations(float dt)
+        public override bool IsIdle => true;
+
+        public bool IsHidden { get; private set; }
+
+        public virtual bool IsAnimationActive(AnimationKind kind) => kind switch
         {
+            AnimationKind.Rotate => _rotateAnim is object,
+            AnimationKind.Fade => _fadeAnim is object,
+            _ => false
+        };
+
+        public void Hide() => IsHidden = true;
+        public void Reveal() => IsHidden = false;
+
+        protected virtual void AdvanceAnimations(float dt, bool assetsReady)
+        {
+            AdvanceAnimation(ref _fadeAnim, dt);
             AdvanceAnimation(ref _rotateAnim, dt);
         }
 
@@ -71,22 +84,55 @@ namespace NitroSharp.Graphics
         {
             if (anim?.Update(dt) is false)
             {
+                if (anim is IDisposable disposable)
+                {
+                    disposable.Dispose();
+                }
                 anim = null;
             }
         }
 
-        public void Update(World world, RenderContext ctx, float dt)
+        public void Update(GameContext ctx, float dt, bool assetsReady)
         {
-            AdvanceAnimations(dt);
-            LayoutPass(world, ctx);
+            AdvanceAnimations(dt, assetsReady);
+            Update(ctx);
+            LayoutPass(ctx.RenderContext);
         }
 
-        protected virtual void LayoutPass(World world, RenderContext ctx)
+        protected virtual void Update(GameContext ctx)
         {
         }
 
-        public virtual void Render(RenderContext ctx)
+        protected virtual void LayoutPass(RenderContext ctx)
         {
+        }
+
+        public virtual void Render(RenderContext ctx, bool assetsReady)
+        {
+        }
+
+        public void Fade(
+            float dstOpacity,
+            TimeSpan duration,
+            NsEaseFunction easeFunction = NsEaseFunction.None)
+        {
+            if (duration > TimeSpan.Zero)
+            {
+                _fadeAnim = new OpacityAnimation(this, _color.A, dstOpacity, duration, easeFunction);
+            }
+            else
+            {
+                _fadeAnim = null;
+                _color.SetAlpha(dstOpacity);
+            }
+
+            if (AnimPropagationMode != AnimPropagationMode.None)
+            {
+                foreach (RenderItem child in GetChildren<RenderItem>())
+                {
+                    child.Fade(dstOpacity, duration, easeFunction);
+                }
+            }
         }
 
         public void Rotate(in Vector3 dstRot, TimeSpan duration, NsEaseFunction easeFunction)
@@ -100,6 +146,14 @@ namespace NitroSharp.Graphics
             {
                 _rotateAnim = null;
                 Transform.Rotation = dstRot;
+            }
+
+            if (AnimPropagationMode != AnimPropagationMode.None)
+            {
+                foreach (RenderItem child in GetChildren<RenderItem>())
+                {
+                    child.Rotate(dstRot, duration, easeFunction);
+                }
             }
         }
 
@@ -115,10 +169,26 @@ namespace NitroSharp.Graphics
 
         private MoveAnimation? _moveAnim;
         private ScaleAnimation? _scaleAnim;
+        private BezierMoveAnimation? _bezierMoveAnim;
 
         protected RenderItem2D(in ResolvedEntityPath path, int priority)
             : base(path, priority)
         {
+            if (Parent is Choice choice)
+            {
+                switch (Id.MouseState)
+                {
+                    case MouseState.Normal:
+                        choice.DefaultVisual = this;
+                        break;
+                    case MouseState.Over:
+                        choice.AddMouseOver(this);
+                        break;
+                    case MouseState.Down:
+                        choice.AddMouseDown(this);
+                        break;
+                }
+            }
         }
 
         private RectangleF BoundingRect { get; set; }
@@ -127,52 +197,49 @@ namespace NitroSharp.Graphics
 
         public BlendMode BlendMode { get; set; }
         public FilterMode FilterMode { get; set; }
-        public AssetRef<Texture>? AlphaMaskOpt { get; set; }
 
-        public override AnimPropagateFlags AnimPropagateFlags
-            => AnimPropagateFlags.Scale;
-
-        public override bool IsMoving => _moveAnim is object;
+        public override bool IsAnimationActive(AnimationKind kind) => kind switch
+        {
+            AnimationKind.Move => _moveAnim is object,
+            AnimationKind.Zoom => _scaleAnim is object,
+            AnimationKind.BezierMove => _bezierMoveAnim is object,
+            _ => base.IsAnimationActive(kind)
+        };
 
         public override bool IsIdle
-            => _moveAnim is null && _scaleAnim is null && _rotateAnim is null;
+            => _moveAnim is null && _scaleAnim is null
+			    && _rotateAnim is null && _fadeAnim is null;
 
         protected virtual bool PreciseHitTest => false;
 
         public abstract Size GetUnconstrainedBounds(RenderContext ctx);
 
-        protected virtual (Vector2 uvTopLeft, Vector2 uvBottomRight) GetUV(RenderContext ctx)
+        protected virtual (Vector2, Vector2) GetTexCoords(RenderContext ctx)
             => (Vector2.Zero, Vector2.One);
 
-        protected Texture GetAlphaMask(RenderContext ctx)
+        protected override void AdvanceAnimations(float dt, bool assetsReady)
         {
-            return AlphaMaskOpt is AssetRef<Texture> maskRef
-                ? ctx.Content.Get(maskRef)
-                : ctx.WhiteTexture;
-        }
-
-        protected override void AdvanceAnimations(float dt)
-        {
-            base.AdvanceAnimations(dt);
+            base.AdvanceAnimations(dt, assetsReady);
             AdvanceAnimation(ref _moveAnim, dt);
             AdvanceAnimation(ref _scaleAnim, dt);
             AdvanceAnimation(ref _rotateAnim, dt);
+            AdvanceAnimation(ref _bezierMoveAnim, dt);
         }
 
-        protected override void LayoutPass(World world, RenderContext ctx)
+        protected override void LayoutPass(RenderContext ctx)
         {
-            base.LayoutPass(world, ctx);
-            if (!HasParent)
+            base.LayoutPass(ctx);
+            if (!(Parent is RenderItem))
             {
-                Layout(world, ctx, constraintRect: null);
+                Layout(ctx, constraintRect: null);
             }
         }
 
-        private void Layout(World world, RenderContext ctx, RectangleF? constraintRect)
+        private void Layout(RenderContext ctx, RectangleF? constraintRect)
         {
             Size unconstrainedBounds = GetUnconstrainedBounds(ctx);
             WorldMatrix = Transform.GetMatrix(unconstrainedBounds);
-            (Vector2 uvTopLeft, Vector2 uvBottomRight) = GetUV(ctx);
+            (Vector2 uvTopLeft, Vector2 uvBottomRight) = GetTexCoords(ctx);
             (Quad, BoundingRect) = QuadGeometry.Create(
                 unconstrainedBounds.ToSizeF(),
                 WorldMatrix,
@@ -185,25 +252,25 @@ namespace NitroSharp.Graphics
             {
                 constraintRect = BoundingRect;
             }
-            foreach (RenderItem2D child in world.Children<RenderItem2D>(this))
+
+            foreach (RenderItem2D child in GetChildren<RenderItem2D>())
             {
-                child.Layout(world, ctx, constraintRect);
+                child.Layout(ctx, constraintRect);
             }
         }
 
-        public bool HitTest(RenderContext ctx, Vector2 mousePos)
+        public bool HitTest(RenderContext ctx, InputContext input)
         {
-            if (!PreciseHitTest)
-            {
-                return BoundingRect.Contains(mousePos);
-            }
-
-            return false;
+            return BoundingRect.Contains(input.MousePosition);
         }
 
-        public override void Render(RenderContext ctx)
+        public override void Render(RenderContext ctx, bool assetsReady)
         {
-            Render(ctx, ctx.MainBatch);
+            if (Color.A > 0.0f)
+            {
+                Render(ctx, ctx.MainBatch);
+            }
+
             return;
 
             SizeF actualSize = BoundingRect.Size;
@@ -212,19 +279,19 @@ namespace NitroSharp.Graphics
                 return;
             }
 
-            if (RenderOffscreen(ctx) is Texture tex)
-            {
-                ctx.MainBatch.PushQuad(
-                    Quad,
-                    tex,
-                    alphaMask: ctx.WhiteTexture,
-                    BlendMode,
-                    FilterMode
-                );
-            }
+            //if (RenderOffscreen(ctx) is Texture tex)
+            //{
+            //    ctx.MainBatch.PushQuad(
+            //        Quad,
+            //        tex,
+            //        alphaMask: ctx.WhiteTexture,
+            //        BlendMode,
+            //        FilterMode
+            //    );
+            //}
         }
 
-        private Texture? RenderOffscreen(RenderContext ctx)
+        protected Texture RenderOffscreen(RenderContext ctx)
         {
             var actualSize = BoundingRect.Size.ToSize();
             Vector3 translation = _worldMatrix.Translation;
@@ -235,7 +302,7 @@ namespace NitroSharp.Graphics
                 using (DrawBatch batch = ctx.BeginBatch(_offscreenTarget, RgbaFloat.Clear))
                 {
                     _worldMatrix.Translation = Vector3.Zero;
-                    (Vector2 uvTopLeft, Vector2 uvBottomRight) = GetUV(ctx);
+                    (Vector2 uvTopLeft, Vector2 uvBottomRight) = GetTexCoords(ctx);
                     (Quad, _) = QuadGeometry.Create(
                         BoundingRect.Size,
                         _worldMatrix,
@@ -264,23 +331,20 @@ namespace NitroSharp.Graphics
         {
         }
 
-        public Vector3 Point(
-            World world,
-            RenderContext ctx,
-            NsCoordinate x, NsCoordinate y)
+        public Vector3 Point(RenderContext ctx, NsCoordinate x, NsCoordinate y)
         {
             Size screen = ctx.DesignResolution;
             Vector3 pos = Transform.Position;
-            Vector3 origin = world.Get(Parent) switch
+            Vector3 origin = Parent switch
             {
-                ConstraintBox { InheritTransform: false } => Vector3.Zero,
+                ConstraintBox { IsContainer: false } => Vector3.Zero,
                 RenderItem2D parent => parent.Transform.Position,
                 _ => Vector3.Zero
             };
             pos.X = x switch
             {
                 NsCoordinate { Kind: NsCoordinateKind.Value, Value: var val }
-                    => val.isRelative ? pos.X + val.pos : origin.X + val.pos,
+                => val.isRelative ? pos.X + val.pos : origin.X + val.pos,
                 NsCoordinate { Kind: NsCoordinateKind.Inherit } => origin.X,
                 NsCoordinate { Kind: NsCoordinateKind.Alignment, Alignment: var align } => align switch
                 {
@@ -294,7 +358,7 @@ namespace NitroSharp.Graphics
             pos.Y = y switch
             {
                 NsCoordinate { Kind: NsCoordinateKind.Value, Value: var val }
-                    => val.isRelative ? pos.Y + val.pos : origin.Y + val.pos,
+                => val.isRelative ? pos.Y + val.pos : origin.Y + val.pos,
                 NsCoordinate { Kind: NsCoordinateKind.Inherit } => origin.Y,
                 NsCoordinate { Kind: NsCoordinateKind.Alignment, Alignment: var align } => align switch
                 {
@@ -312,50 +376,49 @@ namespace NitroSharp.Graphics
             {
                 bounds = ctx.DesignResolution.ToVector2();
             }
+
             pos -= new Vector3(anchorPoint * bounds, 0);
             return pos;
         }
 
-        public void Move(World world, RenderContext ctx, in NsCoordinate x, in NsCoordinate y, TimeSpan duration, NsEaseFunction easeFunction)
+        public void Move(
+            RenderContext ctx,
+            in NsCoordinate x, in NsCoordinate y,
+            TimeSpan duration,
+            NsEaseFunction easeFunction)
         {
-            Vector3 destination = Point(world, ctx, x, y);
-            if (duration > TimeSpan.Zero)
+            Vector3 destination = Point(ctx, x, y);
+            MoveCore(destination, duration, easeFunction);
+
+            if (AnimPropagationMode == AnimPropagationMode.All)
             {
-                Vector3 startPosition = Transform.Position;
-                _moveAnim = new MoveAnimation(this, startPosition, destination, duration, easeFunction);
+                foreach (RenderItem2D child in GetChildren<RenderItem2D>())
+                {
+                    child.MoveCore(destination, duration, easeFunction);
+                }
             }
-            else
+            else if (AnimPropagationMode != AnimPropagationMode.None)
             {
-                _moveAnim = null;
-                Transform.Position = destination;
+                // Move is a bit special. If the dst coordinates are relative (@x, @y),
+                // the animation is always propagared to the children unless
+                // PropagationMode is set to None.
+                NsCoordinate childX = childCoord(x);
+                NsCoordinate childY = childCoord(y);
+                foreach (RenderItem2D child in GetChildren<RenderItem2D>())
+                {
+                    child.Move(ctx, childX, childY, duration, easeFunction);
+                }
             }
 
-            if (AnimPropagateFlags.HasFlag(AnimPropagateFlags.Move))
+            static NsCoordinate childCoord(NsCoordinate parentCoord)
             {
-                foreach (RenderItem2D child in world.Children<RenderItem2D>(this))
-                {
-                    child.Move(destination, duration, easeFunction);
-                }
+                return parentCoord is { Kind: NsCoordinateKind.Value, Value: (_, isRelative: true) }
+                    ? parentCoord
+                    : new NsCoordinate(0, isRelative: true);
             }
-            else
-            {
-                var childX = x is { Kind: NsCoordinateKind.Value, Value: (_, isRelative: true) }
-                    ? x : new NsCoordinate(0, isRelative: true);
-                var childY = y is { Kind: NsCoordinateKind.Value, Value: (_, isRelative: true) }
-                    ? y : new NsCoordinate(0, isRelative: true);
-                foreach (RenderItem2D child in world.Children<RenderItem2D>(this))
-                {
-                    child.Move(world, ctx, childX, childY, duration, easeFunction);
-                }
-            }
-            //else if (x is { Kind: NsCoordinateKind.Value, Value: (pos: var relX, isRelative: true) }
-            //    && y is { Kind: NsCoordinateKind.Value, Value: (pos: var relY, isRelative: true) })
-            //{
-            //
-            //}
         }
 
-        public void Move(in Vector3 destination, TimeSpan duration, NsEaseFunction easeFunction)
+        private void MoveCore(in Vector3 destination, TimeSpan duration, NsEaseFunction easeFunction)
         {
             if (duration > TimeSpan.Zero)
             {
@@ -381,6 +444,22 @@ namespace NitroSharp.Graphics
                 _scaleAnim = null;
                 Transform.Scale = dstScale;
             }
+
+            if (AnimPropagationMode != AnimPropagationMode.None)
+            {
+                foreach (RenderItem2D child in GetChildren<RenderItem2D>())
+                {
+                    child.Scale(dstScale, duration, easeFunction);
+                }
+            }
+        }
+
+        public void BezierMove(
+            in ProcessedBezierCurve curve,
+            TimeSpan duration,
+            NsEaseFunction easeFunction)
+        {
+            _bezierMoveAnim = new BezierMoveAnimation(this, curve, duration, easeFunction);
         }
 
         public override void Dispose()
@@ -395,21 +474,18 @@ namespace NitroSharp.Graphics
             : base(in path, priority)
         {
         }
-
-        public override bool IsMoving => false;
     }
 
     internal static class RenderItemExt
     {
         public static T WithPosition<T>(
             this T renderItem,
-            World world,
             RenderContext ctx,
             NsCoordinate x,
             NsCoordinate y)
             where T : RenderItem2D
         {
-            renderItem.Transform.Position = renderItem.Point( world, ctx, x, y);
+            renderItem.Transform.Position = renderItem.Point(ctx, x, y);
             return renderItem;
         }
     }

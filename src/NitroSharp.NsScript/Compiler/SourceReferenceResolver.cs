@@ -2,7 +2,7 @@ using System;
 using System.IO;
 using System.Text;
 
-namespace NitroSharp.NsScript
+namespace NitroSharp.NsScript.Compiler
 {
     public abstract class SourceReferenceResolver
     {

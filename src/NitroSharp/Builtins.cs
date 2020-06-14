@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Numerics;
 using NitroSharp.Graphics;
 using NitroSharp.NsScript;
 using NitroSharp.NsScript.VM;
+using NitroSharp.Utilities;
 
 #nullable enable
 
@@ -10,26 +12,32 @@ namespace NitroSharp
     internal sealed partial class Builtins : BuiltInFunctions
     {
         private readonly World _world;
-        private readonly Context _ctx;
+        private readonly GameContext _ctx;
         private readonly RenderContext _renderCtx;
 
-        public Builtins(Context context)
+        public Builtins(GameContext context)
         {
             _ctx = context;
             _renderCtx = context.RenderContext;
             _world = context.World;
         }
 
-        public override void CreateChoice(in EntityPath entityPath)
+        public override void Exit()
         {
-            if (_world.ResolvePath(entityPath, out ResolvedEntityPath resolvedPath))
-            {
-                _world.Add(new Choice(resolvedPath));
-            }
+            _ctx.ShutdownSignal.Cancel();
+        }
+
+        public override ConstantValue FormatString(string format, object[] args)
+        {
+            return ConstantValue.String(CRuntime.sprintf(format, args));
         }
 
         public override void CreateEntity(in EntityPath path)
         {
+            if (_world.ResolvePath(path, out ResolvedEntityPath resolvedPath))
+            {
+                _world.Add(new SimpleEntity(resolvedPath));
+            }
         }
 
         public override void Request(EntityQuery query, NsEntityAction action)
@@ -51,16 +59,36 @@ namespace NitroSharp
                         ri.FilterMode = FilterMode.Linear;
                         break;
                     case (VmThread thread, NsEntityAction.Start):
-                        _ctx.VM.ResumeThread(thread.Context);
+                        thread.Restart();
                         break;
                     case (VmThread thread, NsEntityAction.Resume):
-                        _ctx.VM.ResumeThread(thread.Context);
+                        thread.Resume();
                         break;
                     case (VmThread thread, NsEntityAction.Pause):
-                        _ctx.VM.SuspendThread(thread.Context);
+                        thread.Suspend();
                         break;
                     case (VmThread thread, NsEntityAction.Stop):
-                        _ctx.VM.TerminateThread(thread.Context);
+                        thread.Suspend();
+                        break;
+                    case (RenderItem ri, NsEntityAction.Enable):
+                        if (ri.Parent is Choice)
+                        {
+                            ri.Reveal();
+                        }
+                        else
+                        {
+                            _world.EnableEntity(ri);
+                        }
+                        break;
+                    case (RenderItem ri, NsEntityAction.Disable):
+                        if (ri.Parent is Choice)
+                        {
+                            ri.Hide();
+                        }
+                        else
+                        {
+                            _world.DisableEntity(ri);
+                        }
                         break;
                     case (_, NsEntityAction.Enable):
                         _world.EnableEntity(entity);
@@ -101,8 +129,7 @@ namespace NitroSharp
         {
             if (_world.ResolvePath(entityPath, out ResolvedEntityPath resolvedPath))
             {
-                ThreadContext context = _ctx.VM.CreateThread(resolvedPath.Id.Path, target);
-                _world.Add(new VmThread(resolvedPath, context));
+                _world.Add(new VmThread(resolvedPath, _ctx.VM, target));
             }
         }
 
@@ -132,6 +159,11 @@ namespace NitroSharp
         public override void WaitForInput(TimeSpan timeout)
         {
             _ctx.Wait(CurrentThread, WaitCondition.UserInput, timeout);
+        }
+
+        public override void MoveCursor(int x, int y)
+        {
+            _ctx.Window.SetMousePosition(new Vector2(x, y));
         }
     }
 }

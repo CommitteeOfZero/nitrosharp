@@ -59,6 +59,7 @@
         {
             return val switch
             {
+                BuiltInConstant.LightDown => NsOutlineOffset.Unspecified,
                 BuiltInConstant.Around => NsOutlineOffset.Center,
                 BuiltInConstant.Left => NsOutlineOffset.Left,
                 BuiltInConstant.Up => NsOutlineOffset.Top,
@@ -81,5 +82,14 @@
                 _ => ThrowHelper.UnexpectedValue<NsScrollbarKind>()
             };
         }
+
+        public static NsFocusDirection ToFocusDirection(BuiltInConstant val) => val switch
+        {
+            BuiltInConstant.Left => NsFocusDirection.Left,
+            BuiltInConstant.Up => NsFocusDirection.Up,
+            BuiltInConstant.Right => NsFocusDirection.Right,
+            BuiltInConstant.Down => NsFocusDirection.Down,
+            _ => ThrowHelper.UnexpectedValue<NsFocusDirection>()
+        };
     }
 }

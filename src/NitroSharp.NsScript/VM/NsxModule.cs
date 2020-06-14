@@ -9,6 +9,14 @@ using NitroSharp.NsScript.Utilities;
 
 namespace NitroSharp.NsScript.VM
 {
+    public enum SubroutineKind : byte
+    {
+        Chapter = 0,
+        Scene = 1,
+        Function = 2
+    }
+
+    [DebuggerDisplay("Module '{Name}'")]
     public sealed class NsxModule
     {
         private readonly string?[] _stringHeap;
@@ -21,7 +29,7 @@ namespace NitroSharp.NsScript.VM
         private readonly SubroutineRuntimeInfo[] _srti;
         private readonly Dictionary<string, int> _subroutineMap;
 
-        public NsxModule(
+        private NsxModule(
             Stream stream, string name, DateTimeOffset sourceModificationTime,
             int[] subroutineOffsets, byte[] rtiTable, string[] imports, int[] stringOffsets)
         {
@@ -110,7 +118,6 @@ namespace NitroSharp.NsScript.VM
             _subroutines[index] = new Subroutine(bytes);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private ushort ReadUInt16()
         {
             Span<byte> bytes = stackalloc byte[2];
@@ -250,6 +257,7 @@ namespace NitroSharp.NsScript.VM
             => new ReadOnlySpan<byte>(_bytes, _codeStart, _bytes.Length - _codeStart);
     }
 
+    [DebuggerDisplay("{SubroutineKind} '{SubroutineName}'")]
     public struct SubroutineRuntimeInfo
     {
         private string[]? _parameterNames;
@@ -320,7 +328,5 @@ namespace NitroSharp.NsScript.VM
                 _parameterNames[i] = reader.ReadLengthPrefixedUtf8String();
             }
         }
-
-        public override string ToString() => $"SRTI '{SubroutineName}'";
     }
 }

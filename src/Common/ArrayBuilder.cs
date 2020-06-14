@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
@@ -88,13 +89,26 @@ namespace NitroSharp.Utilities
             _count++;
         }
 
-        public void Remove(uint index)
+        public void RemoveAt(uint index)
         {
             Debug.Assert(index < _count);
             _count--;
             if (index < _count)
             {
                 Array.Copy(_elements, index + 1, _elements, index, _count - index);
+            }
+        }
+
+        public void Remove(T item)
+        {
+            T[] elems = _elements;
+            for (uint i = 0; i < _count; i++)
+            {
+                if (EqualityComparer<T>.Default.Equals(elems[i], item))
+                {
+                    RemoveAt(i);
+                    return;
+                }
             }
         }
 

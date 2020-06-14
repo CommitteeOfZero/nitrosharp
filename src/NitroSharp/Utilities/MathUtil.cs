@@ -1,7 +1,4 @@
-﻿using System;
-using System.Runtime.CompilerServices;
-
-namespace NitroSharp.Utilities
+﻿namespace NitroSharp.Utilities
 {
     internal static class MathUtil
     {
@@ -23,9 +20,6 @@ namespace NitroSharp.Utilities
                 ? value
                 : value + multiple - remainder;
         }
-
-        public static float ToRadians(float degrees)
-            => degrees / 180.0f * MathF.PI;
 
         public static uint NearestPowerOfTwo(uint n)
         {

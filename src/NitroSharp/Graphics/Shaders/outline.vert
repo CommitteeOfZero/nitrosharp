@@ -52,30 +52,28 @@ void main()
     vec4 col4 = texelFetch(Transforms, transformUV + ivec2(3, 0), 0);
     mat4 transform = mat4(col1, col2, col3, col4);
 
-    ivec2 glyphInfoUV = getCacheEntryUV(vs_OutlineID, 2, glyphRectTexSize);
+    ivec2 glyphInfoUV = getCacheEntryUV(vs_GlyphID, 2, glyphRectTexSize);
     vec4 block1 = texelFetch(GlyphRects, glyphInfoUV, 0);
     vec4 block2 = texelFetch(GlyphRects, glyphInfoUV + ivec2(1, 0), 0);
     float layer = block1.x;
     vec2 texOrigin = block1.yz;
     vec2 size = vec2(block1.w, block2.x);
-    vec2 outlineOffset = block2.yz;
 
     vec4 uvRect = vec4(
-        texOrigin.x, texOrigin.y,
-        texOrigin.x + size.x, texOrigin.y + size.y
+    texOrigin.x, texOrigin.y,
+    texOrigin.x + size.x, texOrigin.y + size.y
     );
-    vec2 offset = vs_Offset + outlineOffset;
     vec2 quad[4] = vec2[4](
-        vec2(offset.x, offset.y),
-        vec2(offset.x + size.x, offset.y),
-        vec2(offset.x, offset.y + size.y),
-        vec2(offset.x + size.x, offset.y + size.y)
+    vec2(vs_Offset.x, vs_Offset.y),
+    vec2(vs_Offset.x + size.x, vs_Offset.y),
+    vec2(vs_Offset.x, vs_Offset.y + size.y),
+    vec2(vs_Offset.x + size.x, vs_Offset.y + size.y)
     );
     vec2 uv[4] = vec2[4](
-        vec2(uvRect.x, uvRect.y),
-        vec2(uvRect.z, uvRect.y),
-        vec2(uvRect.x, uvRect.w),
-        vec2(uvRect.z, uvRect.w)
+    vec2(uvRect.x, uvRect.y),
+    vec2(uvRect.z, uvRect.y),
+    vec2(uvRect.x, uvRect.w),
+    vec2(uvRect.z, uvRect.w)
     );
 
     uint index = indices[gl_VertexIndex];

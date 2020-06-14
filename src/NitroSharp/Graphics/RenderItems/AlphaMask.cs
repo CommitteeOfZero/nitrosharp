@@ -9,15 +9,15 @@ namespace NitroSharp.Graphics
             in ResolvedEntityPath path,
             int priority,
             AssetRef<Texture> texture,
-            bool inheritTransform)
-            : base(path, priority, inheritTransform)
+            bool isContainer)
+            : base(path, priority, isContainer)
         {
             Texture = texture;
         }
 
         public AssetRef<Texture> Texture { get; }
 
-        public override void Render(RenderContext ctx)
+        public override void Render(RenderContext ctx, bool assetsReady)
         {
         }
 

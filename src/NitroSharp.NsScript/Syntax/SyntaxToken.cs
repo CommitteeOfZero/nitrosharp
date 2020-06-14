@@ -128,7 +128,6 @@ namespace NitroSharp.NsScript.Syntax
             }
             if ((Flags & SyntaxTokenFlags.HasDollarPrefix) == SyntaxTokenFlags.HasDollarPrefix
                 || (Flags & SyntaxTokenFlags.HasHashPrefix) == SyntaxTokenFlags.HasHashPrefix
-                || (Flags & SyntaxTokenFlags.HasAtPrefix) == SyntaxTokenFlags.HasAtPrefix
                 || (Flags & SyntaxTokenFlags.IsHexTriplet) == SyntaxTokenFlags.IsHexTriplet)
             {
                 start++;

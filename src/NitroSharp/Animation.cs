@@ -1,9 +1,12 @@
 using System;
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Numerics;
+using NitroSharp.Content;
 using NitroSharp.Graphics;
 using NitroSharp.NsScript;
 using NitroSharp.Utilities;
+using Veldrid;
 
 namespace NitroSharp
 {
@@ -19,15 +22,8 @@ namespace NitroSharp
 
         protected Animation(TimeSpan duration, NsEaseFunction easeFunction, bool repeat = false)
         {
-            if (duration > TimeSpan.FromMilliseconds(0))
-            {
-                _duration = duration;
-            }
-            else
-            {
-                _duration = TimeSpan.FromMilliseconds(1);
-                _elapsed = 1.0f;
-            }
+            Debug.Assert(duration > TimeSpan.Zero);
+            _duration = duration;
             _easeFunction = easeFunction;
             _repeat = repeat;
         }
@@ -37,11 +33,11 @@ namespace NitroSharp
 
         public bool HasCompleted => _elapsed >= _duration.TotalMilliseconds;
 
-        public bool Update(float deltaMilliseconds)
+        public bool Update(float dt)
         {
             if (_initialized)
             {
-                _elapsed += deltaMilliseconds;
+                _elapsed += dt;
             }
             else
             {
@@ -50,7 +46,7 @@ namespace NitroSharp
 
             if (!_completed)
             {
-                Advance(deltaMilliseconds);
+                Advance(dt);
                 PostAdvance();
                 return !_completed;
             }
@@ -97,13 +93,23 @@ namespace NitroSharp
         }
     }
 
-    internal abstract class PropertyAnimation<TEntity, TProperty> : Animation
+    internal enum AnimationKind
+    {
+        Move,
+        Zoom,
+        Rotate,
+        BezierMove,
+        Transition,
+        Fade
+    }
+
+    internal abstract class ValueAnimation<TEntity, TValue> : Animation
         where TEntity : Entity
-        where TProperty : struct
+        where TValue : struct
     {
         protected readonly TEntity _entity;
 
-        protected PropertyAnimation(
+        protected ValueAnimation(
             TEntity entity, TimeSpan duration,
             NsEaseFunction easeFunction,
             bool repeat = false) : base(duration, easeFunction, repeat)
@@ -111,17 +117,17 @@ namespace NitroSharp
             _entity = entity;
         }
 
-        protected abstract ref TProperty GetRef();
+        protected abstract ref TValue GetValueRef();
 
         protected override void Advance(float dt)
         {
-            InterpolateValue(ref GetRef(), GetFactor(Progress, _easeFunction));
+            InterpolateValue(ref GetValueRef(), GetFactor(Progress, _easeFunction));
         }
 
-        protected abstract void InterpolateValue(ref TProperty value, float factor);
+        protected abstract void InterpolateValue(ref TValue value, float factor);
     }
 
-    internal abstract class FloatAnimation<TEntity> : PropertyAnimation<TEntity, float>
+    internal abstract class FloatAnimation<TEntity> : ValueAnimation<TEntity, float>
         where TEntity : Entity
     {
         protected readonly float _startValue;
@@ -144,22 +150,67 @@ namespace NitroSharp
         }
     }
 
-    //internal sealed class OpacityAnimation : FloatAnimation<RenderItem2D>
-    //{
-    //    public OpacityAnimation(
-    //        RenderItem2D entity,
-    //        float startValue, float endValue,
-    //        TimeSpan duration,
-    //        NsEaseFunction easeFunction = NsEaseFunction.None,
-    //        bool repeat = false)
-    //        : base(entity, startValue, endValue, duration, easeFunction, repeat)
-    //    {
-    //    }
-    //
-    //    //protected override ref float GetRef() => ref _entity.Color.
-    //}
+    internal sealed class TransitionAnimation : Animation, IDisposable
+    {
+        private readonly float _srcFadeAmount;
+        private readonly float _dstFadeAmount;
+        private float _fadeAmount;
 
-    internal abstract class Vector3Animation<TEntity> : PropertyAnimation<TEntity, Vector3>
+        public TransitionAnimation(
+            AssetRef<Texture> mask,
+            float srcFadeAmount, float dstFadeAmount,
+            TimeSpan duration,
+            NsEaseFunction easeFunction)
+            : base(duration, easeFunction, repeat: false)
+        {
+            Mask = mask;
+            _srcFadeAmount = srcFadeAmount;
+            _dstFadeAmount = dstFadeAmount;
+        }
+
+        public AssetRef<Texture> Mask { get; }
+        public float FadeAmount => _fadeAmount;
+
+        protected override void Advance(float dt)
+        {
+            float delta = _dstFadeAmount - _srcFadeAmount;
+            _fadeAmount = _srcFadeAmount + delta * GetFactor(Progress, _easeFunction);
+        }
+
+        public void Dispose()
+        {
+            //Mask.Dispose();
+        }
+    }
+
+    internal sealed class OpacityAnimation : Animation
+    {
+        private readonly RenderItem _entity;
+        private readonly float _startOpacity;
+        private readonly float _endOpacity;
+
+        public OpacityAnimation(
+            RenderItem entity,
+            float startOpacity, float endOpacity,
+            TimeSpan duration,
+            NsEaseFunction easeFunction,
+            bool repeat = false) : base(duration, easeFunction, repeat)
+        {
+            _entity = entity;
+            _startOpacity = startOpacity;
+            _endOpacity = endOpacity;
+        }
+
+        protected override void Advance(float dt)
+        {
+            float factor = GetFactor(Progress, _easeFunction);
+            float delta = _endOpacity - _startOpacity;
+            float current = _startOpacity + delta * factor;
+            _entity.Color.SetAlpha(current);
+        }
+    }
+
+    internal abstract class Vector3Animation<TEntity> : ValueAnimation<TEntity, Vector3>
         where TEntity : Entity
     {
         protected readonly Vector3 _startValue;
@@ -194,7 +245,7 @@ namespace NitroSharp
         {
         }
 
-        protected override ref Vector3 GetRef() => ref _entity.Transform.Position;
+        protected override ref Vector3 GetValueRef() => ref _entity.Transform.Position;
     }
 
     internal sealed class ScaleAnimation : Vector3Animation<RenderItem>
@@ -209,7 +260,7 @@ namespace NitroSharp
         {
         }
 
-        protected override ref Vector3 GetRef() => ref _entity.Transform.Scale;
+        protected override ref Vector3 GetValueRef() => ref _entity.Transform.Scale;
     }
 
     internal sealed class RotateAnimation : Vector3Animation<RenderItem>
@@ -224,7 +275,7 @@ namespace NitroSharp
         {
         }
 
-        protected override ref Vector3 GetRef() => ref _entity.Transform.Rotation;
+        protected override ref Vector3 GetValueRef() => ref _entity.Transform.Rotation;
     }
 
     internal readonly struct ProcessedBezierCurve
@@ -262,19 +313,22 @@ namespace NitroSharp
         }
     }
 
-    internal sealed class BezierMoveAnimation : PropertyAnimation<RenderItem2D, Vector3>
+    internal sealed class BezierMoveAnimation : ValueAnimation<RenderItem2D, Vector3>
     {
         public BezierMoveAnimation(
-            RenderItem2D entity, TimeSpan duration,
+            RenderItem2D entity,
+            ProcessedBezierCurve curve,
+            TimeSpan duration,
             NsEaseFunction easeFunction,
             bool repeat = false)
             : base(entity, duration, easeFunction, repeat)
         {
+            Curve = curve;
         }
 
-        public ProcessedBezierCurve Curve { get; set; }
+        public ProcessedBezierCurve Curve { get; }
 
-        protected override ref Vector3 GetRef() => ref _entity.Transform.Position;
+        protected override ref Vector3 GetValueRef() => ref _entity.Transform.Position;
 
         protected override void InterpolateValue(ref Vector3 value, float factor)
         {

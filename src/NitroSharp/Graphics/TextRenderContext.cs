@@ -52,23 +52,23 @@ namespace NitroSharp.Graphics
 
     internal sealed class TextRenderContext : IDisposable
     {
-        internal readonly struct GpuGlyphRun : GpuType
+        private struct GpuGlyphRun : GpuType
         {
             public const uint SizeInGpuBlocks = 2;
 
-            public readonly RgbaFloat Color;
-            public readonly RgbaFloat OutlineColor;
+            private RgbaFloat _color;
+            private RgbaFloat _outlineColor;
 
             public GpuGlyphRun(in RgbaFloat color, in RgbaFloat outlineColor)
             {
-                Color = color;
-                OutlineColor = outlineColor;
+                _color = color;
+                _outlineColor = outlineColor;
             }
 
             public void WriteGpuBlocks(Span<Vector4> blocks)
             {
-                blocks[0] = Color.ToVector4();
-                blocks[1] = OutlineColor.ToVector4();
+                blocks[0] = _color.ToVector4();
+                blocks[1] = _outlineColor.ToVector4();
             }
         }
 
@@ -142,13 +142,19 @@ namespace NitroSharp.Graphics
             }
         }
 
-        public void Render(RenderContext ctx, DrawBatch drawBatch, TextLayout layout, in Matrix4x4 transform)
+        public void Render(
+            RenderContext ctx,
+            DrawBatch drawBatch,
+            TextLayout layout,
+            in Matrix4x4 transform,
+            Vector2 offset)
         {
+            Matrix4x4 finalTransform = transform * Matrix4x4.CreateTranslation(new Vector3(offset, 0));
             TextShaderResources shaderResources = ctx.ShaderResources.Text;
             foreach (ref readonly GlyphRun glyphRun in layout.GlyphRuns)
             {
                 ReadOnlySpan<PositionedGlyph> glyphs = layout.GetGlyphs(glyphRun.GlyphSpan);
-                if (AppendRun(glyphRun, glyphs, transform) is GpuGlyphSlice gpuGlyphSlice)
+                if (AppendRun(glyphRun, glyphs, finalTransform) is GpuGlyphSlice gpuGlyphSlice)
                 {
                     _pendingDraws.Add() = new Draw
                     {

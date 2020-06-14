@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Numerics;
 using System.Threading;
 using Veldrid;
 using Veldrid.Sdl2;
@@ -28,7 +29,6 @@ namespace NitroSharp
             SwapchainSource = VeldridStartup.GetSwapchainSource(_window);
         }
 
-        public Sdl2Window SdlWindow => _window;
         public SwapchainSource SwapchainSource { get; }
         public Size Size => new Size((uint)_window.Width, (uint)_window.Height);
         public bool Exists => _window.Exists;
@@ -44,5 +44,6 @@ namespace NitroSharp
         public event Action? Mobile_SurfaceDestroyed;
 
         public InputSnapshot PumpEvents() => _window.PumpEvents();
+        public void SetMousePosition(Vector2 pos) => _window.SetMousePosition(pos);
     }
 }

@@ -5,6 +5,7 @@ using NitroSharp.Utilities;
 
 namespace NitroSharp.NsScript
 {
+    [DebuggerDisplay("{Value}")]
     public readonly struct EntityQuery
     {
         public EntityQuery(string query)
@@ -58,7 +59,7 @@ namespace NitroSharp.NsScript
             }
             if (value.Equals("MouseClick", StringComparison.Ordinal))
             {
-                return MouseState.Pressed;
+                return MouseState.Down;
             }
             if (value.Equals("MouseLeave", StringComparison.Ordinal))
             {

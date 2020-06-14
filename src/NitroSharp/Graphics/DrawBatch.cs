@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.Numerics;
 using System.Runtime.InteropServices;
 using NitroSharp.Graphics.Core;
 using Veldrid;
@@ -186,6 +187,7 @@ namespace NitroSharp.Graphics
         private CommandList? _commandList;
 
         private Draw _lastDraw;
+        private Vector2 _lastAlphaMaskPosition;
 
         public DrawBatch(RenderContext context)
         {
@@ -206,15 +208,32 @@ namespace NitroSharp.Graphics
             }
         }
 
+        public void UpdateBuffer<T>(GpuBuffer<T> buffer, in T data)
+            where T : unmanaged
+        {
+            Debug.Assert(_commandList is object);
+            Flush();
+            buffer.Update(_commandList, data);
+        }
+
         public void PushQuad(
             QuadGeometry quad,
             Texture texture,
             Texture alphaMask,
+            Vector2 alphaMaskPosition,
             BlendMode blendMode,
             FilterMode filterMode)
         {
             Debug.Assert(_commandList is object && Target is object);
             ViewProjection vp = Target.ViewProjection;
+
+            QuadShaderResources resources = _ctx.ShaderResources.Quad;
+            if (alphaMaskPosition != _lastAlphaMaskPosition)
+            {
+                UpdateBuffer(resources.AlphaMaskPositionBuffer, new Vector4(alphaMaskPosition, 0, 0));
+                _lastAlphaMaskPosition = alphaMaskPosition;
+            }
+
             PushQuad(quad, _ctx.ShaderResources.Quad.GetPipeline(blendMode),
                 new ResourceBindings(
                     new ResourceSetKey(vp.ResourceLayout, vp.Buffer.VdBuffer),
@@ -222,7 +241,8 @@ namespace NitroSharp.Graphics
                         _ctx.ShaderResources.Quad.ResourceLayout,
                         texture,
                         alphaMask,
-                        _ctx.GetSampler(filterMode)
+                        _ctx.GetSampler(filterMode),
+                        resources.AlphaMaskPositionBuffer.VdBuffer
                     )
                 )
             );

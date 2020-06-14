@@ -13,9 +13,8 @@ namespace NitroSharp.NsScript.VM
             _randomGen = new Random();
         }
 
-        protected ThreadContext CurrentThread => VM.CurrentThread!;
-        public NsScriptVM VM => _vm!;
-        public ThreadContext MainThread => VM.MainThread!;
+        public ThreadContext CurrentThread => VM.CurrentThread!;
+        protected NsScriptVM VM => _vm!;
 
         /// <summary>
         /// Original name: Random.
@@ -57,6 +56,7 @@ namespace NitroSharp.NsScript.VM
         public virtual void WaitForInput(TimeSpan timeout) { }
 
         public virtual void LoadImage(in EntityPath entityPath, string fileName) { }
+        public virtual void LoadColor(in EntityPath entityPath, uint width, uint height, NsColor color) { }
 
         /// <summary>
         /// Original name: CreateColor.
@@ -70,7 +70,7 @@ namespace NitroSharp.NsScript.VM
 
         public virtual void CreateSpriteEx(in EntityPath entityPath, int priority, NsCoordinate x, NsCoordinate y, uint srcX, uint srcY, uint width, uint height, string source) { }
 
-        public virtual void CreateAlphaMask(in EntityPath entityPath, int priority, NsCoordinate x, NsCoordinate y, string maskPath, bool inheritTransform) { }
+        public virtual void CreateAlphaMask(in EntityPath entityPath, int priority, NsCoordinate x, NsCoordinate y, string imagePath, bool inheritTransform) { }
 
         /// <summary>
         /// Original name: CreateWindow.
@@ -83,8 +83,8 @@ namespace NitroSharp.NsScript.VM
         public virtual void CreateTextBlock(in EntityPath entityPath, int priority, NsCoordinate x, NsCoordinate y, NsTextDimension width, NsTextDimension height, string pxmlText) { }
 
         public virtual void SetFont(string family, int size, NsColor color, NsColor outlineColor, NsFontWeight weight, NsOutlineOffset outlineOffset) { }
-        public virtual void LoadText(in DialogueBlockToken token, uint maxWidth, uint maxHeight, int letterSpacing, int lineSpacing) { }
-        public virtual void WaitText(string id, TimeSpan time) { }
+        public virtual void LoadDialogue(in DialogueBlockToken blockToken, uint maxWidth, uint maxHeight, int letterSpacing, int lineSpacing) { }
+        public virtual void WaitText(in EntityQuery query, TimeSpan timeout) { }
 
         public virtual void BoxBlur(EntityQuery query, uint nbPasses) { }
         public virtual void Grayscale(EntityQuery query) { }
@@ -109,21 +109,20 @@ namespace NitroSharp.NsScript.VM
         /// </summary>
         public virtual void ToggleLooping(in EntityPath entityPath, bool looping) { }
         public virtual void SetLoopRegion(in EntityPath entityPath, TimeSpan loopStart, TimeSpan loopEnd) { }
-        public virtual void SetVolume(in EntityPath entityPath, TimeSpan duration, NsRational volume) { }
+        public virtual void SetVolume(EntityQuery query, TimeSpan duration, NsRational volume) { }
 
         public virtual void Fade(EntityQuery query, TimeSpan duration, NsRational dstOpacity, NsEaseFunction easeFunction, TimeSpan delay) { }
         public virtual void Move(EntityQuery query, TimeSpan duration, NsCoordinate dstX, NsCoordinate dstY, NsEaseFunction easeFunction, TimeSpan delay) { }
         public virtual void Zoom(EntityQuery query, TimeSpan duration, NsRational dstScaleX, NsRational dstScaleY, NsEaseFunction easeFunction, TimeSpan delay) { }
         public virtual void Rotate(EntityQuery query, TimeSpan duration, NsNumeric dstRotationX, NsNumeric dstRotationY, NsNumeric dstRotationZ, NsEaseFunction easeFunction, TimeSpan delay) { }
         public virtual void BezierMove(EntityQuery query, TimeSpan duration, CompositeBezier curve, NsEaseFunction easeFunction, bool wait) { }
-        public virtual void DrawTransition(EntityQuery query, TimeSpan duration, NsRational initialFadeAmount, NsRational finalFadeAmount, NsRational feather, NsEaseFunction easeFunction, string maskFileName, TimeSpan delay) { }
+        public virtual void BeginTransition(EntityQuery query, TimeSpan duration, NsRational srcFadeAmount, NsRational dstFadeAmount, NsRational feather, NsEaseFunction easeFunction, string maskFileName, TimeSpan delay) { }
 
         public virtual void WaitAction(EntityQuery query, TimeSpan? timeout) { }
         public virtual void WaitMove(EntityQuery query) { }
 
-
         public virtual void CreateChoice(in EntityPath entityPath) { }
-        public virtual void SetNextFocus(in EntityPath choice, in EntityPath next) { }
+        public virtual void SetNextFocus(in EntityPath first, in EntityPath second, NsFocusDirection focusDirection) { }
 
         public virtual void CreateScrollbar(in EntityPath path, int priority, int x1, int y1, int x2, int y2, int pos, NsScrollbarKind kind, string src) { }
         public virtual float GetScrollbarValue(in EntityPath scrollbarEntity)
@@ -131,8 +130,14 @@ namespace NitroSharp.NsScript.VM
             return 0.5f;
         }
 
-        public virtual void BeginDialogueLine(string pxmlString) { }
-        public virtual bool IsPressed(in EntityPath choice) => false;
+        public virtual void Exit() { }
+
+        public virtual void MoveCursor(int x, int y) { }
+
+        // --- NitroSharp only ---
+        public virtual void DisplayLine(in EntityPath dialogueBlockPath, string line) { }
+        public virtual bool UpdateChoice(in EntityPath choicePath) => false;
         public virtual void AssertTrue(bool value) { }
+
     }
 }

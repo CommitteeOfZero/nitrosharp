@@ -19,7 +19,7 @@ namespace NitroSharp.NsScriptCompiler.Tests
             SourceFileSymbol file = ctx.TestModule.RootSourceFile;
             foreach (FunctionSymbol func in file.Functions)
             {
-                if (func.Parameters.IsEmpty)
+                if (func.Parameters.IsEmpty && !func.Declaration.Name.Value.StartsWith("priv_"))
                 {
                     yield return new[] { file.Name, func.Name };
                 }
@@ -99,7 +99,7 @@ namespace NitroSharp.NsScriptCompiler.Tests
         [ClassData(typeof(TestDiscoverer))]
         public void test(string module, string function)
         {
-            _context.VM.CreateThread($"{module}.{function}", module, function, start: true);
+            _context.VM.CreateThread(module, function, start: true);
             _context.VM.Run(_context.BuiltInFunctions, CancellationToken.None);
         }
     }

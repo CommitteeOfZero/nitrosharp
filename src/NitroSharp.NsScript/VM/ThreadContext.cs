@@ -9,17 +9,18 @@ namespace NitroSharp.NsScript.VM
         internal long? SuspensionTime;
         internal long? SleepTimeout;
         internal bool Yielded;
+        internal EntityPath? DialogueBlock;
 
-        internal ThreadContext(string name, ref CallFrame frame)
+        internal ThreadContext(uint id, ref CallFrame frame)
         {
-            Name = name;
+            Id = id;
             CallFrameStack = new ValueStack<CallFrame>(4);
             CallFrameStack.Push(ref frame);
             EvalStack = new ValueStack<ConstantValue>(8);
             EntryModule = frame.Module.Name;
         }
 
-        public string Name { get; }
+        public uint Id { get; }
         public string EntryModule { get; }
         public bool DoneExecuting => CallFrameStack.Count == 0;
         public bool IsActive => SuspensionTime == null;

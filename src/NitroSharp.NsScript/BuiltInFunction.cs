@@ -85,6 +85,7 @@
         MountSavedata,
         AvailableFile,
         Escape,
+
         CreateBacklog,
         SetBacklog,
         EnableBacklog,
@@ -104,6 +105,7 @@
         XBOX360_Presence,
         XBOX360_AwardGameIcon,
         XBOX360_Achieved,
+        XBOX360_IsAchieved,
         XBOX360_InitUser,
         XBOX360_IsSignin,
         XBOX360_CheckStorage,

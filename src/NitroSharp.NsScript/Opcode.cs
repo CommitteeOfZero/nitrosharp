@@ -46,8 +46,8 @@
         IsPressed = 0x38,       // <ushort token>
         SelectEnd = 0x39,       // <>
 
-        ActivateText = 0x40,    // <ushort id>
-        PresentText = 0x41,     // <ushort token>
+        ActivateBlock = 0x40,    // <ushort id>
+        DisplayLine = 0x41,     // <ushort token>
         AwaitInput = 0x42,      // <>
     }
 }

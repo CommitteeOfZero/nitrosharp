@@ -3,7 +3,7 @@ using System.Runtime.CompilerServices;
 
 namespace NitroSharp.NsScript.Utilities
 {
-    public struct ValueStack<T> where T : struct
+    internal struct ValueStack<T> where T : struct
     {
         private T[] _array;
         private int _size;

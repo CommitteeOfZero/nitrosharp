@@ -14,7 +14,7 @@ namespace NitroSharp.Text
         private static readonly PXmlFlattener s_pxmlFlattener
             = new PXmlFlattener();
 
-        public TextBuffer(
+        private TextBuffer(
             ImmutableArray<TextBufferSegment> segments,
             VoiceSegment? voice,
             uint textLength)

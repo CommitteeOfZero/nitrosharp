@@ -1,6 +1,4 @@
 using System;
-using System.Diagnostics;
-using System.Runtime.InteropServices;
 using NitroSharp.Content;
 using NitroSharp.Graphics.Core;
 using NitroSharp.Text;
@@ -26,6 +24,8 @@ namespace NitroSharp.Graphics
 
     internal sealed class RenderContext : IDisposable
     {
+        private readonly ShaderLibrary _shaderLibrary;
+
         private readonly CommandList _transferCommands;
         private readonly CommandList _drawCommands;
 
@@ -62,10 +62,10 @@ namespace NitroSharp.Graphics
             SecondaryCommandList.Name = "Secondary";
             Content = contentManager;
             GlyphRasterizer = glyphRasterizer;
-            ShaderLibrary = new ShaderLibrary(graphicsDevice);
+            _shaderLibrary = new ShaderLibrary(graphicsDevice);
             ShaderResources = new ShaderResources(
                 graphicsDevice,
-                ShaderLibrary,
+                _shaderLibrary,
                 _swapchainTarget.OutputDescription,
                 _swapchainTarget.ViewProjection.ResourceLayout
             );
@@ -105,7 +105,6 @@ namespace NitroSharp.Graphics
 
         public ContentManager Content { get; }
         public GlyphRasterizer GlyphRasterizer { get; }
-        public ShaderLibrary ShaderLibrary { get; }
         public ShaderResources ShaderResources { get; }
 
         public ResourceSetCache ResourceSetCache { get; }
@@ -137,6 +136,23 @@ namespace NitroSharp.Graphics
 
             _transferCommands.Begin();
             TextureCache.EndFrame(_transferCommands);
+        }
+
+        public Texture CreateFullscreenTexture()
+        {
+            Size size = _swapchainTarget.Size;
+            var desc = TextureDescription.Texture2D(
+                size.Width, size.Height,
+                mipLevels: 1, arrayLayers: 1,
+                PixelFormat.B8_G8_R8_A8_UNorm,
+                TextureUsage.Sampled
+            );
+            return ResourceFactory.CreateTexture(ref desc);
+        }
+
+        public void CaptureFramebuffer(Texture dstTexture)
+        {
+            _drawCommands.CopyTexture(_swapchainTarget.ColorTarget, dstTexture);
         }
 
         public void EndFrame()
@@ -191,6 +207,16 @@ namespace NitroSharp.Graphics
             return texture;
         }
 
+        private void LoadWaitIndicator(string pathFormat, int first, int last)
+        {
+            string getPath(int i) => string.Format(pathFormat, i);
+
+            for (int i = first; i <= last; i++)
+            {
+
+            }
+        }
+
         public void Dispose()
         {
             _transferCommands.Dispose();
@@ -204,7 +230,7 @@ namespace NitroSharp.Graphics
             TextureCache.Dispose();
             ResourceSetCache.Dispose();
             _swapchainTarget.Dispose();
-            ShaderLibrary.Dispose();
+            _shaderLibrary.Dispose();
         }
     }
 }

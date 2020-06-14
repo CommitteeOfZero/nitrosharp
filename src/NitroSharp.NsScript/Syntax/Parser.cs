@@ -14,11 +14,12 @@ namespace NitroSharp.NsScript.Syntax
         private readonly SyntaxToken[] _tokens;
         private int _tokenOffset;
 
-        // It's not always possible for the lexer to tell whether something is a string literal or an identifier,
-        // since some identifiers (more specifically, parameter names and parameter references) in NSS can also
-        // be enclosed in quotes. In such cases, the lexer outputs a StringLiteralOrQuotedIdentifier token and
-        // lets the parser decide whether it's a string literal or an identifier. In order to do that, the parser
-        // needs to keep track of the parameters that can be referenced in the current scope.
+        // It's not always possible for the lexer to tell whether something is a string literal
+        // or an identifier, since some identifiers (more specifically, parameter names and
+        // parameter references) in NSS can also be enclosed in quotes. In such cases, the lexer
+        // outputs a StringLiteralOrQuotedIdentifier token and lets the parser decide whether
+        // it's a string literal or an identifier. In order to do that, the parser needs to
+        // keep track of the parameters that can be referenced in the current scope.
         //
         // Example:
         // function foo("stringParameter1", "stringParameter2") {
@@ -75,7 +76,6 @@ namespace NitroSharp.NsScript.Syntax
             return tokens.UnderlyingArray;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private SyntaxToken EatToken()
         {
             SyntaxToken ct = CurrentToken;
@@ -83,7 +83,6 @@ namespace NitroSharp.NsScript.Syntax
             return ct;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private SyntaxToken EatToken(SyntaxTokenKind expectedKind)
         {
             SyntaxToken ct = CurrentToken;
@@ -96,15 +95,12 @@ namespace NitroSharp.NsScript.Syntax
             return ct;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private string GetText(in SyntaxToken token)
             => SourceText.GetText(token.TextSpan);
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private string GetValueText(in SyntaxToken token)
             => SourceText.GetText(token.GetValueSpan());
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private string InternValueText(in SyntaxToken token)
             => _internTable.Add(SourceText.GetCharacterSpan(token.GetValueSpan()));
 
@@ -123,11 +119,9 @@ namespace NitroSharp.NsScript.Syntax
             CurrentToken = _tokens[_tokenOffset];
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private TextSpan SpanFrom(SyntaxNode firstNode)
             => TextSpan.FromBounds(firstNode.Span.Start, CurrentToken.TextSpan.Start);
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private TextSpan SpanFrom(in SyntaxToken firstToken)
             => TextSpan.FromBounds(firstToken.TextSpan.Start, CurrentToken.TextSpan.Start);
 
@@ -170,12 +164,10 @@ namespace NitroSharp.NsScript.Syntax
                         SyntaxToken filePath = EatToken(SyntaxTokenKind.StringLiteralOrQuotedIdentifier);
                         fileReferences.Add(new Spanned<string>(GetValueText(filePath), filePath.TextSpan));
                         break;
-
                     case SyntaxTokenKind.Semicolon:
                         Report(DiagnosticId.MisplacedSemicolon);
                         EatToken();
                         break;
-
                     default:
                         EatStrayToken();
                         break;
@@ -200,15 +192,12 @@ namespace NitroSharp.NsScript.Syntax
                         subrotuines.Add(ParseFunctionDeclaration());
                         subroutineCounts.functionCount++;
                         break;
-
                     // Lines starting with a '.' are treated as comments.
                     case SyntaxTokenKind.Dot:
                         SkipToNextLine();
                         break;
-
                     case SyntaxTokenKind.EndOfFileToken:
                         break;
-
                     default:
                         Report(DiagnosticId.ExpectedSubroutineDeclaration, GetText(CurrentToken));
                         SkipToNextLine();
@@ -218,7 +207,11 @@ namespace NitroSharp.NsScript.Syntax
 
             var span = new TextSpan(0, SourceText.Length);
             return new SourceFileRootSyntax(
-                subrotuines.ToImmutable(), fileReferences.ToImmutable(), subroutineCounts, span);
+                subrotuines.ToImmutable(),
+                fileReferences.ToImmutable(),
+                subroutineCounts,
+                span
+            );
         }
 
         public SubroutineDeclarationSyntax ParseSubroutineDeclaration()
@@ -286,11 +279,9 @@ namespace NitroSharp.NsScript.Syntax
                         _parameters.Add(parameter);
                         _parameterMap[parameter.Name] = parameter;
                         break;
-
                     case SyntaxTokenKind.Comma:
                         EatToken();
                         break;
-
                     default:
                         EatStrayToken();
                         break;
@@ -617,6 +608,21 @@ namespace NitroSharp.NsScript.Syntax
 
         private BezierExpressionSyntax? ParseBezierExpression(in SyntaxToken openParen, ExpressionSyntax x0)
         {
+            BezierControlPointSyntax? parseControlPoint(bool starting)
+            {
+                (SyntaxTokenKind startTk, SyntaxTokenKind endTk) = starting
+                    ? (SyntaxTokenKind.OpenParen, SyntaxTokenKind.CloseParen)
+                    : (SyntaxTokenKind.OpenBrace, SyntaxTokenKind.CloseBrace);
+                EatToken(startTk);
+                ExpressionSyntax? x = ParseSubExpression(Precedence.Expression);
+                if (x == null) { return null; }
+                EatToken(SyntaxTokenKind.Comma);
+                ExpressionSyntax? y = ParseSubExpression(Precedence.Expression);
+                if (y == null) { return null; }
+                EatToken(endTk);
+                return new BezierControlPointSyntax(x, y, starting);
+            }
+
             var controlPoints = ImmutableArray.CreateBuilder<BezierControlPointSyntax>();
             EatToken(SyntaxTokenKind.Comma);
             ExpressionSyntax? y0 = ParseSubExpression(Precedence.Expression);
@@ -640,21 +646,6 @@ namespace NitroSharp.NsScript.Syntax
             }
 
             return new BezierExpressionSyntax(controlPoints.ToImmutable(), SpanFrom(openParen));
-
-            BezierControlPointSyntax? parseControlPoint(bool starting)
-            {
-                (SyntaxTokenKind startTk, SyntaxTokenKind endTk) = starting
-                    ? (SyntaxTokenKind.OpenParen, SyntaxTokenKind.CloseParen)
-                    : (SyntaxTokenKind.OpenBrace, SyntaxTokenKind.CloseBrace);
-                EatToken(startTk);
-                ExpressionSyntax? x = ParseSubExpression(Precedence.Expression);
-                if (x == null) { return null; }
-                EatToken(SyntaxTokenKind.Comma);
-                ExpressionSyntax? y = ParseSubExpression(Precedence.Expression);
-                if (y == null) { return null; }
-                EatToken(endTk);
-                return new BezierControlPointSyntax(x, y, starting);
-            }
         }
 
         private LiteralExpressionSyntax ParseLiteral()
@@ -670,12 +661,10 @@ namespace NitroSharp.NsScript.Syntax
                         ? ConstantValue.Float(float.Parse(valueText, provider: CultureInfo.InvariantCulture))
                         : ConstantValue.Integer(int.Parse(valueText, numberStyle));
                     break;
-
                 case SyntaxTokenKind.StringLiteralOrQuotedIdentifier:
                     string str = InternValueText(token);
                     value = ConstantValue.String(str);
                     break;
-
                 case SyntaxTokenKind.NullKeyword:
                     value = ConstantValue.Null;
                     break;
@@ -685,7 +674,6 @@ namespace NitroSharp.NsScript.Syntax
                 case SyntaxTokenKind.FalseKeyword:
                     value = ConstantValue.False;
                     break;
-
                 default:
                     ThrowHelper.Unreachable();
                     return null!;
@@ -759,7 +747,6 @@ namespace NitroSharp.NsScript.Syntax
                 case SyntaxTokenKind.Identifier:
                 case SyntaxTokenKind.StringLiteralOrQuotedIdentifier:
                     return _parameterMap.ContainsKey(InternValueText(CurrentToken));
-
                 default:
                     return false;
             }
@@ -961,11 +948,6 @@ namespace NitroSharp.NsScript.Syntax
                 ReadOnlySpan<char> span = SourceText.GetCharacterSpan(tag.TextSpan);
                 span = span.Slice(5, span.Length - 6);
                 Debug.Assert(span.Length > 0);
-                if (span[0] == '@')
-                {
-                    span = span.Slice(1);
-                }
-
                 return span.ToString();
             }
 

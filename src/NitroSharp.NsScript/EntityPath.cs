@@ -99,6 +99,7 @@ namespace NitroSharp.NsScript
 
         public ReadOnlySpan<char> Name => Value.AsSpan(NameStartIndex);
         public bool IsEmpty => string.IsNullOrEmpty(Value);
+        public bool HasParent => _parent is object;
 
         public static EntityPath Empty => new EntityPath(string.Empty);
 

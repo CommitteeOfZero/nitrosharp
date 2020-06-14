@@ -15,36 +15,12 @@
       "startupScript": "boot.nss"
     },
 
-    "Settings": {
-      "startupScript": "boot_settings.nss"
-    },
-
-    "Staking": {
-      "startupScript": "boot-staking.nss"
-    },
-
-    "Phantasm": {
-      "startupScript": "boot-phantasm.nss"
-    },
-
-    "Prologue": {
-      "startupScript": "boot-prologue.nss"
-    },
-
-    "Test": {
-      "startupScript": "sys_close.nss"
-    },
-
-    "CustomBoot": {
+    "Any": {
       "startupScript": "boot_any.nss"
     },
 
-    "Saya": {
-      "window.title": "Saya no Uta",
-      "window.width": 800,
-      "window.height": 600,
-      "startupScript": "boot.nss",
-      "debug.contentRoot": "S:/ChaosContent/Saya"
+    "Test": {
+      "startupScript": "tests/all.nss"
     },
 
     "CH": {
@@ -52,7 +28,7 @@
       "window.width": 800,
       "window.height": 600,
       "startupScript": "boot.nss",
-      "debug.contentRoot": "S:/ChaosContent/CH"
+      "dev.contentRoot": "S:/ChaosContent/CH"
     }
   }
 }

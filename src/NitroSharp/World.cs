@@ -11,10 +11,10 @@ namespace NitroSharp
     internal readonly struct ResolvedEntityPath
     {
         public readonly EntityId Id;
-        public readonly EntityId ParentId;
+        public readonly Entity? Parent;
 
-        public ResolvedEntityPath(in EntityId id, in EntityId parentId)
-            => (Id, ParentId) = (id, parentId);
+        public ResolvedEntityPath(in EntityId id, Entity? parent)
+            => (Id, Parent) = (id, parent);
     }
 
     internal enum EntityBucket
@@ -227,17 +227,23 @@ namespace NitroSharp
         private readonly Dictionary<EntityPath, EntityId> _aliases;
         private readonly List<(EntityId, EntityBucket)> _pendingBucketChanges;
 
+        private readonly EntityGroup<SimpleEntity> _simpleEntities;
         private readonly EntityGroup<VmThread> _vmThreads;
         private readonly SortableEntityGroup<RenderItem> _renderItems;
+        private readonly EntityGroup<ColorSource> _colorSources;
         private readonly EntityGroup<Image> _images;
         private readonly EntityGroup<Choice> _choices;
+
+        private readonly Queue<Action> _assetsReadyCallbacks;
 
         public World()
         {
             _entities = new Dictionary<EntityId, EntityRec>(1024);
             _aliases = new Dictionary<EntityPath, EntityId>(128);
+            _simpleEntities = new EntityGroup<SimpleEntity>();
             _vmThreads = new EntityGroup<VmThread>();
             _renderItems = new SortableEntityGroup<RenderItem>();
+            _colorSources = new EntityGroup<ColorSource>();
             _images = new EntityGroup<Image>();
             _choices = new EntityGroup<Choice>();
             _pendingBucketChanges = new List<(EntityId, EntityBucket)>();
@@ -267,17 +273,19 @@ namespace NitroSharp
         public bool ResolvePath(in EntityPath path, out ResolvedEntityPath resolvedPath)
         {
             EntityId id = Resolve(path);
-            EntityId parentId = EntityId.Invalid;
             if (path.GetParent(out EntityPath parentPath))
             {
-                parentId = Resolve(parentPath);
-                if (Get(parentId) is null)
+                if (Get(Resolve(parentPath)) is Entity parent)
                 {
-                    resolvedPath = default;
-                    return false;
+                    resolvedPath = new ResolvedEntityPath(id, parent);
+                    return true;
                 }
+
+                resolvedPath = default;
+                return false;
             }
-            resolvedPath = new ResolvedEntityPath(id, parentId);
+
+            resolvedPath = new ResolvedEntityPath(id, parent: null);
             return true;
         }
 
@@ -286,6 +294,12 @@ namespace NitroSharp
 
         public Entity? Get(in EntityId entityId)
             => _entities.TryGetValue(entityId, out EntityRec rec) ? rec.Entity : null;
+
+        public SimpleEntity Add(SimpleEntity entity)
+        {
+            Add(entity, _simpleEntities);
+            return entity;
+        }
 
         public VmThread Add(VmThread thread)
         {
@@ -299,6 +313,8 @@ namespace NitroSharp
             Add(renderItem, _renderItems);
             return renderItem;
         }
+
+        public void Add(ColorSource colorSource) => Add(colorSource, _colorSources);
 
         public Image Add(Image image)
         {
@@ -314,27 +330,19 @@ namespace NitroSharp
 
         public void SetAlias(in EntityId entityId, in EntityPath alias)
         {
-            if (Get(alias) is Entity existing)
-            {
-                if (ReferenceEquals(Get(entityId), existing)) { return; }
-                throw new ArgumentException($"'{alias}' resolves to an existing entity.");
-            }
-
             if (Get(entityId) is Entity entity)
             {
                 if (!entity.Alias.IsEmpty)
                 {
                     _aliases.Remove(entity.Alias);
                 }
-                _aliases[alias] = entityId;
-                ((EntityInternal)entity).SetAlias(alias);
-            }
-        }
 
-        public ChildEnumerable<T> Children<T>(Entity entity)
-            where T : Entity
-        {
-            return new ChildEnumerable<T>(this, entity.Children);
+                EntityPath aliasActual = !alias.Value.StartsWith('@')
+                    ? new EntityPath("@" + alias.Value)
+                    : alias;
+                _aliases[aliasActual] = entityId;
+                ((EntityInternal)entity).SetAlias(aliasActual);
+            }
         }
 
         public bool IsEnabled(in EntityId entityId)
@@ -347,30 +355,35 @@ namespace NitroSharp
             => IsEnabled(entity.Id);
 
         public void EnableEntity(Entity entity)
-            => SetEnabled(entity.Id, true);
+            => _pendingBucketChanges.Add((entity.Id, EntityBucket.Active));
 
         public void DisableEntity(Entity entity)
-            => SetEnabled(entity.Id, false);
+            => _pendingBucketChanges.Add((entity.Id, EntityBucket.Inactive));
 
         public void DestroyEntity(Entity entity)
-           => DestroyEntity(entity.Id);
+        {
+            DestroyEntity(entity.Id);
+        }
 
         public void DestroyEntity(in EntityId id)
         {
-            EntityRec rec = GetRecord(id);
+            if (!GetRecord(id, out EntityRec rec)) { return; }
             Entity entity = rec.Entity;
-            if (entity.HasParent)
-            {
-                Entity parent = GetRecord(entity.Parent).Entity;
-                ((EntityInternal)parent).RemoveChild(id);
-            }
-
             EntityMove move = rec.Group.Remove(rec.Location);
             UpdateLocation(move);
-            foreach (EntityId child in entity.Children)
+
+            if (entity.Parent is Entity parent)
+            {
+                ((EntityInternal)parent).RemoveChild(entity);
+            }
+
+            ref ArrayBuilder<Entity> children = ref ((EntityInternal)entity).GetChildrenMut();
+            foreach (Entity child in children.AsSpan().ToArray())
             {
                 DestroyEntity(child);
             }
+            children.Clear();
+
             if (!entity.Alias.IsEmpty)
             {
                 _aliases.Remove(entity.Alias);
@@ -389,10 +402,9 @@ namespace NitroSharp
                 DestroyEntity(id);
             }
 
-            if (entity.Parent.IsValid)
+            if (entity.Parent is Entity parent)
             {
-                EntityRec parentRec = GetRecord(entity.Parent);
-                ((EntityInternal)parentRec.Entity).AddChild(id);
+                ((EntityInternal)parent).AddChild(entity);
             }
 
             EntityLocation location = group.Add(entity, EntityBucket.Inactive);
@@ -407,22 +419,33 @@ namespace NitroSharp
 
         private EntityId Resolve(in EntityPath path)
         {
-            EntityId lookupAlias(in EntityPath alias)
+            EntityId lookupSlow(in EntityPath path)
             {
-                return _aliases.TryGetValue(alias, out EntityId result)
-                    ? result : EntityId.Invalid;
+                if (!path.GetParent(out EntityPath parentAlias))
+                {
+                    return _aliases.TryGetValue(path, out EntityId result)
+                        ? result
+                        : EntityId.Invalid;
+                }
+
+                EntityId parent = Resolve(parentAlias);
+                if (!parent.IsValid) { return EntityId.Invalid; }
+                return Resolve(new EntityPath(path.Value.Replace(parentAlias.Value, parent.Path)));
             }
 
             return path.Value[0] != '@'
                 ? new EntityId(path.Value, path.NameStartIndex, path.MouseState)
-                : lookupAlias(path);
+                : lookupSlow(path);
         }
+
+        private bool GetRecord(in EntityId entiytId, out EntityRec rec)
+            => _entities.TryGetValue(entiytId, out rec);
 
         private EntityRec GetRecord(in EntityId entityId)
         {
             return _entities.TryGetValue(entityId, out EntityRec rec)
                 ? rec
-                : throw new ArgumentException($"Entity '{entityId.ToString()}' does not exist.");
+                : throw new ArgumentException($"Entity '{entityId}' does not exist.");
         }
 
         private void SetEnabled(in EntityId entityId, bool enable)
@@ -465,51 +488,6 @@ namespace NitroSharp
             foreach ((_, EntityRec rec) in _entities)
             {
                 rec.Entity.Dispose();
-            }
-        }
-
-        internal readonly ref struct ChildEnumerable<T>
-            where T : Entity
-        {
-            private readonly World _world;
-            private readonly ReadOnlySpan<EntityId> _ids;
-
-            public ChildEnumerable(World world, ReadOnlySpan<EntityId> ids)
-            {
-                _world = world;
-                _ids = ids;
-            }
-
-            public ChildEnumerator<T> GetEnumerator()
-                => new ChildEnumerator<T>(_world, _ids);
-        }
-
-        internal ref struct ChildEnumerator<T>
-            where T : Entity
-        {
-            private readonly World _world;
-            private readonly ReadOnlySpan<EntityId> _ids;
-            private int _pos;
-            private T? _current;
-
-            public ChildEnumerator(World world, ReadOnlySpan<EntityId> ids)
-            {
-                _world = world;
-                _ids = ids;
-                _pos = 0;
-                _current = null;
-            }
-
-            public T Current => _current!;
-
-            public bool MoveNext()
-            {
-                _current = null;
-                while (_pos < _ids.Length && _current is null)
-                {
-                    _current = _world.Get(_ids[_pos++]) as T;
-                }
-                return _current is object;
             }
         }
     }

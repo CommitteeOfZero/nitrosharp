@@ -30,6 +30,14 @@ namespace NitroSharp.NsScript.VM
             var args = new ArgConsumer(cvs);
             switch (function)
             {
+                case BuiltInFunction.MoveCursor:
+                    MoveCursor(ref args);
+                    break;
+
+                case BuiltInFunction.EnableBacklog:
+                    EnableBacklog();
+                    break;
+
                 case BuiltInFunction.CreateName:
                     CreateName(ref args);
                     break;
@@ -58,11 +66,14 @@ namespace NitroSharp.NsScript.VM
                 case BuiltInFunction.SetNextFocus:
                     SetNextFocus(ref args);
                     break;
-                case BuiltInFunction.CreateColor:
-                    CreateColor(ref args);
+                case BuiltInFunction.LoadColor:
+                    LoadColor(ref args);
                     break;
                 case BuiltInFunction.LoadImage:
                     LoadImage(ref args);
+                    break;
+                case BuiltInFunction.CreateColor:
+                    CreateColor(ref args);
                     break;
                 case BuiltInFunction.CreateTexture:
                     CreateTexture(ref args);
@@ -121,7 +132,7 @@ namespace NitroSharp.NsScript.VM
                     SetFont(ref args);
                     break;
                 case BuiltInFunction.WaitText:
-                    WaitText();
+                    WaitText(ref args);
                     break;
 
                 case BuiltInFunction.CreateSound:
@@ -200,6 +211,9 @@ namespace NitroSharp.NsScript.VM
                 case BuiltInFunction.XBOX360_Achieved:
                     XBOX360_Achieved(ref args);
                     break;
+                case BuiltInFunction.XBOX360_IsAchieved:
+                    XBOX360_IsAchieved(ref args);
+                    break;
                 case BuiltInFunction.XBOX360_CheckStorage:
                     XBOX360_CheckStorage(ref args);
                     break;
@@ -227,11 +241,36 @@ namespace NitroSharp.NsScript.VM
                 case BuiltInFunction.XBOX360_AwardGameIcon:
                     XBOX360_AwardGameIcon();
                     break;
+
+                case BuiltInFunction.Exit:
+                    Exit();
+                    break;
             }
 
             ConstantValue? result = _result;
             _result = null;
             return result;
+        }
+
+        private void MoveCursor(ref ArgConsumer args)
+        {
+            _impl.MoveCursor(x: args.TakeInt(), y: args.TakeInt());
+        }
+
+        private void XBOX360_IsAchieved(ref ArgConsumer args)
+        {
+            args.TakeInt();
+            _result = ConstantValue.True;
+        }
+
+        private void EnableBacklog()
+        {
+            _result = ConstantValue.True;
+        }
+
+        private void Exit()
+        {
+            _impl.Exit();
         }
 
         private void SetFont(ref ArgConsumer args)
@@ -242,7 +281,7 @@ namespace NitroSharp.NsScript.VM
                 color: args.TakeColor(),
                 outlineColor: args.TakeColor(),
                 weight: NsFontWeight.From(args.Take()),
-                outlineOffset: EnumConversions.ToOutlineOffset(args.TakeConstant())
+                outlineOffset: args.TakeOutlineOffset()
             );
         }
 
@@ -303,7 +342,7 @@ namespace NitroSharp.NsScript.VM
                 priority: args.TakeInt(),
                 x: args.TakeCoordinate(),
                 y: args.TakeCoordinate(),
-                maskPath: args.TakeString(),
+                imagePath: args.TakeString(),
                 inheritTransform: args.TakeBool()
             );
         }
@@ -389,9 +428,9 @@ namespace NitroSharp.NsScript.VM
             );
         }
 
-        private void WaitText()
+        private void WaitText(ref ArgConsumer args)
         {
-            _impl.WaitText(string.Empty, default);
+            _impl.WaitText(args.TakeEntityQuery(), args.TakeTimeSpan());
         }
 
         private void LoadText(ref ArgConsumer args)
@@ -404,20 +443,20 @@ namespace NitroSharp.NsScript.VM
             int letterSpacing = args.TakeInt();
             int lineSpacing = args.TakeInt();
 
-            NsxModule module = _impl.VM.CurrentThread!.CallFrameStack.Peek(1).Module;
+            NsxModule module = _impl.CurrentThread.CallFrameStack.Peek(1).Module;
             int subroutineIdx = module.LookupSubroutineIndex(subroutineName);
             ref readonly SubroutineRuntimeInfo srti = ref module.GetSubroutineRuntimeInfo(subroutineIdx);
             int blockIndex = srti.LookupDialogueBlockIndex(textName);
             int offset = module.GetSubroutine(subroutineIdx).DialogueBlockOffsets[blockIndex];
 
             var token = new DialogueBlockToken(textName, boxName, module, subroutineIdx, offset);
-            _impl.LoadText(token, maxWidth, maxHeight, letterSpacing, lineSpacing);
+            _impl.LoadDialogue(token, maxWidth, maxHeight, letterSpacing, lineSpacing);
         }
 
         private void SetVolume(ref ArgConsumer args)
         {
             _impl.SetVolume(
-                args.TakeEntityPath(),
+                args.TakeEntityQuery(),
                 duration: args.TakeTimeSpan(),
                 volume: args.TakeRational()
             );
@@ -527,11 +566,11 @@ namespace NitroSharp.NsScript.VM
         {
             EntityQuery query = args.TakeEntityQuery();
             TimeSpan duration = args.TakeTimeSpan();
-            _impl.DrawTransition(
+            _impl.BeginTransition(
                 query,
                 duration,
-                initialFadeAmount: args.TakeRational(),
-                finalFadeAmount: args.TakeRational(),
+                srcFadeAmount: args.TakeRational(),
+                dstFadeAmount: args.TakeRational(),
                 feather: args.TakeRational(),
                 args.TakeEaseFunction(),
                 maskFileName: args.TakeString(),
@@ -574,7 +613,29 @@ namespace NitroSharp.NsScript.VM
 
         private void SetNextFocus(ref ArgConsumer args)
         {
-            _impl.SetNextFocus(choice: args.TakeEntityPath(), next: args.TakeEntityPath());
+            _impl.SetNextFocus(
+                first: args.TakeEntityPath(),
+                second: args.TakeEntityPath(),
+                args.TakeFocusDirection()
+            );
+        }
+
+        private void LoadColor(ref ArgConsumer args)
+        {
+            _impl.LoadColor(
+                args.TakeEntityPath(),
+                width: args.TakeUInt(),
+                height: args.TakeUInt(),
+                args.TakeColor()
+            );
+        }
+
+        private void LoadImage(ref ArgConsumer args)
+        {
+            _impl.LoadImage(
+                args.TakeEntityPath(),
+                fileName: args.TakeString()
+            );
         }
 
         private void CreateColor(ref ArgConsumer args)
@@ -600,14 +661,6 @@ namespace NitroSharp.NsScript.VM
                 width: args.TakeUInt(),
                 height: args.TakeUInt(),
                 color: takeColor(ref args)
-            );
-        }
-
-        private void LoadImage(ref ArgConsumer args)
-        {
-            _impl.LoadImage(
-                args.TakeEntityPath(),
-                fileName: args.TakeString()
             );
         }
 
@@ -855,7 +908,7 @@ namespace NitroSharp.NsScript.VM
 
             public int TakeInt()
             {
-                ConstantValue arg = TakeOpt(ConstantValue.Integer(0));
+                ConstantValue arg = Take();
                 return arg.AsInteger()!.Value;
             }
 
@@ -938,6 +991,18 @@ namespace NitroSharp.NsScript.VM
                     : UnexpectedType<NsEntityAction>(val.Type);
             }
 
+            public NsOutlineOffset TakeOutlineOffset()
+            {
+                ConstantValue val = Take();
+                return val.Type switch
+                {
+                    BuiltInType.BuiltInConstant
+                        => EnumConversions.ToOutlineOffset(val.AsBuiltInConstant()!.Value),
+                    BuiltInType.Null => NsOutlineOffset.Unspecified,
+                    _ => UnexpectedType<NsOutlineOffset>(val.Type)
+                };
+            }
+
             public NsRational TakeRational(float denominator = 1000.0f)
             {
                 return new NsRational(TakeInt(), denominator);
@@ -978,6 +1043,14 @@ namespace NitroSharp.NsScript.VM
 
             public T UnexpectedType<T>(BuiltInType type)
                 => throw new NsxCallDispatchException(_pos - 1, type);
+
+            public NsFocusDirection TakeFocusDirection()
+            {
+                ConstantValue val = Take();
+                return val.Type == BuiltInType.BuiltInConstant
+                    ? EnumConversions.ToFocusDirection(val.AsBuiltInConstant()!.Value)
+                    : UnexpectedType<NsFocusDirection>(val.Type);
+            }
         }
     }
 }

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Numerics;
 using System.Threading;
 using Veldrid;
 
@@ -19,5 +20,6 @@ namespace NitroSharp
         //event Action Destroyed;
 
         InputSnapshot PumpEvents();
+        void SetMousePosition(Vector2 pos);
     }
 }

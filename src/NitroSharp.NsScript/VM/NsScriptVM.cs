@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Threading;
 using NitroSharp.NsScript.Primitives;
@@ -50,11 +49,12 @@ namespace NitroSharp.NsScript.VM
         private readonly Dictionary<string, NsxModule> _loadedModules;
         private readonly BuiltInFunctionDispatcher _builtInCallDispatcher;
         private readonly List<ThreadContext> _threads;
-        private readonly Dictionary<string, ThreadContext> _threadMap;
         private readonly Queue<ThreadAction> _pendingThreadActions;
         private readonly Stopwatch _timer;
         private readonly ConstantValue[] _globals;
         private readonly Stack<CubicBezierSegment> _bezierSegmentStack;
+
+        private uint _lastThreadId;
 
         public NsScriptVM(
             NsxModuleLocator moduleLocator,
@@ -64,7 +64,6 @@ namespace NitroSharp.NsScript.VM
             _moduleLocator = moduleLocator;
             _builtInCallDispatcher = new BuiltInFunctionDispatcher();
             _threads = new List<ThreadContext>();
-            _threadMap = new Dictionary<string, ThreadContext>();
             _pendingThreadActions = new Queue<ThreadAction>();
             _timer = Stopwatch.StartNew();
             _globals = new ConstantValue[5000];
@@ -77,27 +76,29 @@ namespace NitroSharp.NsScript.VM
         public SystemVariableLookup SystemVariables { get; }
         public ThreadContext? MainThread { get; private set; }
         public ThreadContext? CurrentThread { get; private set; }
-        public IReadOnlyList<ThreadContext> Threads => _threads;
 
-        public ThreadContext CreateThread(string name, string symbol, bool start = false)
-            => CreateThread(name, CurrentThread!.CurrentFrame.Module.Name, symbol, start);
+        public ThreadContext CreateThread(string symbol, bool start = false)
+            => CreateThread(CurrentThread!.CurrentFrame.Module.Name, symbol, start);
 
-        public void ActivateDialogueBlock(in DialogueBlockToken blockToken)
+        public ThreadContext ActivateDialogueBlock(in DialogueBlockToken blockToken)
         {
             var frame = new CallFrame(
                 blockToken.Module,
                 (ushort)blockToken.SubroutineIndex,
                 pc: blockToken.Offset
             );
-            CurrentThread!.CallFrameStack.Push(frame);
+            var thread = new ThreadContext(++_lastThreadId, ref frame);
+            thread.DialogueBlock = new EntityPath($"{blockToken.BoxName}/{blockToken.BlockName}");
+            _pendingThreadActions.Enqueue(ThreadAction.Create(thread));
+            return thread;
         }
 
-        public ThreadContext CreateThread(string name, string moduleName, string symbol, bool start = true)
+        public ThreadContext CreateThread(string moduleName, string symbol, bool start = true)
         {
             NsxModule module = GetModule(moduleName);
             ushort subIndex = (ushort)module.LookupSubroutineIndex(symbol);
             var frame = new CallFrame(module, subIndex);
-            var thread = new ThreadContext(name, ref frame);
+            var thread = new ThreadContext(++_lastThreadId, ref frame);
             _pendingThreadActions.Enqueue(ThreadAction.Create(thread));
             MainThread ??= thread;
             if (!start)
@@ -132,23 +133,6 @@ namespace NitroSharp.NsScript.VM
         public void TerminateThread(ThreadContext thread)
         {
             _pendingThreadActions.Enqueue(ThreadAction.Terminate(thread));
-        }
-
-        public void SuspendMainThread()
-        {
-            Debug.Assert(MainThread != null);
-            SuspendThread(MainThread);
-        }
-
-        public void ResumeMainThread()
-        {
-            Debug.Assert(MainThread != null);
-            ResumeThread(MainThread);
-        }
-
-        public bool TryGetThread(string name, [NotNullWhen(true)] out ThreadContext? thread)
-        {
-            return _threadMap.TryGetValue(name, out thread);
         }
 
         public void Run(BuiltInFunctions builtins, CancellationToken cancellationToken)
@@ -212,13 +196,10 @@ namespace NitroSharp.NsScript.VM
                 switch (action.Kind)
                 {
                     case ThreadAction.ActionKind.Create:
-                        if (_threadMap.TryAdd(thread.Name, thread))
-                        {
-                            _threads.Add(thread);
-                        }
+                        _threads.Add(thread);
                         break;
                     case ThreadAction.ActionKind.Terminate:
-                        CommitTerminateThread(thread);
+                        _threads.Remove(thread);
                         break;
                     case ThreadAction.ActionKind.Suspend:
                         CommitSuspendThread(thread, action.Timeout);
@@ -243,12 +224,6 @@ namespace NitroSharp.NsScript.VM
         {
             thread.SleepTimeout = null;
             thread.SuspensionTime = null;
-        }
-
-        private void CommitTerminateThread(ThreadContext thread)
-        {
-            _threads.Remove(thread);
-            _threadMap.Remove(thread.Name);
         }
 
         private static long TicksFromTimeSpan(TimeSpan timespan)
@@ -524,29 +499,30 @@ namespace NitroSharp.NsScript.VM
                         frame.ProgramCounter = program.Position;
                         return TickResult.Ok;
 
-                    case Opcode.ActivateText:
-                        ushort textId = program.DecodeToken();
+                    case Opcode.ActivateBlock:
+                        ushort blockId = program.DecodeToken();
                         ref readonly var srti = ref thisModule.GetSubroutineRuntimeInfo(
                             frame.SubroutineIndex
                         );
-                        (string box, string textName) = srti.DialogueBlockInfos[textId];
-                        SystemVariables.CurrentBoxName = ConstantValue.String(box);
-                        SystemVariables.CurrentTextName = ConstantValue.String(textName);
+                        (string box, string textName) = srti.DialogueBlockInfos[blockId];
+                        SystemVariables.CurrentDialogueBox = ConstantValue.String(box);
+                        SystemVariables.CurrentDialogueBlock = ConstantValue.String(textName);
                         break;
 
                     case Opcode.SelectStart:
                         break;
                     case Opcode.IsPressed:
-                        string choiceName = thisModule.GetString(program.DecodeToken());
-                        bool pressed = builtins.IsPressed(new EntityPath(choiceName));
+                        string choice = thisModule.GetString(program.DecodeToken());
+                        bool pressed = builtins.UpdateChoice(new EntityPath(choice));
                         stack.Push(ConstantValue.Boolean(pressed));
                         break;
                     case Opcode.SelectEnd:
                         frame.ProgramCounter = program.Position;
                         return TickResult.Yield;
-                    case Opcode.PresentText:
+                    case Opcode.DisplayLine:
+                        Debug.Assert(thread.DialogueBlock.HasValue);
                         string text = thisModule.GetString(program.DecodeToken());
-                        builtins.BeginDialogueLine(text);
+                        builtins.DisplayLine(thread.DialogueBlock.Value, text);
                         break;
                     case Opcode.AwaitInput:
                         builtins.WaitForInput();
@@ -592,7 +568,7 @@ namespace NitroSharp.NsScript.VM
         }
     }
 
-    public class SystemVariableLookup
+    public sealed class SystemVariableLookup
     {
         private readonly NsScriptVM _vm;
         private readonly GlobalVarLookupTable _nameLookup;
@@ -642,8 +618,8 @@ namespace NitroSharp.NsScript.VM
         }
 
         public ref ConstantValue CurrentSubroutineName => ref Var(PresentProcess);
-        public ref ConstantValue CurrentBoxName => ref Var(_presentPreprocess);
-        public ref ConstantValue CurrentTextName => ref Var(_presentText);
+        public ref ConstantValue CurrentDialogueBox => ref Var(_presentPreprocess);
+        public ref ConstantValue CurrentDialogueBlock => ref Var(_presentText);
         public ref ConstantValue RightButtonDown => ref Var(_rButtonDown);
 
         public ref ConstantValue X360StartButtonDown => ref Var(_x360ButtonStartDown);

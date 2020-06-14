@@ -59,9 +59,9 @@ namespace NitroSharp
 
         public FontKey DefaultFont { get; }
         public FontKey? ItalicFont { get; }
-        public PtFontSize DefaultFontSize { get; set; }
-        public RgbaFloat DefaultTextColor { get; set; }
-        public RgbaFloat? DefaultOutlineColor { get; set; }
+        public PtFontSize DefaultFontSize { get; private set; }
+        public RgbaFloat DefaultTextColor { get; private set; }
+        public RgbaFloat? DefaultOutlineColor { get; private set; }
         public float RubyFontSizeMultiplier { get; }
 
         public FontConfiguration WithDefaultSize(PtFontSize size)

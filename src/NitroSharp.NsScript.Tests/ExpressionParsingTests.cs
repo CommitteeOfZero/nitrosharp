@@ -1,4 +1,5 @@
-﻿using NitroSharp.NsScript;
+﻿using System.Collections.Generic;
+using NitroSharp.NsScript;
 using NitroSharp.NsScript.Syntax;
 using Xunit;
 
@@ -14,17 +15,16 @@ namespace NitroSharp.NsScriptCompiler.Tests
         }
 
         [Fact]
-        public void HexTriplets_Parse_Correctly()
+        public void HexTriplet()
         {
             var literal = AssertExpression<LiteralExpressionSyntax>("#000000", SyntaxNodeKind.LiteralExpression);
             Assert.Equal(ConstantValue.Integer(0), literal.Value);
-
-            //literal = AssertExpression<LiteralExpressionSyntax>("#FFFFFF", SyntaxNodeKind.LiteralExpression);
-            //Assert.Equal(ConstantValue.Integer(0x00FFFFFF), literal.Value);
+            literal = AssertExpression<LiteralExpressionSyntax>("#FFFFFF", SyntaxNodeKind.LiteralExpression);
+            Assert.Equal(ConstantValue.Integer(0x00FFFFFF), literal.Value);
         }
 
         [Fact]
-        public void DeltaValues_Parse_Correctly()
+        public void DeltaValue()
         {
             var expr = AssertExpression<UnaryExpressionSyntax>("@42", SyntaxNodeKind.UnaryExpression);
             Assert.Equal(UnaryOperatorKind.Delta, expr.OperatorKind.Value);
@@ -40,12 +40,17 @@ namespace NitroSharp.NsScriptCompiler.Tests
         //[InlineData("null", SyntaxNodeKind.LiteralExpression, ConstantValue.True)]
         //public void Literals_Parse_Correctly(string text, SyntaxNodeKind expectedKind, ConstantValue expectedValue)
         //{
-
+        //
         //}
+
+        public static IEnumerable<object[]> GetDialogueBlockTestData()
+        {
+            yield return new object[] { };
+        }
 
         [Theory]
         [InlineData("Foo()", "Foo")]
-        public void FunctionCall_Parses_Correctly(string text, string functionName)
+        public void FunctionCall(string text, string functionName)
         {
             var invocation = AssertExpression<FunctionCallExpressionSyntax>(text, SyntaxNodeKind.FunctionCallExpression);
             Common.AssertSpannedText(text, functionName, invocation.TargetName);

@@ -1,6 +1,5 @@
 using System;
 using NitroSharp.NsScript;
-using NitroSharp.NsScript.Primitives;
 using NitroSharp.Utilities;
 
 #nullable enable
@@ -29,60 +28,101 @@ namespace NitroSharp
         public bool IsValid => Path != null;
 
         public override int GetHashCode() => _hashCode;
-        public bool Equals(EntityId other) => Path.Equals(other.Path);
+        public bool Equals(EntityId other) => string.Equals(Path, other.Path);
         public override string? ToString() => Path;
     }
 
     internal abstract class Entity : EntityInternal, IDisposable
     {
-        private SmallList<EntityId> _children;
+        private ArrayBuilder<Entity> _children;
 
         protected Entity(in ResolvedEntityPath path)
         {
             Id = path.Id;
-            Parent = path.ParentId;
-            _children = new SmallList<EntityId>();
+            Parent = path.Parent;
+            _children = new ArrayBuilder<Entity>(2);
         }
 
         public EntityId Id { get; }
-        public EntityId Parent { get; }
+        public Entity? Parent { get; }
         public EntityPath Alias { get; private set; }
         public bool IsLocked { get; private set; }
-
-        public bool HasParent => Parent.IsValid;
-
-        public ReadOnlySpan<EntityId> Children
-            => _children.AsSpan();
 
         public void Lock() => IsLocked = true;
         public void Unlock() => IsLocked = false;
 
         public abstract bool IsIdle { get; }
 
+        protected ChildEnumerable<T> GetChildren<T>() where T : Entity
+            => new ChildEnumerable<T>(_children.AsSpan());
+
         void EntityInternal.SetAlias(in EntityPath alias)
         {
             Alias = alias;
         }
 
-        void EntityInternal.AddChild(in EntityId child)
+        void EntityInternal.AddChild(Entity child)
         {
             _children.Add(child);
         }
 
-        void EntityInternal.RemoveChild(in EntityId child)
+        void EntityInternal.RemoveChild(Entity child)
         {
             _children.Remove(child);
         }
 
+        ref ArrayBuilder<Entity> EntityInternal.GetChildrenMut()
+            => ref _children;
+
         public virtual void Dispose()
         {
+        }
+
+        internal readonly ref struct ChildEnumerable<T>
+            where T : Entity
+        {
+            private readonly ReadOnlySpan<Entity> _children;
+
+            public ChildEnumerable(ReadOnlySpan<Entity> children)
+                => _children = children;
+
+            public ChildEnumerator<T> GetEnumerator()
+                => new ChildEnumerator<T>(_children);
+        }
+
+        internal ref struct ChildEnumerator<T>
+            where T : Entity
+        {
+            private readonly ReadOnlySpan<Entity> _children;
+            private int _pos;
+            private T? _current;
+
+            public ChildEnumerator(ReadOnlySpan<Entity> children)
+            {
+                _children = children;
+                _pos = 0;
+                _current = null;
+            }
+
+            public T Current => _current!;
+
+            public bool MoveNext()
+            {
+                _current = null;
+                while (_pos < _children.Length && _current is null)
+                {
+                    _current = _children[_pos++] as T;
+                }
+                return _current is object;
+            }
         }
     }
 
     internal interface EntityInternal
     {
+        ref ArrayBuilder<Entity> GetChildrenMut();
         void SetAlias(in EntityPath alias);
-        void AddChild(in EntityId child);
-        void RemoveChild(in EntityId child);
+        void AddChild(Entity child);
+        void RemoveChild(Entity child);
     }
 }
