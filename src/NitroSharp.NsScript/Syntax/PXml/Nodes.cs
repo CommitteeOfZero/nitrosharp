@@ -11,7 +11,8 @@ namespace NitroSharp.NsScript.Syntax.PXml
         RubyElement,
         HaltElement,
         NoLinebreaksElement,
-        ItalicElement
+        ItalicElement,
+        LinebreakElement
     }
 
     public abstract class PXmlNode
@@ -122,6 +123,16 @@ namespace NitroSharp.NsScript.Syntax.PXml
         internal override void Accept(PXmlSyntaxVisitor visitor)
         {
             visitor.VisitHaltElement(this);
+        }
+    }
+
+    public sealed class LinebreakElement : PXmlNode
+    {
+        public override PXmlNodeKind Kind => PXmlNodeKind.LinebreakElement;
+
+        internal override void Accept(PXmlSyntaxVisitor visitor)
+        {
+            visitor.VisitLinebreakElement(this);
         }
     }
 

@@ -114,6 +114,11 @@ namespace NitroSharp.Text
                 }
             }
 
+            public override void VisitLinebreakElement(LinebreakElement linebreakElement)
+            {
+                _textRunData.Text = "\n";
+            }
+
             public override void VisitItalicElement(ItalicElement italicElement)
             {
                 bool oldValue = _textRunData.Italic;

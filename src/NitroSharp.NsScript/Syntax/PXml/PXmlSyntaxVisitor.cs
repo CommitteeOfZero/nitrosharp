@@ -1,4 +1,5 @@
-﻿using System.Collections.Immutable;
+﻿using System;
+using System.Collections.Immutable;
 
 namespace NitroSharp.NsScript.Syntax.PXml
 {
@@ -46,6 +47,10 @@ namespace NitroSharp.NsScript.Syntax.PXml
         }
 
         public virtual void VisitItalicElement(ItalicElement italicElement)
+        {
+        }
+
+        public virtual void VisitLinebreakElement(LinebreakElement linebreakElement)
         {
         }
     }

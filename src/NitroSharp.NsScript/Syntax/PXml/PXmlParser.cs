@@ -92,6 +92,9 @@ namespace NitroSharp.NsScript.Syntax.PXml
                 case "?":
                     return new NoLinebreaksElement();
 
+                case "br":
+                    return new LinebreakElement();
+
                 case "i":
                 case "I":
                     PXmlContent content = ParseContent(startTag.Name);
