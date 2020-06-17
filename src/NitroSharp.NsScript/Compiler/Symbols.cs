@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using NitroSharp.NsScript.Syntax;
 
@@ -219,8 +220,9 @@ namespace NitroSharp.NsScript.Compiler
     public abstract class SubroutineSymbol : NamedSymbol, IEquatable<SubroutineSymbol>
     {
         protected SubroutineSymbol(
-            SourceFileSymbol declaringSourceFile, string name, SubroutineDeclarationSyntax declaration)
-            : base(name)
+            SourceFileSymbol declaringSourceFile,
+            string name,
+            SubroutineDeclarationSyntax declaration) : base(name)
         {
             DeclaringSourceFile = declaringSourceFile;
             Declaration = declaration;
@@ -231,8 +233,8 @@ namespace NitroSharp.NsScript.Compiler
 
         public virtual ParameterSymbol? LookupParameter(string name) => null;
 
-        public bool Equals(SubroutineSymbol other)
-            => ReferenceEquals(Declaration, other.Declaration);
+        public bool Equals(SubroutineSymbol? other)
+            => ReferenceEquals(Declaration, other?.Declaration);
 
         public override bool Equals(object? obj)
             => obj is SubroutineSymbol other && ReferenceEquals(Declaration, other.Declaration);
@@ -246,7 +248,8 @@ namespace NitroSharp.NsScript.Compiler
 
         internal FunctionSymbol(
             SourceFileSymbol declaringSourceFile,
-            string name, FunctionDeclarationSyntax declaration)
+            string name,
+            FunctionDeclarationSyntax declaration)
             : base(declaringSourceFile, name, declaration)
         {
             var parameters = ImmutableArray<ParameterSymbol>.Empty;
@@ -280,7 +283,7 @@ namespace NitroSharp.NsScript.Compiler
             return _parameterMap.TryGetValue(name, out ParameterSymbol? symbol) ? symbol : null;
         }
 
-        public bool Equals(FunctionSymbol other) => ReferenceEquals(Declaration, other.Declaration);
+        public bool Equals(FunctionSymbol? other) => ReferenceEquals(Declaration, other?.Declaration);
         public override int GetHashCode() => Declaration.GetHashCode();
         public override string ToString() => $"Function '{Name}'";
     }
@@ -302,7 +305,9 @@ namespace NitroSharp.NsScript.Compiler
     public sealed class ChapterSymbol : SubroutineSymbol, IEquatable<ChapterSymbol>
     {
         internal ChapterSymbol(
-            SourceFileSymbol declaringSourceFile, string name, ChapterDeclarationSyntax declaration)
+            SourceFileSymbol declaringSourceFile,
+            string name,
+            ChapterDeclarationSyntax declaration)
             : base(declaringSourceFile, name, declaration)
         {
             Declaration = declaration;
@@ -311,7 +316,7 @@ namespace NitroSharp.NsScript.Compiler
         public override SymbolKind Kind => SymbolKind.Chapter;
         public new ChapterDeclarationSyntax Declaration { get; }
 
-        public bool Equals(ChapterSymbol other) => ReferenceEquals(Declaration, other.Declaration);
+        public bool Equals(ChapterSymbol? other) => ReferenceEquals(Declaration, other?.Declaration);
         public override int GetHashCode() => Declaration.GetHashCode();
         public override string ToString() => $"Chapter '{Name}'";
     }
@@ -319,7 +324,9 @@ namespace NitroSharp.NsScript.Compiler
     public sealed class SceneSymbol : SubroutineSymbol, IEquatable<SceneSymbol>
     {
         internal SceneSymbol(
-            SourceFileSymbol declaringSourceFile, string name, SceneDeclarationSyntax declaration)
+            SourceFileSymbol declaringSourceFile,
+            string name,
+            SceneDeclarationSyntax declaration)
             : base(declaringSourceFile, name, declaration)
         {
             Declaration = declaration;
@@ -328,7 +335,7 @@ namespace NitroSharp.NsScript.Compiler
         public override SymbolKind Kind => SymbolKind.Scene;
         public new SceneDeclarationSyntax Declaration { get; }
 
-        public bool Equals(SceneSymbol other) => ReferenceEquals(Declaration, other.Declaration);
+        public bool Equals(SceneSymbol? other) => ReferenceEquals(Declaration, other?.Declaration);
         public override int GetHashCode() => Declaration.GetHashCode();
         public override string ToString() => $"Scene '{Name}'";
     }

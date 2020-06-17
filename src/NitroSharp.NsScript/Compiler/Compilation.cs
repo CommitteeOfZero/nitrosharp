@@ -104,9 +104,6 @@ namespace NitroSharp.NsScript.Compiler
                 file.Write(sysVarListWriter.Written);
                 file.Write(nameWriter.Written);
             }
-
-            var unboundVars = _globals.AsSpan().ToArray()
-                .Except(BoundVariables).ToArray();
         }
 
         private void EmitCore(SourceFileSymbol sourceFile, HashSet<ResolvedPath> compiledFiles)
@@ -206,5 +203,8 @@ namespace NitroSharp.NsScript.Compiler
 
             return token;
         }
+
+        internal bool TryGetGlobalVarToken(string variableName, out ushort token)
+            => _globals.TryGetToken(variableName, out token);
     }
 }

@@ -17,34 +17,31 @@ namespace NitroSharp.NsScript.Compiler
         private readonly Compilation _compilation;
         private BufferWriter _code;
         private int _textId;
-        private readonly TokenMap<ParameterSymbol>? _parameters;
         private ValueStack<BreakScope> _breakScopes;
         private bool _supressConstantLookup;
         private bool _treatGlobalsAsOutVars;
         private List<string>? _outVariables;
 
-        public Emitter(NsxModuleBuilder moduleBuilder, SubroutineSymbol subroutine)
+        private Emitter(NsxModuleBuilder moduleBuilder, SubroutineSymbol subroutine)
         {
             _module = moduleBuilder;
             _subroutine = subroutine;
             _checker = new Checker(subroutine, moduleBuilder.Diagnostics);
             _compilation = moduleBuilder.Compilation;
-            _parameters = null;
             _breakScopes = new ValueStack<BreakScope>(initialCapacity: 4);
-            if (subroutine is FunctionSymbol function && function.Parameters.Length > 0)
-            {
-                ImmutableArray<ParameterSymbol> parameters = function.Parameters;
-                _parameters = new TokenMap<ParameterSymbol>((uint)parameters.Length);
-                foreach (ParameterSymbol param in parameters)
-                {
-                    _parameters.GetOrAddToken(param);
-                }
-            }
             _code = default;
             _textId = 0;
             _supressConstantLookup = false;
             _treatGlobalsAsOutVars = false;
             _outVariables = null;
+
+            if (subroutine is FunctionSymbol function && function.Parameters.Length > 0)
+            {
+                foreach (ParameterSymbol p in function.Parameters)
+                {
+                    _ = GetGlobalVarToken(p.Name);
+                }
+            }
         }
 
         private enum LoopKind
@@ -186,17 +183,12 @@ namespace NitroSharp.NsScript.Compiler
         private void EmitNameExpression(NameExpressionSyntax expression)
         {
             var spanned = new Spanned<string>(expression.Name, expression.Span);
-            bool isVariable = expression.HasSigil;
-            LookupResult lookupResult = _checker.LookupNonInvocableSymbol(spanned, isVariable);
+            bool isDefinitelyVariable = expression.HasSigil;
+            LookupResult lookupResult = _checker.LookupNonInvocableSymbol(spanned, isDefinitelyVariable);
             switch (lookupResult._variant)
             {
                 case LookupResultVariant.BuiltInConstant:
                     EmitLoadImm(ConstantValue.BuiltInConstant(lookupResult.BuiltInConstant));
-                    break;
-                case LookupResultVariant.Parameter:
-                    Debug.Assert(_parameters != null);
-                    ushort slot = _parameters.GetOrAddToken(lookupResult.Parameter);
-                    EmitLoadArg(slot);
                     break;
                 case LookupResultVariant.GlobalVariable:
                     ushort varToken = GetGlobalVarToken(lookupResult.GlobalVariable);
@@ -233,12 +225,6 @@ namespace NitroSharp.NsScript.Compiler
             EmitBinary(expression.OperatorKind.Value);
         }
 
-        enum VariableKind
-        {
-            Global,
-            Parameter
-        }
-
         private void EmitAssignmentExpression(AssignmentExpressionSyntax assignmentExpr)
         {
             LookupResult target = _checker.ResolveAssignmentTarget(assignmentExpr.Target);
@@ -246,26 +232,12 @@ namespace NitroSharp.NsScript.Compiler
 
             EmitExpression(assignmentExpr.Value);
 
-            ushort token;
-            VariableKind variableKind;
-            if (target._variant == LookupResultVariant.Parameter)
-            {
-                Debug.Assert(_parameters != null);
-                token = _parameters.GetOrAddToken(target.Parameter);
-                variableKind = VariableKind.Parameter;
-            }
-            else
-            {
-                Debug.Assert(target._variant == LookupResultVariant.GlobalVariable);
-                token = GetGlobalVarToken(target.GlobalVariable);
-                variableKind = VariableKind.Global;
-                _compilation.BoundVariables.Add(target.GlobalVariable);
-            }
-
+            Debug.Assert(target._variant == LookupResultVariant.GlobalVariable);
+            ushort token = GetGlobalVarToken(target.GlobalVariable);
             AssignmentOperatorKind opKind = assignmentExpr.OperatorKind.Value;
             if (opKind != AssignmentOperatorKind.Assign)
             {
-                EmitLoadVariable(variableKind, token);
+                EmitLoadVariable(token);
             }
 
             switch (opKind)
@@ -292,7 +264,7 @@ namespace NitroSharp.NsScript.Compiler
                     break;
             }
 
-            EmitStoreOp(variableKind, token);
+            EmitStoreOp(token);
         }
 
         private void EmitFunctionCall(FunctionCallExpressionSyntax callExpression)
@@ -318,16 +290,31 @@ namespace NitroSharp.NsScript.Compiler
                 }
             }
 
-            for (int i = 0; i < arguments.Length; i++)
+            if (!isBuiltIn)
+            {
+                var target = (FunctionSymbol)lookupResult.Subroutine;
+                int count = Math.Min(arguments.Length, target.Parameters.Length);
+                for (int i = 0; i < count; i++)
+                {
+                    _supressConstantLookup = true;
+                    EmitExpression(arguments[i]);
+                    EmitStoreOp(GetGlobalVarToken(target.Parameters[i].Name));
+                    _supressConstantLookup = supressConstantLookup;
+                }
+            }
+            else
             {
                 // Assumption: the first argument is never a built-in constant
                 // Even if it looks like one (e.g. "Black"), it should be treated
                 // as a string literal, not as a built-in constant.
                 // Reasoning: "Black" and "White" are sometimes used as entity names.
-                // Update: also make an exception for regular function calls.
-                _supressConstantLookup = i == 0 || !isBuiltIn;
-                EmitExpression(arguments[i]);
-                _supressConstantLookup = supressConstantLookup;
+                // Update: also make an exception for regular function calls (see code above).
+                for (int i = 0; i < arguments.Length; i++)
+                {
+                    _supressConstantLookup = i == 0;
+                    EmitExpression(arguments[i]);
+                    _supressConstantLookup = supressConstantLookup;
+                }
             }
 
             _treatGlobalsAsOutVars = false;
@@ -634,32 +621,16 @@ namespace NitroSharp.NsScript.Compiler
             _code.WriteUInt16LE(_module.GetStringToken(text.Text));
         }
 
-        private void EmitLoadVariable(VariableKind variableKind, ushort token)
+        private void EmitLoadVariable(ushort token)
         {
-            switch (variableKind)
-            {
-                case VariableKind.Global:
-                    EmitOpcode(Opcode.LoadVar);
-                    _code.WriteUInt16LE(token);
-                    break;
-                case VariableKind.Parameter:
-                    EmitLoadArg(token);
-                    break;
-            }
+            EmitOpcode(Opcode.LoadVar);
+            _code.WriteUInt16LE(token);
         }
 
-        private void EmitStoreOp(VariableKind variableKind, ushort tk)
+        private void EmitStoreOp(ushort tk)
         {
-            if (variableKind == VariableKind.Global)
-            {
-                EmitOpcode(Opcode.StoreVar);
-                _code.WriteUInt16LE(tk);
-            }
-            else
-            {
-                Debug.Assert(variableKind == VariableKind.Parameter);
-                EmitStoreArg(tk);
-            }
+            EmitOpcode(Opcode.StoreVar);
+            _code.WriteUInt16LE(tk);
         }
 
         private void EmitLoadImm(in ConstantValue value)
@@ -721,42 +692,6 @@ namespace NitroSharp.NsScript.Compiler
                 case BuiltInType.Null:
                     EmitOpcode(Opcode.LoadImmNull);
                     break;
-            }
-        }
-
-        private void EmitLoadArg(ushort slot)
-        {
-            Opcode opcode = slot switch
-            {
-                0 => Opcode.LoadArg0,
-                1 => Opcode.LoadArg1,
-                2 => Opcode.LoadArg2,
-                3 => Opcode.LoadArg3,
-                _ => Opcode.LoadArg
-            };
-
-            EmitOpcode(opcode);
-            if (slot > 3)
-            {
-                _code.WriteUInt16LE(slot);
-            }
-        }
-
-        private void EmitStoreArg(ushort slot)
-        {
-            Opcode opcode = slot switch
-            {
-                0 => Opcode.StoreArg0,
-                1 => Opcode.StoreArg1,
-                2 => Opcode.StoreArg2,
-                3 => Opcode.StoreArg3,
-                _ => Opcode.StoreArg
-            };
-
-            EmitOpcode(opcode);
-            if (slot > 3)
-            {
-                _code.WriteUInt16LE(slot);
             }
         }
 

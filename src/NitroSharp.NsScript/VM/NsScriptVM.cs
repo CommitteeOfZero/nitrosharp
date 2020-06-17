@@ -272,11 +272,6 @@ namespace NitroSharp.NsScript.VM
                     Opcode.LoadImmNull => ConstantValue.Null,
                     Opcode.LoadImmEmptyStr => ConstantValue.EmptyString,
                     Opcode.LoadVar => GetGlobalVar((varToken = program.DecodeToken())),
-                    Opcode.LoadArg0 => stack[frame.ArgStart + 0],
-                    Opcode.LoadArg1 => stack[frame.ArgStart + 1],
-                    Opcode.LoadArg2 => stack[frame.ArgStart + 2],
-                    Opcode.LoadArg3 => stack[frame.ArgStart + 3],
-                    Opcode.LoadArg => stack[frame.ArgStart + program.ReadByte()],
                     _ => null
                 };
 
@@ -299,22 +294,6 @@ namespace NitroSharp.NsScript.VM
                         int index = program.DecodeToken();
                         GetGlobalVar(index) = stack.Pop();
                         break;
-                    case Opcode.StoreArg0:
-                        stack[frame.ArgStart + 0] = stack.Pop();
-                        break;
-                    case Opcode.StoreArg1:
-                        stack[frame.ArgStart + 1] = stack.Pop();
-                        break;
-                    case Opcode.StoreArg2:
-                        stack[frame.ArgStart + 2] = stack.Pop();
-                        break;
-                    case Opcode.StoreArg3:
-                        stack[frame.ArgStart + 3] = stack.Pop();
-                        break;
-                    case Opcode.StoreArg:
-                        stack[frame.ArgStart + program.ReadByte()] = stack.Pop();
-                        break;
-
                     case Opcode.Binary:
                         var opKind = (BinaryOperatorKind)program.ReadByte();
                         ConstantValue op2 = stack.Pop();

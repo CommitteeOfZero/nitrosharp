@@ -10,7 +10,6 @@ namespace NitroSharp.NsScript.Compiler
     {
         Empty = 0,
         Subroutine,
-        Parameter,
         BuiltInFunction,
         BuiltInConstant,
         GlobalVariable
@@ -39,9 +38,6 @@ namespace NitroSharp.NsScript.Compiler
 
         public LookupResult(SubroutineSymbol subroutine) : this()
             => (_variant, Subroutine) = (LookupResultVariant.Subroutine, subroutine);
-
-        public LookupResult(ParameterSymbol parameter) : this()
-            => (_variant, Parameter) = (LookupResultVariant.Parameter, parameter);
 
         public LookupResult(BuiltInFunction builtInFunction) : this()
             => (_variant, BuiltInFunction) = (LookupResultVariant.BuiltInFunction, builtInFunction);
@@ -102,7 +98,7 @@ namespace NitroSharp.NsScript.Compiler
             if (expression is NameExpressionSyntax nameExpression)
             {
                 var identifier = new Spanned<string>(nameExpression.Name, nameExpression.Span);
-                return LookupNonInvocableSymbol(identifier, isVariable: true);
+                return LookupNonInvocableSymbol(identifier, isDefinitelyVariable: true);
             }
 
             Report(expression, DiagnosticId.BadAssignmentTarget);
@@ -159,27 +155,21 @@ namespace NitroSharp.NsScript.Compiler
             }
         }
 
-        public LookupResult LookupNonInvocableSymbol(Spanned<string> identifier, bool isVariable)
+        public LookupResult LookupNonInvocableSymbol(Spanned<string> identifier, bool isDefinitelyVariable)
         {
             string name = identifier.Value;
-            ParameterSymbol? parameter = _subroutine.LookupParameter(name);
-            if (parameter != null)
+            if (isDefinitelyVariable || _compilation.TryGetGlobalVarToken(name, out _))
             {
-                return new LookupResult(parameter);
+                return new LookupResult(globalVariable: name);
             }
 
-            if (!isVariable)
+            BuiltInConstant? builtInConstant = WellKnownSymbols.LookupBuiltInConstant(name);
+            if (builtInConstant.HasValue)
             {
-                BuiltInConstant? builtInConstant = WellKnownSymbols.LookupBuiltInConstant(name);
-                if (!builtInConstant.HasValue)
-                {
-                    return LookupResult.Empty;
-                }
-
                 return new LookupResult(builtInConstant.Value);
             }
 
-            return new LookupResult(globalVariable: name);
+            return LookupResult.Empty;
         }
 
         public LookupResult LookupFunction(Spanned<string> identifier)
