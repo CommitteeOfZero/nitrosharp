@@ -18,6 +18,26 @@ namespace NitroSharp
         public string ReturnToMenu { get; set; } = "sys_reset.nss";
     }
 
+    public sealed class Icons
+    {
+        public Icons(
+            string waitLine,
+            string waitPage,
+            string waitAuto,
+            string backlogVoice)
+        {
+            WaitLine = waitLine;
+            WaitPage = waitPage;
+            WaitAuto = waitAuto;
+            BacklogVoice = backlogVoice;
+        }
+
+        public string WaitLine { get; }
+        public string WaitPage { get; }
+        public string WaitAuto { get; }
+        public string BacklogVoice { get; }
+    }
+
     public sealed class Configuration
     {
         public int WindowWidth { get; set; } = 1280;
@@ -35,15 +55,22 @@ namespace NitroSharp
         public bool UseUtf8 { get; set; } = false;
         public bool SkipUpToDateCheck { get; set; } = false;
 
-        public string FontFamily { get; set; } = "Noto Sans CJK JP";
-        public int FontSize { get; set; } = 28;
+        public string FontFamily { get; set; } = "MS Gothic";
+        public int FontSize { get; set; } = 20;
+
+        public Icons Icons { get; }
+
+        public Configuration(Icons icons)
+        {
+            Icons = icons;
+        }
     }
 
     internal sealed class FontConfiguration
     {
         public FontConfiguration(
-            FontKey defaultFont,
-            FontKey? italicFont,
+            FontFaceKey defaultFont,
+            FontFaceKey? italicFont,
             PtFontSize defaultFontSize,
             RgbaFloat defaultTextColor,
             RgbaFloat? defaultOutlineColor,
@@ -57,8 +84,8 @@ namespace NitroSharp
             RubyFontSizeMultiplier = rubyFontSizeMultiplier;
         }
 
-        public FontKey DefaultFont { get; }
-        public FontKey? ItalicFont { get; }
+        public FontFaceKey DefaultFont { get; }
+        public FontFaceKey? ItalicFont { get; }
         public PtFontSize DefaultFontSize { get; private set; }
         public RgbaFloat DefaultTextColor { get; private set; }
         public RgbaFloat? DefaultOutlineColor { get; private set; }

@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Immutable;
-using System.Diagnostics;
 using System.Numerics;
 using NitroSharp.Content;
 using NitroSharp.Graphics;
@@ -16,6 +15,68 @@ namespace NitroSharp
 {
     internal partial class Builtins
     {
+        public override void CreateBacklog(in EntityPath path, int priority)
+        {
+            if (_world.ResolvePath(path, out ResolvedEntityPath resolvedPath))
+            {
+                _world.Add(new Backlog(resolvedPath, priority, _world.History));
+            }
+        }
+
+        public override void ClearBacklog()
+        {
+
+        }
+
+        public override void SetBacklog(string text)
+        {
+            _world.History.Add(text);
+        }
+
+        public override Vector2 GetCursorPosition()
+        {
+            return _ctx.InputContext.MousePosition;
+        }
+
+        public override void CreateScrollbar(
+            in EntityPath path,
+            int priority,
+            int x1, int y1,
+            int x2, int y2,
+            NsRational initialValue,
+            NsScrollDirection scrollDirection,
+            string knobImage)
+        {
+            if (_world.ResolvePath(path, out ResolvedEntityPath resolvedPath)
+                && ResolveSpriteSource(knobImage) is SpriteTexture knob)
+            {
+                _world.Add(new Scrollbar(
+                    resolvedPath,
+                    priority,
+                    scrollDirection,
+                    knob,
+                    new Vector2(x1, y1),
+                    new Vector2(x2, y2),
+                    initialValue.Rebase(1.0f)
+                ));
+            }
+        }
+
+        public override void SetScrollbar(in EntityPath scrollbar, in EntityPath parent)
+        {
+            if (_world.Get(parent) is Backlog backlog)
+            {
+                // TODO
+            }
+        }
+
+        public override float GetScrollbarValue(in EntityPath scrollbarEntity)
+        {
+            return _world.Get(scrollbarEntity) is Scrollbar scrollbar
+                ? scrollbar.GetValue()
+                : 0;
+        }
+
         public override void CreateChoice(in EntityPath entityPath)
         {
             if (_world.ResolvePath(entityPath, out ResolvedEntityPath resolvedPath))
@@ -36,11 +97,11 @@ namespace NitroSharp
             }
         }
 
-        public override bool UpdateChoice(in EntityPath choicePath)
+        public override bool HandleInputEvents(in EntityPath uiElementPath)
         {
-            if (_world.Get(choicePath) is Choice choice)
+            if (_world.Get(uiElementPath) is UiElement uiElement)
             {
-                return choice.Update();
+                return uiElement.HandleEvents();
             }
 
             return false;
@@ -61,10 +122,10 @@ namespace NitroSharp
             }
         }
 
-        public override void LoadImage(in EntityPath entityPath, string fileName)
+        public override void LoadImage(in EntityPath entityPath, string source)
         {
             if (_world.ResolvePath(entityPath, out ResolvedEntityPath resolvedPath)
-                && _ctx.Content.RequestTexture(fileName) is AssetRef<Texture> texture)
+                && ResolveSpriteSource(source) is SpriteTexture texture)
             {
                 _world.Add(new Image(resolvedPath, texture));
             }
@@ -100,18 +161,6 @@ namespace NitroSharp
                     priority,
                     texture
                 ).WithPosition(_renderCtx, x, y));
-
-                if (texture.Kind == SpriteTextureKind.StandaloneTexture)
-                {
-                    Debug.Assert(texture.Standalone is object);
-                    _ctx.Wait(
-                        CurrentThread,
-                        WaitCondition.FrameReady,
-                        timeout: null,
-                        entityQuery: null,
-                        texture.Standalone
-                    );
-                }
             }
         }
 
@@ -119,7 +168,15 @@ namespace NitroSharp
         {
             if (src == "SCREEN")
             {
-                return SpriteTexture.FromStandalone(_renderCtx.CreateFullscreenTexture());
+                var result = SpriteTexture.FromStandalone(_renderCtx.CreateFullscreenTexture());
+                _ctx.Wait(
+                    CurrentThread,
+                    WaitCondition.FrameReady,
+                    timeout: null,
+                    entityQuery: null,
+                    result.Standalone
+                );
+                return result;
             }
 
             Entity? srcEntity = _world.Get(new EntityPath(src));
@@ -127,13 +184,17 @@ namespace NitroSharp
             {
                 return SpriteTexture.SolidColor(colorSrc.Color, colorSrc.Size);
             }
+            if (srcEntity is Image img)
+            {
+                return img.Texture;
+            }
 
-            AssetRef<Texture>? assetRefOpt = srcEntity is Image img
-                ? img.Texture.Clone()
-                : _ctx.Content.RequestTexture(src);
-            return assetRefOpt is {} assetRef
-                ? SpriteTexture.FromAsset(assetRef, srcRect)
-                : (SpriteTexture?)null;
+            if (_ctx.Content.RequestTexture(src) is AssetRef<Texture> asset)
+            {
+                return SpriteTexture.FromAsset(asset, srcRect);
+            }
+
+            return null;
         }
 
         public override void CreateSpriteEx(
@@ -165,33 +226,27 @@ namespace NitroSharp
         {
             if (_world.ResolvePath(entityPath, out ResolvedEntityPath resolvedPath))
             {
-                Vector4 padding = resolvedPath.Parent is null
-                    ? new Vector4(0, 4, 0, 20)
-                    : new Vector4(0, 16, 0, 16);
-
+                var margin = new Vector4(0, 15, 34, 28);
                 var textBuffer = TextBuffer.FromPXmlString(pxmlText, _ctx.FontConfig);
 
-                uint w = width is { Variant: NsTextDimensionVariant.Value, Value: {} sWidth }
-                    ? (uint)sWidth : 0;
-                uint h = height  is { Variant: NsTextDimensionVariant.Value, Value: {} sHeight }
-                    ? (uint)sHeight : 0;
-                Size? innerBounds = (w, h) is (0, 0)
-                    ? (Size?)null
-                    : new Size(w - (uint)(padding.X + padding.Z), h - (uint)(padding.Y + padding.W));
+                uint w = width is { Variant: NsTextDimensionVariant.Value, Value: { } sWidth }
+                    ? (uint)sWidth : uint.MaxValue;
+                uint h = height  is { Variant: NsTextDimensionVariant.Value, Value: { } sHeight }
+                    ? (uint)sHeight : uint.MaxValue;
 
                 if (textBuffer.AssertSingleTextSegment() is TextSegment textSegment)
                 {
                     var layout = new TextLayout(
                         _ctx.GlyphRasterizer,
                         textSegment.TextRuns.AsSpan(),
-                        innerBounds
+                        new Size(w, h)
                     );
                     _world.Add(new TextBlock(
                         resolvedPath,
                         _renderCtx.Text,
                         priority,
                         layout,
-                        padding
+                        margin
                     ).WithPosition(_renderCtx, x, y));
                 }
             }
@@ -205,8 +260,8 @@ namespace NitroSharp
         {
             static int mapFontSize(int size) => size switch
             {
-                23 => 22,
-                26 => 25,
+                //23 => 22,
+                //26 => 25,
                 _ => size
             };
 
@@ -233,39 +288,59 @@ namespace NitroSharp
             }
         }
 
-        public override void LoadDialogue(
+        public override void LoadDialogueBlock(
             in DialogueBlockToken blockToken,
             uint maxWidth, uint maxHeight,
             int letterSpacing, int lineSpacing)
         {
             var path = new EntityPath($"{blockToken.BoxName}/{blockToken.BlockName}");
-            if (_world.ResolvePath(path, out ResolvedEntityPath resolvedPath))
+            if (_world.ResolvePath(path, out ResolvedEntityPath resolvedPath)
+                && resolvedPath.Parent is RenderItem2D box)
             {
-                _ctx.DialogueThread = _ctx.VM.ActivateDialogueBlock(blockToken);
-                _ctx.CurrentDialoguePage = _world.Add(new DialoguePage(
+                var margin = new Vector4(0, 10, 0, 0);
+                ThreadContext thread = _ctx.VM.ActivateDialogueBlock(blockToken);
+                var page = _world.Add(new DialoguePage(
                     resolvedPath,
-                    int.MaxValue,
+                    box.Key.Priority,
                     new Size(maxWidth, maxHeight),
                     lineSpacing,
-                    _renderCtx.GlyphRasterizer,
-                    _ctx.DialogueThread
+                    margin,
+                    thread
                 )).WithPosition(_renderCtx, default, default);
+                _world.SetAlias(page.Id, new EntityPath(page.Id.Name.ToString()));
             }
         }
 
-        public override void DisplayLine(in EntityPath dialogueBlockPath, string line)
+        public override void ClearDialoguePage(in EntityPath dialoguePage)
         {
-            if (_world.Get(dialogueBlockPath) is DialoguePage page)
+            if (_world.Get(dialoguePage) is DialoguePage page)
             {
-                var buffer = TextBuffer.FromPXmlString(line, _ctx.FontConfig);
-                page.Load(buffer);
+                page.Clear();
             }
+        }
+
+        public override void AppendDialogue(in EntityPath dialoguePage, string text)
+        {
+            if (_world.Get(dialoguePage) is DialoguePage page)
+            {
+                var buffer = TextBuffer.FromPXmlString(text, _ctx.FontConfig);
+                page.Append(_renderCtx, buffer);
+            }
+        }
+
+        public override void LineEnd(in EntityPath dialoguePage)
+        {
+            _ctx.Wait(
+                CurrentThread,
+                WaitCondition.LineRead,
+                null,
+                new EntityQuery(dialoguePage.Value)
+            );
         }
 
         public override void WaitText(in EntityQuery query, TimeSpan timeout)
         {
-            var q = new EntityQuery(_ctx.CurrentDialoguePage!.Id.Path);
-            _ctx.Wait(CurrentThread, WaitCondition.EntityIdle, null, q);
+            _ctx.Wait(CurrentThread, WaitCondition.EntityIdle, null, query);
         }
 
         public override void CreateAlphaMask(
@@ -287,24 +362,25 @@ namespace NitroSharp
             }
         }
 
+        public override Vector2 GetPosition(in EntityPath entityPath)
+        {
+            return _world.Get(entityPath) is RenderItem2D renderItem
+                ? renderItem.Transform.Position.XY()
+                : Vector2.Zero;
+        }
+
         public override int GetWidth(in EntityPath entityPath)
         {
-            if (_world.Get(entityPath) is RenderItem2D renderItem)
-            {
-                return (int)renderItem.GetUnconstrainedBounds(_renderCtx).Width;
-            }
-
-            return 0;
+            return _world.Get(entityPath) is RenderItem2D renderItem
+                ? (int)renderItem.GetUnconstrainedBounds(_renderCtx).Width
+                : 0;
         }
 
         public override int GetHeight(in EntityPath entityPath)
         {
-            if (_world.Get(entityPath) is RenderItem2D renderItem)
-            {
-                return (int)renderItem.GetUnconstrainedBounds(_renderCtx).Height;
-            }
-
-            return 0;
+            return _world.Get(entityPath) is RenderItem2D renderItem
+                ? (int)renderItem.GetUnconstrainedBounds(_renderCtx).Height
+                : 0;
         }
 
         private void Pause(

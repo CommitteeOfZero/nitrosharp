@@ -6,9 +6,12 @@
   "window.title": "COWS;HEAD NOAH",
   "window.width": 1280,
   "window.height": 720,
+  "icons.waitLine": "cg/sys/icon/line/%03d.png#21",
+  "icons.waitPage": "cg/sys/icon/page/%03d.png#21",
+  "icons.waitAuto": "cg/sys/icon/auto/%03d.png#21",
+  "icons.backlogVoice": "cg/sys/backlog/スピーカ%03d.png#3",
   "dev.contentRoot": "S:/C;HN",
   "dev.skipUpToDateCheck": true,
-  "font.size": "22",
 
   "profiles": {
     "Noah": {

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.InteropServices;
@@ -17,11 +18,10 @@ namespace NitroSharp.Text
 {
     internal sealed class GlyphRasterizer : IDisposable
     {
-        private readonly bool _enableOutlines;
         private readonly FontContext _metricsContext;
         private readonly FontContext[] _contexts;
         private readonly Channel<FontContext> _freeContexts;
-        private readonly Dictionary<FontKey, FontData> _fontDatas;
+        private readonly Dictionary<FontFaceKey, FontData> _fontDatas;
         private readonly Channel<RasterBatch> _rasterBatches;
         private readonly ConcurrentBag<Exception> _exceptions;
         private volatile int _pendingBatches;
@@ -38,13 +38,13 @@ namespace NitroSharp.Text
 
         private readonly struct RasterBatch
         {
-            public readonly FontKey Font;
+            public readonly FontFaceKey Font;
             public readonly PtFontSize FontSize;
             public readonly RasterResult[] Results;
             public readonly RasterResult[]? OutlineResults;
 
             public RasterBatch(
-                FontKey font,
+                FontFaceKey font,
                 PtFontSize fontSize,
                 RasterResult[] results,
                 RasterResult[]? outlineResults)
@@ -52,12 +52,11 @@ namespace NitroSharp.Text
                     = (font, fontSize, results, outlineResults);
         }
 
-        public GlyphRasterizer(bool enableOutlines)
+        public GlyphRasterizer()
         {
-            _enableOutlines = enableOutlines;
             _metricsContext = new FontContext();
-            _contexts = new FontContext[Environment.ProcessorCount];
-            _fontDatas = new Dictionary<FontKey, FontData>();
+            _contexts = new FontContext[1];
+            _fontDatas = new Dictionary<FontFaceKey, FontData>();
             _exceptions = new ConcurrentBag<Exception>();
             _freeContexts = Channel.CreateUnbounded<FontContext>(
                 new UnboundedChannelOptions
@@ -91,36 +90,38 @@ namespace NitroSharp.Text
             }
         }
 
-        public FontKey AddFont(string path)
+        public void AddFont(string path)
         {
-            if (_metricsContext.TryAddFont(path, out FontKey fontKey, out FontFace face))
+            if (_metricsContext.AddFont(path, out ImmutableArray<(FontFaceKey, FontFace)> faces))
             {
                 foreach (FontContext ctx in _contexts)
                 {
-                    ctx.TryAddFont(path, out _, out _);
+                    ctx.AddFont(path, out _);
                 }
-                _fontDatas.Add(fontKey, new FontData(_metricsContext, face));
+                foreach ((FontFaceKey key, FontFace face) in faces)
+                {
+                    _fontDatas.TryAdd(key, new FontData(_metricsContext, face));
+                }
             }
-
-            return fontKey;
         }
 
-        public FontData GetFontData(FontKey fontKey)
+        public FontData GetFontData(FontFaceKey fontFaceKey)
         {
-            static FontData notFound(FontKey key)
+            static FontData notFound(FontFaceKey key)
             {
-                throw new ArgumentException($"Font '{key.ToString()}' has not been loaded.");
+                throw new ArgumentException($"Font '{key}' has not been loaded.");
             }
 
-            return _fontDatas.TryGetValue(fontKey, out FontData? data)
-                ? data : notFound(fontKey);
+            return _fontDatas.TryGetValue(fontFaceKey, out FontData? data)
+                ? data : notFound(fontFaceKey);
         }
 
         public void RequestGlyphs(
-            FontKey font,
+            FontFaceKey font,
             PtFontSize fontSize,
             ReadOnlySpan<PositionedGlyph> glyphs,
-            TextureCache textureCache)
+            TextureCache textureCache,
+            bool generateOutlines)
         {
             List<uint>? newGlyphIndices = null;
             FontData fontData = GetFontData(font);
@@ -133,22 +134,30 @@ namespace NitroSharp.Text
                     if (!cacheEntry.IsRegular) { continue; }
                     if (textureCache.RequestEntry(cacheEntry.TextureCacheHandle))
                     {
-                        if (!_enableOutlines
-                            || textureCache.RequestEntry(cacheEntry.OutlineTextureCacheHandle))
+                        TextureCacheHandle outlineHandle = cacheEntry.OutlineTextureCacheHandle;
+                        if ((!outlineHandle.IsValid && !generateOutlines) ||
+                            textureCache.RequestEntry(cacheEntry.OutlineTextureCacheHandle))
                         {
                             continue;
                         }
                     }
                 }
-                fontData.UpsertCachedGlyph(key, GlyphCacheEntry.Pending());
-                newGlyphIndices ??= new List<uint>();
-                newGlyphIndices.Add(index);
+                if (index == 0)
+                {
+                    fontData.UpsertCachedGlyph(key, GlyphCacheEntry.Blank());
+                }
+                else
+                {
+                    fontData.UpsertCachedGlyph(key, GlyphCacheEntry.Pending());
+                    newGlyphIndices ??= new List<uint>();
+                    newGlyphIndices.Add(index);
+                }
             }
 
             if (newGlyphIndices != null)
             {
                 Interlocked.Increment(ref _pendingBatches);
-                Task.Run(() => RasterizeBatch(font, fontSize, newGlyphIndices))
+                Task.Run(() => RasterizeBatch(font, fontSize, newGlyphIndices, generateOutlines))
                     .ContinueWith(t => _exceptions.Add(t.Exception!),
                         TaskContinuationOptions.OnlyOnFaulted);
             }
@@ -226,10 +235,14 @@ namespace NitroSharp.Text
             public fixed byte Channels[4];
         }
 
-        private async Task RasterizeBatch(FontKey font, PtFontSize fontSize, List<uint> indices)
+        private async Task RasterizeBatch(
+            FontFaceKey font,
+            PtFontSize fontSize,
+            List<uint> indices,
+            bool rasterizeOutlines)
         {
             async Task<RasterResult> rasterizeGlyph(
-                FontKey font,
+                FontFaceKey font,
                 PtFontSize fontSize,
                 uint index)
             {
@@ -241,7 +254,7 @@ namespace NitroSharp.Text
             }
 
             async Task<RasterResult> produceOutline(
-                FontKey font,
+                FontFaceKey font,
                 PtFontSize fontSize,
                 uint glyphIndex)
             {
@@ -292,7 +305,7 @@ namespace NitroSharp.Text
             }
 
             async Task<NativeBitmapGlyph> stroke(
-                FontKey font,
+                FontFaceKey font,
                 PtFontSize fontSize,
                 uint index,
                 uint radius)
@@ -312,7 +325,7 @@ namespace NitroSharp.Text
             }
 
             Task<RasterResult>[]? outlineTasks = null;
-            if (_enableOutlines)
+            if (rasterizeOutlines)
             {
                 outlineTasks = new Task<RasterResult>[indices.Count];
                 i = 0;
@@ -324,7 +337,7 @@ namespace NitroSharp.Text
 
             RasterResult[] results = await Task.WhenAll(tasks);
             RasterResult[]? outlineResults = null;
-            if (_enableOutlines)
+            if (rasterizeOutlines)
             {
                 Debug.Assert(outlineTasks != null);
                 outlineResults = await Task.WhenAll(outlineTasks);
@@ -385,7 +398,6 @@ namespace NitroSharp.Text
             _outlineHandle = outlineTextureCacheHandle;
         }
 
-        public bool IsPending => Kind == GlyphCacheEntryKind.Pending;
         public bool IsRegular => Kind == GlyphCacheEntryKind.Regular;
 
         public static GlyphCacheEntry Regular(
@@ -577,31 +589,42 @@ namespace NitroSharp.Text
         private IntPtr _freetypeLib;
         private IntPtr _stroker;
         private PtFontSize _lastSize;
-        private readonly Dictionary<FontKey, FontFace> _faces;
+        private readonly Dictionary<FontFaceKey, FontFace> _faces;
 
         public FontContext()
         {
-            _faces = new Dictionary<FontKey, FontFace>();
+            _faces = new Dictionary<FontFaceKey, FontFace>();
             FT.FT_Init_FreeType(out _freetypeLib);
             FT.FT_Stroker_New(_freetypeLib, out _stroker);
         }
 
-        public bool TryAddFont(string path, out FontKey fontKey, out FontFace fontFace)
+        public bool AddFont(string path, out ImmutableArray<(FontFaceKey, FontFace)> faces)
         {
-            FT.CheckResult(FT.FT_New_Face(_freetypeLib, path, 0, out Face* ftFace));
-            fontFace = new FontFace(ftFace);
-            fontKey = new FontKey(fontFace.FontFamily, fontFace.Style);
-            if (!_faces.TryAdd(fontKey, fontFace))
+            int idxFace = 0;
+            int newFaces = 0;
+            faces = ImmutableArray.Create<(FontFaceKey, FontFace)>();
+            while ((FT.FT_New_Face(_freetypeLib, path, idxFace, out Face* ftFace)) == Error.Ok)
             {
-                fontFace.Dispose();
-                fontFace = _faces[fontKey];
-                return false;
+                var face = new FontFace(ftFace);
+                var key = new FontFaceKey(face.FontFamily, face.Style);
+                if (_faces.TryAdd(key, face))
+                {
+                    newFaces++;
+                }
+                else
+                {
+                    face.Dispose();
+                    face = _faces[key];
+                }
+                faces = faces.Add((key, face));
+                idxFace++;
             }
-            return true;
+
+            return newFaces > 0;
         }
 
-        public FontFace? GetFontFace(FontKey fontKey)
-            => _faces.TryGetValue(fontKey, out FontFace? face) ? face : null;
+        public FontFace? GetFontFace(FontFaceKey faceKey)
+            => _faces.TryGetValue(faceKey, out FontFace? face) ? face : null;
 
         public uint GetGlyphIndex(FontFace fontFace, char c)
             => FT.FT_Get_Char_Index(fontFace.FTFace, c);
@@ -617,18 +640,11 @@ namespace NitroSharp.Text
             return new VerticalMetrics(ascender, descender, height);
         }
 
-        public uint GetGlyphIndex(FontFace fontFace, PtFontSize fontSize, char ch)
-        {
-            Face* ftFace = fontFace.FTFace;
-            SetSize(fontFace.FTFace, fontSize);
-            return FT.FT_Get_Char_Index(ftFace, ch);
-        }
-
         public GlyphDimensions GetGlyphDimensions(FontFace fontFace, PtFontSize fontSize, uint index)
         {
             Face* ftFace = fontFace.FTFace;
             SetSize(fontFace.FTFace, fontSize);
-            FT.CheckResult(FT.FT_Load_Glyph(ftFace, index, LoadFlags.Default));
+            FT.CheckResult(FT.FT_Load_Glyph(ftFace, index, LoadFlags.NoBitmap));
             GlyphSlot* glyph = ftFace->glyph;
             return new GlyphDimensions(
                 glyph->bitmap_top,
@@ -641,9 +657,33 @@ namespace NitroSharp.Text
 
         public RasterizedGlyph RasterizeGlyph(FontFace fontFace, PtFontSize fontSize, uint index)
         {
+            static void to8bpp(GlyphSlot* glyph, Span<byte> outBuffer)
+            {
+                (int width, int height) = (glyph->bitmap.width, glyph->bitmap.rows);
+                FT.CheckResult(FT.FT_Render_Glyph(glyph, RenderMode.Normal));
+                int srcPitch = glyph->bitmap.pitch;
+                var mono = new Span<byte>(glyph->bitmap.buffer.ToPointer(), srcPitch * height);
+                int dst = 0;
+                for (int row = 0; row < height; row++)
+                {
+                    int src = row * srcPitch;
+                    int rowEnd = dst + width;
+                    while (dst < rowEnd)
+                    {
+                        sbyte b = (sbyte)mono[src++];
+                        int byteEnd = Math.Min(rowEnd, dst + 8);
+                        while (dst < byteEnd)
+                        {
+                            outBuffer[dst++] = (byte)(b >> 7);
+                            b <<= 1;
+                        }
+                    }
+                }
+            }
+
             Face* ftFace = fontFace.FTFace;
             SetSize(fontFace.FTFace, fontSize);
-            FT.CheckResult(FT.FT_Load_Glyph(ftFace, index, LoadFlags.Default));
+            FT.CheckResult(FT.FT_Load_Glyph(ftFace, index, LoadFlags.NoBitmap));
             GlyphSlot* glyph = ftFace->glyph;
             (int bitmapLeft, int bitmapTop) = (glyph->bitmap_left, glyph->bitmap_top);
             (int width, int height) = (glyph->bitmap.width, glyph->bitmap.rows);
@@ -659,21 +699,29 @@ namespace NitroSharp.Text
             var buffer = bufferSize > 0 ? new byte[width * height] : Array.Empty<byte>();
             if (bufferSize > 0)
             {
-                fixed (byte* ptr = &buffer[0])
+                if (glyph->bitmap.pixel_mode == PixelMode.Mono)
                 {
-                    var bmp = new Bitmap
+                    to8bpp(glyph, buffer);
+                }
+                else
+                {
+                    Debug.Assert(glyph->bitmap.pixel_mode == PixelMode.Gray);
+                    fixed (byte* ptr = &buffer[0])
                     {
-                        buffer = new IntPtr(ptr),
-                        width = width,
-                        pitch = width,
-                        rows = height,
-                        pixel_mode = PixelMode.Gray,
-                        num_grays = 256
-                    };
+                        var bmp = new Bitmap
+                        {
+                            buffer = new IntPtr(ptr),
+                            width = width,
+                            pitch = width,
+                            rows = height,
+                            pixel_mode = PixelMode.Gray,
+                            num_grays = 256
+                        };
 
-                    FT.CheckResult(
-                        FT.FT_Outline_Get_Bitmap(_freetypeLib, ref outline, ref bmp)
-                    );
+                        FT.CheckResult(
+                            FT.FT_Outline_Get_Bitmap(_freetypeLib, ref outline, ref bmp)
+                        );
+                    }
                 }
             }
 

@@ -25,8 +25,22 @@ namespace NitroSharp
             => new RgbaFloat(nsColor.R / 255.0f, nsColor.G / 255.0f, nsColor.B / 255.0f, 1.0f);
     }
 
-    internal static class Vector3Extensions
+    internal enum Vector2Component
     {
+        X,
+        Y
+    }
+
+    internal static class VectorExtensions
+    {
+        public static float Get(this Vector2 vec, Vector2Component component) => component switch
+        {
+            Vector2Component.X => vec.X,
+            Vector2Component.Y => vec.Y,
+            _ => ThrowHelper.Unreachable<float>()
+        };
+
+        public static Vector2 XY(this in Vector4 vec) => new Vector2(vec.X, vec.Y);
         public static Vector2 XY(this in Vector3 vec) => new Vector2(vec.X, vec.Y);
     }
 }

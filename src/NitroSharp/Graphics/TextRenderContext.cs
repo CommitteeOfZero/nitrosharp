@@ -1,5 +1,4 @@
 using System;
-using System.Buffers;
 using System.Diagnostics;
 using System.Numerics;
 using System.Threading.Tasks;
@@ -125,12 +124,13 @@ namespace NitroSharp.Graphics
             _pendingDraws = new ArrayBuilder<Draw>(4);
         }
 
+        public GlyphRasterizer GlyphRasterizer => _glyphRasterizer;
+
         public void BeginFrame()
         {
             _gpuGlyphRuns.BeginFrame(clear: true);
             _gpuTransforms.BeginFrame(clear: true);
             _gpuGlyphs.Begin();
-            ResolveGlyphs();
         }
 
         public void RequestGlyphs(TextLayout textLayout)
@@ -138,7 +138,13 @@ namespace NitroSharp.Graphics
             foreach (ref readonly GlyphRun glyphRun in textLayout.GlyphRuns)
             {
                 ReadOnlySpan<PositionedGlyph> glyphs = textLayout.GetGlyphs(glyphRun.GlyphSpan);
-                _glyphRasterizer.RequestGlyphs(glyphRun.Font, glyphRun.FontSize, glyphs, _textureCache);
+                _glyphRasterizer.RequestGlyphs(
+                    glyphRun.Font,
+                    glyphRun.FontSize,
+                    glyphs,
+                    _textureCache,
+                    glyphRun.DrawOutline
+                );
             }
         }
 
@@ -147,9 +153,10 @@ namespace NitroSharp.Graphics
             DrawBatch drawBatch,
             TextLayout layout,
             in Matrix4x4 transform,
-            Vector2 offset)
+            Vector2 offset,
+            in RectangleU rect)
         {
-            Matrix4x4 finalTransform = transform * Matrix4x4.CreateTranslation(new Vector3(offset, 0));
+            Matrix4x4 finalTransform = Matrix4x4.CreateTranslation(new Vector3(offset, 0)) * transform;
             TextShaderResources shaderResources = ctx.ShaderResources.Text;
             foreach (ref readonly GlyphRun glyphRun in layout.GlyphRuns)
             {
@@ -179,7 +186,8 @@ namespace NitroSharp.Graphics
                             vertexCount: 6,
                             gpuGlyphSlice.InstanceBase,
                             gpuGlyphSlice.InstanceCount
-                        )
+                        ),
+                        ScissorRect = rect
                     };
                 }
             }
@@ -242,14 +250,14 @@ namespace NitroSharp.Graphics
         private GpuGlyphSlice? AppendRun(
             in GlyphRun run,
             ReadOnlySpan<PositionedGlyph> positionedGlyphs,
-            in Matrix4x4 matrix)
+            in Matrix4x4 transform)
         {
             var gpuGlyphRun = new GpuGlyphRun(run.Color, run.OutlineColor);
             GpuCacheHandle glyphRunHandle = _gpuGlyphRuns.Insert(ref gpuGlyphRun);
             int glyphRunId = _gpuGlyphRuns.GetCachePosition(glyphRunHandle);
 
-            var transform = new GpuTransform(matrix);
-            GpuCacheHandle transformHandle = _gpuTransforms.Insert(ref transform);
+            var gpuTransform = new GpuTransform(transform);
+            GpuCacheHandle transformHandle = _gpuTransforms.Insert(ref gpuTransform);
             Debug.Assert(_gpuTransforms.GetCachePosition(transformHandle) == glyphRunId);
 
             FontData fontData = _glyphRasterizer.GetFontData(run.Font);
@@ -258,9 +266,10 @@ namespace NitroSharp.Graphics
             foreach (PositionedGlyph glyph in positionedGlyphs)
             {
                 var key = new GlyphCacheKey(glyph.Index, run.FontSize);
-                if (fontData.TryGetCachedGlyph(key, out GlyphCacheEntry cachedGlyph)
-                    && cachedGlyph.IsRegular)
+                if (fontData.TryGetCachedGlyph(key, out GlyphCacheEntry cachedGlyph))
                 {
+                    Debug.Assert(cachedGlyph.Kind != GlyphCacheEntryKind.Pending);
+                    if (cachedGlyph.Kind == GlyphCacheEntryKind.Blank) { continue; }
                     TextureCacheItem glyphTci = _textureCache.Get(cachedGlyph.TextureCacheHandle);
                     int outlineId = 0;
                     if (cachedGlyph.OutlineTextureCacheHandle.IsValid)

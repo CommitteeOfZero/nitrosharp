@@ -30,6 +30,9 @@ namespace NitroSharp
 
         public FrameStamp(long frameId, long stopwatchTicks)
             => (FrameId, StopwatchTicks) = (frameId, stopwatchTicks);
+
+        public static FrameStamp Invalid => new FrameStamp(-1, -1);
+        public bool IsValid => FrameId >= 0 && StopwatchTicks >= 0;
     }
 
     internal enum WaitCondition
@@ -43,7 +46,8 @@ namespace NitroSharp
         BezierMoveCompleted,
         TransitionCompleted,
         EntityIdle,
-        FrameReady
+        FrameReady,
+        LineRead
     }
 
     internal readonly struct WaitOperation
@@ -85,9 +89,6 @@ namespace NitroSharp
 
         public Queue<WaitOperation> WaitOperations { get; }
         public CancellationTokenSource ShutdownSignal { get; }
-
-        public DialoguePage? CurrentDialoguePage { get; set; }
-        public ThreadContext? DialogueThread { get; set; }
 
         public GameContext(
             World world,
@@ -167,7 +168,7 @@ namespace NitroSharp
             _initializingGraphics = new TaskCompletionSource<int>();
             _configuration = configuration;
             (_logger, _logEventRecorder) = SetupLogging();
-            _glyphRasterizer = new GlyphRasterizer(enableOutlines: true);
+            _glyphRasterizer = new GlyphRasterizer();
             _window = window;
             _window.Mobile_SurfaceCreated += OnSurfaceCreated;
             _window.Resized += () => _needsResize = true;
@@ -246,7 +247,7 @@ namespace NitroSharp
         private void SetupFonts()
         {
             _glyphRasterizer.AddFonts(Directory.EnumerateFiles("Fonts"));
-            var defaultFont = new FontKey(_configuration.FontFamily, FontStyle.Regular);
+            var defaultFont = new FontFaceKey(_configuration.FontFamily, FontStyle.Regular);
             _fontConfig = new FontConfiguration(
                 defaultFont,
                 italicFont: null,
@@ -409,18 +410,24 @@ namespace NitroSharp
             Debug.Assert(_context is object);
             Debug.Assert(_vm is object);
 
+            _renderSystem.BeginFrame(framestamp);
+
             _vm.Run(_builtinFunctions, _context.ShutdownSignal.Token);
             bool assetsReady = _content.ResolveAssets();
             if (assetsReady)
             {
                 _world.BeginFrame();
             }
-            ReadOnlySpan<RenderItem> renderItems = _world.RenderItems.SortActive();
-            _renderSystem.Render(_context, renderItems, framestamp, dt, assetsReady);
+            _renderSystem.Render(_context, _world.RenderItems, dt, assetsReady);
+            _renderSystem.EndFrame();
             if (assetsReady)
             {
+                // That's right, the input is processed after the frame's been rendered,
+                // and only if all of the requested assets have been loaded.
+                // These two conditions have to be met in order to perform
+                // pixel-perfect hit testing.
                 _inputContext.Update(_vm);
-                _renderSystem.ProcessChoices(_world, _inputContext);
+                _renderSystem.ProcessChoices(_world, _inputContext, _window);
                 ProcessWaitOperations();
             }
             try
@@ -489,17 +496,28 @@ namespace NitroSharp
                 return true;
             }
 
+            bool checkLineRead(EntityQuery query)
+            {
+                foreach (DialoguePage page in _world.Query<DialoguePage>(query))
+                {
+                    if (page.LineRead) { return true; }
+                }
+
+                return false;
+            }
+
             return wait switch
             {
                 (WaitCondition.UserInput, _) => checkInput(),
-                (WaitCondition.EntityIdle, {} query) => checkIdle(query),
-                (WaitCondition.FadeCompleted, {} query) => checkAnim(query, AnimationKind.Fade),
-                (WaitCondition.MoveCompleted, {} query) => checkAnim(query, AnimationKind.Move),
-                (WaitCondition.ZoomCompleted, {} query) => checkAnim(query, AnimationKind.Zoom),
-                (WaitCondition.RotateCompleted, {} query) => checkAnim(query, AnimationKind.Rotate),
-                (WaitCondition.BezierMoveCompleted, {} query) => checkAnim(query, AnimationKind.BezierMove),
-                (WaitCondition.TransitionCompleted, {} query) => checkAnim(query, AnimationKind.Transition),
+                (WaitCondition.EntityIdle, { } query) => checkIdle(query),
+                (WaitCondition.FadeCompleted, { } query) => checkAnim(query, AnimationKind.Fade),
+                (WaitCondition.MoveCompleted, { } query) => checkAnim(query, AnimationKind.Move),
+                (WaitCondition.ZoomCompleted, { } query) => checkAnim(query, AnimationKind.Zoom),
+                (WaitCondition.RotateCompleted, { } query) => checkAnim(query, AnimationKind.Rotate),
+                (WaitCondition.BezierMoveCompleted, { } query) => checkAnim(query, AnimationKind.BezierMove),
+                (WaitCondition.TransitionCompleted, { } query) => checkAnim(query, AnimationKind.Transition),
                 (WaitCondition.FrameReady, _) => true,
+                (WaitCondition.LineRead, { } query) => checkLineRead(query),
                 _ => false
             };
         }
@@ -617,6 +635,7 @@ namespace NitroSharp
             _glyphRasterizer.Dispose();
             _swapchain?.Dispose();
             _graphicsDevice?.Dispose();
+            _window.Dispose();
             _audioSourcePool?.Dispose();
             _audioDevice?.Dispose();
         }

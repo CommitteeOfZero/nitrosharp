@@ -5,7 +5,7 @@
     <LangVersion>8.0</LangVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <NoWarn>1701;1702;CA1063;IDE1006;IDE0063</NoWarn>
-    <VeldridVersion>4.7</VeldridVersion>
+    <VeldridVersion>4.8</VeldridVersion>
   </PropertyGroup>
 
   <Import Project="..\..\OutputPath.props" />
@@ -40,7 +40,7 @@
     <!--<PackageReference Include="Veldrid" Version="$(VeldridVersion)" />
     <PackageReference Include="Veldrid.SDL2" Version="$(VeldridVersion)" />
     <PackageReference Include="Veldrid.StartupUtilities" Version="$(VeldridVersion)" />
-    <PackageReference Include="Veldrid.ImGui" Version="5.69.0" />-->
+    <PackageReference Include="Veldrid.ImGui" Version="5.72.0" />-->
 
     <PackageReference Include="SharpDX.Direct2D1" Version="4.2.0" />
     <PackageReference Include="SharpDX.XAudio2" Version="4.2.0" />
@@ -53,10 +53,6 @@
     <Content Include="../../fonts/**/*.*" LinkBase="Fonts">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Remove="Graphics\Shaders\text_common.h" />
   </ItemGroup>
 
   <Target Name="EmbedGeneratedShaderContent" AfterTargets="AssignTargetPaths">

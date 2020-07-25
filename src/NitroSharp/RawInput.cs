@@ -14,7 +14,6 @@ namespace NitroSharp
 {
     internal sealed class RawInput : IDisposable
     {
-        private readonly GameWindow _window;
         private readonly bool _desktopOS;
 
         private readonly HashSet<Key> _keyboardState = new HashSet<Key>();
@@ -26,9 +25,9 @@ namespace NitroSharp
 
         public RawInput(GameWindow window)
         {
-            _window = window;
-            CurrentSnapshot = null!;
-            _desktopOS = _window is DesktopWindow;
+            Window = window;
+            Snapshot = null!;
+            _desktopOS = Window is DesktopWindow;
             Gamepad = new DebugGamepad(this);
             if (_desktopOS)
             {
@@ -36,14 +35,15 @@ namespace NitroSharp
             }
         }
 
-        public GameWindow Window => _window;
+        public GameWindow Window { get; }
         public Vector2 MouseDelta { get; private set; }
-        public InputSnapshot CurrentSnapshot { get; private set; }
+        public float WheelDelta { get; private set; }
+        public InputSnapshot Snapshot { get; private set; }
         public Gamepad Gamepad { get; private set; }
 
         public void Update()
         {
-            ProcessWindowEvents(_window.PumpEvents());
+            ProcessSnapshot(Window.PumpEvents());
             Sdl2Events.ProcessEvents();
         }
 
@@ -54,7 +54,7 @@ namespace NitroSharp
             => _newKeys.Contains(key);
 
         public bool MouseState(MouseButton button)
-            => CurrentSnapshot.IsMouseDown(button);
+            => _mouseState[(int)button];
 
         public bool IsMouseDown(MouseButton button)
             => _newMouseButtons[(int)button];
@@ -76,14 +76,15 @@ namespace NitroSharp
             }
         }
 
-        private void ProcessWindowEvents(InputSnapshot snapshot)
+        private void ProcessSnapshot(InputSnapshot snapshot)
         {
-            CurrentSnapshot = snapshot;
+            Snapshot = snapshot;
             _newKeys.Clear();
             _newMouseButtons.AsSpan().Clear();
 
-            MouseDelta = CurrentSnapshot.MousePosition - _prevMousePosition;
-            _prevMousePosition = CurrentSnapshot.MousePosition;
+            MouseDelta = snapshot.MousePosition - _prevMousePosition;
+            _prevMousePosition = snapshot.MousePosition;
+            WheelDelta = snapshot.WheelDelta;
 
             IReadOnlyList<KeyEvent> keyEvents = snapshot.KeyEvents;
             for (int i = 0; i < keyEvents.Count; i++)

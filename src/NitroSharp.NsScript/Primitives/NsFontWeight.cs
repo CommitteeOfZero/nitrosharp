@@ -45,7 +45,7 @@ namespace NitroSharp.NsScript.Primitives
 
             return value.Type switch
             {
-                BuiltInType.Integer => new NsFontWeight(value.AsInteger()!.Value),
+                BuiltInType.Numeric => new NsFontWeight((int)value.AsNumber()!.Value),
                 BuiltInType.BuiltInConstant => new NsFontWeight(mapConstant(value.AsBuiltInConstant()!.Value)),
                 _ => ThrowHelper.UnexpectedValue<NsFontWeight>()
             };

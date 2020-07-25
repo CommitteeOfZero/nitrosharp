@@ -12,7 +12,7 @@ namespace NitroSharp.Text
     [StructLayout(LayoutKind.Auto)]
     internal readonly struct GlyphRun
     {
-        public readonly FontKey Font;
+        public readonly FontFaceKey Font;
         public readonly PtFontSize FontSize;
         public readonly RgbaFloat Color;
         public readonly RgbaFloat OutlineColor;
@@ -20,7 +20,7 @@ namespace NitroSharp.Text
         public readonly bool DrawOutline;
 
         public GlyphRun(
-            FontKey font, PtFontSize fontSize,
+            FontFaceKey font, PtFontSize fontSize,
             RgbaFloat color, RgbaFloat outlineColor,
             GlyphSpan glyphSpan, bool drawOutline)
         {
@@ -52,15 +52,153 @@ namespace NitroSharp.Text
     internal sealed class TextLayout
     {
         [StructLayout(LayoutKind.Auto)]
-        private struct Line
+        private readonly struct Line
         {
-            public uint Start;
-            public uint Length;
+            public readonly uint Start;
+            public readonly uint Length;
+            public readonly float BaselineY;
+            public readonly float MaxFontDescender;
+            public readonly float MaxFontLineGap;
+
+            public Line(
+                uint start,
+                uint length,
+                float baselineY,
+                float maxFontDescender,
+                float maxFontLineGap)
+            {
+                Start = start;
+                Length = length;
+                BaselineY = baselineY;
+                MaxFontDescender = maxFontDescender;
+                MaxFontLineGap = maxFontLineGap;
+            }
+        }
+
+        [StructLayout(LayoutKind.Auto)]
+        private struct LineBuilder
+        {
+            private ArrayBuilder<RubyTextChunk> _rubyChunks;
+            private float _prevRight;
+
+            public float BaselineY;
+            public float Shift;
             public uint GlyphsPositioned;
-            public float PenX;
-            public float? BaselineY;
-            public PtFontSize LargestFontSize;
-            public VerticalMetrics LargestFontMetrics;
+
+            public uint Start { get; private set; }
+            public uint Length { get; private set; }
+            public float PenX { get; private set; }
+            public uint NbNonWhitespaceChars { get; private set; }
+
+            public float ActualAscender { get; private set; }
+            public float ActualDescender { get; private set; }
+
+            public float MaxFontAscender { get; private set; }
+            public float MaxFontDescender { get; private set; }
+            public float MaxFontLineGap { get; private set; }
+
+            public float Left { get; private set; }
+            public float Right { get; private set; }
+
+            public Span<RubyTextChunk> RubyChunks => _rubyChunks.AsSpan();
+
+            public static LineBuilder Create()
+            {
+                return new LineBuilder
+                {
+                    _rubyChunks = new ArrayBuilder<RubyTextChunk>(initialCapacity: 0),
+                    Left = float.MaxValue
+                };
+            }
+
+            public void Append(in GlyphDimensions glyphDims, bool isWhitespace)
+            {
+                Length++;
+                PenX += glyphDims.Advance;
+                if (!isWhitespace)
+                {
+                    NbNonWhitespaceChars++;
+                }
+            }
+
+            public void AddRubyChunk(in RubyTextChunk chunk)
+            {
+                _rubyChunks.Add(chunk);
+                Length += chunk.RubyTextSpan.Length;
+            }
+
+            public void Reset(uint start)
+            {
+                ArrayBuilder<RubyTextChunk> rubyChunks = _rubyChunks;
+                this = default;
+                Start = start;
+                Left = float.MaxValue;
+                rubyChunks.Clear();
+                _rubyChunks = rubyChunks;
+            }
+
+            public void AddWord(in Word word, in VerticalMetrics fontMetrics)
+            {
+                ActualAscender = MathF.Max(ActualAscender, word.Ascent);
+                ActualDescender = MathF.Max(ActualDescender, word.Descent);
+                MaxFontAscender = MathF.Max(MaxFontAscender, fontMetrics.Ascender);
+                MaxFontDescender = MathF.Min(MaxFontDescender, fontMetrics.Descender);
+                MaxFontLineGap = MathF.Min(MaxFontLineGap, fontMetrics.LineGap);
+                if (word.Length > 0)
+                {
+                    _prevRight = Right;
+                    Left = MathF.Min(Left, word.Left);
+                    Right = word.Right;
+                }
+            }
+
+            public void RemoveWord(in Word word)
+            {
+                Length -= word.Length;
+                NbNonWhitespaceChars -= word.Length;
+                PenX -= (word.Right - word.Left + 1);
+                Right = _prevRight;
+            }
+
+            public Line Build()
+            {
+                return new Line(
+                    Start,
+                    Length,
+                    BaselineY,
+                    MaxFontDescender,
+                    MaxFontLineGap
+                );
+            }
+        }
+
+        [StructLayout(LayoutKind.Auto)]
+        private struct Word
+        {
+            public Word(uint start) : this()
+            {
+                Start = start;
+            }
+
+            public uint Start { get; }
+            public uint Length { get; private set; }
+            public float Left { get; private set; }
+            public float Right { get; private set; }
+            public float Ascent { get; private set; }
+            public float Descent { get; private set; }
+
+            public void Append(in GlyphDimensions glyph, Vector2 position)
+            {
+                Ascent = MathF.Max(Ascent, glyph.Top);
+                Descent = MathF.Max(Descent, glyph.Height - glyph.Top - 1);
+                if (Length == 0)
+                {
+                    Left = position.X;
+                }
+                float w = glyph.Width > 0 ? glyph.Width : glyph.Advance;
+                Right = position.X + w - 1;
+                Length++;
+            }
         }
 
         [StructLayout(LayoutKind.Auto)]
@@ -83,22 +221,31 @@ namespace NitroSharp.Text
         private ArrayBuilder<Line> _lines;
         private ArrayBuilder<PositionedGlyph> _glyphs;
 
+        private Word _lastWord;
         private uint _currentLineIdx;
-        private float _prevBaselineY;
-        private uint _lastWordStartGlyph;
-        private float _lastWordStartGlyphX;
-        private float _lastWordAscend;
-        private float _lastWordDescend;
-        private float _currentLineAscender;
-        private float _currentLineDescender;
-        private float _currentLineShift;
+        private LineBuilder _lineBuilder;
 
-        private ArrayBuilder<RubyTextChunk> _rubyChunksOnLine;
-        private uint _lastNonRubyGlyphOnLine;
+        private float _prevBaselineY;
         private char _lastAddedChar;
 
         private RectangleF _boundingBox;
         private float _bbLeft, _bbRight;
+
+        public TextLayout(
+            Size? maxBounds = null,
+            float? fixedLineHeight = null,
+            float rubyFontSizeMultiplier = 0.4f)
+        {
+            _textRuns = new ArrayBuilder<TextRun>(initialCapacity: 2);
+            _glyphs = new ArrayBuilder<PositionedGlyph>(initialCapacity: 32);
+            _glyphRuns = new ArrayBuilder<GlyphRun>(initialCapacity: 2);
+            _lines = new ArrayBuilder<Line>(initialCapacity: 2);
+            _maxBounds = maxBounds ?? new Size(uint.MaxValue, uint.MaxValue);
+            _fixedLineHeight = fixedLineHeight;
+            _rubyFontSizeMultiplier = rubyFontSizeMultiplier;
+            _lineBuilder = LineBuilder.Create();
+            Clear();
+        }
 
         public TextLayout(
             GlyphRasterizer glyphRasterizer,
@@ -106,22 +253,15 @@ namespace NitroSharp.Text
             Size? maxBounds,
             float? fixedLineHeight = null,
             float rubyFontSizeMultiplier = 0.4f)
+            : this(maxBounds, fixedLineHeight, rubyFontSizeMultiplier)
         {
-            _textRuns = new ArrayBuilder<TextRun>(textRuns.Length);
-            _glyphs = new ArrayBuilder<PositionedGlyph>(initialCapacity: 32);
-            _glyphRuns = new ArrayBuilder<GlyphRun>(initialCapacity: textRuns.Length);
-            _lines = new ArrayBuilder<Line>(initialCapacity: 2);
-            _rubyChunksOnLine = new ArrayBuilder<RubyTextChunk>(initialCapacity: 0);
-            _maxBounds = maxBounds ?? new Size(uint.MaxValue, uint.MaxValue);
-            _fixedLineHeight = fixedLineHeight;
-            _rubyFontSizeMultiplier = rubyFontSizeMultiplier;
-            Clear();
             Append(glyphRasterizer, textRuns);
         }
 
         public ReadOnlySpan<GlyphRun> GlyphRuns => _glyphRuns.AsReadonlySpan();
         public ReadOnlySpan<PositionedGlyph> Glyphs => _glyphs.AsSpan();
         public RectangleF BoundingBox => _boundingBox;
+        public Size MaxBounds => _maxBounds;
 
         public void Clear()
         {
@@ -132,15 +272,8 @@ namespace NitroSharp.Text
             _glyphs.Clear();
             _currentLineIdx = 0;
             _prevBaselineY = 0;
-            _lastWordStartGlyph = 0;
-            _lastWordStartGlyphX = 0;
-            _lastWordAscend = 0;
-            _lastWordDescend = 0;
-            _currentLineAscender = 0;
-            _currentLineDescender = 0;
-            _currentLineShift = 0;
-            _rubyChunksOnLine.Clear();
-            _lastNonRubyGlyphOnLine = 0;
+            _lastWord = default;
+            _lineBuilder.Reset(start: 0);
             _lastAddedChar = default;
             _boundingBox = new RectangleF(x: 0, y: float.MaxValue, 0, 0);
             _bbLeft = float.MaxValue;
@@ -157,8 +290,6 @@ namespace NitroSharp.Text
             return _glyphs.AsSpan((int)span.Start, (int)span.Length);
         }
 
-        private ref Line CurrentLine => ref _lines[_currentLineIdx];
-
         public void Append(GlyphRasterizer glyphRasterizer, ReadOnlySpan<TextRun> textRuns)
         {
             for (uint i = 0; i < textRuns.Length; i++)
@@ -174,122 +305,117 @@ namespace NitroSharp.Text
 
         private bool Append(GlyphRasterizer glyphRasterizer, uint textRunIndex, bool lastTextRun)
         {
+             bool canFitGlyph(in GlyphDimensions glyphDims)
+            {
+                return (_lineBuilder.PenX
+                    + glyphDims.Width
+                    + glyphDims.Left) <= _maxBounds.Width;
+            }
+
             TextRun textRun = _textRuns[(int)textRunIndex];
             uint glyphRunStart = _glyphs.Count;
             FontData fontData = glyphRasterizer.GetFontData(textRun.Font);
+            VerticalMetrics fontMetrics = fontData.GetVerticalMetrics(textRun.FontSize);
             ReadOnlySpan<char> text = textRun.Text.Span;
-            uint nbNonWhitespaceOnLine = 0;
             for (int stringPos = 0; stringPos < text.Length; stringPos++)
             {
                 char c = text[stringPos];
                 uint glyphIndex = fontData.GetGlyphIndex(c);
                 GlyphDimensions glyphDims = fontData.GetGlyphDimensions(glyphIndex, textRun.FontSize);
                 bool isNewline = c == '\r' || c == '\n';
-                bool isWhitespace = char.IsWhiteSpace(c);
-                if (CanFitGlyph(glyphDims) || isNewline)
+
+                bool wordStart;
+                if (!textRun.HasRubyText)
                 {
-                    var position = new Vector2(
-                        _currentLineShift + CurrentLine.PenX + glyphDims.Left,
-                        glyphDims.Top
-                    );
-                    if (position.X < 0)
+                    wordStart = LineBreakingRules.CanStartLine(c);
+                    if (_glyphs.Count > 0)
                     {
-                        _currentLineShift = -position.X;
-                        position.X = 0;
-                    }
-
-                    _lastNonRubyGlyphOnLine = _glyphs.Count;
-                    _glyphs.Add() = new PositionedGlyph(glyphIndex, position);
-                    _lastWordAscend = MathF.Max(_lastWordAscend, glyphDims.Top);
-                    _lastWordDescend = MathF.Max(_lastWordDescend, glyphDims.Height - glyphDims.Top - 1);
-                    if (!isWhitespace)
-                    {
-                        nbNonWhitespaceOnLine++;
-                    }
-                    bool wordStart;
-                    if (!textRun.HasRubyText)
-                    {
-                        wordStart = LineBreakingRules.CanStartLine(c);
-                        if (_glyphs.Count > 1)
-                        {
-                            wordStart &= LineBreakingRules.CanEndLine(_lastAddedChar);
-                        }
-                    }
-                    else
-                    {
-                        // If a TextRun has ruby text, the base is treated as a single word
-                        // to disallow line breaking. So only the first character of the base
-                        // can start a word.
-                        wordStart = stringPos == 0;
-                    }
-
-                    if (wordStart)
-                    {
-                        _lastWordStartGlyph = _glyphs.Count - 1;
-                        _lastWordStartGlyphX = CurrentLine.PenX;
-                        _lastWordAscend = 0;
-                    }
-                    if (CurrentLine.Length == 0 ||
-                        LineBreakingRules.CanEndLine(c) && nbNonWhitespaceOnLine > 0)
-                    {
-                        if (!textRun.HasRubyText)
-                        {
-                            EndWord(textRun);
-                        }
-                    }
-
-                    CurrentLine.Length++;
-                    _lastAddedChar = c;
-                    if (!isNewline)
-                    {
-                        CurrentLine.PenX += glyphDims.Advance;
-                    }
-                    else if (c == '\n')
-                    {
-                        Debug.Assert(!textRun.HasRubyText);
-                        if (nbNonWhitespaceOnLine > 0)
-                        {
-                            EndWord(textRun);
-                        }
-                        nbNonWhitespaceOnLine = 0;
-                        if (!StartNewLine(textRun, fontData, _glyphs.Count))
-                        {
-                            goto exit;
-                        }
+                        wordStart &= LineBreakingRules.CanEndLine(_lastAddedChar);
                     }
                 }
                 else
                 {
-                    uint lastWordLength = _glyphs.Count - _lastWordStartGlyph;
-                    float lastWordWidth = CurrentLine.PenX - _lastWordStartGlyphX + 1;
-                    CurrentLine.Length -= lastWordLength;
-                    _lastNonRubyGlyphOnLine -= lastWordLength;
-                    // Start a new line and move the last word to it
-                    if (!StartNewLine(textRun, fontData, _lastWordStartGlyph))
+                    // If a TextRun has ruby text, the base is treated as a single word
+                    // to disallow line breaking. So only the first character of the base
+                    // can start a word.
+                    wordStart = stringPos == 0;
+                }
+
+                if (canFitGlyph(glyphDims))
+                {
+                    if (!isNewline)
                     {
-                        _glyphs.Truncate(_glyphs.Count - lastWordLength);
+                        var position = new Vector2(
+                            _lineBuilder.Shift + _lineBuilder.PenX + glyphDims.Left,
+                            glyphDims.Top
+                        );
+                        if (position.X < 0)
+                        {
+                            _lineBuilder.Shift = -position.X;
+                            position.X = 0;
+                        }
+
+                        _glyphs.Add() = new PositionedGlyph(glyphIndex, position);
+                        _lineBuilder.Append(glyphDims, char.IsWhiteSpace(c));
+
+                        if (wordStart)
+                        {
+                            _lastWord = new Word(_glyphs.Count - 1);
+                        }
+
+                        _lastWord.Append(glyphDims, position);
+                    }
+
+                    if (LineBreakingRules.CanEndLine(c) && _lineBuilder.NbNonWhitespaceChars > 0)
+                    {
+                        if (!textRun.HasRubyText)
+                        {
+                            _lineBuilder.AddWord(_lastWord, fontMetrics);
+                        }
+                    }
+
+                    _lastAddedChar = c;
+
+                    if (c == '\n' && !StartNewLine(glyphRasterizer, _glyphs.Count))
+                    {
                         goto exit;
                     }
-                    nbNonWhitespaceOnLine = 0;
-
-                    float basePosX = 0;
-                    float shift = _glyphs[_lastWordStartGlyph].Position.X - _lastWordStartGlyphX;
-                    if (shift < 0)
+                }
+                else
+                {
+                    if (wordStart)
                     {
-                        basePosX = -shift;
+                        if (!StartNewLine(glyphRasterizer, _glyphs.Count))
+                        {
+                            goto exit;
+                        }
+
+                        stringPos--;
+                        continue;
                     }
-                    for (uint i = _lastWordStartGlyph; i < _glyphs.Count; i++)
+
+                    _lineBuilder.RemoveWord(_lastWord);
+                    _lastWord = new Word(_lastWord.Start);
+                    // Start a new line and move the last word to it
+                    if (!StartNewLine(glyphRasterizer, _lastWord.Start))
+                    {
+                        _glyphs.Truncate(_glyphs.Count - _lastWord.Length);
+                        goto exit;
+                    }
+
+                    for (uint i = _lastWord.Start; i < _glyphs.Count; i++)
                     {
                         ref PositionedGlyph g = ref _glyphs[i];
-                        g = new PositionedGlyph(
-                            g.Index,
-                            new Vector2(basePosX + g.Position.X - _lastWordStartGlyphX, g.Position.Y)
+                        GlyphDimensions dims = fontData.GetGlyphDimensions(g.Index, textRun.FontSize);
+                        var pos = new Vector2(
+                            _lineBuilder.PenX + dims.Left,
+                            dims.Top
                         );
-                        CurrentLine.Length++;
-                        nbNonWhitespaceOnLine++;
+                        g = new PositionedGlyph(g.Index, pos);
+                        _lineBuilder.Append(dims, isWhitespace: false);
+                        _lastWord.Append(dims, pos);
                     }
 
-                    CurrentLine.PenX = lastWordWidth - 1;
                     // The one character that couldn't fit on the previous line
                     // and thus triggered a line break still needs to be positioned.
                     stringPos--;
@@ -302,11 +428,17 @@ namespace NitroSharp.Text
                 return false;
             }
 
-            EndWord(textRun);
+            _lineBuilder.AddWord(_lastWord, fontMetrics);
+            Debug.Assert(_glyphs.Count >= glyphRunStart);
             var glyphSpan = GlyphSpan.FromBounds(
                 start: glyphRunStart,
                 end: _glyphs.Count
             );
+            if (glyphSpan.IsEmpty)
+            {
+                return true;
+            }
+
             _glyphRuns.Add() = new GlyphRun(
                 textRun.Font,
                 textRun.FontSize,
@@ -324,8 +456,7 @@ namespace NitroSharp.Text
                     length: rubyTextLength
                 );
                 _glyphs.Append(count: rubyTextLength);
-                CurrentLine.Length += rubyTextLength;
-                _rubyChunksOnLine.Add(new RubyTextChunk
+                _lineBuilder.AddRubyChunk(new RubyTextChunk
                 {
                     RubyBaseSpan = glyphSpan,
                     RubyTextSpan = rubyTextSpan,
@@ -341,76 +472,73 @@ namespace NitroSharp.Text
                 );
             }
 
-            uint lineLength = CurrentLine.Length;
-            if (lastTextRun)
+            bool enoughSpace = lastTextRun
+                ? ProcessLine(glyphRasterizer)
+                : CalculateBaselineY(out _);
+            if (!enoughSpace)
             {
-                if (!FinishLine(textRun, fontData))
+                if (textRun.HasRubyText)
                 {
-                    if (textRun.HasRubyText)
-                    {
-                        _glyphRuns.RemoveLast();
-                        _rubyChunksOnLine.RemoveLast();
-                    }
-                    ref GlyphRun lastRun = ref _glyphRuns.AsSpan()[^1];
-                    uint lastRunLen = lastRun.GlyphSpan.Length;
+                    _glyphRuns.RemoveLast();
+                }
+                ref GlyphRun lastRun = ref _glyphRuns.AsSpan()[^1];
+                uint lastRunLen = lastRun.GlyphSpan.Length;
+                Debug.Assert(lastRunLen >= _lineBuilder.Length);
+                uint newLength = lastRunLen - _lineBuilder.Length;
+                if (newLength > 0)
+                {
                     lastRun = new GlyphRun(
                         lastRun.Font,
                         lastRun.FontSize,
                         lastRun.Color,
                         lastRun.OutlineColor,
-                        new GlyphSpan(lastRun.GlyphSpan.Start, lastRunLen - lineLength),
+                        new GlyphSpan(lastRun.GlyphSpan.Start, newLength),
                         textRun.DrawOutline
                     );
-                    return false;
                 }
+                else
+                {
+                    _glyphRuns.RemoveLast();
+                }
+
+                _glyphs.Truncate(_glyphs.Count - _lineBuilder.Length);
+                _lineBuilder.Reset(_glyphs.Count);
+                _lastWord = new Word(_glyphs.Count);
+                return false;
             }
 
             return true;
         }
 
-        private void EndWord(in TextRun textRun)
+        private bool ProcessLine(GlyphRasterizer glyphRasterizer)
         {
-            _currentLineAscender = MathF.Max(_currentLineAscender, _lastWordAscend);
-            _currentLineDescender = MathF.Max(_currentLineDescender, _lastWordDescend);
-            ref Line line = ref CurrentLine;
-            line.LargestFontSize = textRun.FontSize.Value > line.LargestFontSize.Value
-                ? textRun.FontSize
-                : line.LargestFontSize;
-        }
-
-        private bool FinishLine(TextRun lastTextRun, FontData fontData)
-        {
-            ref Line line = ref CurrentLine;
-            if (line.Length == 0) { return false; }
-            Debug.Assert(!line.LargestFontSize.Equals(default));
-            line.LargestFontMetrics = fontData.GetVerticalMetrics(line.LargestFontSize);
-            if (!CalculateBaselineY(out float baselineY))
+            ref LineBuilder lineBuilder = ref _lineBuilder;
+            if (lineBuilder.Length == 0 || !CalculateBaselineY(out float baselineY))
             {
-                _glyphs.Truncate(_glyphs.Count - line.Length);
-                line.Length = 0;
                 return false;
             }
 
             float rubyTextBaselineOffset = 0, rubyTextAscend = 0;
-            if (_rubyChunksOnLine.Count > 0)
+            if (lineBuilder.RubyChunks.Length > 0)
             {
                 LayOutRubyText(
-                    fontData,
+                    glyphRasterizer,
                     ref baselineY,
                     out rubyTextBaselineOffset,
                     out rubyTextAscend
                 );
             }
 
-            PositionedGlyph lastGlyph = _glyphs[_lastNonRubyGlyphOnLine];
-            GlyphDimensions dims = fontData.GetGlyphDimensions(lastGlyph.Index, lastTextRun.FontSize);
-            _bbRight = MathF.Max(_bbRight, lastGlyph.Position.X + dims.Width - 1);
-            _bbLeft = MathF.Min(_bbLeft, _glyphs[line.Start].Position.X);
+            _bbRight = MathF.Max(_bbRight, lineBuilder.Right);
+            _bbLeft = MathF.Min(_bbLeft, lineBuilder.Left);
 
-            float lineTop = _rubyChunksOnLine.Count == 0
-                ? baselineY - _currentLineAscender
+            float lineTop = lineBuilder.RubyChunks.Length == 0
+                ? baselineY - lineBuilder.ActualAscender
                 : baselineY + rubyTextBaselineOffset - rubyTextAscend;
-            float lineBottom = baselineY + _currentLineDescender;
+            float lineBottomActual = baselineY + lineBuilder.ActualDescender;
+            float lineBottom = _fixedLineHeight is float height && height >= (lineBottomActual - lineTop)
+                ? lineTop + height - 1
+                : lineBottomActual;
             float top = MathF.Min(_boundingBox.Y, lineTop);
             _boundingBox = new RectangleF(
                 x: _bbLeft, y: top,
@@ -418,13 +546,13 @@ namespace NitroSharp.Text
                 height: MathF.Max(_boundingBox.Height, lineBottom - top + 1)
             );
 
-            float? prevBaselineY = line.BaselineY;
-            line.BaselineY = baselineY;
+            float? prevBaselineY = lineBuilder.BaselineY;
+            lineBuilder.BaselineY = baselineY;
             if (prevBaselineY != null && baselineY != prevBaselineY)
             {
                 Span<PositionedGlyph> oldGlyphs = _glyphs.AsSpan(
-                    (int)line.Start,
-                    (int)line.GlyphsPositioned
+                    (int)lineBuilder.Start,
+                    (int)lineBuilder.GlyphsPositioned
                 );
                 foreach (ref PositionedGlyph glyph in oldGlyphs)
                 {
@@ -438,8 +566,8 @@ namespace NitroSharp.Text
                 }
             }
 
-            uint nbNewGlyphs = line.Length - line.GlyphsPositioned;
-            uint start = line.Start + line.GlyphsPositioned;
+            uint nbNewGlyphs = lineBuilder.Length - lineBuilder.GlyphsPositioned;
+            uint start = lineBuilder.Start + lineBuilder.GlyphsPositioned;
             Span<PositionedGlyph> newGlyphs = _glyphs.AsSpan((int)start, (int)nbNewGlyphs);
             foreach (ref PositionedGlyph glyph in newGlyphs)
             {
@@ -451,42 +579,45 @@ namespace NitroSharp.Text
                     )
                 );
             }
-            line.GlyphsPositioned += nbNewGlyphs;
+            lineBuilder.GlyphsPositioned += nbNewGlyphs;
+            _lines[^1] = _lineBuilder.Build();
             return true;
         }
 
         private void LayOutRubyText(
-            FontData fontData,
+            GlyphRasterizer glyphRasterizer,
             ref float baselineY,
             out float rubyTextBaselineOffset,
             out float rubyTextAscend)
         {
-            PtFontSize largestRubyFontSize = default;
-            for (uint i = 0; i < _rubyChunksOnLine.Count; i++)
+            ref LineBuilder line = ref _lineBuilder;
+            Span<RubyTextChunk> rubyChunks = line.RubyChunks;
+
+            float maxRubyAscender = 0, maxRubyDescender = 0;
+            for (int i = 0; i < rubyChunks.Length; i++)
             {
-                uint runIndex = _rubyChunksOnLine[i].TextRun;
+                uint runIndex = rubyChunks[i].TextRun;
                 ref readonly TextRun rubyTextRun = ref _textRuns[runIndex];
-                PtFontSize newFontSize = GetRubyFontSize(rubyTextRun.FontSize);
-                largestRubyFontSize = newFontSize.Value > largestRubyFontSize.Value
-                    ? newFontSize
-                    : largestRubyFontSize;
+                FontData fontData = glyphRasterizer.GetFontData(rubyTextRun.Font);
+                PtFontSize fontSize = GetRubyFontSize(rubyTextRun.FontSize);
+                VerticalMetrics metrics = fontData.GetVerticalMetrics(fontSize);
+                maxRubyAscender = MathF.Max(maxRubyAscender, metrics.Ascender);
+                maxRubyDescender = MathF.Max(maxRubyDescender, metrics.Descender);
             }
 
-            VerticalMetrics largestRubyFontMetrics = fontData.GetVerticalMetrics(largestRubyFontSize);
             // Move the baseline down to fit the ruby text
             const float rubyTextMargin = 2.0f;
-            baselineY += rubyTextMargin + largestRubyFontMetrics.Ascender;
-            rubyTextBaselineOffset = -_currentLineAscender
-                + largestRubyFontMetrics.Descender
-                - rubyTextMargin;
+            baselineY += rubyTextMargin + maxRubyAscender;
+            rubyTextBaselineOffset = -line.ActualAscender + maxRubyDescender - rubyTextMargin;
 
             rubyTextAscend = 0;
-            for (uint i = 0; i < _rubyChunksOnLine.Count; i++)
+            for (int i = 0; i < rubyChunks.Length; i++)
             {
-                ref RubyTextChunk rtChunk = ref _rubyChunksOnLine[i];
+                ref RubyTextChunk rtChunk = ref rubyChunks[i];
                 ReadOnlySpan<PositionedGlyph> rubyBaseGlyphs = GetGlyphs(rtChunk.RubyBaseSpan);
                 Span<PositionedGlyph> rubyTextGlyphs = GetGlyphsMut(rtChunk.RubyTextSpan);
                 ref readonly TextRun textRun = ref _textRuns[rtChunk.TextRun];
+                FontData fontData = glyphRasterizer.GetFontData(textRun.Font);
                 PtFontSize rubyFontSize = GetRubyFontSize(textRun.FontSize);
 
                 // Measure the base text
@@ -573,56 +704,46 @@ namespace NitroSharp.Text
 
         private bool CalculateBaselineY(out float baselineY)
         {
-            ref VerticalMetrics largestMetrics = ref CurrentLine.LargestFontMetrics;
             if (_currentLineIdx > 0)
             {
-                ref Line prevLine = ref _lines[_currentLineIdx - 1];
-                ref VerticalMetrics prevLargestMetrics = ref prevLine.LargestFontMetrics;
+                const float minLineGap = 2.0f;
+                float minHeight = _lineBuilder.ActualDescender
+                    + _lineBuilder.ActualAscender + minLineGap;
+
                 if (_fixedLineHeight is {} lineHeight)
                 {
-                    baselineY = _prevBaselineY + lineHeight;
+                    baselineY = _prevBaselineY + Math.Max(minHeight, lineHeight);
                 }
                 else
                 {
+                    ref Line prevLine = ref _lines[_currentLineIdx - 1];
                     baselineY = _prevBaselineY
-                        + largestMetrics.Ascender
-                        - prevLargestMetrics.Descender
-                        + prevLargestMetrics.LineGap;
+                        + _lineBuilder.MaxFontAscender
+                        - prevLine.MaxFontDescender
+                        + prevLine.MaxFontLineGap;
                 }
             }
             else
             {
-                baselineY = _prevBaselineY + largestMetrics.Ascender;
+                baselineY = _prevBaselineY + _lineBuilder.MaxFontAscender;
             }
 
-            return (baselineY + Math.Abs(largestMetrics.Descender)) <= _maxBounds.Height;
+            return (baselineY + Math.Abs(_lineBuilder.MaxFontDescender))
+                <= _maxBounds.Height;
         }
 
-        public bool StartNewLine(TextRun lastTextRun, FontData fontData, uint startGlyph, float baselineX = 0)
+        public bool StartNewLine(GlyphRasterizer glyphRasterizer, uint startGlyph)
         {
-            if (FinishLine(lastTextRun, fontData))
+            if (ProcessLine(glyphRasterizer))
             {
-                _prevBaselineY = CurrentLine.BaselineY!.Value;
-                _lines.Add(new Line());
+                _prevBaselineY = _lineBuilder.BaselineY;
+                _lineBuilder.Reset(startGlyph);
                 _currentLineIdx++;
-                CurrentLine.Start = startGlyph;
-                CurrentLine.PenX = baselineX;
-                _rubyChunksOnLine.Clear();
-                _currentLineAscender = 0;
-                _currentLineDescender = 0;
-                _lastNonRubyGlyphOnLine = 0;
-                _currentLineShift = 0;
+                _lines.Add();
                 return true;
             }
 
             return false;
-        }
-
-        private bool CanFitGlyph(in GlyphDimensions glyphDims)
-        {
-            return (CurrentLine.PenX
-                + glyphDims.Width
-                + glyphDims.Left) <= _maxBounds.Width;
         }
     }
 }

@@ -5,18 +5,18 @@ using FreeTypeBindings;
 
 namespace NitroSharp.Text
 {
-    internal readonly struct FontKey : IEquatable<FontKey>
+    internal readonly struct FontFaceKey : IEquatable<FontFaceKey>
     {
         public readonly string FamilyName;
         public readonly FontStyle Style;
 
-        public FontKey(string familyName, FontStyle style)
+        public FontFaceKey(string familyName, FontStyle style)
         {
             FamilyName = familyName;
             Style = style;
         }
 
-        public bool Equals(FontKey other)
+        public bool Equals(FontFaceKey other)
             => FamilyName.Equals(other.FamilyName) && Style == other.Style;
 
         public override int GetHashCode() => HashCode.Combine(FamilyName, Style);
@@ -61,12 +61,12 @@ namespace NitroSharp.Text
         /// </summary>
         public readonly float Descender;
         /// <summary>
-        /// The distance between two consecutive baselines.
+        /// The recommended distance between two consecutive baselines.
         /// </summary>
         public readonly float LineHeight;
         /// <summary>
-        /// The recommended distance between two lines of text.
-        /// This value does not include ascender and descender.
+        /// The recommended gap between two lines of text,
+        /// not including ascender and descender.
         /// </summary>
         public float LineGap => LineHeight - Ascender + Descender;
     }

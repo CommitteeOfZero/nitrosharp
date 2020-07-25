@@ -17,10 +17,6 @@ namespace NitroSharp.Graphics
 
         public AssetRef<Texture> Texture { get; }
 
-        public override void Render(RenderContext ctx, bool assetsReady)
-        {
-        }
-
         public override Size GetUnconstrainedBounds(RenderContext ctx)
             => ctx.Content.GetTextureSize(Texture);
 

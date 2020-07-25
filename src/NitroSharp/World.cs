@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
 using NitroSharp.Graphics;
 using NitroSharp.NsScript;
 using NitroSharp.Utilities;
@@ -223,9 +224,19 @@ namespace NitroSharp
                 => new EntityRec(Entity, Group, newLocation);
         }
 
+        private readonly struct Chapter
+        {
+            public readonly List<EntityId> Entities;
+
+            public Chapter(List<EntityId> entities) => Entities = entities;
+            public static Chapter New() => new Chapter(new List<EntityId>());
+        }
+
         private readonly Dictionary<EntityId, EntityRec> _entities;
         private readonly Dictionary<EntityPath, EntityId> _aliases;
         private readonly List<(EntityId, EntityBucket)> _pendingBucketChanges;
+
+        private readonly Stack<Chapter> _chapters;
 
         private readonly EntityGroup<SimpleEntity> _simpleEntities;
         private readonly EntityGroup<VmThread> _vmThreads;
@@ -233,8 +244,6 @@ namespace NitroSharp
         private readonly EntityGroup<ColorSource> _colorSources;
         private readonly EntityGroup<Image> _images;
         private readonly EntityGroup<Choice> _choices;
-
-        private readonly Queue<Action> _assetsReadyCallbacks;
 
         public World()
         {
@@ -247,12 +256,36 @@ namespace NitroSharp
             _images = new EntityGroup<Image>();
             _choices = new EntityGroup<Choice>();
             _pendingBucketChanges = new List<(EntityId, EntityBucket)>();
+            _chapters = new Stack<Chapter>();
+            History = new List<string>();
         }
+
+        public List<string> History { get; }
 
         public EntityGroupView<VmThread> Threads => _vmThreads;
         public SortableEntityGroupView<RenderItem> RenderItems => _renderItems;
         public EntityGroupView<Image> Images => _images;
         public EntityGroupView<Choice> Choices => _choices;
+
+        public void PushChapter()
+        {
+            _chapters.Push(Chapter.New());
+        }
+
+        public void PopChapter()
+        {
+            if (_chapters.Count > 0)
+            {
+                Chapter ch = _chapters.Pop();
+                foreach (EntityId id in ch.Entities)
+                {
+                    if (Get(id) is RenderItem2D e && !e.IsLocked)
+                    {
+                        DestroyEntity(id);
+                    }
+                }
+            }
+        }
 
         public void BeginFrame()
         {
@@ -415,6 +448,11 @@ namespace NitroSharp
             );
 
             _pendingBucketChanges.Add((id, EntityBucket.Active));
+
+            if (_chapters.TryPeek(out Chapter currentChapter))
+            {
+                currentChapter.Entities.Add(entity.Id);
+            }
         }
 
         private EntityId Resolve(in EntityPath path)

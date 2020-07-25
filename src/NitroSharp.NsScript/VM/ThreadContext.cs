@@ -9,7 +9,8 @@ namespace NitroSharp.NsScript.VM
         internal long? SuspensionTime;
         internal long? SleepTimeout;
         internal bool Yielded;
-        internal EntityPath? DialogueBlock;
+        internal EntityPath? DialoguePage;
+        internal bool SelectResult;
 
         internal ThreadContext(uint id, ref CallFrame frame)
         {
@@ -32,6 +33,7 @@ namespace NitroSharp.NsScript.VM
     {
         public readonly NsxModule Module;
         public readonly ushort SubroutineIndex;
+        public readonly SubroutineKind SubroutineKind;
         public readonly ushort ArgStart;
         public readonly ushort ArgCount;
 
@@ -40,12 +42,14 @@ namespace NitroSharp.NsScript.VM
         public CallFrame(
             NsxModule module,
             ushort subroutineIndex,
+            SubroutineKind subroutineKind,
             int pc = 0,
             ushort argStart = 0,
             ushort argCount = 0)
         {
             Module = module;
             SubroutineIndex = subroutineIndex;
+            SubroutineKind = subroutineKind;
             ProgramCounter = pc;
             ArgStart = argStart;
             ArgCount = argCount;

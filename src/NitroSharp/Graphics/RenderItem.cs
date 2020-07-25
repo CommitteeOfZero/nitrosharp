@@ -191,7 +191,7 @@ namespace NitroSharp.Graphics
             }
         }
 
-        private RectangleF BoundingRect { get; set; }
+        protected RectangleF BoundingRect { get; private set; }
         protected ref QuadGeometry Quad => ref _quad;
         protected ref Matrix4x4 WorldMatrix => ref _worldMatrix;
 
@@ -333,8 +333,11 @@ namespace NitroSharp.Graphics
 
         public Vector3 Point(RenderContext ctx, NsCoordinate x, NsCoordinate y)
         {
-            Size screen = ctx.DesignResolution;
             Vector3 pos = Transform.Position;
+            Size screenBounds = ctx.DesignResolution;
+            Size parentBounds = Parent is RenderItem2D parentVisual
+                ? parentVisual.GetUnconstrainedBounds(ctx)
+                : screenBounds;
             Vector3 origin = Parent switch
             {
                 ConstraintBox { IsContainer: false } => Vector3.Zero,
@@ -344,13 +347,13 @@ namespace NitroSharp.Graphics
             pos.X = x switch
             {
                 NsCoordinate { Kind: NsCoordinateKind.Value, Value: var val }
-                => val.isRelative ? pos.X + val.pos : origin.X + val.pos,
+                    => val.isRelative ? pos.X + val.pos : origin.X + val.pos,
                 NsCoordinate { Kind: NsCoordinateKind.Inherit } => origin.X,
                 NsCoordinate { Kind: NsCoordinateKind.Alignment, Alignment: var align } => align switch
                 {
-                    NsAlignment.Left => 0.0f,
-                    NsAlignment.Center => screen.Width / 2.0f,
-                    NsAlignment.Right => screen.Width,
+                    NsAlignment.Left => origin.X,
+                    NsAlignment.Center => screenBounds.Width / 2.0f,
+                    NsAlignment.Right => origin.X + parentBounds.Width,
                     _ => ThrowHelper.UnexpectedValue<float>()
                 },
                 _ => 0.0f
@@ -358,13 +361,13 @@ namespace NitroSharp.Graphics
             pos.Y = y switch
             {
                 NsCoordinate { Kind: NsCoordinateKind.Value, Value: var val }
-                => val.isRelative ? pos.Y + val.pos : origin.Y + val.pos,
+                    => val.isRelative ? pos.Y + val.pos : origin.Y + val.pos,
                 NsCoordinate { Kind: NsCoordinateKind.Inherit } => origin.Y,
                 NsCoordinate { Kind: NsCoordinateKind.Alignment, Alignment: var align } => align switch
                 {
-                    NsAlignment.Top => 0.0f,
-                    NsAlignment.Center => screen.Height / 2.0f,
-                    NsAlignment.Bottom => screen.Height,
+                    NsAlignment.Top => origin.Y,
+                    NsAlignment.Center => screenBounds.Height / 2.0f,
+                    NsAlignment.Bottom => origin.Y + parentBounds.Height,
                     _ => ThrowHelper.UnexpectedValue<float>()
                 },
                 _ => 0.0f

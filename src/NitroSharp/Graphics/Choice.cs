@@ -2,15 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
-using NitroSharp.Graphics;
 using NitroSharp.NsScript;
-using Vulkan.Xlib;
 
 #nullable enable
 
-namespace NitroSharp
+namespace NitroSharp.Graphics
 {
-    internal sealed class Choice : Entity
+    internal sealed class Choice : Entity, UiElement
     {
         private struct FocusData
         {
@@ -20,16 +18,18 @@ namespace NitroSharp
             public EntityId Down;
         }
 
+        private MouseState _mouseState;
+        private MouseState _prevMouseState;
         private readonly List<RenderItem2D> _mouseOverVisuals;
         private readonly List<RenderItem2D> _mouseDownVisuals;
         private FocusData _nextFocus;
 
         public Choice(in ResolvedEntityPath path)
-            : base(in path)
+            : base(path)
         {
             _mouseOverVisuals = new List<RenderItem2D>();
             _mouseDownVisuals = new List<RenderItem2D>();
-            LastMouseState = MouseState.Normal;
+            _prevMouseState = _mouseState = MouseState.Normal;
         }
 
         public RenderItem2D? DefaultVisual { get; set; }
@@ -39,9 +39,7 @@ namespace NitroSharp
         public int Priority => DefaultVisual?.Key.Priority ?? 0;
         public bool CanFocus { get; private set; }
 
-        public MouseState LastMouseState { get; private set; }
-        private MouseState PrevMouseState { get; set; }
-
+        public bool IsHovered => _mouseState == MouseState.Over;
         public override bool IsIdle => true;
 
         public void AddMouseOver(RenderItem2D visual)
@@ -59,21 +57,24 @@ namespace NitroSharp
             _ => ThrowHelper.Unreachable<EntityId>()
         };
 
-        public void HandleInput(InputContext inputCtx, RenderContext renderCtx)
+        public void RecordInput(InputContext inputCtx, RenderContext renderCtx)
         {
             if (DefaultVisual is RenderItem2D visual)
             {
-                bool mouseDown = inputCtx.VKeyState(VirtualKey.Enter);
-                bool mouseOver = visual.HitTest(renderCtx, inputCtx);
-                MouseState newPrevMouseState = LastMouseState;
-                LastMouseState = (PrevMouseState, mouseOver, mouseDown) switch
+                bool hovered = visual.HitTest(renderCtx, inputCtx);
+                bool pressed = inputCtx.VKeyState(VirtualKey.Enter);
+                MouseState newState = hovered switch
                 {
-                    (MouseState.Down, true, false) => MouseState.Clicked,
-                    (_, true, false) => MouseState.Over,
-                    (_, true, true) => MouseState.Down,
-                    (_, false, _) => MouseState.Normal
+                    true => (pressed, PrevMouseState: _prevMouseState) switch
+                    {
+                        (false, MouseState.Down) => MouseState.Clicked,
+                        (false, _) => MouseState.Over,
+                        (true, _) => MouseState.Down
+                    },
+                    _ => MouseState.Normal
                 };
-                PrevMouseState = newPrevMouseState;
+                _prevMouseState = _mouseState;
+                _mouseState = newState;
             }
         }
 
@@ -106,7 +107,7 @@ namespace NitroSharp
             }
         }
 
-        private enum StateTransition
+        private enum Event
         {
             None,
             Entered,
@@ -114,7 +115,7 @@ namespace NitroSharp
             Pressed
         }
 
-        public bool Update()
+        public bool HandleEvents()
         {
             static void fade(List<RenderItem2D> list, float dstOpacity, TimeSpan duration)
             {
@@ -128,43 +129,43 @@ namespace NitroSharp
             {
                 CanFocus = _mouseOverVisuals.Any(x => !x.IsHidden);
 
-                StateTransition transition = (PrevMouseState, LastMouseState) switch
+                Event evt = (PrevMouseState: _prevMouseState, MouseState: _mouseState) switch
                 {
-                    (MouseState.Normal, MouseState.Over) => StateTransition.Entered,
-                    (MouseState.Over, MouseState.Normal) => StateTransition.Left,
-                    (MouseState.Over, MouseState.Down) => StateTransition.Pressed,
-                    (MouseState.Down, MouseState.Normal) => StateTransition.Left,
-                    _ => StateTransition.None
+                    (MouseState.Normal, MouseState.Over) => Event.Entered,
+                    (MouseState.Over, MouseState.Normal) => Event.Left,
+                    (MouseState.Over, MouseState.Down) => Event.Pressed,
+                    (MouseState.Down, MouseState.Normal) => Event.Left,
+                    _ => Event.None
                 };
 
                 var duration = TimeSpan.FromMilliseconds(200);
-                switch (transition)
+                switch (evt)
                 {
-                    case StateTransition.Entered:
+                    case Event.Entered:
                         visual.Fade(0.0f, duration);
                         fade(_mouseDownVisuals, 0.0f, TimeSpan.Zero);
                         fade(_mouseOverVisuals, 1.0f, TimeSpan.Zero);
                         MouseLeaveThread?.Terminate();
                         MouseEnterThread?.Restart();
                         break;
-                    case StateTransition.Left:
+                    case Event.Left:
                         fade(_mouseOverVisuals, 0.0f, duration);
                         fade(_mouseDownVisuals, 0.0f, TimeSpan.Zero);
                         visual.Fade(1.0f, duration);
                         MouseEnterThread?.Terminate();
                         MouseLeaveThread?.Restart();
                         break;
-                    case StateTransition.Pressed:
+                    case Event.Pressed:
                         visual.Fade(0, TimeSpan.Zero);
                         fade(_mouseOverVisuals, 0.0f, TimeSpan.Zero);
                         fade(_mouseDownVisuals, 1.0f, TimeSpan.Zero);
                         break;
                 }
 
-                bool clicked = LastMouseState == MouseState.Clicked;
+                bool clicked = _mouseState == MouseState.Clicked;
                 if (clicked)
                 {
-                    DefaultVisual?.Fade(0, TimeSpan.Zero);
+                    DefaultVisual.Fade(0, TimeSpan.Zero);
                     fade(_mouseOverVisuals, 1.0f, TimeSpan.Zero);
                     fade(_mouseDownVisuals, 0.0f, TimeSpan.Zero);
                     MouseEnterThread?.Terminate();

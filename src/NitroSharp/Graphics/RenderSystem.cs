@@ -28,49 +28,83 @@ namespace NitroSharp.Graphics
 
         public RenderContext Context { get; }
 
+        public void BeginFrame(in FrameStamp frameStamp)
+            => Context.BeginFrame(frameStamp);
+
+        public void EndFrame()
+            => Context.EndFrame();
+
         public void Render(
             GameContext ctx,
-            ReadOnlySpan<RenderItem> renderItems,
-            in FrameStamp frameStamp,
+            SortableEntityGroupView<RenderItem> renderItems,
             float dt,
             bool assetsReady)
         {
-            Context.BeginFrame(frameStamp);
-
-            foreach (RenderItem ri in renderItems)
+            ReadOnlySpan<RenderItem> active = renderItems.SortActive();
+            ReadOnlySpan<RenderItem> inactive = renderItems.Disabled;
+            foreach (RenderItem ri in active)
             {
                 ri.Update(ctx, dt, assetsReady);
             }
-            foreach (RenderItem ri in renderItems)
+            foreach (RenderItem ri in inactive)
+            {
+                ri.Update(ctx, dt, assetsReady);
+            }
+
+            Context.ResolveGlyphs();
+
+            foreach (RenderItem ri in active)
             {
                 if (!ri.IsHidden)
                 {
                     ri.Render(Context, assetsReady);
                 }
             }
-
-            Context.EndFrame();
         }
 
-        public void ProcessChoices(World world, InputContext inputCtx)
+        public void ProcessChoices(World world, InputContext inputCtx, GameWindow window)
         {
             ReadOnlySpan<Choice> choices = world.Choices.Enabled;
-            if (choices.IsEmpty) { return; }
+            //if (choices.IsEmpty) { return; }
 
             Choice? focusedChoice = null, firstChoice = null;
             int maxPriority = -1;
+            bool anyHovered = false;
             foreach (Choice c in choices)
             {
-                c.HandleInput(inputCtx, Context);
+                c.RecordInput(inputCtx, Context);
+                anyHovered |= c.IsHovered;
                 if (c.CanFocus && c.Priority > maxPriority)
                 {
+                    maxPriority = c.Priority;
                     firstChoice = c;
-                    if (c.LastMouseState == MouseState.Over)
+                    if (c.IsHovered)
                     {
                         focusedChoice = c;
                     }
                 }
             }
+
+            foreach (RenderItem ri in world.RenderItems.Enabled)
+            {
+                if (ri is UiElement c)
+                {
+                    c.RecordInput(inputCtx, Context);
+                    anyHovered |= c.IsHovered;
+                }
+            }
+
+            foreach (RenderItem ri in world.RenderItems.Disabled)
+            {
+                if (ri is UiElement c)
+                {
+                    c.RecordInput(inputCtx, Context);
+                    anyHovered |= c.IsHovered;
+                }
+            }
+
+            SystemCursor cursor = anyHovered ? SystemCursor.Hand : SystemCursor.Arrow;
+            window.SetCursor(cursor);
 
             Choice? shiftFocus(NsFocusDirection direction, Choice? current)
             {

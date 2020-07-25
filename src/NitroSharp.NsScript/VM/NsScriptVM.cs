@@ -62,11 +62,11 @@ namespace NitroSharp.NsScript.VM
         {
             _loadedModules = new Dictionary<string, NsxModule>(16);
             _moduleLocator = moduleLocator;
-            _builtInCallDispatcher = new BuiltInFunctionDispatcher();
             _threads = new List<ThreadContext>();
             _pendingThreadActions = new Queue<ThreadAction>();
             _timer = Stopwatch.StartNew();
             _globals = new ConstantValue[5000];
+            _builtInCallDispatcher = new BuiltInFunctionDispatcher(_globals);
             GlobalVarLookup = GlobalVarLookupTable.Load(globalVarLookupTableStream);
             SystemVariables = new SystemVariableLookup(this);
             _bezierSegmentStack = new Stack<CubicBezierSegment>();
@@ -85,10 +85,11 @@ namespace NitroSharp.NsScript.VM
             var frame = new CallFrame(
                 blockToken.Module,
                 (ushort)blockToken.SubroutineIndex,
+                SubroutineKind.Function,
                 pc: blockToken.Offset
             );
             var thread = new ThreadContext(++_lastThreadId, ref frame);
-            thread.DialogueBlock = new EntityPath($"{blockToken.BoxName}/{blockToken.BlockName}");
+            thread.DialoguePage = new EntityPath("@" + blockToken.BlockName);
             _pendingThreadActions.Enqueue(ThreadAction.Create(thread));
             return thread;
         }
@@ -97,7 +98,8 @@ namespace NitroSharp.NsScript.VM
         {
             NsxModule module = GetModule(moduleName);
             ushort subIndex = (ushort)module.LookupSubroutineIndex(symbol);
-            var frame = new CallFrame(module, subIndex);
+            SubroutineKind kind = module.GetSubroutineRuntimeInfo(subIndex).SubroutineKind;
+            var frame = new CallFrame(module, subIndex, kind);
             var thread = new ThreadContext(++_lastThreadId, ref frame);
             _pendingThreadActions.Enqueue(ThreadAction.Create(thread));
             MainThread ??= thread;
@@ -234,7 +236,7 @@ namespace NitroSharp.NsScript.VM
             ref ConstantValue val = ref _globals[index];
             if (val.Type == BuiltInType.Uninitialized)
             {
-                val = ConstantValue.Integer(0);
+                val = ConstantValue.Number(0);
             }
 
             return ref val;
@@ -265,13 +267,14 @@ namespace NitroSharp.NsScript.VM
                 ConstantValue? imm = opcode switch
                 {
                     Opcode.LoadImm => readConst(ref program, thisModule),
-                    Opcode.LoadImm0 => ConstantValue.Integer(0),
-                    Opcode.LoadImm1 => ConstantValue.Integer(1),
+                    Opcode.LoadImm0 => ConstantValue.Number(0),
+                    Opcode.LoadImm1 => ConstantValue.Number(1),
                     Opcode.LoadImmTrue => ConstantValue.True,
                     Opcode.LoadImmFalse => ConstantValue.False,
                     Opcode.LoadImmNull => ConstantValue.Null,
                     Opcode.LoadImmEmptyStr => ConstantValue.EmptyString,
-                    Opcode.LoadVar => GetGlobalVar((varToken = program.DecodeToken())),
+                    Opcode.LoadVar => GetGlobalVar(varToken = program.DecodeToken())
+                        .WithSlot((short)varToken),
                     _ => null
                 };
 
@@ -316,25 +319,24 @@ namespace NitroSharp.NsScript.VM
                         ref ConstantValue val = ref stack.Peek();
                         val = val.Type switch
                         {
-                            BuiltInType.Integer => ConstantValue.Integer(-val.AsInteger()!.Value),
-                            BuiltInType.Float => ConstantValue.Float(-val.AsFloat()!.Value),
+                            BuiltInType.Numeric => ConstantValue.Number(-val.AsNumber()!.Value),
                             _ => ThrowHelper.Unreachable<ConstantValue>()
                         };
                         break;
                     case Opcode.Inc:
                         val = ref stack.Peek();
-                        Debug.Assert(val.Type == BuiltInType.Integer); // TODO: runtime error
-                        val = ConstantValue.Integer(val.AsInteger()!.Value + 1);
+                        Debug.Assert(val.Type == BuiltInType.Numeric); // TODO: runtime error
+                        val = ConstantValue.Number(val.AsNumber()!.Value + 1);
                         break;
                     case Opcode.Dec:
                         val = ref stack.Peek();
-                        Debug.Assert(val.Type == BuiltInType.Integer); // TODO: runtime error
-                        val = ConstantValue.Integer(val.AsInteger()!.Value - 1);
+                        Debug.Assert(val.Type == BuiltInType.Numeric); // TODO: runtime error
+                        val = ConstantValue.Number(val.AsNumber()!.Value - 1);
                         break;
                     case Opcode.Delta:
                         val = ref stack.Peek();
-                        Debug.Assert(val.Type == BuiltInType.Integer);
-                        val = ConstantValue.Delta(val.AsInteger()!.Value);
+                        Debug.Assert(val.Type == BuiltInType.Numeric);
+                        val = ConstantValue.Delta(val.AsNumber()!.Value);
                         break;
                     case Opcode.Invert:
                         val = ref stack.Peek();
@@ -348,7 +350,7 @@ namespace NitroSharp.NsScript.VM
                         ushort argCount = program.ReadByte();
                         ushort argStart = (ushort)(stack.Count - argCount);
                         frame.ProgramCounter = program.Position;
-                        var newFrame = new CallFrame(frame.Module, subroutineToken, 0, argStart, argCount);
+                        var newFrame = new CallFrame(frame.Module, subroutineToken, SubroutineKind.Function, 0, argStart, argCount);
                         thread.CallFrameStack.Push(newFrame);
                         if (CurrentThread == MainThread)
                         {
@@ -368,9 +370,15 @@ namespace NitroSharp.NsScript.VM
                         argStart = (ushort)(stack.Count - argCount);
                         string externalModuleName = thisModule.Imports[importTableIndex];
                         NsxModule externalModule = GetModule(externalModuleName);
-                        newFrame = new CallFrame(externalModule, subroutineToken, 0, argStart, argCount);
+                        SubroutineKind kind = externalModule.GetSubroutineRuntimeInfo(subroutineToken)
+                            .SubroutineKind;
+                        newFrame = new CallFrame(externalModule, subroutineToken, kind, 0, argStart, argCount);
                         thread.CallFrameStack.Push(newFrame);
                         frame.ProgramCounter = program.Position;
+                        if (kind == SubroutineKind.Chapter)
+                        {
+                            builtins.BeginChapter();
+                        }
                         if (CurrentThread == MainThread)
                         {
                             string name = externalModule.GetSubroutineRuntimeInfo(subroutineToken)
@@ -410,6 +418,10 @@ namespace NitroSharp.NsScript.VM
                         if (thread.CallFrameStack.Count > 0)
                         {
                             thread.CallFrameStack.Pop();
+                            if (frame.SubroutineKind == SubroutineKind.Chapter)
+                            {
+                                builtins.EndChapter();
+                            }
                         }
                         return TickResult.Ok;
                     case Opcode.BezierStart:
@@ -485,28 +497,36 @@ namespace NitroSharp.NsScript.VM
                         );
                         (string box, string textName) = srti.DialogueBlockInfos[blockId];
                         SystemVariables.CurrentDialogueBox = ConstantValue.String(box);
-                        SystemVariables.CurrentDialogueBlock = ConstantValue.String(textName);
+                        SystemVariables.CurrentDialogueBlock = ConstantValue.String("@" + textName);
                         break;
+                    case Opcode.ClearPage:
+                        Debug.Assert(thread.DialoguePage.HasValue);
+                        builtins.ClearDialoguePage(thread.DialoguePage.Value);
+                        break;
+                    case Opcode.AppendDialogue:
+                        Debug.Assert(thread.DialoguePage.HasValue);
+                        string text = thisModule.GetString(program.DecodeToken());
+                        builtins.AppendDialogue(thread.DialoguePage.Value, text);
+                        break;
+                    case Opcode.LineEnd:
+                        Debug.Assert(thread.DialoguePage.HasValue);
+                        builtins.LineEnd(thread.DialoguePage.Value);
+                        frame.ProgramCounter = program.Position;
+                        return TickResult.Ok;
 
                     case Opcode.SelectStart:
+                        thread.SelectResult = false;
                         break;
                     case Opcode.IsPressed:
                         string choice = thisModule.GetString(program.DecodeToken());
-                        bool pressed = builtins.UpdateChoice(new EntityPath(choice));
+                        bool pressed = builtins.HandleInputEvents(new EntityPath(choice));
                         stack.Push(ConstantValue.Boolean(pressed));
+                        thread.SelectResult |= pressed;
                         break;
                     case Opcode.SelectEnd:
+                        stack.Push(ConstantValue.Boolean(thread.SelectResult));
                         frame.ProgramCounter = program.Position;
                         return TickResult.Yield;
-                    case Opcode.DisplayLine:
-                        Debug.Assert(thread.DialogueBlock.HasValue);
-                        string text = thisModule.GetString(program.DecodeToken());
-                        builtins.DisplayLine(thread.DialogueBlock.Value, text);
-                        break;
-                    case Opcode.AwaitInput:
-                        builtins.WaitForInput();
-                        frame.ProgramCounter = program.Position;
-                        return TickResult.Ok;
                 }
             }
 
@@ -515,8 +535,8 @@ namespace NitroSharp.NsScript.VM
                 Immediate imm = stream.DecodeImmediateValue();
                 return imm.Type switch
                 {
-                    BuiltInType.Integer => ConstantValue.Integer(imm.IntegerValue),
-                    BuiltInType.DeltaInteger => ConstantValue.Delta(imm.IntegerValue),
+                    BuiltInType.Numeric => ConstantValue.Number(imm.Numeric),
+                    BuiltInType.DeltaNumeric => ConstantValue.Delta(imm.Numeric),
                     BuiltInType.BuiltInConstant => ConstantValue.BuiltInConstant(imm.Constant),
                     BuiltInType.String => ConstantValue.String(module.GetString(imm.StringToken)),
                     _ => ThrowHelper.Unreachable<ConstantValue>()
@@ -569,6 +589,12 @@ namespace NitroSharp.NsScript.VM
 
         private readonly int _x360ButtonLbDown;
         private readonly int _x360ButtonRbDown;
+        private readonly int _backlogEnable;
+        private readonly int _backlogRowMax;
+        private readonly int _backlogPositionX;
+        private readonly int _backlogPositionY;
+        private readonly int _backlogRowInterval;
+        private readonly int _backlogCharacterWidth;
 
         public SystemVariableLookup(NsScriptVM vm)
         {
@@ -588,6 +614,13 @@ namespace NitroSharp.NsScript.VM
             _x360ButtonDownDown = Lookup("SYSTEM_XBOX360_button_down_down");
             _x360ButtonLbDown = Lookup("SYSTEM_XBOX360_button_lb_down");
             _x360ButtonRbDown = Lookup("SYSTEM_XBOX360_button_rb_down");
+
+            _backlogEnable = Lookup("SYSTEM_backlog_enable");
+            _backlogRowMax = Lookup("SYSTEM_backlog_row_max");
+            _backlogPositionX = Lookup("SYSTEM_backlog_position_x");
+            _backlogPositionY = Lookup("SYSTEM_backlog_position_y");
+            _backlogRowInterval = Lookup("SYSTEM_backlog_row_interval");
+            _backlogCharacterWidth = Lookup("SYSTEM_backlog_character_width");
         }
 
         private int Lookup(string name)
@@ -615,5 +648,12 @@ namespace NitroSharp.NsScript.VM
         public ref ConstantValue X360RbButtonDown => ref Var(_x360ButtonRbDown);
 
         private ref ConstantValue Var(int index) => ref _vm.GetGlobalVar(index);
+
+        public ref ConstantValue BacklogEnable => ref _vm.GetGlobalVar(_backlogEnable);
+        public ref ConstantValue BacklogRowMax => ref _vm.GetGlobalVar(_backlogRowMax);
+        public ref ConstantValue BacklogRowInterval => ref _vm.GetGlobalVar(_backlogRowInterval);
+        public ref ConstantValue BacklogPositionX => ref _vm.GetGlobalVar(_backlogPositionX);
+        public ref ConstantValue BacklogPositionY => ref _vm.GetGlobalVar(_backlogPositionY);
+        public ref ConstantValue BacklogCharacterWidth => ref _vm.GetGlobalVar(_backlogCharacterWidth);
     }
 }

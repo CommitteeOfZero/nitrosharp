@@ -1,17 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Numerics;
 using NitroSharp.NsScript.Primitives;
 
 namespace NitroSharp.NsScript.VM
 {
     internal sealed class BuiltInFunctionDispatcher
     {
+        private readonly ConstantValue[] _globals;
         private BuiltInFunctions _impl;
         private ConstantValue? _result;
 
-        public BuiltInFunctionDispatcher()
+        public BuiltInFunctionDispatcher(ConstantValue[] globals)
         {
+            _globals = globals;
             _impl = null!;
         }
 
@@ -30,10 +33,26 @@ namespace NitroSharp.NsScript.VM
             var args = new ArgConsumer(cvs);
             switch (function)
             {
+                case BuiltInFunction.Position:
+                    Position(ref args);
+                    break;
+                case BuiltInFunction.CursorPosition:
+                    CursorPosition(ref args);
+                    break;
+
                 case BuiltInFunction.MoveCursor:
                     MoveCursor(ref args);
                     break;
 
+                case BuiltInFunction.CreateBacklog:
+                    CreateBacklog(ref args);
+                    break;
+                case BuiltInFunction.SetBacklog:
+                    SetBacklog(ref args);
+                    break;
+                case BuiltInFunction.ClearBacklog:
+                    ClearBacklog();
+                    break;
                 case BuiltInFunction.EnableBacklog:
                     EnableBacklog();
                     break;
@@ -188,6 +207,9 @@ namespace NitroSharp.NsScript.VM
                 case BuiltInFunction.CreateScrollbar:
                     CreateScrollbar(ref args);
                     break;
+                case BuiltInFunction.SetScrollbar:
+                    SetScrollbar(ref args);
+                    break;
                 case BuiltInFunction.ScrollbarValue:
                     ScrollbarValue(ref args);
                     break;
@@ -252,6 +274,48 @@ namespace NitroSharp.NsScript.VM
             return result;
         }
 
+        private void CursorPosition(ref ArgConsumer args)
+        {
+            short xSlot = args.TakeRef();
+            short ySlot = args.TakeRef();
+            Vector2 position = _impl.GetCursorPosition();
+            _globals[xSlot] = ConstantValue.Number((int)position.X);
+            _globals[ySlot] = ConstantValue.Number((int)position.Y);
+        }
+
+        private void Position(ref ArgConsumer args)
+        {
+            EntityPath path = args.TakeEntityPath();
+            short xSlot = args.TakeRef();
+            short ySlot = args.TakeRef();
+            Vector2 position = _impl.GetPosition(path);
+            _globals[xSlot] = ConstantValue.Number((int)position.X);
+            _globals[ySlot] = ConstantValue.Number((int)position.Y);
+        }
+
+        private void SetScrollbar(ref ArgConsumer args)
+        {
+            _impl.SetScrollbar(scrollbar: args.TakeEntityPath(), parent: args.TakeEntityPath());
+        }
+
+        private void CreateBacklog(ref ArgConsumer args)
+        {
+            _impl.CreateBacklog(args.TakeEntityPath(), priority: args.TakeInt());
+        }
+
+        private void SetBacklog(ref ArgConsumer args)
+        {
+            string text = args.TakeString();
+            args.Take();
+            args.Take();
+            _impl.SetBacklog(text);
+        }
+
+        private void ClearBacklog()
+        {
+            _impl.ClearBacklog();
+        }
+
         private void MoveCursor(ref ArgConsumer args)
         {
             _impl.MoveCursor(x: args.TakeInt(), y: args.TakeInt());
@@ -294,16 +358,16 @@ namespace NitroSharp.NsScript.VM
                 y1: args.TakeInt(),
                 x2: args.TakeInt(),
                 y2: args.TakeInt(),
-                pos: args.TakeInt(),
-                kind: EnumConversions.ToScrollbarKind(args.TakeConstant()),
-                src: args.TakeString()
+                initialValue: args.TakeRational(),
+                scrollDirection: EnumConversions.ToScrollDirection(args.TakeConstant()),
+                knobImage: args.TakeString()
             );
         }
 
         private void ScrollbarValue(ref ArgConsumer args)
         {
             EntityPath scrollbarEntity = args.TakeEntityPath();
-            SetResult(ConstantValue.Float(_impl.GetScrollbarValue(scrollbarEntity)));
+            SetResult(ConstantValue.Number(_impl.GetScrollbarValue(scrollbarEntity)));
         }
 
         private void WaitMove(ref ArgConsumer args)
@@ -402,12 +466,10 @@ namespace NitroSharp.NsScript.VM
             ConstantValue value = args.TakeOpt(ConstantValue.Null);
             switch (value.Type)
             {
-                case BuiltInType.Integer:
+                case BuiltInType.Numeric:
+                    value = ConstantValue.Number((int)value.AsNumber()!.Value);
                     break;
-                case BuiltInType.Float:
-                    value = ConstantValue.Integer((int)value.AsFloat()!.Value);
-                    break;
-                    //default:
+                //default:
                     //    UnexpectedArgType<ConstantValue>(0, BuiltInType.Integer, value.Type);
                     //    break;
             }
@@ -428,29 +490,34 @@ namespace NitroSharp.NsScript.VM
             );
         }
 
-        private void WaitText(ref ArgConsumer args)
-        {
-            _impl.WaitText(args.TakeEntityQuery(), args.TakeTimeSpan());
-        }
-
         private void LoadText(ref ArgConsumer args)
         {
             string subroutineName = args.TakeString();
             string boxName = args.TakeString();
-            string textName = args.TakeString();
+            string blockName = args.TakeString();
             uint maxWidth = args.TakeUInt();
             uint maxHeight = args.TakeUInt();
             int letterSpacing = args.TakeInt();
             int lineSpacing = args.TakeInt();
 
-            NsxModule module = _impl.CurrentThread.CallFrameStack.Peek(1).Module;
-            int subroutineIdx = module.LookupSubroutineIndex(subroutineName);
-            ref readonly SubroutineRuntimeInfo srti = ref module.GetSubroutineRuntimeInfo(subroutineIdx);
-            int blockIndex = srti.LookupDialogueBlockIndex(textName);
-            int offset = module.GetSubroutine(subroutineIdx).DialogueBlockOffsets[blockIndex];
+            if (blockName.StartsWith('@'))
+            {
+                blockName = blockName[1..];
+            }
 
-            var token = new DialogueBlockToken(textName, boxName, module, subroutineIdx, offset);
-            _impl.LoadDialogue(token, maxWidth, maxHeight, letterSpacing, lineSpacing);
+            NsxModule module = _impl.CurrentThread.CallFrameStack.Peek(1).Module;
+            int sub = module.LookupSubroutineIndex(subroutineName);
+            ref readonly SubroutineRuntimeInfo srti = ref module.GetSubroutineRuntimeInfo(sub);
+            int blockIndex = srti.LookupDialogueBlockIndex(blockName);
+            int codeOffset = module.GetSubroutine(sub).DialogueBlockOffsets[blockIndex];
+
+            var token = new DialogueBlockToken(boxName, blockName, module, sub, codeOffset);
+            _impl.LoadDialogueBlock(token, maxWidth, maxHeight, letterSpacing, lineSpacing);
+        }
+
+        private void WaitText(ref ArgConsumer args)
+        {
+            _impl.WaitText(args.TakeEntityQuery(), args.TakeTimeSpan());
         }
 
         private void SetVolume(ref ArgConsumer args)
@@ -501,7 +568,7 @@ namespace NitroSharp.NsScript.VM
         private void SetLoop(ref ArgConsumer args)
         {
             _impl.ToggleLooping(
-                args.TakeEntityPath(),
+                args.TakeEntityQuery(),
                 looping: args.TakeBool()
             );
         }
@@ -634,7 +701,7 @@ namespace NitroSharp.NsScript.VM
         {
             _impl.LoadImage(
                 args.TakeEntityPath(),
-                fileName: args.TakeString()
+                source: args.TakeString()
             );
         }
 
@@ -699,7 +766,7 @@ namespace NitroSharp.NsScript.VM
 
         private void Time()
         {
-            SetResult(ConstantValue.Integer(0));
+            SetResult(ConstantValue.Number(0));
         }
 
         private void String(ref ArgConsumer args)
@@ -708,7 +775,7 @@ namespace NitroSharp.NsScript.VM
             var list = new List<object>();
             foreach (ref readonly ConstantValue arg in args.AsSpan(1))
             {
-                int? num = arg.AsInteger();
+                int? num = (int?)arg.AsNumber();
                 if (num != null)
                 {
                     list.Add(num.Value);
@@ -729,49 +796,49 @@ namespace NitroSharp.NsScript.VM
 
         private void Platform()
         {
-            SetResult(ConstantValue.Integer(_impl.GetPlatformId()));
+            SetResult(ConstantValue.Number(_impl.GetPlatformId()));
         }
 
         private void SoundAmplitude(ref ArgConsumer args)
         {
             string characterName = args.TakeString();
-            SetResult(ConstantValue.Integer(_impl.GetSoundAmplitude(characterName)));
+            SetResult(ConstantValue.Number(_impl.GetSoundAmplitude(characterName)));
         }
 
         private void Random(ref ArgConsumer args)
         {
             int max = args.TakeInt();
-            SetResult(ConstantValue.Integer(_impl.GetRandomNumber(max)));
+            SetResult(ConstantValue.Number(_impl.GetRandomNumber(max)));
         }
 
         private void ImageHorizon(ref ArgConsumer args)
         {
             EntityPath entityPath = args.TakeEntityPath();
-            SetResult(ConstantValue.Integer(_impl.GetWidth(entityPath)));
+            SetResult(ConstantValue.Number(_impl.GetWidth(entityPath)));
         }
 
         private void ImageVertical(ref ArgConsumer args)
         {
             EntityPath entityPath = args.TakeEntityPath();
-            SetResult(ConstantValue.Integer(_impl.GetHeight(entityPath)));
+            SetResult(ConstantValue.Number(_impl.GetHeight(entityPath)));
         }
 
         private void RemainTime(ref ArgConsumer args)
         {
-            EntityPath entityPath = args.TakeEntityPath();
-            SetResult(ConstantValue.Integer(_impl.GetTimeRemaining(entityPath)));
+            EntityQuery query = args.TakeEntityQuery();
+            SetResult(ConstantValue.Number(_impl.GetTimeRemaining(query)));
         }
 
         private void PassageTime(ref ArgConsumer args)
         {
             EntityPath entityPath = args.TakeEntityPath();
-            SetResult(ConstantValue.Integer(_impl.GetTimeElapsed(entityPath)));
+            SetResult(ConstantValue.Number(_impl.GetTimeElapsed(entityPath)));
         }
 
         private void DurationTime(ref ArgConsumer args)
         {
             EntityPath entityPath = args.TakeEntityPath();
-            SetResult(ConstantValue.Integer(_impl.GetSoundDuration(entityPath)));
+            SetResult(ConstantValue.Number(_impl.GetSoundDuration(entityPath)));
         }
 
         private void XBOX360_AwardGameIcon()
@@ -791,7 +858,7 @@ namespace NitroSharp.NsScript.VM
         private void XBOX360_PadTrigger(ref ArgConsumer args)
         {
             int unk = args.TakeInt();
-            _result = ConstantValue.Integer(0);
+            _result = ConstantValue.Number(0);
         }
 
         private void XBOX360_ExistContent(ref ArgConsumer args)
@@ -801,17 +868,17 @@ namespace NitroSharp.NsScript.VM
 
         private void XBOX360_StorageSize(ref ArgConsumer args)
         {
-            _result = ConstantValue.Integer(int.MaxValue);
+            _result = ConstantValue.Number(int.MaxValue);
         }
 
         private void XBOX360_CurrentStorage(ref ArgConsumer args)
         {
-            _result = ConstantValue.Integer(0);
+            _result = ConstantValue.Number(0);
         }
 
         private void XBOX360_UserIndex(ref ArgConsumer args)
         {
-            _result = ConstantValue.Integer(0);
+            _result = ConstantValue.Number(0);
         }
 
         private void XBOX360_CheckStorage(ref ArgConsumer args)
@@ -869,7 +936,7 @@ namespace NitroSharp.NsScript.VM
                 _pos = 0;
             }
 
-            private static TimeSpan Time(int ms) => TimeSpan.FromMilliseconds(ms);
+            private static TimeSpan Time(float ms) => TimeSpan.FromMilliseconds(ms);
 
             public int Count => _args.Length;
 
@@ -909,15 +976,15 @@ namespace NitroSharp.NsScript.VM
             public int TakeInt()
             {
                 ConstantValue arg = Take();
-                return arg.AsInteger()!.Value;
+                return (int)arg.AsNumber()!.Value;
             }
 
             public TimeSpan TakeTimeSpan()
             {
-                ConstantValue val = TakeOpt(ConstantValue.Integer(0));
-                int num = val.Type switch
+                ConstantValue val = TakeOpt(ConstantValue.Number(0));
+                float num = val.Type switch
                 {
-                    BuiltInType.Integer => val.AsInteger()!.Value,
+                    BuiltInType.Numeric => val.AsNumber()!.Value,
                     BuiltInType.String => int.Parse(val.AsString()!),
                     BuiltInType.Null => 0,
                     _ => UnexpectedType<int>(val.Type)
@@ -937,7 +1004,7 @@ namespace NitroSharp.NsScript.VM
                 return val.Type switch
                 {
                     BuiltInType.String => NsColor.FromString(val.AsString()!),
-                    BuiltInType.Integer => NsColor.FromRgb(val.AsInteger()!.Value),
+                    BuiltInType.Numeric => NsColor.FromRgb((int)val.AsNumber()!.Value),
                     BuiltInType.BuiltInConstant => NsColor.FromConstant(val.AsBuiltInConstant()!.Value),
                     _ => UnexpectedType<NsColor>(val.Type)
                 };
@@ -945,18 +1012,18 @@ namespace NitroSharp.NsScript.VM
 
             public NsCoordinate TakeCoordinate()
             {
-                ConstantValue val = TakeOpt(ConstantValue.Integer(0));
+                ConstantValue val = TakeOpt(ConstantValue.Number(0));
                 NsCoordinate? ret = NsCoordinate.FromValue(val);
                 return ret ?? UnexpectedType<NsCoordinate>(val.Type);
             }
 
             public NsTextDimension TakeDimension()
             {
-                ConstantValue val = TakeOpt(ConstantValue.Integer(0));
+                ConstantValue val = TakeOpt(ConstantValue.Number(0));
                 return val.Type switch
                 {
-                    BuiltInType.Integer
-                        => NsTextDimension.WithValue(val.AsInteger()!.Value),
+                    BuiltInType.Numeric
+                        => NsTextDimension.WithValue((int)val.AsNumber()!.Value),
                     BuiltInType.BuiltInConstant
                         => NsTextDimension.FromConstant(val.AsBuiltInConstant()!.Value),
                     _ => UnexpectedType<NsTextDimension>(val.Type)
@@ -1013,8 +1080,8 @@ namespace NitroSharp.NsScript.VM
                 ConstantValue val = Take();
                 return val.Type switch
                 {
-                    BuiltInType.Integer => new NsNumeric(val.AsInteger()!.Value, isDelta: false),
-                    BuiltInType.DeltaInteger => new NsNumeric(val.AsDelta()!.Value, isDelta: true),
+                    BuiltInType.Numeric => new NsNumeric(val.AsNumber()!.Value, isDelta: false),
+                    BuiltInType.DeltaNumeric => new NsNumeric(val.AsDeltaNumber()!.Value, isDelta: true),
                     _ => UnexpectedType<NsNumeric>(val.Type)
                 };
             }
@@ -1050,6 +1117,14 @@ namespace NitroSharp.NsScript.VM
                 return val.Type == BuiltInType.BuiltInConstant
                     ? EnumConversions.ToFocusDirection(val.AsBuiltInConstant()!.Value)
                     : UnexpectedType<NsFocusDirection>(val.Type);
+            }
+
+            public short TakeRef()
+            {
+                ConstantValue val = Take();
+                return val.GetSlotInfo(out short slot)
+                    ? slot
+                    : throw new Exception("ConstantValue doesn't contain slot information. TODO: better error handling");
             }
         }
     }

@@ -15,6 +15,7 @@ namespace NitroSharp.Graphics
         public ResourceBindings ResourceBindings;
         public BufferBindings BufferBindings;
         public DrawParams Params;
+        public RectangleU? ScissorRect;
     }
 
     [StructLayout(LayoutKind.Auto)]
@@ -268,6 +269,7 @@ namespace NitroSharp.Graphics
             if (ReferenceEquals(draw.Pipeline, _lastDraw.Pipeline)
                 && draw.ResourceBindings.Equals(_lastDraw.ResourceBindings)
                 && draw.BufferBindings.Equals(_lastDraw.BufferBindings)
+                && Nullable.Equals(draw.ScissorRect, _lastDraw.ScissorRect)
                 && DrawParams.TryMerge(ref _lastDraw.Params, draw.Params))
             {
                 return;
@@ -291,6 +293,14 @@ namespace NitroSharp.Graphics
             CommandList cl = _commandList;
             cl.SetFramebuffer(Target.Framebuffer);
             cl.SetPipeline(_lastDraw.Pipeline);
+            if (_lastDraw.ScissorRect is { } sr)
+            {
+                cl.SetScissorRect(0, sr.Left, sr.Top, sr.Width, sr.Height);
+            }
+            else
+            {
+                cl.SetFullScissorRect(0);
+            }
             ref BufferBindings buffers = ref _lastDraw.BufferBindings;
             if (buffers.Vertices is DeviceBuffer vertices)
             {

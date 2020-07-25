@@ -78,6 +78,9 @@ namespace NitroSharp
         public bool Equals(Size other) => Width == other.Width && Height == other.Height;
         public override bool Equals(object? obj) => obj is Size size && Equals(size);
 
+        public Size Constrain(Size size)
+            => new Size(Math.Min(Width, size.Width), Math.Min(Height, size.Height));
+
         public SizeF ToSizeF() => new SizeF(Width, Height);
         public Vector2 ToVector2() => new Vector2(Width, Height);
 

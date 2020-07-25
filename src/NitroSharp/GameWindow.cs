@@ -7,7 +7,7 @@ using Veldrid;
 
 namespace NitroSharp
 {
-    public interface GameWindow
+    public interface GameWindow : IDisposable
     {
         SwapchainSource SwapchainSource { get; }
         AutoResetEvent Mobile_HandledSurfaceDestroyed { get; }
@@ -21,5 +21,14 @@ namespace NitroSharp
 
         InputSnapshot PumpEvents();
         void SetMousePosition(Vector2 pos);
+
+        void SetCursor(SystemCursor cursor);
+    }
+
+    public enum SystemCursor
+    {
+        Arrow,
+        Hand,
+        Wait
     }
 }

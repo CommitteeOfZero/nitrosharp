@@ -22,6 +22,16 @@ namespace NitroSharp
             _world = context.World;
         }
 
+        public override void BeginChapter()
+        {
+            _world.PushChapter();
+        }
+
+        public override void EndChapter()
+        {
+            _world.PopChapter();
+        }
+
         public override void Exit()
         {
             _ctx.ShutdownSignal.Cancel();

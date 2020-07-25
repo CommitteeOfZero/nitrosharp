@@ -46,7 +46,7 @@ namespace NitroSharp
 
             if (!_completed)
             {
-                Advance(dt);
+                Advance();
                 PostAdvance();
                 return !_completed;
             }
@@ -54,7 +54,7 @@ namespace NitroSharp
             return false;
         }
 
-        protected virtual void Advance(float dt)
+        protected virtual void Advance()
         {
         }
 
@@ -119,7 +119,7 @@ namespace NitroSharp
 
         protected abstract ref TValue GetValueRef();
 
-        protected override void Advance(float dt)
+        protected override void Advance()
         {
             InterpolateValue(ref GetValueRef(), GetFactor(Progress, _easeFunction));
         }
@@ -171,7 +171,7 @@ namespace NitroSharp
         public AssetRef<Texture> Mask { get; }
         public float FadeAmount => _fadeAmount;
 
-        protected override void Advance(float dt)
+        protected override void Advance()
         {
             float delta = _dstFadeAmount - _srcFadeAmount;
             _fadeAmount = _srcFadeAmount + delta * GetFactor(Progress, _easeFunction);
@@ -201,7 +201,7 @@ namespace NitroSharp
             _endOpacity = endOpacity;
         }
 
-        protected override void Advance(float dt)
+        protected override void Advance()
         {
             float factor = GetFactor(Progress, _easeFunction);
             float delta = _endOpacity - _startOpacity;

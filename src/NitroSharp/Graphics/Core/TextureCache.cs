@@ -93,6 +93,7 @@ namespace NitroSharp.Graphics.Core
             _entries = new FreeList<CacheEntry>();
             _strongHandles = new List<FreeListHandle>();
             _maxTextureLayers = maxTextureLayers;
+            _now = FrameStamp.Invalid;
             _rgbaTexture = new ArrayTexture(
                 graphicsDevice,
                 PixelFormat.R8_G8_B8_A8_UNorm,
@@ -147,13 +148,16 @@ namespace NitroSharp.Graphics.Core
 
         public void EndFrame(CommandList commandList)
         {
+            Debug.Assert(_now.IsValid);
             _r8Texture.EndFrame(commandList);
             _rgbaTexture.EndFrame(commandList);
             _uvRectCache.EndFrame(commandList);
+            _now = FrameStamp.Invalid;
         }
 
         public bool RequestEntry(TextureCacheHandle handle)
         {
+            Debug.Assert(_now.IsValid);
             RefOption<CacheEntry> entryOpt = _entries.GetOpt(handle.Value);
             if (entryOpt.HasValue)
             {
@@ -180,6 +184,7 @@ namespace NitroSharp.Graphics.Core
             Vector3 userData = default)
             where TPix : unmanaged
         {
+            Debug.Assert(_now.IsValid);
             RefOption<CacheEntry> entryOpt = _entries.GetOpt(handle.Value);
             bool exists;
             if (entryOpt.HasValue)
@@ -292,6 +297,7 @@ namespace NitroSharp.Graphics.Core
                     && lastAccess.StopwatchTicks < evictionThreshold.StopwatchTicks;
                 if (evict)
                 {
+                    Debug.Assert(lastAccess.FrameId != _now.FrameId);
                     CacheEntry entry = _entries.Free(handle);
                     FreeEntry(ref entry);
                     RemoveStrongHandle(i);

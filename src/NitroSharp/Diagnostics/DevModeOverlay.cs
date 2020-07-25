@@ -57,7 +57,7 @@ namespace NitroSharp.Diagnostics
 
             if (_enabled)
             {
-                Render(deltaMilliseconds, rawRawInput.CurrentSnapshot);
+                Render(deltaMilliseconds, rawRawInput.Snapshot);
             }
         }
 

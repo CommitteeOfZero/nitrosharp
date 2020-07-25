@@ -19,7 +19,7 @@ namespace NitroSharp.Text
     {
         public readonly ReadOnlyMemory<char> Text;
         public readonly ReadOnlyMemory<char> RubyText;
-        public readonly FontKey Font;
+        public readonly FontFaceKey Font;
         public readonly PtFontSize FontSize;
         public readonly RgbaFloat Color;
         public readonly RgbaFloat OutlineColor;
@@ -30,7 +30,7 @@ namespace NitroSharp.Text
 
         public static TextRun Regular(
             ReadOnlyMemory<char> text,
-            FontKey font, PtFontSize ptFontSize,
+            FontFaceKey font, PtFontSize ptFontSize,
             RgbaFloat color, RgbaFloat? outlineColor)
         {
             return new TextRun(
@@ -42,7 +42,7 @@ namespace NitroSharp.Text
 
         public static TextRun WithRubyText(
             ReadOnlyMemory<char> rubyBase, ReadOnlyMemory<char> rubyText,
-            FontKey font, PtFontSize ptFontSize,
+            FontFaceKey font, PtFontSize ptFontSize,
             RgbaFloat color, RgbaFloat? outlineColor)
         {
             return new TextRun(
@@ -53,7 +53,7 @@ namespace NitroSharp.Text
         }
 
         private TextRun(
-            FontKey font, PtFontSize fontSize,
+            FontFaceKey font, PtFontSize fontSize,
             RgbaFloat color, RgbaFloat? outlineColor,
             ReadOnlyMemory<char> text, ReadOnlyMemory<char> rubyText)
         {

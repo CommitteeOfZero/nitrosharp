@@ -18,9 +18,9 @@ namespace NitroSharp.NsScriptCompiler.Tests
         public void HexTriplet()
         {
             var literal = AssertExpression<LiteralExpressionSyntax>("#000000", SyntaxNodeKind.LiteralExpression);
-            Assert.Equal(ConstantValue.Integer(0), literal.Value);
+            Assert.Equal(ConstantValue.Number(0), literal.Value);
             literal = AssertExpression<LiteralExpressionSyntax>("#FFFFFF", SyntaxNodeKind.LiteralExpression);
-            Assert.Equal(ConstantValue.Integer(0x00FFFFFF), literal.Value);
+            Assert.Equal(ConstantValue.Number(0x00FFFFFF), literal.Value);
         }
 
         [Fact]
@@ -29,7 +29,7 @@ namespace NitroSharp.NsScriptCompiler.Tests
             var expr = AssertExpression<UnaryExpressionSyntax>("@42", SyntaxNodeKind.UnaryExpression);
             Assert.Equal(UnaryOperatorKind.Delta, expr.OperatorKind.Value);
             var operand = Assert.IsType<LiteralExpressionSyntax>(expr.Operand);
-            Assert.Equal(ConstantValue.Integer(42), operand.Value);
+            Assert.Equal(ConstantValue.Number(42), operand.Value);
         }
 
         //[Theory]

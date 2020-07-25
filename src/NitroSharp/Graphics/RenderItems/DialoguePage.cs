@@ -1,4 +1,4 @@
-using System;
+using System.Collections.Generic;
 using System.Numerics;
 using NitroSharp.NsScript.VM;
 using NitroSharp.Text;
@@ -9,56 +9,68 @@ namespace NitroSharp.Graphics
     {
         private readonly ThreadContext _dialogueThread;
         private readonly TextLayout _layout;
-        private ReadOnlyMemory<TextBufferSegment> _remainingSegments;
+        private readonly Queue<TextBufferSegment> _remainingSegments;
 
         public DialoguePage(
             in ResolvedEntityPath path,
             int priority,
             Size? bounds,
             float lineHeight,
-            GlyphRasterizer glyphRasterizer,
+            in Vector4 margin,
             ThreadContext dialogueThread)
             : base(path, priority)
         {
+            Margin = margin;
             _dialogueThread = dialogueThread;
-            _layout = new TextLayout(glyphRasterizer, Array.Empty<TextRun>(), bounds, lineHeight);
+            _layout = new TextLayout(bounds, lineHeight);
+            _remainingSegments = new Queue<TextBufferSegment>();
         }
 
-        public override bool IsIdle => _dialogueThread.DoneExecuting;
+        public Vector4 Margin { get; }
+        public override bool IsIdle => _dialogueThread.DoneExecuting && LineRead;
+        public bool LineRead { get; private set; }
 
-        public void Load(TextBuffer text)
+        public void Append(RenderContext renderCtx, TextBuffer text)
         {
-            _layout.Clear();
-            _remainingSegments = text.Segments.AsMemory();
+            foreach (TextBufferSegment seg in text.Segments)
+            {
+                _remainingSegments.Enqueue(seg);
+            }
+
+            Advance(renderCtx);
+            renderCtx.Text.RequestGlyphs(_layout);
+            LineRead = false;
+        }
+
+        private void Advance(RenderContext renderCtx)
+        {
+            while (_remainingSegments.TryDequeue(out TextBufferSegment seg))
+            {
+                switch (seg.SegmentKind)
+                {
+                    case TextBufferSegmentKind.Text:
+                        var textSegment = (TextSegment)seg;
+                        _layout.Append(renderCtx.GlyphRasterizer, textSegment.TextRuns.AsSpan());
+                        break;
+                    case TextBufferSegmentKind.Marker:
+                        var marker = (MarkerSegment)seg;
+                        switch (marker.MarkerKind)
+                        {
+                            case MarkerKind.Halt:
+                                return;
+                        }
+                        break;
+                }
+            }
         }
 
         protected override void Update(GameContext ctx)
         {
-            InputContext inputCtx = ctx.InputContext;
-            GlyphRasterizer glyphRasterizer = ctx.GlyphRasterizer;
-            bool advance = _layout.Glyphs.IsEmpty || inputCtx.VKeyDown(VirtualKey.Advance);
+            bool advance = ctx.InputContext.VKeyDown(VirtualKey.Advance);
             if (advance)
             {
-                while (!_remainingSegments.IsEmpty)
-                {
-                    TextBufferSegment seg = _remainingSegments.Span[0];
-                    _remainingSegments = _remainingSegments[1..];
-                    switch (seg.SegmentKind)
-                    {
-                        case TextBufferSegmentKind.Text:
-                            var textSegment = (TextSegment)seg;
-                            _layout.Append(glyphRasterizer, textSegment.TextRuns.AsSpan());
-                            break;
-                        case TextBufferSegmentKind.Marker:
-                            var marker = (MarkerSegment)seg;
-                            switch (marker.MarkerKind)
-                            {
-                                case MarkerKind.Halt:
-                                    return;
-                            }
-                            break;
-                    }
-                }
+                LineRead = _remainingSegments.Count == 0;
+                Advance(ctx.RenderContext);
             }
 
             ctx.RenderContext.Text.RequestGlyphs(_layout);
@@ -66,16 +78,69 @@ namespace NitroSharp.Graphics
 
         protected override void Render(RenderContext ctx, DrawBatch batch)
         {
-            ctx.Text.Render(ctx, batch, _layout, WorldMatrix, Vector2.Zero);
+            RectangleF br = BoundingRect;
+            var rect = new RectangleU((uint)br.X, (uint)br.Y, (uint)br.Width, (uint)br.Height);
+            ctx.Text.Render(ctx, batch, _layout, WorldMatrix, Margin.XY(), rect);
+
+            return;
+
+            RectangleF bb = _layout.BoundingBox;
+            ctx.MainBatch.PushQuad(
+                QuadGeometry.Create(
+                    new SizeF(bb.Size.Width, bb.Size.Height),
+                    WorldMatrix * Matrix4x4.CreateTranslation(new Vector3(Margin.XY() + bb.Position, 0)),
+                    Vector2.Zero,
+                    Vector2.One,
+                    new Vector4(0, 0.8f, 0.0f, 0.3f)
+                ).Item1,
+                ctx.WhiteTexture,
+                ctx.WhiteTexture,
+                default,
+                BlendMode,
+                FilterMode
+            );
+
+            var rasterizer = ctx.Text.GlyphRasterizer;
+            foreach (var glyphRun in _layout.GlyphRuns)
+            {
+                var glyphs = _layout.GetGlyphs(glyphRun.GlyphSpan);
+                var font = rasterizer.GetFontData(glyphRun.Font);
+                foreach (PositionedGlyph g in glyphs)
+                {
+                    var dims = font.GetGlyphDimensions(g.Index, glyphRun.FontSize);
+
+                    ctx.MainBatch.PushQuad(
+                        QuadGeometry.Create(
+                            new SizeF(dims.Width, dims.Height),
+                            WorldMatrix * Matrix4x4.CreateTranslation(new Vector3(Margin.XY() + g.Position + new Vector2(0, 0), 0)),
+                            Vector2.Zero,
+                            Vector2.One,
+                            new Vector4(0.8f, 0.0f, 0.0f, 0.3f)
+                        ).Item1,
+                        ctx.WhiteTexture,
+                        ctx.WhiteTexture,
+                        default,
+                        BlendMode,
+                        FilterMode
+                    );
+                }
+            }
         }
 
         public override Size GetUnconstrainedBounds(RenderContext ctx)
         {
             RectangleF bb = _layout.BoundingBox;
-            return new Size(
-                (uint)(bb.Right),
-                (uint)(bb.Bottom)
+            var size = new Size(
+                (uint)(Margin.X + bb.Right + Margin.Z),
+                (uint)(Margin.Y + bb.Bottom + Margin.W)
             );
+            return size.Constrain(_layout.MaxBounds);
+        }
+
+        public void Clear()
+        {
+            _layout.Clear();
+            _remainingSegments.Clear();
         }
     }
 }

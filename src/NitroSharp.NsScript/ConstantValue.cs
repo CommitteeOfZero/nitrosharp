@@ -11,9 +11,8 @@ namespace NitroSharp.NsScript
         Uninitialized = 0,
 
         Null,
-        Integer,
-        DeltaInteger,
-        Float,
+        Numeric,
+        DeltaNumeric,
         Boolean,
         String,
         BuiltInConstant,
@@ -23,6 +22,8 @@ namespace NitroSharp.NsScript
     [StructLayout(LayoutKind.Explicit)]
     public readonly struct ConstantValue : IEquatable<ConstantValue>
     {
+        private const short UnspecifiedSlot = -1;
+
         [FieldOffset(0)]
         private readonly string? _stringValue;
 
@@ -35,26 +36,47 @@ namespace NitroSharp.NsScript
         [FieldOffset(12)]
         public readonly BuiltInType Type;
 
+        [FieldOffset(14)]
+        private readonly short _slot;
+
+        private float FloatValue
+        {
+            get
+            {
+                int val = _numericValue;
+                return Unsafe.As<int, float>(ref val);
+            }
+        }
+
         public static ConstantValue Null => new ConstantValue(BuiltInType.Null);
         public static ConstantValue True => new ConstantValue(true);
         public static ConstantValue False => new ConstantValue(false);
         public static ConstantValue EmptyString => new ConstantValue(string.Empty);
 
-        public static ConstantValue Integer(int value) => new ConstantValue(value, false);
-        public static ConstantValue Delta(int delta) => new ConstantValue(delta, true);
-        public static ConstantValue Float(float value) => new ConstantValue(value);
+        public static ConstantValue Number(float value) => new ConstantValue(value, false);
+        public static ConstantValue Delta(float delta) => new ConstantValue(delta, true);
         public static ConstantValue String(string value) => new ConstantValue(value);
         public static ConstantValue Boolean(bool value) => value ? True : False;
+
         public static ConstantValue BezierCurve(CompositeBezier bezierCurve)
             => new ConstantValue(bezierCurve);
 
         public static ConstantValue BuiltInConstant(BuiltInConstant value)
             => new ConstantValue(value);
 
+        public ConstantValue WithSlot(short slot) => new ConstantValue(this, slot);
+
+        private ConstantValue(in ConstantValue value, short slot)
+        {
+            this = value;
+            _slot = slot;
+        }
+
         private ConstantValue(CompositeBezier bezierCurve) : this()
         {
             Type = BuiltInType.BezierCurve;
             _bezierCurve = bezierCurve;
+            _slot = UnspecifiedSlot;
         }
 
         private ConstantValue(BuiltInType type) : this()
@@ -63,22 +85,25 @@ namespace NitroSharp.NsScript
             _numericValue = 0;
             _stringValue = null;
             Type = type;
+            _slot = UnspecifiedSlot;
         }
 
-        private ConstantValue(int value, bool isDelta) : this()
+        private ConstantValue(float value, bool isDelta) : this()
         {
-            _numericValue = value;
+            _numericValue = Unsafe.As<float, int>(ref value);
             _stringValue = null;
             Type = isDelta
-                ? BuiltInType.DeltaInteger
-                : BuiltInType.Integer;
+                ? BuiltInType.DeltaNumeric
+                : BuiltInType.Numeric;
+            _slot = UnspecifiedSlot;
         }
 
         private ConstantValue(float value) : this()
         {
             _numericValue = Unsafe.As<float, int>(ref value);
             _stringValue = null;
-            Type = BuiltInType.Integer;
+            Type = BuiltInType.Numeric;
+            _slot = UnspecifiedSlot;
         }
 
         private ConstantValue(bool value) : this()
@@ -86,6 +111,7 @@ namespace NitroSharp.NsScript
             _numericValue = value ? 1 : 0;
             _stringValue = null;
             Type = BuiltInType.Boolean;
+            _slot = UnspecifiedSlot;
         }
 
         private ConstantValue(string value) : this()
@@ -93,6 +119,7 @@ namespace NitroSharp.NsScript
             _stringValue = value;
             _numericValue = 0;
             Type = BuiltInType.String;
+            _slot = UnspecifiedSlot;
         }
 
         private ConstantValue(BuiltInConstant value) : this()
@@ -100,26 +127,34 @@ namespace NitroSharp.NsScript
             _numericValue = (int)value;
             _stringValue = null;
             Type = BuiltInType.BuiltInConstant;
+            _slot = UnspecifiedSlot;
         }
 
         public bool IsNull => Type == BuiltInType.Null;
         public bool IsString => Type == BuiltInType.String;
-        public bool IsZero => Type == BuiltInType.Integer && _numericValue == 0;
+        public bool IsZero => Type == BuiltInType.Numeric && FloatValue == 0;
         public bool IsEmptyString => Type == BuiltInType.String && _stringValue == string.Empty;
+
+        public bool GetSlotInfo(out short slot)
+        {
+            slot = _slot;
+            return slot != UnspecifiedSlot;
+        }
 
         public bool IsAtCharacter =>
             _stringValue != null && _stringValue == "@";
 
-        public int? AsDelta()
-            => Type == BuiltInType.DeltaInteger
-                ? _numericValue
-                : (int?)null;
+        public float? AsDeltaNumber()
+            => Type == BuiltInType.DeltaNumeric
+                ? FloatValue
+                : (float?)null;
 
-        public int? AsInteger()
+        public float? AsNumber()
         {
             switch (Type)
             {
-                case BuiltInType.Integer:
+                case BuiltInType.Numeric:
+                    return FloatValue;
                 case BuiltInType.Boolean:
                 case BuiltInType.BuiltInConstant:
                     return _numericValue;
@@ -131,20 +166,12 @@ namespace NitroSharp.NsScript
             }
         }
 
-        public float? AsFloat()
+        public bool? AsBool() => Type switch
         {
-            if (Type == BuiltInType.Float)
-            {
-                int value = _numericValue;
-                return Unsafe.As<int, float>(ref value);
-            }
-
-            return null;
-        }
-
-        public bool? AsBool()
-            => Type == BuiltInType.Boolean || Type == BuiltInType.Integer
-                ? _numericValue > 0 : (bool?)null;
+            BuiltInType.Boolean => _numericValue > 0,
+            BuiltInType.Numeric => FloatValue > 0,
+            _ => null
+        };
 
         public string? AsString()
             => Type == BuiltInType.String ? _stringValue : null;
@@ -162,7 +189,7 @@ namespace NitroSharp.NsScript
         private static bool Equals(ConstantValue left, ConstantValue right)
         {
             bool equal;
-            (int? leftNum, int? rightNum) = (left.AsInteger(), right.AsInteger());
+            (float? leftNum, float? rightNum) = (left.AsNumber(), right.AsNumber());
             if (leftNum.HasValue && rightNum.HasValue)
             {
                 equal = leftNum.Value == rightNum.Value;
@@ -183,9 +210,8 @@ namespace NitroSharp.NsScript
         {
             BuiltInType.String => _stringValue!,
             BuiltInType.Boolean => _numericValue > 0 ? "true" : "false",
-            BuiltInType.Integer => _numericValue.ToString(),
-            BuiltInType.DeltaInteger => "@" + _numericValue.ToString(),
-            BuiltInType.Float => AsFloat()!.Value!.ToString(),
+            BuiltInType.Numeric => FloatValue.ToString(),
+            BuiltInType.DeltaNumeric => "@" + FloatValue.ToString(),
             BuiltInType.BuiltInConstant => ((BuiltInConstant)_numericValue).ToString(),
             BuiltInType.Null => "null",
             _ => ThrowHelper.Unreachable<string>()
@@ -201,21 +227,20 @@ namespace NitroSharp.NsScript
         {
             return (left.Type, right.Type) switch
             {
-                (BuiltInType.Integer, BuiltInType.Integer)
-                    => Integer(left.AsInteger()!.Value + right.AsInteger()!.Value),
-                (BuiltInType.Integer, BuiltInType.String)
+                (BuiltInType.Numeric, BuiltInType.Numeric)
+                    => Number(left.AsNumber()!.Value + right.AsNumber()!.Value),
+                (BuiltInType.Numeric, BuiltInType.String)
                     => integerString(left, right),
-                (BuiltInType.String, BuiltInType.Integer)
+                (BuiltInType.String, BuiltInType.Numeric)
                     => integerString(left, right),
-                (BuiltInType.Float, BuiltInType.Float)
-                    => Float(left.AsFloat()!.Value + right.AsFloat()!.Value),
+
                 _   => String(left.ConvertToString() + right.ConvertToString())
             };
 
             static ConstantValue integerString(in ConstantValue left, in ConstantValue right)
             {
                 return left.IsAtCharacter
-                    ? Delta(right._numericValue)
+                    ? Delta(right.FloatValue)
                     : String(left.ConvertToString() + right.ConvertToString());
             }
         }
@@ -224,10 +249,8 @@ namespace NitroSharp.NsScript
         {
             return (left.Type, right.Type) switch
             {
-                (BuiltInType.Integer, BuiltInType.Integer)
-                    => Integer(left.AsInteger()!.Value - right.AsInteger()!.Value),
-                (BuiltInType.Float, BuiltInType.Float)
-                    => Float(left.AsFloat()!.Value - right.AsFloat()!.Value),
+                (BuiltInType.Numeric, BuiltInType.Numeric)
+                    => Number(left.AsNumber()!.Value - right.AsNumber()!.Value),
                 _   => InvalidBinOp("-", left.Type, right.Type)
             };
         }
@@ -236,10 +259,8 @@ namespace NitroSharp.NsScript
         {
             return (left.Type, right.Type) switch
             {
-                (BuiltInType.Integer, BuiltInType.Integer)
-                    => Integer(left.AsInteger()!.Value * right.AsInteger()!.Value),
-                (BuiltInType.Float, BuiltInType.Float)
-                    => Float(left.AsFloat()!.Value * right.AsFloat()!.Value),
+                (BuiltInType.Numeric, BuiltInType.Numeric)
+                    => Number(left.AsNumber()!.Value * right.AsNumber()!.Value),
                 _   => InvalidBinOp("*", left.Type, right.Type)
             };
         }
@@ -248,10 +269,8 @@ namespace NitroSharp.NsScript
         {
             return (left.Type, right.Type) switch
             {
-                (BuiltInType.Integer, BuiltInType.Integer)
-                    => Integer(left.AsInteger()!.Value / right.AsInteger()!.Value),
-                (BuiltInType.Float, BuiltInType.Float)
-                    => Float(left.AsFloat()!.Value / right.AsFloat()!.Value),
+                (BuiltInType.Numeric, BuiltInType.Numeric)
+                    => Number(left.AsNumber()!.Value / right.AsNumber()!.Value),
                 _   => InvalidBinOp("/", left.Type, right.Type)
             };
         }
@@ -260,10 +279,8 @@ namespace NitroSharp.NsScript
         {
             return (left.Type, right.Type) switch
             {
-                (BuiltInType.Integer, BuiltInType.Integer)
-                    => Boolean(left.AsInteger()!.Value < right.AsInteger()!.Value),
-                (BuiltInType.Float, BuiltInType.Float)
-                    => Boolean(left.AsFloat()!.Value < right.AsFloat()!.Value),
+                (BuiltInType.Numeric, BuiltInType.Numeric)
+                    => Boolean(left.AsNumber()!.Value < right.AsNumber()!.Value),
                 _   => InvalidBinOp("<", left.Type, right.Type)
             };
         }
@@ -272,10 +289,8 @@ namespace NitroSharp.NsScript
         {
             return (left.Type, right.Type) switch
             {
-                (BuiltInType.Integer, BuiltInType.Integer)
-                    => Boolean(left.AsInteger()!.Value <= right.AsInteger()!.Value),
-                (BuiltInType.Float, BuiltInType.Float)
-                    => Boolean(left.AsFloat()!.Value <= right.AsFloat()!.Value),
+                (BuiltInType.Numeric, BuiltInType.Numeric)
+                    => Boolean(left.AsNumber()!.Value <= right.AsNumber()!.Value),
                 _   => InvalidBinOp("<=", left.Type, right.Type)
             };
         }
@@ -284,10 +299,8 @@ namespace NitroSharp.NsScript
         {
             return (left.Type, right.Type) switch
             {
-                (BuiltInType.Integer, BuiltInType.Integer)
-                    => Boolean(left.AsInteger()!.Value > right.AsInteger()!.Value),
-                (BuiltInType.Float, BuiltInType.Float)
-                    => Boolean(left.AsFloat()!.Value > right.AsFloat()!.Value),
+                (BuiltInType.Numeric, BuiltInType.Numeric)
+                    => Boolean(left.AsNumber()!.Value > right.AsNumber()!.Value),
                 _   => InvalidBinOp(">", left.Type, right.Type)
             };
         }
@@ -296,10 +309,8 @@ namespace NitroSharp.NsScript
         {
             return (left.Type, right.Type) switch
             {
-                (BuiltInType.Integer, BuiltInType.Integer)
-                    => Boolean(left.AsInteger()!.Value >= right.AsInteger()!.Value),
-                (BuiltInType.Float, BuiltInType.Float)
-                    => Boolean(left.AsFloat()!.Value >= right.AsFloat()!.Value),
+                (BuiltInType.Numeric, BuiltInType.Numeric)
+                    => Boolean(left.AsNumber()!.Value >= right.AsNumber()!.Value),
                 _   => InvalidBinOp(">=", left.Type, right.Type)
             };
         }
@@ -308,8 +319,7 @@ namespace NitroSharp.NsScript
         {
             return value.Type switch
             {
-                BuiltInType.Integer => Integer(value._numericValue + 1),
-                BuiltInType.Float => Float(value.AsFloat()!.Value + 1),
+                BuiltInType.Numeric => Number(value.FloatValue + 1),
                 _ => InvalidOp("++", value.Type)
             };
         }
@@ -318,8 +328,7 @@ namespace NitroSharp.NsScript
         {
             return value.Type switch
             {
-                BuiltInType.Integer => Integer(value._numericValue - 1),
-                BuiltInType.Float => Float(value.AsFloat()!.Value - 1),
+                BuiltInType.Numeric => Number(value.FloatValue - 1),
                 _ => InvalidOp("++", value.Type)
             };
         }
@@ -368,7 +377,7 @@ namespace NitroSharp.NsScript
                 BuiltInType.Null => 0,
                 BuiltInType.Uninitialized => -1,
                 BuiltInType.BezierCurve => _bezierCurve.GetHashCode(),
-                _ => HashCode.Combine(_numericValue)
+                _ => HashCode.Combine(Type, _numericValue)
             };
         }
 

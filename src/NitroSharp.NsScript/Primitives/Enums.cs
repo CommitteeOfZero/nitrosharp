@@ -62,7 +62,7 @@ namespace NitroSharp.NsScript
         Stop
     }
 
-    public enum NsScrollbarKind
+    public enum NsScrollDirection
     {
         Vertical,
         Horizontal

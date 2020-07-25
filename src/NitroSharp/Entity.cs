@@ -40,7 +40,7 @@ namespace NitroSharp
         {
             Id = path.Id;
             Parent = path.Parent;
-            _children = new ArrayBuilder<Entity>(2);
+            _children = new ArrayBuilder<Entity>(0);
         }
 
         public EntityId Id { get; }

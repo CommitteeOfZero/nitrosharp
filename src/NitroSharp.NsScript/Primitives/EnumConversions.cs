@@ -73,13 +73,13 @@
             };
         }
 
-        public static NsScrollbarKind ToScrollbarKind(BuiltInConstant val)
+        public static NsScrollDirection ToScrollDirection(BuiltInConstant val)
         {
             return val switch
             {
-                BuiltInConstant.Vertical => NsScrollbarKind.Vertical,
-                BuiltInConstant.Horizon => NsScrollbarKind.Horizontal,
-                _ => ThrowHelper.UnexpectedValue<NsScrollbarKind>()
+                BuiltInConstant.Vertical => NsScrollDirection.Vertical,
+                BuiltInConstant.Horizon => NsScrollDirection.Horizontal,
+                _ => ThrowHelper.UnexpectedValue<NsScrollDirection>()
             };
         }
 

@@ -133,8 +133,12 @@ namespace NitroSharp.Graphics
             TextureCache.BeginFrame(frameStamp);
             ResourceSetCache.BeginFrame(frameStamp);
             Text.BeginFrame();
-
             _transferCommands.Begin();
+        }
+
+        public void ResolveGlyphs()
+        {
+            Text.ResolveGlyphs();
             TextureCache.EndFrame(_transferCommands);
         }
 
@@ -205,16 +209,6 @@ namespace NitroSharp.Graphics
             GraphicsDevice.SubmitCommands(_transferCommands);
             stagingWhite.Dispose();
             return texture;
-        }
-
-        private void LoadWaitIndicator(string pathFormat, int first, int last)
-        {
-            string getPath(int i) => string.Format(pathFormat, i);
-
-            for (int i = first; i <= last; i++)
-            {
-
-            }
         }
 
         public void Dispose()

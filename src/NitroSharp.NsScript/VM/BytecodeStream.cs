@@ -43,9 +43,8 @@ namespace NitroSharp.NsScript.VM
             var type = (BuiltInType)_reader.ReadByte();
             return type switch
             {
-                BuiltInType.Integer => new Immediate(_reader.ReadInt32LE(), false),
-                BuiltInType.DeltaInteger => new Immediate(_reader.ReadInt32LE(), true),
-                BuiltInType.Float => new Immediate(_reader.ReadSingle()),
+                BuiltInType.Numeric => new Immediate(_reader.ReadSingle(), false),
+                BuiltInType.DeltaNumeric => new Immediate(_reader.ReadSingle(), true),
                 BuiltInType.String => new Immediate(_reader.ReadUInt16LE()),
                 BuiltInType.BuiltInConstant => new Immediate((BuiltInConstant)_reader.ReadByte()),
                 _ => ThrowHelper.InvalidData<Immediate>("Unexpected immediate value type.")
@@ -60,19 +59,14 @@ namespace NitroSharp.NsScript.VM
         public readonly BuiltInType Type;
 
         [FieldOffset(4)]
-        public readonly int IntegerValue;
-        [FieldOffset(4)]
-        public readonly float FloatValue;
+        public readonly float Numeric;
         [FieldOffset(4)]
         public readonly ushort StringToken;
         [FieldOffset(4)]
         public readonly BuiltInConstant Constant;
 
-        internal Immediate(int integerValue, bool isDelta) : this()
-            => (Type, IntegerValue) = (isDelta ? BuiltInType.DeltaInteger : BuiltInType.Integer, integerValue);
-
-        internal Immediate(float floatValue) : this()
-            => (Type, FloatValue) = (BuiltInType.Float, floatValue);
+        internal Immediate(float value, bool isDelta) : this()
+            => (Type, Numeric) = (isDelta ? BuiltInType.DeltaNumeric : BuiltInType.Numeric, value);
 
         internal Immediate(ushort stringToken) : this()
             => (Type, StringToken) = (BuiltInType.String, stringToken);

@@ -658,8 +658,8 @@ namespace NitroSharp.NsScript.Syntax
                     ReadOnlySpan<char> valueText = SourceText.GetCharacterSpan(token.GetValueSpan());
                     var numberStyle = token.IsHexTriplet ? NumberStyles.HexNumber : NumberStyles.None;
                     value = token.IsFloatingPointLiteral
-                        ? ConstantValue.Float(float.Parse(valueText, provider: CultureInfo.InvariantCulture))
-                        : ConstantValue.Integer(int.Parse(valueText, numberStyle));
+                        ? ConstantValue.Number(float.Parse(valueText, provider: CultureInfo.InvariantCulture))
+                        : ConstantValue.Number(int.Parse(valueText, numberStyle));
                     break;
                 case SyntaxTokenKind.StringLiteralOrQuotedIdentifier:
                     string str = InternValueText(token);

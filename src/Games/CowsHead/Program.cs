@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Threading.Tasks;
 using NitroSharp.Launcher;
 
@@ -58,6 +59,7 @@ namespace CowsHead
             NativeLibrary.SetDllImportResolver(typeof(OpenAL.NativeLib).Assembly, ResolveDllImport);
             NativeLibrary.SetDllImportResolver(typeof(FFmpeg.AutoGen.ffmpeg).Assembly, ResolveDllImport);
 #endif
+            Console.OutputEncoding = Encoding.Unicode;
             return GameLauncher.Launch("Game.json");
         }
 

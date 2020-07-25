@@ -41,7 +41,7 @@ namespace NitroSharp
         {
             RawInput input = _rawInput;
             input.Update();
-            MousePosition = input.CurrentSnapshot.MousePosition;
+            MousePosition = input.Snapshot.MousePosition;
 
             PollVkey(input, VirtualKey.Advance);
             PollVkey(input, VirtualKey.Enter);
@@ -88,10 +88,12 @@ namespace NitroSharp
                 VirtualKey.Left => input.KeyState(Key.Left) |
                                    gamepad.ButtonState(SDL_GameControllerButton.DPadLeft),
                 VirtualKey.Up => input.KeyState(Key.Up) |
+                                 input.WheelDelta > 0 |
                                  gamepad.ButtonState(SDL_GameControllerButton.DPadUp),
                 VirtualKey.Right => input.KeyState(Key.Right) |
                                     gamepad.ButtonState(SDL_GameControllerButton.DPadRight),
                 VirtualKey.Down => input.KeyState(Key.Down) |
+                                   input.WheelDelta < 0 |
                                    gamepad.ButtonState(SDL_GameControllerButton.DPadDown),
                 _ => false
             };

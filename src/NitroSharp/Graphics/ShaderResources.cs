@@ -322,7 +322,13 @@ namespace NitroSharp.Graphics
             var pipelineDesc = new GraphicsPipelineDescription(
                 BlendStateDescription.SingleAlphaBlend,
                 DepthStencilStateDescription.Disabled,
-                RasterizerStateDescription.CullNone,
+                new RasterizerStateDescription(
+                    FaceCullMode.None,
+                    PolygonFillMode.Solid,
+                    FrontFace.Clockwise,
+                    depthClipEnabled: true,
+                    scissorTestEnabled: true
+                ),
                 PrimitiveTopology.TriangleList,
                 new ShaderSetDescription(
                     new[] { GpuGlyph.LayoutDescription },

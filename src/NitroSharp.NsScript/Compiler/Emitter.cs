@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using NitroSharp.NsScript.Syntax;
 using NitroSharp.NsScript.Utilities;
 
@@ -19,8 +18,7 @@ namespace NitroSharp.NsScript.Compiler
         private int _textId;
         private ValueStack<BreakScope> _breakScopes;
         private bool _supressConstantLookup;
-        private bool _treatGlobalsAsOutVars;
-        private List<string>? _outVariables;
+        private bool _clearPage;
 
         private Emitter(NsxModuleBuilder moduleBuilder, SubroutineSymbol subroutine)
         {
@@ -32,8 +30,7 @@ namespace NitroSharp.NsScript.Compiler
             _code = default;
             _textId = 0;
             _supressConstantLookup = false;
-            _treatGlobalsAsOutVars = false;
-            _outVariables = null;
+            _clearPage = true;
 
             if (subroutine is FunctionSymbol function && function.Parameters.Length > 0)
             {
@@ -42,12 +39,6 @@ namespace NitroSharp.NsScript.Compiler
                     _ = GetGlobalVarToken(p.Name);
                 }
             }
-        }
-
-        private enum LoopKind
-        {
-            While,
-            Select
         }
 
         private readonly struct JumpPlaceholder
@@ -62,17 +53,7 @@ namespace NitroSharp.NsScript.Compiler
 
         private struct BreakScope
         {
-            public readonly LoopKind LoopKind;
             private Queue<JumpPlaceholder>? _breakPlaceholders;
-
-            public BreakScope(LoopKind loopKind)
-            {
-                LoopKind = loopKind;
-                _breakPlaceholders = null;
-            }
-
-            public bool NoBreakPlaceholders
-                => _breakPlaceholders == null;
 
             public Queue<JumpPlaceholder> BreakPlaceholders
                 => _breakPlaceholders ??= new Queue<JumpPlaceholder>();
@@ -194,12 +175,6 @@ namespace NitroSharp.NsScript.Compiler
                     ushort varToken = GetGlobalVarToken(lookupResult.GlobalVariable);
                     EmitOpcode(Opcode.LoadVar);
                     _code.WriteUInt16LE(varToken);
-                    if (_treatGlobalsAsOutVars)
-                    {
-                        _outVariables ??= new List<string>();
-                        _outVariables.Add(lookupResult.GlobalVariable);
-                        _compilation.BoundVariables.Add(lookupResult.GlobalVariable);
-                    }
                     if (lookupResult.GlobalVariable.StartsWith("SYSTEM"))
                     {
                         _compilation.BoundVariables.Add(lookupResult.GlobalVariable);
@@ -237,7 +212,8 @@ namespace NitroSharp.NsScript.Compiler
             AssignmentOperatorKind opKind = assignmentExpr.OperatorKind.Value;
             if (opKind != AssignmentOperatorKind.Assign)
             {
-                EmitLoadVariable(token);
+                EmitOpcode(Opcode.LoadVar);
+                _code.WriteUInt16LE(token);
             }
 
             switch (opKind)
@@ -264,7 +240,7 @@ namespace NitroSharp.NsScript.Compiler
                     break;
             }
 
-            EmitStoreOp(token);
+            EmitStoreVar(token);
         }
 
         private void EmitFunctionCall(FunctionCallExpressionSyntax callExpression)
@@ -275,21 +251,6 @@ namespace NitroSharp.NsScript.Compiler
             ImmutableArray<ExpressionSyntax> arguments = callExpression.Arguments;
             bool supressConstantLookup = _supressConstantLookup;
 
-            if (isBuiltIn)
-            {
-                bool usesOutParams = lookupResult.BuiltInFunction switch
-                {
-                    BuiltInFunction.CursorPosition => true,
-                    BuiltInFunction.Position => true,
-                    BuiltInFunction.DateTime => true,
-                    _ => false
-                };
-                if (usesOutParams)
-                {
-                    _treatGlobalsAsOutVars = true;
-                }
-            }
-
             if (!isBuiltIn)
             {
                 var target = (FunctionSymbol)lookupResult.Subroutine;
@@ -298,7 +259,7 @@ namespace NitroSharp.NsScript.Compiler
                 {
                     _supressConstantLookup = true;
                     EmitExpression(arguments[i]);
-                    EmitStoreOp(GetGlobalVarToken(target.Parameters[i].Name));
+                    EmitStoreVar(GetGlobalVarToken(target.Parameters[i].Name));
                     _supressConstantLookup = supressConstantLookup;
                 }
             }
@@ -316,8 +277,6 @@ namespace NitroSharp.NsScript.Compiler
                     _supressConstantLookup = supressConstantLookup;
                 }
             }
-
-            _treatGlobalsAsOutVars = false;
 
             if (isBuiltIn)
             {
@@ -367,8 +326,7 @@ namespace NitroSharp.NsScript.Compiler
 
         private void EmitCallChapter(CallChapterStatementSyntax statement)
         {
-            ChapterSymbol? chapter = _checker.ResolveCallChapterTarget(statement);
-            if (chapter != null)
+            if (_checker.ResolveCallChapterTarget(statement) is ChapterSymbol chapter)
             {
                 EmitCallFar(chapter);
             }
@@ -428,13 +386,22 @@ namespace NitroSharp.NsScript.Compiler
                     EmitSelectSection((SelectSectionSyntax)statement);
                     break;
                 case SyntaxNodeKind.DialogueBlock:
-                    EmitActivateText();
+                    EmitOpcode(Opcode.ActivateBlock);
+                    _code.WriteUInt16LE((ushort)_textId++);
                     break;
                 case SyntaxNodeKind.PXmlString:
-                    EmitPresentText((PXmlString)statement);
+                    var text = (PXmlString)statement;
+                    if (_clearPage)
+                    {
+                        EmitOpcode(Opcode.ClearPage);
+                        _clearPage = false;
+                    }
+                    EmitOpcode(Opcode.AppendDialogue);
+                    _code.WriteUInt16LE(_module.GetStringToken(text.Text));
                     break;
                 case SyntaxNodeKind.PXmlLineSeparator:
-                    EmitOpcode(Opcode.AwaitInput);
+                    EmitOpcode(Opcode.LineEnd);
+                    _clearPage = true;
                     break;
             }
         }
@@ -508,42 +475,33 @@ namespace NitroSharp.NsScript.Compiler
             int loopStart = _code.Position;
             EmitExpression(whileStmt.Condition);
             JumpPlaceholder exitJump = EmitJump(Opcode.JumpIfFalse);
-            BreakScope bodyScope = EmitLoopBody(LoopKind.While, whileStmt.Body);
+            BreakScope bodyScope = EmitLoopBody(whileStmt.Body);
             EmitJump(Opcode.Jump, loopStart);
             PatchJump(exitJump, _code.Position);
-            PatchBreaks(bodyScope, _code.Position);
+            PatchBreaks(ref bodyScope, _code.Position);
         }
 
         private void EmitSelect(SelectStatementSyntax selectStmt)
         {
             int loopStart = _code.Position;
             EmitOpcode(Opcode.SelectStart);
-            BreakScope bodyScope = EmitLoopBody(LoopKind.Select, selectStmt.Body);
+            EmitStatement(selectStmt.Body);
             EmitOpcode(Opcode.SelectEnd);
-            EmitJump(Opcode.Jump, loopStart);
-            PatchBreaks(bodyScope, _code.Position);
-            EmitOpcode(Opcode.SelectEnd);
+            EmitJump(Opcode.JumpIfFalse, loopStart);
         }
 
         private void EmitSelectSection(SelectSectionSyntax section)
         {
-            if (_breakScopes.Count == 0 || _breakScopes.Peek().LoopKind != LoopKind.Select)
-            {
-                _checker.Report(section, DiagnosticId.OrphanedSelectSection);
-                return;
-            }
-
             EmitOpcode(Opcode.IsPressed);
             _code.WriteUInt16LE(_module.GetStringToken(section.Label.Value));
             JumpPlaceholder jmp = EmitJump(Opcode.JumpIfFalse);
             EmitStatement(section.Body);
-            EmitBreakPlaceholder();
             PatchJump(jmp, _code.Position);
         }
 
-        private BreakScope EmitLoopBody(LoopKind loopKind, StatementSyntax body)
+        private BreakScope EmitLoopBody(StatementSyntax body)
         {
-            _breakScopes.Push(new BreakScope(loopKind));
+            _breakScopes.Push(new BreakScope());
             EmitStatement(body);
             return _breakScopes.Pop();
         }
@@ -565,13 +523,10 @@ namespace NitroSharp.NsScript.Compiler
             scope.BreakPlaceholders.Enqueue(EmitJump(Opcode.Jump));
         }
 
-        private void PatchBreaks(in BreakScope scope, int destination)
+        private void PatchBreaks(ref BreakScope scope, int destination)
         {
-            if (scope.NoBreakPlaceholders) { return; }
-            Queue<JumpPlaceholder> placeholders = scope.BreakPlaceholders;
-            while (placeholders.Count > 0)
+            while (scope.BreakPlaceholders.TryDequeue(out JumpPlaceholder jump))
             {
-                JumpPlaceholder jump = placeholders.Dequeue();
                 PatchJump(jump, destination);
             }
         }
@@ -609,25 +564,7 @@ namespace NitroSharp.NsScript.Compiler
             _code.Position = oldPos;
         }
 
-        private void EmitActivateText()
-        {
-            EmitOpcode(Opcode.ActivateBlock);
-            _code.WriteUInt16LE((ushort)_textId++);
-        }
-
-        private void EmitPresentText(PXmlString text)
-        {
-            EmitOpcode(Opcode.DisplayLine);
-            _code.WriteUInt16LE(_module.GetStringToken(text.Text));
-        }
-
-        private void EmitLoadVariable(ushort token)
-        {
-            EmitOpcode(Opcode.LoadVar);
-            _code.WriteUInt16LE(token);
-        }
-
-        private void EmitStoreOp(ushort tk)
+        private void EmitStoreVar(ushort tk)
         {
             EmitOpcode(Opcode.StoreVar);
             _code.WriteUInt16LE(tk);
@@ -637,8 +574,8 @@ namespace NitroSharp.NsScript.Compiler
         {
             switch (value.Type)
             {
-                case BuiltInType.Integer:
-                    int num = value.AsInteger()!.Value;
+                case BuiltInType.Numeric:
+                    float num = value.AsNumber()!.Value;
                     switch (num)
                     {
                         case 0:
@@ -650,25 +587,20 @@ namespace NitroSharp.NsScript.Compiler
                         default:
                             EmitOpcode(Opcode.LoadImm);
                             _code.WriteByte((byte)value.Type);
-                            _code.WriteInt32LE(num);
+                            _code.WriteSingle(num);
                             break;
                     }
                     break;
-                case BuiltInType.DeltaInteger:
+                case BuiltInType.DeltaNumeric:
                     EmitOpcode(Opcode.LoadImm);
                     _code.WriteByte((byte)value.Type);
-                    _code.WriteInt32LE(value.AsDelta()!.Value);
+                    _code.WriteSingle(value.AsDeltaNumber()!.Value);
                     break;
                 case BuiltInType.Boolean:
                     Opcode opcode = value.AsBool()!.Value
                         ? Opcode.LoadImmTrue
                         : Opcode.LoadImmFalse;
                     EmitOpcode(opcode);
-                    break;
-                case BuiltInType.Float:
-                    EmitOpcode(Opcode.LoadImm);
-                    _code.WriteByte((byte)value.Type);
-                    _code.WriteSingle(value.AsFloat()!.Value);
                     break;
                 case BuiltInType.String:
                     string str = value.AsString()!;
@@ -687,7 +619,7 @@ namespace NitroSharp.NsScript.Compiler
                 case BuiltInType.BuiltInConstant:
                     EmitOpcode(Opcode.LoadImm);
                     _code.WriteByte((byte)value.Type);
-                    _code.WriteByte((byte)value.AsInteger()!.Value);
+                    _code.WriteByte((byte)value.AsBuiltInConstant()!.Value);
                     break;
                 case BuiltInType.Null:
                     EmitOpcode(Opcode.LoadImmNull);

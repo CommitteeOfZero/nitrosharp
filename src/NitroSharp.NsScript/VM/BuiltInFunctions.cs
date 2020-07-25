@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Numerics;
 using NitroSharp.NsScript.Primitives;
 
 namespace NitroSharp.NsScript.VM
@@ -24,13 +25,14 @@ namespace NitroSharp.NsScript.VM
         /// <summary>
         /// Original name: Platform.
         /// </summary>
-        public virtual int GetPlatformId() => 0;
+        public virtual int GetPlatformId() => 100;
+
         public virtual string GetCurrentModuleName() => throw new NotImplementedException();
         public virtual int GetSoundAmplitude(string characterName) => throw new NotImplementedException();
         public virtual int GetHeight(in EntityPath entityPath) => throw new NotImplementedException();
         public virtual int GetWidth(in EntityPath entityPath) => throw new NotImplementedException();
         public virtual int GetSoundDuration(in EntityPath entityPath) => 0;
-        public virtual int GetTimeRemaining(in EntityPath entityPath) => throw new NotImplementedException();
+        public virtual int GetTimeRemaining(EntityQuery query) => throw new NotImplementedException();
         public virtual int GetTimeElapsed(in EntityPath entityPath) => throw new NotImplementedException();
 
         public virtual ConstantValue FormatString(string format, object[] args) => throw new NotImplementedException();
@@ -50,12 +52,13 @@ namespace NitroSharp.NsScript.VM
         /// Original name: WaitKey.
         /// </summary>
         public virtual void WaitForInput() { }
+
         /// <summary>
         /// Original name: WaitKey.
         /// </summary>
         public virtual void WaitForInput(TimeSpan timeout) { }
 
-        public virtual void LoadImage(in EntityPath entityPath, string fileName) { }
+        public virtual void LoadImage(in EntityPath entityPath, string source) { }
         public virtual void LoadColor(in EntityPath entityPath, uint width, uint height, NsColor color) { }
 
         /// <summary>
@@ -83,7 +86,7 @@ namespace NitroSharp.NsScript.VM
         public virtual void CreateTextBlock(in EntityPath entityPath, int priority, NsCoordinate x, NsCoordinate y, NsTextDimension width, NsTextDimension height, string pxmlText) { }
 
         public virtual void SetFont(string family, int size, NsColor color, NsColor outlineColor, NsFontWeight weight, NsOutlineOffset outlineOffset) { }
-        public virtual void LoadDialogue(in DialogueBlockToken blockToken, uint maxWidth, uint maxHeight, int letterSpacing, int lineSpacing) { }
+        public virtual void LoadDialogueBlock(in DialogueBlockToken blockToken, uint maxWidth, uint maxHeight, int letterSpacing, int lineSpacing) { }
         public virtual void WaitText(in EntityQuery query, TimeSpan timeout) { }
 
         public virtual void BoxBlur(EntityQuery query, uint nbPasses) { }
@@ -107,7 +110,8 @@ namespace NitroSharp.NsScript.VM
         /// <summary>
         /// Original name: SetLoop.
         /// </summary>
-        public virtual void ToggleLooping(in EntityPath entityPath, bool looping) { }
+        public virtual void ToggleLooping(EntityQuery query, bool looping) { }
+
         public virtual void SetLoopRegion(in EntityPath entityPath, TimeSpan loopStart, TimeSpan loopEnd) { }
         public virtual void SetVolume(EntityQuery query, TimeSpan duration, NsRational volume) { }
 
@@ -124,20 +128,30 @@ namespace NitroSharp.NsScript.VM
         public virtual void CreateChoice(in EntityPath entityPath) { }
         public virtual void SetNextFocus(in EntityPath first, in EntityPath second, NsFocusDirection focusDirection) { }
 
-        public virtual void CreateScrollbar(in EntityPath path, int priority, int x1, int y1, int x2, int y2, int pos, NsScrollbarKind kind, string src) { }
-        public virtual float GetScrollbarValue(in EntityPath scrollbarEntity)
-        {
-            return 0.5f;
-        }
+        public virtual void CreateScrollbar(in EntityPath path, int priority, int x1, int y1, int x2, int y2, NsRational initialValue, NsScrollDirection scrollDirection, string knobImage) { }
+        public virtual void SetScrollbar(in EntityPath scrollbar, in EntityPath parent) { }
+        public virtual float GetScrollbarValue(in EntityPath scrollbarEntity) => 0;
 
         public virtual void Exit() { }
 
         public virtual void MoveCursor(int x, int y) { }
+        public virtual Vector2 GetCursorPosition() => Vector2.Zero;
+
+        public virtual void CreateBacklog(in EntityPath path, int priority) { }
+        public virtual void SetBacklog(string text) { }
+        public virtual void ClearBacklog() { }
+
+        public virtual Vector2 GetPosition(in EntityPath entityPath) => Vector2.Zero;
 
         // --- NitroSharp only ---
-        public virtual void DisplayLine(in EntityPath dialogueBlockPath, string line) { }
-        public virtual bool UpdateChoice(in EntityPath choicePath) => false;
+        public virtual void ClearDialoguePage(in EntityPath dialoguePage) { }
+        public virtual void AppendDialogue(in EntityPath dialoguePage, string text) { }
+        public virtual bool HandleInputEvents(in EntityPath uiElementPath) => false;
         public virtual void AssertTrue(bool value) { }
 
+        public virtual void LineEnd(in EntityPath dialoguePage) { }
+
+        public virtual void BeginChapter() { }
+        public virtual void EndChapter() { }
     }
 }

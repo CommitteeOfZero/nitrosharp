@@ -159,7 +159,7 @@ namespace NitroSharp.Text
                 Debug.Assert(_fontConfig != null);
                 ref readonly TextRunData data = ref _textRunData;
                 if (data.Text == null) { return; }
-                FontKey font = _fontConfig.DefaultFont;
+                FontFaceKey font = _fontConfig.DefaultFont;
                 if (data.Italic && _fontConfig.ItalicFont.HasValue)
                 {
                     font = _fontConfig.ItalicFont.Value;

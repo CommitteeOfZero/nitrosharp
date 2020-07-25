@@ -1,22 +1,19 @@
-using NitroSharp.Content;
-using Veldrid;
-
 namespace NitroSharp.Graphics
 {
     internal sealed class Image : Entity
     {
-        public Image(in ResolvedEntityPath path, AssetRef<Texture> texture)
+        public Image(in ResolvedEntityPath path, SpriteTexture texture)
             : base(path)
         {
             Texture = texture;
         }
 
-        public AssetRef<Texture> Texture { get; }
+        public SpriteTexture Texture { get; }
         public override bool IsIdle => true;
 
         public override void Dispose()
         {
-            Texture.Dispose();
+            //Texture.Dispose();
         }
     }
 }

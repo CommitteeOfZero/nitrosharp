@@ -78,8 +78,7 @@ namespace NitroSharp.NsScript.Syntax.PXml
 
                 case "pre":
                 case "PRE":
-                    node = ParsePlainText();
-                    ParsePXmlTag();
+                    node = ParsePreformattedText();
                     break;
 
                 case "voice":
@@ -153,6 +152,22 @@ namespace NitroSharp.NsScript.Syntax.PXml
             }
 
             return null;
+        }
+
+        private PXmlText ParsePreformattedText()
+        {
+            StartScanning();
+            var sb = new StringBuilder();
+            char c;
+            while ((c = PeekChar()) != EofCharacter
+                && !Match("</pre>") && !Match("</PRE>"))
+            {
+                AdvanceChar();
+                sb.Append(c);
+            }
+
+            AdvanceChar(6);
+            return new PXmlText(sb.ToString());
         }
 
         private PXmlText ParsePlainText()

@@ -29,7 +29,7 @@ namespace NitroSharp.NsScript.Primitives
         public readonly float AnchorPoint;
 
         [FieldOffset(8)]
-        public readonly (int pos, bool isRelative) Value;
+        public readonly (float pos, bool isRelative) Value;
 
         [FieldOffset(8)]
         public readonly NsAlignment Alignment;
@@ -37,7 +37,7 @@ namespace NitroSharp.NsScript.Primitives
         private NsCoordinate(NsCoordinateKind kind) : this()
             => Kind = kind;
 
-        public NsCoordinate(int value, bool isRelative) : this()
+        public NsCoordinate(float value, bool isRelative) : this()
             => (Kind, Value) = (NsCoordinateKind.Value, (value, isRelative));
 
         public NsCoordinate(NsAlignment alignment, float anchorPoint) : this()
@@ -48,8 +48,8 @@ namespace NitroSharp.NsScript.Primitives
 
         public static NsCoordinate FromValue(ConstantValue val) => val.Type switch
         {
-            BuiltInType.Integer => new NsCoordinate(val.AsInteger()!.Value, isRelative: false),
-            BuiltInType.DeltaInteger => new NsCoordinate(val.AsDelta()!.Value, isRelative: true),
+            BuiltInType.Numeric => new NsCoordinate(val.AsNumber()!.Value, isRelative: false),
+            BuiltInType.DeltaNumeric => new NsCoordinate(val.AsDeltaNumber()!.Value, isRelative: true),
             BuiltInType.BuiltInConstant => FromConstant(val.AsBuiltInConstant()!.Value),
             _ => IllegalValue()
         };

@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Json;
 using NitroSharp.Media;
@@ -6,35 +7,72 @@ using Veldrid;
 
 namespace NitroSharp.Launcher
 {
+    internal sealed class BadConfigException : Exception
+    {
+        public BadConfigException(string missingProperty, Exception? innerException = null)
+            : base($"Bad config file: missing required property '{missingProperty}'", innerException)
+        {
+        }
+    }
+
     internal static class ConfigurationReader
     {
+        /// <exception cref="BadConfigException"></exception>
         public static Configuration Read(string configPath)
         {
-            var configuration = new Configuration
+            static JsonValue getRequired(JsonValue settings, string key)
             {
-                ContentRoot = "Content"
-            };
+                try
+                {
+                    return settings[key];
+                }
+                catch (KeyNotFoundException)
+                {
+                    throw new BadConfigException(key);
+                }
+            }
 
             using (FileStream stream = File.OpenRead(configPath))
             {
                 var root = JsonValue.Load(stream);
-                foreach (KeyValuePair<string, JsonValue> property in root)
+
+                string waitLineIcon = getRequired(root, "icons.waitLine");
+                string waitPageIcon = getRequired(root, "icons.waitPage");
+                string waitAutoIcon = getRequired(root, "icons.waitAuto");
+                string backlogVoiceIcon = getRequired(root, "icons.backlogVoice");
+
+                var icons = new Icons(
+                    waitLineIcon,
+                    waitPageIcon,
+                    waitAutoIcon,
+                    backlogVoiceIcon
+                );
+
+                var configuration = new Configuration(icons);
+                foreach (KeyValuePair<string, JsonValue>? property in root)
                 {
-                    SetProperty(configuration, property);
+                    if (property is { } p)
+                    {
+                        Set(configuration, p);
+                    }
                 }
 
                 string profileName = root["activeProfile"];
                 JsonValue profile = root["profiles"][profileName];
-                foreach (KeyValuePair<string, JsonValue> property in profile)
+
+                foreach (KeyValuePair<string, JsonValue>? property in profile)
                 {
-                    SetProperty(configuration, property);
+                    if (property is { } prop)
+                    {
+                        Set(configuration, prop);
+                    }
                 }
 
                 return configuration;
             }
         }
 
-        private static void SetProperty(Configuration configuration, KeyValuePair<string, JsonValue> property)
+        private static void Set(Configuration configuration, KeyValuePair<string, JsonValue> property)
         {
             switch (property.Key)
             {

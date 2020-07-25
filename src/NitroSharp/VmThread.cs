@@ -1,3 +1,4 @@
+using NitroSharp.Graphics;
 using NitroSharp.NsScript;
 using NitroSharp.NsScript.VM;
 
@@ -7,7 +8,7 @@ namespace NitroSharp
     {
         private readonly NsScriptVM _vm;
 
-        public VmThread(in ResolvedEntityPath path, NsScriptVM vm,  string target)
+        public VmThread(in ResolvedEntityPath path, NsScriptVM vm, string target)
             : base(path)
         {
             _vm = vm;
