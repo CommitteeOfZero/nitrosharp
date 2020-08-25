@@ -33,14 +33,14 @@ namespace NitroSharp.Graphics
             _ => false
         };
 
-        public bool IsInstanced => Method switch
+        private bool IsInstanced => Method switch
         {
             DrawMethod.DrawInstanced => true,
             DrawMethod.DrawIndexedInstanced => true,
             _ => false
         };
 
-        public DrawParams(
+        private DrawParams(
             uint vertexBase,
             uint vertexCount,
             uint indexBase,

@@ -8,6 +8,7 @@ namespace NitroSharp.NsScript.Syntax.PXml
         Text,
         VoiceElement,
         FontElement,
+        SpanElement,
         RubyElement,
         HaltElement,
         NoLinebreaksElement,
@@ -94,6 +95,25 @@ namespace NitroSharp.NsScript.Syntax.PXml
         internal override void Accept(PXmlSyntaxVisitor visitor)
         {
             visitor.VisitFontElement(this);
+        }
+    }
+
+    public sealed class SpanElement : PXmlNode
+    {
+        public int Size { get; }
+        public PXmlContent Content { get; }
+
+        public SpanElement(int size, PXmlContent content)
+        {
+            Size = size;
+            Content = content;
+        }
+
+        public override PXmlNodeKind Kind => PXmlNodeKind.SpanElement;
+
+        internal override void Accept(PXmlSyntaxVisitor visitor)
+        {
+            visitor.VisitSpanElement(this);
         }
     }
 

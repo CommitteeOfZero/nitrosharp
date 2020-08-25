@@ -30,7 +30,8 @@
         Dispatch = 0x33,        // <byte function> <byte argCount>
         Call = 0x34,            // <ushort subroutine> <byte argCount>
         CallFar = 0x35,         // <ushort module> <ushort subroutine> <byte argCount>
-        Return = 0x36,          // <>
+        CallScene = 0x36,       // <ushort module> <ushort scene>
+        Return = 0x37,          // <>
 
         SelectStart = 0x40,     // <>
         IsPressed = 0x41,       // <ushort token>

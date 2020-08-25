@@ -13,7 +13,7 @@ namespace NitroSharp.Graphics
 
         public override void Dispose()
         {
-            //Texture.Dispose();
+            Texture.Dispose();
         }
     }
 }

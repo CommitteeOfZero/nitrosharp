@@ -106,6 +106,14 @@ namespace NitroSharp.Text
                 _textRunData = oldData;
             }
 
+            public override void VisitSpanElement(SpanElement spanElement)
+            {
+                TextRunData oldData = _textRunData;
+                _textRunData.FontSize = spanElement.Size;
+                Visit(spanElement.Content);
+                _textRunData = oldData;
+            }
+
             public override void VisitText(PXmlText text)
             {
                 if (text.Text.Length > 0)

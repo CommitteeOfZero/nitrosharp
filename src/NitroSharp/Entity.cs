@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.InteropServices;
 using NitroSharp.NsScript;
 using NitroSharp.Utilities;
 
@@ -6,16 +7,23 @@ using NitroSharp.Utilities;
 
 namespace NitroSharp
 {
+    [StructLayout(LayoutKind.Auto)]
     internal readonly struct EntityId : IEquatable<EntityId>
     {
         private readonly int _hashCode;
         private readonly int _nameStart;
 
         public readonly string Path;
+        public readonly uint Context;
         public readonly MouseState MouseState;
 
-        public EntityId(string path, int nameStart, MouseState mouseState)
+        public EntityId(
+            uint context,
+            string path,
+            int nameStart,
+            MouseState mouseState)
         {
+            Context = context;
             Path = path;
             _hashCode = path.GetHashCode();
             _nameStart = nameStart;
@@ -29,7 +37,7 @@ namespace NitroSharp
 
         public override int GetHashCode() => _hashCode;
         public bool Equals(EntityId other) => string.Equals(Path, other.Path);
-        public override string? ToString() => Path;
+        public override string ToString() => Path;
     }
 
     internal abstract class Entity : EntityInternal, IDisposable

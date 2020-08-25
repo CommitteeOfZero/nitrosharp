@@ -6,9 +6,24 @@ using System.IO;
 using System.Threading;
 using NitroSharp.NsScript.Primitives;
 using NitroSharp.NsScript.Utilities;
+using NitroSharp.Utilities;
 
 namespace NitroSharp.NsScript.VM
 {
+    public readonly ref struct RunResult
+    {
+        public readonly ReadOnlySpan<uint> NewThreads;
+        public readonly ReadOnlySpan<uint> TerminatedThreads;
+
+        public RunResult(
+            ReadOnlySpan<uint> newThreads,
+            ReadOnlySpan<uint> terminatedThreads)
+        {
+            NewThreads = newThreads;
+            TerminatedThreads = terminatedThreads;
+        }
+    }
+
     public sealed class NsScriptVM
     {
         private readonly struct ThreadAction
@@ -18,12 +33,14 @@ namespace NitroSharp.NsScript.VM
                 Create,
                 Terminate,
                 Suspend,
+                Join,
                 Resume
             }
 
             public readonly ThreadContext Thread;
             public readonly ActionKind Kind;
             public readonly TimeSpan? Timeout;
+            public readonly ThreadContext? JoinedThread;
 
             public static ThreadAction Create(ThreadContext thread)
                 => new ThreadAction(thread, ActionKind.Create, null);
@@ -34,14 +51,22 @@ namespace NitroSharp.NsScript.VM
             public static ThreadAction Suspend(ThreadContext thread, TimeSpan? timeout)
                 => new ThreadAction(thread, ActionKind.Suspend, timeout);
 
-            public static ThreadAction Resume(ThreadContext thread)
+            public static ThreadAction Join(ThreadContext thread, ThreadContext target)
+                => new ThreadAction(thread, ActionKind.Join, null, target);
+
+                public static ThreadAction Resume(ThreadContext thread)
                 => new ThreadAction(thread, ActionKind.Resume, null);
 
-            private ThreadAction(ThreadContext thread, ActionKind kind, TimeSpan? timeout)
+            private ThreadAction(
+                ThreadContext thread,
+                ActionKind kind,
+                TimeSpan? timeout,
+                ThreadContext? joinedThread = null)
             {
                 Thread = thread;
                 Kind = kind;
                 Timeout = timeout;
+                JoinedThread = joinedThread;
             }
         }
 
@@ -55,6 +80,8 @@ namespace NitroSharp.NsScript.VM
         private readonly Stack<CubicBezierSegment> _bezierSegmentStack;
 
         private uint _lastThreadId;
+        private ArrayBuilder<uint> _newThreads;
+        private ArrayBuilder<uint> _terminatedThreads;
 
         public NsScriptVM(
             NsxModuleLocator moduleLocator,
@@ -70,6 +97,8 @@ namespace NitroSharp.NsScript.VM
             GlobalVarLookup = GlobalVarLookupTable.Load(globalVarLookupTableStream);
             SystemVariables = new SystemVariableLookup(this);
             _bezierSegmentStack = new Stack<CubicBezierSegment>();
+            _newThreads = new ArrayBuilder<uint>(4);
+            _terminatedThreads = new ArrayBuilder<uint>(4);
         }
 
         internal GlobalVarLookupTable GlobalVarLookup { get; }
@@ -85,12 +114,10 @@ namespace NitroSharp.NsScript.VM
             var frame = new CallFrame(
                 blockToken.Module,
                 (ushort)blockToken.SubroutineIndex,
-                SubroutineKind.Function,
                 pc: blockToken.Offset
             );
-            var thread = new ThreadContext(++_lastThreadId, ref frame);
+            ThreadContext thread = CreateThread(ref frame);
             thread.DialoguePage = new EntityPath("@" + blockToken.BlockName);
-            _pendingThreadActions.Enqueue(ThreadAction.Create(thread));
             return thread;
         }
 
@@ -98,15 +125,20 @@ namespace NitroSharp.NsScript.VM
         {
             NsxModule module = GetModule(moduleName);
             ushort subIndex = (ushort)module.LookupSubroutineIndex(symbol);
-            SubroutineKind kind = module.GetSubroutineRuntimeInfo(subIndex).SubroutineKind;
-            var frame = new CallFrame(module, subIndex, kind);
-            var thread = new ThreadContext(++_lastThreadId, ref frame);
-            _pendingThreadActions.Enqueue(ThreadAction.Create(thread));
+            var frame = new CallFrame(module, subIndex, 0);
+            ThreadContext thread = CreateThread(ref frame);
             MainThread ??= thread;
             if (!start)
             {
                 CommitSuspendThread(thread, null);
             }
+            return thread;
+        }
+
+        private ThreadContext CreateThread(ref CallFrame callFrame)
+        {
+            var thread = new ThreadContext(++_lastThreadId, ref callFrame);
+            _pendingThreadActions.Enqueue(ThreadAction.Create(thread));
             return thread;
         }
 
@@ -127,6 +159,12 @@ namespace NitroSharp.NsScript.VM
             _pendingThreadActions.Enqueue(ThreadAction.Suspend(thread, timeout));
         }
 
+        public void Join(ThreadContext callingThread, ThreadContext targetThread)
+        {
+            _pendingThreadActions
+                .Enqueue(ThreadAction.Join(callingThread, targetThread));
+        }
+
         public void ResumeThread(ThreadContext thread)
         {
             _pendingThreadActions.Enqueue(ThreadAction.Resume(thread));
@@ -137,10 +175,12 @@ namespace NitroSharp.NsScript.VM
             _pendingThreadActions.Enqueue(ThreadAction.Terminate(thread));
         }
 
-        public void Run(BuiltInFunctions builtins, CancellationToken cancellationToken)
+        public RunResult Run(BuiltInFunctions builtins, CancellationToken cancellationToken)
         {
             builtins._vm = this;
             long? time = null;
+            _newThreads.Clear();
+            _terminatedThreads.Clear();
             foreach (ThreadContext thread in _threads)
             {
                 if (thread.SuspensionTime != null && thread.SleepTimeout != null)
@@ -172,6 +212,11 @@ namespace NitroSharp.NsScript.VM
                         }
                         else if (thread.DoneExecuting)
                         {
+                            if (thread.WaitingThread is ThreadContext waitingThread)
+                            {
+                                ResumeThread(waitingThread);
+                                nbActive++;
+                            }
                             TerminateThread(thread);
                             nbActive--;
                         }
@@ -185,9 +230,14 @@ namespace NitroSharp.NsScript.VM
                         thread.Yielded = false;
                     }
 
-                    return;
+                    break;
                 }
             }
+
+            return new RunResult(
+                _newThreads.AsReadonlySpan(),
+                _terminatedThreads.AsReadonlySpan()
+            );
         }
 
         private void ProcessPendingThreadActions()
@@ -199,12 +249,18 @@ namespace NitroSharp.NsScript.VM
                 {
                     case ThreadAction.ActionKind.Create:
                         _threads.Add(thread);
+                        _newThreads.Add(thread.Id);
                         break;
                     case ThreadAction.ActionKind.Terminate:
                         _threads.Remove(thread);
+                        _terminatedThreads.Add(thread.Id);
                         break;
                     case ThreadAction.ActionKind.Suspend:
                         CommitSuspendThread(thread, action.Timeout);
+                        break;
+                    case ThreadAction.ActionKind.Join:
+                        Debug.Assert(action.JoinedThread is object);
+                        CommitJoin(thread, action.JoinedThread);
                         break;
                     case ThreadAction.ActionKind.Resume:
                         CommitResumeThread(thread);
@@ -220,6 +276,12 @@ namespace NitroSharp.NsScript.VM
             {
                 thread.SleepTimeout = TicksFromTimeSpan(timeout);
             }
+        }
+
+        private void CommitJoin(ThreadContext thread, ThreadContext target)
+        {
+            thread.SuspensionTime = TicksFromTimeSpan(_timer.Elapsed);
+            target.WaitingThread = thread;
         }
 
         private void CommitResumeThread(ThreadContext thread)
@@ -263,7 +325,7 @@ namespace NitroSharp.NsScript.VM
             while (true)
             {
                 Opcode opcode = program.NextOpcode();
-                ushort varToken = 0;
+                ushort varToken = ushort.MaxValue;
                 ConstantValue? imm = opcode switch
                 {
                     Opcode.LoadImm => readConst(ref program, thisModule),
@@ -280,7 +342,7 @@ namespace NitroSharp.NsScript.VM
 
                 if (imm.HasValue)
                 {
-                    if (varToken != 0 && varToken == SystemVariables.PresentProcess)
+                    if (varToken != ushort.MaxValue && varToken == SystemVariables.PresentProcess)
                     {
                         string subName = thisModule.GetSubroutineName(frame.SubroutineIndex);
                         imm = _globals[varToken] = ConstantValue.String(subName);
@@ -299,18 +361,18 @@ namespace NitroSharp.NsScript.VM
                         break;
                     case Opcode.Binary:
                         var opKind = (BinaryOperatorKind)program.ReadByte();
-                        ConstantValue op2 = stack.Pop();
                         ConstantValue op1 = stack.Pop();
+                        ConstantValue op2 = stack.Pop();
                         stack.Push(BinOp(op1, opKind, op2));
                         break;
                     case Opcode.Equal:
-                        op2 = stack.Pop();
                         op1 = stack.Pop();
+                        op2 = stack.Pop();
                         stack.Push(op1 == op2);
                         break;
                     case Opcode.NotEqual:
-                        op2 = stack.Pop();
                         op1 = stack.Pop();
+                        op2 = stack.Pop();
                         stack.Push(op1 != op2);
                         break;
 
@@ -347,10 +409,8 @@ namespace NitroSharp.NsScript.VM
 
                     case Opcode.Call:
                         ushort subroutineToken = program.DecodeToken();
-                        ushort argCount = program.ReadByte();
-                        ushort argStart = (ushort)(stack.Count - argCount);
                         frame.ProgramCounter = program.Position;
-                        var newFrame = new CallFrame(frame.Module, subroutineToken, SubroutineKind.Function, 0, argStart, argCount);
+                        var newFrame = new CallFrame(frame.Module, subroutineToken, 0);
                         thread.CallFrameStack.Push(newFrame);
                         if (CurrentThread == MainThread)
                         {
@@ -364,24 +424,13 @@ namespace NitroSharp.NsScript.VM
                         }
                         return TickResult.Ok;
                     case Opcode.CallFar:
-                        ushort importTableIndex = program.DecodeToken();
-                        subroutineToken = program.DecodeToken();
-                        argCount = program.ReadByte();
-                        argStart = (ushort)(stack.Count - argCount);
-                        string externalModuleName = thisModule.Imports[importTableIndex];
-                        NsxModule externalModule = GetModule(externalModuleName);
-                        SubroutineKind kind = externalModule.GetSubroutineRuntimeInfo(subroutineToken)
-                            .SubroutineKind;
-                        newFrame = new CallFrame(externalModule, subroutineToken, kind, 0, argStart, argCount);
+                        newFrame = externalCall(ref program);
                         thread.CallFrameStack.Push(newFrame);
                         frame.ProgramCounter = program.Position;
-                        if (kind == SubroutineKind.Chapter)
-                        {
-                            builtins.BeginChapter();
-                        }
                         if (CurrentThread == MainThread)
                         {
-                            string name = externalModule.GetSubroutineRuntimeInfo(subroutineToken)
+                            string name = newFrame.Module
+                                .GetSubroutineRuntimeInfo(newFrame.SubroutineIndex)
                                 .SubroutineName;
                             for (int i = 0; i < thread.CallFrameStack.Count; i++)
                             {
@@ -389,6 +438,13 @@ namespace NitroSharp.NsScript.VM
                             }
                             Console.WriteLine("far: " + name);
                         }
+                        return TickResult.Ok;
+                    case Opcode.CallScene:
+                        newFrame = externalCall(ref program);
+                        ThreadContext newThread = CreateThread(ref newFrame);
+                        Join(thread, newThread);
+                        ResumeThread(newThread);
+                        frame.ProgramCounter = program.Position;
                         return TickResult.Ok;
                     case Opcode.Jump:
                         int @base = program.Position - 1;
@@ -418,10 +474,6 @@ namespace NitroSharp.NsScript.VM
                         if (thread.CallFrameStack.Count > 0)
                         {
                             thread.CallFrameStack.Pop();
-                            if (frame.SubroutineKind == SubroutineKind.Chapter)
-                            {
-                                builtins.EndChapter();
-                            }
                         }
                         return TickResult.Ok;
                     case Opcode.BezierStart:
@@ -449,7 +501,7 @@ namespace NitroSharp.NsScript.VM
                         break;
                     case Opcode.Dispatch:
                         var func = (BuiltInFunction)program.ReadByte();
-                        argCount = program.ReadByte();
+                        int argCount = program.ReadByte();
                         ReadOnlySpan<ConstantValue> args = stack.AsSpan(stack.Count - argCount, argCount);
                         switch (func)
                         {
@@ -528,6 +580,15 @@ namespace NitroSharp.NsScript.VM
                         frame.ProgramCounter = program.Position;
                         return TickResult.Yield;
                 }
+            }
+
+            CallFrame externalCall(ref BytecodeStream program)
+            {
+                ushort importTableIndex = program.DecodeToken();
+                ushort subroutineToken = program.DecodeToken();
+                string externalModuleName = thisModule.Imports[importTableIndex];
+                NsxModule externalModule = GetModule(externalModuleName);
+                return new CallFrame(externalModule, subroutineToken, 0);
             }
 
             static ConstantValue readConst(ref BytecodeStream stream, NsxModule module)

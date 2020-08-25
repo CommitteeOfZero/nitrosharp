@@ -195,8 +195,8 @@ namespace NitroSharp.NsScript.Compiler
 
         private void EmitBinaryExpression(BinaryExpressionSyntax expression)
         {
-            EmitExpression(expression.Left);
             EmitExpression(expression.Right);
+            EmitExpression(expression.Left);
             EmitBinary(expression.OperatorKind.Value);
         }
 
@@ -328,27 +328,25 @@ namespace NitroSharp.NsScript.Compiler
         {
             if (_checker.ResolveCallChapterTarget(statement) is ChapterSymbol chapter)
             {
-                EmitCallFar(chapter);
+                EmitCall(Opcode.CallScene, chapter);
             }
         }
 
         private void EmitCallScene(CallSceneStatementSyntax statement)
         {
-            SceneSymbol? scene = _checker.ResolveCallSceneTarget(statement);
-            if (scene != null)
+            if (_checker.ResolveCallSceneTarget(statement) is SceneSymbol scene)
             {
-                EmitCallFar(scene);
+                EmitCall(Opcode.CallScene, scene);
             }
         }
 
-        private void EmitCallFar(SubroutineSymbol subroutine)
+        private void EmitCall(Opcode opcode, SubroutineSymbol target)
         {
-            EmitOpcode(Opcode.CallFar);
-            SourceFileSymbol externalSourceFile = subroutine.DeclaringSourceFile;
+            EmitOpcode(opcode);
+            SourceFileSymbol externalSourceFile = target.DeclaringSourceFile;
             NsxModuleBuilder externalNsxBuilder = _compilation.GetNsxModuleBuilder(externalSourceFile);
             _code.WriteUInt16LE(_module.GetExternalModuleToken(externalSourceFile));
-            _code.WriteUInt16LE(externalNsxBuilder.GetSubroutineToken(subroutine));
-            _code.WriteByte(0);
+            _code.WriteUInt16LE(externalNsxBuilder.GetSubroutineToken(target));
         }
 
         private void EmitStatement(StatementSyntax statement)

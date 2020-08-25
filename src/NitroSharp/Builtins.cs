@@ -11,25 +11,46 @@ namespace NitroSharp
 {
     internal sealed partial class Builtins : BuiltInFunctions
     {
-        private readonly World _world;
         private readonly GameContext _ctx;
         private readonly RenderContext _renderCtx;
+        private readonly World _world;
 
         public Builtins(GameContext context)
         {
             _ctx = context;
             _renderCtx = context.RenderContext;
-            _world = context.World;
+            _world = _ctx.World;
         }
 
-        public override void BeginChapter()
+        private Entity? Get(in EntityPath entityPath)
+            => _world.Get(CurrentThread.Id, entityPath);
+
+        private SmallList<Entity> Query(EntityQuery query)
         {
-            _world.PushChapter();
+            SmallList<Entity> results = _world.Query(CurrentThread.Id, query);
+            if (results.Count == 0)
+            {
+                EmptyResults(query);
+            }
+            return results;
         }
 
-        public override void EndChapter()
+        private QueryResultsEnumerable<T> Query<T>(EntityQuery query) where T : Entity
         {
-            _world.PopChapter();
+            QueryResultsEnumerable<T> results = _world.Query<T>(CurrentThread.Id, query);
+            if (results.IsEmpty)
+            {
+                EmptyResults(query);
+            }
+            return results;
+        }
+
+        private void EmptyResults(EntityQuery query) { }
+            //=> Console.WriteLine($"Query '{query.Value}' yielded no results.");
+
+        private bool ResolvePath(in EntityPath path, out ResolvedEntityPath resolvedPath)
+        {
+            return _world.ResolvePath(CurrentThread.Id, path, out resolvedPath);
         }
 
         public override void Exit()
@@ -44,7 +65,7 @@ namespace NitroSharp
 
         public override void CreateEntity(in EntityPath path)
         {
-            if (_world.ResolvePath(path, out ResolvedEntityPath resolvedPath))
+            if (ResolvePath(path, out ResolvedEntityPath resolvedPath))
             {
                 _world.Add(new SimpleEntity(resolvedPath));
             }
@@ -52,7 +73,7 @@ namespace NitroSharp
 
         public override void Request(EntityQuery query, NsEntityAction action)
         {
-            foreach (Entity entity in _world.Query(query))
+            foreach (Entity entity in Query(query))
             {
                 switch (entity, action)
                 {
@@ -106,6 +127,9 @@ namespace NitroSharp
                     case (_, NsEntityAction.Disable):
                         _world.DisableEntity(entity);
                         break;
+                    case (_, NsEntityAction.DestroyWhenIdle):
+                        _world.DestroyWhenIdle(entity);
+                        break;
                     case (_, NsEntityAction.Lock):
                         entity.Lock();
                         break;
@@ -118,7 +142,7 @@ namespace NitroSharp
 
         public override void SetAlias(in EntityPath entityPath, in EntityPath alias)
         {
-            if (_world.ResolvePath(entityPath, out ResolvedEntityPath resolvedPath))
+            if (ResolvePath(entityPath, out ResolvedEntityPath resolvedPath))
             {
                 _world.SetAlias(resolvedPath.Id, alias);
             }
@@ -126,7 +150,7 @@ namespace NitroSharp
 
         public override void DestroyEntities(EntityQuery query)
         {
-            foreach (Entity entity in _world.Query(query))
+            foreach (Entity entity in Query(query))
             {
                 if (!entity.IsLocked)
                 {
@@ -137,7 +161,7 @@ namespace NitroSharp
 
         public override void CreateThread(in EntityPath entityPath, string target)
         {
-            if (_world.ResolvePath(entityPath, out ResolvedEntityPath resolvedPath))
+            if (ResolvePath(entityPath, out ResolvedEntityPath resolvedPath))
             {
                 _world.Add(new VmThread(resolvedPath, _ctx.VM, target));
             }

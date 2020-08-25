@@ -12,9 +12,9 @@ namespace NitroSharp
 {
     internal abstract class Animation
     {
-        protected readonly TimeSpan _duration;
+        private readonly TimeSpan _duration;
+        private readonly bool _repeat;
         protected readonly NsEaseFunction _easeFunction;
-        protected readonly bool _repeat;
 
         private float _elapsed;
         private bool _initialized;

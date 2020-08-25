@@ -25,7 +25,7 @@ namespace NitroSharp.NsScript.VM
         /// <summary>
         /// Original name: Platform.
         /// </summary>
-        public virtual int GetPlatformId() => 100;
+        public virtual int GetPlatformId() => 0;
 
         public virtual string GetCurrentModuleName() => throw new NotImplementedException();
         public virtual int GetSoundAmplitude(string characterName) => throw new NotImplementedException();
@@ -150,8 +150,5 @@ namespace NitroSharp.NsScript.VM
         public virtual void AssertTrue(bool value) { }
 
         public virtual void LineEnd(in EntityPath dialoguePage) { }
-
-        public virtual void BeginChapter() { }
-        public virtual void EndChapter() { }
     }
 }

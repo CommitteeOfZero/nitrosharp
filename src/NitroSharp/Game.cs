@@ -78,7 +78,6 @@ namespace NitroSharp
 
     internal sealed class GameContext
     {
-        public World World { get; }
         public GameWindow Window { get; }
         public ContentManager Content { get; }
         public GlyphRasterizer GlyphRasterizer { get; }
@@ -86,21 +85,21 @@ namespace NitroSharp
         public RenderContext RenderContext { get; }
         public InputContext InputContext { get; }
         public NsScriptVM VM { get; }
+        public World World { get; }
 
         public Queue<WaitOperation> WaitOperations { get; }
         public CancellationTokenSource ShutdownSignal { get; }
 
         public GameContext(
-            World world,
             GameWindow window,
             ContentManager content,
             GlyphRasterizer glyphRasterizer,
             FontConfiguration fontConfig,
             RenderContext renderContext,
             InputContext inputContext,
-            NsScriptVM vm)
+            NsScriptVM vm,
+            World world)
         {
-            World = world;
             Window = window;
             Content = content;
             GlyphRasterizer = glyphRasterizer;
@@ -108,6 +107,7 @@ namespace NitroSharp
             RenderContext = renderContext;
             InputContext = inputContext;
             VM = vm;
+            World = world;
             WaitOperations = new Queue<WaitOperation>();
             ShutdownSignal = new CancellationTokenSource();
         }
@@ -154,11 +154,11 @@ namespace NitroSharp
         private AudioDevice? _audioDevice;
         private AudioSourcePool? _audioSourcePool;
 
-        private readonly World _world;
         private readonly string _nssFolder;
         private readonly string _bytecodeCacheDir;
         private NsScriptVM? _vm;
         private Builtins _builtinFunctions;
+        private readonly World _world;
         private GameContext? _context;
 
         private readonly List<WaitOperation> _survivedWaits;
@@ -175,13 +175,13 @@ namespace NitroSharp
             _window.Mobile_SurfaceDestroyed += () => _surfaceDestroyed = true;
 
             _gameTimer = new Stopwatch();
-            _world = new World();
             _inputContext = new InputContext(window);
 
             _nssFolder = Path.Combine(_configuration.ContentRoot, "nss");
             _bytecodeCacheDir = _nssFolder.Replace("nss", "nsx");
             _builtinFunctions = null!;
             _survivedWaits = new List<WaitOperation>();
+            _world = new World();
         }
 
         internal AudioDevice AudioDevice => _audioDevice!;
@@ -206,14 +206,14 @@ namespace NitroSharp
             }
 
             _context = new GameContext(
-                _world,
                 _window,
                 _content!,
                 _glyphRasterizer,
                 _fontConfig!,
                 _renderSystem!.Context,
                 _inputContext,
-                _vm!
+                _vm!,
+                _world
             );
             _builtinFunctions = new Builtins(_context);
             return RunMainLoop(useDedicatedThread);
@@ -411,8 +411,12 @@ namespace NitroSharp
             Debug.Assert(_vm is object);
 
             _renderSystem.BeginFrame(framestamp);
+            RunResult runResult = _vm.Run(_builtinFunctions, _context.ShutdownSignal.Token);
+            foreach (uint thread in runResult.TerminatedThreads)
+            {
+                _world.DestroyContext(thread);
+            }
 
-            _vm.Run(_builtinFunctions, _context.ShutdownSignal.Token);
             bool assetsReady = _content.ResolveAssets();
             if (assetsReady)
             {
@@ -474,11 +478,13 @@ namespace NitroSharp
 
         private bool ShouldResume(in WaitOperation wait)
         {
+            uint contextId = wait.Thread.Id;
+
             bool checkInput() => _inputContext.VKeyDown(VirtualKey.Advance);
 
             bool checkIdle(EntityQuery query)
             {
-                foreach (Entity entity in _world.Query(query))
+                foreach (Entity entity in _world.Query(contextId, query))
                 {
                     if (!entity.IsIdle) { return false; }
                 }
@@ -488,7 +494,7 @@ namespace NitroSharp
 
             bool checkAnim(EntityQuery query, AnimationKind anim)
             {
-                foreach (RenderItem entity in _world.Query<RenderItem>(query))
+                foreach (RenderItem entity in _world.Query<RenderItem>(contextId, query))
                 {
                     if (entity.IsAnimationActive(anim)) { return false; }
                 }
@@ -498,7 +504,7 @@ namespace NitroSharp
 
             bool checkLineRead(EntityQuery query)
             {
-                foreach (DialoguePage page in _world.Query<DialoguePage>(query))
+                foreach (DialoguePage page in _world.Query<DialoguePage>(contextId, query))
                 {
                     if (page.LineRead) { return true; }
                 }

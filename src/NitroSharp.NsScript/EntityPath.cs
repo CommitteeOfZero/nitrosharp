@@ -1,5 +1,4 @@
 ﻿using System;
-using NitroSharp.NsScript.Primitives;
 
 namespace NitroSharp.NsScript
 {

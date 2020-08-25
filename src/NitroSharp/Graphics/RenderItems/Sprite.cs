@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Numerics;
 using NitroSharp.Content;
 using NitroSharp.Graphics.Core;
@@ -24,7 +25,7 @@ namespace NitroSharp.Graphics
         public readonly Texture? Standalone;
         public readonly RgbaFloat Color;
 
-        public SpriteTexture(
+        private SpriteTexture(
             SpriteTextureKind kind,
             AssetRef<Texture>? assetRef,
             RectangleU? sourceRectangle,
@@ -51,22 +52,22 @@ namespace NitroSharp.Graphics
 
         public Texture Resolve(RenderContext ctx) => this switch
         {
-            { Kind: SpriteTextureKind.Asset, AssetRef: {} assetRef } => ctx.Content.Get(assetRef),
+            { Kind: SpriteTextureKind.Asset, AssetRef: { } assetRef } => ctx.Content.Get(assetRef),
             { Kind: SpriteTextureKind.SolidColor } => ctx.WhiteTexture,
-            { Kind: SpriteTextureKind.StandaloneTexture, Standalone: {} standalone } => standalone,
+            { Kind: SpriteTextureKind.StandaloneTexture, Standalone: { } standalone } => standalone,
             _ => ThrowHelper.Unreachable<Texture>()
         };
 
         public Size GetSize(RenderContext ctx) => this switch
         {
-            { SourceRectangle: {} srcRect } => srcRect.Size,
-            { AssetRef: {} assetRef } => ctx.Content.GetTextureSize(assetRef),
+            { SourceRectangle: { } srcRect } => srcRect.Size,
+            { AssetRef: { } assetRef } => ctx.Content.GetTextureSize(assetRef),
             _ => ThrowHelper.Unreachable<Size>()
         };
 
         public (Vector2, Vector2) GetTexCoords(RenderContext ctx)
         {
-            if (this is { AssetRef: {} assetRef, SourceRectangle: {} srcRect })
+            if (this is { AssetRef: { } assetRef, SourceRectangle: { } srcRect })
             {
                 var texSize = ctx.Content.GetTextureSize(assetRef).ToVector2();
                 var tl = new Vector2(srcRect.Left, srcRect.Top) / texSize;
@@ -77,13 +78,27 @@ namespace NitroSharp.Graphics
             return (Vector2.Zero, Vector2.One);
         }
 
+        public SpriteTexture WithSourceRectangle(RectangleU? sourceRect)
+        {
+            return this is { Kind: SpriteTextureKind.Asset, AssetRef: { } assetRef }
+                ? FromAsset(assetRef.Clone(), sourceRect)
+                : new SpriteTexture(Kind, AssetRef, sourceRect ?? SourceRectangle, Standalone, Color);
+        }
+
+        public SpriteTexture Clone()
+        {
+            return this is { Kind: SpriteTextureKind.Asset, AssetRef: { } assetRef }
+                ? FromAsset(assetRef.Clone(), SourceRectangle)
+                : this;
+        }
+
         public void Dispose()
         {
-            if (this is { Kind: SpriteTextureKind.Asset, AssetRef: {} assetRef })
+            if (this is { Kind: SpriteTextureKind.Asset, AssetRef: { } assetRef })
             {
                 assetRef.Dispose();
             }
-            if (this is { Kind: SpriteTextureKind.StandaloneTexture, Standalone: {} tex})
+            if (this is { Kind: SpriteTextureKind.StandaloneTexture, Standalone: { } tex})
             {
                 tex.Dispose();
             }

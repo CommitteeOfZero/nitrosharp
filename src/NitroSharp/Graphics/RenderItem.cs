@@ -208,7 +208,7 @@ namespace NitroSharp.Graphics
 
         public override bool IsIdle
             => _moveAnim is null && _scaleAnim is null
-			    && _rotateAnim is null && _fadeAnim is null;
+                && _rotateAnim is null && _fadeAnim is null;
 
         protected virtual bool PreciseHitTest => false;
 
@@ -390,35 +390,15 @@ namespace NitroSharp.Graphics
             TimeSpan duration,
             NsEaseFunction easeFunction)
         {
-            Vector3 destination = Point(ctx, x, y);
-            MoveCore(destination, duration, easeFunction);
-
-            if (AnimPropagationMode == AnimPropagationMode.All)
+            if (AnimPropagationMode != AnimPropagationMode.None)
             {
                 foreach (RenderItem2D child in GetChildren<RenderItem2D>())
                 {
-                    child.MoveCore(destination, duration, easeFunction);
-                }
-            }
-            else if (AnimPropagationMode != AnimPropagationMode.None)
-            {
-                // Move is a bit special. If the dst coordinates are relative (@x, @y),
-                // the animation is always propagared to the children unless
-                // PropagationMode is set to None.
-                NsCoordinate childX = childCoord(x);
-                NsCoordinate childY = childCoord(y);
-                foreach (RenderItem2D child in GetChildren<RenderItem2D>())
-                {
-                    child.Move(ctx, childX, childY, duration, easeFunction);
+                    child.Move(ctx, x, y, duration, easeFunction);
                 }
             }
 
-            static NsCoordinate childCoord(NsCoordinate parentCoord)
-            {
-                return parentCoord is { Kind: NsCoordinateKind.Value, Value: (_, isRelative: true) }
-                    ? parentCoord
-                    : new NsCoordinate(0, isRelative: true);
-            }
+            MoveCore(Point(ctx, x, y), duration, easeFunction);
         }
 
         private void MoveCore(in Vector3 destination, TimeSpan duration, NsEaseFunction easeFunction)

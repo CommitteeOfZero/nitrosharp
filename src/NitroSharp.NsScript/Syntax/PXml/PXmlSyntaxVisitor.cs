@@ -34,6 +34,10 @@ namespace NitroSharp.NsScript.Syntax.PXml
         {
         }
 
+        public virtual void VisitSpanElement(SpanElement spanElement)
+        {
+        }
+
         public virtual void VisitRubyElement(RubyElement rubyElement)
         {
         }

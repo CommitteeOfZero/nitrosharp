@@ -44,6 +44,10 @@
 
     <PackageReference Include="SharpDX.Direct2D1" Version="4.2.0" />
     <PackageReference Include="SharpDX.XAudio2" Version="4.2.0" />
+
+    <!--<PackageReference Include="Vortice.Direct3D11" Version="1.7.33-beta" />
+    <PackageReference Include="Vortice.DXGI" Version="1.7.33-beta" />
+    <PackageReference Include="Vortice.DirectX" Version="1.7.33-beta" />-->
   </ItemGroup>
 
   <ItemGroup>

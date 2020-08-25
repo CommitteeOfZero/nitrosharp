@@ -40,36 +40,6 @@ namespace NitroSharp.Graphics
         public QuadVertex BottomLeft;
         public QuadVertex BottomRight;
 
-        public RectangleF GetBoundingRect()
-        {
-            float left = MathF.Min(TopLeft.Position.X, BottomLeft.Position.X);
-            float top = MathF.Min(TopLeft.Position.Y, TopRight.Position.Y);
-            float right = MathF.Max(TopRight.Position.X, BottomRight.Position.X);
-            float bottom = MathF.Max(BottomLeft.Position.Y, BottomRight.Position.Y);
-            return RectangleF.FromLTRB(left, top, right, bottom);
-        }
-
-        public void Constrain(ref RectangleF boundingRect, in RectangleF constraintRect)
-        {
-            static void clamp(ref QuadVertex vert, Vector2 bounds, in RectangleF constraint)
-            {
-                Vector2 oldPos = vert.Position;
-                vert.Position = Vector2.Clamp(
-                    vert.Position,
-                    min: constraint.TopLeft,
-                    max: constraint.BottomRight
-                );
-                vert.TexCoord += (vert.Position - oldPos) / bounds;
-            }
-
-            var bounds = boundingRect.Size.ToVector2();
-            clamp(ref TopLeft, bounds, constraintRect);
-            clamp(ref TopRight, bounds, constraintRect);
-            clamp(ref BottomLeft, bounds, constraintRect);
-            clamp(ref BottomRight, bounds, constraintRect);
-            boundingRect = GetBoundingRect();
-        }
-
         public static (QuadGeometry, RectangleF) Create(
             SizeF localBounds,
             in Matrix4x4 transform,
@@ -117,6 +87,36 @@ namespace NitroSharp.Graphics
                 quad.Constrain(ref boundingRect, constraint);
             }
             return (quad, boundingRect);
+        }
+
+        private RectangleF GetBoundingRect()
+        {
+            float left = MathF.Min(TopLeft.Position.X, BottomLeft.Position.X);
+            float top = MathF.Min(TopLeft.Position.Y, TopRight.Position.Y);
+            float right = MathF.Max(TopRight.Position.X, BottomRight.Position.X);
+            float bottom = MathF.Max(BottomLeft.Position.Y, BottomRight.Position.Y);
+            return RectangleF.FromLTRB(left, top, right, bottom);
+        }
+
+        private void Constrain(ref RectangleF boundingRect, in RectangleF constraintRect)
+        {
+            static void clamp(ref QuadVertex vert, Vector2 bounds, in RectangleF constraint)
+            {
+                Vector2 oldPos = vert.Position;
+                vert.Position = Vector2.Clamp(
+                    vert.Position,
+                    min: constraint.TopLeft,
+                    max: constraint.BottomRight
+                );
+                vert.TexCoord += (vert.Position - oldPos) / bounds;
+            }
+
+            var bounds = boundingRect.Size.ToVector2();
+            clamp(ref TopLeft, bounds, constraintRect);
+            clamp(ref TopRight, bounds, constraintRect);
+            clamp(ref BottomLeft, bounds, constraintRect);
+            clamp(ref BottomRight, bounds, constraintRect);
+            boundingRect = GetBoundingRect();
         }
     }
 }

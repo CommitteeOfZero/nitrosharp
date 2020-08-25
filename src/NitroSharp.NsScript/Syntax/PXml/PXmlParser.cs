@@ -71,39 +71,48 @@ namespace NitroSharp.NsScript.Syntax.PXml
                 case "FONT":
                     node = ParseFontElement(startTag);
                     break;
-
+                case "span":
+                case "SPAN":
+                    node = ParseSpan(startTag);
+                    break;
                 case "RUBY":
                     node = ParseRubyElement(startTag);
                     break;
-
                 case "pre":
                 case "PRE":
                     node = ParsePreformattedText();
                     break;
-
                 case "voice":
                     node = ParseVoiceElement(startTag);
                     break;
-
                 case "k":
                 case "K":
                     return new HaltElement();
                 case "?":
                     return new NoLinebreaksElement();
-
                 case "br":
                     return new LinebreakElement();
-
                 case "i":
                 case "I":
                     PXmlContent content = ParseContent(startTag.Name);
                     return new ItalicElement(content);
-
                 default:
                     throw new NotImplementedException($"PXml tag '{startTag.Name}' is not yet supported.");
             }
-
             return node;
+        }
+
+        private SpanElement? ParseSpan(in PXmlTag tag)
+        {
+            PXmlContent content = ParseContent(tag.Name);
+            AttributeList attrs = tag.Attributes;
+            if (attrs.Get("value") is string strValue
+                && int.TryParse(strValue, out int value))
+            {   
+                return new SpanElement(value, content);
+            }
+
+            return null;
         }
 
         private VoiceElement? ParseVoiceElement(in PXmlTag tag)

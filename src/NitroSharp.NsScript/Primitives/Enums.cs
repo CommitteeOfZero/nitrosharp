@@ -14,7 +14,7 @@ namespace NitroSharp.NsScript
     {
         Lock,
         Unlock,
-        MarkForRemoval,
+        DestroyWhenIdle,
         Disable,
         Enable,
         Start,

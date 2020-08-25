@@ -17,10 +17,6 @@ namespace NitroSharp
     {
         public override void CreateBacklog(in EntityPath path, int priority)
         {
-            if (_world.ResolvePath(path, out ResolvedEntityPath resolvedPath))
-            {
-                _world.Add(new Backlog(resolvedPath, priority, _world.History));
-            }
         }
 
         public override void ClearBacklog()
@@ -30,7 +26,6 @@ namespace NitroSharp
 
         public override void SetBacklog(string text)
         {
-            _world.History.Add(text);
         }
 
         public override Vector2 GetCursorPosition()
@@ -47,7 +42,7 @@ namespace NitroSharp
             NsScrollDirection scrollDirection,
             string knobImage)
         {
-            if (_world.ResolvePath(path, out ResolvedEntityPath resolvedPath)
+            if (ResolvePath(path, out ResolvedEntityPath resolvedPath)
                 && ResolveSpriteSource(knobImage) is SpriteTexture knob)
             {
                 _world.Add(new Scrollbar(
@@ -64,7 +59,7 @@ namespace NitroSharp
 
         public override void SetScrollbar(in EntityPath scrollbar, in EntityPath parent)
         {
-            if (_world.Get(parent) is Backlog backlog)
+            if (Get(parent) is Backlog backlog)
             {
                 // TODO
             }
@@ -72,14 +67,14 @@ namespace NitroSharp
 
         public override float GetScrollbarValue(in EntityPath scrollbarEntity)
         {
-            return _world.Get(scrollbarEntity) is Scrollbar scrollbar
+            return Get(scrollbarEntity) is Scrollbar scrollbar
                 ? scrollbar.GetValue()
                 : 0;
         }
 
         public override void CreateChoice(in EntityPath entityPath)
         {
-            if (_world.ResolvePath(entityPath, out ResolvedEntityPath resolvedPath))
+            if (ResolvePath(entityPath, out ResolvedEntityPath resolvedPath))
             {
                 _world.Add(new Choice(resolvedPath));
             }
@@ -90,8 +85,8 @@ namespace NitroSharp
             in EntityPath second,
             NsFocusDirection focusDirection)
         {
-            if (_world.Get(first) is RenderItem2D { Parent: Choice choiceA }
-                && _world.Get(second) is RenderItem2D { Parent: Choice choiceB })
+            if (Get(first) is RenderItem2D { Parent: Choice choiceA }
+                && Get(second) is RenderItem2D { Parent: Choice choiceB })
             {
                 choiceA.SetNextFocus(focusDirection, choiceB.Id);
             }
@@ -99,7 +94,7 @@ namespace NitroSharp
 
         public override bool HandleInputEvents(in EntityPath uiElementPath)
         {
-            if (_world.Get(uiElementPath) is UiElement uiElement)
+            if (Get(uiElementPath) is UiElement uiElement)
             {
                 return uiElement.HandleEvents();
             }
@@ -112,7 +107,7 @@ namespace NitroSharp
             uint width, uint height,
             NsColor color)
         {
-            if (_world.ResolvePath(entityPath, out ResolvedEntityPath resolvedPath))
+            if (ResolvePath(entityPath, out ResolvedEntityPath resolvedPath))
             {
                 _world.Add(new ColorSource(
                     resolvedPath,
@@ -124,7 +119,7 @@ namespace NitroSharp
 
         public override void LoadImage(in EntityPath entityPath, string source)
         {
-            if (_world.ResolvePath(entityPath, out ResolvedEntityPath resolvedPath)
+            if (ResolvePath(entityPath, out ResolvedEntityPath resolvedPath)
                 && ResolveSpriteSource(source) is SpriteTexture texture)
             {
                 _world.Add(new Image(resolvedPath, texture));
@@ -138,7 +133,7 @@ namespace NitroSharp
             uint width, uint height,
             NsColor color)
         {
-            if (_world.ResolvePath(entityPath, out ResolvedEntityPath resolvedPath))
+            if (ResolvePath(entityPath, out ResolvedEntityPath resolvedPath))
             {
                 _world.Add(new Sprite(
                     resolvedPath, priority,
@@ -153,7 +148,7 @@ namespace NitroSharp
             NsCoordinate x, NsCoordinate y,
             string source)
         {
-            if (_world.ResolvePath(entityPath, out ResolvedEntityPath resolvedPath)
+            if (ResolvePath(entityPath, out ResolvedEntityPath resolvedPath)
                 && ResolveSpriteSource(source) is SpriteTexture texture)
             {
                 _world.Add(new Sprite(
@@ -179,14 +174,14 @@ namespace NitroSharp
                 return result;
             }
 
-            Entity? srcEntity = _world.Get(new EntityPath(src));
+            Entity? srcEntity = Get(new EntityPath(src));
             if (srcEntity is ColorSource colorSrc)
             {
                 return SpriteTexture.SolidColor(colorSrc.Color, colorSrc.Size);
             }
             if (srcEntity is Image img)
             {
-                return img.Texture;
+                return img.Texture.WithSourceRectangle(srcRect);
             }
 
             if (_ctx.Content.RequestTexture(src) is AssetRef<Texture> asset)
@@ -206,7 +201,7 @@ namespace NitroSharp
             string source)
         {
             var srcRect = new RectangleU(srcX, srcY, width, height);
-            if (_world.ResolvePath(entityPath, out ResolvedEntityPath resolvedPath)
+            if (ResolvePath(entityPath, out ResolvedEntityPath resolvedPath)
                 && ResolveSpriteSource(source, srcRect) is SpriteTexture texture)
             {
                 _world.Add(new Sprite(
@@ -224,7 +219,7 @@ namespace NitroSharp
             NsTextDimension width, NsTextDimension height,
             string pxmlText)
         {
-            if (_world.ResolvePath(entityPath, out ResolvedEntityPath resolvedPath))
+            if (ResolvePath(entityPath, out ResolvedEntityPath resolvedPath))
             {
                 var margin = new Vector4(0, 15, 34, 28);
                 var textBuffer = TextBuffer.FromPXmlString(pxmlText, _ctx.FontConfig);
@@ -277,7 +272,7 @@ namespace NitroSharp
             uint width, uint height,
             bool inheritTransform)
         {
-            if (_world.ResolvePath(entityPath, out ResolvedEntityPath resolvedPath))
+            if (ResolvePath(entityPath, out ResolvedEntityPath resolvedPath))
             {
                 _world.Add(new DialogueBox(
                     resolvedPath,
@@ -294,7 +289,7 @@ namespace NitroSharp
             int letterSpacing, int lineSpacing)
         {
             var path = new EntityPath($"{blockToken.BoxName}/{blockToken.BlockName}");
-            if (_world.ResolvePath(path, out ResolvedEntityPath resolvedPath)
+            if (ResolvePath(path, out ResolvedEntityPath resolvedPath)
                 && resolvedPath.Parent is RenderItem2D box)
             {
                 var margin = new Vector4(0, 10, 0, 0);
@@ -313,7 +308,7 @@ namespace NitroSharp
 
         public override void ClearDialoguePage(in EntityPath dialoguePage)
         {
-            if (_world.Get(dialoguePage) is DialoguePage page)
+            if (Get(dialoguePage) is DialoguePage page)
             {
                 page.Clear();
             }
@@ -321,7 +316,7 @@ namespace NitroSharp
 
         public override void AppendDialogue(in EntityPath dialoguePage, string text)
         {
-            if (_world.Get(dialoguePage) is DialoguePage page)
+            if (Get(dialoguePage) is DialoguePage page)
             {
                 var buffer = TextBuffer.FromPXmlString(text, _ctx.FontConfig);
                 page.Append(_renderCtx, buffer);
@@ -350,7 +345,7 @@ namespace NitroSharp
             string imagePath,
             bool inheritTransform)
         {
-            if (_world.ResolvePath(entityPath, out ResolvedEntityPath resolvedPath)
+            if (ResolvePath(entityPath, out ResolvedEntityPath resolvedPath)
                 && _ctx.Content.RequestTexture(imagePath) is AssetRef<Texture> texture)
             {
                 _world.Add(new AlphaMask(
@@ -364,21 +359,21 @@ namespace NitroSharp
 
         public override Vector2 GetPosition(in EntityPath entityPath)
         {
-            return _world.Get(entityPath) is RenderItem2D renderItem
+            return Get(entityPath) is RenderItem2D renderItem
                 ? renderItem.Transform.Position.XY()
                 : Vector2.Zero;
         }
 
         public override int GetWidth(in EntityPath entityPath)
         {
-            return _world.Get(entityPath) is RenderItem2D renderItem
+            return Get(entityPath) is RenderItem2D renderItem
                 ? (int)renderItem.GetUnconstrainedBounds(_renderCtx).Width
                 : 0;
         }
 
         public override int GetHeight(in EntityPath entityPath)
         {
-            return _world.Get(entityPath) is RenderItem2D renderItem
+            return Get(entityPath) is RenderItem2D renderItem
                 ? (int)renderItem.GetUnconstrainedBounds(_renderCtx).Height
                 : 0;
         }
@@ -407,7 +402,7 @@ namespace NitroSharp
             NsEaseFunction easeFunction,
             TimeSpan delay)
         {
-            foreach (RenderItem2D ri in _world.Query<RenderItem2D>(query))
+            foreach (RenderItem2D ri in Query<RenderItem2D>(query))
             {
                 ri.Fade(dstOpacity, duration, easeFunction);
             }
@@ -422,7 +417,7 @@ namespace NitroSharp
             NsEaseFunction easeFunction,
             TimeSpan delay)
         {
-            foreach (RenderItem2D ri in _world.Query<RenderItem2D>(query))
+            foreach (RenderItem2D ri in Query<RenderItem2D>(query))
             {
                 ri.Move(_renderCtx, dstX, dstY, duration, easeFunction);
             }
@@ -438,7 +433,7 @@ namespace NitroSharp
             TimeSpan delay)
         {
             var dstScale = new Vector3(dstScaleX.Rebase(1.0f), dstScaleY.Rebase(1.0f), 1.0f);
-            foreach (RenderItem2D ri in _world.Query<RenderItem2D>(query))
+            foreach (RenderItem2D ri in Query<RenderItem2D>(query))
             {
                 ri.Scale(dstScale, duration, easeFunction);
             }
@@ -454,7 +449,7 @@ namespace NitroSharp
             TimeSpan delay)
         {
             var dstRot = new Vector3(dstRotationX.Value, dstRotationY.Value, dstRotationZ.Value);
-            foreach (RenderItem2D ri in _world.Query<RenderItem2D>(query))
+            foreach (RenderItem2D ri in Query<RenderItem2D>(query))
             {
                 ri.Rotate(dstRot, duration, easeFunction);
             }
@@ -470,7 +465,7 @@ namespace NitroSharp
             bool wait)
         {
             if (duration <= TimeSpan.Zero) { return; }
-            foreach (RenderItem2D ri in _world.Query<RenderItem2D>(query))
+            foreach (RenderItem2D ri in Query<RenderItem2D>(query))
             {
                 var segments = ImmutableArray.CreateBuilder<ProcessedBezierSegment>();
                 foreach (CubicBezierSegment srcSeg in curve.Segments)
@@ -507,7 +502,7 @@ namespace NitroSharp
         {
             if (_ctx.Content.RequestTexture(maskFileName) is AssetRef<Texture> mask)
             {
-                foreach (Sprite sprite in _world.Query<Sprite>(query))
+                foreach (Sprite sprite in Query<Sprite>(query))
                 {
                     sprite.BeginTransition(
                         mask,

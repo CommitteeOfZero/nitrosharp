@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using NitroSharp.NsScript;
 using NitroSharp.Utilities;
 
@@ -15,6 +16,8 @@ namespace NitroSharp
         {
             _results = results;
         }
+
+        public bool IsEmpty => _results.Count == 0;
 
         public QueryResultsEnumerator<T> GetEnumerator()
             => new QueryResultsEnumerator<T>(_results);
@@ -49,24 +52,24 @@ namespace NitroSharp
 
     internal sealed partial class World
     {
-        public QueryResultsEnumerable<T> Query<T>(EntityQuery query)
+        public QueryResultsEnumerable<T> Query<T>(uint contextId, EntityQuery query)
             where T : Entity
         {
-            SmallList<Entity> results = Query(query);
+            SmallList<Entity> results = Query(contextId, query);
             return new QueryResultsEnumerable<T>(results);
         }
 
-        public SmallList<Entity> Query(EntityQuery query)
+        public SmallList<Entity> Query(uint contextId, EntityQuery query)
         {
             if (EntityPath.IsValidPath(query, out EntityPath simplePath)
-                && Get(simplePath) is Entity result)
+                && Get(contextId, simplePath) is Entity result)
             {
                 return new SmallList<Entity>(result);
             }
-            return QuerySlow(query);
+            return QuerySlow(contextId, query);
         }
 
-        private SmallList<Entity> QuerySlow(EntityQuery query)
+        private SmallList<Entity> QuerySlow(uint contextId, EntityQuery query)
         {
             static bool match(ref SmallList<EntityQueryPart> queryParts, string entityPath)
             {
@@ -114,7 +117,8 @@ namespace NitroSharp
                     if (matchParts(queryRoot, new EntityQueryPart(path.Value.AsMemory(), 0, false)))
                     {
                         string amendedQuery = query.Value.Replace(queryRoot.Value.ToString(), id.Path);
-                        SmallList<Entity> subQueryRes = Query(new EntityQuery(amendedQuery));
+                        uint parentContext = id.Context;
+                        SmallList<Entity> subQueryRes = Query(parentContext, new EntityQuery(amendedQuery));
                         foreach (Entity e in subQueryRes)
                         {
                             results.Add(e);
@@ -127,7 +131,7 @@ namespace NitroSharp
 
             foreach ((EntityId id, EntityRec _) in _entities)
             {
-                if (match(ref queryParts, id.Path))
+                if (id.Context == contextId && match(ref queryParts, id.Path))
                 {
                     results.Add(Get(id)!);
                 }

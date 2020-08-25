@@ -8,7 +8,7 @@
             {
                 BuiltInConstant.Lock => NsEntityAction.Lock,
                 BuiltInConstant.Unlock => NsEntityAction.Unlock,
-                BuiltInConstant.Disused => NsEntityAction.MarkForRemoval,
+                BuiltInConstant.Disused => NsEntityAction.DestroyWhenIdle,
                 BuiltInConstant.Erase => NsEntityAction.Disable,
                 BuiltInConstant.Enter => NsEntityAction.Enable,
                 BuiltInConstant.Start => NsEntityAction.Start,

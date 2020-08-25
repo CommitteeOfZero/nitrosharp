@@ -97,7 +97,7 @@ namespace NitroSharp.Content
         public AssetRef<Texture>? RequestTexture(string path)
             => RequestTexture(path, out _);
 
-        public AssetRef<Texture>? RequestTexture(string path, out Size size)
+        private AssetRef<Texture>? RequestTexture(string path, out Size size)
         {
             if (_strongHandles.TryGetValue(path, out FreeListHandle existing))
             {
