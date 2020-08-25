@@ -10,7 +10,6 @@ Committee of Zero's effort to reimplement n2system, a visual novel engine used i
 Run
 ```
 dotnet run --no-launch-profile --project ./src/NitroSharp.ShaderCompiler/NitroSharp.ShaderCompiler.csproj ./src/NitroSharp/Graphics/Shaders ./bin/obj/NitroSharp/Shaders.Generated
-
 dotnet build NitroSharp.sln [-c Release]
 ```
 Alternatively, you can run ``aot-build.ps1`` in PowerShell 6/7 to produce an AOT-compiled build.
