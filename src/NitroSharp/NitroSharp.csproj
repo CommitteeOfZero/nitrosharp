@@ -11,16 +11,6 @@
   <Import Project="..\..\OutputPath.props" />
 
   <ItemGroup>
-    <Compile Remove="Disabled/**" />
-    <Compile Remove="Old/**" />
-    <Compile Remove="Graphics/Old/**" />
-    <Compile Remove="OldDialogue/**" />
-    <Compile Remove="OldContent/**" />
-    <!--<Compile Remove="OldWorld/**" />-->
-    <Compile Remove="Disabled/Animation/AnimationProcessor.cs" />
-  </ItemGroup>
-
-  <ItemGroup>
 
     <ProjectReference Include="..\..\third_party\FFmpeg.AutoGen\FFmpeg.AutoGen.csproj" />
     <ProjectReference Include="..\..\third_party\OpenAL-CS\OpenAL-CS.csproj" />
