@@ -79,7 +79,6 @@ namespace NitroSharp.Text
         private struct LineBuilder
         {
             private ArrayBuilder<RubyTextChunk> _rubyChunks;
-            private float _prevRight;
 
             public float BaselineY;
             public float Shift;
@@ -87,8 +86,7 @@ namespace NitroSharp.Text
 
             public uint Start { get; private set; }
             public uint Length { get; private set; }
-            public float PenX { get; private set; }
-            public uint NbNonWhitespaceChars { get; private set; }
+            public float LastPenX { get; private set; }
 
             public float ActualAscender { get; private set; }
             public float ActualDescender { get; private set; }
@@ -111,16 +109,6 @@ namespace NitroSharp.Text
                 };
             }
 
-            public void Append(in GlyphDimensions glyphDims, bool isWhitespace)
-            {
-                Length++;
-                PenX += glyphDims.Advance;
-                if (!isWhitespace)
-                {
-                    NbNonWhitespaceChars++;
-                }
-            }
-
             public void AddRubyChunk(in RubyTextChunk chunk)
             {
                 _rubyChunks.Add(chunk);
@@ -137,8 +125,10 @@ namespace NitroSharp.Text
                 _rubyChunks = rubyChunks;
             }
 
-            public void AddWord(in Word word, in VerticalMetrics fontMetrics)
+            public void AppendWord(ref Word word, in VerticalMetrics fontMetrics)
             {
+                Length += word.Length;
+                LastPenX += word.PenX;
                 ActualAscender = MathF.Max(ActualAscender, word.Ascent);
                 ActualDescender = MathF.Max(ActualDescender, word.Descent);
                 MaxFontAscender = MathF.Max(MaxFontAscender, fontMetrics.Ascender);
@@ -146,18 +136,11 @@ namespace NitroSharp.Text
                 MaxFontLineGap = MathF.Min(MaxFontLineGap, fontMetrics.LineGap);
                 if (word.Length > 0)
                 {
-                    _prevRight = Right;
                     Left = MathF.Min(Left, word.Left);
                     Right = word.Right;
                 }
-            }
 
-            public void RemoveWord(in Word word)
-            {
-                Length -= word.Length;
-                NbNonWhitespaceChars -= word.Length;
-                PenX -= (word.Right - word.Left + 1);
-                Right = _prevRight;
+                word = new Word(word.Start + word.Length);
             }
 
             public Line Build()
@@ -180,15 +163,18 @@ namespace NitroSharp.Text
                 Start = start;
             }
 
+            public float PenX { get; private set; }
             public uint Start { get; }
             public uint Length { get; private set; }
             public float Left { get; private set; }
             public float Right { get; private set; }
             public float Ascent { get; private set; }
             public float Descent { get; private set; }
+            public bool HasNonWhitespaceChars { get; private set; }
 
-            public void Append(in GlyphDimensions glyph, Vector2 position)
+            public void Append(in GlyphDimensions glyph, Vector2 position, bool isWhitespace)
             {
+                PenX += glyph.Advance;
                 Ascent = MathF.Max(Ascent, glyph.Top);
                 Descent = MathF.Max(Descent, glyph.Height - glyph.Top - 1);
                 if (Length == 0)
@@ -198,6 +184,7 @@ namespace NitroSharp.Text
                 float w = glyph.Width > 0 ? glyph.Width : glyph.Advance;
                 Right = position.X + w - 1;
                 Length++;
+                HasNonWhitespaceChars |= !isWhitespace;
             }
         }
 
@@ -226,7 +213,6 @@ namespace NitroSharp.Text
         private LineBuilder _lineBuilder;
 
         private float _prevBaselineY;
-        private char _lastAddedChar;
 
         private RectangleF _boundingBox;
         private float _bbLeft, _bbRight;
@@ -258,6 +244,8 @@ namespace NitroSharp.Text
             Append(glyphRasterizer, textRuns);
         }
 
+        private float PenX => _lineBuilder.LastPenX + _lastWord.PenX;
+
         public ReadOnlySpan<GlyphRun> GlyphRuns => _glyphRuns.AsReadonlySpan();
         public ReadOnlySpan<PositionedGlyph> Glyphs => _glyphs.AsSpan();
         public RectangleF BoundingBox => _boundingBox;
@@ -274,7 +262,6 @@ namespace NitroSharp.Text
             _prevBaselineY = 0;
             _lastWord = default;
             _lineBuilder.Reset(start: 0);
-            _lastAddedChar = default;
             _boundingBox = new RectangleF(x: 0, y: float.MaxValue, 0, 0);
             _bbLeft = float.MaxValue;
             _bbRight = 0;
@@ -307,7 +294,7 @@ namespace NitroSharp.Text
         {
              bool canFitGlyph(in GlyphDimensions glyphDims)
             {
-                return (_lineBuilder.PenX
+                return (PenX
                     + glyphDims.Width
                     + glyphDims.Left) <= _maxBounds.Width;
             }
@@ -319,34 +306,19 @@ namespace NitroSharp.Text
             ReadOnlySpan<char> text = textRun.Text.Span;
             for (int stringPos = 0; stringPos < text.Length; stringPos++)
             {
+                bool end = stringPos == text.Length - 1;
                 char c = text[stringPos];
                 uint glyphIndex = fontData.GetGlyphIndex(c);
                 GlyphDimensions glyphDims = fontData.GetGlyphDimensions(glyphIndex, textRun.FontSize);
                 bool isNewline = c == '\r' || c == '\n';
-
-                bool wordStart;
-                if (!textRun.HasRubyText)
-                {
-                    wordStart = LineBreakingRules.CanStartLine(c);
-                    if (_glyphs.Count > 0)
-                    {
-                        wordStart &= LineBreakingRules.CanEndLine(_lastAddedChar);
-                    }
-                }
-                else
-                {
-                    // If a TextRun has ruby text, the base is treated as a single word
-                    // to disallow line breaking. So only the first character of the base
-                    // can start a word.
-                    wordStart = stringPos == 0;
-                }
-
+                // Disallow line breaking if the TextRun has ruby text
+                bool mayBreakLine = !(textRun.HasRubyText && stringPos > 0);
                 if (canFitGlyph(glyphDims))
                 {
                     if (!isNewline)
                     {
                         var position = new Vector2(
-                            _lineBuilder.Shift + _lineBuilder.PenX + glyphDims.Left,
+                            _lineBuilder.Shift + PenX + glyphDims.Left,
                             glyphDims.Top
                         );
                         if (position.X < 0)
@@ -356,25 +328,18 @@ namespace NitroSharp.Text
                         }
 
                         _glyphs.Add() = new PositionedGlyph(glyphIndex, position);
-                        _lineBuilder.Append(glyphDims, char.IsWhiteSpace(c));
-
-                        if (wordStart)
-                        {
-                            _lastWord = new Word(_glyphs.Count - 1);
-                        }
-
-                        _lastWord.Append(glyphDims, position);
+                        _lastWord.Append(glyphDims, position, char.IsWhiteSpace(c));
+                        
                     }
 
-                    if (LineBreakingRules.CanEndLine(c) && _lineBuilder.NbNonWhitespaceChars > 0)
+                    if (mayBreakLine && LineBreakingRules.CanEndLine(c) && _lastWord.HasNonWhitespaceChars
+                        && (stringPos == text.Length - 1 || LineBreakingRules.CanStartLine(text[stringPos + 1])))
                     {
                         if (!textRun.HasRubyText)
                         {
-                            _lineBuilder.AddWord(_lastWord, fontMetrics);
+                            _lineBuilder.AppendWord(ref _lastWord, fontMetrics);
                         }
                     }
-
-                    _lastAddedChar = c;
 
                     if (c == '\n' && !StartNewLine(glyphRasterizer, _glyphs.Count))
                     {
@@ -383,7 +348,8 @@ namespace NitroSharp.Text
                 }
                 else
                 {
-                    if (wordStart)
+                    if (mayBreakLine && LineBreakingRules.CanStartLine(c)
+                        && LineBreakingRules.CanEndLine(text[stringPos - 1]))
                     {
                         if (!StartNewLine(glyphRasterizer, _glyphs.Count))
                         {
@@ -394,7 +360,6 @@ namespace NitroSharp.Text
                         continue;
                     }
 
-                    _lineBuilder.RemoveWord(_lastWord);
                     _lastWord = new Word(_lastWord.Start);
                     // Start a new line and move the last word to it
                     if (!StartNewLine(glyphRasterizer, _lastWord.Start))
@@ -408,12 +373,11 @@ namespace NitroSharp.Text
                         ref PositionedGlyph g = ref _glyphs[i];
                         GlyphDimensions dims = fontData.GetGlyphDimensions(g.Index, textRun.FontSize);
                         var pos = new Vector2(
-                            _lineBuilder.PenX + dims.Left,
+                            PenX + dims.Left,
                             dims.Top
                         );
                         g = new PositionedGlyph(g.Index, pos);
-                        _lineBuilder.Append(dims, isWhitespace: false);
-                        _lastWord.Append(dims, pos);
+                        _lastWord.Append(dims, pos, isWhitespace: false);
                     }
 
                     // The one character that couldn't fit on the previous line
@@ -428,7 +392,7 @@ namespace NitroSharp.Text
                 return false;
             }
 
-            _lineBuilder.AddWord(_lastWord, fontMetrics);
+            _lineBuilder.AppendWord(ref _lastWord, fontMetrics);
             Debug.Assert(_glyphs.Count >= glyphRunStart);
             var glyphSpan = GlyphSpan.FromBounds(
                 start: glyphRunStart,
