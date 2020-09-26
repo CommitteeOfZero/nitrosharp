@@ -68,7 +68,7 @@ namespace NitroSharp.Text
             {
                 Flags |= TextRunFlags.RubyText;
             }
-            if (outlineColor is {})
+            if (outlineColor is { })
             {
                 Flags |= TextRunFlags.Outline;
             }

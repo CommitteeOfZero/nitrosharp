@@ -733,7 +733,7 @@ namespace NitroSharp.Text
             IntPtr stroker = _stroker;
             Face* ftFace = fontFace.FTFace;
             SetSize(fontFace.FTFace, fontSize);
-            FT.CheckResult(FT.FT_Load_Glyph(ftFace, index, LoadFlags.Default));
+            FT.CheckResult(FT.FT_Load_Glyph(ftFace, index, LoadFlags.NoBitmap));
 
             GlyphSlot* slot = ftFace->glyph;
             ref Outline outline = ref slot->outline;
