@@ -225,14 +225,15 @@ namespace NitroSharp
             SetupFonts();
             await Task.WhenAll(_initializingGraphics.Task, initializeAudio);
             _content = CreateContentManager();
+            await Task.Run(LoadStartupScript);
             _renderSystem = new RenderSystem(
                 _configuration,
                 _graphicsDevice!,
                 _swapchain!,
                 _glyphRasterizer,
-                _content
+                _content,
+                _vm!.SystemVariables
             );
-            await Task.Run(LoadStartupScript);
         }
 
         private static (Logger, LogEventRecorder) SetupLogging()
@@ -253,7 +254,7 @@ namespace NitroSharp
                 italicFont: null,
                 new PtFontSize(_configuration.FontSize),
                 defaultTextColor: RgbaFloat.White,
-                defaultOutlineColor: null,
+                defaultOutlineColor: RgbaFloat.Black,
                 rubyFontSizeMultiplier: 0.4f
             );
         }

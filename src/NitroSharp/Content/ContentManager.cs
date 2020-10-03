@@ -69,6 +69,12 @@ namespace NitroSharp.Content
 
         public string RootDirectory { get; }
 
+        public Texture LoadTexture(string path, bool staging)
+        {
+            Stream stream = OpenStream(path);
+            return _textureLoader.LoadTexture(stream, staging);
+        }
+
         public T Get<T>(AssetRef<T> assetRef)
             where T : class, IDisposable
         {

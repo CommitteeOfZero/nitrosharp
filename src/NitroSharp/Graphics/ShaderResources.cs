@@ -33,6 +33,7 @@ namespace NitroSharp.Graphics
             ResourceLayout viewProjectionLayout)
         {
             Quad = new QuadShaderResources(graphicsDevice, shaderLibrary, outputDescription, viewProjectionLayout);
+            Icon = new IconShaderResources(graphicsDevice, shaderLibrary, outputDescription, viewProjectionLayout);
             Transition = new TransitionShaderResources(graphicsDevice, shaderLibrary, outputDescription, viewProjectionLayout);
             Text = new TextShaderResources(graphicsDevice, shaderLibrary, outputDescription);
             Effects = new EffectShaderResources(graphicsDevice, shaderLibrary, outputDescription);
@@ -41,6 +42,7 @@ namespace NitroSharp.Graphics
         }
 
         public QuadShaderResources Quad { get; }
+        public IconShaderResources Icon { get; }
         public TransitionShaderResources Transition { get; }
         public TextShaderResources Text { get; }
         public EffectShaderResources Effects { get; }
@@ -50,6 +52,7 @@ namespace NitroSharp.Graphics
         public void Dispose()
         {
             Quad.Dispose();
+            Icon.Dispose();
             Transition.Dispose();
             Text.Dispose();
             Effects.Dispose();
@@ -193,6 +196,56 @@ namespace NitroSharp.Graphics
             MultiplicativeBlend.Dispose();
             ResourceLayout.Dispose();
             AlphaMaskPositionBuffer.Dispose();
+        }
+    }
+
+    internal sealed class IconShaderResources : IDisposable
+    {
+        public IconShaderResources(
+            GraphicsDevice graphicsDevice,
+            ShaderLibrary shaderLibrary,
+            in OutputDescription outputDescription,
+            ResourceLayout viewProjectionLayout)
+        {
+            ResourceFactory factory = graphicsDevice.ResourceFactory;
+            ResourceLayout = factory.CreateResourceLayout(new ResourceLayoutDescription(
+                new ResourceLayoutElementDescription(
+                    "Texture",
+                    ResourceKind.TextureReadOnly,
+                    ShaderStages.Fragment
+                ),
+                new ResourceLayoutElementDescription(
+                    "Sampler",
+                    ResourceKind.Sampler,
+                    ShaderStages.Fragment
+                )
+            ));
+
+            (Shader vs, Shader fs) = shaderLibrary.LoadShaderSet("icon");
+            var shaderSetDesc = new ShaderSetDescription(
+                new[] { IconVertex.LayoutDescription },
+                new[] { vs, fs }
+            );
+
+            var pipelineDesc = new GraphicsPipelineDescription(
+                BlendStateDescription.SingleAlphaBlend,
+                DepthStencilStateDescription.Disabled,
+                RasterizerStateDescription.CullNone,
+                PrimitiveTopology.TriangleList,
+                shaderSetDesc,
+                new[] { viewProjectionLayout, ResourceLayout },
+                outputDescription
+            );
+            Pipeline = factory.CreateGraphicsPipeline(ref pipelineDesc);
+        }
+
+        public ResourceLayout ResourceLayout { get; }
+        public Pipeline Pipeline { get; }
+
+        public void Dispose()
+        {
+            Pipeline.Dispose();
+            ResourceLayout.Dispose();
         }
     }
 

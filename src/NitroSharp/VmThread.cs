@@ -30,7 +30,7 @@ namespace NitroSharp
 
         public string Target { get; }
         public ThreadContext Context { get; private set; }
-        public override bool IsIdle => Context.DoneExecuting;
+        public override bool IsIdle => !Context.IsActive || Context.DoneExecuting;
 
         public void Restart()
         {

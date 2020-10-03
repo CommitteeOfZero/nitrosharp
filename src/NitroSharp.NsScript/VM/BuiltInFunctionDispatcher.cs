@@ -1037,7 +1037,7 @@ namespace NitroSharp.NsScript.VM
                 {
                     BuiltInType.BuiltInConstant
                         => EnumConversions.ToEaseFunction(val.AsBuiltInConstant()!.Value),
-                    BuiltInType.Null => NsEaseFunction.None,
+                    BuiltInType.Null => NsEaseFunction.Linear,
                     _ => UnexpectedType<NsEaseFunction>(val.Type)
                 };
             }

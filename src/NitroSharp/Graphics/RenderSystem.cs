@@ -1,6 +1,7 @@
 using System;
 using NitroSharp.Content;
 using NitroSharp.NsScript;
+using NitroSharp.NsScript.VM;
 using NitroSharp.Text;
 using Veldrid;
 
@@ -15,14 +16,16 @@ namespace NitroSharp.Graphics
             GraphicsDevice graphicsDevice,
             Swapchain swapchain,
             GlyphRasterizer glyphRasterizer,
-            ContentManager contentManager)
+            ContentManager contentManager,
+            SystemVariableLookup systemVariables)
         {
             Context = new RenderContext(
                 gameConfiguration,
                 graphicsDevice,
                 swapchain,
                 contentManager,
-                glyphRasterizer
+                glyphRasterizer,
+                systemVariables
             );
         }
 

@@ -161,7 +161,8 @@ namespace NitroSharp.Graphics
             foreach (ref readonly GlyphRun glyphRun in layout.GlyphRuns)
             {
                 ReadOnlySpan<PositionedGlyph> glyphs = layout.GetGlyphs(glyphRun.GlyphSpan);
-                if (AppendRun(glyphRun, glyphs, finalTransform) is GpuGlyphSlice gpuGlyphSlice)
+                ReadOnlySpan<float> opacityValues = layout.GetOpacityValues(glyphRun.GlyphSpan);
+                if (AppendRun(glyphRun, glyphs, opacityValues, finalTransform) is GpuGlyphSlice gpuGlyphSlice)
                 {
                     _pendingDraws.Add() = new Draw
                     {
@@ -250,6 +251,7 @@ namespace NitroSharp.Graphics
         private GpuGlyphSlice? AppendRun(
             in GlyphRun run,
             ReadOnlySpan<PositionedGlyph> positionedGlyphs,
+            ReadOnlySpan<float> opacityValues,
             in Matrix4x4 transform)
         {
             var gpuGlyphRun = new GpuGlyphRun(run.Color, run.OutlineColor);
@@ -263,8 +265,9 @@ namespace NitroSharp.Graphics
             FontData fontData = _glyphRasterizer.GetFontData(run.Font);
             uint instanceBase = _gpuGlyphs.Count;
             DeviceBuffer? buffer = null;
-            foreach (PositionedGlyph glyph in positionedGlyphs)
+            for (int i = 0; i < positionedGlyphs.Length; i++)
             {
+                PositionedGlyph glyph = positionedGlyphs[i];
                 var key = new GlyphCacheKey(glyph.Index, run.FontSize);
                 if (fontData.TryGetCachedGlyph(key, out GlyphCacheEntry cachedGlyph))
                 {
@@ -278,13 +281,14 @@ namespace NitroSharp.Graphics
                             .Get(cachedGlyph.OutlineTextureCacheHandle);
                         outlineId = outlineTci.UvRectPosition;
                     }
+
                     (buffer, _) = _gpuGlyphs.Append(new GpuGlyph
                     {
                         Offset = glyph.Position,
                         GlyphRunId = glyphRunId,
                         GlyphId = glyphTci.UvRectPosition,
                         OutlineId = outlineId,
-                        Opacity = 1.0f
+                        Opacity = opacityValues[i]
                     });
                 }
             }

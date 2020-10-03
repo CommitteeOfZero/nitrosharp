@@ -41,11 +41,11 @@ namespace NitroSharp.Launcher
                 string waitAutoIcon = getRequired(root, "icons.waitAuto");
                 string backlogVoiceIcon = getRequired(root, "icons.backlogVoice");
 
-                var icons = new Icons(
-                    waitLineIcon,
-                    waitPageIcon,
-                    waitAutoIcon,
-                    backlogVoiceIcon
+                var icons = new IconPathPatterns(
+                    new IconPathPattern(waitLineIcon),
+                    new IconPathPattern(waitPageIcon),
+                    new IconPathPattern(waitAutoIcon),
+                    new IconPathPattern(backlogVoiceIcon)
                 );
 
                 var configuration = new Configuration(icons);

@@ -3,6 +3,8 @@ using System.Numerics;
 using NitroSharp.NsScript.VM;
 using NitroSharp.Text;
 
+#nullable enable
+
 namespace NitroSharp.Graphics
 {
     internal sealed class DialoguePage : RenderItem2D
@@ -10,6 +12,8 @@ namespace NitroSharp.Graphics
         private readonly ThreadContext _dialogueThread;
         private readonly TextLayout _layout;
         private readonly Queue<TextBufferSegment> _remainingSegments;
+
+        private TypewriterAnimation? _animation;
 
         public DialoguePage(
             in ResolvedEntityPath path,
@@ -44,7 +48,18 @@ namespace NitroSharp.Graphics
 
         private void Advance(RenderContext renderCtx)
         {
-            while (_remainingSegments.TryDequeue(out TextBufferSegment seg))
+            if (_animation is object)
+            {
+                if (!_animation.Skipping)
+                {
+                    _animation.Skip();
+                }
+
+                return;
+            }
+
+            int start = _layout.GlyphRuns.Length;
+            while (_remainingSegments.TryDequeue(out TextBufferSegment? seg))
             {
                 switch (seg.SegmentKind)
                 {
@@ -57,11 +72,28 @@ namespace NitroSharp.Graphics
                         switch (marker.MarkerKind)
                         {
                             case MarkerKind.Halt:
-                                return;
+                                goto exit;
                         }
                         break;
                 }
             }
+
+        exit:
+            if (_layout.GlyphRuns.Length != start)
+            {
+                _animation = new TypewriterAnimation(_layout, _layout.GlyphRuns[start..], 40);
+                renderCtx.Icons.WaitLine.Reset();
+            }
+        }
+
+        protected override void AdvanceAnimations(RenderContext ctx, float dt, bool assetsReady)
+        {
+            AdvanceAnimation(ref _animation, dt);
+            if (_animation is null)
+            {
+                ctx.Icons.WaitLine.Update(dt);
+            }
+            base.AdvanceAnimations(ctx, dt, assetsReady);
         }
 
         protected override void Update(GameContext ctx)
@@ -69,7 +101,7 @@ namespace NitroSharp.Graphics
             bool advance = ctx.InputContext.VKeyDown(VirtualKey.Advance);
             if (advance)
             {
-                LineRead = _remainingSegments.Count == 0;
+                LineRead = _remainingSegments.Count == 0 && _animation is null;
                 Advance(ctx.RenderContext);
             }
 
@@ -81,6 +113,13 @@ namespace NitroSharp.Graphics
             RectangleF br = BoundingRect;
             var rect = new RectangleU((uint)br.X, (uint)br.Y, (uint)br.Width, (uint)br.Height);
             ctx.Text.Render(ctx, batch, _layout, WorldMatrix, Margin.XY(), rect);
+
+            if (_animation is null)
+            {
+                float x = ctx.SystemVariables.PositionXTextIcon.AsNumber()!.Value;
+                float y = ctx.SystemVariables.PositionYTextIcon.AsNumber()!.Value;
+                ctx.Icons.WaitLine.Render(ctx, new Vector2(x, y));
+            }
 
             return;
 

@@ -9,6 +9,15 @@ using Veldrid;
 
 namespace NitroSharp.Text
 {
+    [Flags]
+    internal enum GlyphRunFlags
+    {
+        None = 0,
+        Outline = 1,
+        RubyBase = 2,
+        RubyText = 4
+    }
+
     [StructLayout(LayoutKind.Auto)]
     internal readonly struct GlyphRun
     {
@@ -17,33 +26,53 @@ namespace NitroSharp.Text
         public readonly RgbaFloat Color;
         public readonly RgbaFloat OutlineColor;
         public readonly GlyphSpan GlyphSpan;
-        public readonly bool DrawOutline;
+        public readonly GlyphRunFlags Flags;
 
         public GlyphRun(
             FontFaceKey font, PtFontSize fontSize,
             RgbaFloat color, RgbaFloat outlineColor,
-            GlyphSpan glyphSpan, bool drawOutline)
+            GlyphSpan glyphSpan, GlyphRunFlags flags)
         {
             Font = font;
             FontSize = fontSize;
             Color = color;
             OutlineColor = outlineColor;
             GlyphSpan = glyphSpan;
-            DrawOutline = drawOutline;
+            Flags = flags;
         }
+
+        public bool DrawOutline => Flags.HasFlag(GlyphRunFlags.Outline);
+        public bool IsRubyBase => Flags.HasFlag(GlyphRunFlags.RubyBase);
+        public bool IsRubyText => Flags.HasFlag(GlyphRunFlags.RubyText);
+    }
+
+    [Flags]
+    internal enum GlyphFlags
+    {
+        None = 0,
+        Whitespace = 1
     }
 
     [StructLayout(LayoutKind.Auto)]
     internal readonly struct PositionedGlyph
     {
         public readonly uint Index;
+        public readonly GlyphFlags Flags;
         public readonly Vector2 Position;
 
-        public PositionedGlyph(uint index, Vector2 position)
+        public PositionedGlyph(uint index, GlyphFlags flags, Vector2 position)
         {
             Index = index;
+            Flags = flags;
             Position = position;
         }
+
+        public PositionedGlyph(uint index, bool isWhitespace, Vector2 position)
+            : this(index, isWhitespace ? GlyphFlags.Whitespace : GlyphFlags.None, position)
+        {
+        }
+
+        public bool IsWhitespace => Flags.HasFlag(GlyphFlags.Whitespace);
 
         public override int GetHashCode() => HashCode.Combine(Index, Position);
         public override string ToString() => $"{{Glyph #{Index}, {Position}}}";
@@ -207,6 +236,7 @@ namespace NitroSharp.Text
         private ArrayBuilder<GlyphRun> _glyphRuns;
         private ArrayBuilder<Line> _lines;
         private ArrayBuilder<PositionedGlyph> _glyphs;
+        private ArrayBuilder<float> _opacityValues;
 
         private Word _lastWord;
         private uint _currentLineIdx;
@@ -224,6 +254,7 @@ namespace NitroSharp.Text
         {
             _textRuns = new ArrayBuilder<TextRun>(initialCapacity: 2);
             _glyphs = new ArrayBuilder<PositionedGlyph>(initialCapacity: 32);
+            _opacityValues = new ArrayBuilder<float>(initialCapacity: 32);
             _glyphRuns = new ArrayBuilder<GlyphRun>(initialCapacity: 2);
             _lines = new ArrayBuilder<Line>(initialCapacity: 2);
             _maxBounds = maxBounds ?? new Size(uint.MaxValue, uint.MaxValue);
@@ -247,7 +278,8 @@ namespace NitroSharp.Text
         private float PenX => _lineBuilder.LastPenX + _lastWord.PenX;
 
         public ReadOnlySpan<GlyphRun> GlyphRuns => _glyphRuns.AsReadonlySpan();
-        public ReadOnlySpan<PositionedGlyph> Glyphs => _glyphs.AsSpan();
+        public ReadOnlySpan<PositionedGlyph> Glyphs => _glyphs.AsReadonlySpan();
+        public ReadOnlySpan<float> OpacityValues => _opacityValues.AsReadonlySpan();
         public RectangleF BoundingBox => _boundingBox;
         public Size MaxBounds => _maxBounds;
 
@@ -268,17 +300,20 @@ namespace NitroSharp.Text
         }
 
         public ReadOnlySpan<PositionedGlyph> GetGlyphs(GlyphSpan span)
-        {
-            return _glyphs.AsReadonlySpan((int)span.Start, (int)span.Length);
-        }
+            => _glyphs.AsReadonlySpan((int)span.Start, (int)span.Length);
+
+        public ReadOnlySpan<float> GetOpacityValues(GlyphSpan span)
+            => _opacityValues.AsReadonlySpan((int)span.Start, (int)span.Length);
+
+        public Span<float> GetOpacityValuesMut(GlyphSpan span)
+            => _opacityValues.AsSpan((int)span.Start, (int)span.Length);
 
         private Span<PositionedGlyph> GetGlyphsMut(GlyphSpan span)
-        {
-            return _glyphs.AsSpan((int)span.Start, (int)span.Length);
-        }
+            => _glyphs.AsSpan((int)span.Start, (int)span.Length);
 
-        public void Append(GlyphRasterizer glyphRasterizer, ReadOnlySpan<TextRun> textRuns)
+        public ReadOnlySpan<GlyphRun> Append(GlyphRasterizer glyphRasterizer, ReadOnlySpan<TextRun> textRuns)
         {
+            int start = (int)_glyphRuns.Count;
             for (uint i = 0; i < textRuns.Length; i++)
             {
                 _textRuns.Add() = textRuns[(int)i];
@@ -288,6 +323,7 @@ namespace NitroSharp.Text
                     break;
                 }
             }
+            return _glyphRuns.AsReadonlySpan()[start..];
         }
 
         private bool Append(GlyphRasterizer glyphRasterizer, uint textRunIndex, bool lastTextRun)
@@ -306,7 +342,6 @@ namespace NitroSharp.Text
             ReadOnlySpan<char> text = textRun.Text.Span;
             for (int stringPos = 0; stringPos < text.Length; stringPos++)
             {
-                bool end = stringPos == text.Length - 1;
                 char c = text[stringPos];
                 uint glyphIndex = fontData.GetGlyphIndex(c);
                 GlyphDimensions glyphDims = fontData.GetGlyphDimensions(glyphIndex, textRun.FontSize);
@@ -327,8 +362,10 @@ namespace NitroSharp.Text
                             position.X = 0;
                         }
 
-                        _glyphs.Add() = new PositionedGlyph(glyphIndex, position);
-                        _lastWord.Append(glyphDims, position, char.IsWhiteSpace(c));
+                        bool whitespace = char.IsWhiteSpace(c);
+                        _glyphs.Add() = new PositionedGlyph(glyphIndex, whitespace, position);
+                        _opacityValues.Add() = 1.0f;
+                        _lastWord.Append(glyphDims, position, whitespace);
                         
                     }
 
@@ -349,7 +386,7 @@ namespace NitroSharp.Text
                 else
                 {
                     if (mayBreakLine && LineBreakingRules.CanStartLine(c)
-                        && LineBreakingRules.CanEndLine(text[stringPos - 1]))
+                        && (stringPos == 0 || LineBreakingRules.CanEndLine(text[stringPos - 1])))
                     {
                         if (!StartNewLine(glyphRasterizer, _glyphs.Count))
                         {
@@ -376,7 +413,7 @@ namespace NitroSharp.Text
                             PenX + dims.Left,
                             dims.Top
                         );
-                        g = new PositionedGlyph(g.Index, pos);
+                        g = new PositionedGlyph(g.Index, isWhitespace: false, pos);
                         _lastWord.Append(dims, pos, isWhitespace: false);
                     }
 
@@ -403,13 +440,19 @@ namespace NitroSharp.Text
                 return true;
             }
 
+            static GlyphRunFlags outline(bool val)
+                => val ? GlyphRunFlags.Outline : GlyphRunFlags.None;
+
+            GlyphRunFlags flags = outline(textRun.DrawOutline)
+                | (textRun.HasRubyText ? GlyphRunFlags.RubyBase : GlyphRunFlags.None);
+
             _glyphRuns.Add() = new GlyphRun(
                 textRun.Font,
                 textRun.FontSize,
                 textRun.Color,
                 textRun.OutlineColor,
                 glyphSpan,
-                textRun.DrawOutline
+                flags
             );
 
             if (textRun.HasRubyText)
@@ -432,7 +475,7 @@ namespace NitroSharp.Text
                     textRun.Color,
                     textRun.OutlineColor,
                     rubyTextSpan,
-                    textRun.DrawOutline
+                    outline(textRun.DrawOutline) | GlyphRunFlags.RubyText
                 );
             }
 
@@ -457,7 +500,7 @@ namespace NitroSharp.Text
                         lastRun.Color,
                         lastRun.OutlineColor,
                         new GlyphSpan(lastRun.GlyphSpan.Start, newLength),
-                        textRun.DrawOutline
+                        lastRun.Flags
                     );
                 }
                 else
@@ -522,6 +565,7 @@ namespace NitroSharp.Text
                 {
                     glyph = new PositionedGlyph(
                         glyph.Index,
+                        glyph.Flags,
                         new Vector2(
                             glyph.Position.X,
                             glyph.Position.Y + (baselineY - prevBaselineY.Value)
@@ -537,6 +581,7 @@ namespace NitroSharp.Text
             {
                 glyph = new PositionedGlyph(
                     glyph.Index,
+                    glyph.Flags,
                     new Vector2(
                         glyph.Position.X,
                         baselineY - glyph.Position.Y
@@ -627,7 +672,8 @@ namespace NitroSharp.Text
                             penX + halfBlockWidth - MathF.Round(glyphDims.Width / 2.0f),
                             -(rubyTextBaselineOffset - glyphDims.Top)
                         );
-                        rubyTextGlyphs[j] = new PositionedGlyph(glyphIndices[j], position);
+                        bool whitespace = char.IsWhiteSpace(rubyText[j]);
+                        rubyTextGlyphs[j] = new PositionedGlyph(glyphIndices[j], whitespace, position);
                         penX += blockWidth;
                     }
                 }
@@ -648,7 +694,8 @@ namespace NitroSharp.Text
                             penX + glyphDims.Left,
                             -(rubyTextBaselineOffset - glyphDims.Top)
                         );
-                        rubyTextGlyphs[j] = new PositionedGlyph(glyphIndices[j], position);
+                        bool whitespace = char.IsWhiteSpace(rubyText[j]);
+                        rubyTextGlyphs[j] = new PositionedGlyph(glyphIndices[j], whitespace, position);
                         penX += MathF.Round(glyphDims.Advance + rubyTextAdvance);
                         if (penX > _maxBounds.Width)
                         {

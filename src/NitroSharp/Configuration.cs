@@ -1,5 +1,6 @@
 ﻿using NitroSharp.Media;
 using NitroSharp.Text;
+using NitroSharp.Utilities;
 using Veldrid;
 
 #nullable enable
@@ -18,13 +19,57 @@ namespace NitroSharp
         public string ReturnToMenu { get; set; } = "sys_reset.nss";
     }
 
-    public sealed class Icons
+    public readonly struct IconPathPattern
     {
-        public Icons(
-            string waitLine,
-            string waitPage,
-            string waitAuto,
-            string backlogVoice)
+        private readonly string _pattern;
+
+        public readonly string FormatString;
+        public readonly uint IconCount;
+
+        public IconPathPattern(string pattern)
+        {
+            int fmtEnd = pattern.IndexOf('#');
+            FormatString = pattern[..fmtEnd].ToString();
+            IconCount = uint.Parse(pattern[(fmtEnd + 1)..]);
+            _pattern = pattern;
+        }
+
+        public IconPathEnumerable EnumeratePaths()
+            => new IconPathEnumerable(this);
+    }
+
+    public struct IconPathEnumerable
+    {
+        private readonly IconPathPattern _pattern;
+        private int _i;
+
+        public IconPathEnumerable(IconPathPattern pattern)
+        {
+            _pattern = pattern;
+            _i = 1;
+            Current = string.Empty;
+        }
+
+        public IconPathEnumerable GetEnumerator() => this;
+
+        public string Current { get; private set; }
+
+        public bool MoveNext()
+        {
+            if (_i == _pattern.IconCount) { return false; }
+            Current = CRuntime.sprintf(_pattern.FormatString, _i);
+            _i++;
+            return true;
+        }
+    }
+
+    public sealed class IconPathPatterns
+    {
+        public IconPathPatterns(
+            IconPathPattern waitLine,
+            IconPathPattern waitPage,
+            IconPathPattern waitAuto,
+            IconPathPattern backlogVoice)
         {
             WaitLine = waitLine;
             WaitPage = waitPage;
@@ -32,10 +77,10 @@ namespace NitroSharp
             BacklogVoice = backlogVoice;
         }
 
-        public string WaitLine { get; }
-        public string WaitPage { get; }
-        public string WaitAuto { get; }
-        public string BacklogVoice { get; }
+        public IconPathPattern WaitLine { get; }
+        public IconPathPattern WaitPage { get; }
+        public IconPathPattern WaitAuto { get; }
+        public IconPathPattern BacklogVoice { get; }
     }
 
     public sealed class Configuration
@@ -58,11 +103,11 @@ namespace NitroSharp
         public string FontFamily { get; set; } = "MS Gothic";
         public int FontSize { get; set; } = 20;
 
-        public Icons Icons { get; }
+        public IconPathPatterns IconPathPatterns { get; }
 
-        public Configuration(Icons icons)
+        public Configuration(IconPathPatterns iconPathPatterns)
         {
-            Icons = icons;
+            IconPathPatterns = iconPathPatterns;
         }
     }
 

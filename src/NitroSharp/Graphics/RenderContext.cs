@@ -1,6 +1,7 @@
 using System;
 using NitroSharp.Content;
 using NitroSharp.Graphics.Core;
+using NitroSharp.NsScript.VM;
 using NitroSharp.Text;
 using Veldrid;
 
@@ -29,7 +30,6 @@ namespace NitroSharp.Graphics
         private readonly CommandList _transferCommands;
         private readonly CommandList _drawCommands;
 
-        private readonly MeshList<QuadVertex> _quads;
         private readonly MeshList<CubeVertex> _cubes;
 
         private readonly RenderTarget _swapchainTarget;
@@ -42,7 +42,8 @@ namespace NitroSharp.Graphics
             GraphicsDevice graphicsDevice,
             Swapchain swapchain,
             ContentManager contentManager,
-            GlyphRasterizer glyphRasterizer)
+            GlyphRasterizer glyphRasterizer,
+            SystemVariableLookup systemVariables)
         {
             DesignResolution = new Size(
                 (uint)gameConfiguration.WindowWidth,
@@ -62,6 +63,7 @@ namespace NitroSharp.Graphics
             SecondaryCommandList.Name = "Secondary";
             Content = contentManager;
             GlyphRasterizer = glyphRasterizer;
+            SystemVariables = systemVariables;
             _shaderLibrary = new ShaderLibrary(graphicsDevice);
             ShaderResources = new ShaderResources(
                 graphicsDevice,
@@ -74,10 +76,15 @@ namespace NitroSharp.Graphics
             TextureCache = new TextureCache(GraphicsDevice);
             WhiteTexture = CreateWhiteTexture();
 
-            _quads = new MeshList<QuadVertex>(
+            Quads = new MeshList<QuadVertex>(
                 graphicsDevice,
                 new MeshDescription(QuadGeometry.Indices, verticesPerMesh: 4),
                 initialCapacity: 512
+            );
+            IconQuads = new MeshList<IconVertex>(
+                graphicsDevice,
+                new MeshDescription(QuadGeometry.Indices, verticesPerMesh: 4),
+                initialCapacity: 4
             );
             _cubes = new MeshList<CubeVertex>(
                 graphicsDevice,
@@ -93,9 +100,12 @@ namespace NitroSharp.Graphics
 
             MainBatch = new DrawBatch(this);
             _offscreenBatch = new DrawBatch(this);
+
+            Icons = LoadIcons(gameConfiguration);
         }
 
-        public MeshList<QuadVertex> Quads => _quads;
+        public MeshList<QuadVertex> Quads { get; }
+        public MeshList<IconVertex> IconQuads { get; }
 
         public Size DesignResolution { get; }
         public GraphicsDevice GraphicsDevice { get; }
@@ -115,6 +125,10 @@ namespace NitroSharp.Graphics
 
         public DrawBatch MainBatch { get; }
 
+        public AnimatedIcons Icons { get; }
+
+        public SystemVariableLookup SystemVariables { get; }
+
         public DrawBatch BeginBatch(RenderTarget renderTarget, RgbaFloat? clearColor)
         {
             _offscreenBatch.Begin(SecondaryCommandList, renderTarget, clearColor);
@@ -128,12 +142,23 @@ namespace NitroSharp.Graphics
 
             SecondaryCommandList.Begin();
 
-            _quads.Begin();
+            Quads.Begin();
+            IconQuads.Begin();
             _cubes.Begin();
             TextureCache.BeginFrame(frameStamp);
             ResourceSetCache.BeginFrame(frameStamp);
             Text.BeginFrame();
             _transferCommands.Begin();
+        }
+
+        private AnimatedIcons LoadIcons(Configuration config)
+        {
+            CommandList cl = SecondaryCommandList;
+            SecondaryCommandList.Begin();
+            var waitLine = Icon.Load(this, config.IconPathPatterns.WaitLine);
+            SecondaryCommandList.End();
+            GraphicsDevice.SubmitCommands(cl);
+            return new AnimatedIcons(waitLine);
         }
 
         public void ResolveGlyphs()
@@ -168,7 +193,8 @@ namespace NitroSharp.Graphics
             ResourceSetCache.EndFrame();
 
             Text.EndFrame(_transferCommands);
-            _quads.End(_transferCommands);
+            Quads.End(_transferCommands);
+            IconQuads.End(_transferCommands);
             _cubes.End(_transferCommands);
             _transferCommands.End();
 
@@ -219,7 +245,7 @@ namespace NitroSharp.Graphics
             ShaderResources.Dispose();
             WhiteTexture.Dispose();
             Text.Dispose();
-            _quads.Dispose();
+            Quads.Dispose();
             _cubes.Dispose();
             TextureCache.Dispose();
             ResourceSetCache.Dispose();

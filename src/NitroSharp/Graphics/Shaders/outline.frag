@@ -10,7 +10,7 @@ layout(location = 0) out vec4 OutColor;
 
 void main()
 {
-    vec4 c = texture(sampler2DArray(CacheTexture, Sampler), fs_TexCoord);
+    vec4 c = texture(sampler2DArray(CacheTexture, Sampler), fs_TexCoord) * fs_Color;
     float alpha = c.y;
     alpha = mix(alpha, c.y, 0.60);
     alpha = mix(alpha, c.z, 0.30);

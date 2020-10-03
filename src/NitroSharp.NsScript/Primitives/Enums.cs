@@ -36,7 +36,7 @@ namespace NitroSharp.NsScript
 
     public enum NsEaseFunction
     {
-        None = 0,
+        Linear = 0,
         QuadraticEaseIn,
         CubicEaseIn,
         QuarticEaseIn,

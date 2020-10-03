@@ -173,9 +173,9 @@ namespace NitroSharp.Graphics
             );
         }
 
-        protected override void AdvanceAnimations(float dt, bool assetsReady)
+        protected override void AdvanceAnimations(RenderContext ctx, float dt, bool assetsReady)
         {
-            base.AdvanceAnimations(dt, assetsReady);
+            base.AdvanceAnimations(ctx, dt, assetsReady);
             if (assetsReady)
             {
                 _transition?.Update(dt);

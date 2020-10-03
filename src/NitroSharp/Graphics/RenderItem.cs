@@ -73,7 +73,7 @@ namespace NitroSharp.Graphics
         public void Hide() => IsHidden = true;
         public void Reveal() => IsHidden = false;
 
-        protected virtual void AdvanceAnimations(float dt, bool assetsReady)
+        protected virtual void AdvanceAnimations(RenderContext ctx, float dt, bool assetsReady)
         {
             AdvanceAnimation(ref _fadeAnim, dt);
             AdvanceAnimation(ref _rotateAnim, dt);
@@ -94,7 +94,7 @@ namespace NitroSharp.Graphics
 
         public void Update(GameContext ctx, float dt, bool assetsReady)
         {
-            AdvanceAnimations(dt, assetsReady);
+            AdvanceAnimations(ctx.RenderContext, dt, assetsReady);
             Update(ctx);
             LayoutPass(ctx.RenderContext);
         }
@@ -114,7 +114,7 @@ namespace NitroSharp.Graphics
         public void Fade(
             float dstOpacity,
             TimeSpan duration,
-            NsEaseFunction easeFunction = NsEaseFunction.None)
+            NsEaseFunction easeFunction = NsEaseFunction.Linear)
         {
             if (duration > TimeSpan.Zero)
             {
@@ -217,9 +217,9 @@ namespace NitroSharp.Graphics
         protected virtual (Vector2, Vector2) GetTexCoords(RenderContext ctx)
             => (Vector2.Zero, Vector2.One);
 
-        protected override void AdvanceAnimations(float dt, bool assetsReady)
+        protected override void AdvanceAnimations(RenderContext ctx, float dt, bool assetsReady)
         {
-            base.AdvanceAnimations(dt, assetsReady);
+            base.AdvanceAnimations(ctx, dt, assetsReady);
             AdvanceAnimation(ref _moveAnim, dt);
             AdvanceAnimation(ref _scaleAnim, dt);
             AdvanceAnimation(ref _rotateAnim, dt);

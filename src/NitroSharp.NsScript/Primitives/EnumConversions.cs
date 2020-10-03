@@ -29,7 +29,7 @@
         {
             return val switch
             {
-                BuiltInConstant._None => NsEaseFunction.None,
+                BuiltInConstant._None => NsEaseFunction.Linear,
                 BuiltInConstant.Axl1 => NsEaseFunction.QuadraticEaseIn,
                 BuiltInConstant.Axl2 => NsEaseFunction.CubicEaseIn,
                 BuiltInConstant.Axl3 => NsEaseFunction.QuarticEaseIn,

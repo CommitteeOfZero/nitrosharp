@@ -657,6 +657,9 @@ namespace NitroSharp.NsScript.VM
         private readonly int _backlogRowInterval;
         private readonly int _backlogCharacterWidth;
 
+        private readonly int _positionXTextIcon;
+        private readonly int _positionYTextIcon;
+
         public SystemVariableLookup(NsScriptVM vm)
         {
             _vm = vm;
@@ -682,6 +685,9 @@ namespace NitroSharp.NsScript.VM
             _backlogPositionY = Lookup("SYSTEM_backlog_position_y");
             _backlogRowInterval = Lookup("SYSTEM_backlog_row_interval");
             _backlogCharacterWidth = Lookup("SYSTEM_backlog_character_width");
+
+            _positionXTextIcon = Lookup("SYSTEM_position_x_text_icon");
+            _positionYTextIcon = Lookup("SYSTEM_position_y_text_icon");
         }
 
         private int Lookup(string name)
@@ -716,5 +722,8 @@ namespace NitroSharp.NsScript.VM
         public ref ConstantValue BacklogPositionX => ref _vm.GetGlobalVar(_backlogPositionX);
         public ref ConstantValue BacklogPositionY => ref _vm.GetGlobalVar(_backlogPositionY);
         public ref ConstantValue BacklogCharacterWidth => ref _vm.GetGlobalVar(_backlogCharacterWidth);
+
+        public ref ConstantValue PositionXTextIcon => ref _vm.GetGlobalVar(_positionXTextIcon);
+        public ref ConstantValue PositionYTextIcon => ref _vm.GetGlobalVar(_positionYTextIcon);
     }
 }
