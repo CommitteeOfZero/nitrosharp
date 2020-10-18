@@ -154,15 +154,30 @@ namespace NitroSharp.Graphics
             TextLayout layout,
             in Matrix4x4 transform,
             Vector2 offset,
-            in RectangleU rect)
+            in RectangleU rect,
+            float opacity)
+        {
+            Render(ctx, drawBatch, layout, layout.GlyphRuns, transform, offset, rect, opacity);
+        }
+
+        public void Render(
+            RenderContext ctx,
+            DrawBatch drawBatch,
+            TextLayout layout,
+            ReadOnlySpan<GlyphRun> glyphRuns,
+            in Matrix4x4 transform,
+            Vector2 offset,
+            in RectangleU rect,
+            float opacity)
         {
             Matrix4x4 finalTransform = Matrix4x4.CreateTranslation(new Vector3(offset, 0)) * transform;
             TextShaderResources shaderResources = ctx.ShaderResources.Text;
-            foreach (ref readonly GlyphRun glyphRun in layout.GlyphRuns)
+            foreach (ref readonly GlyphRun glyphRun in glyphRuns)
             {
                 ReadOnlySpan<PositionedGlyph> glyphs = layout.GetGlyphs(glyphRun.GlyphSpan);
                 ReadOnlySpan<float> opacityValues = layout.GetOpacityValues(glyphRun.GlyphSpan);
-                if (AppendRun(glyphRun, glyphs, opacityValues, finalTransform) is GpuGlyphSlice gpuGlyphSlice)
+                if (AppendRun(glyphRun, glyphs, opacityValues, finalTransform, opacity)
+                    is GpuGlyphSlice gpuGlyphSlice)
                 {
                     _pendingDraws.Add() = new Draw
                     {
@@ -193,9 +208,9 @@ namespace NitroSharp.Graphics
                 }
             }
 
-            for (int i = 0; i < layout.GlyphRuns.Length; i++)
+            for (int i = 0; i < glyphRuns.Length; i++)
             {
-                if (layout.GlyphRuns[i].DrawOutline)
+                if (glyphRuns[i].DrawOutline)
                 {
                     Draw draw = _pendingDraws[i];
                     draw.ResourceBindings = new ResourceBindings(
@@ -252,7 +267,8 @@ namespace NitroSharp.Graphics
             in GlyphRun run,
             ReadOnlySpan<PositionedGlyph> positionedGlyphs,
             ReadOnlySpan<float> opacityValues,
-            in Matrix4x4 transform)
+            in Matrix4x4 transform,
+            float opacityMul)
         {
             var gpuGlyphRun = new GpuGlyphRun(run.Color, run.OutlineColor);
             GpuCacheHandle glyphRunHandle = _gpuGlyphRuns.Insert(ref gpuGlyphRun);
@@ -288,7 +304,7 @@ namespace NitroSharp.Graphics
                         GlyphRunId = glyphRunId,
                         GlyphId = glyphTci.UvRectPosition,
                         OutlineId = outlineId,
-                        Opacity = opacityValues[i]
+                        Opacity = opacityValues[i] * opacityMul
                     });
                 }
             }

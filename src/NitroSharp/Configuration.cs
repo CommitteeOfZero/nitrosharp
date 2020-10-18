@@ -136,6 +136,12 @@ namespace NitroSharp
         public RgbaFloat? DefaultOutlineColor { get; private set; }
         public float RubyFontSizeMultiplier { get; }
 
+        public FontConfiguration Clone() => new FontConfiguration(
+            DefaultFont, ItalicFont,
+            DefaultFontSize, DefaultTextColor,
+            DefaultOutlineColor, RubyFontSizeMultiplier
+        );
+
         public FontConfiguration WithDefaultSize(PtFontSize size)
         {
             DefaultFontSize = size;

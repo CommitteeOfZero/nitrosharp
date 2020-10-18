@@ -43,7 +43,7 @@ namespace NitroSharp.Graphics
         {
             RectangleF br = BoundingRect;
             var rect = new RectangleU((uint)br.X, (uint)br.Y, (uint)br.Width, (uint)br.Height);
-            ctx.Text.Render(ctx, drawBatch, _layout, WorldMatrix, Margin.XY(), rect);
+            ctx.Text.Render(ctx, drawBatch, _layout, WorldMatrix, Margin.XY(), rect, Color.A);
             RectangleF bb = _layout.BoundingBox;
             //ctx.MainBatch.PushQuad(
             //    QuadGeometry.Create(

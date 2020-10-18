@@ -109,6 +109,11 @@ namespace NitroSharp.NsScript.Utilities
             return true;
         }
 
+        public void Clear()
+        {
+            _size = 0;
+        }
+
         [MethodImpl(MethodImplOptions.NoInlining)]
         private void PushWithResize(ref T value)
         {

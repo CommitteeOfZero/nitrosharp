@@ -9,7 +9,7 @@ namespace NitroSharp.Graphics
 {
     internal sealed class DialoguePage : RenderItem2D
     {
-        private readonly ThreadContext _dialogueThread;
+        private readonly NsScriptThread _dialogueThread;
         private readonly TextLayout _layout;
         private readonly Queue<TextBufferSegment> _remainingSegments;
 
@@ -21,12 +21,12 @@ namespace NitroSharp.Graphics
             Size? bounds,
             float lineHeight,
             in Vector4 margin,
-            ThreadContext dialogueThread)
+            NsScriptThread dialogueThread)
             : base(path, priority)
         {
             Margin = margin;
             _dialogueThread = dialogueThread;
-            _layout = new TextLayout(bounds, lineHeight);
+            _layout = new TextLayout(bounds?.Width, bounds?.Height, lineHeight);
             _remainingSegments = new Queue<TextBufferSegment>();
         }
 
@@ -34,19 +34,19 @@ namespace NitroSharp.Graphics
         public override bool IsIdle => _dialogueThread.DoneExecuting && LineRead;
         public bool LineRead { get; private set; }
 
-        public void Append(RenderContext renderCtx, TextBuffer text)
+        public void Append(RenderContext renderCtx, TextBuffer text, Backlog backlog)
         {
             foreach (TextBufferSegment seg in text.Segments)
             {
                 _remainingSegments.Enqueue(seg);
             }
 
-            Advance(renderCtx);
+            Advance(renderCtx, backlog);
             renderCtx.Text.RequestGlyphs(_layout);
             LineRead = false;
         }
 
-        private void Advance(RenderContext renderCtx)
+        private void Advance(RenderContext renderCtx, Backlog backlog)
         {
             if (_animation is object)
             {
@@ -66,6 +66,7 @@ namespace NitroSharp.Graphics
                     case TextBufferSegmentKind.Text:
                         var textSegment = (TextSegment)seg;
                         _layout.Append(renderCtx.GlyphRasterizer, textSegment.TextRuns.AsSpan());
+                        backlog.Append(renderCtx.GlyphRasterizer, textSegment);
                         break;
                     case TextBufferSegmentKind.Marker:
                         var marker = (MarkerSegment)seg;
@@ -102,7 +103,7 @@ namespace NitroSharp.Graphics
             if (advance)
             {
                 LineRead = _remainingSegments.Count == 0 && _animation is null;
-                Advance(ctx.RenderContext);
+                Advance(ctx.RenderContext, ctx.Backlog);
             }
 
             ctx.RenderContext.Text.RequestGlyphs(_layout);
@@ -112,7 +113,7 @@ namespace NitroSharp.Graphics
         {
             RectangleF br = BoundingRect;
             var rect = new RectangleU((uint)br.X, (uint)br.Y, (uint)br.Width, (uint)br.Height);
-            ctx.Text.Render(ctx, batch, _layout, WorldMatrix, Margin.XY(), rect);
+            ctx.Text.Render(ctx, batch, _layout, WorldMatrix, Margin.XY(), rect, Color.A);
 
             if (_animation is null)
             {

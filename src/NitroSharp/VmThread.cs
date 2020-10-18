@@ -8,12 +8,12 @@ namespace NitroSharp
     {
         private readonly NsScriptVM _vm;
 
-        public VmThread(in ResolvedEntityPath path, NsScriptVM vm, string target)
+        public VmThread(in ResolvedEntityPath path, NsScriptVM vm, NsScriptProcess process, string target)
             : base(path)
         {
             _vm = vm;
             Target = target;
-            Context = vm.CreateThread(Target);
+            Thread = vm.CreateThread(process, Target);
             if (Parent is Choice choice)
             {
                 switch (Id.MouseState)
@@ -29,22 +29,22 @@ namespace NitroSharp
         }
 
         public string Target { get; }
-        public ThreadContext Context { get; private set; }
-        public override bool IsIdle => !Context.IsActive || Context.DoneExecuting;
+        public NsScriptThread Thread { get; private set; }
+        public override bool IsIdle => !Thread.IsActive || Thread.DoneExecuting;
 
         public void Restart()
         {
-            if (!Context.DoneExecuting)
+            if (!Thread.DoneExecuting)
             {
-                _vm.TerminateThread(Context);
+                _vm.TerminateThread(Thread);
             }
-            Context = _vm.CreateThread(Target);
-            _vm.ResumeThread(Context);
+            Thread = _vm.CreateThread(Thread.Process, Target);
+            _vm.ResumeThread(Thread);
         }
 
-        public void Suspend() => _vm.SuspendThread(Context);
-        public void Resume() => _vm.ResumeThread(Context);
-        public void Terminate() => _vm.TerminateThread(Context);
+        public void Suspend() => _vm.SuspendThread(Thread);
+        public void Resume() => _vm.ResumeThread(Thread);
+        public void Terminate() => _vm.TerminateThread(Thread);
 
         public override void Dispose()
         {

@@ -106,7 +106,6 @@ namespace NitroSharp
             bool repeat = false)
             : base(easeFunction, repeat)
         {
-            Debug.Assert(duration > TimeSpan.Zero);
             _duration = duration;
         }
 

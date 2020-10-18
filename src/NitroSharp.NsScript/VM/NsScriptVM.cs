@@ -6,7 +6,6 @@ using System.IO;
 using System.Threading;
 using NitroSharp.NsScript.Primitives;
 using NitroSharp.NsScript.Utilities;
-using NitroSharp.Utilities;
 
 namespace NitroSharp.NsScript.VM
 {
@@ -26,62 +25,13 @@ namespace NitroSharp.NsScript.VM
 
     public sealed class NsScriptVM
     {
-        private readonly struct ThreadAction
-        {
-            public enum ActionKind
-            {
-                Create,
-                Terminate,
-                Suspend,
-                Join,
-                Resume
-            }
-
-            public readonly ThreadContext Thread;
-            public readonly ActionKind Kind;
-            public readonly TimeSpan? Timeout;
-            public readonly ThreadContext? JoinedThread;
-
-            public static ThreadAction Create(ThreadContext thread)
-                => new ThreadAction(thread, ActionKind.Create, null);
-
-            public static ThreadAction Terminate(ThreadContext thread)
-                => new ThreadAction(thread, ActionKind.Terminate, null);
-
-            public static ThreadAction Suspend(ThreadContext thread, TimeSpan? timeout)
-                => new ThreadAction(thread, ActionKind.Suspend, timeout);
-
-            public static ThreadAction Join(ThreadContext thread, ThreadContext target)
-                => new ThreadAction(thread, ActionKind.Join, null, target);
-
-                public static ThreadAction Resume(ThreadContext thread)
-                => new ThreadAction(thread, ActionKind.Resume, null);
-
-            private ThreadAction(
-                ThreadContext thread,
-                ActionKind kind,
-                TimeSpan? timeout,
-                ThreadContext? joinedThread = null)
-            {
-                Thread = thread;
-                Kind = kind;
-                Timeout = timeout;
-                JoinedThread = joinedThread;
-            }
-        }
-
         private readonly NsxModuleLocator _moduleLocator;
         private readonly Dictionary<string, NsxModule> _loadedModules;
         private readonly BuiltInFunctionDispatcher _builtInCallDispatcher;
-        private readonly List<ThreadContext> _threads;
-        private readonly Queue<ThreadAction> _pendingThreadActions;
-        private readonly Stopwatch _timer;
         private readonly ConstantValue[] _globals;
         private readonly Stack<CubicBezierSegment> _bezierSegmentStack;
 
         private uint _lastThreadId;
-        private ArrayBuilder<uint> _newThreads;
-        private ArrayBuilder<uint> _terminatedThreads;
 
         public NsScriptVM(
             NsxModuleLocator moduleLocator,
@@ -89,58 +39,17 @@ namespace NitroSharp.NsScript.VM
         {
             _loadedModules = new Dictionary<string, NsxModule>(16);
             _moduleLocator = moduleLocator;
-            _threads = new List<ThreadContext>();
-            _pendingThreadActions = new Queue<ThreadAction>();
-            _timer = Stopwatch.StartNew();
             _globals = new ConstantValue[5000];
             _builtInCallDispatcher = new BuiltInFunctionDispatcher(_globals);
             GlobalVarLookup = GlobalVarLookupTable.Load(globalVarLookupTableStream);
             SystemVariables = new SystemVariableLookup(this);
             _bezierSegmentStack = new Stack<CubicBezierSegment>();
-            _newThreads = new ArrayBuilder<uint>(4);
-            _terminatedThreads = new ArrayBuilder<uint>(4);
         }
 
         internal GlobalVarLookupTable GlobalVarLookup { get; }
         public SystemVariableLookup SystemVariables { get; }
-        public ThreadContext? MainThread { get; private set; }
-        public ThreadContext? CurrentThread { get; private set; }
 
-        public ThreadContext CreateThread(string symbol, bool start = false)
-            => CreateThread(CurrentThread!.CurrentFrame.Module.Name, symbol, start);
-
-        public ThreadContext ActivateDialogueBlock(in DialogueBlockToken blockToken)
-        {
-            var frame = new CallFrame(
-                blockToken.Module,
-                (ushort)blockToken.SubroutineIndex,
-                pc: blockToken.Offset
-            );
-            ThreadContext thread = CreateThread(ref frame);
-            thread.DialoguePage = new EntityPath("@" + blockToken.BlockName);
-            return thread;
-        }
-
-        public ThreadContext CreateThread(string moduleName, string symbol, bool start = true)
-        {
-            NsxModule module = GetModule(moduleName);
-            ushort subIndex = (ushort)module.LookupSubroutineIndex(symbol);
-            var frame = new CallFrame(module, subIndex, 0);
-            ThreadContext thread = CreateThread(ref frame);
-            MainThread ??= thread;
-            if (!start)
-            {
-                CommitSuspendThread(thread, null);
-            }
-            return thread;
-        }
-
-        private ThreadContext CreateThread(ref CallFrame callFrame)
-        {
-            var thread = new ThreadContext(++_lastThreadId, ref callFrame);
-            _pendingThreadActions.Enqueue(ThreadAction.Create(thread));
-            return thread;
-        }
+        public NsScriptProcess? CurrentProcess { get; private set; }
 
         public NsxModule GetModule(string name)
         {
@@ -154,57 +63,106 @@ namespace NitroSharp.NsScript.VM
             return module;
         }
 
-        public void SuspendThread(ThreadContext thread, TimeSpan? timeout = null)
+        public NsScriptProcess CreateProcess(string moduleName, string symbol)
         {
-            _pendingThreadActions.Enqueue(ThreadAction.Suspend(thread, timeout));
+            NsScriptThread mainThread = CreateThread(moduleName, symbol);
+            return new NsScriptProcess(this, mainThread);
         }
 
-        public void Join(ThreadContext callingThread, ThreadContext targetThread)
+        public NsScriptThread CreateThread(NsScriptProcess process, string symbol, bool start = false)
+            => CreateThread(process, process.CurrentThread!.CurrentFrame.Module.Name, symbol, start);
+
+        private NsScriptThread CreateThread(
+            NsScriptProcess process,
+            string moduleName,
+            string symbol,
+            bool start)
         {
-            _pendingThreadActions
+            NsScriptThread thread = CreateThread(moduleName, symbol);
+            process.AttachThread(thread);
+            if (!start)
+            {
+                process.CommitSuspendThread(thread, null);
+            }
+            return thread;
+        }
+
+        private NsScriptThread CreateThread(NsScriptProcess process, ref CallFrame callFrame)
+        {
+            var thread = new NsScriptThread(++_lastThreadId, ref callFrame);
+            process.AttachThread(thread);
+            return thread;
+        }
+
+        private NsScriptThread CreateThread(string moduleName, string symbol)
+        {
+            NsxModule module = GetModule(moduleName);
+            ushort subIndex = (ushort)module.LookupSubroutineIndex(symbol);
+            var frame = new CallFrame(module, subIndex, 0);
+            return new NsScriptThread(++_lastThreadId, ref frame);
+        }
+
+        public void SuspendThread(NsScriptThread thread, TimeSpan? timeout = null)
+        {
+            thread.Process.PendingThreadActions
+                .Enqueue(ThreadAction.Suspend(thread, timeout));
+        }
+
+        public void Join(NsScriptThread callingThread, NsScriptThread targetThread)
+        {
+            callingThread.Process.PendingThreadActions
                 .Enqueue(ThreadAction.Join(callingThread, targetThread));
         }
 
-        public void ResumeThread(ThreadContext thread)
+        public void ResumeThread(NsScriptThread thread)
         {
-            _pendingThreadActions.Enqueue(ThreadAction.Resume(thread));
+            thread.Process.PendingThreadActions
+                .Enqueue(ThreadAction.Resume(thread));
         }
 
-        public void TerminateThread(ThreadContext thread)
+        public void TerminateThread(NsScriptThread thread)
         {
-            _pendingThreadActions.Enqueue(ThreadAction.Terminate(thread));
+            thread.Process.PendingThreadActions
+                .Enqueue(ThreadAction.Terminate(thread));
         }
 
-        public RunResult Run(BuiltInFunctions builtins, CancellationToken cancellationToken)
+        public NsScriptThread ActivateDialogueBlock(in DialogueBlockToken blockToken)
+            => ActivateDialogueBlock(CurrentProcess!, blockToken);
+
+        public NsScriptThread ActivateDialogueBlock(
+            NsScriptProcess process,
+            in DialogueBlockToken blockToken)
+        {
+            var frame = new CallFrame(
+                blockToken.Module,
+                (ushort)blockToken.SubroutineIndex,
+                pc: blockToken.Offset
+            );
+            NsScriptThread thread = CreateThread(process, ref frame);
+            thread.DialoguePage = new EntityPath("@" + blockToken.BlockName);
+            return thread;
+        }
+
+        public RunResult Run(
+            NsScriptProcess process,
+            BuiltInFunctions builtins,
+            CancellationToken cancellationToken)
         {
             builtins._vm = this;
-            long? time = null;
-            _newThreads.Clear();
-            _terminatedThreads.Clear();
-            foreach (ThreadContext thread in _threads)
-            {
-                if (thread.SuspensionTime != null && thread.SleepTimeout != null)
-                {
-                    time ??= _timer.ElapsedTicks;
-                    long delta = time.Value - thread.SuspensionTime.Value;
-                    if (delta >= thread.SleepTimeout)
-                    {
-                        CommitResumeThread(thread);
-                    }
-                }
-            }
+            CurrentProcess = process;
+            process.Tick();
 
-            while (_threads.Count > 0 || _pendingThreadActions.Count > 0)
+            while (!process.Threads.IsEmpty || process.PendingThreadActions.Count > 0)
             {
-                ProcessPendingThreadActions();
-                int nbActive = 0;
-                foreach (ThreadContext thread in _threads)
+                process.ProcessPendingThreadActions();
+                uint nbActive = 0;
+                foreach (NsScriptThread thread in process.Threads)
                 {
                     if (thread.IsActive && !thread.Yielded)
                     {
-                        CurrentThread = thread;
+                        process.CurrentThread = thread;
                         nbActive++;
-                        TickResult tickResult = Tick(thread, builtins);
+                        TickResult tickResult = Tick(process, thread, builtins);
                         if (tickResult == TickResult.Yield)
                         {
                             thread.Yielded = true;
@@ -212,7 +170,7 @@ namespace NitroSharp.NsScript.VM
                         }
                         else if (thread.DoneExecuting)
                         {
-                            if (thread.WaitingThread is ThreadContext waitingThread)
+                            if (thread.WaitingThread is NsScriptThread waitingThread)
                             {
                                 ResumeThread(waitingThread);
                                 nbActive++;
@@ -225,73 +183,16 @@ namespace NitroSharp.NsScript.VM
 
                 if (nbActive == 0)
                 {
-                    foreach (ThreadContext thread in _threads)
+                    foreach (NsScriptThread thread in process.Threads)
                     {
                         thread.Yielded = false;
                     }
-
                     break;
                 }
             }
 
-            return new RunResult(
-                _newThreads.AsReadonlySpan(),
-                _terminatedThreads.AsReadonlySpan()
-            );
+            return new RunResult(process.NewThreads, process.TerminatedThreads);
         }
-
-        private void ProcessPendingThreadActions()
-        {
-            while (_pendingThreadActions.TryDequeue(out ThreadAction action))
-            {
-                ThreadContext thread = action.Thread;
-                switch (action.Kind)
-                {
-                    case ThreadAction.ActionKind.Create:
-                        _threads.Add(thread);
-                        _newThreads.Add(thread.Id);
-                        break;
-                    case ThreadAction.ActionKind.Terminate:
-                        _threads.Remove(thread);
-                        _terminatedThreads.Add(thread.Id);
-                        break;
-                    case ThreadAction.ActionKind.Suspend:
-                        CommitSuspendThread(thread, action.Timeout);
-                        break;
-                    case ThreadAction.ActionKind.Join:
-                        Debug.Assert(action.JoinedThread is object);
-                        CommitJoin(thread, action.JoinedThread);
-                        break;
-                    case ThreadAction.ActionKind.Resume:
-                        CommitResumeThread(thread);
-                        break;
-                }
-            }
-        }
-
-        private void CommitSuspendThread(ThreadContext thread, TimeSpan? timeoutOpt)
-        {
-            thread.SuspensionTime = TicksFromTimeSpan(_timer.Elapsed);
-            if (timeoutOpt is TimeSpan timeout)
-            {
-                thread.SleepTimeout = TicksFromTimeSpan(timeout);
-            }
-        }
-
-        private void CommitJoin(ThreadContext thread, ThreadContext target)
-        {
-            thread.SuspensionTime = TicksFromTimeSpan(_timer.Elapsed);
-            target.WaitingThread = thread;
-        }
-
-        private void CommitResumeThread(ThreadContext thread)
-        {
-            thread.SleepTimeout = null;
-            thread.SuspensionTime = null;
-        }
-
-        private static long TicksFromTimeSpan(TimeSpan timespan)
-            => (long)(timespan.TotalSeconds * Stopwatch.Frequency);
 
         internal ref ConstantValue GetGlobalVar(int index)
         {
@@ -310,7 +211,7 @@ namespace NitroSharp.NsScript.VM
             Yield
         }
 
-        private TickResult Tick(ThreadContext thread, BuiltInFunctions builtins)
+        private TickResult Tick(NsScriptProcess process, NsScriptThread thread, BuiltInFunctions builtins)
         {
             if (thread.CallFrameStack.Count == 0)
             {
@@ -412,7 +313,7 @@ namespace NitroSharp.NsScript.VM
                         frame.ProgramCounter = program.Position;
                         var newFrame = new CallFrame(frame.Module, subroutineToken, 0);
                         thread.CallFrameStack.Push(newFrame);
-                        if (CurrentThread == MainThread)
+                        if (process.CurrentThread == process.MainThread)
                         {
                             string name = thisModule.GetSubroutineRuntimeInfo(subroutineToken)
                                 .SubroutineName;
@@ -427,7 +328,7 @@ namespace NitroSharp.NsScript.VM
                         newFrame = externalCall(ref program);
                         thread.CallFrameStack.Push(newFrame);
                         frame.ProgramCounter = program.Position;
-                        if (CurrentThread == MainThread)
+                        if (process.CurrentThread == process.MainThread)
                         {
                             string name = newFrame.Module
                                 .GetSubroutineRuntimeInfo(newFrame.SubroutineIndex)
@@ -441,7 +342,7 @@ namespace NitroSharp.NsScript.VM
                         return TickResult.Ok;
                     case Opcode.CallScene:
                         newFrame = externalCall(ref program);
-                        ThreadContext newThread = CreateThread(ref newFrame);
+                        NsScriptThread newThread = CreateThread(process, ref newFrame);
                         Join(thread, newThread);
                         ResumeThread(newThread);
                         frame.ProgramCounter = program.Position;
@@ -506,7 +407,7 @@ namespace NitroSharp.NsScript.VM
                         switch (func)
                         {
                             default:
-                                if (CurrentThread == MainThread)
+                                if (process.CurrentThread == process.MainThread)
                                 {
                                     //Console.Write($"Built-in: {func.ToString()}(");
                                     //foreach (ref readonly ConstantValue cv in args)

@@ -84,10 +84,10 @@ namespace NitroSharp.Graphics
             if (held)
             {
                 float value = MathUtil.Clamp(_mousePos.Get(_axis), _min, _max);
-                if (_p1.Get(_axis) > _p2.Get(_axis))
-                {
-                    value = _p1.Get(_axis) - value;
-                }
+                //if (_p1.Get(_axis) > _p2.Get(_axis))
+                //{
+                //    value = _p1.Get(_axis) - value;
+                //}
                 Transform.Position = _axis == Vector2Component.Y
                     ? new Vector3(Transform.Position.X, value, 0)
                     : new Vector3(value, Transform.Position.Y, 0);

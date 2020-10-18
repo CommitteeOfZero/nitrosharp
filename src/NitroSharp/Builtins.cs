@@ -13,21 +13,21 @@ namespace NitroSharp
     {
         private readonly GameContext _ctx;
         private readonly RenderContext _renderCtx;
-        private readonly World _world;
 
         public Builtins(GameContext context)
         {
             _ctx = context;
             _renderCtx = context.RenderContext;
-            _world = _ctx.World;
         }
 
+        private World World => _ctx.ActiveProcess.World;
+
         private Entity? Get(in EntityPath entityPath)
-            => _world.Get(CurrentThread.Id, entityPath);
+            => World.Get(CurrentThread.Id, entityPath);
 
         private SmallList<Entity> Query(EntityQuery query)
         {
-            SmallList<Entity> results = _world.Query(CurrentThread.Id, query);
+            SmallList<Entity> results = World.Query(CurrentThread.Id, query);
             if (results.Count == 0)
             {
                 EmptyResults(query);
@@ -37,7 +37,7 @@ namespace NitroSharp
 
         private QueryResultsEnumerable<T> Query<T>(EntityQuery query) where T : Entity
         {
-            QueryResultsEnumerable<T> results = _world.Query<T>(CurrentThread.Id, query);
+            QueryResultsEnumerable<T> results = World.Query<T>(CurrentThread.Id, query);
             if (results.IsEmpty)
             {
                 EmptyResults(query);
@@ -50,7 +50,7 @@ namespace NitroSharp
 
         private bool ResolvePath(in EntityPath path, out ResolvedEntityPath resolvedPath)
         {
-            return _world.ResolvePath(CurrentThread.Id, path, out resolvedPath);
+            return World.ResolvePath(CurrentThread.Id, path, out resolvedPath);
         }
 
         public override void Exit()
@@ -67,7 +67,7 @@ namespace NitroSharp
         {
             if (ResolvePath(path, out ResolvedEntityPath resolvedPath))
             {
-                _world.Add(new SimpleEntity(resolvedPath));
+                World.Add(new SimpleEntity(resolvedPath));
             }
         }
 
@@ -108,7 +108,7 @@ namespace NitroSharp
                         }
                         else
                         {
-                            _world.EnableEntity(ri);
+                            World.EnableEntity(ri);
                         }
                         break;
                     case (RenderItem ri, NsEntityAction.Disable):
@@ -118,17 +118,17 @@ namespace NitroSharp
                         }
                         else
                         {
-                            _world.DisableEntity(ri);
+                            World.DisableEntity(ri);
                         }
                         break;
                     case (_, NsEntityAction.Enable):
-                        _world.EnableEntity(entity);
+                        World.EnableEntity(entity);
                         break;
                     case (_, NsEntityAction.Disable):
-                        _world.DisableEntity(entity);
+                        World.DisableEntity(entity);
                         break;
                     case (_, NsEntityAction.DestroyWhenIdle):
-                        _world.DestroyWhenIdle(entity);
+                        World.DestroyWhenIdle(entity);
                         break;
                     case (_, NsEntityAction.Lock):
                         entity.Lock();
@@ -144,7 +144,7 @@ namespace NitroSharp
         {
             if (ResolvePath(entityPath, out ResolvedEntityPath resolvedPath))
             {
-                _world.SetAlias(resolvedPath.Id, alias);
+                World.SetAlias(resolvedPath.Id, alias);
             }
         }
 
@@ -154,7 +154,7 @@ namespace NitroSharp
             {
                 if (!entity.IsLocked)
                 {
-                    _world.DestroyEntity(entity);
+                    World.DestroyEntity(entity);
                 }
             }
         }
@@ -163,7 +163,7 @@ namespace NitroSharp
         {
             if (ResolvePath(entityPath, out ResolvedEntityPath resolvedPath))
             {
-                _world.Add(new VmThread(resolvedPath, _ctx.VM, target));
+                World.Add(new VmThread(resolvedPath, _ctx.VM, CurrentProcess, target));
             }
         }
 

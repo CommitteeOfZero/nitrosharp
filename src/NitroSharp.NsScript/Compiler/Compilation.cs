@@ -52,10 +52,13 @@ namespace NitroSharp.NsScript.Compiler
         public SourceReferenceResolver SourceReferenceResolver => _sourceReferenceResolver;
         public string OutputDirectory => _outputDirectory;
 
-        public void Emit(SourceModuleSymbol mainModule)
+        public void Emit(ReadOnlySpan<SourceModuleSymbol> roots)
         {
             var compiledSourceFiles = new HashSet<ResolvedPath>();
-            EmitCore(mainModule.RootSourceFile, compiledSourceFiles);
+            foreach (SourceModuleSymbol module in roots)
+            {
+                EmitCore(module.RootSourceFile, compiledSourceFiles);
+            }
 
             int filesCompiled;
             do

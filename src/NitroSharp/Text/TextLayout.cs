@@ -78,32 +78,29 @@ namespace NitroSharp.Text
         public override string ToString() => $"{{Glyph #{Index}, {Position}}}";
     }
 
+    [StructLayout(LayoutKind.Auto)]
+    internal readonly struct Line
+    {
+        public readonly GlyphSpan GlyphSpan;
+        public readonly float BaselineY;
+        public readonly float MaxFontDescender;
+        public readonly float MaxFontLineGap;
+
+        public Line(
+            GlyphSpan glyphSpan,
+            float baselineY,
+            float maxFontDescender,
+            float maxFontLineGap)
+        {
+            GlyphSpan = glyphSpan;
+            BaselineY = baselineY;
+            MaxFontDescender = maxFontDescender;
+            MaxFontLineGap = maxFontLineGap;
+        }
+    }
+
     internal sealed class TextLayout
     {
-        [StructLayout(LayoutKind.Auto)]
-        private readonly struct Line
-        {
-            public readonly uint Start;
-            public readonly uint Length;
-            public readonly float BaselineY;
-            public readonly float MaxFontDescender;
-            public readonly float MaxFontLineGap;
-
-            public Line(
-                uint start,
-                uint length,
-                float baselineY,
-                float maxFontDescender,
-                float maxFontLineGap)
-            {
-                Start = start;
-                Length = length;
-                BaselineY = baselineY;
-                MaxFontDescender = maxFontDescender;
-                MaxFontLineGap = maxFontLineGap;
-            }
-        }
-
         [StructLayout(LayoutKind.Auto)]
         private struct LineBuilder
         {
@@ -175,8 +172,7 @@ namespace NitroSharp.Text
             public Line Build()
             {
                 return new Line(
-                    Start,
-                    Length,
+                    new GlyphSpan(Start, Length),
                     BaselineY,
                     MaxFontDescender,
                     MaxFontLineGap
@@ -248,7 +244,8 @@ namespace NitroSharp.Text
         private float _bbLeft, _bbRight;
 
         public TextLayout(
-            Size? maxBounds = null,
+            uint? maxWidth = null,
+            uint? maxHeight = null,
             float? fixedLineHeight = null,
             float rubyFontSizeMultiplier = 0.4f)
         {
@@ -257,7 +254,9 @@ namespace NitroSharp.Text
             _opacityValues = new ArrayBuilder<float>(initialCapacity: 32);
             _glyphRuns = new ArrayBuilder<GlyphRun>(initialCapacity: 2);
             _lines = new ArrayBuilder<Line>(initialCapacity: 2);
-            _maxBounds = maxBounds ?? new Size(uint.MaxValue, uint.MaxValue);
+            uint mWidth = maxWidth ?? uint.MaxValue;
+            uint mHeight = maxHeight ?? uint.MaxValue;
+            _maxBounds = new Size(mWidth, mHeight);
             _fixedLineHeight = fixedLineHeight;
             _rubyFontSizeMultiplier = rubyFontSizeMultiplier;
             _lineBuilder = LineBuilder.Create();
@@ -267,10 +266,11 @@ namespace NitroSharp.Text
         public TextLayout(
             GlyphRasterizer glyphRasterizer,
             ReadOnlySpan<TextRun> textRuns,
-            Size? maxBounds,
+            uint? maxWidth = null,
+            uint? maxHeight = null,
             float? fixedLineHeight = null,
             float rubyFontSizeMultiplier = 0.4f)
-            : this(maxBounds, fixedLineHeight, rubyFontSizeMultiplier)
+            : this(maxWidth, maxHeight, fixedLineHeight, rubyFontSizeMultiplier)
         {
             Append(glyphRasterizer, textRuns);
         }
@@ -280,6 +280,7 @@ namespace NitroSharp.Text
         public ReadOnlySpan<GlyphRun> GlyphRuns => _glyphRuns.AsReadonlySpan();
         public ReadOnlySpan<PositionedGlyph> Glyphs => _glyphs.AsReadonlySpan();
         public ReadOnlySpan<float> OpacityValues => _opacityValues.AsReadonlySpan();
+        public ReadOnlySpan<Line> Lines => _lines.AsReadonlySpan();
         public RectangleF BoundingBox => _boundingBox;
         public Size MaxBounds => _maxBounds;
 
@@ -311,9 +312,12 @@ namespace NitroSharp.Text
         private Span<PositionedGlyph> GetGlyphsMut(GlyphSpan span)
             => _glyphs.AsSpan((int)span.Start, (int)span.Length);
 
-        public ReadOnlySpan<GlyphRun> Append(GlyphRasterizer glyphRasterizer, ReadOnlySpan<TextRun> textRuns)
+        public GlyphSpan Append(GlyphRasterizer glyphRasterizer, TextRun textRun)
+            => Append(glyphRasterizer, MemoryMarshal.CreateReadOnlySpan(ref textRun, 1));
+
+        public GlyphSpan Append(GlyphRasterizer glyphRasterizer, ReadOnlySpan<TextRun> textRuns)
         {
-            int start = (int)_glyphRuns.Count;
+            uint start = _glyphRuns.Count;
             for (uint i = 0; i < textRuns.Length; i++)
             {
                 _textRuns.Add() = textRuns[(int)i];
@@ -323,8 +327,17 @@ namespace NitroSharp.Text
                     break;
                 }
             }
-            return _glyphRuns.AsReadonlySpan()[start..];
+
+            if (_lines.Count > 1 && _lines[^1].GlyphSpan.IsEmpty)
+            {
+                _lines.RemoveLast();
+            }
+
+            return new GlyphSpan(start, _glyphs.Count - start);
         }
+
+        public void NewLine(GlyphRasterizer glyphRasterizer)
+            => StartNewLine(glyphRasterizer, _glyphs.Count);
 
         private bool Append(GlyphRasterizer glyphRasterizer, uint textRunIndex, bool lastTextRun)
         {
@@ -336,6 +349,10 @@ namespace NitroSharp.Text
             }
 
             TextRun textRun = _textRuns[(int)textRunIndex];
+            if (textRun.Text.Length == 0)
+            {
+                return true;
+            }
             uint glyphRunStart = _glyphs.Count;
             FontData fontData = glyphRasterizer.GetFontData(textRun.Font);
             VerticalMetrics fontMetrics = fontData.GetVerticalMetrics(textRun.FontSize);
@@ -366,7 +383,7 @@ namespace NitroSharp.Text
                         _glyphs.Add() = new PositionedGlyph(glyphIndex, whitespace, position);
                         _opacityValues.Add() = 1.0f;
                         _lastWord.Append(glyphDims, position, whitespace);
-                        
+
                     }
 
                     if (mayBreakLine && LineBreakingRules.CanEndLine(c) && _lastWord.HasNonWhitespaceChars
@@ -743,7 +760,7 @@ namespace NitroSharp.Text
                 <= _maxBounds.Height;
         }
 
-        public bool StartNewLine(GlyphRasterizer glyphRasterizer, uint startGlyph)
+        private bool StartNewLine(GlyphRasterizer glyphRasterizer, uint startGlyph)
         {
             if (ProcessLine(glyphRasterizer))
             {

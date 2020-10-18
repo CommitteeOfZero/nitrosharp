@@ -1,7 +1,6 @@
 ﻿using NitroSharp.Media;
 using NitroSharp.Text;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
@@ -35,60 +34,21 @@ namespace NitroSharp
         public bool IsValid => FrameId >= 0 && StopwatchTicks >= 0;
     }
 
-    internal enum WaitCondition
-    {
-        None,
-        UserInput,
-        MoveCompleted,
-        ZoomCompleted,
-        RotateCompleted,
-        FadeCompleted,
-        BezierMoveCompleted,
-        TransitionCompleted,
-        EntityIdle,
-        FrameReady,
-        LineRead
-    }
-
-    internal readonly struct WaitOperation
-    {
-        public readonly ThreadContext Thread;
-        public readonly WaitCondition Condition;
-        public readonly EntityQuery? EntityQuery;
-        public readonly Texture? ScreenshotTexture;
-
-        public WaitOperation(
-            ThreadContext thread,
-            WaitCondition condition,
-            EntityQuery? entityQuery,
-            Texture? screenshotTexture = null)
-        {
-            Thread = thread;
-            Condition = condition;
-            EntityQuery = entityQuery;
-            ScreenshotTexture = screenshotTexture;
-        }
-
-        public void Deconstruct(out WaitCondition condition, out EntityQuery? query)
-        {
-            condition = Condition;
-            query = EntityQuery;
-        }
-    }
-
     internal sealed class GameContext
     {
         public GameWindow Window { get; }
         public ContentManager Content { get; }
         public GlyphRasterizer GlyphRasterizer { get; }
-        public FontConfiguration FontConfig { get; }
         public RenderContext RenderContext { get; }
         public InputContext InputContext { get; }
         public NsScriptVM VM { get; }
-        public World World { get; }
-
-        public Queue<WaitOperation> WaitOperations { get; }
         public CancellationTokenSource ShutdownSignal { get; }
+
+        public GameProcess MainProcess { get; }
+        public GameProcess? SysProcess { get; set; }
+        public GameProcess ActiveProcess => SysProcess ?? MainProcess;
+
+        public Backlog Backlog { get; }
 
         public GameContext(
             GameWindow window,
@@ -98,34 +58,27 @@ namespace NitroSharp
             RenderContext renderContext,
             InputContext inputContext,
             NsScriptVM vm,
-            World world)
+            GameProcess mainProcess)
         {
             Window = window;
             Content = content;
             GlyphRasterizer = glyphRasterizer;
-            FontConfig = fontConfig;
             RenderContext = renderContext;
             InputContext = inputContext;
             VM = vm;
-            World = world;
-            WaitOperations = new Queue<WaitOperation>();
             ShutdownSignal = new CancellationTokenSource();
+            MainProcess = mainProcess;
+            Backlog = new Backlog(fontConfig);
         }
 
         public void Wait(
-            ThreadContext thread,
+            NsScriptThread thread,
             WaitCondition condition,
             TimeSpan? timeout = null,
             EntityQuery? entityQuery = null,
             Texture? screenshotTexture = null)
         {
-            VM.SuspendThread(thread, timeout);
-            if (condition != WaitCondition.None)
-            {
-                WaitOperations.Enqueue(
-                    new WaitOperation(thread, condition, entityQuery, screenshotTexture)
-                );
-            }
+            ActiveProcess.Wait(thread, condition, timeout, entityQuery, screenshotTexture);
         }
     }
 
@@ -146,7 +99,7 @@ namespace NitroSharp
         private readonly TaskCompletionSource<int> _initializingGraphics;
         private RenderSystem? _renderSystem;
         private readonly GlyphRasterizer _glyphRasterizer;
-        private FontConfiguration? _fontConfig;
+        private readonly FontConfiguration _defaultFontConfig;
 
         private ContentManager? _content;
         private readonly InputContext _inputContext;
@@ -158,10 +111,9 @@ namespace NitroSharp
         private readonly string _bytecodeCacheDir;
         private NsScriptVM? _vm;
         private Builtins _builtinFunctions;
-        private readonly World _world;
         private GameContext? _context;
 
-        private readonly List<WaitOperation> _survivedWaits;
+        private bool _clearFramebuffer = true;
 
         public Game(GameWindow window, Configuration configuration)
         {
@@ -180,8 +132,16 @@ namespace NitroSharp
             _nssFolder = Path.Combine(_configuration.ContentRoot, "nss");
             _bytecodeCacheDir = _nssFolder.Replace("nss", "nsx");
             _builtinFunctions = null!;
-            _survivedWaits = new List<WaitOperation>();
-            _world = new World();
+
+            var defaultFont = new FontFaceKey(_configuration.FontFamily, FontStyle.Regular);
+            _defaultFontConfig = new FontConfiguration(
+                defaultFont,
+                italicFont: null,
+                new PtFontSize(_configuration.FontSize),
+                defaultTextColor: RgbaFloat.White,
+                defaultOutlineColor: RgbaFloat.Black,
+                rubyFontSizeMultiplier: 0.4f
+            );
         }
 
         internal AudioDevice AudioDevice => _audioDevice!;
@@ -196,9 +156,10 @@ namespace NitroSharp
             // require that the main loop be run on the main thread.
             // useDedicatedThread is only used by the Android verison
             // at this point.
+            GameProcess process;
             try
             {
-                Initialize().Wait();
+                process = Initialize().Result;
             }
             catch (AggregateException aex)
             {
@@ -209,23 +170,23 @@ namespace NitroSharp
                 _window,
                 _content!,
                 _glyphRasterizer,
-                _fontConfig!,
+                _defaultFontConfig!,
                 _renderSystem!.Context,
                 _inputContext,
                 _vm!,
-                _world
+                process
             );
             _builtinFunctions = new Builtins(_context);
             return RunMainLoop(useDedicatedThread);
         }
 
-        private async Task Initialize()
+        private async Task<GameProcess> Initialize()
         {
             var initializeAudio = Task.Run(SetupAudio);
-            SetupFonts();
+            _glyphRasterizer.AddFonts(Directory.EnumerateFiles("Fonts"));
             await Task.WhenAll(_initializingGraphics.Task, initializeAudio);
             _content = CreateContentManager();
-            await Task.Run(LoadStartupScript);
+            GameProcess mainProcess = await Task.Run(LoadStartupScript);
             _renderSystem = new RenderSystem(
                 _configuration,
                 _graphicsDevice!,
@@ -234,6 +195,7 @@ namespace NitroSharp
                 _content,
                 _vm!.SystemVariables
             );
+            return mainProcess;
         }
 
         private static (Logger, LogEventRecorder) SetupLogging()
@@ -245,21 +207,7 @@ namespace NitroSharp
             return (logger, recorder);
         }
 
-        private void SetupFonts()
-        {
-            _glyphRasterizer.AddFonts(Directory.EnumerateFiles("Fonts"));
-            var defaultFont = new FontFaceKey(_configuration.FontFamily, FontStyle.Regular);
-            _fontConfig = new FontConfiguration(
-                defaultFont,
-                italicFont: null,
-                new PtFontSize(_configuration.FontSize),
-                defaultTextColor: RgbaFloat.White,
-                defaultOutlineColor: RgbaFloat.Black,
-                rubyFontSizeMultiplier: 0.4f
-            );
-        }
-
-        private void LoadStartupScript()
+        private GameProcess LoadStartupScript()
         {
             const string globalsFileName = "_globals";
             string globalsPath = Path.Combine(_bytecodeCacheDir, globalsFileName);
@@ -287,7 +235,11 @@ namespace NitroSharp
                     globalsFileName,
                     sourceEncoding
                 );
-                compilation.Emit(compilation.GetSourceModule(_configuration.SysScripts.Startup));
+
+                SourceModuleSymbol startup = compilation.GetSourceModule(_configuration.SysScripts.Startup);
+                SourceModuleSymbol backlog = compilation.GetSourceModule(_configuration.SysScripts.Backlog);
+
+                compilation.Emit(new[] { startup, backlog });
             }
             else
             {
@@ -296,10 +248,7 @@ namespace NitroSharp
 
             var nsxLocator = new FileSystemNsxModuleLocator(_bytecodeCacheDir);
             _vm = new NsScriptVM(nsxLocator, File.OpenRead(globalsPath));
-            _vm.CreateThread(
-                Path.ChangeExtension(_configuration.SysScripts.Startup, null),
-                symbol: "main"
-            );
+            return CreateProcess(_configuration.SysScripts.Startup);
         }
 
         private bool ValidateBytecodeCache()
@@ -411,29 +360,61 @@ namespace NitroSharp
             Debug.Assert(_context is object);
             Debug.Assert(_vm is object);
 
-            _renderSystem.BeginFrame(framestamp);
-            RunResult runResult = _vm.Run(_builtinFunctions, _context.ShutdownSignal.Token);
-            foreach (uint thread in runResult.TerminatedThreads)
+            _renderSystem.BeginFrame(framestamp, _clearFramebuffer);
+            _clearFramebuffer = true;
+
+            while (true)
             {
-                _world.DestroyContext(thread);
+                GameProcess activeProcess = _context.ActiveProcess;
+                RunResult runResult = _vm.Run(
+                    activeProcess.VmProcess,
+                    _builtinFunctions,
+                    _context.ShutdownSignal.Token
+                );
+
+                foreach (uint thread in runResult.TerminatedThreads)
+                {
+                    activeProcess.World.DestroyContext(thread);
+                }
+
+                if (_context.SysProcess is GameProcess { VmProcess: { IsTerminated: true } } sysProc)
+                {
+                    sysProc.Dispose();
+                    _context.SysProcess = null;
+                    _context.MainProcess.VmProcess.Resume();
+                    continue;
+                }
+
+                break;
             }
 
+
+            World world = _context.ActiveProcess.World;
             bool assetsReady = _content.ResolveAssets();
             if (assetsReady)
             {
-                _world.BeginFrame();
+                world.BeginFrame();
             }
-            _renderSystem.Render(_context, _world.RenderItems, dt, assetsReady);
+            _renderSystem.Render(_context, world.RenderItems, dt, assetsReady);
             _renderSystem.EndFrame();
+
             if (assetsReady)
             {
                 // That's right, the input is processed after the frame's been rendered,
                 // and only if all of the requested assets have been loaded.
                 // These two conditions have to be met in order to perform
                 // pixel-perfect hit testing.
-                _inputContext.Update(_vm);
-                _renderSystem.ProcessChoices(_world, _inputContext, _window);
-                ProcessWaitOperations();
+                _inputContext.Update(_vm.SystemVariables);
+                _renderSystem.ProcessChoices(world, _inputContext, _window);
+                _context.ActiveProcess.ProcessWaitOperations(_context);
+
+                if (_inputContext.WheelDelta > 0)
+                {
+                    if (CreateSysProcess(_configuration.SysScripts.Backlog))
+                    {
+                        _clearFramebuffer = false;
+                    }
+                }
             }
             try
             {
@@ -445,88 +426,22 @@ namespace NitroSharp
             }
         }
 
-        private void ProcessWaitOperations()
+        private bool CreateSysProcess(string mainModule)
         {
-            Debug.Assert(_context is object);
-            Debug.Assert(_vm is object);
-            Debug.Assert(_renderSystem is object);
-
-            Queue<WaitOperation> waits = _context.WaitOperations;
-            while (waits.TryDequeue(out WaitOperation wait))
+            if (_context!.SysProcess is null)
             {
-                if (wait.Thread.IsActive) { continue; }
-                if (ShouldResume(wait))
-                {
-                    _vm.ResumeThread(wait.Thread);
-                    if (wait.ScreenshotTexture is Texture screenshotTexture)
-                    {
-                        _renderSystem.Context.CaptureFramebuffer(screenshotTexture);
-                    }
-                }
-                else
-                {
-                    _survivedWaits.Add(wait);
-                }
+                _context!.MainProcess.VmProcess.Suspend();
+                _context!.SysProcess = CreateProcess(mainModule);
+                return true;
             }
 
-            foreach (WaitOperation wait in _survivedWaits)
-            {
-                waits.Enqueue(wait);
-            }
-
-            _survivedWaits.Clear();
+            return false;
         }
 
-        private bool ShouldResume(in WaitOperation wait)
+        private GameProcess CreateProcess(string mainModule)
         {
-            uint contextId = wait.Thread.Id;
-
-            bool checkInput() => _inputContext.VKeyDown(VirtualKey.Advance);
-
-            bool checkIdle(EntityQuery query)
-            {
-                foreach (Entity entity in _world.Query(contextId, query))
-                {
-                    if (!entity.IsIdle) { return false; }
-                }
-
-                return true;
-            }
-
-            bool checkAnim(EntityQuery query, AnimationKind anim)
-            {
-                foreach (RenderItem entity in _world.Query<RenderItem>(contextId, query))
-                {
-                    if (entity.IsAnimationActive(anim)) { return false; }
-                }
-
-                return true;
-            }
-
-            bool checkLineRead(EntityQuery query)
-            {
-                foreach (DialoguePage page in _world.Query<DialoguePage>(contextId, query))
-                {
-                    if (page.LineRead) { return true; }
-                }
-
-                return false;
-            }
-
-            return wait switch
-            {
-                (WaitCondition.UserInput, _) => checkInput(),
-                (WaitCondition.EntityIdle, { } query) => checkIdle(query),
-                (WaitCondition.FadeCompleted, { } query) => checkAnim(query, AnimationKind.Fade),
-                (WaitCondition.MoveCompleted, { } query) => checkAnim(query, AnimationKind.Move),
-                (WaitCondition.ZoomCompleted, { } query) => checkAnim(query, AnimationKind.Zoom),
-                (WaitCondition.RotateCompleted, { } query) => checkAnim(query, AnimationKind.Rotate),
-                (WaitCondition.BezierMoveCompleted, { } query) => checkAnim(query, AnimationKind.BezierMove),
-                (WaitCondition.TransitionCompleted, { } query) => checkAnim(query, AnimationKind.Transition),
-                (WaitCondition.FrameReady, _) => true,
-                (WaitCondition.LineRead, { } query) => checkLineRead(query),
-                _ => false
-            };
+            mainModule = Path.ChangeExtension(mainModule, null);
+            return new GameProcess(_vm!.CreateProcess(mainModule, "main"), _defaultFontConfig.Clone());
         }
 
         private void OnSurfaceCreated(SwapchainSource swapchainSource)
@@ -636,7 +551,8 @@ namespace NitroSharp
         {
             _inputContext.Dispose();
             _graphicsDevice?.WaitForIdle();
-            _world.Dispose();
+            _context!.MainProcess.Dispose();
+            _context!.SysProcess?.Dispose();
             _renderSystem?.Dispose();
             _content?.Dispose();
             _glyphRasterizer.Dispose();

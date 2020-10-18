@@ -33,15 +33,17 @@ namespace NitroSharp
 
         public GameWindow Window => _rawInput.Window;
         public Vector2 MousePosition { get; private set; }
+        public float WheelDelta { get; private set; }
 
         public bool VKeyState(VirtualKey vkey) => _vkeyState[(int)vkey];
         public bool VKeyDown(VirtualKey vkey) => _newVkeys[(int)vkey];
 
-        public void Update(NsScriptVM vm)
+        public void Update(SystemVariableLookup systemVariables)
         {
             RawInput input = _rawInput;
             input.Update();
             MousePosition = input.Snapshot.MousePosition;
+            WheelDelta = input.WheelDelta;
 
             PollVkey(input, VirtualKey.Advance);
             PollVkey(input, VirtualKey.Enter);
@@ -51,7 +53,7 @@ namespace NitroSharp
             PollVkey(input, VirtualKey.Down);
 
             Gamepad gamepad = input.Gamepad;
-            SystemVariableLookup sys = vm.SystemVariables;
+            SystemVariableLookup sys = systemVariables;
             set(ref sys.RightButtonDown, input.MouseState(MouseButton.Right));
             poll(SDL_GameControllerButton.Start, ref sys.X360StartButtonDown);
             poll(SDL_GameControllerButton.A, ref sys.X360AButtonDown);

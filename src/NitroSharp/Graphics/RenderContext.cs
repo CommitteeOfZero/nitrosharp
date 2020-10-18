@@ -135,10 +135,11 @@ namespace NitroSharp.Graphics
             return _offscreenBatch;
         }
 
-        public void BeginFrame(in FrameStamp frameStamp)
+        public void BeginFrame(in FrameStamp frameStamp, bool clear)
         {
             _drawCommands.Begin();
-            MainBatch.Begin(_drawCommands, _swapchainTarget, RgbaFloat.Black);
+            RgbaFloat? clearColor = clear ? RgbaFloat.Black : (RgbaFloat?)null;
+            MainBatch.Begin(_drawCommands, _swapchainTarget, clearColor);
 
             SecondaryCommandList.Begin();
 

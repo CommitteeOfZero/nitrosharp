@@ -17,15 +17,22 @@ namespace NitroSharp
     {
         public override void CreateBacklog(in EntityPath path, int priority)
         {
+            if (ResolvePath(path, out ResolvedEntityPath resolvedPath))
+            {
+               var backlog =  World.Add(new BacklogView(resolvedPath, priority, _ctx.Backlog));
+            }
         }
 
         public override void ClearBacklog()
         {
-
+            _ctx.Backlog.Clear();
         }
 
         public override void SetBacklog(string text)
         {
+            TextSegment seg = TextBuffer.FromPXmlString(text, _ctx.ActiveProcess.FontConfig)
+                .AssertSingleTextSegment()!;
+            _ctx.Backlog.Append(_ctx.GlyphRasterizer, seg);
         }
 
         public override Vector2 GetCursorPosition()
@@ -45,7 +52,7 @@ namespace NitroSharp
             if (ResolvePath(path, out ResolvedEntityPath resolvedPath)
                 && ResolveSpriteSource(knobImage) is SpriteTexture knob)
             {
-                _world.Add(new Scrollbar(
+                World.Add(new Scrollbar(
                     resolvedPath,
                     priority,
                     scrollDirection,
@@ -59,9 +66,10 @@ namespace NitroSharp
 
         public override void SetScrollbar(in EntityPath scrollbar, in EntityPath parent)
         {
-            if (Get(parent) is Backlog backlog)
+            if (Get(scrollbar) is Scrollbar sb &&
+                Get(parent) is BacklogView backlog)
             {
-                // TODO
+                backlog.Scrollbar = sb.Id;
             }
         }
 
@@ -76,7 +84,7 @@ namespace NitroSharp
         {
             if (ResolvePath(entityPath, out ResolvedEntityPath resolvedPath))
             {
-                _world.Add(new Choice(resolvedPath));
+                World.Add(new Choice(resolvedPath));
             }
         }
 
@@ -109,7 +117,7 @@ namespace NitroSharp
         {
             if (ResolvePath(entityPath, out ResolvedEntityPath resolvedPath))
             {
-                _world.Add(new ColorSource(
+                World.Add(new ColorSource(
                     resolvedPath,
                     color.ToRgbaFloat(),
                     new Size(width, height)
@@ -122,7 +130,7 @@ namespace NitroSharp
             if (ResolvePath(entityPath, out ResolvedEntityPath resolvedPath)
                 && ResolveSpriteSource(source) is SpriteTexture texture)
             {
-                _world.Add(new Image(resolvedPath, texture));
+                World.Add(new Image(resolvedPath, texture));
             }
         }
 
@@ -135,7 +143,7 @@ namespace NitroSharp
         {
             if (ResolvePath(entityPath, out ResolvedEntityPath resolvedPath))
             {
-                _world.Add(new Sprite(
+                World.Add(new Sprite(
                     resolvedPath, priority,
                     SpriteTexture.SolidColor(color.ToRgbaFloat(), new Size(width, height))
                 ).WithPosition(_renderCtx, x, y));
@@ -151,7 +159,7 @@ namespace NitroSharp
             if (ResolvePath(entityPath, out ResolvedEntityPath resolvedPath)
                 && ResolveSpriteSource(source) is SpriteTexture texture)
             {
-                _world.Add(new Sprite(
+                World.Add(new Sprite(
                     resolvedPath,
                     priority,
                     texture
@@ -204,7 +212,7 @@ namespace NitroSharp
             if (ResolvePath(entityPath, out ResolvedEntityPath resolvedPath)
                 && ResolveSpriteSource(source, srcRect) is SpriteTexture texture)
             {
-                _world.Add(new Sprite(
+                World.Add(new Sprite(
                     resolvedPath,
                     priority,
                     texture
@@ -222,7 +230,7 @@ namespace NitroSharp
             if (ResolvePath(entityPath, out ResolvedEntityPath resolvedPath))
             {
                 var margin = new Vector4(0, 15, 34, 28);
-                var textBuffer = TextBuffer.FromPXmlString(pxmlText, _ctx.FontConfig);
+                var textBuffer = TextBuffer.FromPXmlString(pxmlText, _ctx.ActiveProcess.FontConfig);
 
                 uint w = width is { Variant: NsTextDimensionVariant.Value, Value: { } sWidth }
                     ? (uint)sWidth : uint.MaxValue;
@@ -234,9 +242,9 @@ namespace NitroSharp
                     var layout = new TextLayout(
                         _ctx.GlyphRasterizer,
                         textSegment.TextRuns.AsSpan(),
-                        new Size(w, h)
+                        w, h
                     );
-                    _world.Add(new TextBlock(
+                    World.Add(new TextBlock(
                         resolvedPath,
                         _renderCtx.Text,
                         priority,
@@ -260,7 +268,7 @@ namespace NitroSharp
                 _ => size
             };
 
-            _ctx.FontConfig
+            _ctx.ActiveProcess.FontConfig
                 .WithDefaultSize(new PtFontSize(mapFontSize(size)))
                 .WithDefaultColor(color.ToRgbaFloat());
         }
@@ -274,7 +282,7 @@ namespace NitroSharp
         {
             if (ResolvePath(entityPath, out ResolvedEntityPath resolvedPath))
             {
-                _world.Add(new DialogueBox(
+                World.Add(new DialogueBox(
                     resolvedPath,
                     priority,
                     new Size(width, height),
@@ -293,8 +301,8 @@ namespace NitroSharp
                 && resolvedPath.Parent is RenderItem2D box)
             {
                 var margin = new Vector4(0, 10, 0, 0);
-                ThreadContext thread = _ctx.VM.ActivateDialogueBlock(blockToken);
-                var page = _world.Add(new DialoguePage(
+                NsScriptThread thread = _ctx.VM.ActivateDialogueBlock(blockToken);
+                var page = World.Add(new DialoguePage(
                     resolvedPath,
                     box.Key.Priority,
                     new Size(maxWidth, maxHeight),
@@ -302,7 +310,7 @@ namespace NitroSharp
                     margin,
                     thread
                 )).WithPosition(_renderCtx, default, default);
-                _world.SetAlias(page.Id, new EntityPath(page.Id.Name.ToString()));
+                World.SetAlias(page.Id, new EntityPath(page.Id.Name.ToString()));
             }
         }
 
@@ -318,8 +326,8 @@ namespace NitroSharp
         {
             if (Get(dialoguePage) is DialoguePage page)
             {
-                var buffer = TextBuffer.FromPXmlString(text, _ctx.FontConfig);
-                page.Append(_renderCtx, buffer);
+                var buffer = TextBuffer.FromPXmlString(text, _ctx.ActiveProcess.FontConfig);
+                page.Append(_renderCtx, buffer, _ctx.Backlog);
             }
         }
 
@@ -348,7 +356,7 @@ namespace NitroSharp
             if (ResolvePath(entityPath, out ResolvedEntityPath resolvedPath)
                 && _ctx.Content.RequestTexture(imagePath) is AssetRef<Texture> texture)
             {
-                _world.Add(new AlphaMask(
+                World.Add(new AlphaMask(
                     resolvedPath,
                     priority,
                     texture,

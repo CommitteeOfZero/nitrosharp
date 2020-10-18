@@ -14,7 +14,8 @@ namespace NitroSharp.NsScript.VM
             _randomGen = new Random();
         }
 
-        public ThreadContext CurrentThread => VM.CurrentThread!;
+        public NsScriptProcess CurrentProcess => VM.CurrentProcess!;
+        public NsScriptThread CurrentThread => CurrentProcess.CurrentThread!;
         protected NsScriptVM VM => _vm!;
 
         /// <summary>
@@ -25,7 +26,7 @@ namespace NitroSharp.NsScript.VM
         /// <summary>
         /// Original name: Platform.
         /// </summary>
-        public virtual int GetPlatformId() => 0;
+        public virtual int GetPlatformId() => 100;
 
         public virtual string GetCurrentModuleName() => throw new NotImplementedException();
         public virtual int GetSoundAmplitude(string characterName) => throw new NotImplementedException();

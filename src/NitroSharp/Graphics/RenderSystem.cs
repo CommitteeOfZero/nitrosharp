@@ -31,8 +31,8 @@ namespace NitroSharp.Graphics
 
         public RenderContext Context { get; }
 
-        public void BeginFrame(in FrameStamp frameStamp)
-            => Context.BeginFrame(frameStamp);
+        public void BeginFrame(in FrameStamp frameStamp, bool clear)
+            => Context.BeginFrame(frameStamp, clear);
 
         public void EndFrame()
             => Context.EndFrame();
