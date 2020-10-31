@@ -15,6 +15,19 @@ namespace NitroSharp
 {
     internal partial class Builtins
     {
+        public override void CreateCube(
+            in EntityPath entityPath, int priority,
+            string front, string back, string right,
+            string left, string top, string bottom)
+        {
+            priority = int.MaxValue;
+            if (ResolvePath(entityPath, out ResolvedEntityPath resolvedPath))
+            {
+                string[] texturePaths = new[] { front, back, right, left, top, bottom };
+                World.Add(Cube.Load(resolvedPath, priority, _ctx.RenderContext, texturePaths));
+            }
+        }
+
         public override void CreateBacklog(in EntityPath path, int priority)
         {
             if (ResolvePath(path, out ResolvedEntityPath resolvedPath))

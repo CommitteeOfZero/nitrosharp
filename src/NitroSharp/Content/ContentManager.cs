@@ -42,7 +42,7 @@ namespace NitroSharp.Content
     internal class ContentManager : IDisposable
     {
         private readonly TextureLoader _textureLoader;
-        private readonly Func<Stream, Texture> _loadTextureFunc;
+        private readonly Func<Stream, bool, Texture> _loadTextureFunc;
 
         private readonly FreeList<CacheEntry> _cache;
         private readonly Dictionary<string, FreeListHandle> _strongHandles;
@@ -61,7 +61,7 @@ namespace NitroSharp.Content
         {
             RootDirectory = rootDirectory;
             _textureLoader = textureLoader;
-            _loadTextureFunc = stream => _textureLoader.LoadTexture(stream, staging: false);
+            _loadTextureFunc = (stream, staging) => _textureLoader.LoadTexture(stream, staging);
             _cache = new FreeList<CacheEntry>();
             _strongHandles = new Dictionary<string, FreeListHandle>();
             _loadedAssets = new ConcurrentBag<(string, IDisposable)>();
@@ -100,10 +100,10 @@ namespace NitroSharp.Content
         public Size GetTextureSize(AssetRef<Texture> textureRef)
             => _cache.Get(textureRef.Handle).TextureSize;
 
-        public AssetRef<Texture>? RequestTexture(string path)
-            => RequestTexture(path, out _);
+        public AssetRef<Texture>? RequestTexture(string path, bool staging = false)
+            => RequestTexture(path, out _, staging);
 
-        private AssetRef<Texture>? RequestTexture(string path, out Size size)
+        private AssetRef<Texture>? RequestTexture(string path, out Size size, bool staging = false)
         {
             if (_strongHandles.TryGetValue(path, out FreeListHandle existing))
             {
@@ -136,7 +136,7 @@ namespace NitroSharp.Content
             {
                 try
                 {
-                    Texture tex = _loadTextureFunc(stream);
+                    Texture tex = _loadTextureFunc(stream, staging);
                     _loadedAssets.Add((path, tex));
                 }
                 catch

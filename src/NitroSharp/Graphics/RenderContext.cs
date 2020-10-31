@@ -30,8 +30,6 @@ namespace NitroSharp.Graphics
         private readonly CommandList _transferCommands;
         private readonly CommandList _drawCommands;
 
-        private readonly MeshList<CubeVertex> _cubes;
-
         private readonly RenderTarget _swapchainTarget;
         private readonly Swapchain _mainSwapchain;
 
@@ -86,7 +84,7 @@ namespace NitroSharp.Graphics
                 new MeshDescription(QuadGeometry.Indices, verticesPerMesh: 4),
                 initialCapacity: 4
             );
-            _cubes = new MeshList<CubeVertex>(
+            Cubes = new MeshList<CubeVertex>(
                 graphicsDevice,
                 new MeshDescription(Cube.Indices, verticesPerMesh: 24),
                 initialCapacity: 1
@@ -106,6 +104,7 @@ namespace NitroSharp.Graphics
 
         public MeshList<QuadVertex> Quads { get; }
         public MeshList<IconVertex> IconQuads { get; }
+        public MeshList<CubeVertex> Cubes { get; }
 
         public Size DesignResolution { get; }
         public GraphicsDevice GraphicsDevice { get; }
@@ -145,7 +144,7 @@ namespace NitroSharp.Graphics
 
             Quads.Begin();
             IconQuads.Begin();
-            _cubes.Begin();
+            Cubes.Begin();
             TextureCache.BeginFrame(frameStamp);
             ResourceSetCache.BeginFrame(frameStamp);
             Text.BeginFrame();
@@ -196,7 +195,7 @@ namespace NitroSharp.Graphics
             Text.EndFrame(_transferCommands);
             Quads.End(_transferCommands);
             IconQuads.End(_transferCommands);
-            _cubes.End(_transferCommands);
+            Cubes.End(_transferCommands);
             _transferCommands.End();
 
             GraphicsDevice.SubmitCommands(_transferCommands);
@@ -247,7 +246,7 @@ namespace NitroSharp.Graphics
             WhiteTexture.Dispose();
             Text.Dispose();
             Quads.Dispose();
-            _cubes.Dispose();
+            Cubes.Dispose();
             TextureCache.Dispose();
             ResourceSetCache.Dispose();
             _swapchainTarget.Dispose();

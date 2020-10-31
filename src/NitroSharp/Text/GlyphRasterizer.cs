@@ -262,8 +262,8 @@ namespace NitroSharp.Text
                 {
                     Task.Run(() => stroke(font, fontSize, glyphIndex, radius: 1)),
                     Task.Run(() => stroke(font, fontSize, glyphIndex, radius: 2)),
-                    Task.Run(() => stroke(font, fontSize, glyphIndex, radius: 3)),
-                    Task.Run(() => stroke(font, fontSize, glyphIndex, radius: 4))
+                    Task.Run(() => stroke(font, fontSize, glyphIndex, radius: 2)),
+                    Task.Run(() => stroke(font, fontSize, glyphIndex, radius: 2))
                 });
 
                 RasterizedGlyph outline = mergeStrokes(strokes);

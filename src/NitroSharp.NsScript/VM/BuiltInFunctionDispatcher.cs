@@ -79,6 +79,9 @@ namespace NitroSharp.NsScript.VM
                     WaitKey(ref args);
                     break;
 
+                case BuiltInFunction.CreateCube:
+                    CreateCube(ref args);
+                    break;
                 case BuiltInFunction.CreateChoice:
                     CreateChoice(ref args);
                     break;
@@ -272,6 +275,20 @@ namespace NitroSharp.NsScript.VM
             ConstantValue? result = _result;
             _result = null;
             return result;
+        }
+
+        private void CreateCube(ref ArgConsumer args)
+        {
+            _impl.CreateCube(
+                args.TakeEntityPath(),
+                priority: args.TakeInt(),
+                args.TakeString(),
+                args.TakeString(),
+                args.TakeString(),
+                args.TakeString(),
+                args.TakeString(),
+                args.TakeString()
+            );
         }
 
         private void CursorPosition(ref ArgConsumer args)
