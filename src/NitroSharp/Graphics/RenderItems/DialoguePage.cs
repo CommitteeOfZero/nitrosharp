@@ -66,7 +66,7 @@ namespace NitroSharp.Graphics
                     case TextBufferSegmentKind.Text:
                         var textSegment = (TextSegment)seg;
                         _layout.Append(renderCtx.GlyphRasterizer, textSegment.TextRuns.AsSpan());
-                        backlog.Append(renderCtx.GlyphRasterizer, textSegment);
+                        backlog.Append(textSegment);
                         break;
                     case TextBufferSegmentKind.Marker:
                         var marker = (MarkerSegment)seg;

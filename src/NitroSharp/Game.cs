@@ -68,7 +68,7 @@ namespace NitroSharp
             VM = vm;
             ShutdownSignal = new CancellationTokenSource();
             MainProcess = mainProcess;
-            Backlog = new Backlog(fontConfig);
+            Backlog = new Backlog();
         }
 
         public void Wait(
@@ -182,9 +182,9 @@ namespace NitroSharp
 
         private async Task<GameProcess> Initialize()
         {
-            var initializeAudio = Task.Run(SetupAudio);
+            //var initializeAudio = Task.Run(SetupAudio);
             _glyphRasterizer.AddFonts(Directory.EnumerateFiles("Fonts"));
-            await Task.WhenAll(_initializingGraphics.Task, initializeAudio);
+            await Task.WhenAll(_initializingGraphics.Task);
             _content = CreateContentManager();
             GameProcess mainProcess = await Task.Run(LoadStartupScript);
             _renderSystem = new RenderSystem(
@@ -510,7 +510,7 @@ namespace NitroSharp
         private ContentManager CreateContentManager()
         {
             Debug.Assert(_graphicsDevice is object);
-            Debug.Assert(_audioDevice is object);
+            //Debug.Assert(_audioDevice is object);
             TextureLoader textureLoader;
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && UseWicOnWindows)
             {

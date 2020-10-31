@@ -1,6 +1,8 @@
 using System;
 using System.Diagnostics;
+using System.IO.MemoryMappedFiles;
 using System.Numerics;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using NitroSharp.Graphics.Core;
 using NitroSharp.Text;
@@ -96,7 +98,7 @@ namespace NitroSharp.Graphics
         private readonly GpuCache<GpuGlyphRun> _gpuGlyphRuns;
         private readonly GpuCache<GpuTransform> _gpuTransforms;
 
-        private ArrayBuilder<Draw> _pendingDraws;
+        private ArrayBuilder<(Draw, int)> _pendingDraws;
 
         public TextRenderContext(
             GraphicsDevice gd,
@@ -110,18 +112,18 @@ namespace NitroSharp.Graphics
                  BufferUsage.VertexBuffer,
                  initialCapacity: 2048
              );
-             _gpuGlyphRuns = new GpuCache<GpuGlyphRun>(
-                gd,
-                GpuGlyphRun.SizeInGpuBlocks,
-                dimension: 128
-            );
+            _gpuGlyphRuns = new GpuCache<GpuGlyphRun>(
+               gd,
+               GpuGlyphRun.SizeInGpuBlocks,
+               dimension: 128
+           );
             _gpuTransforms = new GpuCache<GpuTransform>(
                 gd,
                 GpuTransform.SizeInGpuBlocks,
                 dimension: 128
             );
 
-            _pendingDraws = new ArrayBuilder<Draw>(4);
+            _pendingDraws = new ArrayBuilder<(Draw, int)>(4);
         }
 
         public GlyphRasterizer GlyphRasterizer => _glyphRasterizer;
@@ -134,8 +136,14 @@ namespace NitroSharp.Graphics
         }
 
         public void RequestGlyphs(TextLayout textLayout)
+            => RequestGlyphs(textLayout, textLayout.GlyphRuns);
+
+        public void RequestGlyphs(TextLayout textLayout, GlyphRun glyphRun)
+            => RequestGlyphs(textLayout, MemoryMarshal.CreateReadOnlySpan(ref glyphRun, 1));
+
+        public void RequestGlyphs(TextLayout textLayout, ReadOnlySpan<GlyphRun> glyphRuns)
         {
-            foreach (ref readonly GlyphRun glyphRun in textLayout.GlyphRuns)
+            foreach (ref readonly GlyphRun glyphRun in glyphRuns)
             {
                 ReadOnlySpan<PositionedGlyph> glyphs = textLayout.GetGlyphs(glyphRun.GlyphSpan);
                 _glyphRasterizer.RequestGlyphs(
@@ -161,6 +169,20 @@ namespace NitroSharp.Graphics
         }
 
         public void Render(
+           RenderContext ctx,
+           DrawBatch drawBatch,
+           TextLayout layout,
+           GlyphRun glyphRun,
+           in Matrix4x4 transform,
+           Vector2 offset,
+           in RectangleU rect,
+           float opacity)
+        {
+            var span = MemoryMarshal.CreateReadOnlySpan(ref glyphRun, 1);
+            Render(ctx, drawBatch, layout, span, transform, offset, rect, opacity);
+        }
+
+        public void Render(
             RenderContext ctx,
             DrawBatch drawBatch,
             TextLayout layout,
@@ -172,14 +194,15 @@ namespace NitroSharp.Graphics
         {
             Matrix4x4 finalTransform = Matrix4x4.CreateTranslation(new Vector3(offset, 0)) * transform;
             TextShaderResources shaderResources = ctx.ShaderResources.Text;
-            foreach (ref readonly GlyphRun glyphRun in glyphRuns)
+            for (int i = 0; i < glyphRuns.Length; i++)
             {
+                ref readonly GlyphRun glyphRun = ref glyphRuns[i];
                 ReadOnlySpan<PositionedGlyph> glyphs = layout.GetGlyphs(glyphRun.GlyphSpan);
                 ReadOnlySpan<float> opacityValues = layout.GetOpacityValues(glyphRun.GlyphSpan);
                 if (AppendRun(glyphRun, glyphs, opacityValues, finalTransform, opacity)
                     is GpuGlyphSlice gpuGlyphSlice)
                 {
-                    _pendingDraws.Add() = new Draw
+                    _pendingDraws.Add() = (new Draw
                     {
                         Pipeline = shaderResources.Pipeline,
                         BufferBindings = new BufferBindings(gpuGlyphSlice.Buffer),
@@ -204,16 +227,16 @@ namespace NitroSharp.Graphics
                             gpuGlyphSlice.InstanceCount
                         ),
                         ScissorRect = rect
-                    };
+                    }, i);
                 }
             }
 
-            for (int i = 0; i < glyphRuns.Length; i++)
+            foreach (ref (Draw draw, int i) entry in _pendingDraws.AsSpan())
             {
-                if (glyphRuns[i].DrawOutline)
+                if (glyphRuns[entry.i].DrawOutline)
                 {
-                    Draw draw = _pendingDraws[i];
-                    draw.ResourceBindings = new ResourceBindings(
+                    Draw outlineDraw = entry.draw;
+                    outlineDraw.ResourceBindings = new ResourceBindings(
                         new ResourceSetKey(
                             shaderResources.ResourceLayoutVS,
                             drawBatch.Target.ViewProjection.Buffer.VdBuffer,
@@ -227,14 +250,14 @@ namespace NitroSharp.Graphics
                             ctx.GraphicsDevice.PointSampler
                         )
                     );
-                    draw.Pipeline = ctx.ShaderResources.Text.OutlinePipeline;
-                    drawBatch.PushDraw(draw);
+                    outlineDraw.Pipeline = ctx.ShaderResources.Text.OutlinePipeline;
+                    drawBatch.PushDraw(outlineDraw);
                 }
             }
 
-            foreach (ref Draw draw in _pendingDraws.AsSpan())
+            foreach (ref (Draw draw, int i) entry in _pendingDraws.AsSpan())
             {
-                drawBatch.PushDraw(draw);
+                drawBatch.PushDraw(entry.draw);
             }
 
             _pendingDraws.Clear();

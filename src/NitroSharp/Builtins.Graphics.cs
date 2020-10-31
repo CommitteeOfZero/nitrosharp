@@ -19,7 +19,7 @@ namespace NitroSharp
         {
             if (ResolvePath(path, out ResolvedEntityPath resolvedPath))
             {
-               var backlog =  World.Add(new BacklogView(resolvedPath, priority, _ctx.Backlog));
+               var backlog =  World.Add(new BacklogView(resolvedPath, priority, _ctx));
             }
         }
 
@@ -32,7 +32,7 @@ namespace NitroSharp
         {
             TextSegment seg = TextBuffer.FromPXmlString(text, _ctx.ActiveProcess.FontConfig)
                 .AssertSingleTextSegment()!;
-            _ctx.Backlog.Append(_ctx.GlyphRasterizer, seg);
+            _ctx.Backlog.Append(seg);
         }
 
         public override Vector2 GetCursorPosition()

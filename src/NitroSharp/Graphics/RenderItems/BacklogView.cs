@@ -1,7 +1,8 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Numerics;
-using System.Runtime.InteropServices;
 using NitroSharp.Text;
+using Veldrid;
 
 namespace NitroSharp.Graphics
 {
@@ -10,15 +11,23 @@ namespace NitroSharp.Graphics
         private const int MaxLines = 12;
 
         private readonly Backlog _backlog;
+        private readonly FontConfiguration _fontConfig;
+        private readonly TextLayout _textLayout;
         private (int start, int end) _range;
+        private GlyphRun _glyphRun;
+
+        private int _entriesAdded;
 
         public BacklogView(
             in ResolvedEntityPath path,
             int priority,
-            Backlog backlog)
+            GameContext ctx)
             : base(path, priority)
         {
-            _backlog = backlog;
+            _backlog = ctx.Backlog;
+            _fontConfig = ctx.ActiveProcess.FontConfig;
+            float lineHeight = ctx.VM.SystemVariables.BacklogRowInterval.AsNumber()!.Value;
+            _textLayout = new TextLayout(1042, null, lineHeight);
         }
 
         public EntityId Scrollbar { get; internal set; }
@@ -26,15 +35,33 @@ namespace NitroSharp.Graphics
         public void Scroll(float position)
         {
             position = 1.0f - position;
-            TextLayout layout = _backlog.TextLayout;
+            TextLayout layout = _textLayout;
             int totalLines = layout.Lines.Length;
             int first = (int)Math.Round(position * Math.Max(0, totalLines - MaxLines));
-            int last = Math.Min(first + MaxLines - 1, totalLines - 1);
+            int last = Math.Min(first + MaxLines - 1, Math.Max(totalLines - 1, 0));
             _range = (first, last + 1);
         }
 
         protected override void Update(GameContext ctx)
         {
+            if (_entriesAdded < _backlog.Entries.Length)
+            {
+                foreach (BacklogEntry entry in _backlog.Entries[_entriesAdded..])
+                {
+                    _textLayout.NewLine(ctx.GlyphRasterizer);
+
+                    var run = TextRun.Regular(
+                        entry.Text.AsMemory(),
+                        _fontConfig.DefaultFont,
+                        new PtFontSize(36),
+                        RgbaFloat.Black,
+                        RgbaFloat.White
+                    );
+                    _textLayout.Append(ctx.GlyphRasterizer, run);
+                    _entriesAdded++;
+                }
+            }
+
             if (ctx.ActiveProcess.World.Get(Scrollbar) is Scrollbar scrollbar)
             {
                 Scroll(scrollbar.GetValue());
@@ -43,40 +70,52 @@ namespace NitroSharp.Graphics
             {
                 Scroll(1.0f);
             }
-            ctx.RenderContext.Text.RequestGlyphs(_backlog.TextLayout);
+
+
+            Line firstLine = _textLayout.Lines[_range.start];
+            Line lastLine = _textLayout.Lines[_range.end - 1];
+            uint start = firstLine.GlyphSpan.Start;
+            uint end = lastLine.GlyphSpan.End;
+            var span = new GlyphSpan(start, end - start);
+            _glyphRun = GetGlyphRun(span);
+
+            ctx.RenderContext.Text.RequestGlyphs(_textLayout, _glyphRun);
         }
 
         protected override void Render(RenderContext ctx, DrawBatch batch)
         {
-            TextLayout layout = _backlog.TextLayout;
-            Line firstLine = layout.Lines[_range.start];
-            Line lastLine = layout.Lines[_range.end - 1];
-            uint start = firstLine.GlyphSpan.Start;
-            uint end = lastLine.GlyphSpan.End;
-            var span = new GlyphSpan(start, end - start);
-            GlyphRun run = _backlog.GetGlyphRun(span);
-            ReadOnlySpan<GlyphRun> runs = MemoryMarshal.CreateReadOnlySpan(ref run, 1);
+            Line firstLine = _textLayout.Lines[_range.start];
 
             float x = ctx.SystemVariables.BacklogPositionX.AsNumber()!.Value;
             float y = ctx.SystemVariables.BacklogPositionY.AsNumber()!.Value;
-            float rowInterval = ctx.SystemVariables.BacklogRowInterval.AsNumber()!.Value;
-
             var offset = new Vector2(x, 100 - firstLine.BaselineY);
             ctx.Text.Render(
                 ctx,
                 batch,
-                _backlog.TextLayout,
-                runs,
+                _textLayout,
+                _glyphRun,
                 WorldMatrix,
                 offset,
-                new RectangleU((uint)x, (uint)y, layout.MaxBounds.Width, 584),
+                new RectangleU((uint)x, (uint)y, _textLayout.MaxBounds.Width, 584),
                 Color.A
+            );
+        }
+
+        private GlyphRun GetGlyphRun(GlyphSpan span)
+        {
+            return new GlyphRun(
+                _fontConfig.DefaultFont,
+                new PtFontSize(36),
+                RgbaFloat.Black,
+                RgbaFloat.White,
+                span,
+                GlyphRunFlags.Outline
             );
         }
 
         public override Size GetUnconstrainedBounds(RenderContext ctx)
         {
-            return _backlog.TextLayout.BoundingBox.Size.ToSize();
+            return _textLayout.BoundingBox.Size.ToSize();
         }
     }
 }

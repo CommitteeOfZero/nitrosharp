@@ -1,5 +1,7 @@
 ﻿using NitroSharp.Text;
-using Veldrid;
+using NitroSharp.Utilities;
+using System;
+using System.Text;
 
 #nullable enable
 
@@ -7,65 +9,47 @@ namespace NitroSharp
 {
     internal readonly struct BacklogEntry
     {
-        public readonly GlyphSpan GlyphSpan;
+        public readonly string Text;
 
-        public BacklogEntry(GlyphSpan glyphSpan)
+        public BacklogEntry(string text)
         {
-            GlyphSpan = glyphSpan;
+            Text = text;
         }
     }
 
     internal sealed class Backlog
     {
-        private readonly FontConfiguration _fontConfig;
-        private readonly TextLayout _layout = new TextLayout(1042, null, fixedLineHeight: 43);
+        private ArrayBuilder<BacklogEntry> _entries;
+        private readonly StringBuilder _sb;
 
-        public Backlog(FontConfiguration fontConfig)
+        public Backlog()
         {
-            _fontConfig = fontConfig;
+            _entries = new ArrayBuilder<BacklogEntry>(1024);
+            _sb = new StringBuilder();
         }
 
-        public TextLayout TextLayout => _layout;
-
-        public GlyphRun GetGlyphRun(GlyphSpan span)
+        public void Append(TextSegment text)
         {
-            return new GlyphRun(
-                _fontConfig.DefaultFont,
-                new PtFontSize(36),
-                RgbaFloat.Black,
-                RgbaFloat.White,
-                span,
-                GlyphRunFlags.Outline
-            );
-        }
-
-        public BacklogEntry Append(GlyphRasterizer glyphRasterizer, TextSegment text)
-        {
-            _layout.NewLine(glyphRasterizer);
-
-            uint start = (uint)_layout.Glyphs.Length;
+            _sb.Clear();
             foreach (TextRun textRun in text.TextRuns)
             {
                 if (!textRun.HasRubyText)
                 {
-                    var run = TextRun.Regular(
-                        textRun.Text,
-                        _fontConfig.DefaultFont,
-                        new PtFontSize(36),
-                        RgbaFloat.Black,
-                        RgbaFloat.White
-                    );
-                    _layout.Append(glyphRasterizer, run);
+                    _sb.Append(textRun.Text);
                 }
             }
 
-            var span = new GlyphSpan(start, (uint)(_layout.Glyphs.Length - start));
-            return new BacklogEntry(span);
+            if (_sb.Length > 0)
+            {
+                _entries.Add(new BacklogEntry(_sb.ToString()));
+            }
         }
+
+        public ReadOnlySpan<BacklogEntry> Entries => _entries.AsReadonlySpan();
 
         public void Clear()
         {
-            _layout.Clear();
+            _entries.Clear();
         }
     }
 }
