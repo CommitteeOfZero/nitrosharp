@@ -1,4 +1,5 @@
 using System;
+using System.Numerics;
 using NitroSharp.Content;
 using NitroSharp.Graphics.Core;
 using NitroSharp.NsScript.VM;
@@ -35,6 +36,9 @@ namespace NitroSharp.Graphics
 
         private readonly DrawBatch _offscreenBatch;
 
+        public ViewProjection OrthoProjection { get; }
+        public ViewProjection PerspectiveViewProjection { get; }
+
         public RenderContext(
             Configuration gameConfiguration,
             GraphicsDevice graphicsDevice,
@@ -63,11 +67,26 @@ namespace NitroSharp.Graphics
             GlyphRasterizer = glyphRasterizer;
             SystemVariables = systemVariables;
             _shaderLibrary = new ShaderLibrary(graphicsDevice);
+
+            OrthoProjection = ViewProjection.CreateOrtho(
+                graphicsDevice,
+                new RectangleF(Vector2.Zero, DesignResolution)
+            );
+
+            var view = Matrix4x4.CreateLookAt(Vector3.Zero, Vector3.UnitZ, Vector3.UnitY);
+            var projection = Matrix4x4.CreatePerspectiveFieldOfView(
+                MathF.PI / 3.0f,
+                (float)DesignResolution.Width / DesignResolution.Height,
+                0.1f,
+                1000.0f
+            );
+            PerspectiveViewProjection = new ViewProjection(GraphicsDevice, view * projection);
+
             ShaderResources = new ShaderResources(
                 graphicsDevice,
                 _shaderLibrary,
                 _swapchainTarget.OutputDescription,
-                _swapchainTarget.ViewProjection.ResourceLayout
+                OrthoProjection.ResourceLayout
             );
 
             ResourceSetCache = new ResourceSetCache(ResourceFactory);
@@ -98,7 +117,7 @@ namespace NitroSharp.Graphics
 
             MainBatch = new DrawBatch(this);
             _offscreenBatch = new DrawBatch(this);
-
+            
             Icons = LoadIcons(gameConfiguration);
         }
 
@@ -239,6 +258,8 @@ namespace NitroSharp.Graphics
 
         public void Dispose()
         {
+            OrthoProjection.Dispose();
+            Icons.Dispose();
             _transferCommands.Dispose();
             _drawCommands.Dispose();
             SecondaryCommandList.Dispose();

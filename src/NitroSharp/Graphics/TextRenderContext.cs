@@ -209,7 +209,7 @@ namespace NitroSharp.Graphics
                         ResourceBindings = new ResourceBindings(
                             new ResourceSetKey(
                                 shaderResources.ResourceLayoutVS,
-                                drawBatch.Target.ViewProjection.Buffer.VdBuffer,
+                                ctx.OrthoProjection.Buffer.VdBuffer,
                                 _gpuGlyphRuns.Texture,
                                 _gpuTransforms.Texture,
                                 _textureCache.UvRectTexture
@@ -239,7 +239,7 @@ namespace NitroSharp.Graphics
                     outlineDraw.ResourceBindings = new ResourceBindings(
                         new ResourceSetKey(
                             shaderResources.ResourceLayoutVS,
-                            drawBatch.Target.ViewProjection.Buffer.VdBuffer,
+                            ctx.OrthoProjection.Buffer.VdBuffer,
                             _gpuGlyphRuns.Texture,
                             _gpuTransforms.Texture,
                             _textureCache.UvRectTexture

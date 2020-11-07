@@ -20,10 +20,9 @@ namespace NitroSharp
             string front, string back, string right,
             string left, string top, string bottom)
         {
-            priority = int.MaxValue;
             if (ResolvePath(entityPath, out ResolvedEntityPath resolvedPath))
             {
-                string[] texturePaths = new[] { front, back, right, left, top, bottom };
+                string[] texturePaths = { right, left, top, bottom, front, back };
                 World.Add(Cube.Load(resolvedPath, priority, _ctx.RenderContext, texturePaths));
             }
         }
@@ -32,7 +31,7 @@ namespace NitroSharp
         {
             if (ResolvePath(path, out ResolvedEntityPath resolvedPath))
             {
-               var backlog =  World.Add(new BacklogView(resolvedPath, priority, _ctx));
+                World.Add(new BacklogView(resolvedPath, priority, _ctx));
             }
         }
 
@@ -313,7 +312,7 @@ namespace NitroSharp
             if (ResolvePath(path, out ResolvedEntityPath resolvedPath)
                 && resolvedPath.Parent is RenderItem2D box)
             {
-                var margin = new Vector4(0, 10, 0, 0);
+                var margin = new Vector4(0, 0, 0, 0);
                 NsScriptThread thread = _ctx.VM.ActivateDialogueBlock(blockToken);
                 var page = World.Add(new DialoguePage(
                     resolvedPath,
@@ -469,10 +468,9 @@ namespace NitroSharp
             NsEaseFunction easeFunction,
             TimeSpan delay)
         {
-            var dstRot = new Vector3(dstRotationX.Value, dstRotationY.Value, dstRotationZ.Value);
-            foreach (RenderItem2D ri in Query<RenderItem2D>(query))
+            foreach (RenderItem ri in Query<RenderItem>(query))
             {
-                ri.Rotate(dstRot, duration, easeFunction);
+                ri.Rotate(dstRotationX, dstRotationY, dstRotationZ, duration, easeFunction);
             }
 
             Pause(WaitCondition.RotateCompleted, query, duration, delay);

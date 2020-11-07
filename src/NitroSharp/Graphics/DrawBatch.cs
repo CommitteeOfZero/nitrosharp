@@ -226,7 +226,7 @@ namespace NitroSharp.Graphics
             FilterMode filterMode)
         {
             Debug.Assert(_commandList is object && Target is object);
-            ViewProjection vp = Target.ViewProjection;
+            ViewProjection vp = _ctx.OrthoProjection;
 
             QuadShaderResources resources = _ctx.ShaderResources.Quad;
             if (alphaMaskPosition != _lastAlphaMaskPosition)

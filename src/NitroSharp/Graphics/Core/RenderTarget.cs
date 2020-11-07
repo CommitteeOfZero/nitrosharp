@@ -1,5 +1,4 @@
 using System;
-using System.Numerics;
 using Veldrid;
 
 #nullable enable
@@ -32,10 +31,6 @@ namespace NitroSharp.Graphics.Core
             _ownsFramebuffer = true;
             Size = size;
             OutputDescription = Framebuffer.OutputDescription;
-            ViewProjection = ViewProjection.CreateOrtho(
-                graphicsDevice,
-                new RectangleF(Vector2.Zero, Size)
-            );
         }
 
         private RenderTarget(GraphicsDevice graphicsDevice, Framebuffer existingFramebuffer)
@@ -44,18 +39,12 @@ namespace NitroSharp.Graphics.Core
             ColorTarget = existingFramebuffer.ColorTargets[0].Target;
             _ownsFramebuffer = false;
             Size = new Size(ColorTarget.Width, ColorTarget.Height);
-            ViewProjection = ViewProjection.CreateOrtho(
-                graphicsDevice,
-                new RectangleF(Vector2.Zero, Size)
-            );
             OutputDescription = Framebuffer.OutputDescription;
         }
 
         public Size Size { get; }
         public Framebuffer Framebuffer { get; }
         public Texture ColorTarget { get; }
-
-        public ViewProjection ViewProjection { get; }
         public OutputDescription OutputDescription { get; }
 
         public Texture GetStagingTexture(ResourceFactory resourceFactory)
@@ -77,7 +66,6 @@ namespace NitroSharp.Graphics.Core
             }
 
             _stagingTexture?.Dispose();
-            ViewProjection.Dispose();
         }
     }
 }

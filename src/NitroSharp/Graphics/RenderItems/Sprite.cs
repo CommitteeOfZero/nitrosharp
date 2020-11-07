@@ -1,5 +1,4 @@
 using System;
-using System.Diagnostics;
 using System.Numerics;
 using NitroSharp.Content;
 using NitroSharp.Graphics.Core;
@@ -202,7 +201,7 @@ namespace NitroSharp.Graphics
             Texture src, Texture mask,
             float fadeAmount)
         {
-            ViewProjection vp = drawBatch.Target.ViewProjection;
+            ViewProjection vp = ctx.OrthoProjection;
             TransitionShaderResources resources = ctx.ShaderResources.Transition;
             drawBatch.UpdateBuffer(resources.ProgressBuffer, new Vector4(fadeAmount, 0, 0, 0));
             drawBatch.PushQuad(

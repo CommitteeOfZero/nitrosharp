@@ -11,7 +11,7 @@ using Veldrid;
 
 namespace NitroSharp.Graphics
 {
-    internal sealed class AnimatedIcons
+    internal sealed class AnimatedIcons : IDisposable
     {
         public AnimatedIcons(Icon waitLine)
         {
@@ -19,6 +19,11 @@ namespace NitroSharp.Graphics
         }
 
         public Icon WaitLine { get; }
+
+        public void Dispose()
+        {
+            WaitLine.Dispose();
+        }
     }
 
     internal struct IconVertex
@@ -82,15 +87,15 @@ namespace NitroSharp.Graphics
         }
     }
 
-    internal sealed class Icon
+    internal sealed class Icon : IDisposable
     {
         private sealed class IconAnimation : UIntAnimation<Icon>
         {
             public IconAnimation(
-                Icon entity,
+                Icon icon,
                 uint startValue, uint endValue,
                 TimeSpan duration)
-                : base(entity, startValue, endValue, duration, NsEaseFunction.Linear, repeat: true)
+                : base(icon, startValue, endValue, duration, NsEaseFunction.Linear, repeat: true)
             {
             }
 
@@ -154,7 +159,7 @@ namespace NitroSharp.Graphics
         {
             DrawBatch batch = context.MainBatch;
             IconShaderResources shaderResources = context.ShaderResources.Icon;
-            ViewProjection vp = batch.Target.ViewProjection;
+            ViewProjection vp = context.OrthoProjection;
 
             (QuadGeometry quad, _) = QuadGeometry.Create(
                 new SizeF(_texture.Width, _texture.Height),
@@ -183,6 +188,11 @@ namespace NitroSharp.Graphics
                 BufferBindings = new BufferBindings(mesh.Vertices.Buffer, mesh.Indices.Buffer),
                 Params = DrawParams.Indexed(0, 0, 6)
             });
+        }
+
+        public void Dispose()
+        {
+            _texture.Dispose();
         }
     }
 }

@@ -135,8 +135,18 @@ namespace NitroSharp.Graphics
             }
         }
 
-        public void Rotate(in Vector3 dstRot, TimeSpan duration, NsEaseFunction easeFunction)
+        public void Rotate(
+            NsNumeric dstRotationX, NsNumeric dstRotationY, NsNumeric dstRotationZ,
+            TimeSpan duration,
+            NsEaseFunction easeFunction)
         {
+            Vector3 dstRot = Transform.Rotation;
+            // ¯\_(ツ)_/¯
+            dstRotationY *= -1;
+            dstRotationX.AssignTo(ref dstRot.X);
+            dstRotationY.AssignTo(ref dstRot.Y);
+            dstRotationZ.AssignTo(ref dstRot.Z);
+
             if (duration > TimeSpan.Zero)
             {
                 Vector3 startRot = Transform.Rotation;
@@ -152,7 +162,7 @@ namespace NitroSharp.Graphics
             {
                 foreach (RenderItem child in GetChildren<RenderItem>())
                 {
-                    child.Rotate(dstRot, duration, easeFunction);
+                    child.Rotate(dstRotationX, dstRotationY, dstRotationZ, duration, easeFunction);
                 }
             }
         }
@@ -448,14 +458,6 @@ namespace NitroSharp.Graphics
         public override void Dispose()
         {
             _offscreenTarget?.Dispose();
-        }
-    }
-
-    internal abstract class RenderItem3D : RenderItem
-    {
-        protected RenderItem3D(in ResolvedEntityPath path, int priority)
-            : base(in path, priority)
-        {
         }
     }
 

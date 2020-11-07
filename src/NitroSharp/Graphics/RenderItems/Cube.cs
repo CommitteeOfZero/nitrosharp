@@ -9,12 +9,16 @@ using Veldrid;
 
 namespace NitroSharp.Graphics
 {
-    internal readonly struct CubeVertex
+    internal struct CubeVertex
     {
         public readonly Vector3 Position;
+        public float Opacity;
 
         public CubeVertex(float x, float y, float z)
-            => Position = new Vector3(x, y, z);
+        {
+            Position = new Vector3(x, y, z);
+            Opacity = 1.0f;
+        }
 
         public static readonly VertexLayoutDescription LayoutDescription = new VertexLayoutDescription(
             new VertexElementDescription(
@@ -23,18 +27,16 @@ namespace NitroSharp.Graphics
                 VertexElementFormat.Float3
             ),
             new VertexElementDescription(
-                "vs_Color",
+                "vs_Opacity",
                 VertexElementSemantic.TextureCoordinate,
-                VertexElementFormat.Float4
+                VertexElementFormat.Float1
             )
         );
     }
 
-    internal sealed class Cube : RenderItem3D
+    internal sealed class Cube : RenderItem
     {
         private readonly Texture _texture;
-        private readonly ViewProjection _vp;
-        private Matrix4x4 _worldMatrix;
 
         public static ReadOnlySpan<CubeVertex> Vertices => new[]
         {
@@ -80,11 +82,10 @@ namespace NitroSharp.Graphics
             20,21,22, 20,22,23
         };
 
-        public Cube(in ResolvedEntityPath path, int priority, Texture texture, ViewProjection vp)
+        public Cube(in ResolvedEntityPath path, int priority, Texture texture)
             : base(in path, priority)
         {
             _texture = texture;
-            _vp = vp;
         }
 
         public static Cube Load(
@@ -107,6 +108,7 @@ namespace NitroSharp.Graphics
                 firstTex.Format, TextureUsage.Sampled | TextureUsage.Cubemap
             ));
 
+            GraphicsDevice gd = renderCtx.GraphicsDevice;
             CommandList cl = renderCtx.SecondaryCommandList;
             for (uint i = 0; i < textures.Length; i++)
             {
@@ -115,50 +117,59 @@ namespace NitroSharp.Graphics
                     dstTexture, dstX: 0, dstY: 0, dstZ: 0, dstMipLevel: 0, dstBaseArrayLayer: i,
                     firstTex.Width, firstTex.Height, depth: 1, layerCount: 1
                 );
+                // TODO: investigate why regular Dispose causes issues when it shouldn't.
+                if (gd.BackendType == GraphicsBackend.Direct3D11)
+                {
+                    textures[i].Dispose();
+                }
+                else
+                {
+                    gd.DisposeWhenIdle(textures[i]);
+                }
             }
 
-            var designResolution = renderCtx.DesignResolution;
-            var view = Matrix4x4.CreateLookAt(Vector3.Zero, Vector3.UnitZ, Vector3.UnitY);
-            var projection = Matrix4x4.CreatePerspectiveFieldOfView(
-                MathF.PI / 3.0f,
-                (float)designResolution.Width / designResolution.Height,
-                0.1f,
-                1000.0f
-            );
-
-            var vp = new ViewProjection(renderCtx.GraphicsDevice, view * projection);
-            return new Cube(path, priority, dstTexture, vp);
+            return new Cube(path, priority, dstTexture);
         }
 
         protected override void Update(GameContext ctx)
         {
-            _worldMatrix = Transform.GetMatrix(new Size(1, 1));
         }
 
         public override void Render(RenderContext ctx, bool assetsReady)
         {
             DrawBatch batch = ctx.MainBatch;
-            CubeShaderResources shaderResources = ctx.ShaderResources.Cube;
-            ViewProjection vp = _vp;
-            Mesh<CubeVertex> mesh = ctx.Cubes.Append(Vertices);
+            CubeShaderResources resources = ctx.ShaderResources.Cube;
+            ViewProjection vp = ctx.PerspectiveViewProjection;
 
-            batch.UpdateBuffer(shaderResources.TransformBuffer, _worldMatrix);
-
-            ctx.MainBatch.PushDraw(new Draw
+            Span<CubeVertex> vertices = stackalloc CubeVertex[Vertices.Length];
+            Vertices.CopyTo(vertices);
+            foreach (ref CubeVertex v in vertices)
             {
-                Pipeline = shaderResources.Pipeline,
+                v.Opacity = Color.A;
+            }
+
+            Mesh<CubeVertex> mesh = ctx.Cubes.Append(vertices);
+            batch.UpdateBuffer(resources.TransformBuffer, Transform.GetMatrix());
+            batch.PushDraw(new Draw
+            {
+                Pipeline = resources.Pipeline,
                 ResourceBindings = new ResourceBindings(
                     new ResourceSetKey(vp.ResourceLayout, vp.Buffer.VdBuffer),
                     new ResourceSetKey(
-                        shaderResources.TextureLayout,
+                        resources.TextureLayout,
                         _texture,
                         ctx.GetSampler(FilterMode.Linear)
                     ),
-                    new ResourceSetKey(shaderResources.TransformLayout, shaderResources.TransformBuffer.VdBuffer)
+                    new ResourceSetKey(resources.TransformLayout, resources.TransformBuffer.VdBuffer)
                 ),
                 BufferBindings = new BufferBindings(mesh.Vertices.Buffer, mesh.Indices.Buffer),
                 Params = DrawParams.Indexed(0, 0, (uint)Indices.Length)
             });
+        }
+
+        public override void Dispose()
+        {
+            _texture.Dispose();
         }
     }
 }
