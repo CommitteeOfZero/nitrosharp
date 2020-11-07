@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Diagnostics;
 using System.Numerics;
 using NitroSharp.Content;
 using NitroSharp.Graphics;
@@ -238,27 +237,47 @@ namespace NitroSharp
         {
             _textLayout = textLayout;
             _anims = new Queue<AnimationPair>();
+
             for (int i = 0; i < glyphRuns.Length; i++)
             {
                 ref readonly GlyphRun run = ref glyphRuns[i];
-                textLayout.GetOpacityValuesMut(run.GlyphSpan).Fill(0.0f);
                 if (run.IsRubyText) { continue; }
-                if (i < glyphRuns.Length - 1
-                    && glyphRuns[i] is { IsRubyBase: true } rb
-                    && glyphRuns[i + 1] is { IsRubyText: true } rt)
+                var glyphSpan = new GlyphSpan(run.GlyphSpan.Start, 0);
+
+                void flush()
                 {
-                    uint baseGlyphCount = NbNonWhitespaceGlyphs(rb.GlyphSpan);
-                    uint rubyGlyphCount = NbNonWhitespaceGlyphs(rt.GlyphSpan);
-                    float rubyGlyphTime = timePerGlyph * baseGlyphCount / rubyGlyphCount;
-                    GlyphRunRevealAnimation baseAnim = createAnim(rb.GlyphSpan, timePerGlyph);
-                    GlyphRunRevealAnimation rubyAnim = createAnim(rt.GlyphSpan, rubyGlyphTime);
-                    _anims.Enqueue(new AnimationPair(baseAnim, rubyAnim));
+                    if (!glyphSpan.IsEmpty)
+                    {
+                        GlyphRunRevealAnimation anim = createAnim(glyphSpan, timePerGlyph);
+                        _anims.Enqueue(new AnimationPair(anim, null));
+                        glyphSpan = default;
+                    }
                 }
-                else
+
+                while (i < glyphRuns.Length)
                 {
-                    GlyphRunRevealAnimation anim = createAnim(run.GlyphSpan, timePerGlyph);
-                    _anims.Enqueue(new AnimationPair(anim, null));
+                    run = ref glyphRuns[i];
+                    textLayout.GetOpacityValuesMut(run.GlyphSpan).Fill(0.0f);
+
+                    if (i < glyphRuns.Length - 1
+                        && glyphRuns[i] is { IsRubyBase: true } rb
+                        && glyphRuns[i + 1] is { IsRubyText: true } rt)
+                    {
+                        flush();
+                        uint baseGlyphCount = NbNonWhitespaceGlyphs(rb.GlyphSpan);
+                        uint rubyGlyphCount = NbNonWhitespaceGlyphs(rt.GlyphSpan);
+                        float rubyGlyphTime = timePerGlyph * baseGlyphCount / rubyGlyphCount;
+                        GlyphRunRevealAnimation baseAnim = createAnim(rb.GlyphSpan, timePerGlyph);
+                        GlyphRunRevealAnimation rubyAnim = createAnim(rt.GlyphSpan, rubyGlyphTime);
+                        _anims.Enqueue(new AnimationPair(baseAnim, rubyAnim));
+                        break;
+                    }
+
+                    glyphSpan = GlyphSpan.FromBounds(glyphSpan.Start, run.GlyphSpan.End);
+                    i++;
                 }
+
+                flush();
             }
 
             GlyphRunRevealAnimation createAnim(GlyphSpan glyphSpan, float timePerGlyph)
