@@ -1,5 +1,5 @@
 ﻿{
-  "activeProfile": "Noah",
+  "activeProfile": "CoZ",
   "graphics.vsync": true,
   "graphics.backend": "D3D11",
   "audio.backend": "XAudio2",
@@ -10,12 +10,18 @@
   "icons.waitPage": "cg/sys/icon/page/%03d.png#21",
   "icons.waitAuto": "cg/sys/icon/auto/%03d.png#21",
   "icons.backlogVoice": "cg/sys/backlog/スピーカ%03d.png#3",
-  "dev.contentRoot": "S:/C;HN",
+  "dev.contentRoot": "C:/src/C;HN",
   "dev.skipUpToDateCheck": true,
 
   "profiles": {
     "Noah": {
       "startupScript": "boot.nss"
+    },
+
+    "CoZ": {
+      "startupScript": "boot_any.nss",
+      "dev.useUtf8": true,
+      "dev.scriptRoot": "coz/nss"
     },
 
     "Any": {

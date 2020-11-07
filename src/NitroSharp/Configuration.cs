@@ -94,13 +94,14 @@ namespace NitroSharp
         public AudioBackend? PreferredAudioBackend { get; set; }
 
         public string ContentRoot { get; set; } = "Content";
+        public string ScriptRoot { get; set; } = "nss";
         public bool EnableDiagnostics { get; set; }
         public SystemScripts SysScripts { get; } = new SystemScripts();
 
         public bool UseUtf8 { get; set; } = false;
         public bool SkipUpToDateCheck { get; set; } = false;
 
-        public string FontFamily { get; set; } = "MS Gothic";
+        public string FontFamily { get; set; } = "Noto Sans CJK JP";
         public int FontSize { get; set; } = 20;
 
         public IconPathPatterns IconPathPatterns { get; }

@@ -125,6 +125,9 @@ namespace NitroSharp.Launcher
                 case "dev.skipUpToDateCheck":
                     configuration.SkipUpToDateCheck = property.Value;
                     break;
+                case "dev.scriptRoot":
+                    configuration.ScriptRoot = property.Value;
+                    break;
             }
         }
 

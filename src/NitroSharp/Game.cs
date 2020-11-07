@@ -129,7 +129,7 @@ namespace NitroSharp
             _gameTimer = new Stopwatch();
             _inputContext = new InputContext(window);
 
-            _nssFolder = Path.Combine(_configuration.ContentRoot, "nss");
+            _nssFolder = Path.Combine(_configuration.ContentRoot, _configuration.ScriptRoot);
             _bytecodeCacheDir = _nssFolder.Replace("nss", "nsx");
             _builtinFunctions = null!;
 
