@@ -82,5 +82,5 @@ void main()
     vec2 vert = quad[index];
     gl_Position = _ViewProjection * transform * vec4(vert.x, vert.y, 0, 1);
     fs_TexCoord = vec3(uv[index] / CACHE_TEX_SIZE, layer);
-    fs_Color = textColor * vs_Opacity;
+    fs_Color = outlineColor * vs_Opacity;
 }

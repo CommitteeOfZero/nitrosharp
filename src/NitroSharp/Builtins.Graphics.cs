@@ -282,6 +282,7 @@ namespace NitroSharp
 
             _ctx.ActiveProcess.FontConfig
                 .WithDefaultSize(new PtFontSize(mapFontSize(size)))
+                .WithOutlineColor(outlineColor.ToRgbaFloat())
                 .WithDefaultColor(color.ToRgbaFloat());
         }
 

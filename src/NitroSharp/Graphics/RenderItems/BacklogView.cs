@@ -67,8 +67,8 @@ namespace NitroSharp.Graphics
                         entry.Text.AsMemory(),
                         _fontConfig.DefaultFont,
                         _fontConfig.DefaultFontSize,
-                        RgbaFloat.Black,
-                        RgbaFloat.White
+                        _fontConfig.DefaultTextColor,
+                        _fontConfig.DefaultOutlineColor
                     );
                     _textLayout.Append(ctx.GlyphRasterizer, run);
                     _entriesAdded++;
@@ -121,8 +121,8 @@ namespace NitroSharp.Graphics
             return new GlyphRun(
                 _fontConfig.DefaultFont,
                 _fontConfig.DefaultFontSize,
-                RgbaFloat.Black,
-                RgbaFloat.White,
+                _fontConfig.DefaultTextColor,
+                _fontConfig.DefaultOutlineColor ?? RgbaFloat.White,
                 span,
                 GlyphRunFlags.Outline
             );
