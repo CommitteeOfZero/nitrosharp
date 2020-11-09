@@ -1,6 +1,6 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Numerics;
+using NitroSharp.NsScript.VM;
 using NitroSharp.Text;
 using Veldrid;
 
@@ -8,11 +8,13 @@ namespace NitroSharp.Graphics
 {
     internal sealed class BacklogView : RenderItem2D
     {
-        private const int MaxLines = 12;
-
         private readonly Backlog _backlog;
         private readonly FontConfiguration _fontConfig;
         private readonly TextLayout _textLayout;
+        private readonly uint _lineHeight;
+        private readonly uint _visibleHeight;
+        private readonly int _maxLines;
+
         private (int start, int end) _range;
         private GlyphRun _glyphRun;
 
@@ -26,8 +28,19 @@ namespace NitroSharp.Graphics
         {
             _backlog = ctx.Backlog;
             _fontConfig = ctx.ActiveProcess.FontConfig;
-            float lineHeight = ctx.VM.SystemVariables.BacklogRowInterval.AsNumber()!.Value;
-            _textLayout = new TextLayout(1042, null, lineHeight);
+            SystemVariableLookup sys = ctx.VM.SystemVariables;
+
+            uint x = (uint)sys.BacklogPositionX.AsNumber()!.Value;
+            uint y = (uint)sys.BacklogPositionY.AsNumber()!.Value;
+            Transform.Position = new Vector3(x, y, 0);
+
+            uint glyphWidth = (uint)sys.BacklogCharacterWidth.AsNumber()!.Value;
+            const uint glyphsPerLine = 32; // called "word_in_row" in system.ini
+            uint maxWidth = glyphWidth * glyphsPerLine;
+            _lineHeight = (uint)sys.BacklogRowInterval.AsNumber()!.Value;
+            _maxLines = (int)sys.BacklogRowMax.AsNumber()!.Value;
+            _visibleHeight = (uint)(_lineHeight * _maxLines);
+            _textLayout = new TextLayout(maxWidth, null, _lineHeight);
         }
 
         public EntityId Scrollbar { get; internal set; }
@@ -37,8 +50,8 @@ namespace NitroSharp.Graphics
             position = 1.0f - position;
             TextLayout layout = _textLayout;
             int totalLines = layout.Lines.Length;
-            int first = (int)Math.Round(position * Math.Max(0, totalLines - MaxLines));
-            int last = Math.Min(first + MaxLines - 1, Math.Max(totalLines - 1, 0));
+            int first = (int)Math.Round(position * Math.Max(0, totalLines - _maxLines));
+            int last = Math.Min(first + _maxLines - 1, Math.Max(totalLines - 1, 0));
             _range = (first, last + 1);
         }
 
@@ -53,7 +66,7 @@ namespace NitroSharp.Graphics
                     var run = TextRun.Regular(
                         entry.Text.AsMemory(),
                         _fontConfig.DefaultFont,
-                        new PtFontSize(36),
+                        _fontConfig.DefaultFontSize,
                         RgbaFloat.Black,
                         RgbaFloat.White
                     );
@@ -71,7 +84,6 @@ namespace NitroSharp.Graphics
                 Scroll(1.0f);
             }
 
-
             Line firstLine = _textLayout.Lines[_range.start];
             Line lastLine = _textLayout.Lines[_range.end - 1];
             uint start = firstLine.GlyphSpan.Start;
@@ -84,11 +96,14 @@ namespace NitroSharp.Graphics
 
         protected override void Render(RenderContext ctx, DrawBatch batch)
         {
-            Line firstLine = _textLayout.Lines[_range.start];
-
-            float x = ctx.SystemVariables.BacklogPositionX.AsNumber()!.Value;
-            float y = ctx.SystemVariables.BacklogPositionY.AsNumber()!.Value;
-            var offset = new Vector2(x, 100 - firstLine.BaselineY);
+            var offset = new Vector2(0, -_range.start * _lineHeight);
+            Vector3 pos = Transform.Position;
+            var scissorRect = new RectangleU(
+                (uint)pos.X,
+                (uint)pos.Y,
+                _textLayout.MaxBounds.Width,
+                _visibleHeight
+            );
             ctx.Text.Render(
                 ctx,
                 batch,
@@ -96,7 +111,7 @@ namespace NitroSharp.Graphics
                 _glyphRun,
                 WorldMatrix,
                 offset,
-                new RectangleU((uint)x, (uint)y, _textLayout.MaxBounds.Width, 584),
+                scissorRect,
                 Color.A
             );
         }
@@ -105,7 +120,7 @@ namespace NitroSharp.Graphics
         {
             return new GlyphRun(
                 _fontConfig.DefaultFont,
-                new PtFontSize(36),
+                _fontConfig.DefaultFontSize,
                 RgbaFloat.Black,
                 RgbaFloat.White,
                 span,

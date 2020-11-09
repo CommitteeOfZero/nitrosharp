@@ -29,7 +29,7 @@ namespace NitroSharp
         public IconPathPattern(string pattern)
         {
             int fmtEnd = pattern.IndexOf('#');
-            FormatString = pattern[..fmtEnd].ToString();
+            FormatString = pattern[..fmtEnd];
             IconCount = uint.Parse(pattern[(fmtEnd + 1)..]);
             _pattern = pattern;
         }
@@ -101,7 +101,7 @@ namespace NitroSharp
         public bool UseUtf8 { get; set; } = false;
         public bool SkipUpToDateCheck { get; set; } = false;
 
-        public string FontFamily { get; set; } = "Noto Sans CJK JP";
+        public string FontFamily { get; set; } = "MS Gothic";
         public int FontSize { get; set; } = 20;
 
         public IconPathPatterns IconPathPatterns { get; }

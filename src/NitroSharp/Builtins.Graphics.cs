@@ -312,7 +312,7 @@ namespace NitroSharp
             if (ResolvePath(path, out ResolvedEntityPath resolvedPath)
                 && resolvedPath.Parent is RenderItem2D box)
             {
-                var margin = new Vector4(0, 0, 0, 0);
+                var margin = new Vector4(0, 10, 0, 0);
                 NsScriptThread thread = _ctx.VM.ActivateDialogueBlock(blockToken);
                 var page = World.Add(new DialoguePage(
                     resolvedPath,
