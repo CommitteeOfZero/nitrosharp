@@ -52,12 +52,12 @@ namespace NitroSharp.Graphics
 
     internal sealed class TextRenderContext : IDisposable
     {
-        private struct GpuGlyphRun : GpuType
+        private readonly struct GpuGlyphRun : GpuType
         {
             public const uint SizeInGpuBlocks = 2;
 
-            private RgbaFloat _color;
-            private RgbaFloat _outlineColor;
+            private readonly RgbaFloat _color;
+            private readonly RgbaFloat _outlineColor;
 
             public GpuGlyphRun(in RgbaFloat color, in RgbaFloat outlineColor)
             {

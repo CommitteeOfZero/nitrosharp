@@ -324,9 +324,8 @@ namespace NitroSharp
             while (_anims.TryDequeue(out AnimationPair animPair))
             {
                 var textAnim = (GlyphRunRevealAnimation)animPair.Text;
-                GlyphRunRevealAnimation? rubyAnim = animPair.RubyText as GlyphRunRevealAnimation;
                 var newTextAnim = new GlyphRunSkipAnimation(_textLayout, textAnim.RemainingGlyphs);
-                GlyphRunSkipAnimation? newRubyAnim = rubyAnim is object
+                GlyphRunSkipAnimation? newRubyAnim = animPair.RubyText is GlyphRunRevealAnimation rubyAnim
                     ? new GlyphRunSkipAnimation(_textLayout, rubyAnim.RemainingGlyphs)
                     : null;
 

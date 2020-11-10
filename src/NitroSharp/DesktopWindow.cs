@@ -96,17 +96,17 @@ namespace NitroSharp
         {
             [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
             private delegate IntPtr SDL_CreateSystemCursor_t(SDL_SystemCursor id);
-            private static SDL_CreateSystemCursor_t s_sdl_createSystemCursor = Sdl2Native.LoadFunction<SDL_CreateSystemCursor_t>("SDL_CreateSystemCursor");
+            private static readonly SDL_CreateSystemCursor_t s_sdl_createSystemCursor = Sdl2Native.LoadFunction<SDL_CreateSystemCursor_t>("SDL_CreateSystemCursor");
             public static IntPtr SDL_CreateSystemCursor(SDL_SystemCursor id) => s_sdl_createSystemCursor(id);
 
             [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
             private delegate void SDL_SetCursor_t(IntPtr cursor);
-            private static SDL_SetCursor_t s_sdl_setCursor = Sdl2Native.LoadFunction<SDL_SetCursor_t>("SDL_SetCursor");
+            private static readonly SDL_SetCursor_t s_sdl_setCursor = Sdl2Native.LoadFunction<SDL_SetCursor_t>("SDL_SetCursor");
             public static void SDL_SetCursor(IntPtr cursor) => s_sdl_setCursor(cursor);
 
             [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
             private delegate void SDL_FreeCursor_t(IntPtr cursor);
-            private static SDL_FreeCursor_t s_sdl_freeCursor = Sdl2Native.LoadFunction<SDL_FreeCursor_t>("SDL_FreeCursor");
+            private static readonly SDL_FreeCursor_t s_sdl_freeCursor = Sdl2Native.LoadFunction<SDL_FreeCursor_t>("SDL_FreeCursor");
             public static void SDL_FreeCursor(IntPtr cursor) => s_sdl_freeCursor(cursor);
         }
     }
