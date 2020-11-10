@@ -41,9 +41,9 @@ namespace NitroSharp.Text
             Flags = flags;
         }
 
-        public bool DrawOutline => Flags.HasFlag(GlyphRunFlags.Outline);
-        public bool IsRubyBase => Flags.HasFlag(GlyphRunFlags.RubyBase);
-        public bool IsRubyText => Flags.HasFlag(GlyphRunFlags.RubyText);
+        public bool DrawOutline => (Flags & GlyphRunFlags.Outline) == GlyphRunFlags.Outline;
+        public bool IsRubyBase => (Flags & GlyphRunFlags.RubyBase) == GlyphRunFlags.RubyBase;
+        public bool IsRubyText => (Flags & GlyphRunFlags.RubyText) == GlyphRunFlags.RubyText;
     }
 
     [Flags]
@@ -72,7 +72,7 @@ namespace NitroSharp.Text
         {
         }
 
-        public bool IsWhitespace => Flags.HasFlag(GlyphFlags.Whitespace);
+        public bool IsWhitespace => (Flags & GlyphFlags.Whitespace) == GlyphFlags.Whitespace;
 
         public override int GetHashCode() => HashCode.Combine(Index, Position);
         public override string ToString() => $"{{Glyph #{Index}, {Position}}}";

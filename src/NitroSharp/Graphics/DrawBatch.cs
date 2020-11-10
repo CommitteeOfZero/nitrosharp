@@ -175,10 +175,10 @@ namespace NitroSharp.Graphics
 
         public bool Equals(ResourceBindings other)
         {
-            return ResourceSet0.Equals(other.ResourceSet0)
-                && ResourceSet1.Equals(other.ResourceSet1)
-                && ResourceSet2.Equals(other.ResourceSet2)
-                && ResourceSet3.Equals(other.ResourceSet3);
+            return Nullable.Equals(ResourceSet0, other.ResourceSet0)
+                && Nullable.Equals(ResourceSet1, other.ResourceSet1)
+                && Nullable.Equals(ResourceSet2, other.ResourceSet2)
+                && Nullable.Equals(ResourceSet3, other.ResourceSet3);
         }
     }
 
