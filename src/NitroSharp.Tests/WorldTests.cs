@@ -10,7 +10,7 @@ namespace NitroSharp.Tests
     public class WorldTests
     {
         private readonly EntityPath[][] _treeLevels;
-        private readonly World _entityManager;
+        private readonly World _world;
 
         public WorldTests()
         {
@@ -23,13 +23,13 @@ namespace NitroSharp.Tests
             void entity(string name)
             {
                 var path = new EntityPath(name);
-                ResolvedEntityPath resolvedPath = _entityManager.ResolvePath(path);
-                _entityManager.Add(new SimpleEntity(resolvedPath));
+                ResolvedEntityPath resolvedPath = _world.ResolvePath(0, path);
+                _world.Add(new SimpleEntity(resolvedPath));
                 int level = name.Count(c => c == '/');
                 levels[level].Add(path);
             }
 
-            _entityManager = new World();
+            _world = new World();
             entity("root");
             entity("root1");
             entity("root/e11");
@@ -54,7 +54,7 @@ namespace NitroSharp.Tests
         {
             void Q(string query, params string[] expectedResults)
             {
-                var results = _entityManager.Query(new EntityQuery(query)).AsSpan().ToArray()
+                var results = _world.Query(0, new EntityQuery(query)).AsSpan().ToArray()
                     .Select(x => x.Id.Path);
                 Assert.Equal(expectedResults, results);
             }
@@ -80,34 +80,34 @@ namespace NitroSharp.Tests
         [Fact]
         public void SetAlias()
         {
-            var resolvedPath = _entityManager.ResolvePath(new EntityPath("parent"));
-            var parent = _entityManager.Add(new SimpleEntity(resolvedPath));
-            _entityManager.SetAlias(parent.Id, new EntityPath("alias"));
-            Assert.Equal(parent, _entityManager.Get(new EntityPath("@alias")));
+            var resolvedPath = _world.ResolvePath(0, new EntityPath("parent"));
+            var parent = _world.Add(new SimpleEntity(resolvedPath));
+            _world.SetAlias(parent.Id, new EntityPath("alias"));
+            Assert.Equal(parent, _world.Get(0, new EntityPath("@alias")));
 
-            resolvedPath = _entityManager.ResolvePath(new EntityPath("parent/child"));
-            var child = _entityManager.Add(new SimpleEntity(resolvedPath));
-            Assert.Equal(child, _entityManager.Get(new EntityPath("@alias/child")));
+            resolvedPath = _world.ResolvePath(0, new EntityPath("parent/child"));
+            var child = _world.Add(new SimpleEntity(resolvedPath));
+            Assert.Equal(child, _world.Get(0, new EntityPath("@alias/child")));
 
-            _entityManager.DestroyEntity(child);
-            Assert.Null(_entityManager.Get(new EntityPath("parent/child")));
-            Assert.Null(_entityManager.Get(new EntityPath("@alias/child")));
+            _world.DestroyEntity(child);
+            Assert.Null(_world.Get(0, new EntityPath("parent/child")));
+            Assert.Null(_world.Get(0, new EntityPath("@alias/child")));
         }
 
         [Fact]
         public void ComplexQuery()
         {
-            var parent = _entityManager.Add(new SimpleEntity(_entityManager.ResolvePath(new EntityPath("parent"))));
-            var child = _entityManager.Add(new SimpleEntity(_entityManager.ResolvePath(new EntityPath("parent/child"))));
-            var grandchild = _entityManager.Add(new SimpleEntity(_entityManager.ResolvePath(new EntityPath("parent/child/MouseOver/grandchild"))));
+            var parent = _world.Add(new SimpleEntity(_world.ResolvePath(0, new EntityPath("parent"))));
+            var child = _world.Add(new SimpleEntity(_world.ResolvePath(0, new EntityPath("parent/child"))));
+            var grandchild = _world.Add(new SimpleEntity(_world.ResolvePath(0, new EntityPath("parent/child/MouseOver/grandchild"))));
 
-            var parent2 = _entityManager.Add(new SimpleEntity(_entityManager.ResolvePath(new EntityPath("parent2"))));
-            var child2 = _entityManager.Add(new SimpleEntity(_entityManager.ResolvePath(new EntityPath("parent2/child2"))));
-            var grandchild2 = _entityManager.Add(new SimpleEntity(_entityManager.ResolvePath(new EntityPath("parent2/child2/MouseOver/grandchild2"))));
+            var parent2 = _world.Add(new SimpleEntity(_world.ResolvePath(0, new EntityPath("parent2"))));
+            var child2 = _world.Add(new SimpleEntity(_world.ResolvePath(0, new EntityPath("parent2/child2"))));
+            var grandchild2 = _world.Add(new SimpleEntity(_world.ResolvePath(0, new EntityPath("parent2/child2/MouseOver/grandchild2"))));
 
-            _entityManager.SetAlias(child.Id, new EntityPath("alias"));
-            _entityManager.SetAlias(child2.Id, new EntityPath("alias2"));
-            var results = _entityManager.Query(new EntityQuery("@alias*/*/*"));
+            _world.SetAlias(child.Id, new EntityPath("alias"));
+            _world.SetAlias(child2.Id, new EntityPath("alias2"));
+            var results = _world.Query(0, new EntityQuery("@alias*/*/*"));
             Assert.Equal(results.AsSpan().ToArray(), new[] { grandchild, grandchild2 });
         }
     }
