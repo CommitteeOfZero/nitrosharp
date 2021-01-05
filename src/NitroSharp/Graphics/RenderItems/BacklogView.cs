@@ -45,6 +45,8 @@ namespace NitroSharp.Graphics
 
         public EntityId Scrollbar { get; internal set; }
 
+        public override EntityKind Kind => EntityKind.BacklogView;
+
         public void Scroll(float position)
         {
             position = 1.0f - position;
@@ -67,8 +69,8 @@ namespace NitroSharp.Graphics
                         entry.Text.AsMemory(),
                         _fontConfig.DefaultFont,
                         _fontConfig.DefaultFontSize,
-                        _fontConfig.DefaultTextColor,
-                        _fontConfig.DefaultOutlineColor
+                        new RgbaFloat(_fontConfig.DefaultTextColor),
+                        _fontConfig.DefaultOutlineColor?.ToRgbaFloat()
                     );
                     _textLayout.Append(ctx.GlyphRasterizer, run);
                     _entriesAdded++;
@@ -121,8 +123,8 @@ namespace NitroSharp.Graphics
             return new GlyphRun(
                 _fontConfig.DefaultFont,
                 _fontConfig.DefaultFontSize,
-                _fontConfig.DefaultTextColor,
-                _fontConfig.DefaultOutlineColor ?? RgbaFloat.White,
+                new RgbaFloat(_fontConfig.DefaultTextColor),
+                _fontConfig.DefaultOutlineColor?.ToRgbaFloat() ?? RgbaFloat.White,
                 span,
                 GlyphRunFlags.Outline
             );

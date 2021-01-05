@@ -80,6 +80,13 @@ namespace NitroSharp.NsScript.Syntax
         EndOfFileToken
     }
 
+    public enum SigilKind
+    {
+        None,
+        Dollar,
+        Hash
+    }
+
     public readonly struct SyntaxToken
     {
         public SyntaxToken(SyntaxTokenKind kind, TextSpan textSpan, SyntaxTokenFlags flags)
@@ -101,16 +108,27 @@ namespace NitroSharp.NsScript.Syntax
 
         public bool HasSigil =>
             (Flags & SyntaxTokenFlags.HasDollarPrefix) == SyntaxTokenFlags.HasDollarPrefix ||
-            (Flags & SyntaxTokenFlags.HasHashPrefix) == SyntaxTokenFlags.HasHashPrefix ||
-            (Flags & SyntaxTokenFlags.HasAtPrefix) == SyntaxTokenFlags.HasAtPrefix;
+            (Flags & SyntaxTokenFlags.HasHashPrefix) == SyntaxTokenFlags.HasHashPrefix;
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public SigilKind GetSigil()
+        {
+            if ((Flags & SyntaxTokenFlags.HasDollarPrefix) == SyntaxTokenFlags.HasDollarPrefix)
+            {
+                return SigilKind.Dollar;
+            }
+            if ((Flags & SyntaxTokenFlags.HasHashPrefix) == SyntaxTokenFlags.HasHashPrefix)
+            {
+                return SigilKind.Hash;
+            }
+
+            return SigilKind.None;
+        }
+
         public ReadOnlySpan<char> GetText(SourceText sourceText)
         {
             return sourceText.GetCharacterSpan(TextSpan);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ReadOnlySpan<char> GetValueText(SourceText sourceText)
         {
             return sourceText.GetCharacterSpan(GetValueSpan());
@@ -147,7 +165,6 @@ namespace NitroSharp.NsScript.Syntax
         IsQuoted = 1 << 1,
         HasDollarPrefix = 1 << 2,
         HasHashPrefix = 1 << 3,
-        HasAtPrefix = 1 << 4,
         HasDecimalPoint = 1 << 5,
         IsHexTriplet = 1 << 6
     }

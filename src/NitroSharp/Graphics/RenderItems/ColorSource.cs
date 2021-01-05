@@ -1,3 +1,5 @@
+using System.Numerics;
+using NitroSharp.Saving;
 using Veldrid;
 
 namespace NitroSharp.Graphics
@@ -11,9 +13,34 @@ namespace NitroSharp.Graphics
             Size = size;
         }
 
+        public ColorSource(in ResolvedEntityPath path, in ColorSourceSaveData saveData)
+            : base(path, saveData.Common)
+        {
+            Color = new RgbaFloat(saveData.Color);
+            Size = saveData.Size;
+        }
+
         public RgbaFloat Color { get; }
         public Size Size { get; }
 
+        public override EntityKind Kind => EntityKind.ColorSource;
         public override bool IsIdle => true;
+
+        public new ColorSourceSaveData ToSaveData(GameSavingContext ctx) => new()
+        {
+            Common = base.ToSaveData(ctx),
+            Color = Color.ToVector4(),
+            Size = Size
+        };
+    }
+
+    [Persistable]
+    internal readonly partial struct ColorSourceSaveData : IEntitySaveData
+    {
+        public EntitySaveData Common { get; init; }
+        public Vector4 Color { get; init; }
+        public Size Size { get; init; }
+
+        public EntitySaveData CommonEntityData => Common;
     }
 }

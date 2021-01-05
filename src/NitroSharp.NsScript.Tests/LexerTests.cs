@@ -116,23 +116,23 @@ namespace NitroSharp.NsScriptCompiler.Tests
         }
 
         [Theory]
-        [InlineData("foo", "foo", SyntaxTokenFlags.Empty)]
-        [InlineData("$foo", "foo", SyntaxTokenFlags.HasDollarPrefix)]
-        [InlineData("#foo", "foo", SyntaxTokenFlags.HasHashPrefix)]
-        [InlineData("@foo", "@foo", SyntaxTokenFlags.HasAtPrefix)]
-        public void Identifier(string text, string valueText, SyntaxTokenFlags flags)
+        [InlineData("foo", "foo", SyntaxTokenFlags.Empty, SigilKind.None)]
+        [InlineData("$foo", "foo", SyntaxTokenFlags.HasDollarPrefix, SigilKind.Dollar)]
+        [InlineData("#foo", "foo", SyntaxTokenFlags.HasHashPrefix, SigilKind.Hash)]
+        public void Identifier(string text, string valueText, SyntaxTokenFlags flags, SigilKind expectedSigilKind)
         {
             (SyntaxToken token, LexingContext ctx) = LexToken(text);
             Assert.Equal(SyntaxTokenKind.Identifier, token.Kind);
             Assert.Equal(text, ctx.GetText(token).ToString());
             Assert.Equal(valueText, ctx.GetValueText(token).ToString());
             Assert.Equal(flags, token.Flags);
+            Assert.Equal(expectedSigilKind, token.GetSigil());
         }
 
         [Theory]
         [InlineData("\"$foo\"", "foo", SyntaxTokenFlags.IsQuoted | SyntaxTokenFlags.HasDollarPrefix)]
         [InlineData("\"#foo\"", "foo", SyntaxTokenFlags.IsQuoted | SyntaxTokenFlags.HasHashPrefix)]
-        [InlineData("\"@foo\"", "@foo", SyntaxTokenFlags.IsQuoted | SyntaxTokenFlags.HasAtPrefix)]
+        [InlineData("\"@foo\"", "@foo", SyntaxTokenFlags.IsQuoted)]
         public void StringLiteralOrQuotedIdentifier(string text, string valueText, SyntaxTokenFlags flags)
         {
             (SyntaxToken token, LexingContext ctx) = LexToken(text);

@@ -107,9 +107,9 @@ namespace NitroSharp.Graphics
             _glyphRasterizer = glyphRasterizer;
             _textureCache = textureCache;
             _gpuGlyphs = new GpuList<GpuGlyph>(
-                 gd,
-                 BufferUsage.VertexBuffer,
-                 initialCapacity: 2048
+                gd,
+                BufferUsage.VertexBuffer,
+                initialCapacity: 2048
              );
             _gpuGlyphRuns = new GpuCache<GpuGlyphRun>(
                gd,
@@ -181,7 +181,7 @@ namespace NitroSharp.Graphics
             Render(ctx, drawBatch, layout, span, transform, offset, rect, opacity);
         }
 
-        public void Render(
+        private void Render(
             RenderContext ctx,
             DrawBatch drawBatch,
             TextLayout layout,
@@ -216,7 +216,7 @@ namespace NitroSharp.Graphics
                             new ResourceSetKey(
                                 shaderResources.ResourceLayoutFS,
                                 _textureCache.GetCacheTexture(PixelFormat.R8_UNorm, out _),
-                                ctx.GraphicsDevice.PointSampler
+                                ctx.GraphicsDevice.LinearSampler
                             )
                         ),
                         Params = DrawParams.Regular(
@@ -246,7 +246,7 @@ namespace NitroSharp.Graphics
                         new ResourceSetKey(
                             shaderResources.ResourceLayoutFS,
                             _textureCache.GetCacheTexture(PixelFormat.R8_G8_B8_A8_UNorm, out _),
-                            ctx.GraphicsDevice.PointSampler
+                            ctx.GraphicsDevice.LinearSampler
                         )
                     );
                     outlineDraw.Pipeline = ctx.ShaderResources.Text.OutlinePipeline;

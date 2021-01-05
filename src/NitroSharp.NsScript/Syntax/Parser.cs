@@ -701,7 +701,7 @@ namespace NitroSharp.NsScript.Syntax
 
             SyntaxToken token = EatToken();
             var identifier = new Spanned<string>(InternValueText(token), token.TextSpan);
-            return new NameExpressionSyntax(identifier.Value, token.HasSigil, identifier.Span);
+            return new NameExpressionSyntax(identifier.Value, token.GetSigil(), identifier.Span);
         }
 
         private bool IsFunctionCall()

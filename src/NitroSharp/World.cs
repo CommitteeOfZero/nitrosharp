@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using NitroSharp.Graphics;
 using NitroSharp.NsScript;
+using NitroSharp.Saving;
 using NitroSharp.Utilities;
 
 #nullable enable
@@ -36,7 +38,7 @@ namespace NitroSharp
             }
 
             public EntityRec WithLocation(EntityLocation newLocation)
-                => new EntityRec(Entity, Group, newLocation);
+                => new(Entity, Group, newLocation);
         }
 
         private sealed class EntityContext
@@ -60,7 +62,7 @@ namespace NitroSharp
         private readonly Queue<EntityId> _markedEntities;
         private readonly Queue<EntityId> _survivedEntities;
 
-        private readonly EntityGroup<SimpleEntity> _simpleEntities;
+        private readonly EntityGroup<BasicEntity> _basicEntities;
         private readonly EntityGroup<VmThread> _vmThreads;
         private readonly SortableEntityGroup<RenderItem> _renderItems;
         private readonly EntityGroup<ColorSource> _colorSources;
@@ -77,7 +79,7 @@ namespace NitroSharp
             _markedEntities = new Queue<EntityId>();
             _survivedEntities = new Queue<EntityId>();
 
-            _simpleEntities = new EntityGroup<SimpleEntity>();
+            _basicEntities = new EntityGroup<BasicEntity>();
             _vmThreads = new EntityGroup<VmThread>();
             _renderItems = new SortableEntityGroup<RenderItem>();
             _colorSources = new EntityGroup<ColorSource>();
@@ -191,24 +193,36 @@ namespace NitroSharp
             return true;
         }
 
-        public SimpleEntity Add(SimpleEntity entity)
+        public BasicEntity Add(BasicEntity entity, bool enable = true)
         {
-            Add(entity, _simpleEntities);
+            Add(entity, _basicEntities, enable);
             return entity;
         }
 
-        public void Add(VmThread thread) => Add(thread, _vmThreads);
+        public void Add(VmThread thread, bool enable = true)
+            => Add(thread, _vmThreads, enable);
 
-        public T Add<T>(T renderItem)
+        public T Add<T>(T renderItem, bool enable = true)
             where T : RenderItem
         {
-            Add(renderItem, _renderItems);
+            Add(renderItem, _renderItems, enable);
             return renderItem;
         }
 
-        public void Add(ColorSource colorSource) => Add(colorSource, _colorSources);
-        public void Add(Image image) => Add(image, _images);
-        public void Add(Choice choice) => Add(choice, _choices);
+        public void Add(ColorSource colorSource, bool enable = true)
+            => Add(colorSource, _colorSources, enable);
+
+        public void Add(Image image, bool enable = true)
+            => Add(image, _images, enable);
+
+        public void Add(Choice choice, bool enable = true)
+            => Add(choice, _choices, enable);
+
+        public bool IsEnabled(Entity entity)
+        {
+            EntityRec rec = _entities[entity.Id];
+            return rec.Location.Bucket == EntityBucket.Active;
+        }
 
         public void EnableEntity(Entity entity)
             => _pendingBucketChanges.Add((entity.Id, EntityBucket.Active));
@@ -287,15 +301,10 @@ namespace NitroSharp
                 : lookupSlow(path);
         }
 
-        private void Add<T>(T entity, EntityGroup<T> group)
+        private void Add<T>(T entity, EntityGroup<T> group, bool enable)
             where T : Entity
         {
             EntityId id = entity.Id;
-            if (Get(id) is object)
-            {
-                DestroyEntity(id);
-            }
-
             if (entity.Parent is Entity parent)
             {
                 ((EntityInternal)parent).AddChild(entity);
@@ -308,7 +317,11 @@ namespace NitroSharp
                 location
             );
 
-            _pendingBucketChanges.Add((id, EntityBucket.Active));
+            if (enable)
+            {
+                _pendingBucketChanges.Add((id, EntityBucket.Active));
+            }
+
             if (!_contextLookup.TryGetValue(id.Context, out EntityContext? context))
             {
                 context = new EntityContext();
@@ -350,6 +363,155 @@ namespace NitroSharp
         {
             EntityRec rec = _entities[entityId];
             _entities[entityId] = rec.WithLocation(location);
+        }
+
+        private readonly struct EntitySaveDataLocation
+        {
+            public EntitySaveDataLocation(EntityKind entityKind, int index, EntityId parentId)
+            {
+                EntityKind = entityKind;
+                Index = index;
+                ParentId = parentId;
+            }
+
+            public EntityKind EntityKind { get; }
+            public int Index { get; }
+            public EntityId ParentId { get; }
+        }
+
+        public WorldSaveData ToSaveData(GameSavingContext ctx) => new()
+        {
+            Aliases = _aliases.Select(x => (x.Key.Value, x.Value)).ToArray(),
+            BasicEntities = _basicEntities.CollectAll().Select(x => x.ToSaveData(ctx)).ToArray(),
+            VmThreads = _vmThreads.CollectAll().Select(x => x.ToSaveData(ctx)).ToArray(),
+            Images = _images.CollectAll().Select(x => x.ToSaveData(ctx)).ToArray(),
+            ColorSources = _colorSources.CollectAll().Select(x => x.ToSaveData(ctx)).ToArray(),
+            AlphaMasks = _renderItems.CollectAll().OfType<AlphaMask>().Select(x => x.ToSaveData(ctx)).ToArray(),
+            DialogueBoxes = _renderItems.CollectAll().OfType<DialogueBox>().Select(x => x.ToSaveData(ctx)).ToArray(),
+            DialoguePages = _renderItems.CollectAll().OfType<DialoguePage>().Select(x => x.ToSaveData(ctx)).ToArray(),
+            TextBlocks = _renderItems.CollectAll().OfType<TextBlock>().Select(x => x.ToSaveData(ctx)).ToArray(),
+            Sprites = _renderItems.CollectAll().OfType<Sprite>().Select(x => x.ToSaveData(ctx)).ToArray(),
+            Cubes = _renderItems.CollectAll().OfType<Cube>().Select(x => x.ToSaveData(ctx)).ToArray(),
+            Choices = _choices.CollectAll().Select(x => x.ToSaveData(ctx)).ToArray()
+        };
+
+        public static World Load(WorldSaveData saveData, GameLoadingContext loadCtx)
+        {
+            var world = new World();
+            var index = new Dictionary<EntityId, EntitySaveDataLocation>();
+
+            void indexTable(EntityKind entityKind, IEntitySaveData[] table)
+            {
+                for (int i = 0; i < table.Length; i++)
+                {
+                    EntitySaveData entityData = table[i].CommonEntityData;
+                    index[entityData.Id] = new EntitySaveDataLocation(entityKind, i, entityData.Parent);
+                }
+            }
+
+            (EntityKind, IEntitySaveData[])[] entityTables = saveData
+                .EnumerateEntityTables()
+                .ToArray();
+
+            foreach ((EntityKind kind, IEntitySaveData[] table) in entityTables)
+            {
+                indexTable(kind, table);
+            }
+
+            foreach ((EntityKind _, IEntitySaveData[] table) in entityTables)
+            {
+                foreach (EntityId entityId in table.Select(x => x.CommonEntityData.Id))
+                {
+                    createEntity(ref saveData, entityId);
+                }
+            }
+
+            foreach ((string alias, EntityId id) in saveData.Aliases)
+            {
+                world.SetAlias(id, new EntityPath(alias));
+            }
+
+            void createEntity(ref WorldSaveData worldData, EntityId id)
+            {
+                if (world.Get(id) is not null)
+                {
+                    return;
+                }
+
+                EntitySaveDataLocation saveDataLoc = index[id];
+                Entity? parent = null;
+                if (saveDataLoc.ParentId.IsValid)
+                {
+                    if (world.Get(saveDataLoc.ParentId) is null)
+                    {
+                        createEntity(ref worldData, saveDataLoc.ParentId);
+                    }
+
+                    parent = world.Get(saveDataLoc.ParentId);
+                }
+
+                var resolvedPath = new ResolvedEntityPath(id.Context, id, parent);
+                switch (saveDataLoc.EntityKind)
+                {
+                    case EntityKind.Basic:
+                        BasicEntitySaveData entityData = worldData.BasicEntities[saveDataLoc.Index];
+                        var entity = new BasicEntity(resolvedPath, entityData);
+                        world.Add(entity, entityData.Data.IsEnabled);
+                        break;
+                    case EntityKind.VmThread:
+                        VmThreadSaveData threadData = worldData.VmThreads[saveDataLoc.Index];
+                        var thread = new VmThread(resolvedPath, threadData, loadCtx.VM, loadCtx.Process.VmProcess);
+                        world.Add(thread, threadData.Common.IsEnabled);
+                        break;
+                    case EntityKind.Image:
+                        ImageSaveData imageData = worldData.Images[saveDataLoc.Index];
+                        var image = new Image(resolvedPath, imageData, loadCtx);
+                        world.Add(image, imageData.CommonEntityData.IsEnabled);
+                        break;
+                    case EntityKind.ColorSource:
+                        ColorSourceSaveData colorSourceData = worldData.ColorSources[saveDataLoc.Index];
+                        var colorSource = new ColorSource(resolvedPath, colorSourceData);
+                        world.Add(colorSource, colorSourceData.CommonEntityData.IsEnabled);
+                        break;
+                    case EntityKind.AlphaMask:
+                        ConstraintBoxSaveData alphaMaskData = worldData.AlphaMasks[saveDataLoc.Index];
+                        var mask = new AlphaMask(resolvedPath, alphaMaskData);
+                        world.Add(mask, alphaMaskData.CommonEntityData.IsEnabled);
+                        break;
+                    case EntityKind.DialogueBox:
+                        ConstraintBoxSaveData boxData = worldData.DialogueBoxes[saveDataLoc.Index];
+                        var box = new DialogueBox(resolvedPath, boxData);
+                        world.Add(box, boxData.CommonEntityData.IsEnabled);
+                        break;
+                    case EntityKind.DialoguePage:
+                        DialoguePageSaveData pageData = worldData.DialoguePages[saveDataLoc.Index];
+                        var page = new DialoguePage(resolvedPath, pageData, loadCtx);
+                        world.Add(page, pageData.CommonEntityData.IsEnabled);
+                        break;
+                    case EntityKind.TextBlock:
+                        TextBlockSaveData textBlockData = worldData.TextBlocks[saveDataLoc.Index];
+                        var textBlock = new TextBlock(resolvedPath, textBlockData, loadCtx);
+                        world.Add(textBlock, textBlockData.Common.EntityData.IsEnabled);
+                        break;
+                    case EntityKind.Sprite:
+                        SpriteSaveData spriteData = worldData.Sprites[saveDataLoc.Index];
+                        var sprite = new Sprite(resolvedPath, spriteData, loadCtx);
+                        world.Add(sprite, spriteData.CommonEntityData.IsEnabled);
+                        break;
+                    case EntityKind.Cube:
+                        CubeSaveData cubeData = worldData.Cubes[saveDataLoc.Index];
+                        var cube = new Cube(resolvedPath, cubeData, loadCtx.Rendering);
+                        world.Add(cube, cubeData.Common.EntityData.IsEnabled);
+                        break;
+                    case EntityKind.Choice:
+                        ChoiceSaveData choiceData = worldData.Choices[saveDataLoc.Index];
+                        var choice = new Choice(resolvedPath, choiceData, world);
+                        world.Add(choice, choiceData.Common.IsEnabled);
+                        break;
+                }
+            }
+
+            return world;
         }
 
         public void Dispose()
@@ -424,7 +586,7 @@ namespace NitroSharp
     {
         private readonly EntityGroup<T> _group;
 
-        public EntityGroupView(EntityGroup<T> group)
+        private EntityGroupView(EntityGroup<T> group)
         {
             _group = group;
         }
@@ -433,7 +595,7 @@ namespace NitroSharp
         public ReadOnlySpan<T> Disabled => _group.Disabled;
 
         public static implicit operator EntityGroupView<T>(EntityGroup<T> group)
-            => new EntityGroupView<T>(group);
+            => new(group);
     }
 
     internal readonly struct SortableEntityGroupView<T>
@@ -453,7 +615,7 @@ namespace NitroSharp
 
         public static implicit operator SortableEntityGroupView<T>(
             SortableEntityGroup<T> group)
-            => new SortableEntityGroupView<T>(group);
+            => new(group);
     }
 
     internal class EntityGroup<T> : EntityGroup
@@ -470,6 +632,14 @@ namespace NitroSharp
 
         public ReadOnlySpan<T> Enabled => _enabledEntities.AsReadonlySpan();
         public ReadOnlySpan<T> Disabled => _disabledEntities.AsReadonlySpan();
+
+        public T[] CollectAll()
+        {
+            var array = new T[Enabled.Length + Disabled.Length];
+            Enabled.CopyTo(array.AsSpan()[..Enabled.Length]);
+            Disabled.CopyTo(array.AsSpan()[Enabled.Length..]);
+            return array;
+        }
 
         private ref ArrayBuilder<T> GetBucket(EntityBucket bucket)
         {
@@ -546,6 +716,38 @@ namespace NitroSharp
             Array.Copy(_enabledEntities.UnderlyingArray, _sorted, actualCount);
             Array.Sort(_sorted, 0, actualCount);
             return _sorted.AsSpan(0, actualCount);
+        }
+    }
+
+    [Persistable]
+    internal readonly partial struct WorldSaveData
+    {
+        public (string, EntityId)[] Aliases { get; init; }
+        public BasicEntitySaveData[] BasicEntities { get; init; }
+        public VmThreadSaveData[] VmThreads { get; init; }
+        public ImageSaveData[] Images { get; init; }
+        public ColorSourceSaveData[] ColorSources { get; init; }
+        public ConstraintBoxSaveData[] AlphaMasks { get; init; }
+        public ConstraintBoxSaveData[] DialogueBoxes { get; init; }
+        public DialoguePageSaveData[] DialoguePages { get; init; }
+        public TextBlockSaveData[] TextBlocks { get; init; }
+        public SpriteSaveData[] Sprites { get; init; }
+        public CubeSaveData[] Cubes { get; init; }
+        public ChoiceSaveData[] Choices { get; init; }
+
+        public IEnumerable<(EntityKind, IEntitySaveData[])> EnumerateEntityTables()
+        {
+            yield return (EntityKind.Basic, BasicEntities.Cast<IEntitySaveData>().ToArray());
+            yield return (EntityKind.VmThread, VmThreads.Cast<IEntitySaveData>().ToArray());
+            yield return (EntityKind.Image, Images.Cast<IEntitySaveData>().ToArray());
+            yield return (EntityKind.ColorSource, ColorSources.Cast<IEntitySaveData>().ToArray());
+            yield return (EntityKind.AlphaMask, AlphaMasks.Cast<IEntitySaveData>().ToArray());
+            yield return (EntityKind.DialogueBox, DialogueBoxes.Cast<IEntitySaveData>().ToArray());
+            yield return (EntityKind.DialoguePage, DialoguePages.Cast<IEntitySaveData>().ToArray());
+            yield return (EntityKind.TextBlock, TextBlocks.Cast<IEntitySaveData>().ToArray());
+            yield return (EntityKind.Sprite, Sprites.Cast<IEntitySaveData>().ToArray());
+            yield return (EntityKind.Cube, Cubes.Cast<IEntitySaveData>().ToArray());
+            yield return (EntityKind.Choice, Choices.Cast<IEntitySaveData>().ToArray());
         }
     }
 }

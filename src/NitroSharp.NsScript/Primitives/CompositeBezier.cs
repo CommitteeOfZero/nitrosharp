@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Immutable;
+using MessagePack;
 
 namespace NitroSharp.NsScript.Primitives
 {
@@ -19,9 +20,31 @@ namespace NitroSharp.NsScript.Primitives
             }
             return code;
         }
+
+        public CompositeBezier(ref MessagePackReader reader)
+        {
+            int length = reader.ReadArrayHeader();
+            var segments = ImmutableArray.CreateBuilder<CubicBezierSegment>(length);
+            for (int i = 0; i < length; i++)
+            {
+                segments.Add(new CubicBezierSegment(ref reader));
+            }
+
+            Segments = segments.ToImmutable();
+        }
+
+        public void Serialize(ref MessagePackWriter writer)
+        {
+            writer.WriteArrayHeader(Segments.Length);
+            foreach (CubicBezierSegment seg in Segments)
+            {
+                seg.Serialize(ref writer);
+            }
+        }
     }
 
-    public readonly struct CubicBezierSegment
+    [Persistable]
+    public readonly partial struct CubicBezierSegment
     {
         public readonly BezierControlPoint P0;
         public readonly BezierControlPoint P1;
@@ -43,7 +66,8 @@ namespace NitroSharp.NsScript.Primitives
         public override int GetHashCode() => HashCode.Combine(P0, P1, P2, P3);
     }
 
-    public readonly struct BezierControlPoint
+    [Persistable]
+    public readonly partial struct BezierControlPoint
     {
         public readonly NsCoordinate X;
         public readonly NsCoordinate Y;

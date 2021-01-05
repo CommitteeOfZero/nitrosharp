@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using NitroSharp.Utilities;
 
 #nullable enable
@@ -24,19 +26,19 @@ namespace NitroSharp.NsScript.VM
         public readonly NsScriptThread? JoinedThread;
 
         public static ThreadAction Create(NsScriptThread thread)
-            => new ThreadAction(thread, ActionKind.Create, null);
+            => new(thread, ActionKind.Create, null);
 
         public static ThreadAction Terminate(NsScriptThread thread)
-            => new ThreadAction(thread, ActionKind.Terminate, null);
+            => new(thread, ActionKind.Terminate, null);
 
         public static ThreadAction Suspend(NsScriptThread thread, TimeSpan? timeout)
-            => new ThreadAction(thread, ActionKind.Suspend, timeout);
+            => new(thread, ActionKind.Suspend, timeout);
 
         public static ThreadAction Join(NsScriptThread thread, NsScriptThread target)
-            => new ThreadAction(thread, ActionKind.Join, null, target);
+            => new(thread, ActionKind.Join, null, target);
 
         public static ThreadAction Resume(NsScriptThread thread)
-            => new ThreadAction(thread, ActionKind.Resume, null);
+            => new(thread, ActionKind.Resume, null);
 
         private ThreadAction(
             NsScriptThread thread,
@@ -57,23 +59,58 @@ namespace NitroSharp.NsScript.VM
         private ArrayBuilder<uint> _newThreads;
         private ArrayBuilder<uint> _terminatedThreads;
         private readonly Stopwatch _clock;
+        private readonly long _clockBase;
 
         internal readonly Queue<ThreadAction> PendingThreadActions;
 
-        public NsScriptProcess(NsScriptVM vm, NsScriptThread mainThread)
+        public NsScriptProcess(NsScriptVM vm, uint id, NsScriptThread mainThread)
         {
             VM = vm;
+            Id = id;
             MainThread = mainThread;
             _threads = new ArrayBuilder<NsScriptThread>(16);
             PendingThreadActions = new Queue<ThreadAction>();
             _newThreads = new ArrayBuilder<uint>(8);
             _terminatedThreads = new ArrayBuilder<uint>(8);
+            _clockBase = 0;
             _clock = Stopwatch.StartNew();
             AttachThread(mainThread);
         }
 
+        public NsScriptThread GetThread(uint id)
+            => _threads.UnderlyingArray.First(x => x.Id == id);
+
+        internal NsScriptProcess(NsScriptVM vm, NsScriptProcessDump dump)
+        {
+            VM = vm;
+            Id = dump.Id;
+            _clockBase = (int)Math.Round(Stopwatch.Frequency / 1000.0d * dump.ClockBaseMs);
+
+            _threads = new ArrayBuilder<NsScriptThread>(16);
+            _newThreads = new ArrayBuilder<uint>(8);
+            _terminatedThreads = new ArrayBuilder<uint>(8);
+            PendingThreadActions = new Queue<ThreadAction>();
+
+            NsScriptThread[] threads = dump.Threads
+                .Select(x => new NsScriptThread(vm, this, x))
+                .ToArray();
+            _threads.AddRange(threads);
+
+            foreach ((NsScriptThread thread, NsScriptThreadDump threadDump) in threads.Zip(dump.Threads))
+            {
+                if (threadDump.WaitingThread is uint waitingThread)
+                {
+                    thread.WaitingThread = threads.First(x => x.Id == waitingThread);
+                }
+            }
+
+            MainThread = threads.First(x => x.Id == dump.MainThread);
+            _clock = Stopwatch.StartNew();
+        }
+
         public NsScriptVM VM { get; }
-        public NsScriptThread? MainThread { get; internal set; }
+        public uint Id { get; }
+        public NsScriptThread? MainThread { get; private set; }
         public NsScriptThread? CurrentThread { get; internal set; }
 
         internal ReadOnlySpan<NsScriptThread> Threads
@@ -81,6 +118,8 @@ namespace NitroSharp.NsScript.VM
 
         internal ReadOnlySpan<uint> NewThreads => _newThreads.AsReadonlySpan();
         internal ReadOnlySpan<uint> TerminatedThreads => _terminatedThreads.AsReadonlySpan();
+
+        private long Ticks => _clockBase + _clock.ElapsedTicks;
 
         public bool IsRunning => _clock.IsRunning;
         public bool IsTerminated => _threads.Count == 0 && PendingThreadActions.Count == 0;
@@ -115,9 +154,9 @@ namespace NitroSharp.NsScript.VM
             _terminatedThreads.Clear();
             foreach (NsScriptThread thread in _threads.AsSpan())
             {
-                if (thread.SuspensionTime != null && thread.SleepTimeout != null)
+                if (thread.SuspensionTime.HasValue && thread.SleepTimeout.HasValue)
                 {
-                    time ??= _clock.ElapsedTicks;
+                    time ??= Ticks;
                     long delta = time.Value - thread.SuspensionTime.Value;
                     if (delta >= thread.SleepTimeout)
                     {
@@ -129,7 +168,6 @@ namespace NitroSharp.NsScript.VM
 
         internal void AttachThread(NsScriptThread thread)
         {
-            if (!IsRunning) { return; }
             thread.Process = this;
             MainThread ??= thread;
             PendingThreadActions.Enqueue(ThreadAction.Create(thread));
@@ -167,28 +205,28 @@ namespace NitroSharp.NsScript.VM
         internal void CommitSuspendThread(NsScriptThread thread, TimeSpan? timeoutOpt)
         {
             if (!IsRunning) { return; }
-            thread.SuspensionTime = TicksFromTimeSpan(_clock.Elapsed);
+            thread.SuspensionTime = Ticks;
             if (timeoutOpt is TimeSpan timeout)
             {
-                thread.SleepTimeout = TicksFromTimeSpan(timeout);
+                thread.SleepTimeout = (long)Math.Round(timeout.TotalSeconds * Stopwatch.Frequency);
             }
         }
 
-        internal void CommitJoin(NsScriptThread thread, NsScriptThread target)
+        private void CommitJoin(NsScriptThread thread, NsScriptThread target)
         {
             if (!IsRunning) { return; }
-            thread.SuspensionTime = TicksFromTimeSpan(_clock.Elapsed);
+            thread.SuspensionTime = Ticks;
             target.WaitingThread = thread;
         }
 
-        internal void CommitResumeThread(NsScriptThread thread)
+        private void CommitResumeThread(NsScriptThread thread)
         {
             if (!IsRunning) { return; }
             thread.SleepTimeout = null;
             thread.SuspensionTime = null;
         }
 
-        internal void CommitTerminateThread(NsScriptThread thread)
+        private void CommitTerminateThread(NsScriptThread thread)
         {
             if (!IsRunning) { return; }
             thread.CallFrameStack.Clear();
@@ -197,7 +235,26 @@ namespace NitroSharp.NsScript.VM
             _terminatedThreads.Add(thread.Id);
         }
 
-        private static long TicksFromTimeSpan(TimeSpan timespan)
-            => (long)(timespan.TotalSeconds * Stopwatch.Frequency);
+        public NsScriptProcessDump Dump()
+        {
+            Debug.Assert(MainThread is not null);
+            Debug.Assert(PendingThreadActions.Count == 0);
+            return new NsScriptProcessDump
+            {
+                Id = Id,
+                ClockBaseMs = Ticks / (double)Stopwatch.Frequency * 1000.0d,
+                MainThread = MainThread.Id,
+                Threads = _threads.ToArray().Select(x => x.Dump()).ToArray()
+            };
+        }
+    }
+
+    [Persistable]
+    public readonly partial struct NsScriptProcessDump
+    {
+        internal uint Id { get; init; }
+        internal double ClockBaseMs { get; init; }
+        internal NsScriptThreadDump[] Threads { get; init; }
+        internal uint MainThread { get; init; }
     }
 }

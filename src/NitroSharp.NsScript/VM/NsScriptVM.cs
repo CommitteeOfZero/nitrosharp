@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using NitroSharp.NsScript.Primitives;
 using NitroSharp.NsScript.Utilities;
@@ -23,35 +24,85 @@ namespace NitroSharp.NsScript.VM
         }
     }
 
+    [Persistable]
+    public readonly partial struct GlobalsDump
+    {
+        internal (string, ConstantValue)[] Globals { get; init; }
+    }
+
     public sealed class NsScriptVM
     {
         private readonly NsxModuleLocator _moduleLocator;
         private readonly Dictionary<string, NsxModule> _loadedModules;
         private readonly BuiltInFunctionDispatcher _builtInCallDispatcher;
-        private readonly ConstantValue[] _globals;
+        private readonly ConstantValue[] _variables;
+        private readonly ConstantValue[] _flags;
         private readonly Stack<CubicBezierSegment> _bezierSegmentStack;
 
+        private uint _lastProcessId;
         private uint _lastThreadId;
 
         public NsScriptVM(
             NsxModuleLocator moduleLocator,
-            Stream globalVarLookupTableStream)
+            Stream globalsLookupTableStream)
         {
             _loadedModules = new Dictionary<string, NsxModule>(16);
             _moduleLocator = moduleLocator;
-            _globals = new ConstantValue[5000];
-            _builtInCallDispatcher = new BuiltInFunctionDispatcher(_globals);
-            GlobalVarLookup = GlobalVarLookupTable.Load(globalVarLookupTableStream);
+            _variables = new ConstantValue[5000];
+            _flags = new ConstantValue[2000];
+            _builtInCallDispatcher = new BuiltInFunctionDispatcher(_variables);
+            GlobalsLookup = GlobalsLookupTable.Load(globalsLookupTableStream);
             SystemVariables = new SystemVariableLookup(this);
             _bezierSegmentStack = new Stack<CubicBezierSegment>();
         }
 
-        internal GlobalVarLookupTable GlobalVarLookup { get; }
-        public SystemVariableLookup SystemVariables { get; }
+        internal GlobalsLookupTable GlobalsLookup { get; }
 
+        public SystemVariableLookup SystemVariables { get; }
         public NsScriptProcess? CurrentProcess { get; private set; }
 
-        public NsxModule GetModule(string name)
+        public NsScriptProcess RestoreProcess(in NsScriptProcessDump dump)
+        {
+            NsScriptProcess process = new(this, dump);
+            _lastProcessId = Math.Max(_lastProcessId, process.Id);
+            _lastThreadId = Math.Max(_lastThreadId, dump.Threads.Max(x => x.Id));
+            return process;
+        }
+
+        public GlobalsDump DumpVariables() => DumpGlobals(_variables, GlobalsLookup.Variables);
+        public GlobalsDump DumpFlags() => DumpGlobals(_flags, GlobalsLookup.Flags);
+
+        public void RestoreVariables(GlobalsDump dump)
+            => RestoreGlobals(_variables, GlobalsLookup.Variables, dump);
+
+        public void RestoreFlags(GlobalsDump dump)
+            => RestoreGlobals(_flags, GlobalsLookup.Flags, dump);
+
+        private static GlobalsDump DumpGlobals(ConstantValue[] table, ImmutableDictionary<string, int> lookup)
+        {
+            var globals = new (string, ConstantValue)[lookup.Count];
+            foreach ((string name, int i) in lookup)
+            {
+                globals[i] = (name, table[i]);
+            }
+            return new GlobalsDump { Globals = globals };
+        }
+
+        private static void RestoreGlobals(
+            ConstantValue[] table,
+            ImmutableDictionary<string, int> lookup,
+            in GlobalsDump dump)
+        {
+            foreach ((string name, ConstantValue val) in dump.Globals)
+            {
+                if (lookup.TryGetValue(name, out int index))
+                {
+                    table[index] = val;
+                }
+            }
+        }
+
+        internal NsxModule GetModule(string name)
         {
             if (!_loadedModules.TryGetValue(name, out NsxModule? module))
             {
@@ -65,8 +116,9 @@ namespace NitroSharp.NsScript.VM
 
         public NsScriptProcess CreateProcess(string moduleName, string symbol)
         {
+            uint pid = ++_lastProcessId;
             NsScriptThread mainThread = CreateThread(moduleName, symbol);
-            return new NsScriptProcess(this, mainThread);
+            return new NsScriptProcess(this, pid, mainThread);
         }
 
         public NsScriptThread CreateThread(NsScriptProcess process, string symbol, bool start = false)
@@ -87,9 +139,12 @@ namespace NitroSharp.NsScript.VM
             return thread;
         }
 
-        private NsScriptThread CreateThread(NsScriptProcess process, ref CallFrame callFrame)
+        private NsScriptThread CreateThread(
+            NsScriptProcess process,
+            ref CallFrame callFrame,
+            uint? declaredId = null)
         {
-            var thread = new NsScriptThread(++_lastThreadId, ref callFrame);
+            var thread = new NsScriptThread(++_lastThreadId, ref callFrame, declaredId);
             process.AttachThread(thread);
             return thread;
         }
@@ -138,7 +193,7 @@ namespace NitroSharp.NsScript.VM
                 (ushort)blockToken.SubroutineIndex,
                 pc: blockToken.Offset
             );
-            NsScriptThread thread = CreateThread(process, ref frame);
+            NsScriptThread thread = CreateThread(process, ref frame, declaredId: process.CurrentThread!.Id);
             thread.DialoguePage = new EntityPath("@" + blockToken.BlockName);
             return thread;
         }
@@ -152,12 +207,13 @@ namespace NitroSharp.NsScript.VM
             CurrentProcess = process;
             process.Tick();
 
-            while (!process.Threads.IsEmpty || process.PendingThreadActions.Count > 0)
+            while (process.IsRunning && (!process.Threads.IsEmpty || process.PendingThreadActions.Count > 0))
             {
                 process.ProcessPendingThreadActions();
                 uint nbActive = 0;
                 foreach (NsScriptThread thread in process.Threads)
                 {
+                    if (!process.IsRunning) { break; }
                     if (thread.IsActive && !thread.Yielded)
                     {
                         process.CurrentThread = thread;
@@ -194,9 +250,20 @@ namespace NitroSharp.NsScript.VM
             return new RunResult(process.NewThreads, process.TerminatedThreads);
         }
 
-        internal ref ConstantValue GetGlobalVar(int index)
+        internal ref ConstantValue GetVariable(int index)
         {
-            ref ConstantValue val = ref _globals[index];
+            ref ConstantValue val = ref _variables[index];
+            if (val.Type == BuiltInType.Uninitialized)
+            {
+                val = ConstantValue.Number(0);
+            }
+
+            return ref val;
+        }
+
+        internal ref ConstantValue GetFlag(int index)
+        {
+            ref ConstantValue val = ref _flags[index];
             if (val.Type == BuiltInType.Uninitialized)
             {
                 val = ConstantValue.Number(0);
@@ -227,6 +294,7 @@ namespace NitroSharp.NsScript.VM
             {
                 Opcode opcode = program.NextOpcode();
                 ushort varToken = ushort.MaxValue;
+                ushort flagToken;
                 ConstantValue? imm = opcode switch
                 {
                     Opcode.LoadImm => readConst(ref program, thisModule),
@@ -236,8 +304,10 @@ namespace NitroSharp.NsScript.VM
                     Opcode.LoadImmFalse => ConstantValue.False,
                     Opcode.LoadImmNull => ConstantValue.Null,
                     Opcode.LoadImmEmptyStr => ConstantValue.EmptyString,
-                    Opcode.LoadVar => GetGlobalVar(varToken = program.DecodeToken())
+                    Opcode.LoadVar => GetVariable(varToken = program.DecodeToken())
                         .WithSlot((short)varToken),
+                    Opcode.LoadFlag => GetFlag(flagToken = program.DecodeToken())
+                        .WithSlot((short)flagToken),
                     _ => null
                 };
 
@@ -246,7 +316,7 @@ namespace NitroSharp.NsScript.VM
                     if (varToken != ushort.MaxValue && varToken == SystemVariables.PresentProcess)
                     {
                         string subName = thisModule.GetSubroutineName(frame.SubroutineIndex);
-                        imm = _globals[varToken] = ConstantValue.String(subName);
+                        imm = _variables[varToken] = ConstantValue.String(subName);
                     }
 
                     ConstantValue value = imm.Value;
@@ -258,7 +328,11 @@ namespace NitroSharp.NsScript.VM
                 {
                     case Opcode.StoreVar:
                         int index = program.DecodeToken();
-                        GetGlobalVar(index) = stack.Pop();
+                        GetVariable(index) = stack.Pop();
+                        break;
+                    case Opcode.StoreFlag:
+                        index = program.DecodeToken();
+                        GetFlag(index) = stack.Pop();
                         break;
                     case Opcode.Binary:
                         var opKind = (BinaryOperatorKind)program.ReadByte();
@@ -276,8 +350,6 @@ namespace NitroSharp.NsScript.VM
                         op2 = stack.Pop();
                         stack.Push(op1 != op2);
                         break;
-
-#pragma warning disable IDE0059
                     case Opcode.Neg:
                         ref ConstantValue val = ref stack.Peek();
                         val = val.Type switch
@@ -306,8 +378,6 @@ namespace NitroSharp.NsScript.VM
                         Debug.Assert(val.AsBool() != null);
                         val = ConstantValue.Boolean(!val.AsBool()!.Value);
                         break;
-#pragma warning restore IDE0059
-
                     case Opcode.Call:
                         ushort subroutineToken = program.DecodeToken();
                         frame.ProgramCounter = program.Position;
@@ -523,7 +593,7 @@ namespace NitroSharp.NsScript.VM
                 BinaryOperatorKind.GreaterThanOrEqual => left >= right,
                 BinaryOperatorKind.And => left && right,
                 BinaryOperatorKind.Or => left || right,
-                BinaryOperatorKind.Remainder => left & right,
+                BinaryOperatorKind.Remainder => left % right,
                 _ => throw new NotImplementedException()
             };
         }
@@ -532,7 +602,7 @@ namespace NitroSharp.NsScript.VM
     public sealed class SystemVariableLookup
     {
         private readonly NsScriptVM _vm;
-        private readonly GlobalVarLookupTable _nameLookup;
+        private readonly GlobalsLookupTable _nameLookup;
 
         public readonly int PresentProcess;
         private readonly int _presentPreprocess;
@@ -560,11 +630,17 @@ namespace NitroSharp.NsScript.VM
 
         private readonly int _positionXTextIcon;
         private readonly int _positionYTextIcon;
+        private readonly int _savePath;
+
+        private readonly int _lastText;
 
         public SystemVariableLookup(NsScriptVM vm)
         {
             _vm = vm;
-            _nameLookup = vm.GlobalVarLookup;
+            _nameLookup = vm.GlobalsLookup;
+
+            _savePath = Lookup("SYSTEM_save_path");
+
             _presentPreprocess = Lookup("SYSTEM_present_preprocess");
             _presentText = Lookup("SYSTEM_present_text");
             PresentProcess = Lookup("SYSTEM_present_process");
@@ -589,11 +665,15 @@ namespace NitroSharp.NsScript.VM
 
             _positionXTextIcon = Lookup("SYSTEM_position_x_text_icon");
             _positionYTextIcon = Lookup("SYSTEM_position_y_text_icon");
+            _lastText = Lookup("SYSTEM_last_text");
         }
 
         private int Lookup(string name)
         {
-            _nameLookup.TryLookupSystemVariable(name, out int index);
+            if (!_nameLookup.TryLookupSystemVariable(name, out int index))
+            {
+                _nameLookup.TryLookupSystemFlag(name, out index);
+            }
             return index;
         }
 
@@ -615,16 +695,21 @@ namespace NitroSharp.NsScript.VM
         public ref ConstantValue X360LbButtonDown => ref Var(_x360ButtonLbDown);
         public ref ConstantValue X360RbButtonDown => ref Var(_x360ButtonRbDown);
 
-        private ref ConstantValue Var(int index) => ref _vm.GetGlobalVar(index);
+        private ref ConstantValue Var(int index) => ref _vm.GetVariable(index);
+        private ref ConstantValue Flag(int index) => ref _vm.GetFlag(index);
 
-        public ref ConstantValue BacklogEnable => ref _vm.GetGlobalVar(_backlogEnable);
-        public ref ConstantValue BacklogRowMax => ref _vm.GetGlobalVar(_backlogRowMax);
-        public ref ConstantValue BacklogRowInterval => ref _vm.GetGlobalVar(_backlogRowInterval);
-        public ref ConstantValue BacklogPositionX => ref _vm.GetGlobalVar(_backlogPositionX);
-        public ref ConstantValue BacklogPositionY => ref _vm.GetGlobalVar(_backlogPositionY);
-        public ref ConstantValue BacklogCharacterWidth => ref _vm.GetGlobalVar(_backlogCharacterWidth);
+        public ref ConstantValue BacklogEnable => ref _vm.GetVariable(_backlogEnable);
+        public ref ConstantValue BacklogRowMax => ref _vm.GetVariable(_backlogRowMax);
+        public ref ConstantValue BacklogRowInterval => ref _vm.GetVariable(_backlogRowInterval);
+        public ref ConstantValue BacklogPositionX => ref _vm.GetVariable(_backlogPositionX);
+        public ref ConstantValue BacklogPositionY => ref _vm.GetVariable(_backlogPositionY);
+        public ref ConstantValue BacklogCharacterWidth => ref _vm.GetVariable(_backlogCharacterWidth);
 
-        public ref ConstantValue PositionXTextIcon => ref _vm.GetGlobalVar(_positionXTextIcon);
-        public ref ConstantValue PositionYTextIcon => ref _vm.GetGlobalVar(_positionYTextIcon);
+        public ref ConstantValue PositionXTextIcon => ref _vm.GetVariable(_positionXTextIcon);
+        public ref ConstantValue PositionYTextIcon => ref _vm.GetVariable(_positionYTextIcon);
+
+        public ref ConstantValue SavePath => ref Flag(_savePath);
+
+        public ref ConstantValue LastText => ref Var(_lastText);
     }
 }

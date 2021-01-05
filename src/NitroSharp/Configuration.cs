@@ -1,6 +1,7 @@
-﻿using NitroSharp.Media;
+﻿using System.Numerics;
+using NitroSharp.Media;
 using NitroSharp.Text;
-using NitroSharp.Utilities;
+using SprintfNET;
 using Veldrid;
 
 #nullable enable
@@ -21,8 +22,6 @@ namespace NitroSharp
 
     public readonly struct IconPathPattern
     {
-        private readonly string _pattern;
-
         public readonly string FormatString;
         public readonly uint IconCount;
 
@@ -31,11 +30,9 @@ namespace NitroSharp
             int fmtEnd = pattern.IndexOf('#');
             FormatString = pattern[..fmtEnd];
             IconCount = uint.Parse(pattern[(fmtEnd + 1)..]);
-            _pattern = pattern;
         }
 
-        public IconPathEnumerable EnumeratePaths()
-            => new IconPathEnumerable(this);
+        public IconPathEnumerable EnumeratePaths() => new(this);
     }
 
     public struct IconPathEnumerable
@@ -57,7 +54,7 @@ namespace NitroSharp
         public bool MoveNext()
         {
             if (_i == _pattern.IconCount) { return false; }
-            Current = CRuntime.sprintf(_pattern.FormatString, _i);
+            Current = StringFormatter.PrintF(_pattern.FormatString, _i);
             _i++;
             return true;
         }
@@ -65,26 +62,16 @@ namespace NitroSharp
 
     public sealed class IconPathPatterns
     {
-        public IconPathPatterns(
-            IconPathPattern waitLine,
-            IconPathPattern waitPage,
-            IconPathPattern waitAuto,
-            IconPathPattern backlogVoice)
-        {
-            WaitLine = waitLine;
-            WaitPage = waitPage;
-            WaitAuto = waitAuto;
-            BacklogVoice = backlogVoice;
-        }
-
-        public IconPathPattern WaitLine { get; }
-        public IconPathPattern WaitPage { get; }
-        public IconPathPattern WaitAuto { get; }
-        public IconPathPattern BacklogVoice { get; }
+        public IconPathPattern WaitLine { get; init; }
+        public IconPathPattern WaitPage { get; init; }
+        public IconPathPattern WaitAuto { get; init; }
+        public IconPathPattern BacklogVoice { get; init; }
     }
 
     public sealed class Configuration
     {
+        public string ProfileName { get; }
+        public string ProductName { get; set; } = "NitroSharp";
         public int WindowWidth { get; set; } = 1280;
         public int WindowHeight { get; set; } = 720;
         public string WindowTitle { get; set; } = "Sample Text";
@@ -96,7 +83,7 @@ namespace NitroSharp
         public string ContentRoot { get; set; } = "Content";
         public string ScriptRoot { get; set; } = "nss";
         public bool EnableDiagnostics { get; set; }
-        public SystemScripts SysScripts { get; } = new SystemScripts();
+        public SystemScripts SysScripts { get; } = new();
 
         public bool UseUtf8 { get; set; } = false;
         public bool SkipUpToDateCheck { get; set; } = false;
@@ -106,20 +93,22 @@ namespace NitroSharp
 
         public IconPathPatterns IconPathPatterns { get; }
 
-        public Configuration(IconPathPatterns iconPathPatterns)
+        public Configuration(string profileName, IconPathPatterns iconPathPatterns)
         {
+            ProfileName = profileName;
             IconPathPatterns = iconPathPatterns;
         }
     }
 
-    internal sealed class FontConfiguration
+    [Persistable]
+    internal sealed partial class FontConfiguration
     {
         public FontConfiguration(
             FontFaceKey defaultFont,
             FontFaceKey? italicFont,
             PtFontSize defaultFontSize,
-            RgbaFloat defaultTextColor,
-            RgbaFloat? defaultOutlineColor,
+            Vector4 defaultTextColor,
+            Vector4? defaultOutlineColor,
             float rubyFontSizeMultiplier)
         {
             DefaultFont = defaultFont;
@@ -130,14 +119,14 @@ namespace NitroSharp
             RubyFontSizeMultiplier = rubyFontSizeMultiplier;
         }
 
-        public FontFaceKey DefaultFont { get; }
-        public FontFaceKey? ItalicFont { get; }
+        public FontFaceKey DefaultFont { get; init; }
+        public FontFaceKey? ItalicFont { get; init; }
         public PtFontSize DefaultFontSize { get; private set; }
-        public RgbaFloat DefaultTextColor { get; private set; }
-        public RgbaFloat? DefaultOutlineColor { get; private set; }
-        public float RubyFontSizeMultiplier { get; }
+        public Vector4 DefaultTextColor { get; private set; }
+        public Vector4? DefaultOutlineColor { get; private set; }
+        public float RubyFontSizeMultiplier { get; init; }
 
-        public FontConfiguration Clone() => new FontConfiguration(
+        public FontConfiguration Clone() => new(
             DefaultFont, ItalicFont,
             DefaultFontSize, DefaultTextColor,
             DefaultOutlineColor, RubyFontSizeMultiplier
@@ -149,13 +138,13 @@ namespace NitroSharp
             return this;
         }
 
-        public FontConfiguration WithDefaultColor(in RgbaFloat color)
+        public FontConfiguration WithDefaultColor(in Vector4 color)
         {
             DefaultTextColor = color;
             return this;
         }
 
-        public FontConfiguration WithOutlineColor(in RgbaFloat? color)
+        public FontConfiguration WithOutlineColor(in Vector4? color)
         {
             DefaultOutlineColor = color;
             return this;

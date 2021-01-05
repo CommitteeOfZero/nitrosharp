@@ -181,16 +181,11 @@ namespace NitroSharp
 
         private SpriteTexture? ResolveSpriteSource(string src, in RectangleU? srcRect = null)
         {
-            if (src == "SCREEN")
+            if (src is "SCREEN" or "Screen" or "VIDEO" or "Video")
             {
-                var result = SpriteTexture.FromStandalone(_renderCtx.CreateFullscreenTexture());
-                _ctx.Wait(
-                    CurrentThread,
-                    WaitCondition.FrameReady,
-                    timeout: null,
-                    entityQuery: null,
-                    result.Standalone
-                );
+                Texture screenshotTexture = _renderCtx.CreateFullscreenTexture();
+                var result = SpriteTexture.FromStandalone(screenshotTexture);
+                _ctx.Defer(DeferredOperation.CaptureFramebuffer(screenshotTexture));
                 return result;
             }
 
@@ -242,28 +237,20 @@ namespace NitroSharp
             if (ResolvePath(entityPath, out ResolvedEntityPath resolvedPath))
             {
                 var margin = new Vector4(0, 15, 34, 28);
-                var textBuffer = TextBuffer.FromPXmlString(pxmlText, _ctx.ActiveProcess.FontConfig);
-
                 uint w = width is { Variant: NsTextDimensionVariant.Value, Value: { } sWidth }
                     ? (uint)sWidth : uint.MaxValue;
                 uint h = height  is { Variant: NsTextDimensionVariant.Value, Value: { } sHeight }
                     ? (uint)sHeight : uint.MaxValue;
 
-                if (textBuffer.AssertSingleTextSegment() is TextSegment textSegment)
-                {
-                    var layout = new TextLayout(
-                        _ctx.GlyphRasterizer,
-                        textSegment.TextRuns.AsSpan(),
-                        w, h
-                    );
-                    World.Add(new TextBlock(
-                        resolvedPath,
-                        _renderCtx.Text,
-                        priority,
-                        layout,
-                        margin
-                    ).WithPosition(_renderCtx, x, y));
-                }
+                World.Add(new TextBlock(
+                    resolvedPath,
+                    _renderCtx.Text,
+                    priority,
+                    pxmlText,
+                    new Size(w, h),
+                    _ctx.ActiveProcess.FontConfig,
+                    margin
+                ).WithPosition(_renderCtx, x, y));
             }
         }
 
@@ -280,10 +267,14 @@ namespace NitroSharp
                 _ => size
             };
 
+            Vector4? outlinec = outlineOffset != NsOutlineOffset.Unspecified
+                ? outlineColor.ToVector4()
+                : null;
+
             _ctx.ActiveProcess.FontConfig
                 .WithDefaultSize(new PtFontSize(mapFontSize(size)))
-                .WithOutlineColor(outlineColor.ToRgbaFloat())
-                .WithDefaultColor(color.ToRgbaFloat());
+                .WithOutlineColor(outlinec)
+                .WithDefaultColor(color.ToVector4());
         }
 
         public override void CreateDialogueBox(
@@ -339,8 +330,7 @@ namespace NitroSharp
         {
             if (Get(dialoguePage) is DialoguePage page)
             {
-                var buffer = TextBuffer.FromPXmlString(text, _ctx.ActiveProcess.FontConfig);
-                page.Append(_renderCtx, buffer, _ctx.Backlog);
+                page.Append(_renderCtx, text, _ctx.ActiveProcess.FontConfig, _ctx.Backlog);
             }
         }
 
@@ -354,7 +344,7 @@ namespace NitroSharp
             );
         }
 
-        public override void WaitText(in EntityQuery query, TimeSpan timeout)
+        public override void WaitText(EntityQuery query, TimeSpan timeout)
         {
             _ctx.Wait(CurrentThread, WaitCondition.EntityIdle, null, query);
         }

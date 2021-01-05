@@ -380,7 +380,7 @@ namespace NitroSharp.Graphics
                     PolygonFillMode.Solid,
                     FrontFace.Clockwise,
                     depthClipEnabled: true,
-                    scissorTestEnabled: true
+                    scissorTestEnabled: false
                 ),
                 PrimitiveTopology.TriangleList,
                 new ShaderSetDescription(

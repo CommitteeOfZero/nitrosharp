@@ -3,7 +3,7 @@ param(
     [string]$CppCompiler = "clang"
 )
 
-$Framework = "netcoreapp3.1"
+$Framework = "net5.0"
 
 if ($Runtime -eq "") {
     if ($IsWindows -or $null -eq $IsWindows) {

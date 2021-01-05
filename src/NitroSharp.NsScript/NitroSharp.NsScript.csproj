@@ -1,8 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>netcoreapp3.1</TargetFrameworks>
-    <LangVersion>8.0</LangVersion>
+    <TargetFramework>net5.0</TargetFramework>
     <Nullable>enable</Nullable>
     <WarningsAsErrors>NU1605;CS8625;CS8600;CS8603</WarningsAsErrors>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -11,8 +10,11 @@
   <Import Project="..\..\OutputPath.props" />
 
   <ItemGroup>
-    <Compile Include="../Common/ArrayBuilder.cs" Link="Utilities/ArrayBuilder.cs" />
-    <Compile Include="../Common/ThrowHelper.cs" Link="Utilities/ThrowHelper.cs" />
+    <ProjectReference Include="..\NitroSharp.Common\NitroSharp.Common.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\NitroSharp.SourceGenerators\NitroSharp.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
 </Project>

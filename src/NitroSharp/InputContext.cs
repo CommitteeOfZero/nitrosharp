@@ -34,6 +34,7 @@ namespace NitroSharp
         public GameWindow Window => _rawInput.Window;
         public Vector2 MousePosition { get; private set; }
         public float WheelDelta { get; private set; }
+        public RawInput RawInput => _rawInput;
 
         public bool VKeyState(VirtualKey vkey) => _vkeyState[(int)vkey];
         public bool VKeyDown(VirtualKey vkey) => _newVkeys[(int)vkey];

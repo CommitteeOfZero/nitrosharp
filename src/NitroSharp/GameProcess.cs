@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using NitroSharp.Graphics;
 using NitroSharp.NsScript;
 using NitroSharp.NsScript.VM;
+using NitroSharp.Saving;
 using Veldrid;
 
 #nullable enable
@@ -20,7 +22,6 @@ namespace NitroSharp
         BezierMoveCompleted,
         TransitionCompleted,
         EntityIdle,
-        FrameReady,
         LineRead
     }
 
@@ -29,18 +30,27 @@ namespace NitroSharp
         public readonly NsScriptThread Thread;
         public readonly WaitCondition Condition;
         public readonly EntityQuery? EntityQuery;
-        public readonly Texture? ScreenshotTexture;
 
         public WaitOperation(
             NsScriptThread thread,
             WaitCondition condition,
-            EntityQuery? entityQuery,
-            Texture? screenshotTexture = null)
+            EntityQuery? entityQuery)
         {
             Thread = thread;
             Condition = condition;
             EntityQuery = entityQuery;
-            ScreenshotTexture = screenshotTexture;
+        }
+
+        public WaitOperation(NsScriptProcess vmProcess, in WaitOperationSaveData saveData)
+        {
+            Condition = saveData.WaitCondition;
+            EntityQuery = null;
+            if (saveData.EntityQuery is string entityQuery)
+            {
+                EntityQuery = new EntityQuery(entityQuery);
+            }
+
+            Thread = vmProcess.GetThread(saveData.ThreadId);
         }
 
         public void Deconstruct(out WaitCondition condition, out EntityQuery? query)
@@ -48,6 +58,13 @@ namespace NitroSharp
             condition = Condition;
             query = EntityQuery;
         }
+
+        public WaitOperationSaveData ToSaveData() => new()
+        {
+            ThreadId = Thread.Id,
+            EntityQuery = EntityQuery?.Value,
+            WaitCondition = Condition
+        };
     }
 
     internal sealed class GameProcess
@@ -64,6 +81,34 @@ namespace NitroSharp
             FontConfig = fontConfig;
         }
 
+        public GameProcess(
+            GameContext ctx,
+            in GameProcessSaveData saveData,
+            IReadOnlyList<Texture> standaloneTextures)
+        {
+            _waitOperations = new Queue<WaitOperation>();
+            _survivedWaits = new List<WaitOperation>();
+            FontConfig = saveData.FontConfig;
+
+            VmProcess = ctx.VM.RestoreProcess(saveData.VmProcessDump);
+
+            var loadingCtx = new GameLoadingContext
+            {
+                Process = this,
+                StandaloneTextures = standaloneTextures,
+                Rendering = ctx.RenderContext,
+                Content = ctx.Content,
+                VM = ctx.VM,
+                Backlog = ctx.Backlog
+            };
+
+            World = World.Load(saveData.World, loadingCtx);
+            foreach (WaitOperationSaveData waitOp in saveData.WaitOperations)
+            {
+                _waitOperations.Enqueue(new WaitOperation(VmProcess, waitOp));
+            }
+        }
+
         public NsScriptProcess VmProcess { get; }
         public World World { get; }
         public FontConfiguration FontConfig { get; }
@@ -72,14 +117,13 @@ namespace NitroSharp
             NsScriptThread thread,
             WaitCondition condition,
             TimeSpan? timeout = null,
-            EntityQuery? entityQuery = null,
-            Texture? screenshotTexture = null)
+            EntityQuery? entityQuery = null)
         {
             VmProcess.VM.SuspendThread(thread, timeout);
             if (condition != WaitCondition.None)
             {
                 _waitOperations.Enqueue(
-                    new WaitOperation(thread, condition, entityQuery, screenshotTexture)
+                    new WaitOperation(thread, condition, entityQuery)
                 );
             }
         }
@@ -93,10 +137,6 @@ namespace NitroSharp
                 if (ShouldResume(wait, ctx.InputContext))
                 {
                     VmProcess.VM.ResumeThread(wait.Thread);
-                    if (wait.ScreenshotTexture is Texture screenshotTexture)
-                    {
-                        ctx.RenderContext.CaptureFramebuffer(screenshotTexture);
-                    }
                 }
                 else
                 {
@@ -111,6 +151,14 @@ namespace NitroSharp
 
             _survivedWaits.Clear();
         }
+
+        public GameProcessSaveData Dump(GameSavingContext ctx) => new()
+        {
+            World = World.ToSaveData(ctx),
+            WaitOperations = _waitOperations.Select(x => x.ToSaveData()).ToArray(),
+            VmProcessDump = VmProcess.Dump(),
+            FontConfig = FontConfig
+        };
 
         public void Dispose()
         {
@@ -164,10 +212,26 @@ namespace NitroSharp
                 (WaitCondition.RotateCompleted, { } query) => checkAnim(query, AnimationKind.Rotate),
                 (WaitCondition.BezierMoveCompleted, { } query) => checkAnim(query, AnimationKind.BezierMove),
                 (WaitCondition.TransitionCompleted, { } query) => checkAnim(query, AnimationKind.Transition),
-                (WaitCondition.FrameReady, _) => true,
                 (WaitCondition.LineRead, { } query) => checkLineRead(query),
                 _ => false
             };
         }
+    }
+
+    [Persistable]
+    internal readonly partial struct GameProcessSaveData
+    {
+        public NsScriptProcessDump VmProcessDump { get; init; }
+        public WorldSaveData World { get; init; }
+        public WaitOperationSaveData[] WaitOperations { get; init; }
+        public FontConfiguration FontConfig { get; init; }
+    }
+
+    [Persistable]
+    internal readonly partial struct WaitOperationSaveData
+    {
+        public uint ThreadId { get; init; }
+        public WaitCondition WaitCondition { get; init; }
+        public string? EntityQuery { get; init; }
     }
 }

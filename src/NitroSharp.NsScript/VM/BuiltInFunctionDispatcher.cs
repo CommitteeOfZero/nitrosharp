@@ -8,13 +8,13 @@ namespace NitroSharp.NsScript.VM
 {
     internal sealed class BuiltInFunctionDispatcher
     {
-        private readonly ConstantValue[] _globals;
+        private readonly ConstantValue[] _variables;
         private BuiltInFunctions _impl;
         private ConstantValue? _result;
 
-        public BuiltInFunctionDispatcher(ConstantValue[] globals)
+        public BuiltInFunctionDispatcher(ConstantValue[] variables)
         {
-            _globals = globals;
+            _variables = variables;
             _impl = null!;
         }
 
@@ -206,6 +206,9 @@ namespace NitroSharp.NsScript.VM
                 case BuiltInFunction.Time:
                     Time();
                     break;
+                case BuiltInFunction.DateTime:
+                    DateTime(ref args);
+                    break;
 
                 case BuiltInFunction.CreateScrollbar:
                     CreateScrollbar(ref args);
@@ -215,6 +218,25 @@ namespace NitroSharp.NsScript.VM
                     break;
                 case BuiltInFunction.ScrollbarValue:
                     ScrollbarValue(ref args);
+                    break;
+
+                case BuiltInFunction.MountSavedata:
+                    MountSavedata(ref args);
+                    break;
+                case BuiltInFunction.ExistSave:
+                    ExistSave(ref args);
+                    break;
+                case BuiltInFunction.Save:
+                    Save(ref args);
+                    break;
+                case BuiltInFunction.Load:
+                    Load(ref args);
+                    break;
+                case BuiltInFunction.DeleteSaveFile:
+                    DeleteSaveFile(ref args);
+                    break;
+                case BuiltInFunction.AvailableFile:
+                    AvailableFile(ref args);
                     break;
 
                 case BuiltInFunction.assert:
@@ -277,6 +299,42 @@ namespace NitroSharp.NsScript.VM
             return result;
         }
 
+        private void Load(ref ArgConsumer args)
+        {
+            _impl.LoadGame(slot: args.TakeUInt());
+        }
+
+        private void AvailableFile(ref ArgConsumer args)
+        {
+            _result = ConstantValue.Boolean(
+                _impl.FileExists(path: args.TakeString())
+            );
+        }
+
+        private void MountSavedata(ref ArgConsumer args)
+        {
+            _result = ConstantValue.Boolean(
+                _impl.MountSaveData(slot: args.TakeUInt())
+            );
+        }
+
+        private void ExistSave(ref ArgConsumer args)
+        {
+            _result = ConstantValue.Boolean(
+                _impl.SaveExists(slot: args.TakeUInt())
+            );
+        }
+
+        private void Save(ref ArgConsumer args)
+        {
+            _impl.SaveGame(slot: args.TakeUInt());
+        }
+
+        private void DeleteSaveFile(ref ArgConsumer args)
+        {
+            _impl.DeleteSave(slot: args.TakeUInt());
+        }
+
         private void CreateCube(ref ArgConsumer args)
         {
             _impl.CreateCube(
@@ -296,8 +354,8 @@ namespace NitroSharp.NsScript.VM
             short xSlot = args.TakeRef();
             short ySlot = args.TakeRef();
             Vector2 position = _impl.GetCursorPosition();
-            _globals[xSlot] = ConstantValue.Number((int)position.X);
-            _globals[ySlot] = ConstantValue.Number((int)position.Y);
+            _variables[xSlot] = ConstantValue.Number((int)position.X);
+            _variables[ySlot] = ConstantValue.Number((int)position.Y);
         }
 
         private void Position(ref ArgConsumer args)
@@ -306,8 +364,8 @@ namespace NitroSharp.NsScript.VM
             short xSlot = args.TakeRef();
             short ySlot = args.TakeRef();
             Vector2 position = _impl.GetPosition(path);
-            _globals[xSlot] = ConstantValue.Number((int)position.X);
-            _globals[ySlot] = ConstantValue.Number((int)position.Y);
+            _variables[xSlot] = ConstantValue.Number((int)position.X);
+            _variables[ySlot] = ConstantValue.Number((int)position.Y);
         }
 
         private void SetScrollbar(ref ArgConsumer args)
@@ -783,7 +841,24 @@ namespace NitroSharp.NsScript.VM
 
         private void Time()
         {
-            SetResult(ConstantValue.Number(0));
+            SetResult(ConstantValue.Number(_impl.GetSecondsElapsed()));
+        }
+
+        private void DateTime(ref ArgConsumer args)
+        {
+            short yearSlot = args.TakeRef();
+            short monthSlot = args.TakeRef();
+            short daySlot = args.TakeRef();
+            short hourSlot = args.TakeRef();
+            short minuteSlot = args.TakeRef();
+            short secondSlot = args.TakeRef();
+            DateTime now = _impl.GetDateTime();
+            _variables[yearSlot] = ConstantValue.Number(now.Year);
+            _variables[monthSlot] = ConstantValue.Number(now.Month);
+            _variables[daySlot] = ConstantValue.Number(now.Day);
+            _variables[hourSlot] = ConstantValue.Number(now.Hour);
+            _variables[minuteSlot] = ConstantValue.Number(now.Minute);
+            _variables[secondSlot] = ConstantValue.Number(now.Second);
         }
 
         private void String(ref ArgConsumer args)

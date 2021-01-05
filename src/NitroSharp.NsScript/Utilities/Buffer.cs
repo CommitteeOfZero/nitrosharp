@@ -3,6 +3,20 @@ using System.Buffers;
 
 namespace NitroSharp.NsScript.Utilities
 {
+    internal readonly struct BufferSlice<T>
+    {
+        public BufferSlice(IBuffer<T> buffer, uint length)
+        {
+            Buffer = buffer;
+            Length = length;
+        }
+
+        public IBuffer<T> Buffer { get; }
+        public uint Length { get; }
+
+        public Span<T> AsSpan() => Buffer.AsSpan().Slice(0, (int)Length);
+    }
+
     internal interface IBuffer<T> : IDisposable
     {
         uint Length { get; }

@@ -164,9 +164,9 @@ namespace NitroSharp.Text
 
             private void FinalizeTextRun()
             {
-                Debug.Assert(_fontConfig != null);
+                Debug.Assert(_fontConfig is not null);
                 ref readonly TextRunData data = ref _textRunData;
-                if (data.Text == null) { return; }
+                if (data.Text is null) { return; }
                 FontFaceKey font = _fontConfig.DefaultFont;
                 if (data.Italic && _fontConfig.ItalicFont.HasValue)
                 {
@@ -177,11 +177,11 @@ namespace NitroSharp.Text
                     ? new PtFontSize(data.FontSize.Value)
                     : _fontConfig.DefaultFontSize;
 
-                RgbaFloat color = data.Color ?? _fontConfig.DefaultTextColor;
-                RgbaFloat? outlineColor = data.OutlineColor ?? _fontConfig.DefaultOutlineColor;
+                RgbaFloat color = data.Color ?? new RgbaFloat(_fontConfig.DefaultTextColor);
+                RgbaFloat? outlineColor = data.OutlineColor ?? _fontConfig.DefaultOutlineColor?.ToRgbaFloat();
 
                 TextRun textRun;
-                if (data.RubyText == null)
+                if (data.RubyText is null)
                 {
                     textRun = TextRun.Regular(
                         data.Text.AsMemory(),
@@ -199,7 +199,9 @@ namespace NitroSharp.Text
                     );
                 }
                 _textRuns.Add(textRun);
-                _textRunData = default;
+                _textRunData.RubyText = null;
+                _textRunData.Text = null;
+                //_textRunData = default;
             }
 
             private void FinalizeTextSegment()

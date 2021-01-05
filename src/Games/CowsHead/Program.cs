@@ -7,6 +7,8 @@ using NitroSharp.Launcher;
 
 using FFmpegLibs = FFmpeg.AutoGen.NativeLibs;
 
+#nullable enable
+
 namespace CowsHead
 {
     class Program
@@ -59,8 +61,8 @@ namespace CowsHead
             NativeLibrary.SetDllImportResolver(typeof(OpenAL.NativeLib).Assembly, ResolveDllImport);
             NativeLibrary.SetDllImportResolver(typeof(FFmpeg.AutoGen.ffmpeg).Assembly, ResolveDllImport);
 #endif
-            Console.OutputEncoding = Encoding.Unicode;
-            return GameLauncher.Launch("Game.json");
+            Console.OutputEncoding = Encoding.UTF8;
+            return GameLauncher.Launch("COWS;HEAD NOAH", "Game.json");
         }
 
         private static void LoadNativeDependencies()

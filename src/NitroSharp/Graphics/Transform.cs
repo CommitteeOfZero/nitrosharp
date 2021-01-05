@@ -7,7 +7,8 @@ using System.Runtime.InteropServices;
 namespace NitroSharp.Graphics
 {
     [StructLayout(LayoutKind.Auto)]
-    internal struct Transform
+    [Persistable]
+    internal partial struct Transform
     {
         public Vector3 Position;
         public Vector3 Scale;

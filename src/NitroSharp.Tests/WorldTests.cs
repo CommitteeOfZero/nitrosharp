@@ -24,7 +24,7 @@ namespace NitroSharp.Tests
             {
                 var path = new EntityPath(name);
                 ResolvedEntityPath resolvedPath = _world.ResolvePath(0, path);
-                _world.Add(new SimpleEntity(resolvedPath));
+                _world.Add(new BasicEntity(resolvedPath));
                 int level = name.Count(c => c == '/');
                 levels[level].Add(path);
             }
@@ -81,12 +81,12 @@ namespace NitroSharp.Tests
         public void SetAlias()
         {
             var resolvedPath = _world.ResolvePath(0, new EntityPath("parent"));
-            var parent = _world.Add(new SimpleEntity(resolvedPath));
+            var parent = _world.Add(new BasicEntity(resolvedPath));
             _world.SetAlias(parent.Id, new EntityPath("alias"));
             Assert.Equal(parent, _world.Get(0, new EntityPath("@alias")));
 
             resolvedPath = _world.ResolvePath(0, new EntityPath("parent/child"));
-            var child = _world.Add(new SimpleEntity(resolvedPath));
+            var child = _world.Add(new BasicEntity(resolvedPath));
             Assert.Equal(child, _world.Get(0, new EntityPath("@alias/child")));
 
             _world.DestroyEntity(child);
@@ -97,13 +97,13 @@ namespace NitroSharp.Tests
         [Fact]
         public void ComplexQuery()
         {
-            var parent = _world.Add(new SimpleEntity(_world.ResolvePath(0, new EntityPath("parent"))));
-            var child = _world.Add(new SimpleEntity(_world.ResolvePath(0, new EntityPath("parent/child"))));
-            var grandchild = _world.Add(new SimpleEntity(_world.ResolvePath(0, new EntityPath("parent/child/MouseOver/grandchild"))));
+            var parent = _world.Add(new BasicEntity(_world.ResolvePath(0, new EntityPath("parent"))));
+            var child = _world.Add(new BasicEntity(_world.ResolvePath(0, new EntityPath("parent/child"))));
+            var grandchild = _world.Add(new BasicEntity(_world.ResolvePath(0, new EntityPath("parent/child/MouseOver/grandchild"))));
 
-            var parent2 = _world.Add(new SimpleEntity(_world.ResolvePath(0, new EntityPath("parent2"))));
-            var child2 = _world.Add(new SimpleEntity(_world.ResolvePath(0, new EntityPath("parent2/child2"))));
-            var grandchild2 = _world.Add(new SimpleEntity(_world.ResolvePath(0, new EntityPath("parent2/child2/MouseOver/grandchild2"))));
+            var parent2 = _world.Add(new BasicEntity(_world.ResolvePath(0, new EntityPath("parent2"))));
+            var child2 = _world.Add(new BasicEntity(_world.ResolvePath(0, new EntityPath("parent2/child2"))));
+            var grandchild2 = _world.Add(new BasicEntity(_world.ResolvePath(0, new EntityPath("parent2/child2/MouseOver/grandchild2"))));
 
             _world.SetAlias(child.Id, new EntityPath("alias"));
             _world.SetAlias(child2.Id, new EntityPath("alias2"));

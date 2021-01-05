@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using NitroSharp.NsScript;
+using NitroSharp.Saving;
 
 #nullable enable
 
@@ -10,19 +11,11 @@ namespace NitroSharp.Graphics
 {
     internal sealed class Choice : Entity, UiElement
     {
-        private struct FocusData
-        {
-            public EntityId Left;
-            public EntityId Up;
-            public EntityId Right;
-            public EntityId Down;
-        }
-
         private MouseState _mouseState;
         private MouseState _prevMouseState;
         private readonly List<RenderItem2D> _mouseOverVisuals;
         private readonly List<RenderItem2D> _mouseDownVisuals;
-        private FocusData _nextFocus;
+        private ChoiceFocusData _nextFocus;
 
         public Choice(in ResolvedEntityPath path)
             : base(path)
@@ -30,6 +23,33 @@ namespace NitroSharp.Graphics
             _mouseOverVisuals = new List<RenderItem2D>();
             _mouseDownVisuals = new List<RenderItem2D>();
             _prevMouseState = _mouseState = MouseState.Normal;
+        }
+
+        public Choice(in ResolvedEntityPath path, ChoiceSaveData saveData, World world)
+            : base(path, saveData.CommonEntityData)
+        {
+            if (saveData.DefaultVisual.IsValid)
+            {
+                DefaultVisual = world.Get(saveData.DefaultVisual) as RenderItem2D;
+            }
+
+            _nextFocus = saveData.NextFocus;
+            _mouseOverVisuals = new List<RenderItem2D>();
+            _mouseDownVisuals = new List<RenderItem2D>();
+            foreach (EntityId entityId in saveData.MouseOverVisuals)
+            {
+                if (world.Get(entityId) is RenderItem2D mouseOver)
+                {
+                    _mouseOverVisuals.Add(mouseOver);
+                }
+            }
+            foreach (EntityId entityId in saveData.MouseDownVisuals)
+            {
+                if (world.Get(entityId) is RenderItem2D mouseDown)
+                {
+                    _mouseDownVisuals.Add(mouseDown);
+                }
+            }
         }
 
         public RenderItem2D? DefaultVisual { get; set; }
@@ -40,6 +60,7 @@ namespace NitroSharp.Graphics
         public bool CanFocus { get; private set; }
 
         public bool IsHovered => _mouseState == MouseState.Over;
+        public override EntityKind Kind => EntityKind.Choice;
         public override bool IsIdle => true;
 
         public void AddMouseOver(RenderItem2D visual)
@@ -176,5 +197,35 @@ namespace NitroSharp.Graphics
 
             return false;
         }
+
+        public new ChoiceSaveData ToSaveData(GameSavingContext ctx) => new()
+        {
+            Common = base.ToSaveData(ctx),
+            DefaultVisual = DefaultVisual?.Id ?? EntityId.Invalid,
+            MouseOverVisuals = _mouseOverVisuals.Select(x => x.Id).ToArray(),
+            MouseDownVisuals = _mouseDownVisuals.Select(x => x.Id).ToArray(),
+            NextFocus = _nextFocus
+        };
+    }
+
+    [Persistable]
+    internal partial struct ChoiceFocusData
+    {
+        public EntityId Left;
+        public EntityId Up;
+        public EntityId Right;
+        public EntityId Down;
+    }
+
+    [Persistable]
+    internal readonly partial struct ChoiceSaveData : IEntitySaveData
+    {
+        public EntitySaveData Common { get; init; }
+        public EntityId DefaultVisual { get; init; }
+        public EntityId[] MouseOverVisuals { get; init; }
+        public EntityId[] MouseDownVisuals { get; init; }
+        public ChoiceFocusData NextFocus { get; init; }
+
+        public EntitySaveData CommonEntityData => Common;
     }
 }

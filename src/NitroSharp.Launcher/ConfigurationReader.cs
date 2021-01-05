@@ -35,20 +35,18 @@ namespace NitroSharp.Launcher
             using (FileStream stream = File.OpenRead(configPath))
             {
                 var root = JsonValue.Load(stream);
+                var icons = new IconPathPatterns
+                {
+                    WaitLine = new IconPathPattern(getRequired(root, "icons.waitLine")),
+                    WaitPage = new IconPathPattern(getRequired(root, "icons.waitPage")),
+                    WaitAuto = new IconPathPattern(getRequired(root, "icons.waitAuto")),
+                    BacklogVoice = new IconPathPattern(getRequired(root, "icons.backlogVoice"))
+                };
 
-                string waitLineIcon = getRequired(root, "icons.waitLine");
-                string waitPageIcon = getRequired(root, "icons.waitPage");
-                string waitAutoIcon = getRequired(root, "icons.waitAuto");
-                string backlogVoiceIcon = getRequired(root, "icons.backlogVoice");
+                string profileName = root["activeProfile"];
+                JsonValue profile = root["profiles"][profileName];
 
-                var icons = new IconPathPatterns(
-                    new IconPathPattern(waitLineIcon),
-                    new IconPathPattern(waitPageIcon),
-                    new IconPathPattern(waitAutoIcon),
-                    new IconPathPattern(backlogVoiceIcon)
-                );
-
-                var configuration = new Configuration(icons);
+                var configuration = new Configuration(profileName, icons);
                 foreach (KeyValuePair<string, JsonValue>? property in root)
                 {
                     if (property is { } p)
@@ -56,9 +54,6 @@ namespace NitroSharp.Launcher
                         Set(configuration, p);
                     }
                 }
-
-                string profileName = root["activeProfile"];
-                JsonValue profile = root["profiles"][profileName];
 
                 foreach (KeyValuePair<string, JsonValue>? property in profile)
                 {

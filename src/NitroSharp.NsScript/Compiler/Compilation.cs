@@ -15,14 +15,14 @@ namespace NitroSharp.NsScript.Compiler
         private readonly string _outputDirectory;
         private readonly string _globalsFileName;
         private readonly Encoding? _sourceTextEncoding;
-        private readonly Dictionary<ResolvedPath, SyntaxTree> _syntaxTrees;
-        private readonly Dictionary<SyntaxTree, SourceModuleSymbol> _sourceModuleSymbols;
+        private readonly Dictionary<ResolvedPath, SyntaxTree> _syntaxTrees = new();
+        private readonly Dictionary<SyntaxTree, SourceModuleSymbol> _sourceModuleSymbols = new();
 
-        private readonly Dictionary<ResolvedPath, NsxModuleBuilder> _nsxModuleBuilders;
-        private readonly TokenMap<string> _globals = new TokenMap<string>(4096);
-        private readonly List<string> _systemVariables = new List<string>();
-
-        internal readonly HashSet<string> BoundVariables = new HashSet<string>();
+        private readonly Dictionary<ResolvedPath, NsxModuleBuilder> _nsxModuleBuilders = new();
+        private readonly TokenMap<string> _variables = new(4096);
+        private readonly TokenMap<string> _flags = new(256);
+        private readonly List<string> _systemVariables = new();
+        private readonly List<string> _systemFlags = new();
 
         public Compilation(string rootSourceDirectory,
                            string outputDirectory,
@@ -44,9 +44,6 @@ namespace NitroSharp.NsScript.Compiler
             _outputDirectory = outputDirectory;
             _globalsFileName = globalsFileName;
             _sourceTextEncoding = sourceTextEncoding;
-            _syntaxTrees = new Dictionary<ResolvedPath, SyntaxTree>();
-            _sourceModuleSymbols = new Dictionary<SyntaxTree, SourceModuleSymbol>();
-            _nsxModuleBuilders = new Dictionary<ResolvedPath, NsxModuleBuilder>();
         }
 
         public SourceReferenceResolver SourceReferenceResolver => _sourceReferenceResolver;
@@ -79,33 +76,60 @@ namespace NitroSharp.NsScript.Compiler
             string globalsFileName = Path.Combine(_outputDirectory, _globalsFileName);
             using (FileStream file = File.Create(globalsFileName))
             {
-                uint offsetTableSize = _globals.Count * 4 + 2;
-                using var offsetTableBuffer = PooledBuffer<byte>.Allocate(offsetTableSize);
-                var offsetWriter = new BufferWriter(offsetTableBuffer);
-                offsetWriter.WriteUInt16LE((ushort)_globals.Count);
-
-                uint sysVarListSize = (uint)(_systemVariables.Count * 2 + 4);
-                using var sysVarList = PooledBuffer<byte>.Allocate(sysVarListSize);
-                var sysVarListWriter = new BufferWriter(sysVarList);
-                sysVarListWriter.WriteUInt16LE((ushort)_systemVariables.Count);
-
                 using var nameHeapBuffer = PooledBuffer<byte>.Allocate(32 * 1024);
                 var nameWriter = new BufferWriter(nameHeapBuffer);
-                ReadOnlySpan<string> variables = _globals.AsSpan();
-                for (int i = 0; i < variables.Length; i++)
+                (BufferSlice<byte> varOffsets, BufferSlice<byte> sysVarList) = writeGlobals(
+                    _variables,
+                    _systemVariables,
+                    ref nameWriter
+                );
+                (BufferSlice<byte> flagOffsets, BufferSlice<byte> sysFlagList) = writeGlobals(
+                    _flags,
+                    _systemFlags,
+                    ref nameWriter
+                );
+
+                static (BufferSlice<byte> offsets, BufferSlice<byte> sysList) writeGlobals(
+                    TokenMap<string> globals,
+                    List<string> systemGlobals,
+                    ref BufferWriter nameWriter)
                 {
-                    string var = variables[i];
-                    offsetWriter.WriteInt32LE(nameWriter.Position);
-                    if (var.StartsWith("SYSTEM"))
+                    uint offsetTableSize = globals.Count * 4 + 2;
+                    var offsetTableBuffer = PooledBuffer<byte>.Allocate(offsetTableSize);
+                    var offsetWriter = new BufferWriter(offsetTableBuffer);
+                    offsetWriter.WriteUInt16LE((ushort)globals.Count);
+
+                    uint sysListSize = (uint)(systemGlobals.Count * 2 + 4);
+                    var sysListBuffer = PooledBuffer<byte>.Allocate(sysListSize);
+                    var sysListWriter = new BufferWriter(sysListBuffer);
+                    sysListWriter.WriteUInt16LE((ushort)systemGlobals.Count);
+
+                    ReadOnlySpan<string> globalsSpan = globals.AsSpan();
+                    for (int i = 0; i < globalsSpan.Length; i++)
                     {
-                        sysVarListWriter.WriteUInt16LE((ushort)i);
+                        string name = globalsSpan[i];
+                        offsetWriter.WriteInt32LE(nameWriter.Position);
+                        if (name.StartsWith("SYSTEM"))
+                        {
+                            sysListWriter.WriteUInt16LE((ushort)i);
+                        }
+                        nameWriter.WriteLengthPrefixedUtf8String(name);
                     }
-                    nameWriter.WriteLengthPrefixedUtf8String(var);
+
+                    var offsets = new BufferSlice<byte>(offsetTableBuffer, (uint)offsetWriter.Position);
+                    var sysList = new BufferSlice<byte>(sysListBuffer, (uint)sysListWriter.Position);
+                    return (offsets, sysList);
                 }
 
-                file.Write(offsetWriter.Written);
-                file.Write(sysVarListWriter.Written);
+                file.Write(varOffsets.AsSpan());
+                file.Write(sysVarList.AsSpan());
+                file.Write(flagOffsets.AsSpan());
+                file.Write(sysFlagList.AsSpan());
                 file.Write(nameWriter.Written);
+                varOffsets.Buffer.Dispose();
+                sysVarList.Buffer.Dispose();
+                flagOffsets.Buffer.Dispose();
+                sysFlagList.Buffer.Dispose();
             }
         }
 
@@ -193,21 +217,35 @@ namespace NitroSharp.NsScript.Compiler
             return moduleBuilder;
         }
 
-        internal ushort GetGlobalVarToken(string variableName)
+        internal ushort GetVariableToken(string name)
         {
-            if (!_globals.TryGetToken(variableName, out ushort token))
+            if (!_variables.TryGetToken(name, out ushort token))
             {
-                token = _globals.AddToken(variableName);
-                if (variableName.StartsWith("SYSTEM"))
+                token = _variables.AddToken(name);
+                if (name.StartsWith("SYSTEM"))
                 {
-                    _systemVariables.Add(variableName);
+                    _systemVariables.Add(name);
                 }
             }
 
             return token;
         }
 
-        internal bool TryGetGlobalVarToken(string variableName, out ushort token)
-            => _globals.TryGetToken(variableName, out token);
+        internal ushort GetFlagToken(string name)
+        {
+            if (!_flags.TryGetToken(name, out ushort token))
+            {
+                token = _flags.AddToken(name);
+                if (name.StartsWith("SYSTEM"))
+                {
+                    _systemFlags.Add(name);
+                }
+            }
+
+            return token;
+        }
+
+        internal bool TryGetVariableToken(string variableName, out ushort token)
+            => _variables.TryGetToken(variableName, out token);
     }
 }

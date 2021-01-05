@@ -1,6 +1,36 @@
 ﻿<Directives>
   <Application>
-    <Assembly Name="SharpDX">
+    <Assembly Name="Vortice.Runtime.COM">
+      <Type Name="SharpGen.Runtime.ComObject" Dynamic="Required All" />
+      <Type Name="SharpGen.Runtime.ComObjectShadow" Dynamic="Required All" />
+      <Type Name="SharpGen.Runtime.Win32.ComStreamProxy" Dynamic="Required All" />
+    </Assembly>
+
+    <Assembly Name="SharpGen.Runtime">
+      <Type Name="SharpGen.Runtime.CppObject" Dynamic="Required All" />
+      <Type Name="SharpGen.Runtime.CppObjectShadow" Dynamic="Required All" />
+      <Type Name="SharpGen.Runtime.ShadowAttribute" Dynamic="Required All" />
+      <Type Name="SharpGen.Runtime.ShadowContainer" Dynamic="Required All" />
+    </Assembly>
+
+    <Assembly Name="Vortice.Direct3D11">
+      <Type Name="Vortice.Direct3D11.ID3D11DeviceContext1" Dynamic="Required All" />
+      <Type Name="Vortice.Direct3D11.ID3D11Texture2D" Dynamic="Required All" />
+      <Type Name="Vortice.Direct3D11.Debug.ID3D11Debug" Dynamic="Required All" />
+      <Type Name="Vortice.Direct3D11.ID3DUserDefinedAnnotation" Dynamic="Required All" />
+    </Assembly>
+
+    <Assembly Name="Vortice.DXGI">
+      <Type Name="Vortice.DXGI.IDXGIDevice" Dynamic="Required All" />
+      <Type Name="Vortice.DXGI.IDXGIDevice1" Dynamic="Required All" />
+      <Type Name="Vortice.DXGI.IDXGIDevice2" Dynamic="Required All" />
+      <Type Name="Vortice.DXGI.IDXGIDevice3" Dynamic="Required All" />
+      <Type Name="Vortice.DXGI.IDXGISwapChain1" Dynamic="Required All" />
+      <Type Name="Vortice.DXGI.IDXGISwapChain2" Dynamic="Required All" />
+      <Type Name="Vortice.DXGI.IDXGIFactory" Dynamic="Required All" />
+    </Assembly>
+    
+    <!--<Assembly Name="SharpDX">
       <Type Name="SharpDX.ShadowAttribute" Dynamic="Required All" />
       <Type Name="SharpDX.ShadowContainer" Dynamic="Required All" />
       <Type Name="SharpDX.ComObjectShadow" Dynamic="Required All" />
@@ -20,6 +50,6 @@
       <Type Name="SharpDX.Direct3D11.DeviceContext1" Dynamic="Required All" />
       <Type Name="SharpDX.Direct3D11.DeviceDebug" Dynamic="Required All" />
       <Type Name="SharpDX.Direct3D11.UserDefinedAnnotation" Dynamic="Required All" />
-    </Assembly>
+    </Assembly>-->
   </Application>
 </Directives>

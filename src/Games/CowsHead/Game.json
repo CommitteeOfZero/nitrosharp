@@ -15,11 +15,11 @@
 
   "profiles": {
     "Noah": {
-      "startupScript": "boot.nss"
+      "startupScript": "boot_any.nss"
     },
 
     "CoZ": {
-      "startupScript": "boot_any.nss",
+      "startupScript": "boot_any2.nss",
       "dev.useUtf8": true,
       "dev.scriptRoot": "coz/nss"
     },

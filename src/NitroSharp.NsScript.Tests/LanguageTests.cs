@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Threading;
-using NitroSharp.NsScript;
 using NitroSharp.NsScript.Compiler;
 using NitroSharp.NsScript.VM;
 using Xunit;
@@ -73,7 +72,7 @@ namespace NitroSharp.NsScriptCompiler.Tests
         {
             var compCtx = new CompilationContext();
             TestModule = compCtx.TestModule;
-            compCtx.Compilation.Emit(TestModule);
+            compCtx.Compilation.Emit(new[] { TestModule });
             using FileStream globals = File.OpenRead(
                 Path.Combine(compCtx.NsxDir, compCtx.GlobalsFileName)
             );
@@ -97,10 +96,10 @@ namespace NitroSharp.NsScriptCompiler.Tests
 
         [Theory]
         [ClassData(typeof(TestDiscoverer))]
-        public void test(string module, string function)
+        public void Test(string module, string function)
         {
-            _context.VM.CreateThread(module, function, start: true);
-            _context.VM.Run(_context.BuiltInFunctions, CancellationToken.None);
+            NsScriptProcess process = _context.VM.CreateProcess(module, function);
+            _context.VM.Run(process, _context.BuiltInFunctions, CancellationToken.None);
         }
     }
 }

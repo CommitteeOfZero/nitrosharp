@@ -1,6 +1,8 @@
 using NitroSharp.Graphics;
 using NitroSharp.NsScript;
 using NitroSharp.NsScript.VM;
+using NitroSharp.Saving;
+using Veldrid;
 
 namespace NitroSharp
 {
@@ -28,9 +30,23 @@ namespace NitroSharp
             }
         }
 
+        public VmThread(
+            in ResolvedEntityPath path,
+            in VmThreadSaveData saveData,
+            NsScriptVM vm,
+            NsScriptProcess process)
+            : base(path, saveData.Common)
+        {
+            _vm = vm;
+            Target = saveData.Target;
+            Thread = process.GetThread(saveData.ThreadId);
+        }
+
         public string Target { get; }
         public NsScriptThread Thread { get; private set; }
         public override bool IsIdle => !Thread.IsActive || Thread.DoneExecuting;
+
+        public override EntityKind Kind => EntityKind.VmThread;
 
         public void Restart()
         {
@@ -50,5 +66,22 @@ namespace NitroSharp
         {
             Terminate();
         }
+
+        public new VmThreadSaveData ToSaveData(GameSavingContext ctx) => new()
+        {
+            Common = base.ToSaveData(ctx),
+            ThreadId = Thread.Id,
+            Target = Target
+        };
+    }
+
+    [Persistable]
+    internal readonly partial struct VmThreadSaveData : IEntitySaveData
+    {
+        public EntitySaveData Common { get; init; }
+        public uint ThreadId { get; init; }
+        public string Target { get; init; }
+
+        public EntitySaveData CommonEntityData => Common;
     }
 }

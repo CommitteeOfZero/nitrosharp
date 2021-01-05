@@ -18,6 +18,8 @@ namespace NitroSharp.NsScript.Utilities
 
         public ref T this[int index] => ref _array[index];
 
+        public ReadOnlySpan<T> AsSpan() => _array.AsSpan(0, _size);
+
         public ReadOnlySpan<T> AsSpan(int start, int length)
             => _array.AsSpan(start, length);
 

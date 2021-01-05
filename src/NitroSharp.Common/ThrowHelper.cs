@@ -3,7 +3,7 @@ using System.IO;
 
 namespace NitroSharp
 {
-    internal static class ThrowHelper
+    public static class ThrowHelper
     {
         public static T UnexpectedValue<T>()
             => throw new InvalidOperationException($"Unexpected value of type {typeof(T).Name}.");

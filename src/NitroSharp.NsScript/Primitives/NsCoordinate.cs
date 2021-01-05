@@ -1,5 +1,6 @@
 using System;
 using System.Runtime.InteropServices;
+using MessagePack;
 
 namespace NitroSharp.NsScript.Primitives
 {
@@ -42,6 +43,40 @@ namespace NitroSharp.NsScript.Primitives
 
         public NsCoordinate(NsAlignment alignment, float anchorPoint) : this()
             => (Kind, Alignment, AnchorPoint) = (NsCoordinateKind.Alignment, alignment, anchorPoint);
+
+        public NsCoordinate(ref MessagePackReader reader)
+        {
+            reader.ReadArrayHeader();
+            Kind = (NsCoordinateKind)reader.ReadInt32();
+            (Value, Alignment, AnchorPoint) = (default, default, default);
+            switch (Kind)
+            {
+                case NsCoordinateKind.Value:
+                    Value = (reader.ReadSingle(), reader.ReadBoolean());
+                    break;
+                case NsCoordinateKind.Alignment:
+                    Alignment = (NsAlignment)reader.ReadInt32();
+                    AnchorPoint = reader.ReadSingle();
+                    break;
+            }
+        }
+
+        public void Serialize(ref MessagePackWriter writer)
+        {
+            writer.WriteArrayHeader(3);
+            writer.Write((int)Kind);
+            switch (Kind)
+            {
+                case NsCoordinateKind.Value:
+                    writer.Write(Value.pos);
+                    writer.Write(Value.isRelative);
+                    break;
+                case NsCoordinateKind.Alignment:
+                    writer.Write((int)Alignment);
+                    writer.Write(AnchorPoint);
+                    break;
+            }
+        }
 
         public static NsCoordinate Inherit()
             => new NsCoordinate(NsCoordinateKind.Inherit);

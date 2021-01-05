@@ -2,6 +2,8 @@
 using NitroSharp.Utilities;
 using System;
 using System.Text;
+using NitroSharp.NsScript;
+using NitroSharp.NsScript.VM;
 
 #nullable enable
 
@@ -19,11 +21,13 @@ namespace NitroSharp
 
     internal sealed class Backlog
     {
+        private readonly SystemVariableLookup _systemVariables;
         private ArrayBuilder<BacklogEntry> _entries;
         private readonly StringBuilder _sb;
 
-        public Backlog()
+        public Backlog(SystemVariableLookup systemVariables)
         {
+            _systemVariables = systemVariables;
             _entries = new ArrayBuilder<BacklogEntry>(1024);
             _sb = new StringBuilder();
         }
@@ -41,7 +45,9 @@ namespace NitroSharp
 
             if (_sb.Length > 0)
             {
-                _entries.Add(new BacklogEntry(_sb.ToString()));
+                string s = _sb.ToString();
+                _systemVariables.LastText = ConstantValue.String(s);
+                _entries.Add(new BacklogEntry(s));
             }
         }
 

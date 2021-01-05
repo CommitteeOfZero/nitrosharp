@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using System.Threading.Tasks;
+using NitroSharp.Saving;
 using Veldrid;
 
 namespace NitroSharp.Graphics
@@ -20,7 +21,7 @@ namespace NitroSharp.Graphics
             Opacity = 1.0f;
         }
 
-        public static readonly VertexLayoutDescription LayoutDescription = new VertexLayoutDescription(
+        public static readonly VertexLayoutDescription LayoutDescription = new(
             new VertexElementDescription(
                 "vs_Position",
                 VertexElementSemantic.TextureCoordinate,
@@ -37,6 +38,7 @@ namespace NitroSharp.Graphics
     internal sealed class Cube : RenderItem
     {
         private readonly Texture _texture;
+        private readonly string[] _texturePaths;
 
         public static ReadOnlySpan<CubeVertex> Vertices => new[]
         {
@@ -82,17 +84,33 @@ namespace NitroSharp.Graphics
             20,21,22, 20,22,23
         };
 
-        public Cube(in ResolvedEntityPath path, int priority, Texture texture)
+        private Cube(in ResolvedEntityPath path, int priority, Texture texture, string[] texturePaths)
             : base(in path, priority)
         {
             _texture = texture;
+            _texturePaths = texturePaths;
         }
+
+        public Cube(in ResolvedEntityPath path, in CubeSaveData saveData, RenderContext ctx)
+            : base(path, saveData.Common)
+        {
+            _texture = CreateCubemap(ctx, saveData.TexturePaths);
+            _texturePaths = saveData.TexturePaths;
+        }
+
+        public override EntityKind Kind => EntityKind.Cube;
 
         public static Cube Load(
             in ResolvedEntityPath path,
             int priority,
             RenderContext renderCtx,
             params string[] texturePaths)
+        {
+            Texture dstTexture = CreateCubemap(renderCtx, texturePaths);
+            return new Cube(path, priority, dstTexture, texturePaths);
+        }
+
+        private static Texture CreateCubemap(RenderContext renderCtx, string[] texturePaths)
         {
             ContentManager content = renderCtx.Content;
             ResourceFactory rf = renderCtx.ResourceFactory;
@@ -109,7 +127,7 @@ namespace NitroSharp.Graphics
             ));
 
             GraphicsDevice gd = renderCtx.GraphicsDevice;
-            CommandList cl = renderCtx.SecondaryCommandList;
+            CommandList cl = renderCtx.TransferCommands;
             for (uint i = 0; i < textures.Length; i++)
             {
                 cl.CopyTexture(
@@ -128,7 +146,7 @@ namespace NitroSharp.Graphics
                 }
             }
 
-            return new Cube(path, priority, dstTexture);
+            return dstTexture;
         }
 
         protected override void Update(GameContext ctx)
@@ -167,9 +185,24 @@ namespace NitroSharp.Graphics
             });
         }
 
+        public new CubeSaveData ToSaveData(GameSavingContext ctx) => new()
+        {
+            Common = base.ToSaveData(ctx),
+            TexturePaths = _texturePaths
+        };
+
         public override void Dispose()
         {
             _texture.Dispose();
         }
+    }
+
+    [Persistable]
+    internal readonly partial struct CubeSaveData : IEntitySaveData
+    {
+        public RenderItemSaveData Common { get; init; }
+        public string[] TexturePaths { get; init; }
+
+        public EntitySaveData CommonEntityData => Common.EntityData;
     }
 }

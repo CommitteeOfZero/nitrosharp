@@ -36,7 +36,7 @@ namespace NitroSharp.NsScript.Compiler
             {
                 foreach (ParameterSymbol p in function.Parameters)
                 {
-                    _ = GetGlobalVarToken(p.Name);
+                    _ = GetVariableToken(p.Name);
                 }
             }
         }
@@ -62,8 +62,11 @@ namespace NitroSharp.NsScript.Compiler
         private void EmitOpcode(Opcode opcode)
             => _code.WriteByte((byte)opcode);
 
-        private ushort GetGlobalVarToken(string variableName)
-            => _compilation.GetGlobalVarToken(variableName);
+        private ushort GetVariableToken(string name)
+            => _compilation.GetVariableToken(name);
+
+        private ushort GetFlagToken(string name)
+            => _compilation.GetFlagToken(name);
 
         public static void CompileSubroutine(
             NsxModuleBuilder moduleBuilder, SubroutineSymbol subroutine,
@@ -163,22 +166,21 @@ namespace NitroSharp.NsScript.Compiler
 
         private void EmitNameExpression(NameExpressionSyntax expression)
         {
-            var spanned = new Spanned<string>(expression.Name, expression.Span);
-            bool isDefinitelyVariable = expression.HasSigil;
-            LookupResult lookupResult = _checker.LookupNonInvocableSymbol(spanned, isDefinitelyVariable);
-            switch (lookupResult._variant)
+            LookupResult lookupResult = _checker.LookupNonInvocableSymbol(expression);
+            switch (lookupResult.Variant)
             {
                 case LookupResultVariant.BuiltInConstant:
                     EmitLoadImm(ConstantValue.BuiltInConstant(lookupResult.BuiltInConstant));
                     break;
-                case LookupResultVariant.GlobalVariable:
-                    ushort varToken = GetGlobalVarToken(lookupResult.GlobalVariable);
+                case LookupResultVariant.Variable:
+                    ushort varToken = GetVariableToken(lookupResult.Global);
                     EmitOpcode(Opcode.LoadVar);
                     _code.WriteUInt16LE(varToken);
-                    if (lookupResult.GlobalVariable.StartsWith("SYSTEM"))
-                    {
-                        _compilation.BoundVariables.Add(lookupResult.GlobalVariable);
-                    }
+                    break;
+                case LookupResultVariant.Flag:
+                    ushort flagToken = GetFlagToken(lookupResult.Global);
+                    EmitOpcode(Opcode.LoadFlag);
+                    _code.WriteUInt16LE(flagToken);
                     break;
                 case LookupResultVariant.Empty:
                     var literal = ConstantValue.String(expression.Name);
@@ -207,12 +209,25 @@ namespace NitroSharp.NsScript.Compiler
 
             EmitExpression(assignmentExpr.Value);
 
-            Debug.Assert(target._variant == LookupResultVariant.GlobalVariable);
-            ushort token = GetGlobalVarToken(target.GlobalVariable);
+            Debug.Assert(target.Variant is LookupResultVariant.Variable or LookupResultVariant.Flag);
             AssignmentOperatorKind opKind = assignmentExpr.OperatorKind.Value;
+
+            var loadOp = Opcode.Nop;
+            ushort token;
+            if (target.Variant == LookupResultVariant.Variable)
+            {
+                token = GetVariableToken(target.Global);
+                loadOp = Opcode.LoadVar;
+            }
+            else
+            {
+                token = GetFlagToken(target.Global);
+                loadOp = Opcode.LoadFlag;
+            }
+
             if (opKind != AssignmentOperatorKind.Assign)
             {
-                EmitOpcode(Opcode.LoadVar);
+                EmitOpcode(loadOp);
                 _code.WriteUInt16LE(token);
             }
 
@@ -240,14 +255,17 @@ namespace NitroSharp.NsScript.Compiler
                     break;
             }
 
-            EmitStoreVar(token);
+            var storeOp = target.Variant == LookupResultVariant.Variable
+                ? Opcode.StoreVar
+                : Opcode.StoreFlag;
+            EmitStore(storeOp, token);
         }
 
         private void EmitFunctionCall(FunctionCallExpressionSyntax callExpression)
         {
             LookupResult lookupResult = _checker.LookupFunction(callExpression.TargetName);
             if (lookupResult.IsEmpty) { return; }
-            bool isBuiltIn = lookupResult._variant == LookupResultVariant.BuiltInFunction;
+            bool isBuiltIn = lookupResult.Variant == LookupResultVariant.BuiltInFunction;
             ImmutableArray<ExpressionSyntax> arguments = callExpression.Arguments;
             bool supressConstantLookup = _supressConstantLookup;
 
@@ -259,7 +277,7 @@ namespace NitroSharp.NsScript.Compiler
                 {
                     _supressConstantLookup = true;
                     EmitExpression(arguments[i]);
-                    EmitStoreVar(GetGlobalVarToken(target.Parameters[i].Name));
+                    EmitStore(Opcode.StoreVar, GetVariableToken( target.Parameters[i].Name));
                     _supressConstantLookup = supressConstantLookup;
                 }
             }
@@ -562,9 +580,9 @@ namespace NitroSharp.NsScript.Compiler
             _code.Position = oldPos;
         }
 
-        private void EmitStoreVar(ushort tk)
+        private void EmitStore(Opcode opcode, ushort tk)
         {
-            EmitOpcode(Opcode.StoreVar);
+            EmitOpcode(opcode);
             _code.WriteUInt16LE(tk);
         }
 

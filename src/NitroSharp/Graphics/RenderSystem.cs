@@ -38,6 +38,7 @@ namespace NitroSharp.Graphics
             => Context.EndFrame();
 
         public void Render(
+            in FrameStamp frameStamp,
             GameContext ctx,
             SortableEntityGroupView<RenderItem> renderItems,
             float dt,
@@ -58,11 +59,10 @@ namespace NitroSharp.Graphics
 
             foreach (RenderItem ri in active)
             {
-                if (!ri.IsHidden)
-                {
-                    ri.Render(Context, assetsReady);
-                }
+                ri.Render(Context, assetsReady);
             }
+
+            Context.TextureCache.BeginFrame(frameStamp);
         }
 
         public void ProcessChoices(World world, InputContext inputCtx, GameWindow window)

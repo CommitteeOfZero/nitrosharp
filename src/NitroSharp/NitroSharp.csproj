@@ -1,11 +1,11 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
-    <LangVersion>8.0</LangVersion>
+    <TargetFramework>net5.0</TargetFramework>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <NoWarn>1701;1702;CA1063;IDE1006;IDE0063</NoWarn>
     <VeldridVersion>4.8</VeldridVersion>
+    <EnableNETAnalyzers>false</EnableNETAnalyzers>
   </PropertyGroup>
 
   <Import Project="..\..\OutputPath.props" />
@@ -32,21 +32,32 @@
     <PackageReference Include="Veldrid.StartupUtilities" Version="$(VeldridVersion)" />
     <PackageReference Include="Veldrid.ImGui" Version="5.72.0" />-->
 
+<!--    <PackageReference Include="Veldrid" Version="4.8.0" />-->
+<!--    <PackageReference Include="Veldrid.SDL2" Version="4.8.0" />-->
+<!--    <PackageReference Include="Veldrid.StartupUtilities" Version="4.8.0" />-->
+<!--    <PackageReference Include="Veldrid.ImGui" Version="5.72.0" />-->
+
     <PackageReference Include="SharpDX.Direct2D1" Version="4.2.0" />
     <PackageReference Include="SharpDX.XAudio2" Version="4.2.0" />
 
     <!--<PackageReference Include="Vortice.Direct3D11" Version="1.7.33-beta" />
     <PackageReference Include="Vortice.DXGI" Version="1.7.33-beta" />
     <PackageReference Include="Vortice.DirectX" Version="1.7.33-beta" />-->
+
+    <PackageReference Include="SixLabors.ImageSharp" Version="1.0.2" />
+
+    <PackageReference Include="Sprintf.NET" Version="2.0.0" />
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Include="../Common/ThrowHelper.cs" Link="Utilities/ThrowHelper.cs" />
-    <Compile Include="../Common/ArrayBuilder.cs" Link="Utilities/ArrayBuilder.cs" />
-
     <Content Include="../../fonts/**/*.*" LinkBase="Fonts">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+  </ItemGroup>
+
+  <!--<ItemGroup>-->
+  <ItemGroup>
+    <ProjectReference Include="..\NitroSharp.SourceGenerators\NitroSharp.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
   <Target Name="EmbedGeneratedShaderContent" AfterTargets="AssignTargetPaths">

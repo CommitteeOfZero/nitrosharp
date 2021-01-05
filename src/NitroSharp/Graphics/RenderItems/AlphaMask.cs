@@ -1,4 +1,5 @@
 using NitroSharp.Content;
+using NitroSharp.Saving;
 using Veldrid;
 
 namespace NitroSharp.Graphics
@@ -15,7 +16,14 @@ namespace NitroSharp.Graphics
             Texture = texture;
         }
 
+        public AlphaMask(in ResolvedEntityPath path, in ConstraintBoxSaveData saveData)
+            : base(path, saveData)
+        {
+        }
+
         public AssetRef<Texture> Texture { get; }
+
+        public override EntityKind Kind => EntityKind.AlphaMask;
 
         public override Size GetUnconstrainedBounds(RenderContext ctx)
             => ctx.Content.GetTextureSize(Texture);
@@ -25,5 +33,12 @@ namespace NitroSharp.Graphics
             base.Dispose();
             Texture.Dispose();
         }
+
+        public new ConstraintBoxSaveData ToSaveData(GameSavingContext ctx) => new()
+        {
+            Common = base.ToSaveData(ctx),
+            IsContainer = IsContainer,
+            AlphaMaskPath = Texture.Path
+        };
     }
 }

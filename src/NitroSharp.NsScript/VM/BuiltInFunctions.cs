@@ -26,7 +26,7 @@ namespace NitroSharp.NsScript.VM
         /// <summary>
         /// Original name: Platform.
         /// </summary>
-        public virtual int GetPlatformId() => 100;
+        public virtual int GetPlatformId() => 0;
 
         public virtual string GetCurrentModuleName() => throw new NotImplementedException();
         public virtual int GetSoundAmplitude(string characterName) => throw new NotImplementedException();
@@ -88,7 +88,7 @@ namespace NitroSharp.NsScript.VM
 
         public virtual void SetFont(string family, int size, NsColor color, NsColor outlineColor, NsFontWeight weight, NsOutlineOffset outlineOffset) { }
         public virtual void LoadDialogueBlock(in DialogueBlockToken blockToken, uint maxWidth, uint maxHeight, int letterSpacing, int lineSpacing) { }
-        public virtual void WaitText(in EntityQuery query, TimeSpan timeout) { }
+        public virtual void WaitText(EntityQuery query, TimeSpan timeout) { }
 
         public virtual void BoxBlur(EntityQuery query, uint nbPasses) { }
         public virtual void Grayscale(EntityQuery query) { }
@@ -151,5 +151,17 @@ namespace NitroSharp.NsScript.VM
         public virtual void AssertTrue(bool value) { }
 
         public virtual void LineEnd(in EntityPath dialoguePage) { }
+
+        public virtual bool SaveExists(uint slot) => false;
+        public virtual bool MountSaveData(uint slot) => false;
+        public virtual void SaveGame(uint slot) { }
+        public virtual void LoadGame(uint slot) { }
+        public virtual void DeleteSave(uint slot) { }
+
+        public virtual int GetSecondsElapsed() => 0;
+
+        public virtual bool FileExists(string path) => false;
+
+        public virtual DateTime GetDateTime() => DateTime.Now;
     }
 }

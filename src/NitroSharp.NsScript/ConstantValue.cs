@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using MessagePack;
 using NitroSharp.NsScript.Primitives;
 
 namespace NitroSharp.NsScript
@@ -65,6 +66,49 @@ namespace NitroSharp.NsScript
             => new ConstantValue(value);
 
         public ConstantValue WithSlot(short slot) => new ConstantValue(this, slot);
+
+        public ConstantValue(ref MessagePackReader reader) : this()
+        {
+            reader.ReadArrayHeader();
+            Type = (BuiltInType)reader.ReadInt32();
+            switch (Type)
+            {
+                case BuiltInType.Numeric:
+                case BuiltInType.DeltaNumeric:
+                case BuiltInType.Boolean:
+                case BuiltInType.BuiltInConstant:
+                    _numericValue = reader.ReadInt32();
+                    break;
+                case BuiltInType.String:
+                    _stringValue = reader.ReadString();
+                    break;
+                case BuiltInType.BezierCurve:
+                    _bezierCurve = new CompositeBezier(ref reader);
+                    break;
+            }
+        }
+
+        public void Serialize(ref MessagePackWriter writer)
+        {
+            int size = Type is BuiltInType.Null or BuiltInType.Uninitialized ? 1 : 2;
+            writer.WriteArrayHeader(size);
+            writer.Write((int)Type);
+            switch (Type)
+            {
+                case BuiltInType.Numeric:
+                case BuiltInType.DeltaNumeric:
+                case BuiltInType.Boolean:
+                case BuiltInType.BuiltInConstant:
+                    writer.Write(_numericValue);
+                    break;
+                case BuiltInType.String:
+                    writer.Write(_stringValue);
+                    break;
+                case BuiltInType.BezierCurve:
+                    _bezierCurve.Serialize(ref writer);
+                    break;
+            }
+        }
 
         private ConstantValue(in ConstantValue value, short slot)
         {
@@ -271,6 +315,17 @@ namespace NitroSharp.NsScript
             {
                 (BuiltInType.Numeric, BuiltInType.Numeric)
                     => Number(left.AsNumber()!.Value / right.AsNumber()!.Value),
+                _   => InvalidBinOp("/", left.Type, right.Type)
+            };
+        }
+
+
+        public static ConstantValue operator %(in ConstantValue left, in ConstantValue right)
+        {
+            return (left.Type, right.Type) switch
+            {
+                (BuiltInType.Numeric, BuiltInType.Numeric)
+                    => Number(left.AsNumber()!.Value % right.AsNumber()!.Value),
                 _   => InvalidBinOp("/", left.Type, right.Type)
             };
         }

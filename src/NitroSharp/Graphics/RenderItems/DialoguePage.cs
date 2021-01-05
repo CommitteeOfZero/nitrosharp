@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Numerics;
 using NitroSharp.NsScript.VM;
+using NitroSharp.Saving;
 using NitroSharp.Text;
 
 #nullable enable
@@ -9,9 +10,19 @@ namespace NitroSharp.Graphics
 {
     internal sealed class DialoguePage : RenderItem2D
     {
+        private enum ConsumeResult
+        {
+            KeepGoing,
+            Halt,
+            AllDone
+        }
+
+        private readonly Size? _bounds;
+        private readonly float _lineHeight;
         private readonly NsScriptThread _dialogueThread;
         private readonly TextLayout _layout;
-        private readonly Queue<TextBufferSegment> _remainingSegments;
+        private readonly List<string> _pxmlLines = new();
+        private readonly Queue<TextBufferSegment> _remainingSegments = new();
 
         private TypewriterAnimation? _animation;
 
@@ -25,18 +36,55 @@ namespace NitroSharp.Graphics
             : base(path, priority)
         {
             Margin = margin;
+            _bounds = bounds;
+            _lineHeight = lineHeight;
             _dialogueThread = dialogueThread;
             _layout = new TextLayout(bounds?.Width, bounds?.Height, lineHeight);
-            _remainingSegments = new Queue<TextBufferSegment>();
         }
+
+        public override EntityKind Kind => EntityKind.DialoguePage;
 
         public Vector4 Margin { get; }
         public override bool IsIdle => _dialogueThread.DoneExecuting && LineRead;
         public bool LineRead { get; private set; }
 
-        public void Append(RenderContext renderCtx, TextBuffer text, Backlog backlog)
+        public DialoguePage(in ResolvedEntityPath path, in DialoguePageSaveData saveData, GameLoadingContext loadCtx)
+            : base(path, saveData.Common)
         {
-            foreach (TextBufferSegment seg in text.Segments)
+            _bounds = saveData.Bounds;
+            _lineHeight = saveData.LineHeight;
+            _layout = new TextLayout(_bounds?.Width, _bounds?.Height, _lineHeight);
+            _dialogueThread = loadCtx.Process.VmProcess.GetThread(saveData.DialogueThreadId);
+            Margin = saveData.Margin;
+
+            foreach (string pxmlLine in saveData.PXmlLines)
+            {
+                _pxmlLines.Add(pxmlLine);
+                FontConfiguration fontConfig = loadCtx.Process.FontConfig;
+                var buffer = TextBuffer.FromPXmlString(pxmlLine, fontConfig);
+                foreach (TextBufferSegment seg in buffer.Segments)
+                {
+                    _remainingSegments.Enqueue(seg);
+                }
+            }
+
+            while (_remainingSegments.Count != saveData.SegmentsRemaining)
+            {
+                ConsumeSegment(loadCtx.Rendering, loadCtx.Backlog);
+            }
+
+            loadCtx.Rendering.Text.RequestGlyphs(_layout);
+        }
+
+        public void Append(
+            RenderContext renderCtx,
+            string pxmlLine,
+            FontConfiguration fontConfig,
+            Backlog backlog)
+        {
+            _pxmlLines.Add(pxmlLine);
+            var buffer = TextBuffer.FromPXmlString(pxmlLine, fontConfig);
+            foreach (TextBufferSegment seg in buffer.Segments)
             {
                 _remainingSegments.Enqueue(seg);
             }
@@ -59,24 +107,8 @@ namespace NitroSharp.Graphics
             }
 
             int start = _layout.GlyphRuns.Length;
-            while (_remainingSegments.TryDequeue(out TextBufferSegment? seg))
+            while (ConsumeSegment(renderCtx, backlog) == ConsumeResult.KeepGoing)
             {
-                switch (seg.SegmentKind)
-                {
-                    case TextBufferSegmentKind.Text:
-                        var textSegment = (TextSegment)seg;
-                        _layout.Append(renderCtx.GlyphRasterizer, textSegment.TextRuns.AsSpan());
-                        backlog.Append(textSegment);
-                        break;
-                    case TextBufferSegmentKind.Marker:
-                        var marker = (MarkerSegment)seg;
-                        switch (marker.MarkerKind)
-                        {
-                            case MarkerKind.Halt:
-                                goto exit;
-                        }
-                        break;
-                }
             }
 
         exit:
@@ -85,6 +117,33 @@ namespace NitroSharp.Graphics
                 _animation = new TypewriterAnimation(_layout, _layout.GlyphRuns[start..], 40);
                 renderCtx.Icons.WaitLine.Reset();
             }
+        }
+
+        private ConsumeResult ConsumeSegment(RenderContext renderCtx, Backlog backlog)
+        {
+            if (_remainingSegments.TryDequeue(out TextBufferSegment? seg))
+            {
+                switch (seg.SegmentKind)
+                {
+                    case TextBufferSegmentKind.Text:
+                        var textSegment = (TextSegment)seg;
+                        _layout.Append(renderCtx.GlyphRasterizer, textSegment.TextRuns.AsSpan());
+                        backlog.Append(textSegment);
+                        return ConsumeResult.KeepGoing;
+                    case TextBufferSegmentKind.Marker:
+                        var marker = (MarkerSegment)seg;
+                        switch (marker.MarkerKind)
+                        {
+                            case MarkerKind.Halt:
+                                return ConsumeResult.Halt;
+                        }
+                        break;
+                }
+
+                return ConsumeResult.KeepGoing;
+            }
+
+            return ConsumeResult.AllDone;
         }
 
         protected override void AdvanceAnimations(RenderContext ctx, float dt, bool assetsReady)
@@ -181,6 +240,32 @@ namespace NitroSharp.Graphics
         {
             _layout.Clear();
             _remainingSegments.Clear();
+            _pxmlLines.Clear();
         }
+
+        public new DialoguePageSaveData ToSaveData(GameSavingContext ctx) => new()
+        {
+            Common = base.ToSaveData(ctx),
+            Bounds = _bounds,
+            LineHeight = _lineHeight,
+            Margin = Margin,
+            DialogueThreadId = _dialogueThread.Id,
+            PXmlLines = _pxmlLines.ToArray(),
+            SegmentsRemaining = _remainingSegments.Count
+        };
+    }
+
+    [Persistable]
+    internal readonly partial struct DialoguePageSaveData : IEntitySaveData
+    {
+        public RenderItemSaveData Common { get; init; }
+        public Size? Bounds { get; init; }
+        public float LineHeight { get; init; }
+        public Vector4 Margin { get; init; }
+        public uint DialogueThreadId { get; init; }
+        public string[] PXmlLines { get; init; }
+        public int SegmentsRemaining { get; init; }
+
+        public EntitySaveData CommonEntityData => Common.EntityData;
     }
 }

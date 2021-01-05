@@ -5,9 +5,10 @@ namespace NitroSharp.Launcher
 {
     public static class GameLauncher
     {
-        public static async Task Launch(string configFilePath)
+        public static async Task Launch(string productName, string configFilePath)
         {
-            var config = ConfigurationReader.Read(configFilePath);
+            Configuration config = ConfigurationReader.Read(configFilePath);
+            config.ProductName = productName;
             var window = new DesktopWindow(config.WindowTitle, (uint)config.WindowWidth, (uint)config.WindowHeight);
             using (var game = new Game(window, config))
             {

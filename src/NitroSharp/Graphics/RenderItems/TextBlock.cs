@@ -1,4 +1,6 @@
 using System.Numerics;
+using NitroSharp.NsScript.Primitives;
+using NitroSharp.Saving;
 using NitroSharp.Text;
 
 #nullable enable
@@ -7,22 +9,58 @@ namespace NitroSharp.Graphics
 {
     internal sealed class TextBlock : RenderItem2D
     {
+        private readonly string _pxmlText;
         private readonly TextLayout _layout;
 
         public TextBlock(
             in ResolvedEntityPath path,
             TextRenderContext ctx,
             int priority,
-            TextLayout layout,
+            string pxmlText,
+            Size maxBounds,
+            FontConfiguration fontConfig,
             in Vector4 margin)
             : base(path, priority)
         {
-            _layout = layout;
             Margin = margin;
-            ctx.RequestGlyphs(layout);
+            _pxmlText = pxmlText;
+            _layout = CreateLayout(ctx, pxmlText, maxBounds, fontConfig);
+        }
+
+        public TextBlock(in ResolvedEntityPath path, in TextBlockSaveData saveData, GameLoadingContext loadCtx)
+            : base(path, saveData.Common)
+        {
+            Margin = saveData.Margin;
+            _pxmlText = saveData.PXmlText;
+            _layout = CreateLayout(
+                loadCtx.Rendering.Text,
+                _pxmlText,
+                saveData.LayoutBounds,
+                loadCtx.Process.FontConfig
+            );
         }
 
         public Vector4 Margin { get; }
+
+        public override EntityKind Kind => EntityKind.TextBlock;
+
+        private static TextLayout CreateLayout(
+            TextRenderContext ctx,
+            string pxmlText,
+            Size maxBounds,
+            FontConfiguration fontConfig)
+        {
+            var textBuffer = TextBuffer.FromPXmlString(pxmlText, fontConfig);
+            TextSegment segment = textBuffer.AssertSingleTextSegment()!;
+            var layout = new TextLayout(
+                ctx.GlyphRasterizer,
+                segment.TextRuns.AsSpan(),
+                maxBounds.Width,
+                maxBounds.Height
+            );
+            ctx.RequestGlyphs(layout);
+            return layout;
+        }
 
         public override Size GetUnconstrainedBounds(RenderContext ctx)
         {
@@ -86,5 +124,24 @@ namespace NitroSharp.Graphics
                 }
             }
         }
+
+        public new TextBlockSaveData ToSaveData(GameSavingContext ctx) => new()
+        {
+            Common = base.ToSaveData(ctx),
+            Margin = Margin,
+            PXmlText = _pxmlText,
+            LayoutBounds = _layout.MaxBounds
+        };
+    }
+
+    [Persistable]
+    internal readonly partial struct TextBlockSaveData : IEntitySaveData
+    {
+        public RenderItemSaveData Common { get; init; }
+        public Vector4 Margin { get; init; }
+        public string PXmlText { get; init; }
+        public Size LayoutBounds { get; init; }
+
+        public EntitySaveData CommonEntityData => Common.EntityData;
     }
 }

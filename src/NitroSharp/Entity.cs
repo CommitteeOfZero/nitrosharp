@@ -1,6 +1,8 @@
 using System;
 using System.Runtime.InteropServices;
+using MessagePack;
 using NitroSharp.NsScript;
+using NitroSharp.Saving;
 using NitroSharp.Utilities;
 
 #nullable enable
@@ -17,6 +19,29 @@ namespace NitroSharp
         public readonly uint Context;
         public readonly MouseState MouseState;
 
+        public EntityId(ref MessagePackReader reader)
+        {
+            reader.ReadArrayHeader();
+            Context = reader.ReadUInt32();
+            string? value = reader.ReadString();
+            if (value is not null)
+            {
+                var path = new EntityPath(value);
+                _nameStart = 0;
+                MouseState = path.MouseState;
+                Path = path.Value;
+                _hashCode = HashCode.Combine(Path.GetHashCode(), Context);
+            }
+            else
+            {
+                Path = null!;
+                _nameStart = 0;
+                Context = 0;
+                _hashCode = 0;
+                MouseState = default;
+            }
+        }
+
         public EntityId(
             uint context,
             string path,
@@ -25,7 +50,7 @@ namespace NitroSharp
         {
             Context = context;
             Path = path;
-            _hashCode = path.GetHashCode();
+            _hashCode = HashCode.Combine(path.GetHashCode(), context);
             _nameStart = nameStart;
             MouseState = mouseState;
         }
@@ -33,11 +58,18 @@ namespace NitroSharp
         public static EntityId Invalid => default;
 
         public ReadOnlySpan<char> Name => Path.AsSpan(_nameStart);
-        public bool IsValid => Path != null;
+        public bool IsValid => Path is not null;
 
-        public override int GetHashCode() => _hashCode;
+        public override int GetHashCode() => HashCode.Combine(_hashCode, Context);
         public bool Equals(EntityId other) => string.Equals(Path, other.Path);
         public override string ToString() => Path;
+
+        public void Serialize(ref MessagePackWriter writer)
+        {
+            writer.WriteArrayHeader(2);
+            writer.Write(Context);
+            writer.Write(Path);
+        }
     }
 
     internal abstract class Entity : EntityInternal, IDisposable
@@ -51,10 +83,17 @@ namespace NitroSharp
             _children = new ArrayBuilder<Entity>(0);
         }
 
+        protected Entity(in ResolvedEntityPath path, in EntitySaveData saveData)
+            : this(path)
+        {
+            IsLocked = saveData.IsLocked;
+        }
+
         public EntityId Id { get; }
         public Entity? Parent { get; }
         public EntityPath Alias { get; private set; }
         public bool IsLocked { get; private set; }
+        public abstract EntityKind Kind { get; }
 
         public void Lock() => IsLocked = true;
         public void Unlock() => IsLocked = false;
@@ -62,7 +101,7 @@ namespace NitroSharp
         public abstract bool IsIdle { get; }
 
         protected ChildEnumerable<T> GetChildren<T>() where T : Entity
-            => new ChildEnumerable<T>(_children.AsSpan());
+            => new(_children.AsSpan());
 
         void EntityInternal.SetAlias(in EntityPath alias)
         {
@@ -86,6 +125,14 @@ namespace NitroSharp
         {
         }
 
+        public EntitySaveData ToSaveData(GameSavingContext ctx) => new()
+        {
+            Id = Id,
+            Parent = Parent?.Id ?? EntityId.Invalid,
+            IsEnabled = ctx.World.IsEnabled(this),
+            IsLocked = IsLocked
+        };
+
         internal readonly ref struct ChildEnumerable<T>
             where T : Entity
         {
@@ -95,7 +142,7 @@ namespace NitroSharp
                 => _children = children;
 
             public ChildEnumerator<T> GetEnumerator()
-                => new ChildEnumerator<T>(_children);
+                => new(_children);
         }
 
         internal ref struct ChildEnumerator<T>
@@ -126,11 +173,69 @@ namespace NitroSharp
         }
     }
 
+    internal sealed class BasicEntity : Entity
+    {
+        public BasicEntity(in ResolvedEntityPath path) : base(path)
+        {
+        }
+
+        public BasicEntity(in ResolvedEntityPath path, in BasicEntitySaveData saveData)
+            : base(path, saveData.Data)
+        {
+        }
+
+        public override EntityKind Kind => EntityKind.Basic;
+        public override bool IsIdle => true;
+
+        public new BasicEntitySaveData ToSaveData(GameSavingContext ctx) => new()
+        {
+            Data = base.ToSaveData(ctx)
+        };
+    }
+
+    internal enum EntityKind
+    {
+        Basic,
+        Image,
+        Sprite,
+        Choice,
+        AlphaMask,
+        BacklogView,
+        ColorSource,
+        Cube,
+        DialogueBox,
+        DialoguePage,
+        Scrollbar,
+        TextBlock,
+        VmThread
+    }
+
     internal interface EntityInternal
     {
         ref ArrayBuilder<Entity> GetChildrenMut();
         void SetAlias(in EntityPath alias);
         void AddChild(Entity child);
         void RemoveChild(Entity child);
+    }
+
+    [Persistable]
+    internal readonly partial struct EntitySaveData
+    {
+        public EntityId Id { get; init; }
+        public EntityId Parent { get; init; }
+        public bool IsEnabled { get; init; }
+        public bool IsLocked { get; init; }
+    }
+
+    [Persistable]
+    internal readonly partial struct BasicEntitySaveData : IEntitySaveData
+    {
+        public EntitySaveData Data { get; init; }
+        public EntitySaveData CommonEntityData => Data;
+    }
+
+    internal interface IEntitySaveData
+    {
+         EntitySaveData CommonEntityData { get; }
     }
 }

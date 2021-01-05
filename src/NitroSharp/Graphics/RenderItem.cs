@@ -3,13 +3,15 @@ using System.Numerics;
 using NitroSharp.Graphics.Core;
 using NitroSharp.NsScript;
 using NitroSharp.NsScript.Primitives;
+using NitroSharp.Saving;
 using Veldrid;
 
 #nullable enable
 
 namespace NitroSharp.Graphics
 {
-    internal readonly struct RenderItemKey : IComparable<RenderItemKey>
+    [Persistable]
+    internal readonly partial struct RenderItemKey : IComparable<RenderItemKey>
     {
         public readonly int Priority;
         public readonly int Id;
@@ -50,6 +52,24 @@ namespace NitroSharp.Graphics
             _key = new RenderItemKey(priority, s_lastId++);
             _color = RgbaFloat.White;
             _transform = Transform.Default;
+        }
+
+        protected RenderItem(in ResolvedEntityPath path, in RenderItemSaveData saveData)
+            : base(path, saveData.EntityData)
+        {
+            _key = saveData.Key;
+            _transform = saveData.Transform;
+            _color = new RgbaFloat(saveData.Color);
+            if (saveData.RotateAnimation is Vector3AnimationSaveData rotateAnim)
+            {
+                _rotateAnim = new RotateAnimation(this, rotateAnim);
+            }
+            if (saveData.FadeAnimation is FloatAnimationSaveData fadeAnim)
+            {
+                _fadeAnim = new OpacityAnimation(this, fadeAnim);
+            }
+
+            s_lastId = Math.Max(s_lastId, _key.Id);
         }
 
         public RenderItemKey Key => _key;
@@ -169,11 +189,25 @@ namespace NitroSharp.Graphics
 
         public int CompareTo(RenderItem? other)
             => _key.CompareTo(other!._key);
+
+        protected new RenderItemSaveData ToSaveData(GameSavingContext ctx) => new()
+        {
+            EntityData = base.ToSaveData(ctx),
+            Key = Key,
+            Color = Color.ToVector4(),
+            Transform = Transform,
+            FadeAnimation = _fadeAnim?.ToSaveData(),
+            MoveAnimation = null,
+            ZoomAnimation = null,
+            RotateAnimation = _rotateAnim?.ToSaveData(),
+            BezierMoveAnimation = null
+        };
     }
 
     internal abstract class RenderItem2D : RenderItem
     {
         private RenderTarget? _offscreenTarget;
+        private Fence? _fence;
         private QuadGeometry _quad;
         private Matrix4x4 _worldMatrix;
 
@@ -198,6 +232,25 @@ namespace NitroSharp.Graphics
                         choice.AddMouseDown(this);
                         break;
                 }
+            }
+        }
+
+        protected RenderItem2D(in ResolvedEntityPath path, in RenderItemSaveData saveData)
+            : base(path, saveData)
+        {
+            BlendMode = saveData.BlendMode;
+            FilterMode = saveData.FilterMode;
+            if (saveData.MoveAnimation is Vector3AnimationSaveData moveAnim)
+            {
+                _moveAnim  = new MoveAnimation(this, moveAnim);
+            }
+            if (saveData.ZoomAnimation is Vector3AnimationSaveData zoomAnim)
+            {
+                _scaleAnim  = new ScaleAnimation(this, zoomAnim);
+            }
+            if (saveData.BezierMoveAnimation is BezierAnimationSaveData bezierMoveAnim)
+            {
+                _bezierMoveAnim  = new BezierMoveAnimation(this, bezierMoveAnim);
             }
         }
 
@@ -271,68 +324,101 @@ namespace NitroSharp.Graphics
 
         public bool HitTest(RenderContext ctx, InputContext input)
         {
-            return BoundingRect.Contains(input.MousePosition);
+            return PreciseHitTest && _offscreenTarget is RenderTarget offscreenTarget
+                ? PixelPerfectHitTest(ctx, offscreenTarget, input)
+                : BoundingRect.Contains(input.MousePosition);
+        }
+
+        private bool PixelPerfectHitTest(RenderContext ctx, RenderTarget offscreenTarget, InputContext input)
+        {
+            _fence ??= ctx.ResourceFactory.CreateFence(signaled: false);
+            CommandList cl = ctx.RentCommandList();
+            cl.Begin();
+            Texture tex = offscreenTarget.ReadBack(cl, ctx.ResourceFactory);
+            cl.End();
+            ctx.GraphicsDevice.SubmitCommands(cl, _fence);
+            ctx.GraphicsDevice.WaitForFence(_fence);
+            _fence.Reset();
+            ctx.ReturnCommandList(cl);
+
+            MappedResourceView<RgbaByte> map = ctx.GraphicsDevice.Map<RgbaByte>(tex, MapMode.Read);
+            Vector2 pos = input.MousePosition - _worldMatrix.Translation.XY();
+            if (pos.X < 0.0f || pos.X >= tex.Width || pos.Y < 0.0f || pos.Y >= tex.Height)
+            {
+                ctx.GraphicsDevice.Unmap(tex);
+                return false;
+            }
+            RgbaByte pixel = map[(int)pos.X, (int)pos.Y];
+            ctx.GraphicsDevice.Unmap(tex);
+            return !pixel.Equals(default);
         }
 
         public override void Render(RenderContext ctx, bool assetsReady)
         {
-            if (Color.A > 0.0f)
+            //if (Color.A > 0.0f)
             {
-                Render(ctx, ctx.MainBatch);
+                if (!PreciseHitTest && !IsHidden)
+                {
+                    Render(ctx, ctx.MainBatch);
+                }
+                else
+                {
+                    SizeF actualSize = BoundingRect.Size;
+                    if (actualSize.Width <= 0.0f || actualSize.Height <= 0.0f)
+                    {
+                        return;
+                    }
+
+                    if (RenderOffscreen(ctx) is Texture && !IsHidden)
+                    {
+                        Render(ctx, ctx.MainBatch);
+                        //ctx.MainBatch.PushQuad(
+                        //    Quad,
+                        //    tex,
+                        //    alphaMask: ctx.WhiteTexture,
+                        //    Vector2.Zero,
+                        //    BlendMode,
+                        //    FilterMode
+                        //);
+                    }
+                }
             }
-
-            return;
-
-            SizeF actualSize = BoundingRect.Size;
-            if (actualSize.Width <= 0.0f || actualSize.Height <= 0.0f)
-            {
-                return;
-            }
-
-            //if (RenderOffscreen(ctx) is Texture tex)
-            //{
-            //    ctx.MainBatch.PushQuad(
-            //        Quad,
-            //        tex,
-            //        alphaMask: ctx.WhiteTexture,
-            //        BlendMode,
-            //        FilterMode
-            //    );
-            //}
         }
 
         protected Texture RenderOffscreen(RenderContext ctx)
         {
             var actualSize = BoundingRect.Size.ToSize();
-            Vector3 translation = _worldMatrix.Translation;
             if (_offscreenTarget is null || !_offscreenTarget.Size.Equals(actualSize))
             {
                 _offscreenTarget?.Dispose();
                 _offscreenTarget = new RenderTarget(ctx.GraphicsDevice, actualSize);
-                using (DrawBatch batch = ctx.BeginBatch(_offscreenTarget, RgbaFloat.Clear))
-                {
-                    _worldMatrix.Translation = Vector3.Zero;
-                    (Vector2 uvTopLeft, Vector2 uvBottomRight) = GetTexCoords(ctx);
-                    (Quad, _) = QuadGeometry.Create(
-                        BoundingRect.Size,
-                        _worldMatrix,
-                        uvTopLeft,
-                        uvBottomRight,
-                        color: Vector4.One
-                    );
-
-                    Render(ctx, batch);
-                }
             }
 
-            _worldMatrix = Matrix4x4.CreateTranslation(translation);
-            (Quad, _) = QuadGeometry.Create(
-                BoundingRect.Size,
-                _worldMatrix,
-                uvTopLeft: Vector2.Zero,
-                uvBottomRight: Vector2.One,
-                Color.ToVector4()
-            );
+            using (DrawBatch batch = ctx.BeginBatch(_offscreenTarget, RgbaFloat.Clear))
+            {
+                Matrix4x4 world = _worldMatrix;
+                world.Translation = Vector3.Zero;
+                (Vector2 uvTopLeft, Vector2 uvBottomRight) = GetTexCoords(ctx);
+                QuadGeometry originalQuad = Quad;
+                (Quad, _) = QuadGeometry.Create(
+                    BoundingRect.Size,
+                    world,
+                    uvTopLeft,
+                    uvBottomRight,
+                    color: Vector4.One
+                );
+
+                Render(ctx, batch);
+                Quad = originalQuad;
+            }
+
+            //(Quad, _) = QuadGeometry.Create(
+            //    BoundingRect.Size,
+            //    Matrix4x4.CreateTranslation(_worldMatrix.Translation),
+            //    uvTopLeft: Vector2.Zero,
+            //    uvBottomRight: Vector2.One,
+            //    Color.ToVector4()
+            //);
 
             return _offscreenTarget.ColorTarget;
         }
@@ -459,6 +545,21 @@ namespace NitroSharp.Graphics
         {
             _offscreenTarget?.Dispose();
         }
+
+        protected new RenderItemSaveData ToSaveData(GameSavingContext ctx) => new()
+        {
+            EntityData = (this as Entity).ToSaveData(ctx),
+            Key = Key,
+            Color = Color.ToVector4(),
+            Transform = Transform,
+            BlendMode = BlendMode,
+            FilterMode = FilterMode,
+            FadeAnimation = _fadeAnim?.ToSaveData(),
+            MoveAnimation = _moveAnim?.ToSaveData(),
+            ZoomAnimation = _scaleAnim?.ToSaveData(),
+            RotateAnimation = _rotateAnim?.ToSaveData(),
+            BezierMoveAnimation = _bezierMoveAnim?.ToSaveData()
+        };
     }
 
     internal static class RenderItemExt
@@ -473,5 +574,21 @@ namespace NitroSharp.Graphics
             renderItem.Transform.Position = renderItem.Point(ctx, x, y);
             return renderItem;
         }
+    }
+
+    [Persistable]
+    internal readonly partial struct RenderItemSaveData
+    {
+        public EntitySaveData EntityData { get; init; }
+        public Vector4 Color { get; init; }
+        public RenderItemKey Key { get; init; }
+        public Transform Transform { get; init; }
+        public BlendMode BlendMode { get; init; }
+        public FilterMode FilterMode { get; init; }
+        public FloatAnimationSaveData? FadeAnimation { get; init; }
+        public Vector3AnimationSaveData? MoveAnimation { get; init; }
+        public Vector3AnimationSaveData? ZoomAnimation { get; init; }
+        public Vector3AnimationSaveData? RotateAnimation { get; init; }
+        public BezierAnimationSaveData? BezierMoveAnimation { get; init; }
     }
 }

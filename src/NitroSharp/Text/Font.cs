@@ -1,14 +1,16 @@
 ﻿using System;
 using FreeTypeBindings;
+using MessagePack;
 
 #nullable enable
 
 namespace NitroSharp.Text
 {
-    internal readonly struct FontFaceKey : IEquatable<FontFaceKey>
+    [Persistable]
+    internal readonly partial struct FontFaceKey : IEquatable<FontFaceKey>
     {
-        public readonly string FamilyName;
-        public readonly FontStyle Style;
+        public readonly string FamilyName { get; init; }
+        public readonly FontStyle Style { get; init; }
 
         public FontFaceKey(string familyName, FontStyle style)
         {
@@ -35,6 +37,16 @@ namespace NitroSharp.Text
     internal readonly struct PtFontSize : IEquatable<PtFontSize>
     {
         public readonly Fixed26Dot6 Value;
+
+        public PtFontSize(ref MessagePackReader reader)
+        {
+            Value = Fixed26Dot6.FromRawValue(reader.ReadInt32());
+        }
+
+        public void Serialize(ref MessagePackWriter writer)
+        {
+            writer.WriteInt32(Value.Value);
+        }
 
         public PtFontSize(int value) => Value = Fixed26Dot6.FromInt32(value);
         public float ToFloat() => Value.ToSingle();

@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Numerics;
-using SharpDX.Direct2D1;
+using NitroSharp.Saving;
 
 #nullable enable
 
@@ -62,7 +62,8 @@ namespace NitroSharp
         public static bool operator !=(Point2DU left, Point2DU right) => !left.Equals(right);
     }
 
-    public readonly struct Size : IEquatable<Size>
+    [Persistable]
+    public readonly partial struct Size : IEquatable<Size>
     {
         public static Size Zero => new Size(0, 0);
 
@@ -91,7 +92,8 @@ namespace NitroSharp
         public static bool operator !=(Size left, Size right) => !left.Equals(right);
     }
 
-    public readonly struct SizeF : IEquatable<SizeF>
+    [Persistable]
+    public readonly partial struct SizeF : IEquatable<SizeF>
     {
         public static SizeF Zero => default;
 
@@ -119,7 +121,8 @@ namespace NitroSharp
         public Size ToSize() => new Size((uint)MathF.Ceiling(Width), (uint)MathF.Ceiling(Height));
     }
 
-    internal readonly struct Rectangle : IEquatable<Rectangle>
+    [Persistable]
+    internal readonly partial struct Rectangle : IEquatable<Rectangle>
     {
         public readonly int X;
         public readonly int Y;
@@ -171,7 +174,8 @@ namespace NitroSharp
         public static bool operator !=(in Rectangle a, in Rectangle b) => !a.Equals(b);
     }
 
-    internal readonly struct RectangleU : IEquatable<RectangleU>
+    [Persistable]
+    internal readonly partial struct RectangleU : IEquatable<RectangleU>
     {
         public readonly uint X;
         public readonly uint Y;
@@ -224,7 +228,8 @@ namespace NitroSharp
         public override string ToString() => $"{{X:{X}, Y:{Y}, Width:{Width}, Height:{Height}}}";
     }
 
-    internal readonly struct RectangleF : IEquatable<RectangleF>
+    [Persistable]
+    internal readonly partial struct RectangleF : IEquatable<RectangleF>
     {
         private readonly Vector4 _value;
 

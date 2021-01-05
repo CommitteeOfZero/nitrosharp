@@ -119,7 +119,7 @@ namespace NitroSharp.Graphics
             ContentManager content = renderContext.Content;
             ResourceFactory rf = renderContext.ResourceFactory;
             Texture? texture = null;
-            CommandList cl = renderContext.SecondaryCommandList;
+            CommandList cl = renderContext.TransferCommands;
             uint layer = 0;
             foreach (string path in pathPattern.EnumeratePaths())
             {

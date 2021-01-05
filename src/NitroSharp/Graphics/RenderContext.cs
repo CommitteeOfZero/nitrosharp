@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Numerics;
 using NitroSharp.Content;
 using NitroSharp.Graphics.Core;
@@ -28,8 +29,9 @@ namespace NitroSharp.Graphics
     {
         private readonly ShaderLibrary _shaderLibrary;
 
-        private readonly CommandList _transferCommands;
         private readonly CommandList _drawCommands;
+        private readonly CommandList _secondaryCommandList;
+        private readonly Queue<CommandList> _commandListPool = new();
 
         private readonly RenderTarget _swapchainTarget;
         private readonly Swapchain _mainSwapchain;
@@ -57,12 +59,12 @@ namespace NitroSharp.Graphics
             _mainSwapchain = swapchain;
             _swapchainTarget = RenderTarget.Swapchain(graphicsDevice, swapchain.Framebuffer);
 
-            _transferCommands = ResourceFactory.CreateCommandList();
-            _transferCommands.Name = "Transfer commands";
+            TransferCommands = ResourceFactory.CreateCommandList();
+            TransferCommands.Name = "Transfer commands";
             _drawCommands = ResourceFactory.CreateCommandList();
             _drawCommands.Name = "Draw commands (primary)";
-            SecondaryCommandList = ResourceFactory.CreateCommandList();
-            SecondaryCommandList.Name = "Secondary";
+            _secondaryCommandList = ResourceFactory.CreateCommandList();
+            _secondaryCommandList.Name = "Secondary";
             Content = contentManager;
             GlyphRasterizer = glyphRasterizer;
             SystemVariables = systemVariables;
@@ -117,7 +119,7 @@ namespace NitroSharp.Graphics
 
             MainBatch = new DrawBatch(this);
             _offscreenBatch = new DrawBatch(this);
-            
+
             Icons = LoadIcons(gameConfiguration);
         }
 
@@ -129,7 +131,7 @@ namespace NitroSharp.Graphics
         public GraphicsDevice GraphicsDevice { get; }
         public ResourceFactory ResourceFactory { get; }
 
-        public CommandList SecondaryCommandList { get; }
+        public CommandList TransferCommands { get; }
 
         public ContentManager Content { get; }
         public GlyphRasterizer GlyphRasterizer { get; }
@@ -147,9 +149,24 @@ namespace NitroSharp.Graphics
 
         public SystemVariableLookup SystemVariables { get; }
 
+        public CommandList RentCommandList()
+        {
+            if (!_commandListPool.TryDequeue(out CommandList? cl))
+            {
+                cl = ResourceFactory.CreateCommandList();
+            }
+
+            return cl;
+        }
+
+        public void ReturnCommandList(CommandList cl)
+        {
+            _commandListPool.Enqueue(cl);
+        }
+
         public DrawBatch BeginBatch(RenderTarget renderTarget, RgbaFloat? clearColor)
         {
-            _offscreenBatch.Begin(SecondaryCommandList, renderTarget, clearColor);
+            _offscreenBatch.Begin(_secondaryCommandList, renderTarget, clearColor);
             return _offscreenBatch;
         }
 
@@ -159,7 +176,7 @@ namespace NitroSharp.Graphics
             RgbaFloat? clearColor = clear ? RgbaFloat.Black : (RgbaFloat?)null;
             MainBatch.Begin(_drawCommands, _swapchainTarget, clearColor);
 
-            SecondaryCommandList.Begin();
+            _secondaryCommandList.Begin();
 
             Quads.Begin();
             IconQuads.Begin();
@@ -167,33 +184,34 @@ namespace NitroSharp.Graphics
             TextureCache.BeginFrame(frameStamp);
             ResourceSetCache.BeginFrame(frameStamp);
             Text.BeginFrame();
-            _transferCommands.Begin();
+            TransferCommands.Begin();
         }
 
         private AnimatedIcons LoadIcons(Configuration config)
         {
-            CommandList cl = SecondaryCommandList;
-            SecondaryCommandList.Begin();
+            CommandList cl = RentCommandList();
+            cl.Begin();
             var waitLine = Icon.Load(this, config.IconPathPatterns.WaitLine);
-            SecondaryCommandList.End();
+            cl.End();
             GraphicsDevice.SubmitCommands(cl);
+            ReturnCommandList(cl);
             return new AnimatedIcons(waitLine);
         }
 
         public void ResolveGlyphs()
         {
             Text.ResolveGlyphs();
-            TextureCache.EndFrame(_transferCommands);
+            TextureCache.EndFrame(TransferCommands);
         }
 
-        public Texture CreateFullscreenTexture()
+        public Texture CreateFullscreenTexture(bool staging = false)
         {
             Size size = _swapchainTarget.Size;
             var desc = TextureDescription.Texture2D(
                 size.Width, size.Height,
                 mipLevels: 1, arrayLayers: 1,
                 PixelFormat.B8_G8_R8_A8_UNorm,
-                TextureUsage.Sampled
+                staging ? TextureUsage.Staging : TextureUsage.Sampled
             );
             return ResourceFactory.CreateTexture(ref desc);
         }
@@ -203,22 +221,34 @@ namespace NitroSharp.Graphics
             _drawCommands.CopyTexture(_swapchainTarget.ColorTarget, dstTexture);
         }
 
+        public Texture ReadbackTexture(CommandList cl, Texture texture)
+        {
+            Texture staging = ResourceFactory.CreateTexture(TextureDescription.Texture2D(
+                texture.Width, texture.Height, texture.MipLevels, texture.ArrayLayers,
+                texture.Format, TextureUsage.Staging
+            ));
+
+            cl.CopyTexture(texture, staging);
+            return staging;
+        }
+
         public void EndFrame()
         {
             MainBatch.End();
 
-            SecondaryCommandList.End();
+            _secondaryCommandList.End();
             _drawCommands.End();
             ResourceSetCache.EndFrame();
 
-            Text.EndFrame(_transferCommands);
-            Quads.End(_transferCommands);
-            IconQuads.End(_transferCommands);
-            Cubes.End(_transferCommands);
-            _transferCommands.End();
+            Text.EndFrame(TransferCommands);
+            TextureCache.EndFrame(TransferCommands);
+            Quads.End(TransferCommands);
+            IconQuads.End(TransferCommands);
+            Cubes.End(TransferCommands);
+            TransferCommands.End();
 
-            GraphicsDevice.SubmitCommands(_transferCommands);
-            GraphicsDevice.SubmitCommands(SecondaryCommandList);
+            GraphicsDevice.SubmitCommands(TransferCommands);
+            GraphicsDevice.SubmitCommands(_secondaryCommandList);
             GraphicsDevice.SubmitCommands(_drawCommands);
         }
 
@@ -248,10 +278,10 @@ namespace NitroSharp.Graphics
             textureDesc.Usage = TextureUsage.Sampled;
             Texture texture = ResourceFactory.CreateTexture(ref textureDesc);
 
-            _transferCommands.Begin();
-            _transferCommands.CopyTexture(stagingWhite, texture);
-            _transferCommands.End();
-            GraphicsDevice.SubmitCommands(_transferCommands);
+            TransferCommands.Begin();
+            TransferCommands.CopyTexture(stagingWhite, texture);
+            TransferCommands.End();
+            GraphicsDevice.SubmitCommands(TransferCommands);
             stagingWhite.Dispose();
             return texture;
         }
@@ -260,9 +290,13 @@ namespace NitroSharp.Graphics
         {
             OrthoProjection.Dispose();
             Icons.Dispose();
-            _transferCommands.Dispose();
+            TransferCommands.Dispose();
             _drawCommands.Dispose();
-            SecondaryCommandList.Dispose();
+            _secondaryCommandList.Dispose();
+            while (_commandListPool.TryDequeue(out CommandList? cl))
+            {
+                cl.Dispose();
+            }
             ShaderResources.Dispose();
             WhiteTexture.Dispose();
             Text.Dispose();

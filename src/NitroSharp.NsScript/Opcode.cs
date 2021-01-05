@@ -13,12 +13,14 @@
         LoadImm = 0x16,         // <byte type> <value>
         LoadVar = 0x17,         // <ushort slot>
         StoreVar = 0x18,        // <ushort slot>
+        LoadFlag = 0x19,        // <ushort slot>
+        StoreFlag = 0x1A,       // <ushort slot>
 
-        Inc = 0x19,             // <>
-        Dec = 0x1A,             // <>
-        Neg = 0x1B,             // <>
-        Invert = 0x1C,          // <>
-        Delta = 0x1D,           // <>
+        Inc = 0x1B,             // <>
+        Dec = 0x1C,             // <>
+        Neg = 0x1D,             // <>
+        Invert = 0x1E,          // <>
+        Delta = 0x1F,           // <>
 
         Equal = 0x20,           // <>
         NotEqual = 0x21,        // <>

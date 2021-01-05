@@ -12,14 +12,15 @@ namespace NitroSharp.NsScript.Compiler
         Subroutine,
         BuiltInFunction,
         BuiltInConstant,
-        GlobalVariable
+        Variable,
+        Flag
     }
 
     [StructLayout(LayoutKind.Explicit)]
     internal readonly struct LookupResult
     {
         [FieldOffset(0)]
-        public readonly LookupResultVariant _variant;
+        public readonly LookupResultVariant Variant;
 
         [FieldOffset(4)]
         public readonly BuiltInFunction BuiltInFunction;
@@ -34,23 +35,23 @@ namespace NitroSharp.NsScript.Compiler
         public readonly ParameterSymbol Parameter;
 
         [FieldOffset(8)]
-        public readonly string GlobalVariable;
+        public readonly string Global;
 
         public LookupResult(SubroutineSymbol subroutine) : this()
-            => (_variant, Subroutine) = (LookupResultVariant.Subroutine, subroutine);
+            => (Variant, Subroutine) = (LookupResultVariant.Subroutine, subroutine);
 
         public LookupResult(BuiltInFunction builtInFunction) : this()
-            => (_variant, BuiltInFunction) = (LookupResultVariant.BuiltInFunction, builtInFunction);
+            => (Variant, BuiltInFunction) = (LookupResultVariant.BuiltInFunction, builtInFunction);
 
         public LookupResult(BuiltInConstant builtInConstant) : this()
-            => (_variant, BuiltInConstant) = (LookupResultVariant.BuiltInConstant, builtInConstant);
+            => (Variant, BuiltInConstant) = (LookupResultVariant.BuiltInConstant, builtInConstant);
 
-        public LookupResult(string globalVariable) : this()
-            => (_variant, GlobalVariable) = (LookupResultVariant.GlobalVariable, globalVariable);
+        public LookupResult(LookupResultVariant variant, string name) : this()
+            => (Variant, Global) = (variant, name);
 
         public static LookupResult Empty = default;
 
-        public bool IsEmpty => _variant == LookupResultVariant.Empty;
+        public bool IsEmpty => Variant == LookupResultVariant.Empty;
     }
 
     internal struct CompileTimeBezierSegment
@@ -97,8 +98,7 @@ namespace NitroSharp.NsScript.Compiler
         {
             if (expression is NameExpressionSyntax nameExpression)
             {
-                var identifier = new Spanned<string>(nameExpression.Name, nameExpression.Span);
-                return LookupNonInvocableSymbol(identifier, isDefinitelyVariable: true);
+                return LookupNonInvocableSymbol(nameExpression);
             }
 
             Report(expression, DiagnosticId.BadAssignmentTarget);
@@ -155,15 +155,18 @@ namespace NitroSharp.NsScript.Compiler
             }
         }
 
-        public LookupResult LookupNonInvocableSymbol(Spanned<string> identifier, bool isDefinitelyVariable)
+        public LookupResult LookupNonInvocableSymbol(NameExpressionSyntax name)
         {
-            string name = identifier.Value;
-            if (isDefinitelyVariable || _compilation.TryGetGlobalVarToken(name, out _))
+            if (name.Sigil == SigilKind.Dollar || _compilation.TryGetVariableToken(name.Name, out _))
             {
-                return new LookupResult(globalVariable: name);
+                return new LookupResult(LookupResultVariant.Variable, name.Name);
+            }
+            if (name.Sigil == SigilKind.Hash)
+            {
+                return new LookupResult(LookupResultVariant.Flag, name.Name);
             }
 
-            BuiltInConstant? builtInConstant = WellKnownSymbols.LookupBuiltInConstant(name);
+            BuiltInConstant? builtInConstant = WellKnownSymbols.LookupBuiltInConstant(name.Name);
             if (builtInConstant.HasValue)
             {
                 return new LookupResult(builtInConstant.Value);

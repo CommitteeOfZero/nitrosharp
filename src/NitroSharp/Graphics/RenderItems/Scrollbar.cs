@@ -54,6 +54,8 @@ namespace NitroSharp.Graphics
             _max = MathF.Max(p1.Get(_axis), p2.Get(_axis));
         }
 
+        public override EntityKind Kind => EntityKind.Scrollbar;
+
         public bool IsHovered => _state != State.Normal;
 
         public float GetValue()

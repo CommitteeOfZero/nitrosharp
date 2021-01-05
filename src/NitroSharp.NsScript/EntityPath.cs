@@ -103,7 +103,13 @@ namespace NitroSharp.NsScript
         public static EntityPath Empty => new EntityPath(string.Empty);
 
         private ReadOnlySpan<char> CharsToHash
-            => Value[0] != '@' ? Value : Value.AsSpan(1);
+        {
+            get
+            {
+                if (string.IsNullOrEmpty(Value)) { return default; }
+                return Value[0] != '@' ? Value : Value.AsSpan(1);
+            }
+        }
 
         public bool GetParent(out EntityPath parent)
         {

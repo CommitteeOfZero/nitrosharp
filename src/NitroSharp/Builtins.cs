@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Numerics;
 using NitroSharp.Graphics;
 using NitroSharp.NsScript;
@@ -23,11 +24,11 @@ namespace NitroSharp
         private World World => _ctx.ActiveProcess.World;
 
         private Entity? Get(in EntityPath entityPath)
-            => World.Get(CurrentThread.Id, entityPath);
+            => World.Get(CurrentThread.DeclaredId, entityPath);
 
         private SmallList<Entity> Query(EntityQuery query)
         {
-            SmallList<Entity> results = World.Query(CurrentThread.Id, query);
+            SmallList<Entity> results = World.Query(CurrentThread.DeclaredId, query);
             if (results.Count == 0)
             {
                 EmptyResults(query);
@@ -37,7 +38,7 @@ namespace NitroSharp
 
         private QueryResultsEnumerable<T> Query<T>(EntityQuery query) where T : Entity
         {
-            QueryResultsEnumerable<T> results = World.Query<T>(CurrentThread.Id, query);
+            QueryResultsEnumerable<T> results = World.Query<T>(CurrentThread.DeclaredId, query);
             if (results.IsEmpty)
             {
                 EmptyResults(query);
@@ -46,11 +47,10 @@ namespace NitroSharp
         }
 
         private void EmptyResults(EntityQuery query) { }
-            //=> Console.WriteLine($"Query '{query.Value}' yielded no results.");
 
         private bool ResolvePath(in EntityPath path, out ResolvedEntityPath resolvedPath)
         {
-            return World.ResolvePath(CurrentThread.Id, path, out resolvedPath);
+            return World.ResolvePath(CurrentThread.DeclaredId, path, out resolvedPath);
         }
 
         public override void Exit()
@@ -60,14 +60,14 @@ namespace NitroSharp
 
         public override ConstantValue FormatString(string format, object[] args)
         {
-            return ConstantValue.String(CRuntime.sprintf(format, args));
+            return ConstantValue.String(SprintfNET.StringFormatter.PrintF(format, args));
         }
 
         public override void CreateEntity(in EntityPath path)
         {
             if (ResolvePath(path, out ResolvedEntityPath resolvedPath))
             {
-                World.Add(new SimpleEntity(resolvedPath));
+                World.Add(new BasicEntity(resolvedPath));
             }
         }
 
@@ -198,6 +198,37 @@ namespace NitroSharp
         public override void MoveCursor(int x, int y)
         {
             _ctx.Window.SetMousePosition(new Vector2(x, y));
+        }
+
+        public override bool MountSaveData(uint slot)
+        {
+            return true;
+        }
+
+        public override int GetSecondsElapsed()
+        {
+            return (int)_ctx.Timer.Elapsed.TotalSeconds;
+        }
+
+        public override bool SaveExists(uint slot)
+        {
+            return _ctx.SaveManager.SaveExists(slot);
+        }
+
+        public override bool FileExists(string path)
+        {
+            string fullPath = Path.Combine(_ctx.Config.ContentRoot, path);
+            return File.Exists(fullPath);
+        }
+
+        public override void SaveGame(uint slot)
+        {
+            _ctx.Defer(DeferredOperation.SaveGame(slot));
+        }
+
+        public override void LoadGame(uint slot)
+        {
+            _ctx.Defer(DeferredOperation.LoadGame(slot));
         }
     }
 }

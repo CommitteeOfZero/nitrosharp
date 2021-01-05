@@ -108,7 +108,7 @@ namespace NitroSharp.NsScript.Syntax.PXml
             AttributeList attrs = tag.Attributes;
             if (attrs.Get("value") is string strValue
                 && int.TryParse(strValue, out int value))
-            {   
+            {
                 return new SpanElement(value, content);
             }
 
@@ -195,7 +195,7 @@ namespace NitroSharp.NsScript.Syntax.PXml
                     continue;
                 }
 
-                if (c == '&' && (next == '.' || next == ','))
+                if (c is '&' or '\\' && next is '.' or ',')
                 {
                     AdvanceChar(2);
                     sb.Append(next);

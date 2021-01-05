@@ -1,4 +1,5 @@
 using System;
+using System.Numerics;
 using Veldrid;
 
 #nullable enable
@@ -11,7 +12,7 @@ namespace NitroSharp.Graphics.Core
         private Texture? _stagingTexture;
 
         public static RenderTarget Swapchain(GraphicsDevice graphicsDevice, Framebuffer framebuffer)
-            => new RenderTarget(graphicsDevice, framebuffer);
+            => new(graphicsDevice, framebuffer);
 
         public RenderTarget(
             GraphicsDevice graphicsDevice,
@@ -22,7 +23,7 @@ namespace NitroSharp.Graphics.Core
                 size.Width, size.Height,
                 mipLevels: 1, arrayLayers: 1,
                 format,
-                TextureUsage.RenderTarget | TextureUsage.Sampled
+                TextureUsage.Sampled | TextureUsage.RenderTarget
             );
             ResourceFactory factory = graphicsDevice.ResourceFactory;
             ColorTarget = factory.CreateTexture(ref textureDesc);
@@ -31,6 +32,10 @@ namespace NitroSharp.Graphics.Core
             _ownsFramebuffer = true;
             Size = size;
             OutputDescription = Framebuffer.OutputDescription;
+            OrthoProjection = ViewProjection.CreateOrtho(
+                graphicsDevice,
+                new RectangleF(Vector2.Zero, Size)
+            );
         }
 
         private RenderTarget(GraphicsDevice graphicsDevice, Framebuffer existingFramebuffer)
@@ -40,20 +45,26 @@ namespace NitroSharp.Graphics.Core
             _ownsFramebuffer = false;
             Size = new Size(ColorTarget.Width, ColorTarget.Height);
             OutputDescription = Framebuffer.OutputDescription;
+            OrthoProjection = ViewProjection.CreateOrtho(
+                graphicsDevice,
+                new RectangleF(Vector2.Zero, Size)
+            );
         }
 
         public Size Size { get; }
         public Framebuffer Framebuffer { get; }
         public Texture ColorTarget { get; }
         public OutputDescription OutputDescription { get; }
+        public ViewProjection OrthoProjection { get; }
 
-        public Texture GetStagingTexture(ResourceFactory resourceFactory)
+        public Texture ReadBack(CommandList cl, ResourceFactory resourceFactory)
         {
             _stagingTexture ??= resourceFactory.CreateTexture(TextureDescription.Texture2D(
                 ColorTarget.Width, ColorTarget.Height,
                 mipLevels: 1, arrayLayers: 1,
                 ColorTarget.Format, TextureUsage.Staging
             ));
+            cl.CopyTexture(ColorTarget, _stagingTexture);
             return _stagingTexture;
         }
 
@@ -66,6 +77,7 @@ namespace NitroSharp.Graphics.Core
             }
 
             _stagingTexture?.Dispose();
+            OrthoProjection.Dispose();
         }
     }
 }

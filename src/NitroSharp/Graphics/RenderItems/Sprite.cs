@@ -1,11 +1,15 @@
 using System;
+using System.Diagnostics;
 using System.Numerics;
+using MessagePack;
 using NitroSharp.Content;
 using NitroSharp.Graphics.Core;
 using NitroSharp.NsScript;
+using NitroSharp.Saving;
 using Veldrid;
+using ToolGeneratedExtensions;
 
-#nullable  enable
+#nullable enable
 
 namespace NitroSharp.Graphics
 {
@@ -38,15 +42,57 @@ namespace NitroSharp.Graphics
             Color = color;
         }
 
+        public static SpriteTexture FromSaveData(in SpriteTextureSaveData saveData, GameLoadingContext ctx)
+        {
+            switch (saveData.Kind)
+            {
+                case SpriteTextureKind.SolidColor:
+                    return new SpriteTexture(
+                        SpriteTextureKind.SolidColor,
+                        assetRef: null,
+                        saveData.SourceRectangle,
+                        standalone: null,
+                        new RgbaFloat(saveData.Color)
+                    );
+                case SpriteTextureKind.Asset:
+                    Debug.Assert(saveData.AssetPath is not null);
+                    // TODO: error handling?
+                    AssetRef<Texture> assetRef = ctx.Content.RequestTexture(saveData.AssetPath)!.Value;
+                    return FromAsset(assetRef, saveData.SourceRectangle);
+                case SpriteTextureKind.StandaloneTexture:
+                    Debug.Assert(saveData.StandaloneTextureId is not null);
+                    int id = saveData.StandaloneTextureId.Value;
+                    return FromStandalone(ctx.StandaloneTextures[id]);
+                default:
+                    return ThrowHelper.Unreachable<SpriteTexture>();
+            }
+        }
+
+        public SpriteTextureSaveData ToSaveData(GameSavingContext ctx)
+        {
+            int? standaloneTextureId = this is { Kind: SpriteTextureKind.StandaloneTexture, Standalone: { } standalone }
+                ? ctx.AddStandaloneTexture(standalone)
+                : null;
+
+            return new SpriteTextureSaveData
+            {
+                Kind = Kind,
+                Color = Color.ToVector4(),
+                AssetPath = AssetRef?.Path,
+                SourceRectangle = SourceRectangle,
+                StandaloneTextureId = standaloneTextureId
+            };
+        }
+
         public static SpriteTexture FromAsset(AssetRef<Texture> assetRef, RectangleU? srcRectangle = null)
-            => new SpriteTexture(SpriteTextureKind.Asset, assetRef, srcRectangle, null, RgbaFloat.White);
+            => new(SpriteTextureKind.Asset, assetRef, srcRectangle, null, RgbaFloat.White);
 
         public static SpriteTexture SolidColor(in RgbaFloat color, Size size)
-            => new SpriteTexture(SpriteTextureKind.SolidColor, null,
+            => new(SpriteTextureKind.SolidColor, null,
                 new RectangleU(0, 0, size.Width, size.Height), null, color);
 
         public static SpriteTexture FromStandalone(Texture texture)
-            => new SpriteTexture(SpriteTextureKind.StandaloneTexture, null,
+            => new(SpriteTextureKind.StandaloneTexture, null,
                 new RectangleU(0, 0, texture.Width, texture.Height), texture, RgbaFloat.White);
 
         public Texture Resolve(RenderContext ctx) => this switch
@@ -117,9 +163,30 @@ namespace NitroSharp.Graphics
         {
             _texture = texture;
             Color = texture.Color;
+            PreciseHitTest = NeedPreciseHitTest();
         }
 
-        protected override bool PreciseHitTest => true;
+        public Sprite(in ResolvedEntityPath path, in SpriteSaveData saveData, GameLoadingContext ctx)
+            : base(path, saveData.RenderItemData)
+        {
+            _texture = SpriteTexture.FromSaveData(saveData.Texture, ctx);
+            PreciseHitTest = NeedPreciseHitTest();
+            if (saveData.TransitionData is TransitionAnimationSaveData transitionData)
+            {
+                _transition = new TransitionAnimation(transitionData, ctx.Content);
+            }
+        }
+
+        public override EntityKind Kind => EntityKind.Sprite;
+
+        protected override bool PreciseHitTest { get; }
+
+        private bool NeedPreciseHitTest()
+        {
+            return Parent is Choice
+                && _texture.Kind == SpriteTextureKind.Asset
+                && _texture.SourceRectangle is null;
+        }
 
         public override Size GetUnconstrainedBounds(RenderContext ctx)
             => _texture.GetSize(ctx);
@@ -223,10 +290,99 @@ namespace NitroSharp.Graphics
             );
         }
 
+        public new SpriteSaveData ToSaveData(GameSavingContext ctx) => new()
+        {
+            RenderItemData = base.ToSaveData(ctx),
+            Texture = _texture.ToSaveData(ctx),
+            TransitionData = _transition?.ToSaveData()
+        };
+
         public override void Dispose()
         {
             base.Dispose();
             _texture.Dispose();
+        }
+    }
+
+     [Persistable]
+    internal readonly partial struct SpriteSaveData : IEntitySaveData
+    {
+        public RenderItemSaveData RenderItemData { get; init; }
+        public SpriteTextureSaveData Texture { get; init; }
+        public TransitionAnimationSaveData? TransitionData { get; init; }
+
+        public EntitySaveData CommonEntityData => RenderItemData.EntityData;
+    }
+
+    internal readonly struct SpriteTextureSaveData
+    {
+        public SpriteTextureKind Kind { get; init; }
+        public Vector4 Color { get; init; }
+        public string? AssetPath { get; init; }
+        public RectangleU? SourceRectangle { get; init; }
+        public int? StandaloneTextureId { get; init; }
+
+        public SpriteTextureSaveData(ref MessagePackReader reader)
+        {
+            reader.ReadArrayHeader();
+            Kind = (SpriteTextureKind)reader.ReadInt32();
+            Color = Vector4.One;
+            AssetPath = null;
+            SourceRectangle = null;
+            StandaloneTextureId = null;
+            switch (Kind)
+            {
+                case SpriteTextureKind.SolidColor:
+                    Color = reader.ReadVector4();
+                    SourceRectangle = new RectangleU(Point2DU.Zero, new Size(ref reader));
+                    break;
+                case SpriteTextureKind.StandaloneTexture:
+                    StandaloneTextureId = reader.ReadNullableInt32();
+                    break;
+                case SpriteTextureKind.Asset:
+                    AssetPath = reader.ReadString();
+                    if (!reader.TryReadNil())
+                    {
+                        SourceRectangle = new RectangleU(ref reader);
+                    }
+                    break;
+            }
+        }
+
+        public void Serialize(ref MessagePackWriter writer)
+        {
+            int fieldCount = Kind switch
+            {
+                SpriteTextureKind.SolidColor => 3,
+                SpriteTextureKind.StandaloneTexture => 2,
+                SpriteTextureKind.Asset => 3,
+                _ => ThrowHelper.Unreachable<int>()
+            };
+
+            writer.WriteArrayHeader(fieldCount);
+            writer.Write((int)Kind);
+            switch (Kind)
+            {
+                case SpriteTextureKind.SolidColor:
+                    Debug.Assert(SourceRectangle is { });
+                    writer.Write(Color);
+                    SourceRectangle.Value.Size.Serialize(ref writer);
+                    break;
+                case SpriteTextureKind.StandaloneTexture:
+                    writer.Write(StandaloneTextureId);
+                    break;
+                case SpriteTextureKind.Asset:
+                    writer.Write(AssetPath);
+                    if (SourceRectangle is RectangleU srcRect)
+                    {
+                        srcRect.Serialize(ref writer);
+                    }
+                    else
+                    {
+                        writer.WriteNil();
+                    }
+                    break;
+            }
         }
     }
 }

@@ -15,8 +15,12 @@ using NitroSharp.Graphics;
 using NitroSharp.NsScript;
 using NitroSharp.NsScript.Compiler;
 using NitroSharp.NsScript.VM;
+using System.Collections.Generic;
+using System.Numerics;
+using NitroSharp.Saving;
 
 [assembly: InternalsVisibleTo("NitroSharp.Tests")]
+[assembly: InternalsVisibleTo("Game")]
 
 #nullable enable
 
@@ -34,9 +38,48 @@ namespace NitroSharp
         public bool IsValid => FrameId >= 0 && StopwatchTicks >= 0;
     }
 
+    internal enum DeferredOperationKind
+    {
+        CaptureFramebuffer,
+        SaveGame,
+        LoadGame
+    }
+
+    internal readonly struct DeferredOperation
+    {
+        public DeferredOperationKind Kind { get; init; }
+        public Texture? ScreenshotTexture { get; init; }
+        public uint? SaveSlot { get; init; }
+
+        public static DeferredOperation CaptureFramebuffer(Texture dstTexture) => new()
+        {
+            Kind = DeferredOperationKind.CaptureFramebuffer,
+            ScreenshotTexture = dstTexture,
+            SaveSlot = null
+        };
+
+        public static DeferredOperation SaveGame(uint slot) => new()
+        {
+            Kind = DeferredOperationKind.SaveGame,
+            ScreenshotTexture = null,
+            SaveSlot = slot
+        };
+
+        public static DeferredOperation LoadGame(uint slot) => new()
+        {
+            Kind = DeferredOperationKind.LoadGame,
+            ScreenshotTexture = null,
+            SaveSlot = slot
+        };
+    }
+
     internal sealed class GameContext
     {
+        public Stopwatch Timer { get; }
+
         public GameWindow Window { get; }
+        public Configuration Config { get; }
+        public GameSaveManager SaveManager { get; }
         public ContentManager Content { get; }
         public GlyphRasterizer GlyphRasterizer { get; }
         public RenderContext RenderContext { get; }
@@ -44,14 +87,20 @@ namespace NitroSharp
         public NsScriptVM VM { get; }
         public CancellationTokenSource ShutdownSignal { get; }
 
-        public GameProcess MainProcess { get; }
+        public GameProcess MainProcess { get; set; }
         public GameProcess? SysProcess { get; set; }
         public GameProcess ActiveProcess => SysProcess ?? MainProcess;
 
         public Backlog Backlog { get; }
 
+        public Texture? LastScreenshot { get; set; }
+
+        public Queue<DeferredOperation> DeferredOperations { get; } = new();
+
         public GameContext(
             GameWindow window,
+            Configuration config,
+            GameSaveManager saveManager,
             ContentManager content,
             GlyphRasterizer glyphRasterizer,
             RenderContext renderContext,
@@ -60,6 +109,8 @@ namespace NitroSharp
             GameProcess mainProcess)
         {
             Window = window;
+            Config = config;
+            SaveManager = saveManager;
             Content = content;
             GlyphRasterizer = glyphRasterizer;
             RenderContext = renderContext;
@@ -67,17 +118,23 @@ namespace NitroSharp
             VM = vm;
             ShutdownSignal = new CancellationTokenSource();
             MainProcess = mainProcess;
-            Backlog = new Backlog();
+            Backlog = new Backlog(vm.SystemVariables);
+            Timer = Stopwatch.StartNew();
+        }
+
+        public void Defer(in DeferredOperation operation)
+        {
+            ActiveProcess.VmProcess.Suspend();
+            DeferredOperations.Enqueue(operation);
         }
 
         public void Wait(
             NsScriptThread thread,
             WaitCondition condition,
             TimeSpan? timeout = null,
-            EntityQuery? entityQuery = null,
-            Texture? screenshotTexture = null)
+            EntityQuery? entityQuery = null)
         {
-            ActiveProcess.Wait(thread, condition, timeout, entityQuery, screenshotTexture);
+            ActiveProcess.Wait(thread, condition, timeout, entityQuery);
         }
     }
 
@@ -99,6 +156,7 @@ namespace NitroSharp
         private RenderSystem? _renderSystem;
         private readonly GlyphRasterizer _glyphRasterizer;
         private readonly FontConfiguration _defaultFontConfig;
+        private readonly GameSaveManager _saveManager;
 
         private ContentManager? _content;
         private readonly InputContext _inputContext;
@@ -109,7 +167,7 @@ namespace NitroSharp
         private readonly string _nssFolder;
         private readonly string _bytecodeCacheDir;
         private NsScriptVM? _vm;
-        private Builtins _builtinFunctions;
+        private Builtins _builtinFunctions = null!;
         private GameContext? _context;
 
         private bool _clearFramebuffer = true;
@@ -118,6 +176,7 @@ namespace NitroSharp
         {
             _initializingGraphics = new TaskCompletionSource<int>();
             _configuration = configuration;
+            _saveManager = new GameSaveManager(configuration);
             (_logger, _logEventRecorder) = SetupLogging();
             _glyphRasterizer = new GlyphRasterizer();
             _window = window;
@@ -130,17 +189,24 @@ namespace NitroSharp
 
             _nssFolder = Path.Combine(_configuration.ContentRoot, _configuration.ScriptRoot);
             _bytecodeCacheDir = _nssFolder.Replace("nss", "nsx");
-            _builtinFunctions = null!;
 
             var defaultFont = new FontFaceKey(_configuration.FontFamily, FontStyle.Regular);
             _defaultFontConfig = new FontConfiguration(
                 defaultFont,
                 italicFont: null,
                 new PtFontSize(_configuration.FontSize),
-                defaultTextColor: RgbaFloat.White,
-                defaultOutlineColor: RgbaFloat.Black,
+                defaultTextColor: Vector4.One,
+                defaultOutlineColor: Vector4.Zero,
                 rubyFontSizeMultiplier: 0.4f
             );
+        }
+
+        private void SetSystemVariables()
+        {
+            Debug.Assert(_context is not null);
+            _saveManager.ReadCommonSaveData(_context);
+            SystemVariableLookup vars = _context.VM.SystemVariables;
+            vars.SavePath = ConstantValue.String(_saveManager.SaveDirectory);
         }
 
         internal AudioDevice AudioDevice => _audioDevice!;
@@ -167,6 +233,8 @@ namespace NitroSharp
 
             _context = new GameContext(
                 _window,
+                _configuration,
+                _saveManager,
                 _content!,
                 _glyphRasterizer,
                 _renderSystem!.Context,
@@ -175,6 +243,10 @@ namespace NitroSharp
                 process
             );
             _builtinFunctions = new Builtins(_context);
+
+
+            SetSystemVariables();
+
             return RunMainLoop(useDedicatedThread);
         }
 
@@ -236,8 +308,11 @@ namespace NitroSharp
 
                 SourceModuleSymbol startup = compilation.GetSourceModule(_configuration.SysScripts.Startup);
                 SourceModuleSymbol backlog = compilation.GetSourceModule(_configuration.SysScripts.Backlog);
+                SourceModuleSymbol save = compilation.GetSourceModule(_configuration.SysScripts.Save);
+                SourceModuleSymbol load = compilation.GetSourceModule(_configuration.SysScripts.Load);
+                SourceModuleSymbol menu = compilation.GetSourceModule(_configuration.SysScripts.Menu);
 
-                compilation.Emit(new[] { startup, backlog });
+                compilation.Emit(new[] { startup, backlog, save, load, menu });
             }
             else
             {
@@ -393,7 +468,8 @@ namespace NitroSharp
             {
                 world.BeginFrame();
             }
-            _renderSystem.Render(_context, world.RenderItems, dt, assetsReady);
+            _renderSystem.Render(framestamp, _context, world.RenderItems, dt, assetsReady);
+            RunDeferredOperations();
             _renderSystem.EndFrame();
 
             if (assetsReady)
@@ -413,6 +489,13 @@ namespace NitroSharp
                         _clearFramebuffer = false;
                     }
                 }
+                if (_inputContext.RawInput.IsMouseDown(MouseButton.Right))
+                {
+                    if (CreateSysProcess(_configuration.SysScripts.Menu))
+                    {
+                        _clearFramebuffer = false;
+                    }
+                }
             }
             try
             {
@@ -424,12 +507,46 @@ namespace NitroSharp
             }
         }
 
+        private void RunDeferredOperations()
+        {
+            Debug.Assert(_context is not null);
+            Debug.Assert(_renderSystem is not null);
+            bool resumeProcess = _context.DeferredOperations.Count > 0;
+            while (_context.DeferredOperations.TryDequeue(out DeferredOperation op))
+            {
+                switch (op.Kind)
+                {
+                    case DeferredOperationKind.CaptureFramebuffer:
+                        Debug.Assert(op.ScreenshotTexture is not null);
+                        _renderSystem.Context.CaptureFramebuffer(op.ScreenshotTexture);
+                        break;
+                    case DeferredOperationKind.SaveGame:
+                        Debug.Assert(op.SaveSlot is not null);
+                        _saveManager.Save(_context, op.SaveSlot.Value);
+                        break;
+                    case DeferredOperationKind.LoadGame:
+                        Debug.Assert(op.SaveSlot is not null);
+                        _saveManager.Load(_context, op.SaveSlot.Value);
+                        break;
+                }
+            }
+
+            if (resumeProcess)
+            {
+                _context.ActiveProcess.VmProcess.Resume();
+            }
+        }
+
         private bool CreateSysProcess(string mainModule)
         {
-            if (_context!.SysProcess is null)
+            Debug.Assert(_context is not null);
+            //_context.SysProcess?.Dispose();
+            if (_context.SysProcess is null)
             {
-                _context!.MainProcess.VmProcess.Suspend();
-                _context!.SysProcess = CreateProcess(mainModule);
+                _context.LastScreenshot ??= _context.RenderContext.CreateFullscreenTexture(staging: true);
+                _context.RenderContext.CaptureFramebuffer(_context.LastScreenshot);
+                _context.MainProcess.VmProcess.Suspend();
+                _context.SysProcess = CreateProcess(mainModule);
                 return true;
             }
 

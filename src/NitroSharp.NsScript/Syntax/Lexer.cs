@@ -204,10 +204,10 @@ namespace NitroSharp.NsScript.Syntax
                         AdvanceChar(3);
                         token.Kind = SyntaxTokenKind.AtArrow;
                     }
-                    else if (ScanIdentifier(ref token))
-                    {
-                        token.Kind = SyntaxTokenKind.Identifier;
-                    }
+                    //else if (ScanIdentifier(ref token))
+                    //{
+                    //    token.Kind = SyntaxTokenKind.Identifier;
+                    //}
                     else
                     {
                         AdvanceChar();
@@ -515,23 +515,18 @@ namespace NitroSharp.NsScript.Syntax
             return true;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void ScanSigil(ref MutableToken token)
         {
-            switch (PeekChar())
+            SyntaxTokenFlags flag = PeekChar() switch
             {
-                case '$':
-                    AdvanceChar();
-                    token.Flags |= SyntaxTokenFlags.HasDollarPrefix;
-                    break;
-                case '#':
-                    AdvanceChar();
-                    token.Flags |= SyntaxTokenFlags.HasHashPrefix;
-                    break;
-                case '@':
-                    AdvanceChar();
-                    token.Flags |= SyntaxTokenFlags.HasAtPrefix;
-                    break;
+                '$' => SyntaxTokenFlags.HasDollarPrefix,
+                '#' => SyntaxTokenFlags.HasHashPrefix,
+                _ => SyntaxTokenFlags.Empty
+            };
+            if (flag != SyntaxTokenFlags.Empty)
+            {
+                AdvanceChar();
+                token.Flags |= flag;
             }
         }
 

@@ -7,7 +7,7 @@ using System.Runtime.CompilerServices;
 
 namespace NitroSharp.Utilities
 {
-    internal struct ArrayBuilder<T>
+    public struct ArrayBuilder<T>
     {
         private T[] _elements;
         private uint _count;
