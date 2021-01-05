@@ -37,10 +37,10 @@ namespace NitroSharp.Utilities
         public FreeListHandle(uint index, uint version)
             => (Index, Version) = (index, version);
 
-        public static FreeListHandle Invalid => new FreeListHandle(0, 0);
+        public static FreeListHandle Invalid => new(0, 0);
 
         public WeakFreeListHandle GetWeakHandle()
-            => new WeakFreeListHandle(Index, Version);
+            => new(Index, Version);
 
         public bool Equals(FreeListHandle other)
             => Index == other.Index && Version == other.Version;
@@ -56,7 +56,7 @@ namespace NitroSharp.Utilities
         public WeakFreeListHandle(uint index, uint version)
             => (Index, Version) = (index, version);
 
-        public static WeakFreeListHandle Invalid => new WeakFreeListHandle(0, 0);
+        public static WeakFreeListHandle Invalid => new(0, 0);
 
         public bool Equals(WeakFreeListHandle other)
             => Index == other.Index && Version == other.Version;

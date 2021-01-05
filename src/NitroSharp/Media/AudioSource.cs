@@ -7,7 +7,7 @@ namespace NitroSharp.Media
     {
         public const uint MaxQueuedBuffers = 16;
 
-        protected ConcurrentQueue<IntPtr> _processedBufferPointers = new ConcurrentQueue<IntPtr>();
+        protected ConcurrentQueue<IntPtr> _processedBufferPointers = new();
 
         public abstract IntPtr CurrentBuffer { get; }
         public abstract uint BuffersQueued { get; }

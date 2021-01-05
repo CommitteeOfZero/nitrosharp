@@ -34,7 +34,7 @@ namespace NitroSharp
         public FrameStamp(long frameId, long stopwatchTicks)
             => (FrameId, StopwatchTicks) = (frameId, stopwatchTicks);
 
-        public static FrameStamp Invalid => new FrameStamp(-1, -1);
+        public static FrameStamp Invalid => new(-1, -1);
         public bool IsValid => FrameId >= 0 && StopwatchTicks >= 0;
     }
 
@@ -598,19 +598,16 @@ namespace NitroSharp
            //     _swapchain = _graphicsDevice.MainSwapchain;
            // }
            // else
-            {
-                if (_graphicsDevice == null)
-                {
-                    _graphicsDevice = backend switch
-                    {
-                        GraphicsBackend.Direct3D11 => GraphicsDevice.CreateD3D11(options),
-                        GraphicsBackend.Vulkan => GraphicsDevice.CreateVulkan(options),
-                        //GraphicsBackend.Metal => GraphicsDevice.CreateMetal(options),
-                        _ => ThrowHelper.Unreachable<GraphicsDevice>()
-                    };
-                }
-                _swapchain = _graphicsDevice.ResourceFactory.CreateSwapchain(ref swapchainDesc);
-            }
+           {
+               _graphicsDevice ??= backend switch
+               {
+                   GraphicsBackend.Direct3D11 => GraphicsDevice.CreateD3D11(options),
+                   GraphicsBackend.Vulkan => GraphicsDevice.CreateVulkan(options),
+                   //GraphicsBackend.Metal => GraphicsDevice.CreateMetal(options),
+                   _ => ThrowHelper.Unreachable<GraphicsDevice>()
+               };
+               _swapchain = _graphicsDevice.ResourceFactory.CreateSwapchain(ref swapchainDesc);
+           }
         }
 
         private void SetupAudio()

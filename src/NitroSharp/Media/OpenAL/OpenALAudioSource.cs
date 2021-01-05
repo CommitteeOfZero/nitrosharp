@@ -11,8 +11,8 @@ namespace NitroSharp.Media.OpenAL
 
         private uint _handle;
 
-        private readonly Queue<IntPtr> _bufferQueue = new Queue<IntPtr>((int)MaxQueuedBuffers);
-        private readonly Queue<uint> _freeAlBuffers = new Queue<uint>((int)MaxQueuedBuffers);
+        private readonly Queue<IntPtr> _bufferQueue = new((int)MaxQueuedBuffers);
+        private readonly Queue<uint> _freeAlBuffers = new((int)MaxQueuedBuffers);
         private readonly uint[] _processedAlBuffers = new uint[MaxQueuedBuffers];
 
         public OpenALAudioSource(OpenALAudioDevice device)

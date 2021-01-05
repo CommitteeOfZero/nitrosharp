@@ -33,7 +33,7 @@ namespace NitroSharp.Graphics
         public float Layer;
         private Vector3 _padding;
 
-        public static readonly VertexLayoutDescription LayoutDescription = new VertexLayoutDescription(
+        public static readonly VertexLayoutDescription LayoutDescription = new(
             stride: 32,
             new VertexElementDescription(
                 "vs_Position",
@@ -69,7 +69,7 @@ namespace NitroSharp.Graphics
         {
             static IconVertex vertex(in QuadVertex v, uint layer)
             {
-                return new IconVertex
+                return new()
                 {
                     Position = v.Position,
                     TexCoord = v.TexCoord,

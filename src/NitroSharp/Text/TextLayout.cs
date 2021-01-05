@@ -128,7 +128,7 @@ namespace NitroSharp.Text
 
             public static LineBuilder Create()
             {
-                return new LineBuilder
+                return new()
                 {
                     _rubyChunks = new ArrayBuilder<RubyTextChunk>(initialCapacity: 0),
                     Left = float.MaxValue
@@ -171,7 +171,7 @@ namespace NitroSharp.Text
 
             public Line Build()
             {
-                return new Line(
+                return new(
                     new GlyphSpan(Start, Length),
                     BaselineY,
                     MaxFontDescender,

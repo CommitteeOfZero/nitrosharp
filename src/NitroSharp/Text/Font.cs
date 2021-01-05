@@ -9,8 +9,8 @@ namespace NitroSharp.Text
     [Persistable]
     internal readonly partial struct FontFaceKey : IEquatable<FontFaceKey>
     {
-        public readonly string FamilyName { get; init; }
-        public readonly FontStyle Style { get; init; }
+        public string FamilyName { get; init; }
+        public FontStyle Style { get; init; }
 
         public FontFaceKey(string familyName, FontStyle style)
         {

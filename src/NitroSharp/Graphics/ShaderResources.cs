@@ -9,7 +9,7 @@ namespace NitroSharp.Graphics
 {
     internal sealed class ShaderResources : IDisposable
     {
-        public static BlendStateDescription PremultipliedAlpha => new BlendStateDescription
+        public static BlendStateDescription PremultipliedAlpha => new()
         {
             AttachmentStates = new[]
             {
@@ -158,7 +158,7 @@ namespace NitroSharp.Graphics
                         ColorFunction = BlendFunction.Add,
                         SourceAlphaFactor = BlendFactor.SourceAlpha,
                         DestinationAlphaFactor = BlendFactor.DestinationAlpha,
-                        AlphaFunction = BlendFunction.Add,
+                        AlphaFunction = BlendFunction.Add
                     }
                 }
             };

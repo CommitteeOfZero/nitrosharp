@@ -24,10 +24,10 @@ namespace NitroSharp.Media.Decoding
         private MediaStream[]? _mediaStreams;
 
         public static MediaContainer Open(Stream stream, bool leaveOpen = false)
-            => new MediaContainer(stream, leaveOpen);
+            => new(stream, leaveOpen);
 
         public static MediaContainer Open(Stream stream, AVInputFormat* inputFormat, bool leaveOpen = false)
-            => new MediaContainer(stream, inputFormat, leaveOpen);
+            => new(stream, inputFormat, leaveOpen);
 
         private MediaContainer(Stream stream, bool leaveOpen = false)
             : this(stream, null, leaveOpen)

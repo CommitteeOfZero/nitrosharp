@@ -6,7 +6,7 @@ namespace NitroSharp.Media.Decoding
 {
     public sealed class DecoderCollection
     {
-        public static readonly DecoderCollection Shared = new DecoderCollection();
+        public static readonly DecoderCollection Shared = new();
 
         private readonly ConcurrentDictionary<AVCodecID, IntPtr> _decoders;
 

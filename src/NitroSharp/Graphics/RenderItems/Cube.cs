@@ -71,7 +71,7 @@ namespace NitroSharp.Graphics
             new CubeVertex(-0.5f,0.5f,0.5f),
             new CubeVertex(0.5f,0.5f,0.5f),
             new CubeVertex(0.5f,-0.5f,0.5f),
-            new CubeVertex(-0.5f,-0.5f,0.5f),
+            new CubeVertex(-0.5f,-0.5f,0.5f)
         };
 
         public static ushort[] Indices => new ushort[]

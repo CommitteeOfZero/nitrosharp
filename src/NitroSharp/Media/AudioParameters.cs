@@ -4,7 +4,7 @@ namespace NitroSharp.Media
 {
     public readonly struct AudioParameters : IEquatable<AudioParameters>
     {
-        public static readonly AudioParameters Default = new AudioParameters(ChannelLayout.Stereo, 44100);
+        public static readonly AudioParameters Default = new(ChannelLayout.Stereo, 44100);
 
         public readonly ChannelLayout ChannelLayout;
         public readonly uint SampleRate;

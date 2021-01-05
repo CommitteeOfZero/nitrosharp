@@ -13,10 +13,10 @@ namespace NitroSharp.Graphics.Core
         where T : unmanaged
     {
         public static GpuBuffer<T> CreateIndex(GraphicsDevice gd, Span<T> data)
-            => new GpuBuffer<T>(gd, BufferUsage.IndexBuffer, data);
+            => new(gd, BufferUsage.IndexBuffer, data);
 
         public static GpuBuffer<T> CreateUniform(GraphicsDevice gd, in T data)
-            => new GpuBuffer<T>(gd, BufferUsage.UniformBuffer, data);
+            => new(gd, BufferUsage.UniformBuffer, data);
 
         public GpuBuffer(
             GraphicsDevice graphicsDevice,

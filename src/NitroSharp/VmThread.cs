@@ -2,7 +2,6 @@ using NitroSharp.Graphics;
 using NitroSharp.NsScript;
 using NitroSharp.NsScript.VM;
 using NitroSharp.Saving;
-using Veldrid;
 
 namespace NitroSharp
 {

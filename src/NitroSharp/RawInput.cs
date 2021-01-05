@@ -16,8 +16,8 @@ namespace NitroSharp
     {
         private readonly bool _desktopOS;
 
-        private readonly HashSet<Key> _keyboardState = new HashSet<Key>();
-        private readonly List<Key> _newKeys = new List<Key>();
+        private readonly HashSet<Key> _keyboardState = new();
+        private readonly List<Key> _newKeys = new();
 
         private readonly bool[] _mouseState = new bool[13];
         private readonly bool[] _newMouseButtons = new bool[13];

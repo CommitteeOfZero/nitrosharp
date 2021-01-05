@@ -21,7 +21,7 @@ namespace NitroSharp
     {
         None = 1 << 0,
         MissingFeature = 1 << 1,
-        MissingAsset = 1 << 2,
+        MissingAsset = 1 << 2
     }
 
     [StructLayout(LayoutKind.Auto)]
@@ -61,7 +61,7 @@ namespace NitroSharp
         }
 
         public Logger CreateLogger()
-            => new Logger(_eventSinks.ToImmutableArray());
+            => new(_eventSinks.ToImmutableArray());
     }
 
     internal sealed class Logger
@@ -162,9 +162,9 @@ namespace NitroSharp
 
     internal sealed class LogEventRecorder : ILogEventSink
     {
-        private ArrayBuilder<LogEvent> _logEvents = new ArrayBuilder<LogEvent>(16);
+        private ArrayBuilder<LogEvent> _logEvents = new(16);
         private int _count;
-        private readonly object _lock = new object();
+        private readonly object _lock = new();
 
         public ReadOnlySpan<LogEvent> LogEvents =>
             _logEvents.AsReadonlySpan(0, _count);

@@ -111,7 +111,7 @@ namespace NitroSharp
             NsEaseFunction.SineEaseOut => MathF.Sin(progress * MathF.PI * 0.5f),
             NsEaseFunction.SineEaseInOut => 0.5f * (1.0f - MathF.Cos(progress * MathF.PI)),
             NsEaseFunction.SineEaseOutIn => MathF.Acos(1.0f - progress * 2.0f) / MathF.PI,
-            _ => progress,
+            _ => progress
         };
     }
 

@@ -120,7 +120,7 @@ namespace NitroSharp.Graphics
 
         private GlyphRun GetGlyphRun(GlyphSpan span)
         {
-            return new GlyphRun(
+            return new(
                 _fontConfig.DefaultFont,
                 _fontConfig.DefaultFontSize,
                 new RgbaFloat(_fontConfig.DefaultTextColor),

@@ -33,7 +33,7 @@ namespace NitroSharp.Text
             FontFaceKey font, PtFontSize ptFontSize,
             RgbaFloat color, RgbaFloat? outlineColor)
         {
-            return new TextRun(
+            return new(
                 font, ptFontSize,
                 color, outlineColor,
                 text, rubyText: default
@@ -45,7 +45,7 @@ namespace NitroSharp.Text
             FontFaceKey font, PtFontSize ptFontSize,
             RgbaFloat color, RgbaFloat? outlineColor)
         {
-            return new TextRun(
+            return new(
                 font, ptFontSize,
                 color, outlineColor,
                 rubyBase, rubyText

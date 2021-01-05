@@ -38,7 +38,7 @@ namespace NitroSharp
         }
 
         public SwapchainSource SwapchainSource { get; }
-        public Size Size => new Size((uint)_window.Width, (uint)_window.Height);
+        public Size Size => new((uint)_window.Width, (uint)_window.Height);
         public bool Exists => _window.Exists;
 
         public AutoResetEvent Mobile_HandledSurfaceDestroyed => throw new NotImplementedException();

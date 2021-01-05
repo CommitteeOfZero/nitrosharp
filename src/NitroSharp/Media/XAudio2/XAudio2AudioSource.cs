@@ -11,8 +11,8 @@ namespace NitroSharp.Media.XAudio2
     {
         private readonly XAudio2AudioDevice _device;
         private readonly SourceVoice _sourceVoice;
-        private readonly ConcurrentQueue<IntPtr> _bufferQueue = new ConcurrentQueue<IntPtr>();
-        private readonly AudioBuffer _xaudioBuffer = new AudioBuffer();
+        private readonly ConcurrentQueue<IntPtr> _bufferQueue = new();
+        private readonly AudioBuffer _xaudioBuffer = new();
 
         private volatile IntPtr _currentBufferPointer;
         private long _lastNbSamplesPlayed;

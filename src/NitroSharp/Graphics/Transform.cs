@@ -14,7 +14,7 @@ namespace NitroSharp.Graphics
         public Vector3 Scale;
         public Vector3 Rotation;
 
-        public static Transform Default => new Transform { Scale = Vector3.One };
+        public static Transform Default => new() { Scale = Vector3.One };
 
         public Matrix4x4 GetMatrix(Size? unconstrainedBounds = null)
         {

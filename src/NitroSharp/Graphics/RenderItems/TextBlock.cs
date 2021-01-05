@@ -1,5 +1,4 @@
 using System.Numerics;
-using NitroSharp.NsScript.Primitives;
 using NitroSharp.Saving;
 using NitroSharp.Text;
 

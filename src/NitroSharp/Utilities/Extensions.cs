@@ -20,10 +20,10 @@ namespace NitroSharp
     internal static class NsColorExtensions
     {
         public static RgbaByte ToRgbaByte(this NsColor nsColor)
-            => new RgbaByte(nsColor.R, nsColor.G, nsColor.B, 255);
+            => new(nsColor.R, nsColor.G, nsColor.B, 255);
 
         public static RgbaFloat ToRgbaFloat(this NsColor nsColor)
-            => new RgbaFloat(nsColor.R / 255.0f, nsColor.G / 255.0f, nsColor.B / 255.0f, 1.0f);
+            => new(nsColor.R / 255.0f, nsColor.G / 255.0f, nsColor.B / 255.0f, 1.0f);
 
         public static Vector4 ToVector4(this NsColor nsColor)
             => new(nsColor.R / 255.0f, nsColor.G / 255.0f, nsColor.B / 255.0f, 1.0f);
@@ -44,8 +44,8 @@ namespace NitroSharp
             _ => ThrowHelper.Unreachable<float>()
         };
 
-        public static Vector2 XY(this in Vector4 vec) => new Vector2(vec.X, vec.Y);
-        public static Vector2 XY(this in Vector3 vec) => new Vector2(vec.X, vec.Y);
+        public static Vector2 XY(this in Vector4 vec) => new(vec.X, vec.Y);
+        public static Vector2 XY(this in Vector3 vec) => new(vec.X, vec.Y);
 
         public static RgbaFloat ToRgbaFloat(this Vector4 v) => new(v);
     }

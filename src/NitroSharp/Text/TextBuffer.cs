@@ -11,8 +11,7 @@ namespace NitroSharp.Text
 {
     internal sealed class TextBuffer
     {
-        private static readonly PXmlFlattener s_pxmlFlattener
-            = new PXmlFlattener();
+        private static readonly PXmlFlattener s_pxmlFlattener = new();
 
         private TextBuffer(
             ImmutableArray<TextBufferSegment> segments,

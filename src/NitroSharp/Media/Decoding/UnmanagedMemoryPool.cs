@@ -85,10 +85,10 @@ namespace NitroSharp.Media.Decoding
         }
 
         public unsafe Span<T> AsSpan<T>() where T : struct
-            => new Span<T>(_start.ToPointer(), (int)ChunkCount);
+            => new(_start.ToPointer(), (int)ChunkCount);
 
         public unsafe ReadOnlySpan<T> AsReadOnlySpan<T>() where T : struct
-            => new ReadOnlySpan<T>(_start.ToPointer(), (int)(ChunkSize * ChunkCount));
+            => new(_start.ToPointer(), (int)(ChunkSize * ChunkCount));
 
         public void Dispose()
         {

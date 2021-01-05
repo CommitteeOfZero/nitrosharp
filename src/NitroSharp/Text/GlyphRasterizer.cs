@@ -90,7 +90,7 @@ namespace NitroSharp.Text
             }
         }
 
-        public void AddFont(string path)
+        private void AddFont(string path)
         {
             if (_metricsContext.AddFont(path, out ImmutableArray<(FontFaceKey, FontFace)> faces))
             {
@@ -230,7 +230,7 @@ namespace NitroSharp.Text
             }
         }
 
-        unsafe struct RgbaPixel
+        private unsafe struct RgbaPixel
         {
             public fixed byte Channels[4];
         }
@@ -404,26 +404,24 @@ namespace NitroSharp.Text
             TextureCacheHandle textureCacheHandle,
             TextureCacheHandle outlineTextureCacheHandle)
         {
-            return new GlyphCacheEntry(
+            return new(
                GlyphCacheEntryKind.Regular,
                textureCacheHandle,
                outlineTextureCacheHandle
-           );
+            );
         }
 
-        public static GlyphCacheEntry Pending() =>
-            new GlyphCacheEntry(
-                GlyphCacheEntryKind.Pending,
-                TextureCacheHandle.Invalid,
-                TextureCacheHandle.Invalid
-            );
+        public static GlyphCacheEntry Pending() => new(
+            GlyphCacheEntryKind.Pending,
+            TextureCacheHandle.Invalid,
+            TextureCacheHandle.Invalid
+        );
 
-        public static GlyphCacheEntry Blank() =>
-            new GlyphCacheEntry(
-                GlyphCacheEntryKind.Blank,
-                TextureCacheHandle.Invalid,
-                TextureCacheHandle.Invalid
-            );
+        public static GlyphCacheEntry Blank() => new(
+            GlyphCacheEntryKind.Blank,
+            TextureCacheHandle.Invalid,
+            TextureCacheHandle.Invalid
+        );
 
         public TextureCacheHandle TextureCacheHandle
         {
@@ -535,11 +533,10 @@ namespace NitroSharp.Text
             Height = (uint)_ftGlyph->bitmap.rows;
         }
 
-        public ReadOnlySpan<byte> Bytes =>
-            new ReadOnlySpan<byte>(
-                _ftGlyph->bitmap.buffer.ToPointer(),
-                (int)(Width * Height)
-            );
+        public ReadOnlySpan<byte> Bytes => new(
+            _ftGlyph->bitmap.buffer.ToPointer(),
+            (int)(Width * Height)
+        );
 
         public readonly int Bottom;
 

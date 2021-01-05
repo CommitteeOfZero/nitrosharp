@@ -50,7 +50,7 @@ namespace NitroSharp.Media.Decoding
             _complete = new Action<object>(SetCompletionAndInvokeContinuation);
         }
 
-        public ValueTask ValueTask => new ValueTask(this, _currentId);
+        public ValueTask ValueTask => new(this, _currentId);
 
         public ValueTaskSourceStatus GetStatus(short token)
         {

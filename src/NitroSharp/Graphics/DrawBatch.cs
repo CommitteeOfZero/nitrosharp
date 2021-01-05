@@ -65,7 +65,7 @@ namespace NitroSharp.Graphics
             uint vertexCount,
             uint instanceBase = 0,
             uint instanceCount = 1)
-            => new DrawParams(vertexBase, vertexCount, 0, 0, instanceBase, instanceCount);
+            => new(vertexBase, vertexCount, 0, 0, instanceBase, instanceCount);
 
         public static DrawParams Indexed(
             uint vertexBase,
@@ -73,7 +73,7 @@ namespace NitroSharp.Graphics
             uint indexCount,
             uint instanceBase = 0,
             uint instanceCount = 1)
-            => new DrawParams(vertexBase, 0, indexBase, indexCount, instanceBase, instanceCount);
+            => new(vertexBase, 0, indexBase, indexCount, instanceBase, instanceCount);
 
         public static bool CanMerge(in DrawParams a, in DrawParams b)
         {

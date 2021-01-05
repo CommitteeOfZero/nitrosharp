@@ -20,7 +20,7 @@ namespace NitroSharp.Graphics
         public int OutlineId;
         public float Opacity;
 
-        public static VertexLayoutDescription LayoutDescription => new VertexLayoutDescription(
+        public static VertexLayoutDescription LayoutDescription => new(
             stride: 24, instanceStepRate: 1,
             new VertexElementDescription(
                 "vs_Offset",

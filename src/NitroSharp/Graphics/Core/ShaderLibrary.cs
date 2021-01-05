@@ -59,7 +59,7 @@ namespace NitroSharp.Graphics.Core
                 GraphicsBackend.OpenGL => ".330.glsl",
                 GraphicsBackend.OpenGLES => ".300.glsles",
                 GraphicsBackend.Metal => ".metallib",
-                _ => ThrowIllegalValue(nameof(backend)),
+                _ => ThrowIllegalValue(nameof(backend))
             };
         }
 

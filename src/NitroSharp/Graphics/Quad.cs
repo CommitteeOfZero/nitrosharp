@@ -12,7 +12,7 @@ namespace NitroSharp.Graphics
         public Vector2 TexCoord;
         public Vector4 Color;
 
-        public static readonly VertexLayoutDescription LayoutDescription = new VertexLayoutDescription(
+        public static readonly VertexLayoutDescription LayoutDescription = new(
             new VertexElementDescription(
                 "vs_Position",
                 VertexElementSemantic.TextureCoordinate,

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Numerics;
-using NitroSharp.Saving;
 
 #nullable enable
 
@@ -53,7 +52,7 @@ namespace NitroSharp
         public bool Equals(Point2DU other) => X.Equals(other.X) && Y.Equals(other.Y);
         public override bool Equals(object? obj) => obj is Point2DU other && Equals(other);
 
-        public Vector2 ToVector2() => new Vector2(X, Y);
+        public Vector2 ToVector2() => new(X, Y);
 
         public override int GetHashCode() => HashCode.Combine(X, Y);
         public override string? ToString() => $"X: {X.ToString()}, Y: {Y.ToString()}";
@@ -65,7 +64,7 @@ namespace NitroSharp
     [Persistable]
     public readonly partial struct Size : IEquatable<Size>
     {
-        public static Size Zero => new Size(0, 0);
+        public static Size Zero => new(0, 0);
 
         public readonly uint Width;
         public readonly uint Height;
@@ -80,10 +79,10 @@ namespace NitroSharp
         public override bool Equals(object? obj) => obj is Size size && Equals(size);
 
         public Size Constrain(Size size)
-            => new Size(Math.Min(Width, size.Width), Math.Min(Height, size.Height));
+            => new(Math.Min(Width, size.Width), Math.Min(Height, size.Height));
 
-        public SizeF ToSizeF() => new SizeF(Width, Height);
-        public Vector2 ToVector2() => new Vector2(Width, Height);
+        public SizeF ToSizeF() => new(Width, Height);
+        public Vector2 ToVector2() => new(Width, Height);
 
         public override int GetHashCode() => HashCode.Combine(Width, Height);
         public override string? ToString() => $"{{Width:{Width.ToString()}, Height:{Height.ToString()}}}";
@@ -118,7 +117,7 @@ namespace NitroSharp
         public static bool operator !=(SizeF left, SizeF right) => !left.Equals(right);
 
         public Vector2 ToVector2() => _value;
-        public Size ToSize() => new Size((uint)MathF.Ceiling(Width), (uint)MathF.Ceiling(Height));
+        public Size ToSize() => new((uint)MathF.Ceiling(Width), (uint)MathF.Ceiling(Height));
     }
 
     [Persistable]
@@ -187,8 +186,8 @@ namespace NitroSharp
         public uint Top => Y;
         public uint Bottom => Y + Height;
 
-        public Vector2 Position => new Vector2(X, Y);
-        public Size Size => new Size(Width, Height);
+        public Vector2 Position => new(X, Y);
+        public Size Size => new(Width, Height);
 
         public RectangleU(uint x, uint y, uint width, uint height)
         {
@@ -255,13 +254,13 @@ namespace NitroSharp
         public float Top => Y;
         public float Bottom => Y + Height;
 
-        public Vector2 TopLeft => new Vector2(Left, Top);
-        public Vector2 TopRight => new Vector2(Right, Top);
-        public Vector2 BottomLeft => new Vector2(Left, Bottom);
-        public Vector2 BottomRight => new Vector2(Right, Bottom);
+        public Vector2 TopLeft => new(Left, Top);
+        public Vector2 TopRight => new(Right, Top);
+        public Vector2 BottomLeft => new(Left, Bottom);
+        public Vector2 BottomRight => new(Right, Bottom);
 
-        public Vector2 Position => new Vector2(X, Y);
-        public SizeF Size => new SizeF(Width, Height);
+        public Vector2 Position => new(X, Y);
+        public SizeF Size => new(Width, Height);
 
         public bool Contains(Vector2 point)
         {
@@ -272,7 +271,7 @@ namespace NitroSharp
         }
 
         public static RectangleF FromLTRB(float left, float top, float right, float bottom)
-            => new RectangleF(new Vector2(left, top), new SizeF(right - left, bottom - top));
+            => new(new Vector2(left, top), new SizeF(right - left, bottom - top));
 
         public static RectangleF Union(in RectangleF a, in RectangleF b)
         {

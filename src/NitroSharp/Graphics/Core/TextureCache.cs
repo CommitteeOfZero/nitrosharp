@@ -18,7 +18,7 @@ namespace NitroSharp.Graphics.Core
             => Value = value;
 
         public static TextureCacheHandle Invalid =>
-            new TextureCacheHandle(WeakFreeListHandle.Invalid);
+            new(WeakFreeListHandle.Invalid);
 
         public bool IsValid => Value.Version != 0;
 

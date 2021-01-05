@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Diagnostics;
 using NitroSharp.NsScript;
 using NitroSharp.Utilities;
 
@@ -20,7 +19,7 @@ namespace NitroSharp
         public bool IsEmpty => _results.Count == 0;
 
         public QueryResultsEnumerator<T> GetEnumerator()
-            => new QueryResultsEnumerator<T>(_results);
+            => new(_results);
     }
 
     internal struct QueryResultsEnumerator<T>

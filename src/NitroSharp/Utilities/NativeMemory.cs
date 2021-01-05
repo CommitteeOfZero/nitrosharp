@@ -12,13 +12,13 @@ namespace NitroSharp.Utilities
             => (Pointer, Size) = (pointer, size);
 
         public static NativeMemory Allocate(uint size)
-            => new NativeMemory(Marshal.AllocHGlobal((int)size), size);
+            => new(Marshal.AllocHGlobal((int)size), size);
 
         public unsafe Span<T> AsSpan<T>()
-            => new Span<T>(Pointer.ToPointer(), (int)Size);
+            => new(Pointer.ToPointer(), (int)Size);
 
         public unsafe ReadOnlySpan<T> AsReadOnlySpan<T>()
-            => new ReadOnlySpan<T>(Pointer.ToPointer(), (int)Size);
+            => new(Pointer.ToPointer(), (int)Size);
 
         public void Dispose()
         {
