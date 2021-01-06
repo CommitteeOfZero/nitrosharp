@@ -12,8 +12,6 @@ namespace NitroSharp.NsScript.VM
     internal sealed class GlobalsLookupTable
     {
         private readonly Stream _stream;
-        private readonly int[] _varOffsets;
-        private readonly int[] _flagOffsets;
         private readonly int _nameHeapStart;
         private readonly Dictionary<string, int> _sysVariables;
         private readonly Dictionary<string, int> _sysFlags;
@@ -30,22 +28,20 @@ namespace NitroSharp.NsScript.VM
             int nameHeapStart)
         {
             _stream = stream;
-            _varOffsets = varOffsets;
-            _flagOffsets = flagOffsets;
             _nameHeapStart = nameHeapStart;
             _sysVariables = new Dictionary<string, int>(sysVars.Length);
             _sysFlags = new Dictionary<string, int>();
             foreach (int idx in sysVars)
             {
-                _sysVariables.Add(ReadString(_varOffsets, idx), idx);
+                _sysVariables.Add(ReadString(varOffsets, idx), idx);
             }
             foreach (int idx in sysFlags)
             {
-                _sysFlags.Add(ReadString(_flagOffsets, idx), idx);
+                _sysFlags.Add(ReadString(flagOffsets, idx), idx);
             }
 
-            _allVariables = new Lazy<ImmutableDictionary<string, int>>(CreateLookup(_varOffsets));
-            _allFlags = new Lazy<ImmutableDictionary<string, int>>(CreateLookup(_flagOffsets));
+            _allVariables = new Lazy<ImmutableDictionary<string, int>>(CreateLookup(varOffsets));
+            _allFlags = new Lazy<ImmutableDictionary<string, int>>(CreateLookup(flagOffsets));
         }
 
         public ImmutableDictionary<string, int> Variables => _allVariables.Value;
@@ -60,26 +56,6 @@ namespace NitroSharp.NsScript.VM
             }
             return lookup.ToImmutable();
         }
-
-        //public string[] ReadVariableNames()
-        //{
-        //    var array = new string[_varOffsets.Length];
-        //    for (int i = 0; i < _varOffsets.Length; i++)
-        //    {
-        //        array[i] = ReadString(_varOffsets, i);
-        //    }
-        //    return array;
-        //}
-        //
-        //public string[] ReadFlagNames()
-        //{
-        //    var array = new string[_flagOffsets.Length];
-        //    for (int i = 0; i < _flagOffsets.Length; i++)
-        //    {
-        //        array[i] = ReadString(_flagOffsets, i);
-        //    }
-        //    return array;
-        //}
 
         public static GlobalsLookupTable Load(Stream stream)
         {
