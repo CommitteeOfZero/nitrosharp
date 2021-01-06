@@ -7,8 +7,6 @@ using System.Runtime.InteropServices;
 using NitroSharp.NsScript;
 using Veldrid;
 
-#nullable enable
-
 namespace NitroSharp.Graphics
 {
     internal sealed class AnimatedIcons : IDisposable

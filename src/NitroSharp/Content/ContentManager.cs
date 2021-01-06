@@ -8,8 +8,6 @@ using System.Threading.Tasks;
 using NitroSharp.Utilities;
 using Veldrid;
 
-#nullable enable
-
 namespace NitroSharp.Content
 {
     internal readonly struct AssetRef<T> : IEquatable<AssetRef<T>>, IDisposable

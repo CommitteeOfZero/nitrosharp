@@ -2,8 +2,6 @@ using System.Numerics;
 using NitroSharp.Saving;
 using NitroSharp.Text;
 
-#nullable enable
-
 namespace NitroSharp.Graphics
 {
     internal sealed class TextBlock : RenderItem2D

@@ -7,8 +7,6 @@ using NitroSharp.NsScript.VM;
 using NitroSharp.Text;
 using Veldrid;
 
-#nullable enable
-
 namespace NitroSharp.Graphics
 {
     internal enum BlendMode : byte

@@ -7,8 +7,6 @@ using NitroSharp.NsScript.VM;
 using NitroSharp.Saving;
 using Veldrid;
 
-#nullable enable
-
 namespace NitroSharp
 {
     internal enum WaitCondition

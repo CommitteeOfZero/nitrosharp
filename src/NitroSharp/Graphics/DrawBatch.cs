@@ -5,8 +5,6 @@ using System.Runtime.InteropServices;
 using NitroSharp.Graphics.Core;
 using Veldrid;
 
-#nullable enable
-
 namespace NitroSharp.Graphics
 {
     internal struct Draw

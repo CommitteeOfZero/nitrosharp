@@ -1,8 +1,6 @@
 using System;
 using System.Diagnostics;
 
-#nullable enable
-
 namespace NitroSharp.Text
 {
     internal readonly struct GlyphSpan : IEquatable<GlyphSpan>

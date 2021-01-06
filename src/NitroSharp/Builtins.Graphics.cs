@@ -9,8 +9,6 @@ using NitroSharp.NsScript.VM;
 using NitroSharp.Text;
 using Veldrid;
 
-#nullable enable
-
 namespace NitroSharp
 {
     internal partial class Builtins

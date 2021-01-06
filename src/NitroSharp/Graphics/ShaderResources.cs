@@ -3,8 +3,6 @@ using System.Numerics;
 using NitroSharp.Graphics.Core;
 using Veldrid;
 
-#nullable enable
-
 namespace NitroSharp.Graphics
 {
     internal sealed class ShaderResources : IDisposable

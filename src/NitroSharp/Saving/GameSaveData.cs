@@ -1,7 +1,5 @@
 ﻿using NitroSharp.NsScript.VM;
 
-#nullable enable
-
 namespace NitroSharp.Saving
 {
     [Persistable]

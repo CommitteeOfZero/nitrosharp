@@ -3,8 +3,6 @@ using System.Numerics;
 using System.Threading;
 using Veldrid;
 
-#nullable enable
-
 namespace NitroSharp
 {
     public interface GameWindow : IDisposable

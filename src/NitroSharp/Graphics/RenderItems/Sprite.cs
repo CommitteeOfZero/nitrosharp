@@ -9,8 +9,6 @@ using NitroSharp.Saving;
 using Veldrid;
 using ToolGeneratedExtensions;
 
-#nullable enable
-
 namespace NitroSharp.Graphics
 {
     internal enum SpriteTextureKind

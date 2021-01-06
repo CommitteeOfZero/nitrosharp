@@ -3,8 +3,6 @@ using System.Numerics;
 using NitroSharp.NsScript;
 using NitroSharp.Utilities;
 
-#nullable enable
-
 namespace NitroSharp.Graphics
 {
     internal sealed class Scrollbar : RenderItem2D, UiElement

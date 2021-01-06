@@ -4,8 +4,6 @@ using SharpDX.WIC;
 using Veldrid;
 using PixelFormat = Veldrid.PixelFormat;
 
-#nullable enable
-
 namespace NitroSharp.Content
 {
     internal sealed unsafe class WicTextureLoader : TextureLoader

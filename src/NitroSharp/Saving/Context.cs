@@ -4,8 +4,6 @@ using NitroSharp.Graphics;
 using NitroSharp.NsScript.VM;
 using Veldrid;
 
-#nullable enable
-
 namespace NitroSharp.Saving
 {
     internal sealed class GameSavingContext

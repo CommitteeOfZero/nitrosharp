@@ -2,8 +2,6 @@
 using NitroSharp.NsScript;
 using NitroSharp.Utilities;
 
-#nullable enable
-
 namespace NitroSharp
 {
     internal readonly struct QueryResultsEnumerable<T>

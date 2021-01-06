@@ -1,8 +1,6 @@
 using System;
 using Veldrid;
 
-#nullable enable
-
 namespace NitroSharp.Graphics.Core
 {
     internal readonly struct MeshDescription

@@ -4,8 +4,6 @@ using System.IO;
 using System.Reflection;
 using Veldrid;
 
-#nullable enable
-
 namespace NitroSharp.Graphics.Core
 {
     internal sealed class ShaderLibrary : IDisposable

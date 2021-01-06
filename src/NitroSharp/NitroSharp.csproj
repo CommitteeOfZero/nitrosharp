@@ -5,7 +5,7 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <NoWarn>1701;1702;CA1063;IDE1006;IDE0063</NoWarn>
     <VeldridVersion>4.8</VeldridVersion>
-    <EnableNETAnalyzers>false</EnableNETAnalyzers>
+    <Nullable>enable</Nullable>
   </PropertyGroup>
 
   <Import Project="..\..\OutputPath.props" />

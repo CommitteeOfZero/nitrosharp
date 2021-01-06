@@ -2,8 +2,6 @@
 using ImGuiNET;
 using Veldrid;
 
-#nullable enable
-
 namespace NitroSharp.Diagnostics
 {
     internal sealed class DevModeOverlay : IDisposable

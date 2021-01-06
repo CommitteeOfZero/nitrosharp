@@ -5,8 +5,6 @@ using NitroSharp.NsScript.VM;
 using Veldrid;
 using Veldrid.Sdl2;
 
-#nullable enable
-
 namespace NitroSharp
 {
     internal enum VirtualKey

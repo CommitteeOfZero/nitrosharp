@@ -3,8 +3,6 @@ using System.Diagnostics;
 using NitroSharp.Utilities;
 using Veldrid;
 
-#nullable enable
-
 namespace NitroSharp.Graphics
 {
     internal enum EffectKind : byte

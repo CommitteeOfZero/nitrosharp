@@ -8,8 +8,6 @@ using NitroSharp.Text;
 using NitroSharp.Utilities;
 using Veldrid;
 
-#nullable enable
-
 namespace NitroSharp.Graphics
 {
     internal struct GpuGlyph

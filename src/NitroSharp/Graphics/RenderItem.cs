@@ -6,8 +6,6 @@ using NitroSharp.NsScript.Primitives;
 using NitroSharp.Saving;
 using Veldrid;
 
-#nullable enable
-
 namespace NitroSharp.Graphics
 {
     [Persistable]

@@ -2,8 +2,6 @@
 using System.Runtime.InteropServices;
 using Veldrid;
 
-#nullable enable
-
 namespace NitroSharp.Text
 {
     [Flags]

@@ -5,8 +5,6 @@ using System.Runtime.InteropServices;
 using System.Text;
 using NitroSharp.Utilities;
 
-#nullable enable
-
 namespace NitroSharp
 {
     internal enum LogLevel

@@ -2,8 +2,6 @@
 using FreeTypeBindings;
 using MessagePack;
 
-#nullable enable
-
 namespace NitroSharp.Text
 {
     [Persistable]

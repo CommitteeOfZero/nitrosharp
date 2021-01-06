@@ -4,8 +4,6 @@ using NitroSharp.Text;
 using SprintfNET;
 using Veldrid;
 
-#nullable enable
-
 namespace NitroSharp
 {
     public sealed class SystemScripts

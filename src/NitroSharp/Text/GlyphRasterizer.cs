@@ -12,8 +12,6 @@ using FreeTypeBindings;
 using NitroSharp.Graphics.Core;
 using Veldrid;
 
-#nullable enable
-
 namespace NitroSharp.Text
 {
     internal sealed class GlyphRasterizer : IDisposable

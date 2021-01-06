@@ -5,8 +5,6 @@ using System.Runtime.CompilerServices;
 using NitroSharp.Utilities;
 using Veldrid;
 
-#nullable enable
-
 namespace NitroSharp.Graphics
 {
     internal readonly ref struct GpuListSlice<T>

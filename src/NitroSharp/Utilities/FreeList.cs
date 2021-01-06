@@ -2,8 +2,6 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 
-#nullable enable
-
 namespace NitroSharp.Utilities
 {
     internal readonly ref struct RefOption<T> where T : struct

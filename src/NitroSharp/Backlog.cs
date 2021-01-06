@@ -5,8 +5,6 @@ using System.Text;
 using NitroSharp.NsScript;
 using NitroSharp.NsScript.VM;
 
-#nullable enable
-
 namespace NitroSharp
 {
     internal readonly struct BacklogEntry

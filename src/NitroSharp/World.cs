@@ -6,8 +6,6 @@ using NitroSharp.NsScript;
 using NitroSharp.Saving;
 using NitroSharp.Utilities;
 
-#nullable enable
-
 namespace NitroSharp
 {
     internal sealed partial class World : IDisposable

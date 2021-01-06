@@ -2,8 +2,6 @@ using System;
 using System.Numerics;
 using Veldrid;
 
-#nullable enable
-
 namespace NitroSharp.Graphics.Core
 {
     internal sealed class RenderTarget : IDisposable

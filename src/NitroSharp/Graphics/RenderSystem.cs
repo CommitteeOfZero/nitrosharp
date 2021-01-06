@@ -5,8 +5,6 @@ using NitroSharp.NsScript.VM;
 using NitroSharp.Text;
 using Veldrid;
 
-#nullable enable
-
 namespace NitroSharp.Graphics
 {
     internal sealed class RenderSystem : IDisposable

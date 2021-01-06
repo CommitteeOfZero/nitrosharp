@@ -6,8 +6,6 @@ using Veldrid;
 using Veldrid.Sdl2;
 using Veldrid.StartupUtilities;
 
-#nullable enable
-
 namespace NitroSharp
 {
     public sealed class DesktopWindow : GameWindow

@@ -5,8 +5,6 @@ using System.Numerics;
 using NitroSharp.NsScript;
 using NitroSharp.Saving;
 
-#nullable enable
-
 namespace NitroSharp.Graphics
 {
     internal sealed class Choice : Entity, UiElement

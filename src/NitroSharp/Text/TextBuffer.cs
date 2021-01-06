@@ -5,8 +5,6 @@ using NitroSharp.NsScript;
 using NitroSharp.NsScript.Syntax.PXml;
 using Veldrid;
 
-#nullable enable
-
 namespace NitroSharp.Text
 {
     internal sealed class TextBuffer

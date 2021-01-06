@@ -6,8 +6,6 @@ using System.Runtime.InteropServices;
 using NitroSharp.Utilities;
 using Veldrid;
 
-#nullable enable
-
 namespace NitroSharp.Graphics.Core
 {
     internal readonly struct TextureCacheHandle : IEquatable<TextureCacheHandle>

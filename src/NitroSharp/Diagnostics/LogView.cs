@@ -2,8 +2,6 @@
 using System.Numerics;
 using ImGuiNET;
 
-#nullable enable
-
 namespace NitroSharp.Diagnostics
 {
     internal sealed class LogView

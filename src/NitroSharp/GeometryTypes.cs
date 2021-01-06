@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Numerics;
 
-#nullable enable
-
 namespace NitroSharp
 {
     public struct SimpleVector2

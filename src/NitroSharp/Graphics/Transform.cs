@@ -2,8 +2,6 @@ using System;
 using System.Numerics;
 using System.Runtime.InteropServices;
 
-#nullable enable
-
 namespace NitroSharp.Graphics
 {
     [StructLayout(LayoutKind.Auto)]

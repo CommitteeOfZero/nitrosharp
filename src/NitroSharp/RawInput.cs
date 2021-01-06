@@ -8,8 +8,6 @@ using Veldrid.Sdl2;
 
 using static Veldrid.Sdl2.Sdl2Native;
 
-#nullable enable
-
 namespace NitroSharp
 {
     internal sealed class RawInput : IDisposable

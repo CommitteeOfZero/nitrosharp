@@ -22,8 +22,6 @@ using NitroSharp.Saving;
 [assembly: InternalsVisibleTo("NitroSharp.Tests")]
 [assembly: InternalsVisibleTo("Game")]
 
-#nullable enable
-
 namespace NitroSharp
 {
     internal readonly struct FrameStamp

@@ -5,8 +5,6 @@ using NitroSharp.NsScript;
 using NitroSharp.Saving;
 using NitroSharp.Utilities;
 
-#nullable enable
-
 namespace NitroSharp
 {
     [StructLayout(LayoutKind.Auto)]

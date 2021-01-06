@@ -4,8 +4,6 @@ using NitroSharp.NsScript.VM;
 using NitroSharp.Saving;
 using NitroSharp.Text;
 
-#nullable enable
-
 namespace NitroSharp.Graphics
 {
     internal sealed class DialoguePage : RenderItem2D

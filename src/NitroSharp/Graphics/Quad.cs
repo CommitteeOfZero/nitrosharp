@@ -2,8 +2,6 @@
 using System.Numerics;
 using Veldrid;
 
-#nullable enable
-
 namespace NitroSharp.Graphics
 {
     internal struct QuadVertex

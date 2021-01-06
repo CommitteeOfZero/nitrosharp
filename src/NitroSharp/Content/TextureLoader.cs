@@ -2,8 +2,6 @@
 using System.IO;
 using Veldrid;
 
-#nullable enable
-
 namespace NitroSharp.Content
 {
     internal abstract class TextureLoader : IDisposable

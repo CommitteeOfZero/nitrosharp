@@ -12,8 +12,6 @@ using Veldrid;
 using Image = SixLabors.ImageSharp.Image;
 using SixLabors.ImageSharp.Processing;
 
-#nullable enable
-
 namespace NitroSharp.Saving
 {
     internal class GameSaveManager

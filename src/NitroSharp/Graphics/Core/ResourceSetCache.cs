@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using Veldrid;
 
-#nullable enable
-
 namespace NitroSharp.Graphics.Core
 {
     internal readonly struct ResourceSetKey : IEquatable<ResourceSetKey>
