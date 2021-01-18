@@ -25,8 +25,8 @@ namespace NitroSharp.NsScript.Utilities
             _position = 0;
         }
 
-        public Span<byte> Free => _span.Slice(_position);
-        public Span<byte> Written => _span.Slice(0, _position);
+        public Span<byte> Free => _span[_position..];
+        public Span<byte> Written => _span[.._position];
 
         public int Position
         {

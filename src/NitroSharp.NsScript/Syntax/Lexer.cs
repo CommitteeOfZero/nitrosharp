@@ -27,8 +27,8 @@ namespace NitroSharp.NsScript.Syntax
         private const string PRE_EndTag = "</pre>";
 
         private readonly LexingMode _initialMode;
-        private readonly Stack<LexingMode> _lexingModeStack = new Stack<LexingMode>();
-        private readonly DiagnosticBuilder _diagnostics = new DiagnosticBuilder();
+        private readonly Stack<LexingMode> _lexingModeStack = new();
+        private readonly DiagnosticBuilder _diagnostics = new();
 
         public Lexer(SourceText sourceText, LexingMode lexingMode = LexingMode.Normal)
             : base(sourceText.Source)
@@ -822,20 +822,11 @@ namespace NitroSharp.NsScript.Syntax
             AdvanceChar(2); // "*/"
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static bool IsEofOrNewLine(char c)
+        private static bool IsEofOrNewLine(char c) => c switch
         {
-            switch (c)
-            {
-                case EofCharacter:
-                case '\r':
-                case '\n':
-                    return true;
-
-                default:
-                    return false;
-            }
-        }
+            EofCharacter or '\r' or '\n' => true,
+            _ => false,
+        };
 
         private void Report(DiagnosticId diagnosticId) => Report(diagnosticId, CurrentLexemeSpan);
         private void Report(DiagnosticId diagnosticId, TextSpan textSpan)

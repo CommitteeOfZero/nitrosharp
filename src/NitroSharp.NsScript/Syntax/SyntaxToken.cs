@@ -154,7 +154,7 @@ namespace NitroSharp.NsScript.Syntax
             return TextSpan.FromBounds(start, end);
         }
 
-        public override string ToString() => $"{TextSpan.ToString()} <{Kind}>";
+        public override string ToString() => $"{TextSpan} <{Kind}>";
     }
 
     [Flags]

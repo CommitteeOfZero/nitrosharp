@@ -38,7 +38,7 @@ namespace NitroSharp.NsScript
 
     public class Diagnostic
     {
-        public static Diagnostic Create(TextSpan span, DiagnosticId id) => new Diagnostic(span, id);
+        public static Diagnostic Create(TextSpan span, DiagnosticId id) => new(span, id);
         public static Diagnostic Create(TextSpan span, DiagnosticId id, params object[] arguments)
             => new DiagnosticWithArguments(span, id, arguments);
 

@@ -16,7 +16,7 @@ namespace NitroSharp.NsScript
         public readonly string Value;
 
         public EntityQueryPartEnumerable EnumerateParts()
-            => new EntityQueryPartEnumerable(Value.AsMemory());
+            => new(Value.AsMemory());
     }
 
     public readonly struct EntityQueryPart : IEquatable<EntityQueryPart>
@@ -122,6 +122,6 @@ namespace NitroSharp.NsScript
         }
 
         public EntityQueryEnumerator GetEnumerator()
-            => new EntityQueryEnumerator(_query);
+            => new(_query);
     }
 }

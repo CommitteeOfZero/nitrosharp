@@ -11,6 +11,6 @@
         public T Value { get; }
         public TextSpan Span { get; }
 
-        public override string ToString() => $"{Value!.ToString()} {Span.ToString()}";
+        public override string ToString() => $"{Value} {Span}";
     }
 }

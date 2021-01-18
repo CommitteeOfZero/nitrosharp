@@ -30,7 +30,7 @@ namespace NitroSharp.NsScript
 
         public DiagnosticBag ToImmutableBag()
         {
-            return new DiagnosticBag(_diagnostics.ToImmutable());
+            return new(_diagnostics.ToImmutable());
         }
     }
 }

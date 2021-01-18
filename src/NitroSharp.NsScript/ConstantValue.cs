@@ -49,23 +49,23 @@ namespace NitroSharp.NsScript
             }
         }
 
-        public static ConstantValue Null => new ConstantValue(BuiltInType.Null);
-        public static ConstantValue True => new ConstantValue(true);
-        public static ConstantValue False => new ConstantValue(false);
-        public static ConstantValue EmptyString => new ConstantValue(string.Empty);
+        public static ConstantValue Null => new(BuiltInType.Null);
+        public static ConstantValue True => new(true);
+        public static ConstantValue False => new(false);
+        public static ConstantValue EmptyString => new(string.Empty);
 
-        public static ConstantValue Number(float value) => new ConstantValue(value, false);
-        public static ConstantValue Delta(float delta) => new ConstantValue(delta, true);
-        public static ConstantValue String(string value) => new ConstantValue(value);
+        public static ConstantValue Number(float value) => new(value, false);
+        public static ConstantValue Delta(float delta) => new(delta, true);
+        public static ConstantValue String(string value) => new(value);
         public static ConstantValue Boolean(bool value) => value ? True : False;
 
         public static ConstantValue BezierCurve(CompositeBezier bezierCurve)
-            => new ConstantValue(bezierCurve);
+            => new(bezierCurve);
 
         public static ConstantValue BuiltInConstant(BuiltInConstant value)
-            => new ConstantValue(value);
+            => new(value);
 
-        public ConstantValue WithSlot(short slot) => new ConstantValue(this, slot);
+        public ConstantValue WithSlot(short slot) => new(this, slot);
 
         public ConstantValue(ref MessagePackReader reader) : this()
         {
@@ -191,23 +191,17 @@ namespace NitroSharp.NsScript
         public float? AsDeltaNumber()
             => Type == BuiltInType.DeltaNumeric
                 ? FloatValue
-                : (float?)null;
+                : null;
 
         public float? AsNumber()
         {
-            switch (Type)
+            return Type switch
             {
-                case BuiltInType.Numeric:
-                    return FloatValue;
-                case BuiltInType.Boolean:
-                case BuiltInType.BuiltInConstant:
-                    return _numericValue;
-                case BuiltInType.String:
-                    return _stringValue == string.Empty
-                        ? 0 : (int?)null;
-                default:
-                    return null;
-            }
+                BuiltInType.Numeric => FloatValue,
+                BuiltInType.Boolean or BuiltInType.BuiltInConstant => _numericValue,
+                BuiltInType.String => _stringValue == string.Empty ? 0 : null,
+                _ => null,
+            };
         }
 
         public bool? AsBool() => Type switch
@@ -223,12 +217,12 @@ namespace NitroSharp.NsScript
         public BuiltInConstant? AsBuiltInConstant()
             => Type == BuiltInType.BuiltInConstant
                 ? (BuiltInConstant)_numericValue
-                : (BuiltInConstant?)null;
+                : null;
 
         public CompositeBezier? AsBezierCurve()
             => Type == BuiltInType.BezierCurve
                 ? _bezierCurve
-                : (CompositeBezier?)null;
+                : null;
 
         private static bool Equals(ConstantValue left, ConstantValue right)
         {
@@ -437,9 +431,9 @@ namespace NitroSharp.NsScript
         }
 
         private static ConstantValue InvalidOp(string op, BuiltInType type)
-            => throw new InvalidOperationException($"Operator '{op}' cannot be applied to operand of type '{type.ToString()}'.");
+            => throw new InvalidOperationException($"Operator '{op}' cannot be applied to operand of type '{type}'.");
 
         private static ConstantValue InvalidBinOp(string op, BuiltInType leftType, BuiltInType rightType)
-            => throw new InvalidOperationException($"Operator '{op}' cannot be applied to operands of type '{leftType.ToString()}' and '{rightType.ToString()}'.");
+            => throw new InvalidOperationException($"Operator '{op}' cannot be applied to operands of type '{leftType}' and '{rightType}'.");
     }
 }

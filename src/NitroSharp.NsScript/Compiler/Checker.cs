@@ -29,13 +29,13 @@ namespace NitroSharp.NsScript.Compiler
         public readonly BuiltInConstant BuiltInConstant;
 
         [FieldOffset(8)]
-        public readonly SubroutineSymbol Subroutine;
+        public readonly SubroutineSymbol? Subroutine;
 
         [FieldOffset(8)]
-        public readonly ParameterSymbol Parameter;
+        public readonly ParameterSymbol? Parameter;
 
         [FieldOffset(8)]
-        public readonly string Global;
+        public readonly string? Global;
 
         public LookupResult(SubroutineSymbol subroutine) : this()
             => (Variant, Subroutine) = (LookupResultVariant.Subroutine, subroutine);
@@ -81,14 +81,12 @@ namespace NitroSharp.NsScript.Compiler
 
     internal readonly struct Checker
     {
-        private readonly SubroutineSymbol _subroutine;
         private readonly SourceModuleSymbol _module;
         private readonly Compilation _compilation;
         private readonly DiagnosticBuilder _diagnostics;
 
         public Checker(SubroutineSymbol subroutine, DiagnosticBuilder diagnostics)
         {
-            _subroutine = subroutine;
             _module = subroutine.DeclaringSourceFile.Module;
             _compilation = _module.Compilation;
             _diagnostics = diagnostics;

@@ -173,11 +173,13 @@ namespace NitroSharp.NsScript.Compiler
                     EmitLoadImm(ConstantValue.BuiltInConstant(lookupResult.BuiltInConstant));
                     break;
                 case LookupResultVariant.Variable:
+                    Debug.Assert(lookupResult.Global is not null);
                     ushort varToken = GetVariableToken(lookupResult.Global);
                     EmitOpcode(Opcode.LoadVar);
                     _code.WriteUInt16LE(varToken);
                     break;
                 case LookupResultVariant.Flag:
+                    Debug.Assert(lookupResult.Global is not null);
                     ushort flagToken = GetFlagToken(lookupResult.Global);
                     EmitOpcode(Opcode.LoadFlag);
                     _code.WriteUInt16LE(flagToken);
@@ -210,9 +212,10 @@ namespace NitroSharp.NsScript.Compiler
             EmitExpression(assignmentExpr.Value);
 
             Debug.Assert(target.Variant is LookupResultVariant.Variable or LookupResultVariant.Flag);
+            Debug.Assert(target.Global is not null);
             AssignmentOperatorKind opKind = assignmentExpr.OperatorKind.Value;
 
-            var loadOp = Opcode.Nop;
+            Opcode loadOp;
             ushort token;
             if (target.Variant == LookupResultVariant.Variable)
             {
@@ -255,7 +258,7 @@ namespace NitroSharp.NsScript.Compiler
                     break;
             }
 
-            var storeOp = target.Variant == LookupResultVariant.Variable
+            Opcode storeOp = target.Variant == LookupResultVariant.Variable
                 ? Opcode.StoreVar
                 : Opcode.StoreFlag;
             EmitStore(storeOp, token);
@@ -271,6 +274,7 @@ namespace NitroSharp.NsScript.Compiler
 
             if (!isBuiltIn)
             {
+                Debug.Assert(lookupResult.Subroutine is not null);
                 var target = (FunctionSymbol)lookupResult.Subroutine;
                 int count = Math.Min(arguments.Length, target.Parameters.Length);
                 for (int i = 0; i < count; i++)
@@ -304,6 +308,7 @@ namespace NitroSharp.NsScript.Compiler
             }
             else
             {
+                Debug.Assert(lookupResult.Subroutine is not null);
                 var function = (FunctionSymbol)lookupResult.Subroutine;
                 if (ReferenceEquals(function.DeclaringSourceFile, _subroutine.DeclaringSourceFile))
                 {

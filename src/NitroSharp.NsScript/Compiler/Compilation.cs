@@ -11,8 +11,6 @@ namespace NitroSharp.NsScript.Compiler
 {
     public sealed class Compilation
     {
-        private readonly SourceReferenceResolver _sourceReferenceResolver;
-        private readonly string _outputDirectory;
         private readonly string _globalsFileName;
         private readonly Encoding? _sourceTextEncoding;
         private readonly Dictionary<ResolvedPath, SyntaxTree> _syntaxTrees = new();
@@ -40,14 +38,14 @@ namespace NitroSharp.NsScript.Compiler
                            string globalsFileName,
                            Encoding? sourceTextEncoding = null)
         {
-            _sourceReferenceResolver = sourceReferenceResolver;
-            _outputDirectory = outputDirectory;
+            SourceReferenceResolver = sourceReferenceResolver;
+            OutputDirectory = outputDirectory;
             _globalsFileName = globalsFileName;
             _sourceTextEncoding = sourceTextEncoding;
         }
 
-        public SourceReferenceResolver SourceReferenceResolver => _sourceReferenceResolver;
-        public string OutputDirectory => _outputDirectory;
+        public SourceReferenceResolver SourceReferenceResolver { get; }
+        public string OutputDirectory { get; }
 
         public void Emit(ReadOnlySpan<SourceModuleSymbol> roots)
         {
@@ -73,7 +71,7 @@ namespace NitroSharp.NsScript.Compiler
                 }
             } while (filesCompiled > 0);
 
-            string globalsFileName = Path.Combine(_outputDirectory, _globalsFileName);
+            string globalsFileName = Path.Combine(OutputDirectory, _globalsFileName);
             using (FileStream file = File.Create(globalsFileName))
             {
                 using var nameHeapBuffer = PooledBuffer<byte>.Allocate(32 * 1024);
@@ -143,13 +141,13 @@ namespace NitroSharp.NsScript.Compiler
         /// <exception cref="FileNotFoundException" />
         public SyntaxTree GetSyntaxTree(string filePath)
         {
-            ResolvedPath resolvedPath = _sourceReferenceResolver.ResolvePath(filePath);
+            ResolvedPath resolvedPath = SourceReferenceResolver.ResolvePath(filePath);
             if (_syntaxTrees.TryGetValue(resolvedPath, out SyntaxTree? syntaxTree))
             {
                 return syntaxTree;
             }
 
-            SourceText sourceText = _sourceReferenceResolver.ReadText(resolvedPath, _sourceTextEncoding);
+            SourceText sourceText = SourceReferenceResolver.ReadText(resolvedPath, _sourceTextEncoding);
             syntaxTree = Parsing.ParseText(sourceText);
             _syntaxTrees[resolvedPath] = syntaxTree;
             return syntaxTree;

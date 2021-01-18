@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Globalization;
-using NitroSharp.NsScript.VM;
 
 namespace NitroSharp.NsScript
 {
@@ -17,12 +16,12 @@ namespace NitroSharp.NsScript
         public byte G { get; }
         public byte B { get; }
 
-        public static NsColor Black  => new NsColor(0, 0, 0);
-        public static NsColor White => new NsColor(255, 255, 255);
-        public static NsColor Red => new NsColor(255, 0, 0);
-        public static NsColor Green => new NsColor(0, 128, 0);
-        public static NsColor Blue => new NsColor(0, 0, 255);
-        public static NsColor Gray => new NsColor(128, 128, 128);
+        public static NsColor Black  => new(0, 0, 0);
+        public static NsColor White => new(255, 255, 255);
+        public static NsColor Red => new(255, 0, 0);
+        public static NsColor Green => new(0, 128, 0);
+        public static NsColor Blue => new(0, 0, 255);
+        public static NsColor Gray => new(128, 128, 128);
 
         public static NsColor FromRgb(int rgb)
         {

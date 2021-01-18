@@ -15,10 +15,10 @@
             => (Variant, Value) = (variant, value);
 
         public static NsTextDimension Auto
-            => new NsTextDimension(NsTextDimensionVariant.Auto, null);
+            => new(NsTextDimensionVariant.Auto, null);
 
         public static NsTextDimension WithValue(int value)
-            => new NsTextDimension(NsTextDimensionVariant.Value, value);
+            => new(NsTextDimensionVariant.Value, value);
 
         public static NsTextDimension FromConstant(BuiltInConstant constant)
         {

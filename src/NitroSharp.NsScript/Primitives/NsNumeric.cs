@@ -2,7 +2,7 @@
 {
     public readonly struct NsNumeric
     {
-        public static NsNumeric Zero => new NsNumeric(0, false);
+        public static NsNumeric Zero => new(0, false);
 
         public NsNumeric(float value, bool isDelta)
         {
@@ -33,9 +33,9 @@
             => (int)numeric.Value;
 
         public static NsNumeric operator *(NsNumeric a, float m)
-            => new NsNumeric(a.Value * m, a.IsDelta);
+            => new(a.Value * m, a.IsDelta);
 
         public static NsNumeric operator /(NsNumeric a, float m)
-            => new NsNumeric(a.Value / m, a.IsDelta);
+            => new(a.Value / m, a.IsDelta);
     }
 }

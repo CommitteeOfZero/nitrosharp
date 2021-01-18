@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Runtime.CompilerServices;
 using System.Text;
 
 namespace NitroSharp.NsScript
@@ -9,9 +8,6 @@ namespace NitroSharp.NsScript
     public sealed class SourceText
     {
         private static readonly Encoding s_defaultEncoding;
-
-        private readonly string _source;
-        private readonly List<TextSpan> _lines;
 
         static SourceText()
         {
@@ -21,19 +17,18 @@ namespace NitroSharp.NsScript
 
         private SourceText(string text, ResolvedPath filePath)
         {
-            _source = text;
+            Source = text;
             FilePath = filePath;
-            _lines = GetLines();
+            Lines = GetLines();
         }
 
-        public string Source => _source;
+        public string Source { get; }
         public ResolvedPath FilePath { get; }
-        public char this[int index] => Source[index];
-        public int Length => _source.Length;
+        public int Length => Source.Length;
 
-        internal List<TextSpan> Lines => _lines;
+        internal List<TextSpan> Lines { get; }
 
-        public static SourceText From(string text) => new SourceText(text, new ResolvedPath(string.Empty));
+        public static SourceText From(string text) => new(text, new ResolvedPath(string.Empty));
         public static SourceText From(Stream stream, ResolvedPath filePath, Encoding? encoding = null)
         {
             if (!stream.CanRead)
@@ -54,25 +49,23 @@ namespace NitroSharp.NsScript
             }
 
             int lineNumber = GetLineNumberFromPosition(position);
-            return _lines[lineNumber];
+            return Lines[lineNumber];
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public string GetText(TextSpan textSpan) => _source.Substring(textSpan.Start, textSpan.Length);
+        public string GetText(TextSpan textSpan) => Source.Substring(textSpan.Start, textSpan.Length);
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ReadOnlySpan<char> GetCharacterSpan(TextSpan textSpan)
-            => _source.AsSpan().Slice(textSpan.Start, textSpan.Length);
+            => Source.AsSpan().Slice(textSpan.Start, textSpan.Length);
 
         public int GetLineNumberFromPosition(int position)
         {
             // Find the right line using binary search
             int lower = 0;
-            int upper = _lines.Count - 1;
+            int upper = Lines.Count - 1;
             while (lower <= upper)
             {
                 int index = lower + ((upper - lower) / 2);
-                TextSpan currentLine = _lines[index];
+                TextSpan currentLine = Lines[index];
                 int start = currentLine.Start;
                 if (start == position)
                 {
@@ -93,12 +86,12 @@ namespace NitroSharp.NsScript
 
         private List<TextSpan> GetLines()
         {
-            var lines = new List<TextSpan>(_source.Length / 80);
+            var lines = new List<TextSpan>(Source.Length / 80);
             int position = 0;
             int lineStart = 0;
             while (position < Length)
             {
-                int lineBreakWidth = GetLineBreakWidth(_source, position);
+                int lineBreakWidth = GetLineBreakWidth(Source, position);
                 if (lineBreakWidth == 0)
                 {
                     position++;

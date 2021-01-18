@@ -97,7 +97,6 @@ namespace NitroSharp.NsScript.VM
                     : new byte[length];
                 _stream.Read(bytes);
                 s = Encoding.UTF8.GetString(bytes);
-                Debug.Assert(s != null);
             }
 
             return s;
@@ -253,7 +252,7 @@ namespace NitroSharp.NsScript.VM
         }
 
         public ReadOnlySpan<byte> Code
-            => new ReadOnlySpan<byte>(_bytes, _codeStart, _bytes.Length - _codeStart);
+            => new(_bytes, _codeStart, _bytes.Length - _codeStart);
     }
 
     [DebuggerDisplay("{SubroutineKind} '{SubroutineName}'")]

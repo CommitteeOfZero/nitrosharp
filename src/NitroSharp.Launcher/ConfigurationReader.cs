@@ -128,20 +128,12 @@ namespace NitroSharp.Launcher
 
         private static AudioBackend? GetAudioBackend(string name)
         {
-            switch (name)
+            return name switch
             {
-                case "XAUDIO":
-                case "XAUDIO2":
-                    return AudioBackend.XAudio2;
-
-                case "OPENAL":
-                case "OPENALSOFT":
-                case "OPENAL SOFT":
-                    return AudioBackend.OpenAL;
-
-                default:
-                    return null;
-            }
+                "XAUDIO" or "XAUDIO2" => AudioBackend.XAudio2,
+                "OPENAL" or "OPENALSOFT" or "OPENAL SOFT" => AudioBackend.OpenAL,
+                _ => null,
+            };
         }
 
         private static GraphicsBackend? GetGraphicsBackend(string name)

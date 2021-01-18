@@ -210,8 +210,11 @@ namespace NitroSharp.NsScript.Compiler
         public FunctionSymbol? LookupFunction(string name)
             => LookupSubroutine(_functionMap, name);
 
-        private T? LookupSubroutine<T>(Dictionary<string, T> map, string name) where T : SubroutineSymbol
-            => map.TryGetValue(name, out T? symbol) ? symbol : null;
+        private static T? LookupSubroutine<T>(Dictionary<string, T> map, string name)
+            where T : SubroutineSymbol
+        {
+            return map.TryGetValue(name, out T? symbol) ? symbol : null;
+        }
 
         public override string ToString() => $"SourceFile '{Name}'";
     }

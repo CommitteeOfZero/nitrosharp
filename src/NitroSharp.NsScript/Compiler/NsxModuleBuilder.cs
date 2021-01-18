@@ -4,28 +4,25 @@ namespace NitroSharp.NsScript.Compiler
 {
     internal sealed class NsxModuleBuilder
     {
-        private readonly Compilation _compilation;
-        private readonly SourceFileSymbol _sourceFile;
-        private readonly DiagnosticBuilder _diagnostics;
-
         private readonly TokenMap<SubroutineSymbol> _subroutines;
         private readonly TokenMap<SourceFileSymbol> _externalSourceFiles;
         private readonly TokenMap<string> _stringHeap;
 
         public NsxModuleBuilder(Compilation compilation, SourceFileSymbol sourceFile)
         {
-            _compilation = compilation;
-            _sourceFile = sourceFile;
-            _diagnostics = new DiagnosticBuilder();
+            Compilation = compilation;
+            SourceFile = sourceFile;
+            Diagnostics = new DiagnosticBuilder();
             _stringHeap = new TokenMap<string>(512);
             _subroutines = new TokenMap<SubroutineSymbol>(sourceFile.SubroutineCount);
             ConstructSubroutineMap(sourceFile);
             _externalSourceFiles = new TokenMap<SourceFileSymbol>();
         }
 
-        public Compilation Compilation => _compilation;
-        public SourceFileSymbol SourceFile => _sourceFile;
-        public DiagnosticBuilder Diagnostics => _diagnostics;
+        public Compilation Compilation { get; }
+        public SourceFileSymbol SourceFile { get; }
+        public DiagnosticBuilder Diagnostics { get; }
+
         public ReadOnlySpan<SubroutineSymbol> Subroutines => _subroutines.AsSpan();
         public ReadOnlySpan<SourceFileSymbol> Imports => _externalSourceFiles.AsSpan();
         public ReadOnlySpan<string> StringHeap => _stringHeap.AsSpan();

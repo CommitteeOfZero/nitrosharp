@@ -8,23 +8,22 @@ namespace NitroSharp.NsScript.Syntax
         // char.MaxValue is not a valid UTF-16 character, so it can safely be used to indicate end of file.
         protected const char EofCharacter = char.MaxValue;
 
-        private readonly string _text;
         private int _position;
         private int _lexemeStart;
 
         protected TextScanner(string text)
         {
-            _text = text;
+            Text = text;
         }
 
-        public string Text => _text;
+        protected string Text { get; }
         protected int Position => _position;
         protected int LexemeStart => _lexemeStart;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected void SetPosition(int position)
         {
-            Debug.Assert(position <= _text.Length && position >= 0);
+            Debug.Assert(position <= Text.Length && position >= 0);
             _position = position;
         }
 
@@ -35,31 +34,25 @@ namespace NitroSharp.NsScript.Syntax
         protected void StartScanning() => _lexemeStart = _position;
 
         protected TextSpan CurrentLexemeSpan =>
-            new TextSpan(start: _lexemeStart, length: _position - _lexemeStart);
+            new(start: _lexemeStart, length: _position - _lexemeStart);
 
-        protected TextSpan CurrentSpanStart => new TextSpan(CurrentLexemeSpan.Start, 0);
+        protected TextSpan CurrentSpanStart => new(CurrentLexemeSpan.Start, 0);
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected char PeekChar() => PeekChar(0);
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected char PeekChar(int offset)
         {
-            if (_position + offset >= _text.Length)
+            if (_position + offset >= Text.Length)
             {
                 return EofCharacter;
             }
 
-            return _text[_position + offset];
+            return Text[_position + offset];
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected void AdvanceChar() => _position++;
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected void AdvanceChar(int n) => _position += n;
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected void EatChar(char c)
         {
             char actualCharacter = PeekChar();
@@ -71,7 +64,6 @@ namespace NitroSharp.NsScript.Syntax
             AdvanceChar();
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected bool TryEatChar(char c)
         {
             char actualCharacter = PeekChar();
@@ -87,7 +79,6 @@ namespace NitroSharp.NsScript.Syntax
         /// <summary>
         /// Returns true if the lookahead characters compose the specified string.
         /// </summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected bool Match(string s)
         {
             for (int i = 0; i < s.Length; i++)

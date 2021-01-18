@@ -36,7 +36,7 @@ namespace NitroSharp.NsScript.Utilities
         public uint Length => (uint)_array.Length;
 
         public static HeapAllocBuffer<T> Allocate(uint minimumSize)
-            => new HeapAllocBuffer<T>(new T[minimumSize]);
+            => new(new T[minimumSize]);
 
         public void Resize(uint newSize)
             => Array.Resize(ref _array, (int)newSize);
@@ -63,8 +63,7 @@ namespace NitroSharp.NsScript.Utilities
         public uint Length => (uint)_pooledArray.Length;
 
         public static PooledBuffer<T> Allocate(uint minimumSize)
-            => new PooledBuffer<T>(
-                ArrayPool<T>.Shared.Rent((int)minimumSize), minimumSize);
+            => new(ArrayPool<T>.Shared.Rent((int)minimumSize), minimumSize);
 
         public void Resize(uint newSize)
         {

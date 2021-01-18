@@ -40,19 +40,13 @@ namespace NitroSharp.NsScript.Compiler
 
         private static string FixKnownTypos(string s)
         {
-            switch (s)
+            return s switch
             {
-                case "Waitkey":
-                    return "WaitKey";
-                case "Wai":
-                case "Wat":
-                case "Waite":
-                    return "Wait";
-                case "Reqiest":
-                    return "Request";
-                default:
-                    return s;
-            }
+                "Waitkey" => "WaitKey",
+                "Wai" or "Wat" or "Waite" => "Wait",
+                "Reqiest" => "Request",
+                _ => s,
+            };
         }
     }
 }

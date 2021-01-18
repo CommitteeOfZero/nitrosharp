@@ -22,8 +22,8 @@ namespace NitroSharp.NsScript.Utilities
             set => _position = value;
         }
 
-        public ReadOnlySpan<byte> Consumed => _buffer.Slice(0, _position);
-        public ReadOnlySpan<byte> Unconsumed => _buffer.Slice(_position);
+        public ReadOnlySpan<byte> Consumed => _buffer[.._position];
+        public ReadOnlySpan<byte> Unconsumed => _buffer[_position..];
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ReadOnlySpan<byte> Consume(int byteCount)

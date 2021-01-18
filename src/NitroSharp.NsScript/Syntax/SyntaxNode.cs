@@ -54,7 +54,7 @@ namespace NitroSharp.NsScript.Syntax
             return null;
         }
 
-        public Children GetChildren() => new Children(this);
+        public Children GetChildren() => new(this);
 
         //public override string ToString()
         //{
@@ -75,7 +75,7 @@ namespace NitroSharp.NsScript.Syntax
             }
 
             public ChildrenEnumerator GetEnumerator()
-                => new ChildrenEnumerator(_node);
+                => new(_node);
 
             public SyntaxNode?[] ToArray()
             {

@@ -100,7 +100,7 @@ namespace NitroSharp.NsScript
         public bool IsEmpty => string.IsNullOrEmpty(Value);
         public bool HasParent => _parent is object;
 
-        public static EntityPath Empty => new EntityPath(string.Empty);
+        public static EntityPath Empty => new(string.Empty);
 
         private ReadOnlySpan<char> CharsToHash
         {
@@ -124,7 +124,7 @@ namespace NitroSharp.NsScript
         }
 
         public override int GetHashCode() => string.GetHashCode(CharsToHash);
-        public override string? ToString() => Value;
+        public override string ToString() => Value;
 
         public bool Equals(EntityPath other)
             => CharsToHash.Equals(other.CharsToHash, StringComparison.Ordinal);

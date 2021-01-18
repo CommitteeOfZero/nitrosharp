@@ -165,11 +165,11 @@ namespace NitroSharp.Utilities
             return copy;
         }
 
-        public Span<T> AsSpan() => new Span<T>(_elements, 0, (int)_count);
-        public Span<T> AsSpan(int start, int length) => new Span<T>(_elements, start, length);
-        public ReadOnlySpan<T> AsReadonlySpan() => new ReadOnlySpan<T>(_elements, 0, (int)_count);
+        public Span<T> AsSpan() => new(_elements, 0, (int)_count);
+        public Span<T> AsSpan(int start, int length) => new(_elements, start, length);
+        public ReadOnlySpan<T> AsReadonlySpan() => new(_elements, 0, (int)_count);
         public ReadOnlySpan<T> AsReadonlySpan(int start, int length)
-            => new ReadOnlySpan<T>(_elements, start, length);
+            => new(_elements, start, length);
 
         public void Reset()
         {

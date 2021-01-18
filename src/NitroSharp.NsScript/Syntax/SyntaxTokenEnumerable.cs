@@ -12,7 +12,7 @@ namespace NitroSharp.NsScript
             _lexer = lexer;
         }
 
-        public Enumerator GetEnumerator() => new Enumerator(_lexer);
+        public Enumerator GetEnumerator() => new(_lexer);
 
         public SyntaxToken[] ToArray()
         {

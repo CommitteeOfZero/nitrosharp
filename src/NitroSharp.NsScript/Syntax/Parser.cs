@@ -946,7 +946,7 @@ namespace NitroSharp.NsScript.Syntax
             string extractBoxName(in SyntaxToken tag)
             {
                 ReadOnlySpan<char> span = SourceText.GetCharacterSpan(tag.TextSpan);
-                span = span.Slice(5, span.Length - 6);
+                span = span[5..^1];
                 Debug.Assert(span.Length > 0);
                 return span.ToString();
             }
@@ -955,7 +955,7 @@ namespace NitroSharp.NsScript.Syntax
             {
                 ReadOnlySpan<char> span = SourceText.GetCharacterSpan(identifierToken.TextSpan);
                 Debug.Assert(span.Length >= 3);
-                return span.Slice(1, span.Length - 2).ToString();
+                return span[1..^1].ToString();
             }
 
             SyntaxToken startTag = EatToken(SyntaxTokenKind.DialogueBlockStartTag);

@@ -124,7 +124,7 @@ namespace NitroSharp.NsScript.Syntax
 
         public static bool IsStatementExpression(ExpressionSyntax expression)
         {
-            var kind = expression.Kind;
+            SyntaxNodeKind kind = expression.Kind;
             return kind == SyntaxNodeKind.AssignmentExpression || kind == SyntaxNodeKind.FunctionCallExpression;
         }
 
