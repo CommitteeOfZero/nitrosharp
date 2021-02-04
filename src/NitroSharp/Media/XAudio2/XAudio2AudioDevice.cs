@@ -1,10 +1,13 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 using SharpDX.XAudio2;
 
 namespace NitroSharp.Media.XAudio2
 {
-    public sealed class XAudio2AudioDevice : AudioDevice
+    internal sealed class XAudio2AudioDevice : AudioDevice
     {
         private static class CoreRTWorkaround
         {
@@ -12,7 +15,7 @@ namespace NitroSharp.Media.XAudio2
             {
                 CoInitializeEx(IntPtr.Zero, COINIT.COINIT_MULTITHREADED);
             }
-           
+
             [DllImport("ole32.dll", SetLastError = true)]
             private static extern int CoInitializeEx(
                 [In, Optional] IntPtr pvReserved,
@@ -29,24 +32,37 @@ namespace NitroSharp.Media.XAudio2
         }
 
         private readonly MasteringVoice _masteringVoice;
+        private readonly List<XAudio2AudioSource> _audioSources = new();
 
-        public XAudio2AudioDevice(in AudioParameters audioParameters) : base(audioParameters)
+        public XAudio2AudioDevice(in AudioParameters audioParameters)
+            : base(audioParameters)
         {
             CoreRTWorkaround.InitializeCOM();
 
-            Device = new SharpDX.XAudio2.XAudio2(XAudio2Flags.None, ProcessorSpecifier.DefaultProcessor);
-            _masteringVoice = new MasteringVoice(Device, audioParameters.ChannelCount, (int)audioParameters.SampleRate);
+            Device = new SharpDX.XAudio2.XAudio2(
+                XAudio2Flags.None,
+                ProcessorSpecifier.DefaultProcessor
+            );
+            _masteringVoice = new MasteringVoice(
+                Device,
+                audioParameters.ChannelCount,
+                (int)audioParameters.SampleRate
+            );
         }
 
         public SharpDX.XAudio2.XAudio2 Device { get; }
 
-        public override AudioSource CreateAudioSource()
+        public override XAudio2AudioSource CreateAudioSource(int bufferSize = 16384, int bufferCount = 16)
         {
-            return new XAudio2AudioSource(this);
+            var source = new XAudio2AudioSource(this, bufferSize, bufferCount);
+            _audioSources.Add(source);
+            return source;
         }
 
-        public override void Dispose()
+        public override async ValueTask DisposeAsync()
         {
+            await Task.WhenAll(_audioSources.Select(x => x.DisposeAsync().AsTask()));
+            _audioSources.Clear();
             _masteringVoice.DestroyVoice();
             _masteringVoice.Dispose();
             Device.StopEngine();

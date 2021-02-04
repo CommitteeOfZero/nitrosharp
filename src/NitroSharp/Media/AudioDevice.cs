@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Runtime.InteropServices;
-using NitroSharp.Media.OpenAL;
+using System.Threading.Tasks;
 using NitroSharp.Media.XAudio2;
 
 namespace NitroSharp.Media
 {
-    public abstract class AudioDevice : IDisposable
+    internal abstract class AudioDevice : IAsyncDisposable
     {
         public const int BitDepth = 16;
 
@@ -16,8 +16,12 @@ namespace NitroSharp.Media
 
         public AudioParameters AudioParameters { get; }
 
-        public abstract AudioSource CreateAudioSource();
-        public abstract void Dispose();
+        public abstract XAudio2AudioSource CreateAudioSource(
+            int bufferSize = 16 * 1024,
+            int bufferCount = 16
+        );
+
+        public abstract ValueTask DisposeAsync();
 
         public static AudioDevice CreatePlatformDefault(in AudioParameters audioParameters)
         {
@@ -43,9 +47,7 @@ namespace NitroSharp.Media
 
         public static AudioDevice Create(AudioBackend backend, in AudioParameters audioParameters)
         {
-            return backend == AudioBackend.XAudio2
-                ? (AudioDevice)new XAudio2AudioDevice(audioParameters)
-                : new OpenALAudioDevice(audioParameters);
+            return new XAudio2AudioDevice(audioParameters);
         }
     }
 

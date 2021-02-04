@@ -328,7 +328,7 @@ namespace NitroSharp
         {
             if (Get(dialoguePage) is DialoguePage page)
             {
-                page.Append(_renderCtx, text, _ctx.ActiveProcess.FontConfig, _ctx.Backlog);
+                page.Append(_ctx, text, _ctx.ActiveProcess.FontConfig);
             }
         }
 

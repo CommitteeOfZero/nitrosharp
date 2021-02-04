@@ -29,6 +29,32 @@ namespace NitroSharp.Graphics
         );
     }
 
+    internal struct QuadVertexUV3
+    {
+        public Vector2 Position;
+        public Vector3 TexCoord;
+        private Vector3 _padding;
+
+        public static readonly VertexLayoutDescription LayoutDescription = new(
+            stride: 32,
+            new VertexElementDescription(
+                "vs_Position",
+                VertexElementSemantic.TextureCoordinate,
+                VertexElementFormat.Float2
+            ),
+            new VertexElementDescription(
+                "vs_TexCoord",
+                VertexElementSemantic.TextureCoordinate,
+                VertexElementFormat.Float3
+            ),
+            new VertexElementDescription(
+                "vs_Padding",
+                VertexElementSemantic.TextureCoordinate,
+                VertexElementFormat.Float3
+            )
+        );
+    }
+
     internal struct QuadGeometry
     {
         public static ushort[] Indices => new ushort[] { 0, 1, 2, 2, 1, 3 };
@@ -115,6 +141,34 @@ namespace NitroSharp.Graphics
             clamp(ref BottomLeft, bounds, constraintRect);
             clamp(ref BottomRight, bounds, constraintRect);
             boundingRect = GetBoundingRect();
+        }
+    }
+
+    internal struct QuadGeometryUV3
+    {
+        public QuadVertexUV3 TopLeft;
+        public QuadVertexUV3 TopRight;
+        public QuadVertexUV3 BottomLeft;
+        public QuadVertexUV3 BottomRight;
+
+        public static QuadGeometryUV3 FromQuad(in QuadGeometry quad, uint layer)
+        {
+            static QuadVertexUV3 vertex(in QuadVertex v, uint layer)
+            {
+                return new()
+                {
+                    Position = v.Position,
+                    TexCoord = new Vector3(v.TexCoord, layer),
+                };
+            }
+
+            return new QuadGeometryUV3
+            {
+                TopLeft = vertex(quad.TopLeft, layer),
+                TopRight = vertex(quad.TopRight, layer),
+                BottomLeft = vertex(quad.BottomLeft, layer),
+                BottomRight = vertex(quad.BottomRight, layer)
+            };
         }
     }
 }

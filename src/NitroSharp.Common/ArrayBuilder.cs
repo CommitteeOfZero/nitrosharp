@@ -116,7 +116,9 @@ namespace NitroSharp.Utilities
         {
             ref T ptr = ref _elements[index];
             T elem = ptr;
-            ptr = _elements[--_count];
+            ref T last = ref _elements[--_count];
+            ptr = last;
+            last = default!;
             return elem;
         }
 

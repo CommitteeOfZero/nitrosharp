@@ -1,5 +1,8 @@
 using System.Collections.Generic;
+using System.IO;
 using System.Numerics;
+using NitroSharp.Media;
+using NitroSharp.NsScript;
 using NitroSharp.NsScript.VM;
 using NitroSharp.Saving;
 using NitroSharp.Text;
@@ -46,7 +49,10 @@ namespace NitroSharp.Graphics
         public override bool IsIdle => _dialogueThread.DoneExecuting && LineRead;
         public bool LineRead { get; private set; }
 
-        public DialoguePage(in ResolvedEntityPath path, in DialoguePageSaveData saveData, GameLoadingContext loadCtx)
+        public DialoguePage(
+            in ResolvedEntityPath path,
+            in DialoguePageSaveData saveData,
+            GameLoadingContext loadCtx)
             : base(path, saveData.Common)
         {
             _bounds = saveData.Bounds;
@@ -68,17 +74,13 @@ namespace NitroSharp.Graphics
 
             while (_remainingSegments.Count != saveData.SegmentsRemaining)
             {
-                ConsumeSegment(loadCtx.Rendering, loadCtx.Backlog);
+                ConsumeSegment(loadCtx.GameContext);
             }
 
             loadCtx.Rendering.Text.RequestGlyphs(_layout);
         }
 
-        public void Append(
-            RenderContext renderCtx,
-            string pxmlLine,
-            FontConfiguration fontConfig,
-            Backlog backlog)
+        public void Append(GameContext ctx, string pxmlLine, FontConfiguration fontConfig)
         {
             _pxmlLines.Add(pxmlLine);
             var buffer = TextBuffer.FromPXmlString(pxmlLine, fontConfig);
@@ -87,12 +89,12 @@ namespace NitroSharp.Graphics
                 _remainingSegments.Enqueue(seg);
             }
 
-            Advance(renderCtx, backlog);
-            renderCtx.Text.RequestGlyphs(_layout);
+            Advance(ctx);
+            ctx.RenderContext.Text.RequestGlyphs(_layout);
             LineRead = false;
         }
 
-        private void Advance(RenderContext renderCtx, Backlog backlog)
+        private void Advance(GameContext ctx)
         {
             if (_animation is object)
             {
@@ -105,7 +107,7 @@ namespace NitroSharp.Graphics
             }
 
             int start = _layout.GlyphRuns.Length;
-            while (ConsumeSegment(renderCtx, backlog) == ConsumeResult.KeepGoing)
+            while (ConsumeSegment(ctx) == ConsumeResult.KeepGoing)
             {
             }
 
@@ -113,20 +115,21 @@ namespace NitroSharp.Graphics
             if (_layout.GlyphRuns.Length != start)
             {
                 _animation = new TypewriterAnimation(_layout, _layout.GlyphRuns[start..], 40);
-                renderCtx.Icons.WaitLine.Reset();
+                ctx.RenderContext.Icons.WaitLine.Reset();
             }
         }
 
-        private ConsumeResult ConsumeSegment(RenderContext renderCtx, Backlog backlog)
+        private ConsumeResult ConsumeSegment(GameContext ctx)
         {
+            GlyphRasterizer glyphRasterizer = ctx.RenderContext.GlyphRasterizer;
             if (_remainingSegments.TryDequeue(out TextBufferSegment? seg))
             {
                 switch (seg.SegmentKind)
                 {
                     case TextBufferSegmentKind.Text:
                         var textSegment = (TextSegment)seg;
-                        _layout.Append(renderCtx.GlyphRasterizer, textSegment.TextRuns.AsSpan());
-                        backlog.Append(textSegment);
+                        _layout.Append(glyphRasterizer, textSegment.TextRuns.AsSpan());
+                        ctx.Backlog.Append(textSegment);
                         return ConsumeResult.KeepGoing;
                     case TextBufferSegmentKind.Marker:
                         var marker = (MarkerSegment)seg;
@@ -136,6 +139,18 @@ namespace NitroSharp.Graphics
                                 return ConsumeResult.Halt;
                         }
                         break;
+                    case TextBufferSegmentKind.Voice:
+                        var voice = (VoiceSegment)seg;
+                        if (voice.Action == NsVoiceAction.Play)
+                        {
+                            ctx.PlayVoice(voice.CharacterName, voice.FileName);
+                        }
+                        else
+                        {
+                            ctx.StopVoice();
+                        }
+                        break;
+
                 }
 
                 return ConsumeResult.KeepGoing;
@@ -160,7 +175,7 @@ namespace NitroSharp.Graphics
             if (advance)
             {
                 LineRead = _remainingSegments.Count == 0 && _animation is null;
-                Advance(ctx.RenderContext, ctx.Backlog);
+                Advance(ctx);
             }
 
             ctx.RenderContext.Text.RequestGlyphs(_layout);

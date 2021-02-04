@@ -26,7 +26,7 @@ namespace NitroSharp.NsScript.VM
         /// <summary>
         /// Original name: Platform.
         /// </summary>
-        public virtual int GetPlatformId() => 0;
+        public virtual int GetPlatformId() => 100;
 
         public virtual string GetCurrentModuleName() => throw new NotImplementedException();
         public virtual int GetSoundAmplitude(string characterName) => throw new NotImplementedException();
@@ -99,8 +99,8 @@ namespace NitroSharp.NsScript.VM
         public virtual void SetFieldOfView(string unk1, double unk2) { }
         public virtual void MoveCube(EntityQuery query, TimeSpan duration, NsNumeric dstX, NsNumeric dstY, NsNumeric dstZ, NsEaseFunction easeFunction, TimeSpan delay) { }
 
-        public virtual void LoadVideo(in EntityPath entityPath, int priority, NsCoordinate x, NsCoordinate y, bool loop, string source) { }
-        public virtual void PlayVideo(in EntityPath entityPath, int priority, bool loop, bool alpha, string source, bool enableAudio) { }
+        public virtual void LoadVideo(in EntityPath entityPath, int priority, NsCoordinate x, NsCoordinate y, bool loop, bool alpha, string source) { }
+        //ublic virtual void PlayVideo(in EntityPath entityPath, int priority, bool loop, bool alpha, string source, bool enableAudio) { }
         public virtual void WaitPlay(in EntityPath entityPath) { }
 
         /// <summary>
@@ -111,7 +111,7 @@ namespace NitroSharp.NsScript.VM
         /// <summary>
         /// Original name: SetLoop.
         /// </summary>
-        public virtual void ToggleLooping(EntityQuery query, bool looping) { }
+        public virtual void ToggleLooping(EntityQuery query, bool enable) { }
 
         public virtual void SetLoopRegion(in EntityPath entityPath, TimeSpan loopStart, TimeSpan loopEnd) { }
         public virtual void SetVolume(EntityQuery query, TimeSpan duration, NsRational volume) { }

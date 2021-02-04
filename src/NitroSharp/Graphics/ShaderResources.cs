@@ -37,6 +37,7 @@ namespace NitroSharp.Graphics
             Effects = new EffectShaderResources(graphicsDevice, shaderLibrary, outputDescription);
             BarrelDistortion = new BarrelDistortionShaderResources(graphicsDevice, shaderLibrary, outputDescription, viewProjectionLayout);
             Cube = new CubeShaderResources(graphicsDevice, shaderLibrary, outputDescription, viewProjectionLayout);
+            Video = new VideoShaderResources(graphicsDevice, shaderLibrary, outputDescription, viewProjectionLayout);
         }
 
         public QuadShaderResources Quad { get; }
@@ -46,6 +47,7 @@ namespace NitroSharp.Graphics
         public EffectShaderResources Effects { get; }
         public BarrelDistortionShaderResources BarrelDistortion { get; }
         public CubeShaderResources Cube { get; }
+        public VideoShaderResources Video { get; }
 
         public void Dispose()
         {
@@ -56,6 +58,7 @@ namespace NitroSharp.Graphics
             Effects.Dispose();
             BarrelDistortion.Dispose();
             Cube.Dispose();
+            Video.Dispose();
         }
     }
 
@@ -221,7 +224,7 @@ namespace NitroSharp.Graphics
 
             (Shader vs, Shader fs) = shaderLibrary.LoadShaderSet("icon");
             var shaderSetDesc = new ShaderSetDescription(
-                new[] { IconVertex.LayoutDescription },
+                new[] { QuadVertexUV3.LayoutDescription },
                 new[] { vs, fs }
             );
 
@@ -244,6 +247,122 @@ namespace NitroSharp.Graphics
         {
             Pipeline.Dispose();
             ResourceLayout.Dispose();
+        }
+    }
+
+    internal sealed class VideoShaderResources : IDisposable
+    {
+        public VideoShaderResources(
+            GraphicsDevice graphicsDevice,
+            ShaderLibrary shaderLibrary,
+            in OutputDescription outputDescription,
+            ResourceLayout viewProjectionLayout)
+        {
+            ResourceFactory factory = graphicsDevice.ResourceFactory;
+            InputLayout = factory.CreateResourceLayout(new ResourceLayoutDescription(
+                new ResourceLayoutElementDescription(
+                    "Luma",
+                    ResourceKind.TextureReadOnly,
+                    ShaderStages.Fragment
+                ),
+                new ResourceLayoutElementDescription(
+                    "Chroma",
+                    ResourceKind.TextureReadOnly,
+                    ShaderStages.Fragment
+                ),
+                new ResourceLayoutElementDescription(
+                    "Sampler",
+                    ResourceKind.Sampler,
+                    ShaderStages.Fragment
+                )
+            ));
+
+            ParamLayout = factory.CreateResourceLayout(new ResourceLayoutDescription(
+                new ResourceLayoutElementDescription(
+                    "EnableAlpha",
+                    ResourceKind.UniformBuffer,
+                    ShaderStages.Fragment
+                )
+            ));
+
+            (Shader vs, Shader fs) = shaderLibrary.LoadShaderSet("video");
+            var shaderSetDesc = new ShaderSetDescription(
+                new[] { QuadVertex.LayoutDescription },
+                new[] { vs, fs }
+            );
+
+            var pipelineDesc = new GraphicsPipelineDescription(
+                BlendStateDescription.SingleAlphaBlend,
+                DepthStencilStateDescription.Disabled,
+                RasterizerStateDescription.CullNone,
+                PrimitiveTopology.TriangleList,
+                shaderSetDesc,
+                new[] { viewProjectionLayout, InputLayout, ParamLayout },
+                outputDescription
+            );
+            AlphaBlend = factory.CreateGraphicsPipeline(ref pipelineDesc);
+            pipelineDesc.BlendState = new BlendStateDescription
+            {
+                AttachmentStates = new[]
+                {
+                    new BlendAttachmentDescription
+                    {
+                        BlendEnabled = true,
+                        SourceColorFactor = BlendFactor.One,
+                        DestinationColorFactor = BlendFactor.One,
+                        ColorFunction = BlendFunction.Add,
+                        SourceAlphaFactor = BlendFactor.SourceAlpha,
+                        DestinationAlphaFactor = BlendFactor.DestinationAlpha,
+                        AlphaFunction = BlendFunction.Add
+                    }
+                }
+            };
+            AdditiveBlend = factory.CreateGraphicsPipeline(ref pipelineDesc);
+            pipelineDesc.BlendState = new BlendStateDescription
+            {
+                AttachmentStates = new[]
+                {
+                    new BlendAttachmentDescription
+                    {
+                        BlendEnabled = true,
+                        SourceColorFactor = BlendFactor.DestinationColor,
+                        DestinationColorFactor = BlendFactor.InverseSourceAlpha,
+                        ColorFunction = BlendFunction.Add,
+                        SourceAlphaFactor = BlendFactor.SourceAlpha,
+                        DestinationAlphaFactor = BlendFactor.DestinationAlpha,
+                        AlphaFunction = BlendFunction.Add
+                    }
+                }
+            };
+            MultiplicativeBlend = factory.CreateGraphicsPipeline(ref pipelineDesc);
+            EnableAlphaBuffer = new GpuBuffer<Vector4>(
+                graphicsDevice,
+                BufferUsage.UniformBuffer,
+                Vector4.Zero
+            );
+        }
+
+        public ResourceLayout InputLayout { get; }
+        public ResourceLayout ParamLayout { get; }
+        public Pipeline AlphaBlend { get; }
+        public Pipeline AdditiveBlend { get; }
+        public Pipeline MultiplicativeBlend { get; }
+        public GpuBuffer<Vector4> EnableAlphaBuffer { get; }
+
+        public Pipeline GetPipeline(BlendMode blendMode) => blendMode switch
+        {
+            BlendMode.Alpha => AlphaBlend,
+            BlendMode.Additive => AdditiveBlend,
+            BlendMode.Multiplicative => MultiplicativeBlend,
+            _ => ThrowHelper.UnexpectedValue<Pipeline>()
+        };
+
+        public void Dispose()
+        {
+            AlphaBlend.Dispose();
+            InputLayout.Dispose();
+            AdditiveBlend.Dispose();
+            EnableAlphaBuffer.Dispose();
         }
     }
 

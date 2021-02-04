@@ -73,6 +73,9 @@ namespace NitroSharp
 
     internal sealed class GameContext
     {
+        private readonly Dictionary<string, MediaStream> _voices = new();
+        private (string, MediaStream?) _activeVoice;
+
         public Stopwatch Timer { get; }
 
         public GameWindow Window { get; }
@@ -81,6 +84,8 @@ namespace NitroSharp
         public ContentManager Content { get; }
         public GlyphRasterizer GlyphRasterizer { get; }
         public RenderContext RenderContext { get; }
+        public AudioDevice AudioDevice { get; }
+        public AudioSourcePool AudioSourcePool { get; }
         public InputContext InputContext { get; }
         public NsScriptVM VM { get; }
         public CancellationTokenSource ShutdownSignal { get; }
@@ -102,6 +107,8 @@ namespace NitroSharp
             ContentManager content,
             GlyphRasterizer glyphRasterizer,
             RenderContext renderContext,
+            AudioDevice audioDevice,
+            AudioSourcePool audioSourcePool,
             InputContext inputContext,
             NsScriptVM vm,
             GameProcess mainProcess)
@@ -116,9 +123,36 @@ namespace NitroSharp
             VM = vm;
             ShutdownSignal = new CancellationTokenSource();
             MainProcess = mainProcess;
+            AudioSourcePool = audioSourcePool;
+            AudioDevice = audioDevice;
             Backlog = new Backlog(vm.SystemVariables);
             Timer = Stopwatch.StartNew();
         }
+
+        public void PlayVoice(string characterName, string filePath)
+        {
+            if (Content.TryOpenStream($"voice/{filePath}") is Stream file)
+            {
+                if (_activeVoice is (string character, MediaStream prevVoice))
+                {
+                    _voices.Remove(character);
+                    prevVoice.Dispose();
+                }
+
+                var voice = new MediaStream(
+                    file,
+                    graphicsDevice: null,
+                    AudioSourcePool.VoiceAudioSource,
+                    AudioDevice.AudioParameters
+                );
+                voice.Start();
+                _voices[characterName] = voice;
+                _activeVoice = (characterName, voice);
+            }
+        }
+
+        public MediaStream? GetVoice(string characterName)
+            => _voices.TryGetValue(characterName, out MediaStream? voice) ? voice : null;
 
         public void Defer(in DeferredOperation operation)
         {
@@ -134,9 +168,19 @@ namespace NitroSharp
         {
             ActiveProcess.Wait(thread, condition, timeout, entityQuery);
         }
+
+        public void StopVoice()
+        {
+            if (_activeVoice is (string character, MediaStream voice))
+            {
+                voice.Dispose();
+                _voices.Remove(character);
+                _activeVoice = default;
+            }
+        }
     }
 
-    public class Game : IDisposable
+    public class Game : IAsyncDisposable
     {
         private readonly bool UseWicOnWindows = true;
 
@@ -159,7 +203,7 @@ namespace NitroSharp
         private ContentManager? _content;
         private readonly InputContext _inputContext;
 
-        private AudioDevice? _audioDevice;
+        private AudioDevice _audioDevice = null!;
         private AudioSourcePool? _audioSourcePool;
 
         private readonly string _nssFolder;
@@ -236,6 +280,8 @@ namespace NitroSharp
                 _content!,
                 _glyphRasterizer,
                 _renderSystem!.Context,
+                _audioDevice,
+                _audioSourcePool!,
                 _inputContext,
                 _vm!,
                 process
@@ -250,7 +296,7 @@ namespace NitroSharp
 
         private async Task<GameProcess> Initialize()
         {
-            //var initializeAudio = Task.Run(SetupAudio);
+            var initializeAudio = Task.Run(SetupAudio);
             _glyphRasterizer.AddFonts(Directory.EnumerateFiles("Fonts"));
             await Task.WhenAll(_initializingGraphics.Task);
             _content = CreateContentManager();
@@ -374,7 +420,12 @@ namespace NitroSharp
         {
             if (useDedicatedThread)
             {
-                return Task.Factory.StartNew(MainLoop, TaskCreationOptions.LongRunning);
+                return Task.Factory.StartNew(
+                    MainLoop,
+                    CancellationToken.None,
+                    TaskCreationOptions.LongRunning,
+                    TaskScheduler.Default
+                );
             }
             try
             {
@@ -466,6 +517,12 @@ namespace NitroSharp
             {
                 world.BeginFrame();
             }
+
+            foreach (Sound sound in world.Sounds.Enabled)
+            {
+                sound.Update(dt);
+            }
+
             _renderSystem.Render(framestamp, _context, world.RenderItems, dt, assetsReady);
             RunDeferredOperations();
             _renderSystem.EndFrame();
@@ -571,7 +628,7 @@ namespace NitroSharp
                     // TODO (Android): recreate all device resources
                 }
 
-                RunMainLoop(true);
+                _ = RunMainLoop(true);
             }
         }
 
@@ -657,7 +714,7 @@ namespace NitroSharp
             _window.Mobile_HandledSurfaceDestroyed.Set();
         }
 
-        public void Dispose()
+        public async ValueTask DisposeAsync()
         {
             _inputContext.Dispose();
             _graphicsDevice?.WaitForIdle();
@@ -669,8 +726,7 @@ namespace NitroSharp
             _swapchain?.Dispose();
             _graphicsDevice?.Dispose();
             _window.Dispose();
-            _audioSourcePool?.Dispose();
-            _audioDevice?.Dispose();
+            await _audioDevice.DisposeAsync();
         }
     }
 }

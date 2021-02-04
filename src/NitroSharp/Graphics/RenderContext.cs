@@ -98,7 +98,7 @@ namespace NitroSharp.Graphics
                 new MeshDescription(QuadGeometry.Indices, verticesPerMesh: 4),
                 initialCapacity: 512
             );
-            IconQuads = new MeshList<IconVertex>(
+            QuadsUV3 = new MeshList<QuadVertexUV3>(
                 graphicsDevice,
                 new MeshDescription(QuadGeometry.Indices, verticesPerMesh: 4),
                 initialCapacity: 4
@@ -122,7 +122,7 @@ namespace NitroSharp.Graphics
         }
 
         public MeshList<QuadVertex> Quads { get; }
-        public MeshList<IconVertex> IconQuads { get; }
+        public MeshList<QuadVertexUV3> QuadsUV3 { get; }
         public MeshList<CubeVertex> Cubes { get; }
 
         public Size DesignResolution { get; }
@@ -177,7 +177,7 @@ namespace NitroSharp.Graphics
             _secondaryCommandList.Begin();
 
             Quads.Begin();
-            IconQuads.Begin();
+            QuadsUV3.Begin();
             Cubes.Begin();
             TextureCache.BeginFrame(frameStamp);
             ResourceSetCache.BeginFrame(frameStamp);
@@ -241,7 +241,7 @@ namespace NitroSharp.Graphics
             Text.EndFrame(TransferCommands);
             TextureCache.EndFrame(TransferCommands);
             Quads.End(TransferCommands);
-            IconQuads.End(TransferCommands);
+            QuadsUV3.End(TransferCommands);
             Cubes.End(TransferCommands);
             TransferCommands.End();
 

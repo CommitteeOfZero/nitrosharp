@@ -2,6 +2,9 @@
 {
     internal static class MathUtil
     {
+        public static double Clamp(double value, double min, double max)
+           => value < min ? min : value > max ? max : value;
+
         public static float Clamp(float value, float min, float max)
             => value < min ? min : value > max ? max : value;
 

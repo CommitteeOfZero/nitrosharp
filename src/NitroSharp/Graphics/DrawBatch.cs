@@ -261,6 +261,20 @@ namespace NitroSharp.Graphics
             });
         }
 
+        public void PushQuadUV3(QuadGeometryUV3 quad, Pipeline pipeline, in ResourceBindings resources)
+        {
+            Debug.Assert(_commandList is object && Target is object);
+            Span<QuadVertexUV3> vertices = MemoryMarshal.CreateSpan(ref quad.TopLeft, 4);
+            Mesh<QuadVertexUV3> mesh = _ctx.QuadsUV3.Append(vertices);
+            PushDraw(new Draw
+            {
+                Pipeline = pipeline,
+                ResourceBindings = resources,
+                BufferBindings = new BufferBindings(mesh.Vertices.Buffer, mesh.Indices.Buffer),
+                Params = DrawParams.Indexed(0, mesh.IndexBase, 6)
+            });
+        }
+
         public void PushDraw(in Draw draw)
         {
             Debug.Assert(_commandList is object && Target is object);

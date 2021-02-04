@@ -17,7 +17,7 @@ namespace NitroSharp.Media
 
         public int ChannelCount => ChannelLayout == ChannelLayout.Mono ? 1 : 2;
 
-        public override bool Equals(object obj) => obj is AudioParameters other && Equals(other);
+        public override bool Equals(object? obj) => obj is AudioParameters other && Equals(other);
         public bool Equals(AudioParameters other)
         {
             return ChannelLayout == other.ChannelLayout && SampleRate == other.SampleRate;
@@ -26,7 +26,7 @@ namespace NitroSharp.Media
         public override int GetHashCode() => HashCode.Combine(ChannelLayout, SampleRate);
 
         public static bool operator ==(AudioParameters left, AudioParameters right) => left.Equals(right);
-        public static bool operator !=(AudioParameters left, AudioParameters right) => !(left.Equals(right));
+        public static bool operator !=(AudioParameters left, AudioParameters right) => !left.Equals(right);
     }
 
     public enum ChannelLayout

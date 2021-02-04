@@ -1,47 +1,57 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Diagnostics;
+using NitroSharp.Media.XAudio2;
 
 namespace NitroSharp.Media
 {
-    internal sealed class AudioSourcePool : IDisposable
+    internal readonly struct PooledAudioSource : IDisposable
     {
-        private readonly AudioDevice _audioDevice;
-        private readonly ConcurrentQueue<AudioSource> _freeSources;
+        private readonly AudioSourcePool _pool;
+        public readonly XAudio2AudioSource Value;
 
-        public AudioSourcePool(AudioDevice audioDevice, uint initialSize = 8)
+        public PooledAudioSource(AudioSourcePool pool, XAudio2AudioSource audioSource)
         {
-            _audioDevice = audioDevice;
-            _freeSources = new ConcurrentQueue<AudioSource>();
-
-            for (int i = 0; i < initialSize; i++)
-            {
-                _freeSources.Enqueue(_audioDevice.CreateAudioSource());
-            }
-        }
-
-        public AudioSource Rent()
-        {
-            var audioSource = _freeSources.TryDequeue(out AudioSource pooled)
-                ? pooled
-                : _audioDevice.CreateAudioSource();
-
-            Debug.Assert(audioSource.TotalBuffersReferenced == 0);
-            return audioSource;
-        }
-
-        public void Return(AudioSource audioSource)
-        {
-            audioSource.FlushBuffers();
-            _freeSources.Enqueue(audioSource);
+            _pool = pool;
+            Value = audioSource;
         }
 
         public void Dispose()
         {
-            while (_freeSources.TryDequeue(out AudioSource audioSource))
+            _pool.Return(Value);
+        }
+    }
+
+    internal sealed class AudioSourcePool
+    {
+        private readonly ConcurrentQueue<XAudio2AudioSource> _freeSources;
+
+        public AudioSourcePool(AudioDevice audioDevice, uint initialSize = 1)
+        {
+            AudioDevice = audioDevice;
+            _freeSources = new ConcurrentQueue<XAudio2AudioSource>();
+
+            VoiceAudioSource = AudioDevice.CreateAudioSource( bufferSize: 4400, bufferCount: 64);
+            for (int i = 0; i < initialSize; i++)
             {
-                audioSource.Dispose();
+                _freeSources.Enqueue(AudioDevice.CreateAudioSource());
             }
+        }
+
+        public AudioDevice AudioDevice { get; }
+
+        public XAudio2AudioSource VoiceAudioSource { get; }
+
+        public PooledAudioSource Rent()
+        {
+            XAudio2AudioSource audioSource = _freeSources.TryDequeue(out XAudio2AudioSource? pooled)
+                ? pooled
+                : AudioDevice.CreateAudioSource();
+            return new PooledAudioSource(this, audioSource);
+        }
+
+        public void Return(XAudio2AudioSource audioSource)
+        {
+            _freeSources.Enqueue(audioSource);
         }
     }
 }

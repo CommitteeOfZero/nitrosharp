@@ -24,67 +24,6 @@ namespace NitroSharp.Graphics
         }
     }
 
-    internal struct IconVertex
-    {
-        public Vector2 Position;
-        public Vector2 TexCoord;
-        public float Layer;
-        private Vector3 _padding;
-
-        public static readonly VertexLayoutDescription LayoutDescription = new(
-            stride: 32,
-            new VertexElementDescription(
-                "vs_Position",
-                VertexElementSemantic.TextureCoordinate,
-                VertexElementFormat.Float2
-            ),
-            new VertexElementDescription(
-                "vs_TexCoord",
-                VertexElementSemantic.TextureCoordinate,
-                VertexElementFormat.Float2
-            ),
-            new VertexElementDescription(
-                "vs_Layer",
-                VertexElementSemantic.TextureCoordinate,
-                VertexElementFormat.Float1
-            ),
-            new VertexElementDescription(
-                "vs_Padding",
-                VertexElementSemantic.TextureCoordinate,
-                VertexElementFormat.Float3
-            )
-        );
-    }
-
-    internal struct IconGeometry
-    {
-        public IconVertex TopLeft;
-        public IconVertex TopRight;
-        public IconVertex BottomLeft;
-        public IconVertex BottomRight;
-
-        public static IconGeometry FromQuad(in QuadGeometry quad, uint layer)
-        {
-            static IconVertex vertex(in QuadVertex v, uint layer)
-            {
-                return new()
-                {
-                    Position = v.Position,
-                    TexCoord = v.TexCoord,
-                    Layer = layer
-                };
-            }
-
-            return new IconGeometry
-            {
-                TopLeft = vertex(quad.TopLeft, layer),
-                TopRight = vertex(quad.TopRight, layer),
-                BottomLeft = vertex(quad.BottomLeft, layer),
-                BottomRight = vertex(quad.BottomRight, layer)
-            };
-        }
-    }
-
     internal sealed class Icon : IDisposable
     {
         private sealed class IconAnimation : UIntAnimation<Icon>
@@ -167,9 +106,8 @@ namespace NitroSharp.Graphics
                 color: Vector4.One
             );
 
-            MeshList<IconVertex> icons = context.IconQuads;
-            var geometry = IconGeometry.FromQuad(quad, layer: _activeFrame);
-            Mesh<IconVertex> mesh = icons
+            var geometry = QuadGeometryUV3.FromQuad(quad, layer: _activeFrame);
+            Mesh<QuadVertexUV3> mesh = context.QuadsUV3
                 .Append(MemoryMarshal.CreateReadOnlySpan(ref geometry.TopLeft, 4));
 
             batch.PushDraw(new Draw

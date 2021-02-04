@@ -130,7 +130,7 @@ namespace NitroSharp.Content
                 return null;
             }
             Interlocked.Increment(ref _nbPending);
-            Task.Run(() =>
+            _ = Task.Run(() =>
             {
                 try
                 {
@@ -173,7 +173,19 @@ namespace NitroSharp.Content
             return _nbPending == 0;
         }
 
-        private Stream OpenStream(string path)
+        public Stream? TryOpenStream(string path)
+        {
+            try
+            {
+                return OpenStream(path);
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        public Stream OpenStream(string path)
         {
             string fullPath = Path.Combine(RootDirectory, path);
             return File.OpenRead(fullPath);

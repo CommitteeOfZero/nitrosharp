@@ -29,6 +29,7 @@ namespace NitroSharp.Saving
     internal sealed class GameLoadingContext
     {
         public IReadOnlyList<Texture> StandaloneTextures { get; init; }
+        public GameContext GameContext { get; init; }
         public RenderContext Rendering { get; init; }
         public ContentManager Content { get; init; }
         public NsScriptVM VM { get; init; }

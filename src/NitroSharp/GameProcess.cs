@@ -93,6 +93,7 @@ namespace NitroSharp
             var loadingCtx = new GameLoadingContext
             {
                 Process = this,
+                GameContext = ctx,
                 StandaloneTextures = standaloneTextures,
                 Rendering = ctx.RenderContext,
                 Content = ctx.Content,

@@ -6,6 +6,7 @@ using System.Numerics;
 using MessagePack;
 using NitroSharp.Content;
 using NitroSharp.Graphics;
+using NitroSharp.Media;
 using NitroSharp.NsScript;
 using NitroSharp.Text;
 using NitroSharp.Utilities;
@@ -267,6 +268,33 @@ namespace NitroSharp
         {
             float delta = _endValue - _startValue;
             value = _startValue + delta * factor;
+        }
+    }
+
+    internal sealed class VolumeAnimation : AnimationWithDuration
+    {
+        private readonly Sound _sound;
+        private readonly float _startValue;
+        private readonly float _endValue;
+
+        public VolumeAnimation(Sound sound, float startValue, float endValue, TimeSpan duration,
+            NsEaseFunction easeFunction = NsEaseFunction.Linear, bool repeat = false)
+            : base(duration, easeFunction, repeat)
+        {
+            _sound = sound;
+            _startValue = startValue;
+            _endValue = endValue;
+        }
+
+        public VolumeAnimation(in AnimationSaveData saveData) : base(in saveData)
+        {
+        }
+
+        protected override AdvanceResult Advance()
+        {
+            float delta = _endValue - _startValue;
+            _sound.Volume = _startValue + delta *  GetFactor(Progress, _easeFunction);
+            return base.Advance();
         }
     }
 

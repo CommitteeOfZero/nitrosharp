@@ -160,6 +160,9 @@ namespace NitroSharp.NsScript.VM
                 case BuiltInFunction.CreateSound:
                     CreateSound(ref args);
                     break;
+                case BuiltInFunction.CreateMovie:
+                    CreateMovie(ref args);
+                    break;
                 case BuiltInFunction.SetVolume:
                     SetVolume(ref args);
                     break;
@@ -297,6 +300,19 @@ namespace NitroSharp.NsScript.VM
             ConstantValue? result = _result;
             _result = null;
             return result;
+        }
+
+        private void CreateMovie(ref ArgConsumer args)
+        {
+            _impl.LoadVideo(
+                args.TakeEntityPath(),
+                priority: args.TakeInt(),
+                x: args.TakeCoordinate(),
+                y: args.TakeCoordinate(),
+                loop: args.TakeBool(),
+                alpha: args.TakeBool(),
+                source: args.TakeString()
+            );
         }
 
         private void Load(ref ArgConsumer args)
@@ -644,7 +660,7 @@ namespace NitroSharp.NsScript.VM
         {
             _impl.ToggleLooping(
                 args.TakeEntityQuery(),
-                looping: args.TakeBool()
+                enable: args.TakeBool()
             );
         }
 
@@ -893,6 +909,7 @@ namespace NitroSharp.NsScript.VM
 
         private void SoundAmplitude(ref ArgConsumer args)
         {
+            string something = args.TakeString();
             string characterName = args.TakeString();
             SetResult(ConstantValue.Number(_impl.GetSoundAmplitude(characterName)));
         }
@@ -1049,8 +1066,8 @@ namespace NitroSharp.NsScript.VM
                     : defaultValue;
             }
 
-            public EntityPath TakeEntityPath() => new EntityPath(TakeString());
-            public EntityQuery TakeEntityQuery() => new EntityQuery(TakeString());
+            public EntityPath TakeEntityPath() => new(TakeString());
+            public EntityQuery TakeEntityQuery() => new(TakeString());
 
             public string TakeString()
             {
@@ -1164,7 +1181,7 @@ namespace NitroSharp.NsScript.VM
 
             public NsRational TakeRational(float denominator = 1000.0f)
             {
-                return new NsRational(TakeInt(), denominator);
+                return new(TakeInt(), denominator);
             }
 
             public NsNumeric TakeNumeric()

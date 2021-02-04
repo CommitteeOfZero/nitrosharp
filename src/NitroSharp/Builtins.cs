@@ -2,6 +2,7 @@
 using System.IO;
 using System.Numerics;
 using NitroSharp.Graphics;
+using NitroSharp.Media;
 using NitroSharp.NsScript;
 using NitroSharp.NsScript.VM;
 using NitroSharp.Utilities;
@@ -119,6 +120,18 @@ namespace NitroSharp
                             World.DisableEntity(ri);
                         }
                         break;
+                    case (Video video, NsEntityAction.Play):
+                        video.Stream.Start();
+                        break;
+                    case (Video video, NsEntityAction.Pause):
+                        video.Stream.Pause();
+                        break;
+                    case (Video video, NsEntityAction.Resume):
+                        video.Stream.Resume();
+                        break;
+                    case (Sound sound, NsEntityAction.Play):
+                        sound.Stream.Start();
+                        break;
                     case (_, NsEntityAction.Enable):
                         World.EnableEntity(entity);
                         break;
@@ -126,7 +139,11 @@ namespace NitroSharp
                         World.DisableEntity(entity);
                         break;
                     case (_, NsEntityAction.DestroyWhenIdle):
-                        World.DestroyWhenIdle(entity);
+                        // Demo 5 HACK
+                        if (entity is DialoguePage)
+                        {
+                            World.DestroyWhenIdle(entity);
+                        }
                         break;
                     case (_, NsEntityAction.Lock):
                         entity.Lock();

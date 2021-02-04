@@ -155,9 +155,11 @@ namespace NitroSharp.Text
             if (newGlyphIndices != null)
             {
                 Interlocked.Increment(ref _pendingBatches);
-                Task.Run(() => RasterizeBatch(font, fontSize, newGlyphIndices, generateOutlines))
+                _ = Task.Run(() => RasterizeBatch(font, fontSize, newGlyphIndices, generateOutlines))
                     .ContinueWith(t => _exceptions.Add(t.Exception!),
-                        TaskContinuationOptions.OnlyOnFaulted);
+                        CancellationToken.None,
+                        TaskContinuationOptions.OnlyOnFaulted,
+                        TaskScheduler.Default);
             }
         }
 

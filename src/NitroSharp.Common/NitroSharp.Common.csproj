@@ -5,7 +5,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="MessagePack" Version="2.2.60" />
+    <PackageReference Include="MessagePack" Version="2.2.85" />
   </ItemGroup>
 
 </Project>

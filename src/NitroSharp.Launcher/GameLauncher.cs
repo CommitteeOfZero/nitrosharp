@@ -10,7 +10,7 @@ namespace NitroSharp.Launcher
             Configuration config = ConfigurationReader.Read(configFilePath);
             config.ProductName = productName;
             var window = new DesktopWindow(config.WindowTitle, (uint)config.WindowWidth, (uint)config.WindowHeight);
-            using (var game = new Game(window, config))
+            await using (var game = new Game(window, config))
             {
                 try
                 {

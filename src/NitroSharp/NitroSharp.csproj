@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFramework>net5.0</TargetFramework>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <NoWarn>1701;1702;CA1063;IDE1006;IDE0063</NoWarn>
+    <NoWarn>1701;1702;CA1063;IDE1006;IDE0063;VSTHRD002;VSTHRD003;VSTHRD103;VSTHRD200</NoWarn>
     <VeldridVersion>4.8</VeldridVersion>
     <Nullable>enable</Nullable>
   </PropertyGroup>
@@ -39,14 +39,18 @@
 
     <PackageReference Include="SharpDX.Direct2D1" Version="4.2.0" />
     <PackageReference Include="SharpDX.XAudio2" Version="4.2.0" />
-
+    
     <!--<PackageReference Include="Vortice.Direct3D11" Version="1.7.33-beta" />
     <PackageReference Include="Vortice.DXGI" Version="1.7.33-beta" />
     <PackageReference Include="Vortice.DirectX" Version="1.7.33-beta" />-->
 
-    <PackageReference Include="SixLabors.ImageSharp" Version="1.0.2" />
-
     <PackageReference Include="Sprintf.NET" Version="2.0.0" />
+    <PackageReference Include="SixLabors.ImageSharp" Version="1.0.2" />
+    <PackageReference Include="System.IO.Pipelines" Version="5.0.1" />
+    <PackageReference Include="Microsoft.VisualStudio.Threading" Version="16.8.55" />
+    <PackageReference Include="Vortice.DirectX" Version="1.9.4-beta" />
+    <PackageReference Include="Vortice.Direct3D11" Version="1.9.4-beta" />
+    <PackageReference Include="Vortice.DXGI" Version="1.9.4-beta" />
   </ItemGroup>
 
   <ItemGroup>

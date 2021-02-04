@@ -67,11 +67,6 @@ namespace NitroSharp.Utilities
         public InvalidHandleException(string message) : base(message)
         {
         }
-
-        public InvalidHandleException(string message, Exception innerException)
-            : base(message, innerException)
-        {
-        }
     }
 
     internal sealed class FreeList<T> where T : struct

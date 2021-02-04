@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using NitroSharp.Graphics;
+using NitroSharp.Media;
 using NitroSharp.NsScript;
 using NitroSharp.Saving;
 using NitroSharp.Utilities;
@@ -66,6 +68,7 @@ namespace NitroSharp
         private readonly EntityGroup<ColorSource> _colorSources;
         private readonly EntityGroup<Image> _images;
         private readonly EntityGroup<Choice> _choices;
+        private readonly EntityGroup<Sound> _sounds = new();
 
         public World()
         {
@@ -87,6 +90,7 @@ namespace NitroSharp
 
         public SortableEntityGroupView<RenderItem> RenderItems => _renderItems;
         public EntityGroupView<Choice> Choices => _choices;
+        public EntityGroup<Sound> Sounds => _sounds;
 
         public void DestroyContext(uint id)
         {
@@ -216,6 +220,12 @@ namespace NitroSharp
         public void Add(Choice choice, bool enable = true)
             => Add(choice, _choices, enable);
 
+        public Sound Add(Sound sound, bool enable = true)
+        {
+            Add(sound, _sounds, enable);
+            return sound;
+        }
+
         public bool IsEnabled(Entity entity)
         {
             EntityRec rec = _entities[entity.Id];
@@ -303,6 +313,11 @@ namespace NitroSharp
             where T : Entity
         {
             EntityId id = entity.Id;
+            if (Get(id) is object)
+            {
+                DestroyEntity(id);
+            }
+
             if (entity.Parent is Entity parent)
             {
                 ((EntityInternal)parent).AddChild(entity);
@@ -659,7 +674,7 @@ namespace NitroSharp
             ref ArrayBuilder<T> bucket = ref GetBucket(location.Bucket);
             if (location.Index == bucket.Count - 1)
             {
-                bucket[location.Index] = null!;
+                bucket[location.Index] = default!;
                 bucket.Truncate(bucket.Count - 1);
                 return EntityMove.Empty;
             }

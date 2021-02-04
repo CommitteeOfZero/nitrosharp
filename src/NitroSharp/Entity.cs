@@ -205,7 +205,9 @@ namespace NitroSharp
         DialoguePage,
         Scrollbar,
         TextBlock,
-        VmThread
+        VmThread,
+        Sound,
+        Video
     }
 
     internal interface EntityInternal
