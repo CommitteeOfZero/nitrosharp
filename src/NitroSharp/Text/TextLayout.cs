@@ -381,7 +381,6 @@ namespace NitroSharp.Text
                         _glyphs.Add() = new PositionedGlyph(glyphIndex, whitespace, position);
                         _opacityValues.Add() = 1.0f;
                         _lastWord.Append(glyphDims, position, whitespace);
-
                     }
 
                     if (mayBreakLine && LineBreakingRules.CanEndLine(c) && _lastWord.HasNonWhitespaceChars
@@ -412,11 +411,12 @@ namespace NitroSharp.Text
                         continue;
                     }
 
+                    uint wordLen = _lastWord.Length;
                     _lastWord = new Word(_lastWord.Start);
                     // Start a new line and move the last word to it
                     if (!StartNewLine(glyphRasterizer, _lastWord.Start))
                     {
-                        _glyphs.Truncate(_glyphs.Count - _lastWord.Length);
+                        _glyphs.Truncate(_glyphs.Count - wordLen);
                         goto exit;
                     }
 
