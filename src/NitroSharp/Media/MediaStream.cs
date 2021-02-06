@@ -677,17 +677,8 @@ namespace NitroSharp.Media
             while (!_cts.IsCancellationRequested)
             {
                 await _unpauseSignal.WaitAsync();
-                QueueItem<AVPacket> packet;
-                bool packetSent;
-                try
-                {
-                    packet = await reader.ReadAsync();
-                    packetSent = false;
-                }
-                catch (ChannelClosedException)
-                {
-                    break;
-                }
+                QueueItem<AVPacket> packet = await reader.ReadAsync();
+                bool packetSent = false;
                 if (packet.Serial != ctx.Serial)
                 {
                     if (packet.Flush)
@@ -872,15 +863,7 @@ namespace NitroSharp.Media
             while (!_cts.IsCancellationRequested)
             {
                 await _unpauseSignal.WaitAsync();
-                QueueItem<AVFrame> frame;
-                try
-                {
-                    frame = await videoFrames.ReadAsync();
-                }
-                catch (ChannelClosedException)
-                {
-                    break;
-                }
+                QueueItem<AVFrame> frame = await videoFrames.ReadAsync();
                 if (frame.Serial != video.Serial)
                 {
                     if (frame.Flush)
@@ -972,7 +955,14 @@ namespace NitroSharp.Media
             _video?.DestroyQueues();
             _audio?.DestroyQueues();
 
-            Task.WhenAll(_tasks).Wait();
+            try
+            {
+                Task.WhenAll(_tasks).Wait();
+            }
+            catch (AggregateException e) when (e.InnerException is ChannelClosedException)
+            {
+            }
+
             _video?.Dispose();
             _audio?.Dispose();
             _videoBuffer?.Dispose();
