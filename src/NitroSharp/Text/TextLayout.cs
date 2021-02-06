@@ -392,9 +392,13 @@ namespace NitroSharp.Text
                         }
                     }
 
-                    if (c == '\n' && !StartNewLine(glyphRasterizer, _glyphs.Count))
+                    if (c == '\n')
                     {
-                        goto exit;
+                        _lineBuilder.AppendWord(ref _lastWord, fontMetrics);
+                        if (!StartNewLine(glyphRasterizer, _glyphs.Count))
+                        {
+                            goto exit;
+                        }
                     }
                 }
                 else
