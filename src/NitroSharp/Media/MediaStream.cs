@@ -40,11 +40,9 @@ namespace NitroSharp.Media
         private const double FrameDupThreshold = 0.1;
         private const double AvNosyncThreshold = 10.0;
 
-        // Lock for avcodec_open2. Not 100% sure it's necessary.
-        private static readonly object s_lock = new();
-
         private readonly Stream _fileStream;
         private readonly unsafe AVFormatContext* _formatContext;
+        private readonly unsafe AVPacket* _avPacket;
         private readonly StreamContext? _audio;
         private readonly StreamContext? _video;
         private readonly Pipe? _audioPipe;
@@ -249,6 +247,7 @@ namespace NitroSharp.Media
             ctx->pb = ioContext;
             _formatContext = ctx;
 
+            _avPacket = ffmpeg.av_packet_alloc();
             CheckResult(ffmpeg.avformat_open_input(&ctx, string.Empty, null, null));
             CheckResult(ffmpeg.avformat_find_stream_info(ctx, null));
 
@@ -362,10 +361,7 @@ namespace NitroSharp.Media
             AVCodecContext* codecCtx = ffmpeg.avcodec_alloc_context3(codec);
             Debug.Assert(codecCtx is not null);
             CheckResult(ffmpeg.avcodec_parameters_to_context(codecCtx, stream->codecpar));
-            lock (s_lock)
-            {
-                CheckResult(ffmpeg.avcodec_open2(codecCtx, codec, null));
-            }
+            CheckResult(ffmpeg.avcodec_open2(codecCtx, codec, null));
 
             if (codecCtx->codec_type == AVMediaType.AVMEDIA_TYPE_AUDIO)
             {
@@ -553,12 +549,13 @@ namespace NitroSharp.Media
 
         private async Task Read()
         {
-            QueueItem<AVPacket> packet = default;
             int serial = 0;
             bool ignoreEof = false;
+            QueueItem<AVPacket> packet = default;
             while (!_cts.IsCancellationRequested)
             {
                 await _unpauseSignal.WaitAsync();
+
                 if (_seekRequest is SeekRequest seekRequest)
                 {
                     _seekRequest = null;
@@ -568,7 +565,7 @@ namespace NitroSharp.Media
                     {
                         CheckResult(ffmpeg.avformat_seek_file(
                             _formatContext, -1,
-                            timestamp - 0 * ffmpeg.AV_TIME_BASE, timestamp, timestamp,
+                            timestamp - 1 * ffmpeg.AV_TIME_BASE, timestamp, timestamp,
                             flags: 0
                         ));
                     }
@@ -610,7 +607,8 @@ namespace NitroSharp.Media
                 int ret;
                 unsafe
                 {
-                    ret = ffmpeg.av_read_frame(_formatContext, &packet.Value);
+                    ret = ffmpeg.av_read_frame(_formatContext, _avPacket);
+                    ffmpeg.av_packet_move_ref(&packet.Value, _avPacket);
                 }
                 if (ret >= 0)
                 {
@@ -661,11 +659,11 @@ namespace NitroSharp.Media
                     }
 
                     if (!_loopingEnabled) { break; }
-                    var wait = new SpinWait();
-                    while (!_cts.IsCancellationRequested && _seekRequest is null)
-                    {
-                        wait.SpinOnce();
-                    }
+                    //var wait = new SpinWait();
+                    //while (!_cts.IsCancellationRequested && _seekRequest is null)
+                    //{
+                    //    wait.SpinOnce();
+                    //}
                 }
             }
         }
@@ -918,9 +916,6 @@ namespace NitroSharp.Media
         {
             fixed (AVFrame* pFrame = &frame)
             {
-                // extended_data normally points to the data field, which means
-                // the pointer must be updated whenever the struct is moved in memory.
-                //pFrame->extended_data = (byte**)&pFrame->data;
                 ffmpeg.av_frame_unref(pFrame);
             }
         }
@@ -955,12 +950,15 @@ namespace NitroSharp.Media
             _video?.DestroyQueues();
             _audio?.DestroyQueues();
 
-            try
+            if (_combinedTask is not null)
             {
-                Task.WhenAll(_tasks).Wait();
-            }
-            catch (AggregateException e) when (e.InnerException is ChannelClosedException)
-            {
+                try
+                {
+                    _combinedTask.Wait();
+                }
+                catch (AggregateException e) when (e.InnerException is ChannelClosedException)
+                {
+                }
             }
 
             _video?.Dispose();
@@ -976,6 +974,11 @@ namespace NitroSharp.Media
             fixed (AVFormatContext** pCtx = &_formatContext)
             {
                 ffmpeg.avformat_close_input(pCtx);
+            }
+
+            fixed (AVPacket** pkt = &_avPacket)
+            {
+                ffmpeg.av_packet_free(pkt);
             }
 
             _fileStream.Dispose();

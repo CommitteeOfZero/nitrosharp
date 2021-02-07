@@ -19,7 +19,7 @@ namespace NitroSharp
             }
         }
 
-        public override void LoadVideo(
+        public override void PlayVideo(
             in EntityPath entityPath,
             int priority,
             NsCoordinate x, NsCoordinate y,
@@ -35,6 +35,7 @@ namespace NitroSharp
                     fs, alpha
                 )).WithPosition(_renderCtx, x, y);
                 video.Stream.ToggleLooping(loop);
+                video.Stream.Start();
             }
         }
 

@@ -56,6 +56,11 @@ namespace NitroSharp.Graphics
 
         protected override void Render(RenderContext ctx, DrawBatch batch)
         {
+            if (!Stream.IsPlaying)
+            {
+                return;
+            }
+
             RenderContext context = ctx;
             GraphicsDevice gd = ctx.GraphicsDevice;
             if (Stream.GetNextFrame(out YCbCrFrame frame))

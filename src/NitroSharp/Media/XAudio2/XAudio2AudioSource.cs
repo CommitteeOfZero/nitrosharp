@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Buffers;
+using System.Diagnostics;
 using System.IO.Pipelines;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -28,7 +29,7 @@ namespace NitroSharp.Media.XAudio2
         private readonly AsyncManualResetEvent _playSignal;
         private readonly AsyncManualResetEvent _bufferAvailable;
         private bool _flushBuffers;
-        private Task? _playTask;
+        private Task? _consumeTask;
         private CancellationTokenSource _cts = new();
         private IntPtr _currentBuffer;
 
@@ -96,16 +97,17 @@ namespace NitroSharp.Media.XAudio2
 
         public void Play(PipeReader audioData)
         {
-            if (_audioData is not null)
-            {
-                Stop();
-            }
+            _ = PlayAsync(audioData);
+        }
 
+        private async Task PlayAsync(PipeReader audioData)
+        {
+            await StopAsync();
             _audioData = audioData;
             _sourceVoice.Start();
             _playSignal.Set();
             _cts = new CancellationTokenSource();
-            _playTask = Task.Run(() => PlayAsync(_audioData));
+            _consumeTask = Task.Run(() => ConsumeLoop(_audioData));
         }
 
         public void Pause()
@@ -125,6 +127,11 @@ namespace NitroSharp.Media.XAudio2
 
         public void Stop()
         {
+            _ = StopAsync();
+        }
+
+        public async Task StopAsync()
+        {
             if (_audioData is not null)
             {
                 _sourceVoice.Stop();
@@ -132,10 +139,15 @@ namespace NitroSharp.Media.XAudio2
                 FlushBuffers();
                 _audioData = null;
                 _currentBuffer = IntPtr.Zero;
+                if (_consumeTask is not null)
+                {
+                    await _consumeTask;
+                    _consumeTask = null;
+                }
             }
         }
 
-        private async Task PlayAsync(PipeReader audioData)
+        private async Task ConsumeLoop(PipeReader audioData)
         {
             while (!_cts.IsCancellationRequested || _flushBuffers)
             {
@@ -144,9 +156,10 @@ namespace NitroSharp.Media.XAudio2
                     _flushBuffers = false;
                     _sourceVoice.FlushSourceBuffers();
                     _nextBuffer = 0;
-                    while (audioData.TryRead(out ReadResult readResult) && !readResult.IsCompleted)
+                    while (audioData.TryRead(out ReadResult readResult))
                     {
                         audioData.AdvanceTo(readResult.Buffer.End);
+                        if (readResult.IsCompleted) { break; }
                     }
                     if (_cts.IsCancellationRequested)
                     {
@@ -173,7 +186,6 @@ namespace NitroSharp.Media.XAudio2
             if (_audioData is not null)
             {
                 _flushBuffers = true;
-                _audioData.CancelPendingRead();
                 _bufferAvailable.Set();
             }
         }
@@ -215,13 +227,9 @@ namespace NitroSharp.Media.XAudio2
 
         public async ValueTask DisposeAsync()
         {
-            if (!_sourceVoice.IsDisposed)
+            if (_consumeTask is not null)
             {
-                Stop();
-            }
-            if (_playTask is not null)
-            {
-                await _playTask;
+                await StopAsync();
             }
             if (!_sourceVoice.IsDisposed)
             {
