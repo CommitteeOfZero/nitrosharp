@@ -166,6 +166,7 @@ namespace NitroSharp.Media
             public readonly int Index;
             public unsafe AVCodecContext* CodecCtx;
             public readonly unsafe AVPacket* Packet;
+            public readonly unsafe AVFrame* Frame;
 
             public readonly Channel<QueueItem<AVPacket>> PacketQueue;
             public readonly Channel<QueueItem<AVFrame>> FrameQueue;
@@ -199,6 +200,7 @@ namespace NitroSharp.Media
                 PacketQueue = Channel.CreateBounded<QueueItem<AVPacket>>(packetQueueOptions);
                 FrameQueue = Channel.CreateBounded<QueueItem<AVFrame>>(frameQueueOptions);
                 Packet = ffmpeg.av_packet_alloc();
+                Frame = ffmpeg.av_frame_alloc();
             }
 
             public unsafe AVRational TimeBase => _stream->time_base;
@@ -222,6 +224,10 @@ namespace NitroSharp.Media
                 fixed (AVPacket** pkt = &Packet)
                 {
                     ffmpeg.av_packet_free(pkt);
+                }
+                fixed (AVFrame** frame = &Frame)
+                {
+                    ffmpeg.av_frame_free(frame);
                 }
                 fixed (AVCodecContext** ctx = &CodecCtx)
                 {
@@ -372,7 +378,7 @@ namespace NitroSharp.Media
 
             if (codecCtx->codec_type == AVMediaType.AVMEDIA_TYPE_AUDIO)
             {
-                return new StreamContext(stream, codecCtx, 512, 2048);
+                return new StreamContext(stream, codecCtx, 1024, 2048);
             }
 
             return new StreamContext(stream, codecCtx, 256, 48);
@@ -713,14 +719,7 @@ namespace NitroSharp.Media
                     frame.Serial = packet.Serial;
                     unsafe
                     {
-                        ret = ffmpeg.avcodec_receive_frame(ctx.CodecCtx, &frame.Value);
-                        if (frame.Value.extended_data == &frame.Value.data)
-                        {
-                            // if extended_data points to data, the pointer will become
-                            // invalid once the struct is moved in memory.
-                            // It should be ok to set it to null in that case.
-                            frame.Value.extended_data = null;
-                        }
+                        ret = ffmpeg.avcodec_receive_frame(ctx.CodecCtx, ctx.Frame);
                     }
 
                     if (ret == ErrorEAgain) { break; }
@@ -736,6 +735,19 @@ namespace NitroSharp.Media
                     }
 
                     CheckResult(ret);
+
+                    unsafe
+                    {
+                        if (ctx.Frame->extended_data == &ctx.Frame->data)
+                        {
+                            // if extended_data points to data, the pointer will become
+                            // invalid once the struct is moved in memory.
+                            // It should be ok to set it to null in that case.
+                            ctx.Frame->extended_data = null;
+                        }
+                        frame.Value = *ctx.Frame;
+                        *ctx.Frame = default;
+                    }
 
                     if (ctx.SeekRequest is SeekRequest seekRequest)
                     {
