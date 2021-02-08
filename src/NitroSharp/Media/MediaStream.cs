@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Pipelines;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
@@ -42,7 +43,7 @@ namespace NitroSharp.Media
 
         private readonly Stream _fileStream;
         private readonly unsafe AVFormatContext* _formatContext;
-        private readonly unsafe AVPacket* _avPacket;
+        private readonly unsafe AVPacket* _recvPacket;
         private readonly StreamContext? _audio;
         private readonly StreamContext? _video;
         private readonly Pipe? _audioPipe;
@@ -164,6 +165,7 @@ namespace NitroSharp.Media
 
             public readonly int Index;
             public unsafe AVCodecContext* CodecCtx;
+            public readonly unsafe AVPacket* Packet;
 
             public readonly Channel<QueueItem<AVPacket>> PacketQueue;
             public readonly Channel<QueueItem<AVFrame>> FrameQueue;
@@ -196,6 +198,7 @@ namespace NitroSharp.Media
 
                 PacketQueue = Channel.CreateBounded<QueueItem<AVPacket>>(packetQueueOptions);
                 FrameQueue = Channel.CreateBounded<QueueItem<AVFrame>>(frameQueueOptions);
+                Packet = ffmpeg.av_packet_alloc();
             }
 
             public unsafe AVRational TimeBase => _stream->time_base;
@@ -216,6 +219,7 @@ namespace NitroSharp.Media
 
             public unsafe void Dispose()
             {
+                ffmpeg.av_packet_unref(Packet);
                 fixed (AVCodecContext** ctx = &CodecCtx)
                 {
                     ffmpeg.avcodec_free_context(ctx);
@@ -247,7 +251,7 @@ namespace NitroSharp.Media
             ctx->pb = ioContext;
             _formatContext = ctx;
 
-            _avPacket = ffmpeg.av_packet_alloc();
+            _recvPacket = ffmpeg.av_packet_alloc();
             CheckResult(ffmpeg.avformat_open_input(&ctx, string.Empty, null, null));
             CheckResult(ffmpeg.avformat_find_stream_info(ctx, null));
 
@@ -365,7 +369,7 @@ namespace NitroSharp.Media
 
             if (codecCtx->codec_type == AVMediaType.AVMEDIA_TYPE_AUDIO)
             {
-                return new StreamContext(stream, codecCtx, 3000, 3000);
+                return new StreamContext(stream, codecCtx, 512, 2048);
             }
 
             return new StreamContext(stream, codecCtx, 256, 48);
@@ -607,8 +611,9 @@ namespace NitroSharp.Media
                 int ret;
                 unsafe
                 {
-                    ret = ffmpeg.av_read_frame(_formatContext, _avPacket);
-                    ffmpeg.av_packet_move_ref(&packet.Value, _avPacket);
+                    ret = ffmpeg.av_read_frame(_formatContext, _recvPacket);
+                    packet.Value = *_recvPacket;
+                    *_recvPacket = default;
                 }
                 if (ret >= 0)
                 {
@@ -761,7 +766,15 @@ namespace NitroSharp.Media
                     {
                         if (!packet.Value.IsNullPacket())
                         {
-                            CheckResult(ffmpeg.avcodec_send_packet(ctx.CodecCtx, &packet.Value));
+                            *ctx.Packet = packet.Value;
+                            try
+                            {
+                                CheckResult(ffmpeg.avcodec_send_packet(ctx.CodecCtx, ctx.Packet));
+                            }
+                            finally
+                            {
+                                ffmpeg.av_packet_unref(ctx.Packet);
+                            }
                         }
                         else
                         {
@@ -769,8 +782,6 @@ namespace NitroSharp.Media
                             goto receive_frames;
                         }
                     }
-
-                    UnrefPacket(ref packet.Value);
                 }
             }
         }
@@ -976,7 +987,7 @@ namespace NitroSharp.Media
                 ffmpeg.avformat_close_input(pCtx);
             }
 
-            fixed (AVPacket** pkt = &_avPacket)
+            fixed (AVPacket** pkt = &_recvPacket)
             {
                 ffmpeg.av_packet_free(pkt);
             }
