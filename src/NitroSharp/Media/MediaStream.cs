@@ -219,7 +219,10 @@ namespace NitroSharp.Media
 
             public unsafe void Dispose()
             {
-                ffmpeg.av_packet_unref(Packet);
+                fixed (AVPacket** pkt = &Packet)
+                {
+                    ffmpeg.av_packet_free(pkt);
+                }
                 fixed (AVCodecContext** ctx = &CodecCtx)
                 {
                     ffmpeg.avcodec_free_context(ctx);
