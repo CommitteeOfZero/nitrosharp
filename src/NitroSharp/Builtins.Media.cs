@@ -95,14 +95,21 @@ namespace NitroSharp
             return 0;
         }
 
-        public override int GetSoundDuration(in EntityPath entityPath)
+        public override int GetMediaDuration(in EntityPath entityPath) => Get(entityPath) switch
         {
-            return Get(entityPath) is Sound sound ?
-                (int)sound.Stream.Duration.TotalMilliseconds
-                : 0;
-        }
+            Sound s => (int)s.Stream.Duration.TotalMilliseconds,
+            Video v => (int)v.Stream.Duration.TotalMilliseconds,
+            _ => 0
+        };
 
-        public override int GetTimeElapsed(in EntityPath entityPath) => 0;
-        public override int GetTimeRemaining(EntityQuery query) => 0;
+        public override int GetTimeElapsed(in EntityPath entityPath) => Get(entityPath) switch
+        {
+            _ => 0
+        };
+
+        public override int GetTimeRemaining(in EntityPath entityPath) => Get(entityPath) switch
+        {
+            _ => 0
+        };
     }
 }

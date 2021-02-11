@@ -35,8 +35,8 @@ namespace NitroSharp.Media
 
         public float Volume
         {
-            get => Stream.AudioSource.Volume;
-            set => Stream.AudioSource.Volume = value;
+            get => _audioSource.Value.Volume;
+            set => _audioSource.Value.Volume = value;
         }
 
         public void Update(float dt)

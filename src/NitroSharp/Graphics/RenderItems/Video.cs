@@ -11,6 +11,7 @@ namespace NitroSharp.Graphics
     {
         private readonly bool _enableAlpha;
         private readonly PooledAudioSource _audioSource;
+        private bool _playbackStarted;
 
         public Video(
             in ResolvedEntityPath path,
@@ -65,6 +66,7 @@ namespace NitroSharp.Graphics
             GraphicsDevice gd = ctx.GraphicsDevice;
             if (Stream.GetNextFrame(out YCbCrFrame frame))
             {
+                _playbackStarted = true;
                 using (frame)
                 {
                     CommandList cl = ctx.RentCommandList();
@@ -75,6 +77,8 @@ namespace NitroSharp.Graphics
                     ctx.ReturnCommandList(cl);
                 }
             }
+
+            if (!_playbackStarted) { return; }
 
             (Texture luma, Texture chroma) = Stream.VideoFrames.GetDeviceTextures();
             VideoShaderResources shaderResources = context.ShaderResources.Video;

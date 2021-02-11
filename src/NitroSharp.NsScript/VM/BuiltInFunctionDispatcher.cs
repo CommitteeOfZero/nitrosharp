@@ -304,7 +304,7 @@ namespace NitroSharp.NsScript.VM
 
         private void CreateMovie(ref ArgConsumer args)
         {
-            _impl.LoadVideo(
+            _impl.PlayVideo(
                 args.TakeEntityPath(),
                 priority: args.TakeInt(),
                 x: args.TakeCoordinate(),
@@ -710,14 +710,27 @@ namespace NitroSharp.NsScript.VM
         private void Fade(ref ArgConsumer args)
         {
             EntityQuery query = args.TakeEntityQuery();
-            TimeSpan duration = args.TakeTimeSpan();
-            _impl.Fade(
-                query,
-                duration,
-                dstOpacity: args.TakeRational(),
-                easeFunction: args.TakeEaseFunction(),
-                args.TakeAnimDelay(duration)
-            );
+            if (args.Count == 3)
+            {
+                _impl.Fade(
+                    query,
+                    duration: TimeSpan.Zero,
+                    dstOpacity: args.TakeRational(),
+                    NsEaseFunction.Linear,
+                    TimeSpan.Zero
+                );
+            }
+            else
+            {
+                TimeSpan duration = args.TakeTimeSpan();
+                _impl.Fade(
+                    query,
+                    duration,
+                    dstOpacity: args.TakeRational(),
+                    args.Count == 4 ? NsEaseFunction.Linear : args.TakeEaseFunction(),
+                    args.TakeAnimDelay(duration)
+                );
+            }
         }
 
         private void DrawTransition(ref ArgConsumer args)
@@ -934,8 +947,8 @@ namespace NitroSharp.NsScript.VM
 
         private void RemainTime(ref ArgConsumer args)
         {
-            EntityQuery query = args.TakeEntityQuery();
-            SetResult(ConstantValue.Number(_impl.GetTimeRemaining(query)));
+            EntityPath entityPath = args.TakeEntityPath();
+            SetResult(ConstantValue.Number(_impl.GetTimeRemaining(entityPath)));
         }
 
         private void PassageTime(ref ArgConsumer args)
@@ -947,7 +960,7 @@ namespace NitroSharp.NsScript.VM
         private void DurationTime(ref ArgConsumer args)
         {
             EntityPath entityPath = args.TakeEntityPath();
-            SetResult(ConstantValue.Number(_impl.GetSoundDuration(entityPath)));
+            SetResult(ConstantValue.Number(_impl.GetMediaDuration(entityPath)));
         }
 
         private void XBOX360_AwardGameIcon()

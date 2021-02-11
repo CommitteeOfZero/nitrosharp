@@ -32,8 +32,8 @@ namespace NitroSharp.NsScript.VM
         public virtual int GetSoundAmplitude(string characterName) => throw new NotImplementedException();
         public virtual int GetHeight(in EntityPath entityPath) => throw new NotImplementedException();
         public virtual int GetWidth(in EntityPath entityPath) => throw new NotImplementedException();
-        public virtual int GetSoundDuration(in EntityPath entityPath) => 0;
-        public virtual int GetTimeRemaining(EntityQuery query) => throw new NotImplementedException();
+        public virtual int GetMediaDuration(in EntityPath entityPath) => 0;
+        public virtual int GetTimeRemaining(in EntityPath entityPath) => throw new NotImplementedException();
         public virtual int GetTimeElapsed(in EntityPath entityPath) => throw new NotImplementedException();
 
         public virtual ConstantValue FormatString(string format, object[] args) => throw new NotImplementedException();
@@ -99,7 +99,7 @@ namespace NitroSharp.NsScript.VM
         public virtual void SetFieldOfView(string unk1, double unk2) { }
         public virtual void MoveCube(EntityQuery query, TimeSpan duration, NsNumeric dstX, NsNumeric dstY, NsNumeric dstZ, NsEaseFunction easeFunction, TimeSpan delay) { }
 
-        public virtual void LoadVideo(in EntityPath entityPath, int priority, NsCoordinate x, NsCoordinate y, bool loop, bool alpha, string source) { }
+        public virtual void PlayVideo(in EntityPath entityPath, int priority, NsCoordinate x, NsCoordinate y, bool loop, bool alpha, string source) { }
         //ublic virtual void PlayVideo(in EntityPath entityPath, int priority, bool loop, bool alpha, string source, bool enableAudio) { }
         public virtual void WaitPlay(in EntityPath entityPath) { }
 

@@ -79,11 +79,10 @@ namespace NitroSharp.Media
             fixed (byte* dst = &dstBuffer[0])
             {
                 byte_ptrArray8 data = srcFrame.data;
-                byte** p = (byte**)&data;
                 int actualSamplesPerChannel = ffmpeg.swr_convert(
                     ctx, &dst,
                     bufferRequirements.SamplesPerChannel,
-                    p,
+                    (byte**)&data,
                     srcFrame.nb_samples
                 );
                 int bytesWritten = ffmpeg.av_samples_get_buffer_size(
