@@ -823,7 +823,8 @@ namespace NitroSharp.Media
                         }
                         Seek(loopRegion.Start);
                     }
-                    else if (FrameIsClosestTo(audio, frame.Value, loopRegion.Start))
+                    else if (audio.SeekRequest is not null
+                        && FrameIsClosestTo(audio, frame.Value, loopRegion.Start, strict: true))
                     {
                         void trimStart(double newStart)
                         {
@@ -891,14 +892,17 @@ namespace NitroSharp.Media
             }
         }
 
-        private bool FrameIsClosestTo(StreamContext ctx, in AVFrame frame, TimeSpan timestamp)
+        private bool FrameIsClosestTo(StreamContext ctx, in AVFrame frame, TimeSpan timestamp, bool strict = false)
         {
             double pts = frame.best_effort_timestamp * ctx.TimeBase.ToDouble();
             double duration = frame.width > 0
                 ? _videoFrameDuration
                 : (double)frame.nb_samples / frame.sample_rate;
             double ts = timestamp.TotalSeconds;
-            return Math.Abs(ts - pts) < duration || Math.Abs(ts - pts - duration) < duration * 0.5d;
+            bool containsTimestamp = Math.Abs(ts - pts) < duration;
+            return strict
+                ? containsTimestamp
+                : containsTimestamp || Math.Abs(ts - pts - duration) < duration * 0.5d;
         }
 
         private bool FrameIsClosestTo(in VideoFrameInfo frame, TimeSpan timestamp)
