@@ -61,24 +61,23 @@ namespace NitroSharp.Media
         private readonly avio_alloc_context_seek _seekFunc;
         // ReSharper restore PrivateFieldCanBeConvertedToLocalVariable
 
-        private readonly List<Task> _tasks = new();
         private Task? _combinedTask;
         private readonly CancellationTokenSource _cts = new();
+        private readonly AsyncAutoResetEvent _resumeReading = new();
+        private readonly AsyncManualResetEvent _unpauseSignal = new(initialState: false);
 
-        private bool _loopingEnabled;
-        private LoopRegion? _loopRegion;
-        private TimeSpan? _seekRequest;
         private bool _started;
         /// <summary>
         /// All the frames have been decoded *and displayed*
         /// </summary>
         private bool _videoEnded;
+        private bool _loopingEnabled;
+        private LoopRegion? _loopRegion;
+        private TimeSpan? _seekRequest;
 
-        private readonly AsyncManualResetEvent _unpauseSignal = new(initialState: false);
-
+        private readonly Stopwatch _timer = new();
         private VideoFrameInfo _lastDisplayedFrameInfo;
         private double _frameTimer;
-        private readonly Stopwatch _timer = new();
 
         private Clock _videoClock;
         private Clock _externalClock;
@@ -381,12 +380,13 @@ namespace NitroSharp.Media
             if (_started) { return; }
             _started = true;
             _unpauseSignal.Set();
-            _tasks.Add(Task.Run(Read));
+            var tasks = new List<Task>(5);
+            tasks.Add(Task.Run(Read));
             if (_audio is { } && _audioSource is XAudio2AudioSource audioSource)
             {
                 Debug.Assert(_audioPipe is not null);
-                _tasks.Add(Task.Run(() => Decode(_audio)));
-                _tasks.Add(Task.Run(() => ProcessAudio(
+                tasks.Add(Task.Run(() => Decode(_audio)));
+                tasks.Add(Task.Run(() => ProcessAudio(
                     _audio,
                     _outAudioParams,
                     _audioPipe.Writer
@@ -396,11 +396,11 @@ namespace NitroSharp.Media
 
             if (_video is { } && _videoBuffer is { })
             {
-                _tasks.Add(Task.Run(() => Decode(_video)));
-                _tasks.Add(Task.Run(() => ProcessVideo(_video, _videoBuffer.Writer)));
+                tasks.Add(Task.Run(() => Decode(_video)));
+                tasks.Add(Task.Run(() => ProcessVideo(_video, _videoBuffer.Writer)));
             }
 
-            _combinedTask = Task.WhenAll(_tasks);
+            _combinedTask = Task.WhenAll(tasks);
             _videoClock = new Clock(_video, _timer, _unpauseSignal);
             _externalClock = new Clock(null, _timer, _unpauseSignal);
             _timer.Start();
@@ -523,9 +523,13 @@ namespace NitroSharp.Media
             return delay;
         }
 
-
-        private void Seek(TimeSpan target) => _seekRequest = target;
         private double GetPlaybackPosition() => _externalClock.Get();
+
+        private void Seek(TimeSpan target)
+        {
+            _seekRequest = target;
+            _resumeReading.Set();
+        }
 
         private async Task Read()
         {
@@ -607,6 +611,7 @@ namespace NitroSharp.Media
                 else if (ret == ffmpeg.AVERROR_EOF && !ignoreEof)
                 {
                     ignoreEof = true;
+                    // Flush packet
                     packet.Value = default;
                     packet.Serial = serial;
                     if (_audio is StreamContext audio)
@@ -620,6 +625,7 @@ namespace NitroSharp.Media
                 }
                 else
                 {
+                    // EOF packet
                     packet.Value = default;
                     packet.Serial = int.MinValue;
                     if (_audio is StreamContext audio)
@@ -632,11 +638,7 @@ namespace NitroSharp.Media
                     }
 
                     if (!_loopingEnabled) { break; }
-                    var wait = new SpinWait();
-                    while (!_cts.IsCancellationRequested && _seekRequest is null)
-                    {
-                        wait.SpinOnce();
-                    }
+                    await _resumeReading.WaitAsync();
                 }
             }
         }
@@ -952,6 +954,7 @@ namespace NitroSharp.Media
             _audioSource?.Pause();
             _audioSource?.FlushBuffers();
             _cts.Cancel();
+            _resumeReading.Set();
             _videoBuffer?.Writer.Clear();
             _video?.DestroyQueues();
             _audio?.DestroyQueues();
