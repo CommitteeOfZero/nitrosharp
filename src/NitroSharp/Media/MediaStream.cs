@@ -240,6 +240,8 @@ namespace NitroSharp.Media
             _audioSource = audioSource;
             _outAudioParams = outAudioParams;
 
+            ffmpeg.av_log_set_level(ffmpeg.AV_LOG_ERROR);
+
             // Both the buffer and the IO context are freed by avformat_close_input.
             byte* ioBuffer = (byte*)ffmpeg.av_malloc(IoBufferSize);
             AVIOContext* ioContext = ffmpeg.avio_alloc_context(

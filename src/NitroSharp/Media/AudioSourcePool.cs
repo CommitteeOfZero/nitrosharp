@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using NitroSharp.Media.XAudio2;
 
 namespace NitroSharp.Media
@@ -46,6 +47,9 @@ namespace NitroSharp.Media
             XAudio2AudioSource audioSource = _freeSources.TryDequeue(out XAudio2AudioSource? pooled)
                 ? pooled
                 : AudioDevice.CreateAudioSource();
+
+            Debug.Assert(!audioSource.IsPlaying);
+            Debug.Assert(!(audioSource.SecondsElapsed > 0));
             return new PooledAudioSource(this, audioSource);
         }
 

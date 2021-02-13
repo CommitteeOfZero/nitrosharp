@@ -31,6 +31,7 @@ namespace NitroSharp.Media.XAudio2
         private Task? _consumeTask;
         private CancellationTokenSource _cts = new();
         private IntPtr _currentBuffer;
+        private long _samplesPlayedStart;
 
         public XAudio2AudioSource(XAudio2AudioDevice audioDevice, int bufferSize, int bufferCount)
         {
@@ -66,7 +67,8 @@ namespace NitroSharp.Media.XAudio2
             => _audioData is not null &&  _sourceVoice.State.BuffersQueued > 0;
 
         public double SecondsElapsed =>
-            (double)_sourceVoice.State.SamplesPlayed / _device.AudioParameters.SampleRate;
+            (_sourceVoice.State.SamplesPlayed - _samplesPlayedStart)
+                / (double)_device.AudioParameters.SampleRate;
 
         public unsafe ReadOnlySpan<short> GetCurrentBuffer()
         {
@@ -96,6 +98,7 @@ namespace NitroSharp.Media.XAudio2
             await StopAsync();
             _audioData = audioData;
             _sourceVoice.Start();
+            _samplesPlayedStart = _sourceVoice.State.SamplesPlayed;
             _playSignal.Set();
             _cts = new CancellationTokenSource();
             _consumeTask = Task.Run(() => ConsumeLoop(_audioData));
