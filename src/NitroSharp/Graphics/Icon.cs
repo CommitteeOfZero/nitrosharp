@@ -56,7 +56,8 @@ namespace NitroSharp.Graphics
             ContentManager content = renderContext.Content;
             ResourceFactory rf = renderContext.ResourceFactory;
             Texture? texture = null;
-            CommandList cl = renderContext.TransferCommands;
+            CommandList cl = renderContext.RentCommandList();
+            cl.Begin();
             uint layer = 0;
             foreach (string path in pathPattern.EnumeratePaths())
             {
@@ -77,6 +78,9 @@ namespace NitroSharp.Graphics
                     depth: 1, layerCount: 1
                 );
             }
+            cl.End();
+            renderContext.GraphicsDevice.SubmitCommands(cl);
+            renderContext.ReturnCommandList(cl);
 
             Debug.Assert(texture is object);
             return new Icon(texture);
