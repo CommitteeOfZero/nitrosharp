@@ -172,6 +172,9 @@ namespace NitroSharp.NsScript.VM
                 case BuiltInFunction.SetLoopPoint:
                     SetLoopPoint(ref args);
                     break;
+                case BuiltInFunction.WaitPlay:
+                    WaitPlay(ref args);
+                    break;
 
                 case BuiltInFunction.DurationTime:
                     DurationTime(ref args);
@@ -313,6 +316,11 @@ namespace NitroSharp.NsScript.VM
                 alpha: args.TakeBool(),
                 source: args.TakeString()
             );
+        }
+
+        private void WaitPlay(ref ArgConsumer args)
+        {
+            _impl.WaitPlay(args.TakeEntityPath());
         }
 
         private void Load(ref ArgConsumer args)
