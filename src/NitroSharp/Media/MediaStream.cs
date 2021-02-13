@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Pipelines;
-using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
@@ -84,6 +83,8 @@ namespace NitroSharp.Media
 
         public bool IsPlaying
             => _combinedTask is { IsCompleted: false } && !_videoEnded || (_audioSource?.IsPlaying ?? false);
+
+        public TimeSpan Elapsed => TimeSpan.FromSeconds(GetSecondsElapsed());
 
         private struct Clock
         {
@@ -460,7 +461,7 @@ namespace NitroSharp.Media
                 double time = _timer.Elapsed.TotalSeconds;
                 if (_lastDisplayedFrameInfo.Serial != frame.Serial)
                 {
-                    if (_video.SeekRequest is TimeSpan seekTarget)
+                    if (_video.SeekRequest is TimeSpan)
                     {
                         _externalClock.Set(double.NaN, 0);
                         _video.SeekRequest = null;
@@ -499,7 +500,7 @@ namespace NitroSharp.Media
 
         private double CalcTargetDelay(double delay)
         {
-            double diff = _videoClock.Get() - GetPlaybackPosition();
+            double diff = _videoClock.Get() - GetSecondsElapsed();
             double syncThreshold = MathUtil.Clamp(delay, SyncThresholdMin, SyncThresholdMax);
             if (!double.IsNaN(diff) && Math.Abs(diff) < _maxFrameDuration)
             {
@@ -523,7 +524,12 @@ namespace NitroSharp.Media
             return delay;
         }
 
-        private double GetPlaybackPosition() => _externalClock.Get();
+        private double GetSecondsElapsed()
+        {
+            return _video is not null
+                ? _externalClock.Get()
+                : _audioSource!.SecondsElapsed;
+        }
 
         private void Seek(TimeSpan target)
         {

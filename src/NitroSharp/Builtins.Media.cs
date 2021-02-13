@@ -104,11 +104,15 @@ namespace NitroSharp
 
         public override int GetTimeElapsed(in EntityPath entityPath) => Get(entityPath) switch
         {
+            Sound s => (int)s.Stream.Elapsed.TotalMilliseconds,
+            Video v => (int)v.Stream.Elapsed.TotalMilliseconds,
             _ => 0
         };
 
         public override int GetTimeRemaining(in EntityPath entityPath) => Get(entityPath) switch
         {
+            Sound s => (int)(s.Stream.Duration - s.Stream.Elapsed).TotalMilliseconds,
+            Video v => (int)(v.Stream.Duration - v.Stream.Elapsed).TotalMilliseconds,
             _ => 0
         };
     }

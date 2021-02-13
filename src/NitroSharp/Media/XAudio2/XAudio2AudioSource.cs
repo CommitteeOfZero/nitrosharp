@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Buffers;
-using System.Diagnostics;
 using System.IO.Pipelines;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -66,17 +65,15 @@ namespace NitroSharp.Media.XAudio2
         public bool IsPlaying
             => _audioData is not null &&  _sourceVoice.State.BuffersQueued > 0;
 
+        public double SecondsElapsed =>
+            (double)_sourceVoice.State.SamplesPlayed / _device.AudioParameters.SampleRate;
+
         public unsafe ReadOnlySpan<short> GetCurrentBuffer()
         {
             if (_currentBuffer == IntPtr.Zero) { return default; }
             int index = (int)((_currentBuffer.ToInt64() - _buffer.ToInt64()) / _bufferSize);
             int size = _actualBufferSizes[index];
             return new ReadOnlySpan<short>(_currentBuffer.ToPointer(), size / 2);
-        }
-
-        private void OnBufferStart(IntPtr pointer)
-        {
-            _currentBuffer = pointer;
         }
 
         public float Volume
@@ -87,12 +84,6 @@ namespace NitroSharp.Media.XAudio2
                 return volume;
             }
             set => _sourceVoice.SetVolume(value);
-        }
-
-        public double GetPlaybackPosition()
-        {
-            return (double)_sourceVoice.State.SamplesPlayed
-                / _device.AudioParameters.SampleRate;
         }
 
         public void Play(PipeReader audioData)
@@ -217,6 +208,11 @@ namespace NitroSharp.Media.XAudio2
             _xaudioBuffer.AudioBytes = size;
             _xaudioBuffer.Flags = BufferFlags.None;
             _sourceVoice.SubmitSourceBuffer(_xaudioBuffer, null);
+        }
+
+        private void OnBufferStart(IntPtr pointer)
+        {
+            _currentBuffer = pointer;
         }
 
         private void OnBufferEnd(IntPtr pointer)
