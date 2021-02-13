@@ -98,7 +98,6 @@ namespace NitroSharp.Media.XAudio2
             await StopAsync();
             _audioData = audioData;
             _sourceVoice.Start();
-            _samplesPlayedStart = _sourceVoice.State.SamplesPlayed;
             _playSignal.Set();
             _cts = new CancellationTokenSource();
             _consumeTask = Task.Run(() => ConsumeLoop(_audioData));
@@ -131,6 +130,7 @@ namespace NitroSharp.Media.XAudio2
                 _sourceVoice.Stop();
                 _cts.Cancel();
                 FlushBuffers();
+                _samplesPlayedStart = _sourceVoice.State.SamplesPlayed;
                 _audioData = null;
                 _currentBuffer = IntPtr.Zero;
                 if (_consumeTask is not null)
