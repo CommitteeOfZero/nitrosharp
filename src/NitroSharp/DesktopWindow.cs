@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Numerics;
-using System.Runtime.InteropServices;
 using System.Threading;
 using Veldrid;
 using Veldrid.Sdl2;
@@ -18,21 +17,17 @@ namespace NitroSharp
         public DesktopWindow(string title, uint width, uint height)
         {
             const int centered = Sdl2Native.SDL_WINDOWPOS_CENTERED;
-            _window = new Sdl2Window(
-                title,
+            _window = new Sdl2Window(title,
                 centered, centered,
                 (int)width, (int)height,
                 SDL_WindowFlags.OpenGL,
-                threadedProcessing: false)
-            {
-                LimitPollRate = true,
-                PollIntervalInMs = 10.0f
-            };
+                threadedProcessing: false
+            );
             SwapchainSource = VeldridStartup.GetSwapchainSource(_window);
 
-            _arrow = Sdl2Cursor.SDL_CreateSystemCursor(SDL_SystemCursor.SDL_SYSTEM_CURSOR_ARROW);
-            _hand = Sdl2Cursor.SDL_CreateSystemCursor(SDL_SystemCursor.SDL_SYSTEM_CURSOR_HAND);
-            _wait = Sdl2Cursor.SDL_CreateSystemCursor(SDL_SystemCursor.SDL_SYSTEM_CURSOR_WAIT);
+            _arrow = Sdl2Native.SDL_CreateSystemCursor(SDL_SystemCursor.Arrow);
+            _hand = Sdl2Native.SDL_CreateSystemCursor(SDL_SystemCursor.Hand);
+            _wait = Sdl2Native.SDL_CreateSystemCursor(SDL_SystemCursor.Wait);
         }
 
         public SwapchainSource SwapchainSource { get; }
@@ -60,52 +55,17 @@ namespace NitroSharp
                 SystemCursor.Wait => _wait,
                 _ => _arrow
             };
-            Sdl2Cursor.SDL_SetCursor(sdlCursor);
+            Sdl2Native.SDL_SetCursor(sdlCursor);
         }
 
         public void Dispose()
         {
-            Sdl2Cursor.SDL_FreeCursor(_wait);
-            Sdl2Cursor.SDL_FreeCursor(_hand);
-            Sdl2Cursor.SDL_FreeCursor(_arrow);
+            Sdl2Native.SDL_FreeCursor(_wait);
+            Sdl2Native.SDL_FreeCursor(_hand);
+            Sdl2Native.SDL_FreeCursor(_arrow);
             _wait = IntPtr.Zero;
             _hand = IntPtr.Zero;
             _arrow = IntPtr.Zero;
-        }
-
-        private enum SDL_SystemCursor
-        {
-            SDL_SYSTEM_CURSOR_ARROW,
-            SDL_SYSTEM_CURSOR_IBEAM,
-            SDL_SYSTEM_CURSOR_WAIT,
-            SDL_SYSTEM_CURSOR_CROSSHAIR,
-            SDL_SYSTEM_CURSOR_WAITARROW,
-            SDL_SYSTEM_CURSOR_SIZENWSE,
-            SDL_SYSTEM_CURSOR_SIZENESW,
-            SDL_SYSTEM_CURSOR_SIZEWE,
-            SDL_SYSTEM_CURSOR_SIZENS,
-            SDL_SYSTEM_CURSOR_SIZEALL,
-            SDL_SYSTEM_CURSOR_NO,
-            SDL_SYSTEM_CURSOR_HAND,
-            SDL_NUM_SYSTEM_CURSORS
-        }
-
-        private static class Sdl2Cursor
-        {
-            [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-            private delegate IntPtr SDL_CreateSystemCursor_t(SDL_SystemCursor id);
-            private static readonly SDL_CreateSystemCursor_t s_sdl_createSystemCursor = Sdl2Native.LoadFunction<SDL_CreateSystemCursor_t>("SDL_CreateSystemCursor");
-            public static IntPtr SDL_CreateSystemCursor(SDL_SystemCursor id) => s_sdl_createSystemCursor(id);
-
-            [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-            private delegate void SDL_SetCursor_t(IntPtr cursor);
-            private static readonly SDL_SetCursor_t s_sdl_setCursor = Sdl2Native.LoadFunction<SDL_SetCursor_t>("SDL_SetCursor");
-            public static void SDL_SetCursor(IntPtr cursor) => s_sdl_setCursor(cursor);
-
-            [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-            private delegate void SDL_FreeCursor_t(IntPtr cursor);
-            private static readonly SDL_FreeCursor_t s_sdl_freeCursor = Sdl2Native.LoadFunction<SDL_FreeCursor_t>("SDL_FreeCursor");
-            public static void SDL_FreeCursor(IntPtr cursor) => s_sdl_freeCursor(cursor);
         }
     }
 }
