@@ -1,43 +1,13 @@
-using System;
-using NitroSharp.Content;
+﻿using System;
 using NitroSharp.NsScript;
-using NitroSharp.NsScript.VM;
-using NitroSharp.Text;
-using Veldrid;
 
 namespace NitroSharp.Graphics
 {
-    internal sealed class RenderSystem : IDisposable
+    internal static class RenderSystem
     {
-        public RenderSystem(
-            Configuration gameConfiguration,
-            GraphicsDevice graphicsDevice,
-            Swapchain swapchain,
-            GlyphRasterizer glyphRasterizer,
-            ContentManager contentManager,
-            SystemVariableLookup systemVariables)
-        {
-            Context = new RenderContext(
-                gameConfiguration,
-                graphicsDevice,
-                swapchain,
-                contentManager,
-                glyphRasterizer,
-                systemVariables
-            );
-        }
-
-        public RenderContext Context { get; }
-
-        public void BeginFrame(in FrameStamp frameStamp, bool clear)
-            => Context.BeginFrame(frameStamp, clear);
-
-        public void EndFrame()
-            => Context.EndFrame();
-
-        public void Render(
-            in FrameStamp frameStamp,
+        public static void Render(
             GameContext ctx,
+            in FrameStamp frameStamp,
             SortableEntityGroupView<RenderItem> renderItems,
             float dt,
             bool assetsReady)
@@ -53,17 +23,21 @@ namespace NitroSharp.Graphics
                 ri.Update(ctx, dt, assetsReady);
             }
 
-            Context.ResolveGlyphs();
+            ctx.RenderContext.ResolveGlyphs();
 
             foreach (RenderItem ri in active)
             {
-                ri.Render(Context, assetsReady);
+                ri.Render(ctx.RenderContext, assetsReady);
             }
 
-            Context.TextureCache.BeginFrame(frameStamp);
+            ctx.RenderContext.TextureCache.BeginFrame(frameStamp);
         }
 
-        public void ProcessChoices(World world, InputContext inputCtx, GameWindow window)
+        public static void ProcessChoices(
+            RenderContext ctx,
+            World world,
+            InputContext inputCtx,
+            GameWindow window)
         {
             ReadOnlySpan<Choice> choices = world.Choices.Enabled;
             //if (choices.IsEmpty) { return; }
@@ -73,7 +47,7 @@ namespace NitroSharp.Graphics
             bool anyHovered = false;
             foreach (Choice c in choices)
             {
-                c.RecordInput(inputCtx, Context);
+                c.RecordInput(inputCtx, ctx);
                 anyHovered |= c.IsHovered;
                 if (c.CanFocus && c.Priority > maxPriority)
                 {
@@ -90,7 +64,7 @@ namespace NitroSharp.Graphics
             {
                 if (ri is UiElement c)
                 {
-                    c.RecordInput(inputCtx, Context);
+                    c.RecordInput(inputCtx, ctx);
                     anyHovered |= c.IsHovered;
                 }
             }
@@ -99,7 +73,7 @@ namespace NitroSharp.Graphics
             {
                 if (ri is UiElement c)
                 {
-                    c.RecordInput(inputCtx, Context);
+                    c.RecordInput(inputCtx, ctx);
                     anyHovered |= c.IsHovered;
                 }
             }
@@ -138,18 +112,8 @@ namespace NitroSharp.Graphics
 
             if (!ReferenceEquals(focusedChoice, prevFocus) && focusedChoice is object)
             {
-                focusedChoice.Focus(inputCtx.Window, Context);
+                focusedChoice.Focus(inputCtx.Window, ctx);
             }
-        }
-
-        public void Present()
-        {
-            Context.Present();
-        }
-
-        public void Dispose()
-        {
-            Context.Dispose();
         }
     }
 }

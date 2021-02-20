@@ -117,12 +117,12 @@ namespace NitroSharp
             RubyFontSizeMultiplier = rubyFontSizeMultiplier;
         }
 
-        public FontFaceKey DefaultFont { get; init; }
-        public FontFaceKey? ItalicFont { get; init; }
+        public FontFaceKey DefaultFont { get; }
+        public FontFaceKey? ItalicFont { get; }
         public PtFontSize DefaultFontSize { get; private set; }
         public Vector4 DefaultTextColor { get; private set; }
         public Vector4? DefaultOutlineColor { get; private set; }
-        public float RubyFontSizeMultiplier { get; init; }
+        public float RubyFontSizeMultiplier { get; }
 
         public FontConfiguration Clone() => new(
             DefaultFont, ItalicFont,

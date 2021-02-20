@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
+using System.Linq;
 using System.Numerics;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -53,7 +54,7 @@ namespace NitroSharp.Text
         public GlyphRasterizer()
         {
             _metricsContext = new FontContext();
-            _contexts = new FontContext[1];
+            _contexts = new FontContext[Environment.ProcessorCount];
             _fontDatas = new Dictionary<FontFaceKey, FontData>();
             _exceptions = new ConcurrentBag<Exception>();
             _freeContexts = Channel.CreateUnbounded<FontContext>(
@@ -95,6 +96,39 @@ namespace NitroSharp.Text
                 foreach (FontContext ctx in _contexts)
                 {
                     ctx.AddFont(path, out _);
+                }
+                foreach ((FontFaceKey key, FontFace face) in faces)
+                {
+                    _fontDatas.TryAdd(key, new FontData(_metricsContext, face));
+                }
+            }
+        }
+
+        public async Task AddFontsAsync(IEnumerable<string> paths)
+        {
+            foreach (string path in paths)
+            {
+                await AddFontAsync(path);
+            }
+        }
+
+        private async Task AddFontAsync(string path)
+        {
+            Task loadAsync()
+                => Task.WhenAll(_contexts.Select(x => Task.Run(() => x.AddFont(path, out _))));
+
+            if (_metricsContext.AddFont(path, out ImmutableArray<(FontFaceKey, FontFace)> faces))
+            {
+                if (_contexts.Length >= 4)
+                {
+                    await loadAsync();
+                }
+                else
+                {
+                    foreach (FontContext ctx in _contexts)
+                    {
+                        ctx.AddFont(path, out _);
+                    }
                 }
                 foreach ((FontFaceKey key, FontFace face) in faces)
                 {

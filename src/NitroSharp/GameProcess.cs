@@ -133,7 +133,7 @@ namespace NitroSharp
             while (waits.TryDequeue(out WaitOperation wait))
             {
                 if (wait.Thread.IsActive) { continue; }
-                if (ShouldResume(wait, ctx.InputContext))
+                if (ShouldResume(wait, ctx))
                 {
                     VmProcess.VM.ResumeThread(wait.Thread);
                 }
@@ -165,11 +165,11 @@ namespace NitroSharp
             World.Dispose();
         }
 
-        private bool ShouldResume(in WaitOperation wait, InputContext input)
+        private bool ShouldResume(in WaitOperation wait, GameContext ctx)
         {
             uint contextId = wait.Thread.Id;
 
-            bool checkInput() => input.VKeyDown(VirtualKey.Advance);
+            bool checkInput() => ctx.Advance || ctx.Skipping;
 
             bool checkIdle(EntityQuery query)
             {
@@ -193,6 +193,7 @@ namespace NitroSharp
 
             bool checkLineRead(EntityQuery query)
             {
+                if (ctx.Skipping) { return true; }
                 foreach (DialoguePage page in World.Query<DialoguePage>(contextId, query))
                 {
                     if (page.LineRead) { return true; }

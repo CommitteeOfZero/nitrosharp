@@ -11,18 +11,20 @@ namespace NitroSharp
     {
         Enter,
         Advance,
+        Back,
         Left,
         Up,
         Right,
-        Down
+        Down,
+        Skip
     }
 
     internal sealed class InputContext : IDisposable
     {
         private readonly RawInput _rawInput;
 
-        private readonly bool[] _vkeyState = new bool[6];
-        private readonly bool[] _newVkeys = new bool[6];
+        private readonly bool[] _vkeyState = new bool[8];
+        private readonly bool[] _newVkeys = new bool[8];
 
         public InputContext(GameWindow window)
         {
@@ -32,7 +34,6 @@ namespace NitroSharp
         public GameWindow Window => _rawInput.Window;
         public Vector2 MousePosition { get; private set; }
         public float WheelDelta { get; private set; }
-        public RawInput RawInput => _rawInput;
 
         public bool VKeyState(VirtualKey vkey) => _vkeyState[(int)vkey];
         public bool VKeyDown(VirtualKey vkey) => _newVkeys[(int)vkey];
@@ -44,33 +45,44 @@ namespace NitroSharp
             MousePosition = input.Snapshot.MousePosition;
             WheelDelta = input.WheelDelta;
 
-            PollVkey(input, VirtualKey.Advance);
             PollVkey(input, VirtualKey.Enter);
+            PollVkey(input, VirtualKey.Advance);
+            PollVkey(input, VirtualKey.Back);
             PollVkey(input, VirtualKey.Left);
             PollVkey(input, VirtualKey.Up);
             PollVkey(input, VirtualKey.Right);
             PollVkey(input, VirtualKey.Down);
+            PollVkey(input, VirtualKey.Skip);
 
             Gamepad gamepad = input.Gamepad;
             SystemVariableLookup sys = systemVariables;
             set(ref sys.RightButtonDown, input.MouseState(MouseButton.Right));
-            poll(SDL_GameControllerButton.Start, ref sys.X360StartButtonDown);
-            poll(SDL_GameControllerButton.A, ref sys.X360AButtonDown);
-            poll(SDL_GameControllerButton.B, ref sys.X360BButtonDown);
-            poll(SDL_GameControllerButton.Y, ref sys.X360YButtonDown);
-            poll(SDL_GameControllerButton.DPadLeft, ref sys.X360LeftButtonDown);
-            poll(SDL_GameControllerButton.DPadUp, ref sys.X360UpButtonDown);
-            poll(SDL_GameControllerButton.DPadRight, ref sys.X360RightButtonDown);
-            poll(SDL_GameControllerButton.DPadDown, ref sys.X360DownButtonDown);
-            poll(SDL_GameControllerButton.LeftShoulder, ref sys.X360LbButtonDown);
-            poll(SDL_GameControllerButton.RightShoulder, ref sys.X360RbButtonDown);
+            pollController(SDL_GameControllerButton.Start, ref sys.X360StartButtonDown);
+            pollController(SDL_GameControllerButton.A, ref sys.X360AButtonDown);
+            pollController(SDL_GameControllerButton.B, ref sys.X360BButtonDown);
+            pollController(SDL_GameControllerButton.Y, ref sys.X360YButtonDown);
+            pollController(SDL_GameControllerButton.DPadLeft, ref sys.X360LeftButtonDown);
+            pollController(SDL_GameControllerButton.DPadUp, ref sys.X360UpButtonDown);
+            pollController(SDL_GameControllerButton.DPadRight, ref sys.X360RightButtonDown);
+            pollController(SDL_GameControllerButton.DPadDown, ref sys.X360DownButtonDown);
+            pollController(SDL_GameControllerButton.LeftShoulder, ref sys.X360LbButtonDown);
+            pollController(SDL_GameControllerButton.RightShoulder, ref sys.X360RbButtonDown);
 
             static void set(ref ConstantValue target, bool value)
                 => target = ConstantValue.Boolean(value);
 
-            void poll(SDL_GameControllerButton button, ref ConstantValue val)
-                => set(ref val, gamepad.ButtonState(button));
+            void pollController(SDL_GameControllerButton button, ref ConstantValue val)
+            {
+                bool down = gamepad.ButtonState(button) || MapControllerButton(button);
+                set(ref val, down);
+            }
         }
+
+        private bool MapControllerButton(SDL_GameControllerButton button) => button switch
+        {
+            SDL_GameControllerButton.A => VKeyState(VirtualKey.Advance),
+            _ => false
+        };
 
         private static bool VKeyState(RawInput input, VirtualKey key)
         {
@@ -82,6 +94,7 @@ namespace NitroSharp
                                       input.KeyState(Key.KeypadEnter) |
                                       input.KeyState(Key.Space) |
                                       gamepad.ButtonState(SDL_GameControllerButton.A),
+                VirtualKey.Back => input.MouseState(MouseButton.Right),
                 VirtualKey.Enter => input.MouseState(MouseButton.Left) |
                                     input.KeyState(Key.Enter) |
                                     input.KeyState(Key.KeypadEnter) |
@@ -96,6 +109,7 @@ namespace NitroSharp
                 VirtualKey.Down => input.KeyState(Key.Down) |
                                    input.WheelDelta < 0 |
                                    gamepad.ButtonState(SDL_GameControllerButton.DPadDown),
+                VirtualKey.Skip => input.KeyState(Key.ControlLeft) | input.KeyState(Key.ControlRight),
                 _ => false
             };
         }

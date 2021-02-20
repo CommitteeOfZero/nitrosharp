@@ -1,7 +1,5 @@
 using System.Collections.Generic;
-using System.IO;
 using System.Numerics;
-using NitroSharp.Media;
 using NitroSharp.NsScript;
 using NitroSharp.NsScript.VM;
 using NitroSharp.Saving;
@@ -94,7 +92,7 @@ namespace NitroSharp.Graphics
             LineRead = false;
         }
 
-        private void Advance(GameContext ctx)
+        private bool Advance(GameContext ctx)
         {
             if (_animation is object)
             {
@@ -103,7 +101,12 @@ namespace NitroSharp.Graphics
                     _animation.Skip();
                 }
 
-                return;
+                return true;
+            }
+
+            if (_remainingSegments.Count == 0)
+            {
+                return false;
             }
 
             int start = _layout.GlyphRuns.Length;
@@ -111,12 +114,13 @@ namespace NitroSharp.Graphics
             {
             }
 
-        exit:
-            if (_layout.GlyphRuns.Length != start)
+            if (_layout.GlyphRuns.Length != start && !ctx.Skipping)
             {
                 _animation = new TypewriterAnimation(_layout, _layout.GlyphRuns[start..], 40);
                 ctx.RenderContext.Icons.WaitLine.Reset();
             }
+
+            return true;
         }
 
         private ConsumeResult ConsumeSegment(GameContext ctx)
@@ -171,11 +175,14 @@ namespace NitroSharp.Graphics
 
         protected override void Update(GameContext ctx)
         {
-            bool advance = ctx.InputContext.VKeyDown(VirtualKey.Advance);
+            bool advance = ctx.Advance || ctx.Skipping;
             if (advance)
             {
                 LineRead = _remainingSegments.Count == 0 && _animation is null;
-                Advance(ctx);
+                if (Advance(ctx))
+                {
+                    ctx.Advance = false;
+                }
             }
 
             ctx.RenderContext.Text.RequestGlyphs(_layout);

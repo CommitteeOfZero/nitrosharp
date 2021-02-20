@@ -163,7 +163,7 @@ namespace NitroSharp.Saving
             return dir;
         }
 
-        private unsafe void SaveAsPng(
+        private static unsafe void SaveAsPng(
             RenderContext ctx,
             Texture texture,
             Stream dstStream,

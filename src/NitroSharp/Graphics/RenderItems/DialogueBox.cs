@@ -28,14 +28,11 @@ namespace NitroSharp.Graphics
 
         public override Size GetUnconstrainedBounds(RenderContext ctx) => _size;
 
-        public new ConstraintBoxSaveData ToSaveData(GameSavingContext ctx)
+        public new ConstraintBoxSaveData ToSaveData(GameSavingContext ctx) => new()
         {
-            return new()
-            {
-                Common = base.ToSaveData(ctx),
-                IsContainer = IsContainer,
-                Size = _size
-            };
-        }
+            Common = base.ToSaveData(ctx),
+            IsContainer = IsContainer,
+            Size = _size
+        };
     }
 }

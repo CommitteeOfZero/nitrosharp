@@ -1,6 +1,5 @@
 using System;
 using System.IO;
-using System.Threading.Tasks;
 using NitroSharp.Graphics;
 using NitroSharp.Media;
 using NitroSharp.NsScript;
@@ -15,7 +14,7 @@ namespace NitroSharp
             if (ResolvePath(entityPath, out ResolvedEntityPath path)
                 && _ctx.Content.TryOpenStream(fileName) is Stream stream)
             {
-                World.Add(new Sound(path, stream, _ctx.AudioSourcePool));
+                World.Add(new Sound(path, stream, _ctx.AudioContext));
             }
         }
 
@@ -31,7 +30,7 @@ namespace NitroSharp
             {
                 Video video = World.Add(new Video(
                     resolvedPath, priority,
-                    _renderCtx, _ctx.AudioSourcePool,
+                    _renderCtx, _ctx.AudioContext,
                     fs, alpha
                 )).WithPosition(_renderCtx, x, y);
                 video.Stream.ToggleLooping(loop);

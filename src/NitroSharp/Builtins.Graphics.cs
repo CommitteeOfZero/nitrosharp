@@ -396,7 +396,7 @@ namespace NitroSharp
             if (delay == TimeSpan.Zero) { return; }
             if (!delay.Equals(duration))
             {
-                Delay(delay);
+                Delay(AdjustDuration(delay));
             }
             else
             {
@@ -411,6 +411,7 @@ namespace NitroSharp
             NsEaseFunction easeFunction,
             TimeSpan delay)
         {
+            duration = AdjustDuration(duration);
             foreach (RenderItem2D ri in Query<RenderItem2D>(query))
             {
                 ri.Fade(dstOpacity, duration, easeFunction);
@@ -426,6 +427,7 @@ namespace NitroSharp
             NsEaseFunction easeFunction,
             TimeSpan delay)
         {
+            duration = AdjustDuration(duration);
             foreach (RenderItem2D ri in Query<RenderItem2D>(query))
             {
                 ri.Move(_renderCtx, dstX, dstY, duration, easeFunction);
@@ -441,6 +443,7 @@ namespace NitroSharp
             NsEaseFunction easeFunction,
             TimeSpan delay)
         {
+            duration = AdjustDuration(duration);
             var dstScale = new Vector3(dstScaleX.Rebase(1.0f), dstScaleY.Rebase(1.0f), 1.0f);
             foreach (RenderItem2D ri in Query<RenderItem2D>(query))
             {
@@ -457,6 +460,7 @@ namespace NitroSharp
             NsEaseFunction easeFunction,
             TimeSpan delay)
         {
+            duration = AdjustDuration(duration);
             foreach (RenderItem ri in Query<RenderItem>(query))
             {
                 ri.Rotate(dstRotationX, dstRotationY, dstRotationZ, duration, easeFunction);
@@ -473,6 +477,7 @@ namespace NitroSharp
             bool wait)
         {
             if (duration <= TimeSpan.Zero) { return; }
+            duration = AdjustDuration(duration);
             foreach (RenderItem2D ri in Query<RenderItem2D>(query))
             {
                 var segments = ImmutableArray.CreateBuilder<ProcessedBezierSegment>();
@@ -508,6 +513,7 @@ namespace NitroSharp
             string maskFileName,
             TimeSpan delay)
         {
+            duration = AdjustDuration(duration);
             if (_ctx.Content.RequestTexture(maskFileName) is AssetRef<Texture> mask)
             {
                 foreach (Sprite sprite in Query<Sprite>(query))
@@ -522,6 +528,13 @@ namespace NitroSharp
             }
 
             Pause(WaitCondition.TransitionCompleted, query, duration, delay);
+        }
+
+        private TimeSpan AdjustDuration(TimeSpan duration)
+        {
+            return _ctx.Skipping
+                ? TimeSpan.FromSeconds(duration.TotalSeconds / 20)
+                : duration;
         }
     }
 }

@@ -1,5 +1,4 @@
-﻿using System;
-using System.IO;
+﻿using System.IO;
 using System.Numerics;
 using NitroSharp.Graphics.Core;
 using NitroSharp.Media;
@@ -17,18 +16,18 @@ namespace NitroSharp.Graphics
             in ResolvedEntityPath path,
             int priority,
             RenderContext renderContext,
-            AudioSourcePool audioSourcePool,
+            AudioContext audioContext,
             Stream stream,
             bool alpha = false)
             : base(path, priority)
         {
             _enableAlpha = alpha;
-            _audioSource = audioSourcePool.Rent();
+            _audioSource = audioContext.RentAudioSource();
             Stream = new MediaStream(
                 stream,
                 renderContext.GraphicsDevice,
                 _audioSource.Value,
-                audioSourcePool.AudioDevice.AudioParameters
+                audioContext.Device.AudioParameters
             );
             Color = RgbaFloat.White;
         }

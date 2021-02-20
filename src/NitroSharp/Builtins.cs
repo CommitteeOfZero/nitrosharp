@@ -186,6 +186,7 @@ namespace NitroSharp
         {
             if (delay > TimeSpan.Zero)
             {
+                delay = AdjustDuration(delay);
                 _ctx.Wait(CurrentThread, WaitCondition.None, delay);
             }
         }
@@ -207,6 +208,7 @@ namespace NitroSharp
 
         public override void WaitForInput(TimeSpan timeout)
         {
+            timeout = AdjustDuration(timeout);
             _ctx.Wait(CurrentThread, WaitCondition.UserInput, timeout);
         }
 
@@ -222,7 +224,7 @@ namespace NitroSharp
 
         public override int GetSecondsElapsed()
         {
-            return (int)_ctx.Timer.Elapsed.TotalSeconds;
+            return (int)_ctx.Clock.Elapsed.TotalSeconds;
         }
 
         public override bool SaveExists(uint slot)

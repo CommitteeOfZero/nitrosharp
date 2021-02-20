@@ -286,6 +286,7 @@ namespace NitroSharp.Graphics
 
         public void Dispose()
         {
+            GraphicsDevice.WaitForIdle();
             OrthoProjection.Dispose();
             Icons.Dispose();
             TransferCommands.Dispose();
@@ -304,6 +305,8 @@ namespace NitroSharp.Graphics
             ResourceSetCache.Dispose();
             _swapchainTarget.Dispose();
             _shaderLibrary.Dispose();
+            _mainSwapchain.Dispose();
+            GraphicsDevice.Dispose();
         }
     }
 }

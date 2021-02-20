@@ -191,7 +191,6 @@ namespace NitroSharp
 
         public override float GetAxis(SDL_GameControllerAxis axis) => 0.0f;
 
-
         public override bool ButtonState(SDL_GameControllerButton button)
             => _rawInput.KeyState(MapButton(button));
 

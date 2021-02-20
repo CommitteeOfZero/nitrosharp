@@ -28,7 +28,7 @@
     <DirectPInvoke Include="d3d11.dll"></DirectPInvoke>
     <DirectPInvoke Include="dxgi.dll"></DirectPInvoke>
   </ItemGroup>
-  
+
   <ItemGroup>
     <Content Include="Game.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
@@ -42,7 +42,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Condition="'$(Native)' == 'true'" Include="Microsoft.DotNet.ILCompiler" Version="6.0.0-preview.2.21103.1" />
+    <PackageReference Condition="'$(Native)' == 'true'" Include="Microsoft.DotNet.ILCompiler" Version="6.0.0-preview.2.21118.5" />
   </ItemGroup>
 
 </Project>

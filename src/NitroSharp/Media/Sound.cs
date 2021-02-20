@@ -11,15 +11,15 @@ namespace NitroSharp.Media
         public Sound(
             in ResolvedEntityPath path,
             Stream stream,
-            AudioSourcePool audioSourcePool)
+            AudioContext audioContext)
             : base(path)
         {
-            _audioSource = audioSourcePool.Rent();
+            _audioSource = audioContext.RentAudioSource();
             Stream = new MediaStream(
                 stream,
                 graphicsDevice: null,
                 _audioSource.Value,
-                audioSourcePool.AudioDevice.AudioParameters
+                audioContext.Device.AudioParameters
             );
         }
 

@@ -633,6 +633,12 @@ namespace NitroSharp.NsScript.VM
         private readonly int _savePath;
 
         private readonly int _lastText;
+        private readonly int _skip;
+        private readonly int _textAuto;
+        private readonly int _textAutoLock;
+        private readonly int _menuLock;
+        private readonly int _skipLock;
+        private readonly int _backlogLock;
 
         public SystemVariableLookup(NsScriptVM vm)
         {
@@ -666,6 +672,13 @@ namespace NitroSharp.NsScript.VM
             _positionXTextIcon = Lookup("SYSTEM_position_x_text_icon");
             _positionYTextIcon = Lookup("SYSTEM_position_y_text_icon");
             _lastText = Lookup("SYSTEM_last_text");
+            _skip = Lookup("SYSTEM_skip");
+            _textAuto = Lookup("SYSTEM_text_auto");
+            _textAutoLock = Lookup("SYSTEM_text_auto_lock");
+
+            _menuLock = Lookup("SYSTEM_menu_lock");
+            _skipLock = Lookup("SYSTEM_skip_lock");
+            _backlogLock = Lookup("SYSTEM_backlog_lock");
         }
 
         private int Lookup(string name)
@@ -711,5 +724,13 @@ namespace NitroSharp.NsScript.VM
         public ref ConstantValue SavePath => ref Flag(_savePath);
 
         public ref ConstantValue LastText => ref Var(_lastText);
+
+        public ref ConstantValue Skip => ref Var(_skip);
+        public ref ConstantValue TextAuto => ref Var(_textAuto);
+        public ref ConstantValue TextAutoLock => ref Var(_textAutoLock);
+
+        public ref ConstantValue MenuLock => ref Var(_menuLock);
+        public ref ConstantValue SkipLock => ref Var(_skipLock);
+        public ref ConstantValue BacklogLock => ref Var(_backlogLock);
     }
 }
