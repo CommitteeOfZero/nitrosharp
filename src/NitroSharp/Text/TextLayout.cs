@@ -499,7 +499,7 @@ namespace NitroSharp.Text
             }
 
             bool enoughSpace = lastTextRun
-                ? ProcessLine(glyphRasterizer)
+                ? _lineBuilder.Length == 0 || ProcessLine(glyphRasterizer)
                 : CalculateBaselineY(out _);
             if (!enoughSpace)
             {
@@ -764,7 +764,11 @@ namespace NitroSharp.Text
 
         private bool StartNewLine(GlyphRasterizer glyphRasterizer, uint startGlyph)
         {
-            if (ProcessLine(glyphRasterizer))
+            if (_lineBuilder.Length == 0)
+            {
+                _lines.Add();
+            }
+            else if (ProcessLine(glyphRasterizer))
             {
                 _prevBaselineY = _lineBuilder.BaselineY;
                 _lineBuilder.Reset(startGlyph);

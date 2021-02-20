@@ -35,10 +35,7 @@ namespace NitroSharp
             _sb.Clear();
             foreach (TextRun textRun in text.TextRuns)
             {
-                if (!textRun.HasRubyText)
-                {
-                    _sb.Append(textRun.Text);
-                }
+                _sb.Append(textRun.Text);
             }
 
             if (_sb.Length > 0)
