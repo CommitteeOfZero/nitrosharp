@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -298,12 +299,19 @@ namespace NitroSharp
                     sourceEncoding
                 );
 
-                SourceModuleSymbol startup = compilation.GetSourceModule(configuration.SysScripts.Startup);
-                SourceModuleSymbol backlog = compilation.GetSourceModule(configuration.SysScripts.Backlog);
-                SourceModuleSymbol save = compilation.GetSourceModule(configuration.SysScripts.Save);
-                SourceModuleSymbol load = compilation.GetSourceModule(configuration.SysScripts.Load);
+                SystemScripts sysScripts = configuration.SysScripts;
+                string[] moduleNames =
+                {
+                    sysScripts.Startup,
+                    sysScripts.Backlog, sysScripts.Menu,
+                    sysScripts.Load, sysScripts.Save
+                };
 
-                compilation.Emit(new[] { startup, backlog, save, load });
+                SourceModuleSymbol[] modules = moduleNames
+                    .Select(x => compilation.GetSourceModule(x))
+                    .ToArray();
+
+                compilation.Emit(modules);
             }
             else
             {
