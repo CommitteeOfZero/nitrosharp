@@ -39,7 +39,17 @@ namespace NitroSharp.SourceGenerators
                     IPropertySymbol prop => prop.Type,
                     _ => throw Unreachable()
                 };
-                stmts.AddRange(Write(MemberAccess(target, member.Name), memberType));
+                try
+                {
+                    stmts.AddRange(Write(MemberAccess(target, member.Name), memberType));
+                }
+                catch (SourceGeneratorException e)
+                {
+                    throw new SourceGeneratorException(
+                        $"Error when generating serialization code for " +
+                        $"{type.Name}.{member.Name}: {e.Message}"
+                    );
+                }
             }
 
             return new SyntaxList<StatementSyntax>(stmts);

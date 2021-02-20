@@ -90,8 +90,9 @@ namespace NitroSharp.SourceGenerators
                 foreach (ISymbol sym in currentType.GetMembers().Reverse())
                 {
                     if (sym is IFieldSymbol { IsStatic: false }
-                        or IPropertySymbol { IsStatic: false, SetMethod: not null })
+                        or IPropertySymbol { IsStatic: false })
                     {
+                        if (sym is IPropertySymbol prop && !prop.IsAutoProperty()) { continue; }
                         if (currentType.IsTupleType || !sym.IsImplicitlyDeclared)
                         {
                             symbols.Push(sym);
@@ -102,6 +103,14 @@ namespace NitroSharp.SourceGenerators
             }
 
             return symbols;
+        }
+
+        public static bool IsAutoProperty(this IPropertySymbol property)
+        {
+            IEnumerable<IFieldSymbol> fields = property.ContainingType
+                .GetMembers().OfType<IFieldSymbol>();
+            return fields.Any(field => SymbolEqualityComparer.Default
+                .Equals(field.AssociatedSymbol, property));
         }
 
         public static FieldTypeKind GetFieldTypeKind(ITypeSymbol type)
