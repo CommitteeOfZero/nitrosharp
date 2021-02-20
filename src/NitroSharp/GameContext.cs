@@ -520,7 +520,7 @@ namespace NitroSharp
 
             if (sysVars.SkipLock.AsBool() is not true)
             {
-                if (InputContext.VKeyDown(VirtualKey.Skip))
+                if (InputContext.VKeyState(VirtualKey.Skip))
                 {
                     VM.SystemVariables.Skip = ConstantValue.True;
                     Skipping = true;

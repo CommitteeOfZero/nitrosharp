@@ -176,13 +176,13 @@ namespace NitroSharp.Graphics
         protected override void Update(GameContext ctx)
         {
             bool advance = ctx.Advance || ctx.Skipping;
-            if (advance)
+            if (advance || _dialogueThread.DoneExecuting)
             {
                 LineRead = _remainingSegments.Count == 0 && _animation is null;
-                if (Advance(ctx))
-                {
-                    ctx.Advance = false;
-                }
+            }
+            if (advance && Advance(ctx))
+            {
+                ctx.Advance = false;
             }
 
             ctx.RenderContext.Text.RequestGlyphs(_layout);
