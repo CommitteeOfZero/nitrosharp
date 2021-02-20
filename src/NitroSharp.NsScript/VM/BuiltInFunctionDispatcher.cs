@@ -1013,7 +1013,7 @@ namespace NitroSharp.NsScript.VM
 
         private void XBOX360_CheckStorage(ref ArgConsumer args)
         {
-            _result = ConstantValue.True;
+            _result = ConstantValue.False;
         }
 
         private void XBOX360_Achieved(ref ArgConsumer args)
@@ -1028,7 +1028,7 @@ namespace NitroSharp.NsScript.VM
 
         private void XBOX360_IsSignin(ref ArgConsumer args)
         {
-            _result = ConstantValue.True;
+            _result = ConstantValue.False;
         }
 
         private void XBOX360_LockVideo(ref ArgConsumer args)

@@ -95,6 +95,10 @@ namespace NitroSharp.Saving
                 Debug.Assert(ctx.LastScreenshot is not null);
                 using FileStream thumbStream = File.Create(Path.Combine(saveDir, "thum.npf"));
                 SaveAsPng(ctx.RenderContext, ctx.LastScreenshot, thumbStream, 128, 72);
+                File.Create(Path.Combine(saveDir, "val.npf"));
+                File.Create(Path.Combine(saveDir, "script.npf"));
+                File.Create(Path.Combine(saveDir, "frames.npf"));
+                File.Create(Path.Combine(saveDir, "bklg.npf"));
             }
         }
 
