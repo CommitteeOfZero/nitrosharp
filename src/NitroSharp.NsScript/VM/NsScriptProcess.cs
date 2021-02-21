@@ -110,7 +110,7 @@ namespace NitroSharp.NsScript.VM
 
         public NsScriptVM VM { get; }
         public uint Id { get; }
-        public NsScriptThread? MainThread { get; private set; }
+        public NsScriptThread MainThread { get; }
         public NsScriptThread? CurrentThread { get; internal set; }
 
         internal ReadOnlySpan<NsScriptThread> Threads
@@ -169,7 +169,6 @@ namespace NitroSharp.NsScript.VM
         internal void AttachThread(NsScriptThread thread)
         {
             thread.Process = this;
-            MainThread ??= thread;
             PendingThreadActions.Enqueue(ThreadAction.Create(thread));
         }
 
@@ -237,7 +236,6 @@ namespace NitroSharp.NsScript.VM
 
         public NsScriptProcessDump Dump()
         {
-            Debug.Assert(MainThread is not null);
             Debug.Assert(PendingThreadActions.Count == 0);
             return new NsScriptProcessDump
             {
