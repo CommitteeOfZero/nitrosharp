@@ -26,7 +26,7 @@ namespace NitroSharp
             Window = window;
             Snapshot = null!;
             _desktopOS = Window is DesktopWindow;
-            Gamepad = new DebugGamepad(this);
+            Gamepad = Gamepad.Default(_desktopOS);
             if (_desktopOS)
             {
                 Sdl2Events.Subscribe(ProcessEvent);

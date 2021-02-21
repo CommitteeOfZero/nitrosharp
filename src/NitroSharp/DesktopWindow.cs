@@ -17,6 +17,7 @@ namespace NitroSharp
         public DesktopWindow(string title, uint width, uint height)
         {
             const int centered = Sdl2Native.SDL_WINDOWPOS_CENTERED;
+            Sdl2Native.SDL_Init(SDLInitFlags.Video | SDLInitFlags.GameController);
             _window = new Sdl2Window(title,
                 centered, centered,
                 (int)width, (int)height,
