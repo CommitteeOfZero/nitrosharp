@@ -407,7 +407,6 @@ namespace NitroSharp
 
         private void MainLoop()
         {
-            SaveManager.ReadCommonSaveData(this);
             VM.SystemVariables.SavePath = ConstantValue.String(SaveManager.SaveDirectory);
 
             long prevFrameTicks = 0L;
