@@ -122,9 +122,9 @@ namespace NitroSharp.NsScript.VM
         }
 
         public NsScriptThread CreateThread(NsScriptProcess process, string symbol, bool start = false)
-            => CreateThread(process, process.MainThread!.EntryModule, symbol, start);
+            => CreateThread(process, process.CurrentThread!.CurrentFrame.Module.Name, symbol, start);
 
-        private NsScriptThread CreateThread(
+        public NsScriptThread CreateThread(
             NsScriptProcess process,
             string moduleName,
             string symbol,

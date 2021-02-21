@@ -53,8 +53,7 @@ namespace NitroSharp
             {
                 _vm.TerminateThread(Thread);
             }
-            Thread = _vm.CreateThread(Thread.Process, Target);
-            _vm.ResumeThread(Thread);
+            Thread = _vm.CreateThread(Thread.Process, Thread.EntryModule, Target, start: true);
         }
 
         public void Suspend() => _vm.SuspendThread(Thread);
