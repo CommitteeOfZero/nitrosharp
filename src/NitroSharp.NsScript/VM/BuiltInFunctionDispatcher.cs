@@ -993,7 +993,7 @@ namespace NitroSharp.NsScript.VM
 
         private void XBOX360_ExistContent(ref ArgConsumer args)
         {
-            _result = ConstantValue.True;
+            _result = ConstantValue.Boolean(_impl.X360_UserDataExists());
         }
 
         private void XBOX360_StorageSize(ref ArgConsumer args)
@@ -1013,7 +1013,7 @@ namespace NitroSharp.NsScript.VM
 
         private void XBOX360_CheckStorage(ref ArgConsumer args)
         {
-            _result = ConstantValue.False;
+            _result = ConstantValue.Boolean(_impl.X360_CheckStorage());
         }
 
         private void XBOX360_Achieved(ref ArgConsumer args)
@@ -1028,7 +1028,7 @@ namespace NitroSharp.NsScript.VM
 
         private void XBOX360_IsSignin(ref ArgConsumer args)
         {
-            _result = ConstantValue.False;
+            _result = ConstantValue.Boolean(_impl.X360_IsSignedIn());
         }
 
         private void XBOX360_LockVideo(ref ArgConsumer args)

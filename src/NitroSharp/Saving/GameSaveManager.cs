@@ -18,22 +18,26 @@ namespace NitroSharp.Saving
     {
         private const uint AutosaveSlot = 9999;
 
-        private readonly string _rootDir;
         private readonly string _commonDir;
 
         public GameSaveManager(Configuration configuration)
         {
-            _rootDir = Path.Combine(
+            SaveDirectory = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                 Path.Combine("Committee of Zero", configuration.ProductName)
             );
-            _rootDir = Path.Combine(_rootDir, configuration.ProfileName);
-            Directory.CreateDirectory(_rootDir);
-            _commonDir = Path.Combine(_rootDir, "common");
+            SaveDirectory = Path.Combine(SaveDirectory, configuration.ProfileName);
+            Directory.CreateDirectory(SaveDirectory);
+            _commonDir = Path.Combine(SaveDirectory, "common");
             Directory.CreateDirectory(_commonDir);
         }
 
-        public string SaveDirectory => _rootDir;
+        public string SaveDirectory { get; }
+
+        public bool CommonSaveDataExists()
+        {
+            return File.Exists(Path.Combine(_commonDir, "val.npf"));
+        }
 
         public bool SaveExists(uint slot)
         {
@@ -148,6 +152,7 @@ namespace NitroSharp.Saving
             string filePath = Path.Combine(_commonDir, "val.npf");
             using FileStream file = File.OpenWrite(filePath);
             file.Write(buffer.WrittenSpan);
+            File.Create(Path.Combine(_commonDir, "cqst.npf"));
         }
 
         public void ReadCommonSaveData(GameContext ctx)
@@ -163,7 +168,7 @@ namespace NitroSharp.Saving
         private string GetSaveDirectory(uint slot, out string savenum)
         {
             savenum = $"{slot:D4}";
-            string dir = Path.Combine(_rootDir, savenum);
+            string dir = Path.Combine(SaveDirectory, savenum);
             return dir;
         }
 

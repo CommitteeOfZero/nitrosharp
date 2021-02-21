@@ -163,5 +163,9 @@ namespace NitroSharp.NsScript.VM
         public virtual bool FileExists(string path) => false;
 
         public virtual DateTime GetDateTime() => DateTime.Now;
+
+        public virtual bool X360_IsSignedIn() => true;
+        public virtual bool X360_UserDataExists() => false;
+        public virtual bool X360_CheckStorage() => true;
     }
 }

@@ -247,5 +247,10 @@ namespace NitroSharp
         {
             _ctx.Defer(DeferredOperation.LoadGame(slot));
         }
+
+        public override bool X360_UserDataExists()
+        {
+            return _ctx.SaveManager.CommonSaveDataExists();
+        }
     }
 }
