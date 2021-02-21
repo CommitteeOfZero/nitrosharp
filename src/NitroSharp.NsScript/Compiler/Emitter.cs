@@ -506,9 +506,10 @@ namespace NitroSharp.NsScript.Compiler
         {
             int loopStart = _code.Position;
             EmitOpcode(Opcode.SelectStart);
-            EmitStatement(selectStmt.Body);
+            BreakScope bodyScope = EmitLoopBody(selectStmt.Body);
             EmitOpcode(Opcode.SelectEnd);
             EmitJump(Opcode.JumpIfFalse, loopStart);
+            PatchBreaks(ref bodyScope, _code.Position);
         }
 
         private void EmitSelectSection(SelectSectionSyntax section)
