@@ -4,7 +4,7 @@ Committee of Zero's effort to reimplement n2system, a visual novel engine used i
 
 ## Building
 ### Required Software
-- [.NET Core SDK 3.1.302](https://dotnet.microsoft.com/download/dotnet-core/3.1)
+- [.NET 5 SDK](https://dotnet.microsoft.com/download/dotnet/5.0)
 - [Vulkan SDK](https://www.lunarg.com/vulkan-sdk/) (might not be a hard requirement)
 
 Run
@@ -12,4 +12,4 @@ Run
 dotnet run --no-launch-profile --project ./src/NitroSharp.ShaderCompiler/NitroSharp.ShaderCompiler.csproj ./src/NitroSharp/Graphics/Shaders ./bin/obj/NitroSharp/Shaders.Generated
 dotnet build NitroSharp.sln [-c Release]
 ```
-Alternatively, you can run ``aot-build.ps1`` in PowerShell 6/7 to produce an AOT-compiled build.
+Alternatively, you can run ``aot-build.ps1`` in PowerShell 7 (not the old Windows PowerShell) to produce an AOT-compiled build.
