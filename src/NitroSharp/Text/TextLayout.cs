@@ -363,7 +363,7 @@ namespace NitroSharp.Text
                 bool isNewline = c == '\r' || c == '\n';
                 // Disallow line breaking if the TextRun has ruby text
                 bool mayBreakLine = !(textRun.HasRubyText && stringPos > 0);
-                if (canFitGlyph(glyphDims))
+                if (canFitGlyph(glyphDims) || isNewline)
                 {
                     if (!isNewline)
                     {
@@ -482,6 +482,7 @@ namespace NitroSharp.Text
                     length: rubyTextLength
                 );
                 _glyphs.Append(count: rubyTextLength);
+                _opacityValues.Append(count: rubyTextLength).Fill(1.0f);
                 _lineBuilder.AddRubyChunk(new RubyTextChunk
                 {
                     RubyBaseSpan = glyphSpan,
