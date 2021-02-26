@@ -796,7 +796,7 @@ namespace NitroSharp.Media
                 {
                     break;
                 }
-                if (frame.Serial != audio.Serial)
+                if (frame.Serial != audio.Serial || frame.Value.nb_samples == 0)
                 {
                     if (frame.Eof)
                     {
@@ -969,37 +969,41 @@ namespace NitroSharp.Media
 
             if (_combinedTask is not null)
             {
-                try
+                _combinedTask.ContinueWith(
+                    _ => finishDispose(),
+                    TaskContinuationOptions.ExecuteSynchronously
+                );
+            }
+            else
+            {
+                finishDispose();
+            }
+
+            void finishDispose()
+            {
+                _video?.Dispose();
+                _audio?.Dispose();
+                _videoBuffer?.Dispose();
+
+                if (_audioSource is not null)
                 {
-                    _combinedTask.Wait();
+                    Debug.Assert(_audioSource is not null);
+                    _audioSource.Stop();
                 }
-                catch (AggregateException e) when (e.InnerException is ChannelClosedException)
+
+                fixed (AVFormatContext** pCtx = &_formatContext)
                 {
+                    ffmpeg.avformat_close_input(pCtx);
                 }
+
+                fixed (AVPacket** pkt = &_recvPacket)
+                {
+                    ffmpeg.av_packet_free(pkt);
+                }
+
+                _fileStream.Dispose();
+                _timer.Stop();
             }
-
-            _video?.Dispose();
-            _audio?.Dispose();
-            _videoBuffer?.Dispose();
-
-            if (_audioSource is not null)
-            {
-                Debug.Assert(_audioSource is not null);
-                _audioSource.Stop();
-            }
-
-            fixed (AVFormatContext** pCtx = &_formatContext)
-            {
-                ffmpeg.avformat_close_input(pCtx);
-            }
-
-            fixed (AVPacket** pkt = &_recvPacket)
-            {
-                ffmpeg.av_packet_free(pkt);
-            }
-
-            _fileStream.Dispose();
-            _timer.Stop();
         }
 
         private static void NoVideoStream()
