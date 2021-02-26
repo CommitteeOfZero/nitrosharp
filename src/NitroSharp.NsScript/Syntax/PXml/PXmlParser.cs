@@ -91,11 +91,15 @@ namespace NitroSharp.NsScript.Syntax.PXml
                 case "?":
                     return new NoLinebreaksElement();
                 case "br":
+                case "BR":
                     return new LinebreakElement();
                 case "i":
                 case "I":
                     PXmlContent content = ParseContent(startTag.Name);
                     return new ItalicElement(content);
+                case "u":
+                case "U":
+                    return ParseContent(startTag.Name);
                 default:
                     throw new NotImplementedException($"PXml tag '{startTag.Name}' is not yet supported.");
             }
@@ -188,22 +192,21 @@ namespace NitroSharp.NsScript.Syntax.PXml
             while ((c = PeekChar()) != '<' && c != EofCharacter)
             {
                 char next = PeekChar(1);
-                if (c == '/' && next == '/')
+                switch (c)
                 {
-                    ScanToEndOfLine();
-                    ScanEndOfLineSequence();
-                    continue;
+                    case '/' when next == '/':
+                        ScanToEndOfLine();
+                        ScanEndOfLineSequence();
+                        continue;
+                    case '&' or '\\' when next is '.' or ',':
+                        AdvanceChar(2);
+                        sb.Append(next);
+                        continue;
+                    default:
+                        sb.Append(c);
+                        AdvanceChar();
+                        break;
                 }
-
-                if (c is '&' or '\\' && next is '.' or ',')
-                {
-                    AdvanceChar(2);
-                    sb.Append(next);
-                    continue;
-                }
-
-                sb.Append(c);
-                AdvanceChar();
             }
 
             string processedText = sb.ToString();
@@ -219,15 +222,11 @@ namespace NitroSharp.NsScript.Syntax.PXml
             do
             {
                 char character = PeekChar();
-                if (SyntaxFacts.IsNewLine(character))
-                {
-                    ScanEndOfLine();
-                    continue;
-                }
 
                 if (character == '/' && PeekChar(1) == '/')
                 {
                     ScanToEndOfLine();
+                    ScanEndOfLineSequence();
                 }
                 else
                 {
