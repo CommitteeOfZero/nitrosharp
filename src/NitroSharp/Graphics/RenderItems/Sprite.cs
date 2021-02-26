@@ -178,6 +178,7 @@ namespace NitroSharp.Graphics
         public override EntityKind Kind => EntityKind.Sprite;
 
         protected override bool PreciseHitTest { get; }
+        public override bool IsIdle => base.IsIdle && _transition is null;
 
         private bool NeedPreciseHitTest()
         {

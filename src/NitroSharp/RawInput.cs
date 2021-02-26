@@ -244,25 +244,22 @@ namespace NitroSharp
 
         private void ProcessEvent(ref SDL_Event evt)
         {
-            static float normalize(short value)
-            {
-                return value < 0
-                    ? -(value / (float)short.MinValue)
-                    : (value / (float)short.MaxValue);
-            }
-
             switch (evt.type)
             {
                 case SDL_EventType.ControllerAxisMotion:
-                    SDL_ControllerAxisEvent axisEvent = Unsafe.As<SDL_Event, SDL_ControllerAxisEvent>(ref evt);
+                    SDL_ControllerAxisEvent axisEvent = Unsafe
+                        .As<SDL_Event, SDL_ControllerAxisEvent>(ref evt);
                     if (axisEvent.which == _instanceId)
                     {
-                        _axisValues[(int)axisEvent.axis] = normalize(axisEvent.value);
+                        _axisValues[(int)axisEvent.axis] = axisEvent.value < 0
+                            ? -((float)axisEvent.value / short.MinValue)
+                            : (float)axisEvent.value / short.MaxValue;
                     }
                     break;
                 case SDL_EventType.ControllerButtonDown:
                 case SDL_EventType.ControllerButtonUp:
-                    SDL_ControllerButtonEvent buttonEvent = Unsafe.As<SDL_Event, SDL_ControllerButtonEvent>(ref evt);
+                    SDL_ControllerButtonEvent buttonEvent = Unsafe
+                        .As<SDL_Event, SDL_ControllerButtonEvent>(ref evt);
                     if (buttonEvent.which == _instanceId)
                     {
                         int index = (int)buttonEvent.button;

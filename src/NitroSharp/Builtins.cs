@@ -132,6 +132,9 @@ namespace NitroSharp
                     case (Sound sound, NsEntityAction.Play):
                         sound.Stream.Start();
                         break;
+                    case (DialoguePage page, NsEntityAction.NoTextAnimation):
+                        page.DisableAnimation = true;
+                        break;
                     case (_, NsEntityAction.Enable):
                         World.EnableEntity(entity);
                         break;
@@ -140,7 +143,7 @@ namespace NitroSharp
                         break;
                     case (_, NsEntityAction.DestroyWhenIdle):
                         // Demo 5 HACK
-                        if (entity is DialoguePage)
+                        //if (entity is DialoguePage)
                         {
                             World.DestroyWhenIdle(entity);
                         }
@@ -251,6 +254,17 @@ namespace NitroSharp
         public override bool X360_UserDataExists()
         {
             return _ctx.SaveManager.CommonSaveDataExists();
+        }
+
+        public override float X360_GetTriggerAxis(XboxTrigger trigger)
+        {
+            VirtualAxis axis = trigger switch
+            {
+                XboxTrigger.Left => VirtualAxis.TriggerLeft,
+                XboxTrigger.Right => VirtualAxis.TriggerRight,
+                _ => ThrowHelper.Unreachable<VirtualAxis>()
+            };
+            return _ctx.InputContext.GetAxis(axis);
         }
     }
 }

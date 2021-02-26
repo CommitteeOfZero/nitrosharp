@@ -29,7 +29,7 @@ namespace NitroSharp.NsScript
         Pause,
         Resume,
 
-        NoTypewriterAnimation,
+        NoTextAnimation,
 
         Other,
     }
@@ -88,5 +88,12 @@ namespace NitroSharp.NsScript
         Up,
         Right,
         Down
+    }
+
+    public enum XboxTrigger
+    {
+        Unknown,
+        Left,
+        Right
     }
 }

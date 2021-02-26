@@ -100,6 +100,7 @@ namespace NitroSharp.NsScript.VM
         public virtual void MoveCube(EntityQuery query, TimeSpan duration, NsNumeric dstX, NsNumeric dstY, NsNumeric dstZ, NsEaseFunction easeFunction, TimeSpan delay) { }
 
         public virtual void PlayVideo(in EntityPath entityPath, int priority, NsCoordinate x, NsCoordinate y, bool loop, bool alpha, string source) { }
+
         //ublic virtual void PlayVideo(in EntityPath entityPath, int priority, bool loop, bool alpha, string source, bool enableAudio) { }
         public virtual void WaitPlay(in EntityPath entityPath) { }
 
@@ -167,5 +168,7 @@ namespace NitroSharp.NsScript.VM
         public virtual bool X360_IsSignedIn() => true;
         public virtual bool X360_UserDataExists() => false;
         public virtual bool X360_CheckStorage() => true;
+
+        public virtual float X360_GetTriggerAxis(XboxTrigger trigger) => 0;
     }
 }

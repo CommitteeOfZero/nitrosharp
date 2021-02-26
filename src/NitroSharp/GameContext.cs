@@ -441,6 +441,9 @@ namespace NitroSharp
             renderCtx.BeginFrame(framestamp, _clearFramebuffer);
             _clearFramebuffer = true;
 
+            InputContext.Update(VM.SystemVariables);
+            Advance = InputContext.VKeyDown(VirtualKey.Advance);
+
             while (true)
             {
                 GameProcess activeProcess = ActiveProcess;
@@ -472,9 +475,6 @@ namespace NitroSharp
             {
                 world.BeginFrame();
             }
-
-            InputContext.Update(VM.SystemVariables);
-            Advance = InputContext.VKeyDown(VirtualKey.Advance);
 
             foreach (Sound sound in world.Sounds.Enabled)
             {
@@ -527,15 +527,10 @@ namespace NitroSharp
 
             if (sysVars.SkipLock.AsBool() is not true)
             {
-                if (InputContext.VKeyState(VirtualKey.Skip))
+                if (InputContext.VKeyDown(VirtualKey.Skip))
                 {
-                    VM.SystemVariables.Skip = ConstantValue.True;
-                    Skipping = true;
-                }
-                else
-                {
-                    VM.SystemVariables.Skip = ConstantValue.False;
-                    Skipping = false;
+                    Skipping = !Skipping;
+                    VM.SystemVariables.Skip = ConstantValue.Boolean(Skipping);
                 }
             }
         }

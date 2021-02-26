@@ -987,8 +987,13 @@ namespace NitroSharp.NsScript.VM
 
         private void XBOX360_PadTrigger(ref ArgConsumer args)
         {
-            int unk = args.TakeInt();
-            _result = ConstantValue.Number(0);
+            XboxTrigger trigger = args.TakeInt() switch
+            {
+                0 => XboxTrigger.Left,
+                1 => XboxTrigger.Right,
+                _ => XboxTrigger.Unknown
+            };
+            _result = ConstantValue.Number(_impl.X360_GetTriggerAxis(trigger));
         }
 
         private void XBOX360_ExistContent(ref ArgConsumer args)

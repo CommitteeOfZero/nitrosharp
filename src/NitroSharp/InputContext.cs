@@ -19,6 +19,12 @@ namespace NitroSharp
         Skip
     }
 
+    internal enum VirtualAxis
+    {
+        TriggerLeft,
+        TriggerRight
+    }
+
     internal sealed class InputContext : IDisposable
     {
         private readonly RawInput _rawInput;
@@ -37,6 +43,20 @@ namespace NitroSharp
 
         public bool VKeyState(VirtualKey vkey) => _vkeyState[(int)vkey];
         public bool VKeyDown(VirtualKey vkey) => _newVkeys[(int)vkey];
+
+        public float GetAxis(VirtualAxis axis)
+        {
+            return axis switch
+            {
+                VirtualAxis.TriggerLeft => _rawInput.IsKeyDown(Key.Left)
+                    ? 1.0f
+                    : _rawInput.Gamepad.GetAxis(SDL_GameControllerAxis.TriggerLeft),
+                VirtualAxis.TriggerRight => _rawInput.IsKeyDown(Key.Right)
+                    ? 1.0f
+                    : _rawInput.Gamepad.GetAxis(SDL_GameControllerAxis.TriggerRight),
+                _ => 0.0f
+            };
+        }
 
         public void Update(SystemVariableLookup systemVariables)
         {

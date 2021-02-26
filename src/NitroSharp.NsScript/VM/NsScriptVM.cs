@@ -78,7 +78,9 @@ namespace NitroSharp.NsScript.VM
         public void RestoreFlags(GlobalsDump dump)
             => RestoreGlobals(_flags, GlobalsLookup.Flags, dump);
 
-        private static GlobalsDump DumpGlobals(ConstantValue[] table, ImmutableDictionary<string, int> lookup)
+        private static GlobalsDump DumpGlobals(
+            ConstantValue[] table,
+            ImmutableDictionary<string, int> lookup)
         {
             var globals = new (string, ConstantValue)[lookup.Count];
             foreach ((string name, int i) in lookup)
@@ -207,7 +209,8 @@ namespace NitroSharp.NsScript.VM
             CurrentProcess = process;
             process.Tick();
 
-            while (process.IsRunning && (!process.Threads.IsEmpty || process.PendingThreadActions.Count > 0))
+            while (process.IsRunning
+                && (!process.Threads.IsEmpty || process.PendingThreadActions.Count > 0))
             {
                 process.ProcessPendingThreadActions();
                 uint nbActive = 0;

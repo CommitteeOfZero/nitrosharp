@@ -114,6 +114,7 @@ namespace NitroSharp
         {
             if (Get(uiElementPath) is UiElement uiElement)
             {
+                uiElement.RecordInput(_ctx.InputContext, _renderCtx);
                 return uiElement.HandleEvents();
             }
 

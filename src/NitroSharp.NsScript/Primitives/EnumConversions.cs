@@ -18,7 +18,7 @@
                 BuiltInConstant.SubRender => NsEntityAction.SetReverseSubtractiveBlend,
                 BuiltInConstant.MulRender => NsEntityAction.SetMultiplicativeBlend,
                 BuiltInConstant.Play => NsEntityAction.Play,
-                BuiltInConstant.PushText => NsEntityAction.NoTypewriterAnimation,
+                BuiltInConstant.PushText => NsEntityAction.NoTextAnimation,
                 BuiltInConstant.Pause => NsEntityAction.Pause,
                 BuiltInConstant.Resume => NsEntityAction.Resume,
                 _ => NsEntityAction.Other,

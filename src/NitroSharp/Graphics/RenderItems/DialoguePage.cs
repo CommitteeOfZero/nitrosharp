@@ -46,6 +46,7 @@ namespace NitroSharp.Graphics
         public Vector4 Margin { get; }
         public override bool IsIdle => _dialogueThread.DoneExecuting && LineRead;
         public bool LineRead { get; private set; }
+        public bool DisableAnimation { get; set; }
 
         public DialoguePage(
             in ResolvedEntityPath path,
@@ -114,7 +115,7 @@ namespace NitroSharp.Graphics
             {
             }
 
-            if (_layout.GlyphRuns.Length != start && !ctx.Skipping)
+            if (_layout.GlyphRuns.Length != start && !ctx.Skipping && !DisableAnimation)
             {
                 _animation = new TypewriterAnimation(_layout, _layout.GlyphRuns[start..], 40);
                 ctx.RenderContext.Icons.WaitLine.Reset();
