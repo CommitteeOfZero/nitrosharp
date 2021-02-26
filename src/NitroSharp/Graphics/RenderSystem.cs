@@ -16,11 +16,11 @@ namespace NitroSharp.Graphics
             ReadOnlySpan<RenderItem> inactive = renderItems.Disabled;
             foreach (RenderItem ri in active)
             {
-                ri.Update(ctx, dt, assetsReady);
+                ri.Update(ctx, dt, assetsReady, layoutOnly: false);
             }
             foreach (RenderItem ri in inactive)
             {
-                ri.Update(ctx, dt, assetsReady);
+                ri.Update(ctx, dt, assetsReady, layoutOnly: true);
             }
 
             ctx.RenderContext.ResolveGlyphs();

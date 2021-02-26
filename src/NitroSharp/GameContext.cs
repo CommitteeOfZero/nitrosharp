@@ -458,6 +458,8 @@ namespace NitroSharp
                     activeProcess.World.DestroyContext(thread);
                 }
 
+                ProcessSystemVariables(VM.SystemVariables);
+
                 if (SysProcess is GameProcess { VmProcess: { IsTerminated: true } } sysProc)
                 {
                     sysProc.Dispose();
@@ -503,6 +505,11 @@ namespace NitroSharp
                 when (e.Message == "The Swapchain's underlying surface has been lost.")
             {
             }
+        }
+
+        private void ProcessSystemVariables(SystemVariableLookup sysVars)
+        {
+            Skipping = sysVars.Skip.AsBool()!.Value;
         }
 
         private void HandleInput()

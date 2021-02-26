@@ -127,6 +127,7 @@ namespace NitroSharp.NsScript.Syntax.PXml
             {
                 bool stop = attrs.Get("mode") is "off";
                 var action = stop ? NsVoiceAction.Stop : NsVoiceAction.Play;
+                ScanEndOfLineSequence();
                 return new VoiceElement(action, characterName, fileName);
             }
 
@@ -222,7 +223,6 @@ namespace NitroSharp.NsScript.Syntax.PXml
             do
             {
                 char character = PeekChar();
-
                 if (character == '/' && PeekChar(1) == '/')
                 {
                     ScanToEndOfLine();

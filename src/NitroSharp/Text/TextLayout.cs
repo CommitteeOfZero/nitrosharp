@@ -339,7 +339,7 @@ namespace NitroSharp.Text
 
         private bool Append(GlyphRasterizer glyphRasterizer, uint textRunIndex, bool lastTextRun)
         {
-             bool canFitGlyph(in GlyphDimensions glyphDims)
+            bool canFitGlyph(in GlyphDimensions glyphDims)
             {
                 return (PenX
                     + glyphDims.Width
@@ -768,6 +768,7 @@ namespace NitroSharp.Text
             if (_lineBuilder.Length == 0)
             {
                 _lines.Add();
+                return true;
             }
             else if (ProcessLine(glyphRasterizer))
             {

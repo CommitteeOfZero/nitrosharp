@@ -110,10 +110,13 @@ namespace NitroSharp.Graphics
             }
         }
 
-        public void Update(GameContext ctx, float dt, bool assetsReady)
+        public void Update(GameContext ctx, float dt, bool assetsReady, bool layoutOnly)
         {
-            AdvanceAnimations(ctx.RenderContext, dt, assetsReady);
-            Update(ctx);
+            if (!layoutOnly)
+            {
+                AdvanceAnimations(ctx.RenderContext, dt, assetsReady);
+                Update(ctx);
+            }
             LayoutPass(ctx.RenderContext);
         }
 
