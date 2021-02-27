@@ -29,7 +29,8 @@ namespace NitroSharp.Media
         }
 
         public override EntityKind Kind => EntityKind.Sound;
-        public override bool IsIdle => !Stream.IsPlaying || Volume == 0;
+        public override bool IsIdle
+            => !Stream.IsPlaying || Volume == 0 && _volumeAnim is null;
 
         public MediaStream Stream { get; }
 

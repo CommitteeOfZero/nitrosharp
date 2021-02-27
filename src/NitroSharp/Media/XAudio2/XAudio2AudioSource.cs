@@ -64,7 +64,7 @@ namespace NitroSharp.Media.XAudio2
         }
 
         public bool IsPlaying
-            => _audioData is not null &&  _sourceVoice.State.BuffersQueued > 0;
+            => _audioData is not null && _sourceVoice.State.BuffersQueued > 0;
 
         public double SecondsElapsed =>
             (_sourceVoice.State.SamplesPlayed - _samplesPlayedStart)

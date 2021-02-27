@@ -81,8 +81,9 @@ namespace NitroSharp.Media
         private Clock _videoClock;
         private Clock _externalClock;
 
-        public bool IsPlaying
-            => _combinedTask is { IsCompleted: false } && !_videoEnded || (_audioSource?.IsPlaying ?? false);
+        public bool IsPlaying =>_combinedTask is { IsCompleted: false }
+            || (_video is not null && !_videoEnded)
+            || _audioSource is { IsPlaying: true };
 
         public TimeSpan Elapsed => TimeSpan.FromSeconds(GetSecondsElapsed());
 
