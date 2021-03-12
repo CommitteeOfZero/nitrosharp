@@ -24,6 +24,7 @@ namespace NitroSharp.Graphics
         private readonly Queue<TextBufferSegment> _remainingSegments = new();
 
         private TypewriterAnimation? _animation;
+        private bool _skipping;
 
         public DialoguePage(
             in ResolvedEntityPath path,
@@ -176,6 +177,7 @@ namespace NitroSharp.Graphics
 
         protected override void Update(GameContext ctx)
         {
+            _skipping = ctx.Skipping;
             bool advance = ctx.Advance || ctx.Skipping;
             if (advance || _dialogueThread.DoneExecuting)
             {
@@ -195,7 +197,7 @@ namespace NitroSharp.Graphics
             var rect = new RectangleU((uint)br.X, (uint)br.Y, (uint)br.Width, (uint)br.Height);
             ctx.Text.Render(ctx, batch, _layout, WorldMatrix, Margin.XY(), rect, Color.A);
 
-            if (_animation is null)
+            if (_animation is null && !_skipping)
             {
                 float x = ctx.SystemVariables.PositionXTextIcon.AsNumber()!.Value;
                 float y = ctx.SystemVariables.PositionYTextIcon.AsNumber()!.Value;

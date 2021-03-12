@@ -14,7 +14,7 @@ namespace NitroSharp
             if (ResolvePath(entityPath, out ResolvedEntityPath path)
                 && _ctx.Content.TryOpenStream(fileName) is Stream stream)
             {
-                World.Add(new Sound(path, stream, _ctx.AudioContext));
+                World.Add(new Sound(path, kind, stream, _ctx.AudioContext));
             }
         }
 
@@ -57,6 +57,7 @@ namespace NitroSharp
 
         public override void SetVolume(EntityQuery query, TimeSpan duration, NsRational volume)
         {
+            duration = AdjustDuration(duration);
             foreach (Sound sound in Query<Sound>(query))
             {
                 sound.AnimateVolume(volume.Rebase(1.0f), duration);

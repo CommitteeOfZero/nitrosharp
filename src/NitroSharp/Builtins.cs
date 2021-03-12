@@ -130,7 +130,7 @@ namespace NitroSharp
                         video.Stream.Resume();
                         break;
                     case (Sound sound, NsEntityAction.Play):
-                        sound.Stream.Start();
+                        sound.Play();
                         break;
                     case (DialoguePage page, NsEntityAction.NoTextAnimation):
                         page.DisableAnimation = true;

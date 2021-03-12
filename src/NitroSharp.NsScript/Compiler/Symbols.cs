@@ -172,7 +172,7 @@ namespace NitroSharp.NsScript.Compiler
                     case SyntaxNodeKind.FunctionDeclaration:
                         var functionDecl = (FunctionDeclarationSyntax)decl;
                         var function = new FunctionSymbol(this, declName, functionDecl);
-                        _functionMap.Add(declName, function);
+                        _functionMap[declName] = function;
                         functions.Add(function);
                         break;
                     case SyntaxNodeKind.SceneDeclaration:

@@ -131,9 +131,9 @@ namespace NitroSharp
         internal GameProcess? SysProcess { get; set; }
         internal GameProcess ActiveProcess => SysProcess ?? MainProcess;
 
-        public bool Skipping { get; private set; }
-        public bool Advance { get; set; }
-        public Texture? LastScreenshot { get; private set; }
+        internal bool Skipping { get; private set; }
+        internal bool Advance { get; set; }
+        internal Texture? LastScreenshot { get; private set; }
 
         public static async Task<GameContext> Create(GameWindow window, Configuration configuration)
         {
@@ -485,7 +485,6 @@ namespace NitroSharp
 
             RenderSystem.Render(this, framestamp, world.RenderItems, dt, assetsReady);
             RunDeferredOperations();
-            renderCtx.EndFrame();
 
             if (assetsReady)
             {
@@ -499,6 +498,7 @@ namespace NitroSharp
             }
             try
             {
+                renderCtx.EndFrame();
                 renderCtx.Present();
             }
             catch (VeldridException e)

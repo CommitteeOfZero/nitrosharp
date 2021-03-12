@@ -34,17 +34,17 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NitroSharp.Tests", "src\Nit
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Veldrid", "Veldrid", "{412EC341-3E91-4D3C-BAFD-A0A09A6F44C7}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Veldrid", "..\mellinoe\veldrid\src\Veldrid\Veldrid.csproj", "{B081A79D-A25E-4112-8F1A-4A2E8FF8EF0A}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Veldrid", "..\SomeAnonDev\veldrid\src\Veldrid\Veldrid.csproj", "{B081A79D-A25E-4112-8F1A-4A2E8FF8EF0A}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Veldrid.MetalBindings", "..\mellinoe\veldrid\src\Veldrid.MetalBindings\Veldrid.MetalBindings.csproj", "{5672E0D5-6EFB-471C-B302-0C8989676490}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Veldrid.MetalBindings", "..\SomeAnonDev\veldrid\src\Veldrid.MetalBindings\Veldrid.MetalBindings.csproj", "{5672E0D5-6EFB-471C-B302-0C8989676490}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Veldrid.OpenGLBindings", "..\mellinoe\veldrid\src\Veldrid.OpenGLBindings\Veldrid.OpenGLBindings.csproj", "{43D96842-5FF4-4933-A217-8FA3B1464708}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Veldrid.OpenGLBindings", "..\SomeAnonDev\veldrid\src\Veldrid.OpenGLBindings\Veldrid.OpenGLBindings.csproj", "{43D96842-5FF4-4933-A217-8FA3B1464708}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Veldrid.SDL2", "..\mellinoe\veldrid\src\Veldrid.SDL2\Veldrid.SDL2.csproj", "{049E7EA7-8884-431D-83BA-1CF26F2774E8}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Veldrid.SDL2", "..\SomeAnonDev\veldrid\src\Veldrid.SDL2\Veldrid.SDL2.csproj", "{049E7EA7-8884-431D-83BA-1CF26F2774E8}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Veldrid.StartupUtilities", "..\mellinoe\veldrid\src\Veldrid.StartupUtilities\Veldrid.StartupUtilities.csproj", "{728C33BF-26D6-466A-B55D-2E02894A276C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Veldrid.StartupUtilities", "..\SomeAnonDev\veldrid\src\Veldrid.StartupUtilities\Veldrid.StartupUtilities.csproj", "{728C33BF-26D6-466A-B55D-2E02894A276C}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Veldrid.ImGui", "..\mellinoe\veldrid\src\Veldrid.ImGui\Veldrid.ImGui.csproj", "{E7DFCB84-5F3E-4681-93B3-B4CAE9042C67}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Veldrid.ImGui", "..\SomeAnonDev\veldrid\src\Veldrid.ImGui\Veldrid.ImGui.csproj", "{E7DFCB84-5F3E-4681-93B3-B4CAE9042C67}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NitroSharp.SourceGenerators", "src\NitroSharp.SourceGenerators\NitroSharp.SourceGenerators.csproj", "{E21D1C44-BA04-4756-9658-3DC3BD029596}"
 EndProject

@@ -27,6 +27,7 @@ namespace NitroSharp.Graphics
         public override EntityKind Kind => EntityKind.DialogueBox;
 
         public override Size GetUnconstrainedBounds(RenderContext ctx) => _size;
+        public override bool IsIdle => false;
 
         public new ConstraintBoxSaveData ToSaveData(GameSavingContext ctx) => new()
         {
