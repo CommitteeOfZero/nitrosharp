@@ -42,7 +42,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Condition="'$(Native)' == 'true'" Include="Microsoft.DotNet.ILCompiler" Version="6.0.0-preview.3.21151.3" />
+    <PackageReference Condition="'$(Native)' == 'true'" Include="Microsoft.DotNet.ILCompiler" Version="6.0.0-preview.3.21162.2" />
   </ItemGroup>
 
 </Project>

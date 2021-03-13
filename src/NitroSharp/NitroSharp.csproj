@@ -4,7 +4,7 @@
     <TargetFramework>net5.0</TargetFramework>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <NoWarn>1701;1702;CA1063;IDE1006;IDE0063;VSTHRD002;VSTHRD003;VSTHRD103;VSTHRD200</NoWarn>
-    <VeldridVersion>4.8</VeldridVersion>
+    <VeldridVersion>4.9.0-g4ed9046a20</VeldridVersion>
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
@@ -16,26 +16,22 @@
     <ProjectReference Include="..\..\third_party\OpenAL-CS\OpenAL-CS.csproj" />
     <ProjectReference Include="..\FreeTypeBindings\FreeTypeBindings.csproj" />
 
-    <ProjectReference Include="..\..\..\SomeAnonDev\veldrid\src\Veldrid\Veldrid.csproj" />
+    <!--<ProjectReference Include="..\..\..\SomeAnonDev\veldrid\src\Veldrid\Veldrid.csproj" />
     <ProjectReference Include="..\..\..\SomeAnonDev\veldrid\src\Veldrid.StartupUtilities\Veldrid.StartupUtilities.csproj" />
     <ProjectReference Include="..\..\..\SomeAnonDev\veldrid\src\Veldrid.ImGui\Veldrid.ImGui.csproj" />
     <ProjectReference Include="..\..\..\SomeAnonDev\veldrid\src\Veldrid.SDL2\Veldrid.SDL2.csproj" />
-    <ProjectReference Include="..\..\..\SomeAnonDev\veldrid\src\Veldrid.OpenGLBindings\Veldrid.OpenGLBindings.csproj" />
+    <ProjectReference Include="..\..\..\SomeAnonDev\veldrid\src\Veldrid.OpenGLBindings\Veldrid.OpenGLBindings.csproj" />-->
+    
     <ProjectReference Include="..\NitroSharp.NsScript\NitroSharp.NsScript.csproj" />
 
     <PackageReference Include="FreeType.Binaries" Version="0.42.0" />
     <PackageReference Include="OpenALSoft.Binaries" Version="0.42.0" />
     <PackageReference Include="FFmpeg.Binaries" Version="0.42.0" />
 
-    <!--<PackageReference Include="Veldrid" Version="$(VeldridVersion)" />
+    <PackageReference Include="Veldrid" Version="$(VeldridVersion)" />
     <PackageReference Include="Veldrid.SDL2" Version="$(VeldridVersion)" />
     <PackageReference Include="Veldrid.StartupUtilities" Version="$(VeldridVersion)" />
-    <PackageReference Include="Veldrid.ImGui" Version="5.72.0" />-->
-
-<!--    <PackageReference Include="Veldrid" Version="4.8.0" />-->
-<!--    <PackageReference Include="Veldrid.SDL2" Version="4.8.0" />-->
-<!--    <PackageReference Include="Veldrid.StartupUtilities" Version="4.8.0" />-->
-<!--    <PackageReference Include="Veldrid.ImGui" Version="5.72.0" />-->
+    <PackageReference Include="Veldrid.ImGui" Version="5.72.0-g4ed9046a20 " />
 
     <PackageReference Include="SharpDX.Direct2D1" Version="4.2.0" />
     <PackageReference Include="SharpDX.XAudio2" Version="4.2.0" />
@@ -59,7 +55,6 @@
     </Content>
   </ItemGroup>
 
-  <!--<ItemGroup>-->
   <ItemGroup>
     <ProjectReference Include="..\NitroSharp.SourceGenerators\NitroSharp.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
