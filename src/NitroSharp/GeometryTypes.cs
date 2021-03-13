@@ -32,7 +32,7 @@ namespace NitroSharp
         public override bool Equals(object? obj) => obj is Point2D other && Equals(other);
 
         public override int GetHashCode() => HashCode.Combine(X, Y);
-        public override string? ToString() => $"X: {X}, Y: {Y}";
+        public override string ToString() => $"X: {X}, Y: {Y}";
 
         public static bool operator ==(Point2D left, Point2D right) => left.Equals(right);
         public static bool operator !=(Point2D left, Point2D right) => !left.Equals(right);
@@ -53,7 +53,7 @@ namespace NitroSharp
         public Vector2 ToVector2() => new(X, Y);
 
         public override int GetHashCode() => HashCode.Combine(X, Y);
-        public override string? ToString() => $"X: {X}, Y: {Y}";
+        public override string ToString() => $"X: {X}, Y: {Y}";
 
         public static bool operator ==(Point2DU left, Point2DU right) => left.Equals(right);
         public static bool operator !=(Point2DU left, Point2DU right) => !left.Equals(right);
@@ -83,7 +83,7 @@ namespace NitroSharp
         public Vector2 ToVector2() => new(Width, Height);
 
         public override int GetHashCode() => HashCode.Combine(Width, Height);
-        public override string? ToString() => $"{{Width:{Width}, Height:{Height}}}";
+        public override string ToString() => $"{{Width:{Width}, Height:{Height}}}";
 
         public static bool operator ==(Size left, Size right) => left.Equals(right);
         public static bool operator !=(Size left, Size right) => !left.Equals(right);
@@ -109,7 +109,7 @@ namespace NitroSharp
         public override bool Equals(object? obj) => obj is SizeF size && Equals(size);
 
         public override int GetHashCode() => _value.GetHashCode();
-        public override string? ToString() => $"{{Width:{Width}, Height:{Height}}}";
+        public override string ToString() => $"{{Width:{Width}, Height:{Height}}}";
 
         public static bool operator ==(SizeF left, SizeF right) => left.Equals(right);
         public static bool operator !=(SizeF left, SizeF right) => !left.Equals(right);
@@ -159,13 +159,8 @@ namespace NitroSharp
                 && Width == other.Width && Height == other.Height;
         }
 
-        public override int GetHashCode()
-            => HashCode.Combine(X, Y, Width, Height);
-
-        public override string ToString()
-        {
-            return $"{{X:{X}, Y:{Y}, Width:{Width}, Height:{Height}}}";
-        }
+        public override int GetHashCode() => HashCode.Combine(X, Y, Width, Height);
+        public override string ToString() => $"{{X:{X}, Y:{Y}, Width:{Width}, Height:{Height}}}";
 
         public static bool operator ==(in Rectangle a, in Rectangle b) => a.Equals(b);
         public static bool operator !=(in Rectangle a, in Rectangle b) => !a.Equals(b);
@@ -263,9 +258,9 @@ namespace NitroSharp
         public bool Contains(Vector2 point)
         {
             return point.X >= X
-                && point.X <= Right
+                && point.X < Right
                 && point.Y >= Y
-                && point.Y <= Bottom;
+                && point.Y < Bottom;
         }
 
         public static RectangleF FromLTRB(float left, float top, float right, float bottom)

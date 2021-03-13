@@ -1,5 +1,3 @@
-#nullable enable
-
 namespace NitroSharp.Graphics
 {
     internal interface UiElement

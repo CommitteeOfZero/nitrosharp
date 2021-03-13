@@ -84,7 +84,7 @@ namespace NitroSharp.Graphics
                 bool pressed = inputCtx.VKeyState(VirtualKey.Enter);
                 MouseState newState = hovered switch
                 {
-                    true => (pressed, PrevMouseState: _prevMouseState) switch
+                    true => (pressed, _mouseState) switch
                     {
                         (false, MouseState.Down) => MouseState.Clicked,
                         (false, _) => MouseState.Over,
@@ -148,7 +148,7 @@ namespace NitroSharp.Graphics
             {
                 CanFocus = _mouseOverVisuals.Any(x => !x.IsHidden);
 
-                Event evt = (PrevMouseState: _prevMouseState, MouseState: _mouseState) switch
+                Event evt = (_prevMouseState, _mouseState) switch
                 {
                     (MouseState.Normal, MouseState.Over) => Event.Entered,
                     (MouseState.Over, MouseState.Normal) => Event.Left,
