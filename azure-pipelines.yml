@@ -1,0 +1,36 @@
+trigger:
+- meowster
+
+jobs:
+- job: build_win_x64
+  displayName: Build win-x64
+  pool:
+    vmImage: windows-2019
+  steps:
+  - task: PowerShell@2
+    inputs:
+      filePath: 'aot-build.ps1'
+      arguments: '-PublishDir $(Build.ArtifactStagingDirectory)/win-x64'
+      pwsh: true
+  - task: ArchiveFiles@2
+    displayName: Zip binaries
+    inputs:
+      rootFolderOrFile: '$(Build.ArtifactStagingDirectory)/win-x64'
+      includeRootFolder: false
+      archiveType: 'zip'
+      archiveFile: '$(Build.ArtifactStagingDirectory)/cowshead-win-x64-$(Build.BuildNumber).zip'
+      replaceExistingArchive: true
+  - task: GitHubRelease@1
+    displayName: 'Create GitHub release'
+    inputs:
+      gitHubConnection: 'github.com_SomeAnonDev'
+      repositoryName: 'CommitteeOfZero/nitrosharp'
+      action: 'create'
+      target: '$(Build.SourceVersion)'
+      tagSource: 'userSpecifiedTag'
+      tag: '$(Build.BuildNumber)'
+      releaseNotesSource: 'inline'
+      assets: |
+        $(Build.ArtifactStagingDirectory)/*.zip
+        $(Build.ArtifactStagingDirectory)/win-x64/*.exe
+      addChangeLog: false

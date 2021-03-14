@@ -1,6 +1,7 @@
 param(
     [ValidateSet("win-x64", "linux-x64", "osx-x64")][string]$Runtime,
-    [string]$CppCompiler = "clang"
+    [string]$CppCompiler = "clang",
+    [string]$PublishDir = "publish/$Runtime"
 )
 
 $Framework = "net5.0"
@@ -38,9 +39,8 @@ $args = @(
 )
 dotnet($args)
 
-$dst = "publish/$Runtime"
-Remove-Item -Path $dst -Recurse -ErrorAction SilentlyContinue
-Copy-Item -Path bin/Release/Games/CowsHead/$Framework/$Runtime/publish -Destination $dst `
+Remove-Item -Path $PublishDir -Recurse -ErrorAction SilentlyContinue
+Copy-Item -Path bin/Release/Games/CowsHead/$Framework/$Runtime/publish -Destination $PublishDir `
     -Recurse -Container -Force -Exclude *.pdb,*.deps.json,*.runtimeconfig.json
 
 if ($linuxBuild) {
@@ -52,7 +52,6 @@ if ($linuxBuild) {
         & strip $args
     }
 }
-
 function dotnet($args) {
     if ($IsWindows -and $linuxBuild) {
         & bash --login -c "dotnet $args"
