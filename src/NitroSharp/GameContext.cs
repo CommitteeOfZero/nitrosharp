@@ -134,6 +134,8 @@ namespace NitroSharp
         internal bool Skipping { get; private set; }
         internal bool Advance { get; set; }
         internal Texture? LastScreenshot { get; private set; }
+        internal bool AnyUiElementFocused { get; set; }
+        internal NsFocusDirection? RequestedFocusChange { get; set; }
 
         public static async Task<GameContext> Create(GameWindow window, Configuration configuration)
         {
@@ -149,7 +151,7 @@ namespace NitroSharp
                 .Run(() => LoadStartupScript(configuration, fontConfig, logger));
 
             SwapchainSource swapchainSource = await createSurface.Task;
-            (GraphicsDevice gd, Swapchain swapchain) = InitGraphics(swapchainSource, configuration);
+            (GraphicsDevice gd, Swapchain swapchain) = InitGraphics(window, configuration);
             ContentManager contentMgr = CreateContentManager(gd, configuration);
             AudioContext audioContext = await initAudio;
             (NsScriptVM vm, GameProcess mainProcess) = await startVM;
@@ -157,6 +159,7 @@ namespace NitroSharp
             var inputContext = new InputContext(window);
             var saveManager = new GameSaveManager(configuration);
             var renderContext = new RenderContext(
+                window,
                 configuration,
                 gd,
                 swapchain,
@@ -214,11 +217,11 @@ namespace NitroSharp
             AudioBackend backend = configuration.PreferredAudioBackend
                 ?? AudioDevice.GetPlatformDefaultBackend();
             var audioDevice = AudioDevice.Create(backend, audioParameters);
-            return new AudioContext(audioDevice);;
+            return new AudioContext(audioDevice);
         }
 
         private static (GraphicsDevice device, Swapchain swapchain) InitGraphics(
-            SwapchainSource swapchainSource,
+            GameWindow window,
             Configuration configuration)
         {
             var options = new GraphicsDeviceOptions(false, null, configuration.EnableVSync);
@@ -228,9 +231,18 @@ namespace NitroSharp
 #endif
             GraphicsBackend backend = configuration.PreferredGraphicsBackend
                 ?? VeldridStartup.GetPlatformDefaultBackend();
-            var swapchainDesc = new SwapchainDescription(swapchainSource,
+            var swapchainDesc = new SwapchainDescription(window.SwapchainSource,
                 (uint)configuration.WindowWidth, (uint)configuration.WindowHeight,
                 options.SwapchainDepthFormat, options.SyncToVerticalBlank);
+
+            if (backend is GraphicsBackend.OpenGL or GraphicsBackend.OpenGLES)
+            {
+                var wnd = window as DesktopWindow;
+                GraphicsDevice glDevice = backend == GraphicsBackend.OpenGL
+                    ? VeldridStartup.CreateDefaultOpenGLGraphicsDevice(options, wnd!.SdlWindow, backend)
+                    : GraphicsDevice.CreateOpenGLES(options, swapchainDesc);
+                return (glDevice, glDevice.MainSwapchain);
+            }
 
             GraphicsDevice device = backend switch
             {
@@ -437,12 +449,11 @@ namespace NitroSharp
 
         private void Tick(FrameStamp framestamp, float dt)
         {
-            RenderContext renderCtx = RenderContext;
-            renderCtx.BeginFrame(framestamp, _clearFramebuffer);
+            RenderContext.BeginFrame(framestamp, _clearFramebuffer);
             _clearFramebuffer = true;
 
             InputContext.Update(VM.SystemVariables);
-            Advance = InputContext.VKeyDown(VirtualKey.Advance);
+            HandleInput();
 
             while (true)
             {
@@ -471,6 +482,8 @@ namespace NitroSharp
                 break;
             }
 
+            Window.SetCursor(AnyUiElementFocused ? SystemCursor.Hand : SystemCursor.Arrow);
+
             World world = ActiveProcess.World;
             bool assetsReady = Content.ResolveAssets();
             if (assetsReady)
@@ -478,32 +491,57 @@ namespace NitroSharp
                 world.BeginFrame();
             }
 
-            foreach (Sound sound in world.Sounds.Enabled)
-            {
-                sound.Update(dt);
-            }
-
-            RenderSystem.Render(this, framestamp, world.RenderItems, dt, assetsReady);
+            ProcessSounds(world, dt);
+            RenderFrame(framestamp, world.RenderItems, dt, assetsReady);
             RunDeferredOperations();
 
             if (assetsReady)
             {
-                // The input is handled after the frame's been rendered,
-                // and only if all of the requested assets have been loaded.
-                // These two conditions have to be met in order to perform
-                // pixel-perfect hit testing.
-                RenderSystem.ProcessChoices(renderCtx, world, InputContext, Window);
                 ActiveProcess.ProcessWaitOperations(this);
-                HandleInput();
             }
             try
             {
-                renderCtx.EndFrame();
-                renderCtx.Present();
+                RenderContext.EndFrame();
+                RenderContext.Present();
             }
             catch (VeldridException e)
                 when (e.Message == "The Swapchain's underlying surface has been lost.")
             {
+            }
+        }
+
+        private void RenderFrame(
+            in FrameStamp frameStamp,
+            SortableEntityGroupView<RenderItem> renderItems,
+            float dt,
+            bool assetsReady)
+        {
+            ReadOnlySpan<RenderItem> active = renderItems.SortActive();
+            ReadOnlySpan<RenderItem> inactive = renderItems.Disabled;
+            foreach (RenderItem ri in active)
+            {
+                ri.Update(this, dt, assetsReady);
+            }
+            foreach (RenderItem ri in inactive)
+            {
+                ri.Update(this, dt, assetsReady);
+            }
+
+            RenderContext.ResolveGlyphs();
+
+            foreach (RenderItem ri in active)
+            {
+                ri.Render(RenderContext, assetsReady);
+            }
+
+            RenderContext.TextureCache.BeginFrame(frameStamp);
+        }
+
+        private static void ProcessSounds(World world, float dt)
+        {
+            foreach (Sound sound in world.Sounds.Enabled)
+            {
+                sound.Update(dt);
             }
         }
 
@@ -514,6 +552,24 @@ namespace NitroSharp
 
         private void HandleInput()
         {
+            Advance = InputContext.VKeyDown(VirtualKey.Advance);
+            if (InputContext.VKeyDown(VirtualKey.Left))
+            {
+                RequestedFocusChange = NsFocusDirection.Left;
+            }
+            else if (InputContext.VKeyDown(VirtualKey.Up))
+            {
+                RequestedFocusChange = NsFocusDirection.Up;
+            }
+            else if (InputContext.VKeyDown(VirtualKey.Right))
+            {
+                RequestedFocusChange = NsFocusDirection.Right;
+            }
+            else if (InputContext.VKeyDown(VirtualKey.Down))
+            {
+                RequestedFocusChange = NsFocusDirection.Down;
+            }
+
             SystemVariableLookup sysVars = VM.SystemVariables;
             if (sysVars.BacklogLock.AsBool() is not true
                 && sysVars.MenuLock.AsBool() is not true)

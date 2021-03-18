@@ -25,6 +25,9 @@ namespace NitroSharp
         private Entity? Get(in EntityPath entityPath)
             => World.Get(CurrentThread.DeclaredId, entityPath);
 
+        private Entity? Get(in EntityId entityId)
+            => World.Get(entityId);
+
         private SmallList<Entity> Query(EntityQuery query)
         {
             SmallList<Entity> results = World.Query(CurrentThread.DeclaredId, query);
@@ -50,6 +53,11 @@ namespace NitroSharp
         private bool ResolvePath(in EntityPath path, out ResolvedEntityPath resolvedPath)
         {
             return World.ResolvePath(CurrentThread.DeclaredId, path, out resolvedPath);
+        }
+
+        public override int GetPlatformId()
+        {
+            return _ctx.Config.PlatformId;
         }
 
         public override void Exit()

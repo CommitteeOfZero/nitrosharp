@@ -90,6 +90,7 @@ namespace NitroSharp
         public int FontSize { get; set; } = 20;
 
         public IconPathPatterns IconPathPatterns { get; }
+        public int PlatformId { get; set; } = 100;
 
         public Configuration(string profileName, IconPathPatterns iconPathPatterns)
         {

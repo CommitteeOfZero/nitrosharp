@@ -13,6 +13,7 @@ namespace NitroSharp
         private IntPtr _hand;
         private IntPtr _arrow;
         private IntPtr _wait;
+        private SystemCursor _cursor;
 
         public DesktopWindow(string title, uint width, uint height)
         {
@@ -29,9 +30,11 @@ namespace NitroSharp
             _arrow = Sdl2Native.SDL_CreateSystemCursor(SDL_SystemCursor.Arrow);
             _hand = Sdl2Native.SDL_CreateSystemCursor(SDL_SystemCursor.Hand);
             _wait = Sdl2Native.SDL_CreateSystemCursor(SDL_SystemCursor.Wait);
+            _cursor = SystemCursor.Arrow;
         }
 
         public SwapchainSource SwapchainSource { get; }
+        public Sdl2Window SdlWindow => _window;
         public Size Size => new((uint)_window.Width, (uint)_window.Height);
         public bool Exists => _window.Exists;
 
@@ -50,13 +53,17 @@ namespace NitroSharp
 
         public void SetCursor(SystemCursor cursor)
         {
-            IntPtr sdlCursor = cursor switch
+            if (cursor != _cursor)
             {
-                SystemCursor.Hand => _hand,
-                SystemCursor.Wait => _wait,
-                _ => _arrow
-            };
-            Sdl2Native.SDL_SetCursor(sdlCursor);
+                IntPtr sdlCursor = cursor switch
+                {
+                    SystemCursor.Hand => _hand,
+                    SystemCursor.Wait => _wait,
+                    _ => _arrow
+                };
+                Sdl2Native.SDL_SetCursor(sdlCursor);
+                _cursor = cursor;
+            }
         }
 
         public void Dispose()

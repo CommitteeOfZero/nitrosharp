@@ -21,7 +21,7 @@
     <ProjectReference Include="..\..\..\SomeAnonDev\veldrid\src\Veldrid.ImGui\Veldrid.ImGui.csproj" />
     <ProjectReference Include="..\..\..\SomeAnonDev\veldrid\src\Veldrid.SDL2\Veldrid.SDL2.csproj" />
     <ProjectReference Include="..\..\..\SomeAnonDev\veldrid\src\Veldrid.OpenGLBindings\Veldrid.OpenGLBindings.csproj" />-->
-    
+
     <ProjectReference Include="..\NitroSharp.NsScript\NitroSharp.NsScript.csproj" />
 
     <PackageReference Include="FreeType.Binaries" Version="0.42.0" />
@@ -36,14 +36,10 @@
     <PackageReference Include="SharpDX.Direct2D1" Version="4.2.0" />
     <PackageReference Include="SharpDX.XAudio2" Version="4.2.0" />
 
-    <!--<PackageReference Include="Vortice.Direct3D11" Version="1.7.33-beta" />
-    <PackageReference Include="Vortice.DXGI" Version="1.7.33-beta" />
-    <PackageReference Include="Vortice.DirectX" Version="1.7.33-beta" />-->
-
     <PackageReference Include="Sprintf.NET" Version="2.0.0" />
-    <PackageReference Include="SixLabors.ImageSharp" Version="1.0.2" />
+    <PackageReference Include="SixLabors.ImageSharp" Version="1.0.3" />
     <PackageReference Include="System.IO.Pipelines" Version="5.0.1" />
-    <PackageReference Include="Microsoft.VisualStudio.Threading" Version="16.8.55" />
+    <PackageReference Include="Microsoft.VisualStudio.Threading" Version="16.9.60" />
     <PackageReference Include="Vortice.DirectX" Version="1.9.4-beta" />
     <PackageReference Include="Vortice.Direct3D11" Version="1.9.4-beta" />
     <PackageReference Include="Vortice.DXGI" Version="1.9.4-beta" />

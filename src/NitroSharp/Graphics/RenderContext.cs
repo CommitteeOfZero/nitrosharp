@@ -40,6 +40,7 @@ namespace NitroSharp.Graphics
         public ViewProjection PerspectiveViewProjection { get; }
 
         public RenderContext(
+            GameWindow window,
             Configuration gameConfiguration,
             GraphicsDevice graphicsDevice,
             Swapchain swapchain,
@@ -51,6 +52,7 @@ namespace NitroSharp.Graphics
                 (uint)gameConfiguration.WindowWidth,
                 (uint)gameConfiguration.WindowHeight
             );
+            Window = window;
             GraphicsDevice = graphicsDevice;
             ResourceFactory = graphicsDevice.ResourceFactory;
 
@@ -121,6 +123,7 @@ namespace NitroSharp.Graphics
             Icons = LoadIcons(gameConfiguration);
         }
 
+        public GameWindow Window { get; }
         public MeshList<QuadVertex> Quads { get; }
         public MeshList<QuadVertexUV3> QuadsUV3 { get; }
         public MeshList<CubeVertex> Cubes { get; }

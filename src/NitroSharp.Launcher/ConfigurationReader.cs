@@ -123,6 +123,9 @@ namespace NitroSharp.Launcher
                 case "dev.scriptRoot":
                     configuration.ScriptRoot = property.Value;
                     break;
+                case "dev.platformId":
+                    configuration.PlatformId = property.Value;
+                    break;
             }
         }
 

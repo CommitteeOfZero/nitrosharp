@@ -23,7 +23,7 @@ namespace NitroSharp.Graphics
         private readonly float _max;
 
         private State _state;
-        private State _prevState;
+        private UiElementFocusData _focusData;
         private Vector2 _mousePos;
 
         public Scrollbar(
@@ -38,7 +38,7 @@ namespace NitroSharp.Graphics
             _knob = knob;
             _p1 = p1;
             _p2 = p2;
-            _prevState = _state = State.Normal;
+            _state = State.Normal;
             _axis = scrollDirection == NsScrollDirection.Vertical
                 ? Vector2Component.Y
                 : Vector2Component.X;
@@ -54,6 +54,8 @@ namespace NitroSharp.Graphics
 
         public override EntityKind Kind => EntityKind.Scrollbar;
 
+        public RenderItem2D? RenderItem => this;
+        public ref UiElementFocusData FocusData => ref _focusData;
         public bool IsHovered => _state != State.Normal;
 
         public float GetValue()
@@ -63,23 +65,20 @@ namespace NitroSharp.Graphics
             return d / _length;
         }
 
-        public void RecordInput(InputContext inputCtx, RenderContext renderCtx)
+        public bool HandleEvents(GameContext ctx)
         {
+            InputContext inputCtx = ctx.InputContext;
             _mousePos = inputCtx.MousePosition;
-            bool hovered = HitTest(renderCtx, inputCtx);
+            bool hovered = HitTest(ctx.RenderContext, inputCtx);
             bool pressed = inputCtx.VKeyState(VirtualKey.Enter);
-            _prevState = _state;
-            _state = (hovered, pressed, _prevState) switch
+            _state = (hovered, pressed, _state) switch
             {
                 (true, false, _) => State.Hovered,
                 (true, true, _) => State.Held,
                 (false, true, State.Held) => State.Held,
                 _ => State.Normal
             };
-        }
 
-        public bool HandleEvents()
-        {
             bool held = _state == State.Held;
             if (held)
             {
@@ -92,7 +91,6 @@ namespace NitroSharp.Graphics
                     ? new Vector3(Transform.Position.X, value, 0)
                     : new Vector3(value, Transform.Position.Y, 0);
             }
-
             return held;
         }
 

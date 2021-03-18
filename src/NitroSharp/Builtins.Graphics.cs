@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Numerics;
 using NitroSharp.Content;
 using NitroSharp.Graphics;
@@ -103,19 +104,53 @@ namespace NitroSharp
             in EntityPath second,
             NsFocusDirection focusDirection)
         {
-            if (Get(first) is RenderItem2D { Parent: Choice choiceA }
-                && Get(second) is RenderItem2D { Parent: Choice choiceB })
+            static UiElement? getUiElement(Entity? entity) => entity switch
             {
-                choiceA.SetNextFocus(focusDirection, choiceB.Id);
+                RenderItem2D { Parent: UiElement parent } => parent,
+                UiElement element => element,
+                _ => null
+            };
+
+            (Entity? entityA, Entity? entityB) = (Get(first), Get(second));
+            if ((getUiElement(entityA), getUiElement(entityB))
+                is (UiElement elementA, UiElement elementB))
+            {
+                elementA.SetNextFocus(focusDirection, elementB.Id);
             }
         }
-
         public override bool HandleInputEvents(in EntityPath uiElementPath)
         {
             if (Get(uiElementPath) is UiElement uiElement)
             {
-                uiElement.RecordInput(_ctx.InputContext, _renderCtx);
-                return uiElement.HandleEvents();
+                bool wasFocused = uiElement.IsHovered;
+                bool selected = uiElement.HandleEvents(_ctx);
+                bool isFocused = uiElement.IsHovered;
+                if (isFocused)
+                {
+                    _ctx.AnyUiElementFocused = true;
+                }
+                else if (wasFocused)
+                {
+                    _ctx.AnyUiElementFocused = false;
+                }
+
+                if (_ctx.RequestedFocusChange is NsFocusDirection focusDirection)
+                {
+                    if (uiElement.IsHovered &&
+                        Get(uiElement.GetNextFocus(focusDirection)) is UiElement nextFocus)
+                    {
+                        nextFocus.Focus(_renderCtx);
+                        _ctx.RequestedFocusChange = null;
+                    }
+                    else if (!_ctx.AnyUiElementFocused)
+                    {
+                        uiElement.Focus(_renderCtx);
+                        _ctx.RequestedFocusChange = null;
+                        _ctx.AnyUiElementFocused = true;
+                    }
+                }
+
+                return selected;
             }
 
             return false;

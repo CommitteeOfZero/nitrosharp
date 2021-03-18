@@ -6,7 +6,6 @@ namespace NitroSharp.NsScript
         Normal,
         Over,
         Down,
-        Clicked,
         Leave
     }
 
