@@ -454,6 +454,7 @@ namespace NitroSharp
             RenderContext.BeginFrame(framestamp, _clearFramebuffer);
             _clearFramebuffer = true;
             InputContext.Update(VM.SystemVariables);
+            Advance = InputContext.VKeyDown(VirtualKey.Advance);
 
             while (true)
             {
@@ -482,16 +483,8 @@ namespace NitroSharp
                 break;
             }
 
-            bool useHandCursor = ActiveProcess.World.Get(FocusedUiElement) is UiElement { IsFocused: true };
-            if (useHandCursor)
-            {
-                Window.SetCursor(SystemCursor.Hand);
-            }
-            else
-            {
-                Window.SetCursor(SystemCursor.Arrow);
-                FocusedUiElement = EntityId.Invalid;
-            }
+            bool useHandCursor = ActiveProcess.World.Exists(FocusedUiElement);
+            Window.SetCursor(useHandCursor ? SystemCursor.Hand : SystemCursor.Arrow);
 
             World world = ActiveProcess.World;
             bool assetsReady = Content.ResolveAssets();
@@ -562,7 +555,6 @@ namespace NitroSharp
 
         private void HandleInput()
         {
-            Advance = InputContext.VKeyDown(VirtualKey.Advance);
             if (InputContext.VKeyDown(VirtualKey.Left))
             {
                 RequestedFocusChange = NsFocusDirection.Left;

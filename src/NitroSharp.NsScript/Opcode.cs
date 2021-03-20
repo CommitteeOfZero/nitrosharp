@@ -35,12 +35,13 @@
         CallScene = 0x36,       // <ushort module> <ushort scene>
         Return = 0x37,          // <>
 
-        SelectStart = 0x40,     // <>
+        SelectLoopStart = 0x40, // <>
         IsPressed = 0x41,       // <ushort token>
-        SelectEnd = 0x42,       // <>
-        BezierStart = 0x43,     // <>
-        BezierEndSeg = 0x44,    // <>
-        BezierEnd = 0x45,       // <>
+        SelectLoopEnd = 0x42,   // <>
+        SelectEnd = 0x43,       // <>
+        BezierStart = 0x44,     // <>
+        BezierEndSeg = 0x45,    // <>
+        BezierEnd = 0x46,       // <>
 
         ActivateBlock = 0x50,   // <ushort id>
         ClearPage = 0x51,

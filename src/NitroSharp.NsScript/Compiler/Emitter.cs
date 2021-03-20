@@ -505,11 +505,12 @@ namespace NitroSharp.NsScript.Compiler
         private void EmitSelect(SelectStatementSyntax selectStmt)
         {
             int loopStart = _code.Position;
-            EmitOpcode(Opcode.SelectStart);
+            EmitOpcode(Opcode.SelectLoopStart);
             BreakScope bodyScope = EmitLoopBody(selectStmt.Body);
-            EmitOpcode(Opcode.SelectEnd);
+            EmitOpcode(Opcode.SelectLoopEnd);
             EmitJump(Opcode.JumpIfFalse, loopStart);
             PatchBreaks(ref bodyScope, _code.Position);
+            EmitOpcode(Opcode.SelectEnd);
         }
 
         private void EmitSelectSection(SelectSectionSyntax section)

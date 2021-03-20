@@ -18,22 +18,18 @@ namespace NitroSharp.Graphics
         public EntityId Id { get; }
         public ref UiElementFocusData FocusData { get; }
         public bool IsFocused { get; }
-        public bool CanFocus { get; }
         public RenderItem2D? RenderItem { get; }
 
         bool HandleEvents(GameContext ctx);
 
-        public bool Focus(RenderContext renderContext)
+        public void Focus(RenderContext renderContext)
         {
-            if (CanFocus && RenderItem is RenderItem2D visual)
+            if (RenderItem is RenderItem2D visual)
             {
                 Size bounds = visual.GetUnconstrainedBounds(renderContext);
                 var center = new Vector2(bounds.Width / 2.0f, bounds.Height / 2.0f);
                 renderContext.Window.SetMousePosition(visual.Transform.Position.XY() + center);
-                return true;
             }
-
-            return false;
         }
 
         public EntityId GetNextFocus(NsFocusDirection direction) => direction switch

@@ -129,6 +129,7 @@ namespace NitroSharp.NsScript.VM
 
         public virtual void CreateChoice(in EntityPath entityPath) { }
         public virtual void SetNextFocus(in EntityPath first, in EntityPath second, NsFocusDirection focusDirection) { }
+        public virtual void SelectEnd() { }
 
         public virtual void CreateScrollbar(in EntityPath path, int priority, int x1, int y1, int x2, int y2, NsRational initialValue, NsScrollDirection scrollDirection, string knobImage) { }
         public virtual void SetScrollbar(in EntityPath scrollbar, in EntityPath parent) { }

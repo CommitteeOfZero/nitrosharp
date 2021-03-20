@@ -542,7 +542,7 @@ namespace NitroSharp.NsScript.VM
                         frame.ProgramCounter = program.Position;
                         return TickResult.Ok;
 
-                    case Opcode.SelectStart:
+                    case Opcode.SelectLoopStart:
                         thread.SelectResult = false;
                         break;
                     case Opcode.IsPressed:
@@ -551,10 +551,13 @@ namespace NitroSharp.NsScript.VM
                         stack.Push(ConstantValue.Boolean(pressed));
                         thread.SelectResult |= pressed;
                         break;
-                    case Opcode.SelectEnd:
+                    case Opcode.SelectLoopEnd:
                         stack.Push(ConstantValue.Boolean(thread.SelectResult));
                         frame.ProgramCounter = program.Position;
                         return TickResult.Yield;
+                    case Opcode.SelectEnd:
+                        builtins.SelectEnd();
+                        break;
                 }
             }
 

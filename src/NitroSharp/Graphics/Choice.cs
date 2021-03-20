@@ -67,14 +67,10 @@ namespace NitroSharp.Graphics
 
         public RenderItem2D? RenderItem => DefaultVisual;
         public ref UiElementFocusData FocusData => ref _focusData;
-        public bool IsFocused => CanFocus && _state == State.Focused;
+        public bool IsFocused => _state == State.Focused;
 
         public override EntityKind Kind => EntityKind.Choice;
         public override bool IsIdle => true;
-
-        public bool CanFocus => DefaultVisual is not null
-            && !DefaultVisual.IsAnimationActive(AnimationKind.Move)
-            && _mouseOverVisuals.All(x => !x.IsAnimationActive(AnimationKind.Move));
 
         public void AddMouseOver(RenderItem2D visual)
             => _mouseOverVisuals.Add(visual);

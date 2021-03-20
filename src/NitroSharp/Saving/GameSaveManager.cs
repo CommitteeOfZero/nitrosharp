@@ -99,10 +99,10 @@ namespace NitroSharp.Saving
                 Debug.Assert(ctx.LastScreenshot is not null);
                 using FileStream thumbStream = File.Create(Path.Combine(saveDir, "thum.npf"));
                 SaveAsPng(ctx.RenderContext, ctx.LastScreenshot, thumbStream, 128, 72);
-                File.Create(Path.Combine(saveDir, "val.npf"));
-                File.Create(Path.Combine(saveDir, "script.npf"));
-                File.Create(Path.Combine(saveDir, "frames.npf"));
-                File.Create(Path.Combine(saveDir, "bklg.npf"));
+                File.Create(Path.Combine(saveDir, "val.npf")).Close();
+                File.Create(Path.Combine(saveDir, "script.npf")).Close();
+                File.Create(Path.Combine(saveDir, "frames.npf")).Close();
+                File.Create(Path.Combine(saveDir, "bklg.npf")).Close();
             }
         }
 
@@ -152,7 +152,7 @@ namespace NitroSharp.Saving
             string filePath = Path.Combine(_commonDir, "val.npf");
             using FileStream file = File.OpenWrite(filePath);
             file.Write(buffer.WrittenSpan);
-            File.Create(Path.Combine(_commonDir, "cqst.npf"));
+            File.Create(Path.Combine(_commonDir, "cqst.npf")).Close();
         }
 
         public void ReadCommonSaveData(GameContext ctx)

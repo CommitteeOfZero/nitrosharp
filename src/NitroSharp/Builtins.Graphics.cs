@@ -118,6 +118,12 @@ namespace NitroSharp
                 elementA.SetNextFocus(focusDirection, elementB.Id);
             }
         }
+
+        public override void SelectEnd()
+        {
+            _ctx.FocusedUiElement = EntityId.Invalid;
+        }
+
         public override bool HandleInputEvents(in EntityPath uiElementPath)
         {
             if (Get(uiElementPath) is UiElement uiElement)
@@ -138,19 +144,15 @@ namespace NitroSharp
                     if (uiElement.IsFocused &&
                         Get(uiElement.GetNextFocus(focusDirection)) is UiElement nextFocus)
                     {
-                        if (nextFocus.Focus(_renderCtx))
-                        {
-                            _ctx.FocusedUiElement = uiElement.Id;
-                            _ctx.RequestedFocusChange = null;
-                        }
+                        nextFocus.Focus(_renderCtx);
+                        _ctx.FocusedUiElement = uiElement.Id;
+                        _ctx.RequestedFocusChange = null;
                     }
                     else if (!World.Exists(_ctx.FocusedUiElement))
                     {
-                        if (uiElement.Focus(_renderCtx))
-                        {
-                            _ctx.RequestedFocusChange = null;
-                            _ctx.FocusedUiElement = uiElement.Id;
-                        }
+                        uiElement.Focus(_renderCtx);
+                        _ctx.RequestedFocusChange = null;
+                        _ctx.FocusedUiElement = uiElement.Id;
                     }
                 }
 
