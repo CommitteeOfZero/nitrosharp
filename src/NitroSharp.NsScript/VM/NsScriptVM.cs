@@ -222,6 +222,7 @@ namespace NitroSharp.NsScript.VM
                         process.CurrentThread = thread;
                         nbActive++;
                         TickResult tickResult = Tick(process, thread, builtins);
+                        if (!process.IsRunning) { break; }
                         if (tickResult == TickResult.Yield)
                         {
                             thread.Yielded = true;
@@ -229,7 +230,8 @@ namespace NitroSharp.NsScript.VM
                         }
                         else if (thread.DoneExecuting)
                         {
-                            if (thread.WaitingThread is NsScriptThread waitingThread)
+                            if (thread.WaitingThread is
+                                NsScriptThread { DoneExecuting: false } waitingThread)
                             {
                                 ResumeThread(waitingThread);
                                 nbActive++;
@@ -388,13 +390,13 @@ namespace NitroSharp.NsScript.VM
                         thread.CallFrameStack.Push(newFrame);
                         if (process.CurrentThread == process.MainThread)
                         {
-                            string name = thisModule.GetSubroutineRuntimeInfo(subroutineToken)
-                                .SubroutineName;
-                            for (int i = 0; i < thread.CallFrameStack.Count; i++)
-                            {
-                                Console.Write(" ");
-                            }
-                            Console.WriteLine("near: " + name);
+                            //string name = thisModule.GetSubroutineRuntimeInfo(subroutineToken)
+                            //    .SubroutineName;
+                            //for (int i = 0; i < thread.CallFrameStack.Count; i++)
+                            //{
+                            //    Console.Write(" ");
+                            //}
+                            //Console.WriteLine("near: " + name);
                         }
                         return TickResult.Ok;
                     case Opcode.CallFar:

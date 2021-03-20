@@ -122,31 +122,35 @@ namespace NitroSharp
         {
             if (Get(uiElementPath) is UiElement uiElement)
             {
-                bool wasFocused = uiElement.IsHovered;
+                bool wasFocused = uiElement.IsFocused;
                 bool selected = uiElement.HandleEvents(_ctx);
-                bool isFocused = uiElement.IsHovered;
-                if (isFocused)
+                if (uiElement.IsFocused)
                 {
-                    _ctx.AnyUiElementFocused = true;
+                    _ctx.FocusedUiElement = uiElement.Id;
                 }
                 else if (wasFocused)
                 {
-                    _ctx.AnyUiElementFocused = false;
+                    _ctx.FocusedUiElement = EntityId.Invalid;
                 }
 
                 if (_ctx.RequestedFocusChange is NsFocusDirection focusDirection)
                 {
-                    if (uiElement.IsHovered &&
+                    if (uiElement.IsFocused &&
                         Get(uiElement.GetNextFocus(focusDirection)) is UiElement nextFocus)
                     {
-                        nextFocus.Focus(_renderCtx);
-                        _ctx.RequestedFocusChange = null;
+                        if (nextFocus.Focus(_renderCtx))
+                        {
+                            _ctx.FocusedUiElement = uiElement.Id;
+                            _ctx.RequestedFocusChange = null;
+                        }
                     }
-                    else if (!_ctx.AnyUiElementFocused)
+                    else if (!World.Exists(_ctx.FocusedUiElement))
                     {
-                        uiElement.Focus(_renderCtx);
-                        _ctx.RequestedFocusChange = null;
-                        _ctx.AnyUiElementFocused = true;
+                        if (uiElement.Focus(_renderCtx))
+                        {
+                            _ctx.RequestedFocusChange = null;
+                            _ctx.FocusedUiElement = uiElement.Id;
+                        }
                     }
                 }
 

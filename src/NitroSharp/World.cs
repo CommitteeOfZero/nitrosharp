@@ -139,6 +139,9 @@ namespace NitroSharp
         public Entity? Get(in EntityId entityId)
             => _entities.TryGetValue(entityId, out EntityRec rec) ? rec.Entity : null;
 
+        public bool Exists(in EntityId entityId)
+            => Get(entityId) is not null;
+
         public void SetAlias(in EntityId entityId, in EntityPath alias)
         {
             if (Get(entityId) is Entity entity)

@@ -227,7 +227,6 @@ namespace NitroSharp.NsScript.VM
 
         private void CommitTerminateThread(NsScriptThread thread)
         {
-            if (!IsRunning) { return; }
             thread.CallFrameStack.Clear();
             thread.EvalStack.Clear();
             _threads.Remove(thread);

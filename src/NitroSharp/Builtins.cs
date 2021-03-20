@@ -166,6 +166,11 @@ namespace NitroSharp
             }
         }
 
+        public override void Reset()
+        {
+            _ctx.Reset();
+        }
+
         public override void SetAlias(in EntityPath entityPath, in EntityPath alias)
         {
             if (ResolvePath(entityPath, out ResolvedEntityPath resolvedPath))

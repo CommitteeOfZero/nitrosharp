@@ -170,5 +170,6 @@ namespace NitroSharp.NsScript.VM
         public virtual bool X360_CheckStorage() => true;
 
         public virtual float X360_GetTriggerAxis(XboxTrigger trigger) => 0;
+        public virtual void Reset() { }
     }
 }

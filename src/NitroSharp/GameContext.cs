@@ -134,7 +134,7 @@ namespace NitroSharp
         internal bool Skipping { get; private set; }
         internal bool Advance { get; set; }
         internal Texture? LastScreenshot { get; private set; }
-        internal bool AnyUiElementFocused { get; set; }
+        internal EntityId FocusedUiElement { get; set; }
         internal NsFocusDirection? RequestedFocusChange { get; set; }
 
         public static async Task<GameContext> Create(GameWindow window, Configuration configuration)
@@ -447,13 +447,13 @@ namespace NitroSharp
             }
         }
 
+        // Note to self: do not reoder anything inside the main loop unless absolutely
+        // necessary or until the engine is both feature-complete and stable.
         private void Tick(FrameStamp framestamp, float dt)
         {
             RenderContext.BeginFrame(framestamp, _clearFramebuffer);
             _clearFramebuffer = true;
-
             InputContext.Update(VM.SystemVariables);
-            HandleInput();
 
             while (true)
             {
@@ -482,7 +482,16 @@ namespace NitroSharp
                 break;
             }
 
-            Window.SetCursor(AnyUiElementFocused ? SystemCursor.Hand : SystemCursor.Arrow);
+            bool useHandCursor = ActiveProcess.World.Get(FocusedUiElement) is UiElement { IsFocused: true };
+            if (useHandCursor)
+            {
+                Window.SetCursor(SystemCursor.Hand);
+            }
+            else
+            {
+                Window.SetCursor(SystemCursor.Arrow);
+                FocusedUiElement = EntityId.Invalid;
+            }
 
             World world = ActiveProcess.World;
             bool assetsReady = Content.ResolveAssets();
@@ -493,6 +502,7 @@ namespace NitroSharp
 
             ProcessSounds(world, dt);
             RenderFrame(framestamp, world.RenderItems, dt, assetsReady);
+            HandleInput();
             RunDeferredOperations();
 
             if (assetsReady)
@@ -571,29 +581,28 @@ namespace NitroSharp
             }
 
             SystemVariableLookup sysVars = VM.SystemVariables;
-            if (sysVars.BacklogLock.AsBool() is not true
-                && sysVars.MenuLock.AsBool() is not true)
-            {
-                if (InputContext.WheelDelta > 0)
-                {
-                    CreateSysProcess(Config.SysScripts.Backlog);
-                }
-            }
-
             if (sysVars.MenuLock.AsBool() is not true)
             {
                 if (InputContext.VKeyDown(VirtualKey.Back))
                 {
                     CreateSysProcess(Config.SysScripts.Menu);
+                    return;
                 }
-            }
-
-            if (sysVars.SkipLock.AsBool() is not true)
-            {
-                if (InputContext.VKeyDown(VirtualKey.Skip))
+                if (sysVars.BacklogLock.AsBool() is not true)
                 {
-                    Skipping = !Skipping;
-                    VM.SystemVariables.Skip = ConstantValue.Boolean(Skipping);
+                    if (InputContext.WheelDelta > 0)
+                    {
+                        CreateSysProcess(Config.SysScripts.Backlog);
+                        return;
+                    }
+                }
+                if (sysVars.SkipLock.AsBool() is not true)
+                {
+                    if (InputContext.VKeyDown(VirtualKey.Skip))
+                    {
+                        Skipping = !Skipping;
+                        VM.SystemVariables.Skip = ConstantValue.Boolean(Skipping);
+                    }
                 }
             }
         }
@@ -702,6 +711,14 @@ namespace NitroSharp
             RenderContext.Dispose();
             Window.Dispose();
             return destroyAudio;
+        }
+
+        public void Reset()
+        {
+            SysProcess?.Dispose();
+            SysProcess = null;
+            MainProcess.Dispose();
+            MainProcess = CreateProcess(VM, Config.SysScripts.Startup, _fontConfig);
         }
     }
 }

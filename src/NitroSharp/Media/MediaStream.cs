@@ -208,8 +208,16 @@ namespace NitroSharp.Media
                 {
                     UnrefPacket(ref packet.Value);
                 }
-                FrameQueue.Writer.Complete();
-                PacketQueue.Writer.Complete();
+
+                // TODO: is it even necessary to call Complete?
+                try
+                {
+                    FrameQueue.Writer.Complete();
+                    PacketQueue.Writer.Complete();
+                }
+                catch (ChannelClosedException)
+                {
+                }
             }
 
             public unsafe void Dispose()

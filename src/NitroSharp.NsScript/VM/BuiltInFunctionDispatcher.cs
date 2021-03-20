@@ -78,6 +78,9 @@ namespace NitroSharp.NsScript.VM
                 case BuiltInFunction.WaitKey:
                     WaitKey(ref args);
                     break;
+                case BuiltInFunction.Reset:
+                    Reset();
+                    break;
 
                 case BuiltInFunction.CreateCube:
                     CreateCube(ref args);
@@ -303,6 +306,11 @@ namespace NitroSharp.NsScript.VM
             ConstantValue? result = _result;
             _result = null;
             return result;
+        }
+
+        private void Reset()
+        {
+            _impl.Reset();
         }
 
         private void CreateMovie(ref ArgConsumer args)

@@ -55,8 +55,9 @@ namespace NitroSharp.Graphics
         public override EntityKind Kind => EntityKind.Scrollbar;
 
         public RenderItem2D? RenderItem => this;
+        public bool CanFocus => true;
         public ref UiElementFocusData FocusData => ref _focusData;
-        public bool IsHovered => _state != State.Normal;
+        public bool IsFocused => _state != State.Normal;
 
         public float GetValue()
         {
