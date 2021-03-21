@@ -67,15 +67,13 @@ namespace NitroSharp
 
     internal sealed class GameProcess
     {
-        private readonly Queue<WaitOperation> _waitOperations;
-        private readonly List<WaitOperation> _survivedWaits;
+        private readonly Dictionary<uint, WaitOperation> _waitOperations = new();
+        private readonly Queue<NsScriptThread> _threadsToResume = new();
 
         public GameProcess(NsScriptProcess vmProcess, FontConfiguration fontConfig)
         {
             VmProcess = vmProcess;
             World = new World();
-            _waitOperations = new Queue<WaitOperation>();
-            _survivedWaits = new List<WaitOperation>();
             FontConfig = fontConfig;
         }
 
@@ -84,10 +82,7 @@ namespace NitroSharp
             in GameProcessSaveData saveData,
             IReadOnlyList<Texture> standaloneTextures)
         {
-            _waitOperations = new Queue<WaitOperation>();
-            _survivedWaits = new List<WaitOperation>();
             FontConfig = saveData.FontConfig;
-
             VmProcess = ctx.VM.RestoreProcess(saveData.VmProcessDump);
 
             var loadingCtx = new GameLoadingContext
@@ -104,7 +99,7 @@ namespace NitroSharp
             World = World.Load(saveData.World, loadingCtx);
             foreach (WaitOperationSaveData waitOp in saveData.WaitOperations)
             {
-                _waitOperations.Enqueue(new WaitOperation(VmProcess, waitOp));
+                _waitOperations[waitOp.ThreadId] = new WaitOperation(VmProcess, waitOp);
             }
         }
 
@@ -121,40 +116,34 @@ namespace NitroSharp
             VmProcess.VM.SuspendThread(thread, timeout);
             if (condition != WaitCondition.None)
             {
-                _waitOperations.Enqueue(
-                    new WaitOperation(thread, condition, entityQuery)
-                );
+                _waitOperations[thread.Id] = new WaitOperation(thread, condition, entityQuery);
             }
         }
 
         public void ProcessWaitOperations(GameContext ctx)
         {
-            Queue<WaitOperation> waits = _waitOperations;
-            while (waits.TryDequeue(out WaitOperation wait))
+            foreach (WaitOperation wait in _waitOperations.Values)
             {
                 if (wait.Thread.IsActive) { continue; }
                 if (ShouldResume(wait, ctx))
                 {
-                    VmProcess.VM.ResumeThread(wait.Thread);
-                }
-                else
-                {
-                    _survivedWaits.Add(wait);
+                    _threadsToResume.Enqueue(wait.Thread);
                 }
             }
 
-            foreach (WaitOperation wait in _survivedWaits)
+            while (_threadsToResume.TryDequeue(out NsScriptThread? thread))
             {
-                waits.Enqueue(wait);
+                VmProcess.VM.ResumeThread(thread);
+                _waitOperations.Remove(thread.Id);
             }
-
-            _survivedWaits.Clear();
         }
 
         public GameProcessSaveData Dump(GameSavingContext ctx) => new()
         {
             World = World.ToSaveData(ctx),
-            WaitOperations = _waitOperations.Select(x => x.ToSaveData()).ToArray(),
+            WaitOperations = _waitOperations.Values
+                .Select(x => x.ToSaveData())
+                .ToArray(),
             VmProcessDump = VmProcess.Dump(),
             FontConfig = FontConfig
         };
