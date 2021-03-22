@@ -375,8 +375,14 @@ namespace NitroSharp.NsScript.VM
                         break;
                     case Opcode.Delta:
                         val = ref stack.Peek();
-                        Debug.Assert(val.Type == BuiltInType.Numeric);
-                        val = ConstantValue.Delta(val.AsNumber()!.Value);
+                        if (val.AsNumber() is float num)
+                        {
+                            val = ConstantValue.Delta(num);
+                        }
+                        else
+                        {
+                            val = ConstantValue.String("@" + val.AsString()!);
+                        }
                         break;
                     case Opcode.Invert:
                         val = ref stack.Peek();

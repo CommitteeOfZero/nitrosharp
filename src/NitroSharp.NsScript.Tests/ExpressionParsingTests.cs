@@ -7,41 +7,55 @@ namespace NitroSharp.NsScriptCompiler.Tests
 {
     public class ExpressionParsingTests
     {
-        private T AssertExpression<T>(string text, SyntaxNodeKind expectedKind) where T : ExpressionSyntax
+        [Theory]
+        [MemberData(nameof(GetLiteralParsingTestData))]
+        public void Literals_Parse_Correctly(string text, ConstantValue expectedValue)
         {
-            var result = Assert.IsType<T>(Parsing.ParseExpression(text).Root);
-            Assert.Equal(expectedKind, result.Kind);
-            return result;
+            var expr = AssertExpression<LiteralExpressionSyntax>(text, SyntaxNodeKind.LiteralExpression);
+            Assert.Equal(expectedValue, expr.Value);
+        }
+
+        public static IEnumerable<object[]> GetLiteralParsingTestData()
+        {
+            yield return new object[] { "\"foo\"", ConstantValue.String("foo") };
+            yield return new object[] { "42", ConstantValue.Number(42) };
+            yield return new object[] { "true", ConstantValue.True };
+            yield return new object[] { "false", ConstantValue.False };
+            yield return new object[] { "null", ConstantValue.Null };
+            yield return new object[] { "\"@CH25\"", ConstantValue.String("@CH25") };
+            yield return new object[] { "#FFFFFF", ConstantValue.Number(0xFFFFFF) };
+            yield return new object[] { "#000000", ConstantValue.Number(0) };
         }
 
         [Fact]
-        public void HexTriplet()
+        public void At_Symbol_Plus_StringLiteral()
         {
-            var literal = AssertExpression<LiteralExpressionSyntax>("#000000", SyntaxNodeKind.LiteralExpression);
-            Assert.Equal(ConstantValue.Number(0), literal.Value);
-            literal = AssertExpression<LiteralExpressionSyntax>("#FFFFFF", SyntaxNodeKind.LiteralExpression);
-            Assert.Equal(ConstantValue.Number(0x00FFFFFF), literal.Value);
+            string text = "\"@\" + \"CH25\"";
+            var expr = AssertExpression<BinaryExpressionSyntax>(text, SyntaxNodeKind.BinaryExpression);
+            Assert.Equal(BinaryOperatorKind.Add, expr.OperatorKind.Value);
+            Assert.IsType<LiteralExpressionSyntax>(expr.Left);
+            Assert.IsType<LiteralExpressionSyntax>(expr.Right);
         }
 
         [Fact]
-        public void DeltaValue()
+        public void At_Symbol_Plus_Identifier()
+        {
+            string text = "\"@\"+$goo";
+            var expr = AssertExpression<BinaryExpressionSyntax>(text, SyntaxNodeKind.BinaryExpression);
+            Assert.Equal(BinaryOperatorKind.Add, expr.OperatorKind.Value);
+            Assert.IsType<LiteralExpressionSyntax>(expr.Left);
+            var rhs = Assert.IsType<NameExpressionSyntax>(expr.Right);
+            Assert.Equal("goo", rhs.Name);
+        }
+
+        [Fact]
+        public void DeltaOperator()
         {
             var expr = AssertExpression<UnaryExpressionSyntax>("@42", SyntaxNodeKind.UnaryExpression);
             Assert.Equal(UnaryOperatorKind.Delta, expr.OperatorKind.Value);
             var operand = Assert.IsType<LiteralExpressionSyntax>(expr.Operand);
             Assert.Equal(ConstantValue.Number(42), operand.Value);
         }
-
-        //[Theory]
-        //[InlineData("\"foo\"", SyntaxNodeKind.LiteralExpression, ConstantValue.String("foo"))]
-        //[InlineData("42", SyntaxNodeKind.LiteralExpression, ConstantValue.Integer(42))]
-        //[InlineData("true", SyntaxNodeKind.LiteralExpression, ConstantValue.True)]
-        //[InlineData("false", SyntaxNodeKind.LiteralExpression, ConstantValue.False)]
-        //[InlineData("null", SyntaxNodeKind.LiteralExpression, ConstantValue.True)]
-        //public void Literals_Parse_Correctly(string text, SyntaxNodeKind expectedKind, ConstantValue expectedValue)
-        //{
-        //
-        //}
 
         public static IEnumerable<object[]> GetDialogueBlockTestData()
         {
@@ -54,6 +68,13 @@ namespace NitroSharp.NsScriptCompiler.Tests
         {
             var invocation = AssertExpression<FunctionCallExpressionSyntax>(text, SyntaxNodeKind.FunctionCallExpression);
             Common.AssertSpannedText(text, functionName, invocation.TargetName);
+        }
+
+        private T AssertExpression<T>(string text, SyntaxNodeKind expectedKind) where T : ExpressionSyntax
+        {
+            var result = Assert.IsType<T>(Parsing.ParseExpression(text).Root);
+            Assert.Equal(expectedKind, result.Kind);
+            return result;
         }
 
         //[Fact]
