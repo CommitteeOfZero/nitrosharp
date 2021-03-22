@@ -290,7 +290,7 @@ namespace NitroSharp.Graphics
         protected override void LayoutPass(RenderContext ctx)
         {
             base.LayoutPass(ctx);
-            if (!(Parent is RenderItem))
+            if (!(Parent is RenderItem or Choice { Parent: ConstraintBox }))
             {
                 Layout(ctx, constraintRect: null);
             }
@@ -317,6 +317,14 @@ namespace NitroSharp.Graphics
             foreach (RenderItem2D child in GetChildren<RenderItem2D>())
             {
                 child.Layout(ctx, constraintRect);
+            }
+
+            foreach (Choice child in GetChildren<Choice>())
+            {
+                foreach (RenderItem2D grandchild in child.GetChildren<RenderItem2D>())
+                {
+                    grandchild.Layout(ctx, constraintRect);
+                }
             }
         }
 

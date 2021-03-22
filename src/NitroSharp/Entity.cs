@@ -98,7 +98,7 @@ namespace NitroSharp
 
         public abstract bool IsIdle { get; }
 
-        protected ChildEnumerable<T> GetChildren<T>() where T : Entity
+        public ChildEnumerable<T> GetChildren<T>() where T : Entity
             => new(_children.AsSpan());
 
         void EntityInternal.SetAlias(in EntityPath alias)
