@@ -109,11 +109,21 @@ namespace NitroSharp
             _ => 0
         };
 
-        public override int GetTimeRemaining(in EntityPath entityPath) => Get(entityPath) switch
+        public override int GetTimeRemaining(EntityQuery query)
         {
-            Sound s => (int)(s.Stream.Duration - s.Stream.Elapsed).TotalMilliseconds,
-            Video v => (int)(v.Stream.Duration - v.Stream.Elapsed).TotalMilliseconds,
-            _ => 0
-        };
+            int remaining = 0;
+            foreach (Entity entity in Query(query))
+            {
+                remaining = Math.Max(remaining, entity switch
+                {
+                    Sound s => (int)(s.Stream.Duration - s.Stream.Elapsed).TotalMilliseconds,
+                    Video v => (int)(v.Stream.Duration - v.Stream.Elapsed).TotalMilliseconds,
+                    _ => 0
+                });
+                if (remaining > 0) { break;  }
+            }
+
+            return remaining;
+        }
     }
 }

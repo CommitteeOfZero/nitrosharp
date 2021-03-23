@@ -963,8 +963,8 @@ namespace NitroSharp.NsScript.VM
 
         private void RemainTime(ref ArgConsumer args)
         {
-            EntityPath entityPath = args.TakeEntityPath();
-            SetResult(ConstantValue.Number(_impl.GetTimeRemaining(entityPath)));
+            EntityQuery query = args.TakeEntityQuery();
+            SetResult(ConstantValue.Number(_impl.GetTimeRemaining(query)));
         }
 
         private void PassageTime(ref ArgConsumer args)

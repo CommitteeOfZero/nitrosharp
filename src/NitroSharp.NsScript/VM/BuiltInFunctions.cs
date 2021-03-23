@@ -33,7 +33,7 @@ namespace NitroSharp.NsScript.VM
         public virtual int GetHeight(in EntityPath entityPath) => throw new NotImplementedException();
         public virtual int GetWidth(in EntityPath entityPath) => throw new NotImplementedException();
         public virtual int GetMediaDuration(in EntityPath entityPath) => 0;
-        public virtual int GetTimeRemaining(in EntityPath entityPath) => throw new NotImplementedException();
+        public virtual int GetTimeRemaining(EntityQuery query) => throw new NotImplementedException();
         public virtual int GetTimeElapsed(in EntityPath entityPath) => throw new NotImplementedException();
 
         public virtual ConstantValue FormatString(string format, object[] args) => throw new NotImplementedException();
