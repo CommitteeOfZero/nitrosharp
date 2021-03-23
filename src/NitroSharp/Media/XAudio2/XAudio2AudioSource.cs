@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Buffers;
+using System.Diagnostics;
 using System.IO.Pipelines;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -96,6 +97,8 @@ namespace NitroSharp.Media.XAudio2
         private async Task PlayAsync(PipeReader audioData)
         {
             await StopAsync();
+            Debug.Assert(!IsPlaying);
+            Debug.Assert(!(SecondsElapsed > 0));
             _audioData = audioData;
             _sourceVoice.Start();
             _playSignal.Set();
