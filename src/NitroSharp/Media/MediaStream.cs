@@ -498,11 +498,14 @@ namespace NitroSharp.Media
                     _frameTimer = time;
                 }
 
+                bool end = !double.IsNaN(frame.Timestamp)
+                   ? FrameIsClosestTo(frame.GetInfo(), Duration)
+                   : Duration.TotalSeconds - _videoClock.Get() - targetDelay < _videoFrameDuration;
+                _videoEnded = end && !_loopingEnabled;
+
                 _videoClock.Set(frame.Timestamp, frame.Serial);
                 _externalClock.SyncTo(_videoClock);
                 _lastDisplayedFrameInfo = frame.GetInfo();
-                bool end = FrameIsClosestTo(frame.GetInfo(), Duration);
-                _videoEnded = end && !_loopingEnabled;
                 return true;
             }
 
@@ -906,6 +909,10 @@ namespace NitroSharp.Media
                 }
 
                 double timestamp = video.TimeBase.ToDouble() * frame.Value.best_effort_timestamp;
+                if (timestamp < 0)
+                {
+                    timestamp = double.NaN;
+                }
                 await bufferWriter.WriteFrameAsync(frame.Value, frame.Serial, timestamp, _videoFrameDuration);
                 UnrefFrame(ref frame.Value);
             }
