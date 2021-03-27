@@ -577,6 +577,18 @@ namespace NitroSharp
             Pause(WaitCondition.TransitionCompleted, query, duration, delay);
         }
 
+        public override void Shake(
+            in EntityPath entityPath,
+            TimeSpan duration,
+            NsCoordinate startX, NsCoordinate startY,
+            NsCoordinate endX, NsCoordinate endY,
+            uint freq,
+            NsEaseFunction easeFunction,
+            TimeSpan delay)
+        {
+            Delay(delay);
+        }
+
         private TimeSpan AdjustDuration(TimeSpan duration)
         {
             return _ctx.Skipping

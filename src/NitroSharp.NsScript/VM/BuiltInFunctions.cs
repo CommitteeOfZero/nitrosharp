@@ -123,6 +123,7 @@ namespace NitroSharp.NsScript.VM
         public virtual void Rotate(EntityQuery query, TimeSpan duration, NsNumeric dstRotationX, NsNumeric dstRotationY, NsNumeric dstRotationZ, NsEaseFunction easeFunction, TimeSpan delay) { }
         public virtual void BezierMove(EntityQuery query, TimeSpan duration, CompositeBezier curve, NsEaseFunction easeFunction, bool wait) { }
         public virtual void BeginTransition(EntityQuery query, TimeSpan duration, NsRational srcFadeAmount, NsRational dstFadeAmount, NsRational feather, NsEaseFunction easeFunction, string maskFileName, TimeSpan delay) { }
+        public virtual void Shake(in EntityPath entityPath, TimeSpan duration, NsCoordinate startX, NsCoordinate startY, NsCoordinate endX, NsCoordinate endY, uint freq, NsEaseFunction easeFunction, TimeSpan delay) { }
 
         public virtual void WaitAction(EntityQuery query, TimeSpan? timeout) { }
         public virtual void WaitMove(EntityQuery query) { }

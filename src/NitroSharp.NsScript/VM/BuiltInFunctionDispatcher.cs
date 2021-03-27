@@ -141,6 +141,9 @@ namespace NitroSharp.NsScript.VM
                 case BuiltInFunction.BezierMove:
                     BezierMove(ref args);
                     break;
+                case BuiltInFunction.Shake:
+                    Shake(ref args);
+                    break;
                 case BuiltInFunction.WaitAction:
                     WaitAction(ref args);
                     break;
@@ -306,6 +309,23 @@ namespace NitroSharp.NsScript.VM
             ConstantValue? result = _result;
             _result = null;
             return result;
+        }
+
+        private void Shake(ref ArgConsumer args)
+        {
+            EntityPath entityPath = args.TakeEntityPath();
+            TimeSpan duration = args.TakeTimeSpan();
+            _impl.Shake(
+                entityPath,
+                duration,
+                startX: args.TakeCoordinate(),
+                startY: args.TakeCoordinate(),
+                endX: args.TakeCoordinate(),
+                endY: args.TakeCoordinate(),
+                freq: args.TakeUInt(),
+                args.TakeEaseFunction(),
+                args.TakeAnimDelay(duration)
+            );
         }
 
         private void Reset()
@@ -1231,8 +1251,14 @@ namespace NitroSharp.NsScript.VM
 
             public TimeSpan TakeAnimDelay(TimeSpan animDuration)
             {
-                int delayArg = TakeInt();
-                return delayArg == 1 ? animDuration : TimeSpan.FromMilliseconds(delayArg);
+                ConstantValue val = Take();
+                return (val.Type, val.AsNumber()) switch
+                {
+                    (BuiltInType.Numeric or BuiltInType.Boolean, float delay) =>
+                        (int)delay == 1 ? animDuration : TimeSpan.FromMilliseconds(delay),
+                    (BuiltInType.Null, _) => TimeSpan.FromSeconds(0),
+                    _ => UnexpectedType<TimeSpan>(val.Type)
+                };
             }
 
             public BuiltInConstant TakeConstant()
