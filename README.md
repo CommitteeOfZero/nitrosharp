@@ -1,11 +1,11 @@
 # NitroSharp (codename Project Hoppy)
 
-**NitroSharp** is an open-source reimplementation of **N2System**, a visual novel engine used in a number of games made by Nitroplus. The primary goal of the project is to make [Chaos;Head Noah](https://vndb.org/v22505), a console-exclusive game, fully playable on PC (Windows, Linux) and possibly other platforms (Android, macOS). Support for other N2System-based games may come later.
+**NitroSharp** is an open-source reimplementation of **N2System**, a visual novel engine used in a number of games made by Nitroplus. The primary goal of the project is to make [Chaos;Head Noah](https://vndb.org/v22505), a console-exclusive game, fully playable on PC (Windows, Linux) and possibly other platforms (listed below). Support for other N2System-based games may come later.
 
 ## Status
 NitroSharp is close to being feature-complete. You should be able to reach at least some of the endings in Chaos;Head Noah without crashes, if you're lucky. **Please do not expect NitroSharp to be a viable drop-in replacement for N2System just yet.**
 
-* Do expect all sorts of bugs
+* Do expect all sorts of bugs.
 * Do not expect your saves to work after upgrading to a newer build of the engine or modifying the scripts.
 * Do not use NitroSharp if you simply want to enjoy the game.
 
@@ -59,6 +59,10 @@ dotnet build NitroSharp.sln [-c Release]
 OR
 
 Run ``aot-build.ps1`` in PowerShell 7 to produce an [AOT-compiled](https://en.wikipedia.org/wiki/Ahead-of-time_compilation) build. Do not expect the build script to work in the old Windows PowerShell.
+
+## License
+NitroSharp is licensed under the [MIT](https://github.com/CommitteeOfZero/nitrosharp/blob/meowster/LICENSE.TXT) license.
+This project uses a number of third-party components. See [THIRDPARTY.md](https://github.com/CommitteeOfZero/nitrosharp/blob/meowster/THIRDPARTY.md) for more details.
 
 ## Legal disclaimers
 * This project is non-commercial and is not affiliated with Nitroplus or MAGES. in any way.
