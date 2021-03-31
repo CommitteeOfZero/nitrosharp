@@ -112,7 +112,7 @@ namespace NitroSharp.Text
             }
         }
 
-        private async Task AddFontAsync(string path)
+        public async Task AddFontAsync(string path)
         {
             Task loadAsync()
                 => Task.WhenAll(_contexts.Select(x => Task.Run(() => x.AddFont(path, out _))));

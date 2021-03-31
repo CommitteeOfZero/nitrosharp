@@ -207,7 +207,16 @@ namespace NitroSharp
                 rubyFontSizeMultiplier: 0.4f
             );
 
-            await glyphRasterizer.AddFontsAsync(Directory.EnumerateFiles("Fonts"));
+            if (OperatingSystem.IsWindows())
+            {
+                string windir = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+                await glyphRasterizer.AddFontAsync($"{windir}\\Fonts\\msgothic.ttc");
+            }
+            if (Directory.Exists("Fonts"))
+            {
+                await glyphRasterizer.AddFontsAsync(Directory.EnumerateFiles("Fonts"));
+            }
+
             return (glyphRasterizer, defaultFontConfig);
         }
 
