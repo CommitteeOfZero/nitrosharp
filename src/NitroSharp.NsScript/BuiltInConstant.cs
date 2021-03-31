@@ -109,8 +109,6 @@
 
         // Other
         Xxx,
-        //Key,
-        //Mmo,
 
         // Character names (Noah)
         ナイトハルト,

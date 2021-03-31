@@ -313,10 +313,10 @@ namespace NitroSharp.NsScript.VM
 
         private void Shake(ref ArgConsumer args)
         {
-            EntityPath entityPath = args.TakeEntityPath();
+            EntityQuery query = args.TakeEntityQuery();
             TimeSpan duration = args.TakeTimeSpan();
             _impl.Shake(
-                entityPath,
+                query,
                 duration,
                 startX: args.TakeCoordinate(),
                 startY: args.TakeCoordinate(),
@@ -733,13 +733,21 @@ namespace NitroSharp.NsScript.VM
         {
             EntityQuery query = args.TakeEntityQuery();
             TimeSpan duration = args.TakeTimeSpan();
+            NsCoordinate dstX = args.TakeCoordinate();
+            NsCoordinate dstY = args.TakeCoordinate();
+            NsEaseFunction easeFunction = NsEaseFunction.Linear;
+            TimeSpan delay = default;
+            if (args.Count == 6)
+            {
+                easeFunction = args.TakeEaseFunction();
+                delay = args.TakeAnimDelay(duration);
+            }
             _impl.Move(
                 query,
                 duration,
-                dstX: args.TakeCoordinate(),
-                dstY: args.TakeCoordinate(),
-                easeFunction: args.TakeEaseFunction(),
-                delay: args.TakeAnimDelay(duration)
+                dstX, dstY,
+                easeFunction,
+                delay
             );
         }
 
@@ -755,16 +763,40 @@ namespace NitroSharp.NsScript.VM
                     NsEaseFunction.Linear,
                     TimeSpan.Zero
                 );
+                return;
             }
             else
             {
                 TimeSpan duration = args.TakeTimeSpan();
+                NsRational dstOpacity = args.TakeRational();
+                NsEaseFunction easeFunction = NsEaseFunction.Linear;
+                TimeSpan animDelay = default;
+                if (args.Count == 4)
+                {
+                    animDelay = args.TakeAnimDelay(duration);
+                }
+                else
+                {
+                    
+                    if (args.AsSpan(0)[^1].AsBuiltInConstant() is null)
+                    {
+                        easeFunction = args.TakeEaseFunction();
+                        animDelay = args.TakeAnimDelay(duration);
+                    }
+                    else
+                    {
+                        // Sometimes the order is switched.
+                        animDelay = args.TakeAnimDelay(duration);
+                        easeFunction = args.TakeEaseFunction();
+                    }
+                }
+
                 _impl.Fade(
                     query,
                     duration,
-                    dstOpacity: args.TakeRational(),
-                    args.Count == 4 ? NsEaseFunction.Linear : args.TakeEaseFunction(),
-                    args.TakeAnimDelay(duration)
+                    dstOpacity,
+                    easeFunction,
+                    animDelay
                 );
             }
         }
@@ -1139,7 +1171,13 @@ namespace NitroSharp.NsScript.VM
             public int TakeInt()
             {
                 ConstantValue arg = Take();
-                return (int)arg.AsNumber()!.Value;
+                return arg.Type switch
+                {
+                    BuiltInType.Numeric => (int)arg.AsNumber()!.Value,
+                    BuiltInType.String when int.TryParse(arg.AsString()!, out int val) => val,
+                    BuiltInType.Null => 0,
+                    _ => UnexpectedType<int>(arg.Type)
+                };
             }
 
             public TimeSpan TakeTimeSpan()

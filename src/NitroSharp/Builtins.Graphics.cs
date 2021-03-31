@@ -578,7 +578,7 @@ namespace NitroSharp
         }
 
         public override void Shake(
-            in EntityPath entityPath,
+            EntityQuery query,
             TimeSpan duration,
             NsCoordinate startX, NsCoordinate startY,
             NsCoordinate endX, NsCoordinate endY,
