@@ -16,15 +16,23 @@
 
   "profiles": {
     "Noah": {
-      "startupScript": "boot_fast.nss"
+      "startupScript": "boot.nss"
     },
 
     "Menu": {
       "startupScript": "sys_menu.nss"
     },
 
+    "SoundLibrary": {
+      "startupScript": "extra_sound.nss"
+    },
+
     "Settings": {
       "startupScript": "sys_config.nss"
+    },
+
+    "DebugMenu": {
+      "startupScript": "boot_debug.nss"
     },
 
     "CoZ": {

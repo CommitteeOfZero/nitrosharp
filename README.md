@@ -60,6 +60,14 @@ OR
 
 Run ``aot-build.ps1`` in PowerShell 7 to produce an [AOT-compiled](https://en.wikipedia.org/wiki/Ahead-of-time_compilation) build. Do not expect the build script to work in the old Windows PowerShell.
 
+## How do I play the game?
+There is currently no support for AFS and NPA archives, which means you will have to extract the game files first.
+1. Get the tools for extracting the archives [here](https://1drv.ms/u/s!Aryvcp_pUUGhjZ4gECiHRIxDYHD0yQ?e=y5SEwm).
+2. Place them in the same directory as the game assets and run ``./extract.ps1`` in PowerShell.
+The extracted files will be placed inside a folder named ``content``.
+3. Edit ``Game.json`` so that ``dev.contentRoot`` points to the ``content`` directory. Avoid unescaped backslashes in the path.
+4. Run ``Game.exe``.
+
 ## License
 NitroSharp is licensed under the [MIT](https://github.com/CommitteeOfZero/nitrosharp/blob/meowster/LICENSE.TXT) license.
 This project uses a number of third-party components. See [THIRDPARTY.md](https://github.com/CommitteeOfZero/nitrosharp/blob/meowster/THIRDPARTY.md) for more details.
