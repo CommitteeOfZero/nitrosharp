@@ -1,0 +1,20 @@
+Argument not provided.
+   at NitroSharp.NsScript.VM.BuiltInFunctionDispatcher.ArgConsumer.Take() in C:\src\nitrosharp\src\NitroSharp.NsScript\VM\BuiltInFunctionDispatcher.cs:li
+ne 1091
+   at NitroSharp.NsScript.VM.BuiltInFunctionDispatcher.ArgConsumer.TakeInt() in C:\src\nitrosharp\src\NitroSharp.NsScript\VM\BuiltInFunctionDispatcher.cs
+:line 1121
+   at NitroSharp.NsScript.VM.BuiltInFunctionDispatcher.ArgConsumer.TakeAnimDelay(TimeSpan animDuration) in C:\src\nitrosharp\src\NitroSharp.NsScript\VM\B
+uiltInFunctionDispatcher.cs:line 1234
+   at NitroSharp.NsScript.VM.BuiltInFunctionDispatcher.Move(ArgConsumer& args) in C:\src\nitrosharp\src\NitroSharp.NsScript\VM\BuiltInFunctionDispatcher.
+cs:line 716
+   at NitroSharp.NsScript.VM.BuiltInFunctionDispatcher.Dispatch(BuiltInFunctions impl, BuiltInFunction function, ReadOnlySpan`1 cvs) in C:\src\nitrosharp
+\src\NitroSharp.NsScript\VM\BuiltInFunctionDispatcher.cs:line 133
+   at NitroSharp.NsScript.VM.NsScriptVM.Tick(NsScriptProcess process, NsScriptThread thread, BuiltInFunctions builtins) in C:\src\nitrosharp\src\NitroSha
+rp.NsScript\VM\NsScriptVM.cs:line 494
+   at NitroSharp.NsScript.VM.NsScriptVM.Run(NsScriptProcess process, BuiltInFunctions builtins, CancellationToken cancellationToken) in C:\src\nitrosharp
+\src\NitroSharp.NsScript\VM\NsScriptVM.cs:line 224
+   at NitroSharp.GameContext.Tick(FrameStamp framestamp, Single dt) in C:\src\nitrosharp\src\NitroSharp\GameContext.cs:line 462
+   at NitroSharp.GameContext.MainLoop() in C:\src\nitrosharp\src\NitroSharp\GameContext.cs:line 442
+   at NitroSharp.GameContext.Run(Boolean useDedicatedThread) in C:\src\nitrosharp\src\NitroSharp\GameContext.cs:line 412
+   at NitroSharp.Launcher.GameLauncher.Launch(String productName, String configFilePath) in C:\src\nitrosharp\src\NitroSharp.Launcher\GameLauncher.cs:lin
+e 17

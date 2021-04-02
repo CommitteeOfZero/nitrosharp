@@ -667,7 +667,7 @@ namespace NitroSharp
         internal void PlayVoice(string characterName, string filePath)
         {
             if (Skipping) { return; }
-            if (Content.TryOpenStream($"voice/{filePath}") is Stream file)
+            if (Content.TryOpenStream($"voice/{filePath}.wav") is Stream file)
             {
                 if (_activeVoice is (string character, MediaStream prevVoice))
                 {
