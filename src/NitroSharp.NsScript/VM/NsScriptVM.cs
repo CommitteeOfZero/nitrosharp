@@ -595,11 +595,6 @@ namespace NitroSharp.NsScript.VM
             BinaryOperatorKind opKind,
             in ConstantValue right)
         {
-            if (right is { Type: BuiltInType.Numeric } && right.AsNumber() is 300 && left.Type is not BuiltInType.Numeric)
-            {
-                Debugger.Break();
-            }
-
             return opKind switch
             {
                 BinaryOperatorKind.Add => left + right,

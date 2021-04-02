@@ -1,5 +1,5 @@
 ﻿{
-  "activeProfile": "CoZ",
+  "activeProfile": "Noah",
   "graphics.vsync": true,
   "graphics.backend": "D3D11",
   "audio.backend": "XAudio2",
@@ -36,7 +36,7 @@
     },
 
     "CoZ": {
-      "startupScript": "boot_any.nss",
+      "startupScript": "boot.nss",
       "dev.useUtf8": true,
       "dev.scriptRoot": "coz/nss"
     },

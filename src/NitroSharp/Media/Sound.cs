@@ -54,7 +54,7 @@ namespace NitroSharp.Media
 
         private float GetVolumeMultiplier() => _kind switch
         {
-            NsAudioKind.BackgroundMusic => 0.3f,
+            NsAudioKind.BackgroundMusic => 0.7f,
             NsAudioKind.SoundEffect => 1.0f,
             NsAudioKind.Voice => 0.9f
         };

@@ -63,9 +63,7 @@ Run ``aot-build.ps1`` in PowerShell 7 to produce an [AOT-compiled](https://en.wi
 ## How do I play the game?
 There is currently no support for AFS and NPA archives, which means you will have to extract the game files first.
 Before you start, make sure your game directory looks this way:
-
 ![image](https://user-images.githubusercontent.com/6377116/113422461-6e227080-93d5-11eb-86fa-56cee4e6e434.png)
-
 1. Get the tools for extracting the archives [here](https://1drv.ms/u/s!Aryvcp_pUUGhjZ4gECiHRIxDYHD0yQ?e=y5SEwm).
 2. Place them in the same directory as the game assets and run ``./extract.ps1`` in PowerShell.
 The extracted files will be placed inside a folder named ``content``.
