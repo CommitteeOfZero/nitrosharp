@@ -42,8 +42,7 @@ namespace NitroSharp.Media
         private const double AvNosyncThreshold = 10.0;
 
         private readonly Stream _fileStream;
-        private readonly unsafe AVFormatContext* _formatContext;
-        private readonly unsafe AVPacket* _recvPacket;
+        private readonly FormatContext _formatContext;
         private readonly StreamContext? _audio;
         private readonly StreamContext? _video;
         private readonly Pipe? _audioPipe;
@@ -250,22 +249,8 @@ namespace NitroSharp.Media
             _outAudioParams = outAudioParams;
 
             ffmpeg.av_log_set_level(ffmpeg.AV_LOG_ERROR);
-
-            // Both the buffer and the IO context are freed by avformat_close_input.
-            byte* ioBuffer = (byte*)ffmpeg.av_malloc(IoBufferSize);
-            AVIOContext* ioContext = ffmpeg.avio_alloc_context(
-                ioBuffer, IoBufferSize,
-                write_flag: 0, opaque: null,
-                _readFunc, null, _seekFunc
-            );
-
-            AVFormatContext* ctx = ffmpeg.avformat_alloc_context();
-            ctx->pb = ioContext;
-            _formatContext = ctx;
-
-            _recvPacket = ffmpeg.av_packet_alloc();
-            CheckResult(ffmpeg.avformat_open_input(&ctx, string.Empty, null, null));
-            CheckResult(ffmpeg.avformat_find_stream_info(ctx, null));
+            _formatContext = new FormatContext(stream);
+            AVFormatContext* ctx = _formatContext.Inner;
 
             int audioStreamId = -1;
             int videoStreamId = -1;
@@ -322,12 +307,12 @@ namespace NitroSharp.Media
                     : AVDiscard.AVDISCARD_ALL;
             }
 
-            if (audioSource is { } && (_audio = OpenStream(_formatContext, audioStreamId)) is { })
+            if (audioSource is { } && (_audio = OpenStream(audioStreamId)) is { })
             {
                 var options = new PipeOptions(minimumSegmentSize: 16384);
                 _audioPipe = new Pipe(options);
             }
-            if (graphicsDevice is { } && (_video = OpenStream(ctx, videoStreamId)) is { })
+            if (graphicsDevice is { } && (_video = OpenStream(videoStreamId)) is { })
             {
                 _videoBuffer = new YCbCrBuffer(
                     graphicsDevice,
@@ -369,22 +354,14 @@ namespace NitroSharp.Media
             }
         }
 
-        private static unsafe StreamContext? OpenStream(AVFormatContext* formatCtx, int index)
+        private unsafe StreamContext? OpenStream(int index)
         {
             if (index < 0) { return null; }
-            AVStream* stream = formatCtx->streams[index];
-            AVCodec* codec = DecoderCollection.Shared.Get(stream->codecpar->codec_id);
-            AVCodecContext* codecCtx = ffmpeg.avcodec_alloc_context3(codec);
-            Debug.Assert(codecCtx is not null);
-            CheckResult(ffmpeg.avcodec_parameters_to_context(codecCtx, stream->codecpar));
-            CheckResult(ffmpeg.avcodec_open2(codecCtx, codec, null));
-
-            if (codecCtx->codec_type == AVMediaType.AVMEDIA_TYPE_AUDIO)
-            {
-                return new StreamContext(stream, codecCtx, 1024, 2048);
-            }
-
-            return new StreamContext(stream, codecCtx, 256, 48);
+            AVStream* stream = _formatContext.Inner->streams[index];
+            AVCodecContext* codecCtx = _formatContext.OpenStream(index);
+            return codecCtx->codec_type == AVMediaType.AVMEDIA_TYPE_AUDIO
+                ? new StreamContext(stream, codecCtx, 1024, 2048)
+                : new StreamContext(stream, codecCtx, 256, 48);
         }
 
         public void Start()
@@ -567,7 +544,7 @@ namespace NitroSharp.Media
                     unsafe
                     {
                         CheckResult(ffmpeg.avformat_seek_file(
-                            _formatContext, -1,
+                            _formatContext.Inner, -1,
                             timestamp - 1 * ffmpeg.AV_TIME_BASE, timestamp, timestamp,
                             flags: 0
                         ));
@@ -603,9 +580,9 @@ namespace NitroSharp.Media
                 int ret;
                 unsafe
                 {
-                    ret = ffmpeg.av_read_frame(_formatContext, _recvPacket);
-                    packet.Value = *_recvPacket;
-                    *_recvPacket = default;
+                    ret = ffmpeg.av_read_frame(_formatContext.Inner, _formatContext.RecvPacket);
+                    packet.Value = *_formatContext.RecvPacket;
+                    *_formatContext.RecvPacket = default;
                 }
                 if (ret >= 0)
                 {
@@ -1007,16 +984,7 @@ namespace NitroSharp.Media
                     _audioSource.Stop();
                 }
 
-                fixed (AVFormatContext** pCtx = &_formatContext)
-                {
-                    ffmpeg.avformat_close_input(pCtx);
-                }
-
-                fixed (AVPacket** pkt = &_recvPacket)
-                {
-                    ffmpeg.av_packet_free(pkt);
-                }
-
+                _formatContext.Dispose();
                 _fileStream.Dispose();
                 _timer.Stop();
             }

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using FFmpeg.AutoGen;
@@ -37,6 +38,22 @@ namespace NitroSharp.Media
             return channelLayout == ChannelLayout.Mono
                 ? ffmpeg.AV_CH_LAYOUT_MONO
                 : ffmpeg.AV_CH_LAYOUT_STEREO;
+        }
+
+        public static void CopyPointers(this byte_ptrArray8 src, Span<IntPtr> dst)
+        {
+            for (uint i = 0; i < 8; i++)
+            {
+                dst[(int)i] = (IntPtr)src[i];
+            }
+        }
+
+        public static void CopyTo(this int_array8 src, Span<int> dst)
+        {
+            for (uint i = 0; i < 8; i++)
+            {
+                dst[(int)i] = src[i];
+            }
         }
     }
 

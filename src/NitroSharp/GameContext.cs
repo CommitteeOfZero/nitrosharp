@@ -269,14 +269,13 @@ namespace NitroSharp
             Configuration configuration)
         {
             TextureLoader textureLoader;
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && true)
+            if (OperatingSystem.IsWindows())
             {
                 textureLoader = new WicTextureLoader(device);
             }
             else
             {
-                textureLoader = null!;
-                //textureLoader = new FFmpegTextureLoader(_graphicsDevice);
+                textureLoader = new FFmpegTextureLoader(device);
             }
 
             var content = new ContentManager(configuration.ContentRoot, textureLoader);
