@@ -288,7 +288,7 @@ namespace NitroSharp.Media
             uint srcRowPitch = (uint)frame.linesize[(uint)plane];
             GraphicsUtils.CopyTextureRegion(
                 srcData, srcX: 0, srcY: 0, srcZ: 0,
-                srcRowPitch, srcDepthPitch: 0,
+                srcRowPitch, srcDepthPitch: (uint)(frame.linesize[0] * frame.height),
                 dstData, dstX: 0, dstY: 0, dstZ: 0,
                 dstTexture.RowPitch, dstTexture.DepthPitch,
                 w, h, depth: 1, bytesPerPixel: 1
