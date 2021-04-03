@@ -273,7 +273,7 @@ namespace NitroSharp
             Configuration configuration)
         {
             TextureLoader textureLoader;
-            if (OperatingSystem.IsWindows() && false)
+            if (OperatingSystem.IsWindows())
             {
                 textureLoader = new WicTextureLoader(device);
             }

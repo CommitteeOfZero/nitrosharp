@@ -32,10 +32,10 @@ The initial release will likely only support two major platforms:
 * [x] Windows x64
   * Direct3D 11
   * Vulkan
-* [ ] Linux x64
+* [x] Linux x64
   * Vulkan
 
-There is currently no way to produce a working Linux build.
+The Linux version currently doesn't have sound. There's also the fact that the game uses case-insensitive paths for assets, so it's not going to work very well until there's support for the archive formats.
 
 It should be theoretically possible to add support for the following platforms:
 * Windows x86
