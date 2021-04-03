@@ -52,11 +52,8 @@ namespace NitroSharp.Media.NullAudio
             Debug.Assert(_cts is not null);
             while (!_cts.IsCancellationRequested)
             {
-                while (!_cts.IsCancellationRequested)
-                {
-                    ReadResult readResult = await audioData.ReadAsync();
-                    audioData.AdvanceTo(readResult.Buffer.End);
-                }
+                ReadResult readResult = await audioData.ReadAsync();
+                audioData.AdvanceTo(readResult.Buffer.End);
             }
         }
 

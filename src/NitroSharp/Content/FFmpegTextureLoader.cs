@@ -23,8 +23,7 @@ namespace NitroSharp.Content
             int streamId = ffmpeg.av_find_best_stream(
                 context.Inner,
                 AVMediaType.AVMEDIA_TYPE_VIDEO,
-                -1, -1,
-                null, 0
+                -1, -1, null, 0
             );
 
             AVCodecContext* codecCtx = context.OpenStream(streamId);
@@ -44,7 +43,7 @@ namespace NitroSharp.Content
                 GraphicsUtils.CopyTextureRegion(
                     src: frame->data[0], 0, 0, 0,
                     srcRowPitch: (uint)frame->linesize[0],
-                    srcDepthPitch: (uint)frame->linesize[0] * height ,
+                    srcDepthPitch: (uint)frame->linesize[0] * height,
                     dst: map.Data.ToPointer(), 0, 0, 0,
                     dstRowPitch: map.RowPitch, dstDepthPitch: map.DepthPitch,
                     width, height, depth: 1, bytesPerPixel: 4
@@ -94,8 +93,7 @@ namespace NitroSharp.Content
             int streamId = ffmpeg.av_find_best_stream(
                 context.Inner,
                 AVMediaType.AVMEDIA_TYPE_VIDEO,
-                -1, -1,
-                null, 0
+                -1, -1, null, 0
             );
             AVCodecParameters* codecpar = context.Inner->streams[streamId]->codecpar;
             return new Size((uint)codecpar->width, (uint)codecpar->height);

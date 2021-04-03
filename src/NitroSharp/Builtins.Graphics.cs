@@ -229,22 +229,18 @@ namespace NitroSharp
                 return result;
             }
 
-            Entity? srcEntity = Get(new EntityPath(src));
-            if (srcEntity is ColorSource colorSrc)
-            {
-                return SpriteTexture.SolidColor(colorSrc.Color, colorSrc.Size);
-            }
-            if (srcEntity is Image img)
-            {
-                return img.Texture.WithSourceRectangle(srcRect);
-            }
-
             if (_ctx.Content.RequestTexture(src) is AssetRef<Texture> asset)
             {
                 return SpriteTexture.FromAsset(asset, srcRect);
             }
 
-            return null;
+            Entity? srcEntity = Get(new EntityPath(src));
+            return srcEntity switch
+            {
+                ColorSource colorSrc => SpriteTexture.SolidColor(colorSrc.Color, colorSrc.Size),
+                Image img => img.Texture.WithSourceRectangle(srcRect),
+                _ => null
+            };
         }
 
         public override void CreateSpriteEx(
