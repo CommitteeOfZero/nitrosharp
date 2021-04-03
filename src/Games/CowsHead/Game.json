@@ -1,8 +1,8 @@
 ﻿{
   "activeProfile": "Noah",
   "graphics.vsync": true,
-  "graphics.backend": "D3D11",
-  "audio.backend": "XAudio2",
+  "graphics.backend": "Auto",
+  "audio.backend": "Auto",
   "window.title": "COWS;HEAD NOAH",
   "window.width": 1280,
   "window.height": 720,
