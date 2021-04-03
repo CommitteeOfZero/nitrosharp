@@ -46,7 +46,7 @@ namespace NitroSharp.Media
         private readonly StreamContext? _audio;
         private readonly StreamContext? _video;
         private readonly Pipe? _audioPipe;
-        private readonly XAudio2AudioSource? _audioSource;
+        private readonly AudioSource? _audioSource;
         private readonly AudioParameters _outAudioParams;
         private readonly YCbCrBuffer? _videoBuffer;
         private readonly Size? _videoResolution;
@@ -239,7 +239,7 @@ namespace NitroSharp.Media
         public unsafe MediaStream(
             Stream stream,
             GraphicsDevice? graphicsDevice,
-            XAudio2AudioSource? audioSource,
+            AudioSource? audioSource,
             AudioParameters outAudioParams)
         {
             _fileStream = stream;
@@ -324,7 +324,7 @@ namespace NitroSharp.Media
 
         public TimeSpan Duration { get; }
 
-        public XAudio2AudioSource AudioSource => _audioSource!;
+        public AudioSource AudioSource => _audioSource!;
 
         public Size VideoResolution
         {
@@ -371,7 +371,7 @@ namespace NitroSharp.Media
             _unpauseSignal.Set();
             var tasks = new List<Task>(5);
             tasks.Add(Task.Run(Read));
-            if (_audio is { } && _audioSource is XAudio2AudioSource audioSource)
+            if (_audio is { } && _audioSource is AudioSource audioSource)
             {
                 Debug.Assert(_audioPipe is not null);
                 tasks.Add(Task.Run(() => Decode(_audio)));

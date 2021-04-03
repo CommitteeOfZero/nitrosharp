@@ -9,9 +9,9 @@ namespace NitroSharp.Media
     internal readonly struct PooledAudioSource : IDisposable
     {
         private readonly AudioContext _pool;
-        public readonly XAudio2AudioSource Value;
+        public readonly AudioSource Value;
 
-        public PooledAudioSource(AudioContext pool, XAudio2AudioSource audioSource)
+        public PooledAudioSource(AudioContext pool, AudioSource audioSource)
         {
             _pool = pool;
             Value = audioSource;
@@ -25,12 +25,12 @@ namespace NitroSharp.Media
 
     internal sealed class AudioContext : IAsyncDisposable
     {
-        private readonly ConcurrentQueue<XAudio2AudioSource> _freeSources;
+        private readonly ConcurrentQueue<AudioSource> _freeSources;
 
         public AudioContext(AudioDevice device, uint initialSize = 1)
         {
             Device = device;
-            _freeSources = new ConcurrentQueue<XAudio2AudioSource>();
+            _freeSources = new ConcurrentQueue<AudioSource>();
 
             VoiceAudioSource = Device.CreateAudioSource( bufferSize: 4400, bufferCount: 64);
             for (int i = 0; i < initialSize; i++)
@@ -40,17 +40,17 @@ namespace NitroSharp.Media
         }
 
         public AudioDevice Device { get; }
-        public XAudio2AudioSource VoiceAudioSource { get; }
+        public AudioSource VoiceAudioSource { get; }
 
         public PooledAudioSource RentAudioSource()
         {
-            XAudio2AudioSource audioSource = _freeSources.TryDequeue(out XAudio2AudioSource? pooled)
+            AudioSource audioSource = _freeSources.TryDequeue(out AudioSource? pooled)
                 ? pooled
                 : Device.CreateAudioSource();
             return new PooledAudioSource(this, audioSource);
         }
 
-        public void ReturnAudioSource(XAudio2AudioSource audioSource)
+        public void ReturnAudioSource(AudioSource audioSource)
         {
             _freeSources.Enqueue(audioSource);
         }

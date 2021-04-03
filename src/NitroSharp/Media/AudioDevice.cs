@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
+using NitroSharp.Media.NullAudio;
 using NitroSharp.Media.XAudio2;
 
 namespace NitroSharp.Media
@@ -16,30 +17,25 @@ namespace NitroSharp.Media
 
         public AudioParameters AudioParameters { get; }
 
-        public abstract XAudio2AudioSource CreateAudioSource(
+        public abstract AudioSource CreateAudioSource(
             int bufferSize = 16 * 1024,
             int bufferCount = 16
         );
 
         public abstract ValueTask DisposeAsync();
 
-        public static AudioDevice CreatePlatformDefault(in AudioParameters audioParameters)
-        {
-            return Create(GetPlatformDefaultBackend(), audioParameters);
-        }
-
         public static AudioBackend GetPlatformDefaultBackend()
         {
-            return RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+            return OperatingSystem.IsWindows()
                 ? AudioBackend.XAudio2
-                : AudioBackend.OpenAL;
+                : AudioBackend.Null;
         }
 
         public static bool IsBackendAvailable(AudioBackend backend)
         {
             if (backend == AudioBackend.XAudio2)
             {
-                return RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+                return OperatingSystem.IsWindows();
             }
 
             return true;
@@ -47,12 +43,18 @@ namespace NitroSharp.Media
 
         public static AudioDevice Create(AudioBackend backend, in AudioParameters audioParameters)
         {
-            return new XAudio2AudioDevice(audioParameters);
+            return backend switch
+            {
+                AudioBackend.Null => new NullAudioDevice(audioParameters),
+                AudioBackend.XAudio2 => new XAudio2AudioDevice(audioParameters),
+                _ => throw new NotImplementedException($"Backend '{backend}' is not implemented")
+            };
         }
     }
 
     public enum AudioBackend
     {
+        Null,
         XAudio2,
         OpenAL
     }

@@ -11,7 +11,7 @@ using SharpDX.XAudio2;
 
 namespace NitroSharp.Media.XAudio2
 {
-    internal sealed class XAudio2AudioSource : System.IAsyncDisposable
+    internal sealed class XAudio2AudioSource : AudioSource
     {
         private readonly int _bufferSize;
         private readonly int _bufferPoolSize;
@@ -64,14 +64,14 @@ namespace NitroSharp.Media.XAudio2
             }
         }
 
-        public bool IsPlaying
+        public override bool IsPlaying
             => _audioData is not null && _sourceVoice.State.BuffersQueued > 0;
 
-        public double SecondsElapsed =>
+        public override double SecondsElapsed =>
             (_sourceVoice.State.SamplesPlayed - _samplesPlayedStart)
                 / (double)_device.AudioParameters.SampleRate;
 
-        public unsafe ReadOnlySpan<short> GetCurrentBuffer()
+        public override unsafe ReadOnlySpan<short> GetCurrentBuffer()
         {
             if (_currentBuffer == IntPtr.Zero) { return default; }
             int index = (int)((_currentBuffer.ToInt64() - _buffer.ToInt64()) / _bufferSize);
@@ -79,7 +79,7 @@ namespace NitroSharp.Media.XAudio2
             return new ReadOnlySpan<short>(_currentBuffer.ToPointer(), size / 2);
         }
 
-        public float Volume
+        public override float Volume
         {
             get
             {
@@ -89,7 +89,7 @@ namespace NitroSharp.Media.XAudio2
             set => _sourceVoice.SetVolume(value);
         }
 
-        public void Play(PipeReader audioData)
+        public override void Play(PipeReader audioData)
         {
             _ = PlayAsync(audioData);
         }
@@ -106,13 +106,13 @@ namespace NitroSharp.Media.XAudio2
             _consumeTask = Task.Run(() => ConsumeLoop(_audioData));
         }
 
-        public void Pause()
+        public override void Pause()
         {
             _sourceVoice.Stop();
             _playSignal.Reset();
         }
 
-        public void Resume()
+        public override void Resume()
         {
             if (_audioData is not null)
             {
@@ -121,12 +121,12 @@ namespace NitroSharp.Media.XAudio2
             }
         }
 
-        public void Stop()
+        public override void Stop()
         {
             _ = StopAsync();
         }
 
-        public async Task StopAsync()
+        private async Task StopAsync()
         {
             if (_audioData is not null)
             {
@@ -178,7 +178,7 @@ namespace NitroSharp.Media.XAudio2
             }
         }
 
-        public void FlushBuffers()
+        public override void FlushBuffers()
         {
             if (_audioData is not null)
             {
@@ -227,7 +227,7 @@ namespace NitroSharp.Media.XAudio2
             _bufferAvailable.Set();
         }
 
-        public async ValueTask DisposeAsync()
+        public override async ValueTask DisposeAsync()
         {
             if (_consumeTask is not null)
             {

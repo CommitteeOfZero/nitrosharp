@@ -1,31 +1,22 @@
 ﻿using System;
-using System.Collections.Concurrent;
+using System.IO.Pipelines;
+using System.Threading.Tasks;
 
 namespace NitroSharp.Media
 {
-    public abstract class AudioSource : IDisposable
+    internal abstract class AudioSource : IAsyncDisposable
     {
-        public const uint MaxQueuedBuffers = 16;
-
-        protected ConcurrentQueue<IntPtr> _processedBufferPointers = new();
-
-        public abstract IntPtr CurrentBuffer { get; }
-        public abstract uint BuffersQueued { get; }
-        public abstract uint TotalBuffersReferenced { get; }
-        public abstract double PositionInCurrentBuffer { get; }
-
+        public abstract bool IsPlaying { get; }
+        public abstract double SecondsElapsed { get; }
         public abstract float Volume { get; set; }
 
-        public abstract bool TrySubmitBuffer(IntPtr data, uint size);
-
-        public virtual bool TryDequeueProcessedBuffer(out IntPtr pointer)
-        {
-            return _processedBufferPointers.TryDequeue(out pointer);
-        }
-
-        public abstract void FlushBuffers();
-        public abstract void Play();
+        public abstract void Play(PipeReader audioData);
+        public abstract void Pause();
+        public abstract void Resume();
         public abstract void Stop();
-        public abstract void Dispose();
+        public abstract void FlushBuffers();
+        public abstract ReadOnlySpan<short> GetCurrentBuffer();
+
+        public abstract ValueTask DisposeAsync();
     }
 }

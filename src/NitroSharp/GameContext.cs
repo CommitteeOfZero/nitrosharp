@@ -223,8 +223,12 @@ namespace NitroSharp
         private static AudioContext InitAudio(Configuration configuration)
         {
             var audioParameters = AudioParameters.Default;
-            AudioBackend backend = configuration.PreferredAudioBackend
-                ?? AudioDevice.GetPlatformDefaultBackend();
+            AudioBackend backend = AudioDevice.GetPlatformDefaultBackend();
+            if (configuration.PreferredAudioBackend is AudioBackend preferredBackend
+                && AudioDevice.IsBackendAvailable(preferredBackend))
+            {
+                backend = preferredBackend;
+            }
             var audioDevice = AudioDevice.Create(backend, audioParameters);
             return new AudioContext(audioDevice);
         }
@@ -269,7 +273,7 @@ namespace NitroSharp
             Configuration configuration)
         {
             TextureLoader textureLoader;
-            if (OperatingSystem.IsWindows())
+            if (OperatingSystem.IsWindows() && false)
             {
                 textureLoader = new WicTextureLoader(device);
             }
