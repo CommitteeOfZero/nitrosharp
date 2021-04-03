@@ -135,7 +135,7 @@ namespace NitroSharp.Launcher
             {
                 "XAUDIO" or "XAUDIO2" => AudioBackend.XAudio2,
                 "OPENAL" or "OPENALSOFT" or "OPENAL SOFT" => AudioBackend.OpenAL,
-                "NULL" or "Null" => AudioBackend.Null,
+                "NULL" or "Null" or "Auto" or "AUTO" => AudioBackend.Null,
                 _ => null,
             };
         }
@@ -165,6 +165,9 @@ namespace NitroSharp.Launcher
                 case "GL ES":
                     return GraphicsBackend.OpenGLES;
 
+                case "Auto":
+                case "AUTO":
+                case "auto":
                 default:
                     return null;
             }

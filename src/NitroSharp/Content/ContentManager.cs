@@ -187,7 +187,7 @@ namespace NitroSharp.Content
 
         public Stream OpenStream(string path)
         {
-            string fullPath = Path.Combine(RootDirectory, path);
+            string fullPath = Path.Combine(RootDirectory, path.ToLowerInvariant());
             return File.OpenRead(fullPath);
         }
 

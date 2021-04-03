@@ -35,7 +35,7 @@ The initial release will likely only support two major platforms:
 * [x] Linux x64
   * Vulkan
 
-The Linux version currently doesn't have sound. There's also the fact that the game uses case-insensitive paths for assets, so it's not going to work very well until there's support for the archive formats.
+The Linux version currently doesn't have sound.
 
 It should be theoretically possible to add support for the following platforms:
 * Windows x86
