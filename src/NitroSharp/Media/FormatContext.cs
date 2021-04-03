@@ -18,6 +18,7 @@ namespace NitroSharp.Media
         // The delegates must be kept alive for the entire lifetime of the object.
         private readonly avio_alloc_context_read_packet _readFunc;
         private readonly avio_alloc_context_seek _seekFunc;
+        private readonly AVCodecContext_get_format _getFormatFunc;
         // ReSharper restore PrivateFieldCanBeConvertedToLocalVariable
 
         public FormatContext(Stream stream)
@@ -25,6 +26,7 @@ namespace NitroSharp.Media
             _stream = stream;
             _readFunc = IoReadPacket;
             _seekFunc = IoSeek;
+            _getFormatFunc = GetFormat;
             // Both the buffer and the IO context are freed by avformat_close_input.
             byte* ioBuffer = (byte*)ffmpeg.av_malloc(IoBufferSize);
             AVIOContext* ioContext = ffmpeg.avio_alloc_context(
@@ -42,6 +44,21 @@ namespace NitroSharp.Media
             CheckResult(ffmpeg.avformat_find_stream_info(ctx, null));
         }
 
+        private static AVPixelFormat GetFormat(AVCodecContext* s, AVPixelFormat* fmt)
+        {
+            int i = 0;
+            while ((int)fmt[i] != -1)
+            {
+                if (fmt[i] == AVPixelFormat.AV_PIX_FMT_YUVJ444P)
+                {
+                    fmt[i] = AVPixelFormat.AV_PIX_FMT_YUV444P;
+                }
+                i++;
+            }
+
+            return ffmpeg.avcodec_default_get_format(s, fmt);
+        }
+
         public AVFormatContext* Inner => _ctx;
         public AVPacket* RecvPacket => _recvPacket;
 
@@ -52,6 +69,7 @@ namespace NitroSharp.Media
             AVCodec* codec = DecoderCollection.Shared.Get(stream->codecpar->codec_id);
             AVCodecContext* codecCtx = ffmpeg.avcodec_alloc_context3(codec);
             Debug.Assert(codecCtx is not null);
+            codecCtx->get_format = _getFormatFunc;
             CheckResult(ffmpeg.avcodec_parameters_to_context(codecCtx, stream->codecpar));
             CheckResult(ffmpeg.avcodec_open2(codecCtx, codec, null));
             return codecCtx;
