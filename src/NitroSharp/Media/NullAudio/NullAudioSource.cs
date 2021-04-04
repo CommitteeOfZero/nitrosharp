@@ -50,8 +50,10 @@ namespace NitroSharp.Media.NullAudio
         private async Task ConsumeLoop(PipeReader audioData)
         {
             Debug.Assert(_cts is not null);
+            SpinWait spinner = new();
             while (!_cts.IsCancellationRequested)
             {
+                spinner.SpinOnce();
                 ReadResult readResult = await audioData.ReadAsync();
                 audioData.AdvanceTo(readResult.Buffer.End);
             }

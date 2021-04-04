@@ -135,7 +135,7 @@ namespace NitroSharp.Launcher
             {
                 "XAUDIO" or "XAUDIO2" => AudioBackend.XAudio2,
                 "OPENAL" or "OPENALSOFT" or "OPENAL SOFT" => AudioBackend.OpenAL,
-                "NULL" or "Null" or "null" or "AUTO" or "Auto" or "auto" => AudioBackend.Null,
+                "NULL" or "Null" or "null" => AudioBackend.Null,
                 _ => null,
             };
         }
