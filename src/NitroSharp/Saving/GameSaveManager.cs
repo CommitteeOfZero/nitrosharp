@@ -22,8 +22,12 @@ namespace NitroSharp.Saving
 
         public GameSaveManager(Configuration configuration)
         {
+            string localAppData = Environment.GetFolderPath(
+                Environment.SpecialFolder.LocalApplicationData,
+                Environment.SpecialFolderOption.Create
+            );
             SaveDirectory = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                localAppData,
                 Path.Combine("Committee of Zero", configuration.ProductName)
             );
             SaveDirectory = Path.Combine(SaveDirectory, configuration.ProfileName);
