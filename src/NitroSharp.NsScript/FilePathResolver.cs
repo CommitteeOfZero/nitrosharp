@@ -46,13 +46,12 @@ namespace NitroSharp.NsScript
     /// </summary>
     internal sealed class FilePathResolver
     {
-        private readonly string _rootDirectory;
         private readonly Dictionary<string, string> _canonicalPaths;
         private readonly bool _unixPlatform;
 
         public FilePathResolver(string rootDirectory, string searchPattern)
         {
-            _rootDirectory = rootDirectory = NormalizeSlashes(rootDirectory);
+            RootDirectory = rootDirectory = NormalizeSlashes(rootDirectory);
             _canonicalPaths = new Dictionary<string, string>();
             _unixPlatform = !RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
             bool normalizedRoot = false;
@@ -62,19 +61,19 @@ namespace NitroSharp.NsScript
                 string normalized = NormalizeDotnetPath(filePath);
                 if (!normalizedRoot)
                 {
-                    _rootDirectory = normalized[..rootDirectory.Length];
-                    Debug.Assert(_rootDirectory.Equals(rootDirectory, StringComparison.OrdinalIgnoreCase));
+                    RootDirectory = normalized[..rootDirectory.Length];
+                    Debug.Assert(RootDirectory.Equals(rootDirectory, StringComparison.OrdinalIgnoreCase));
                     normalizedRoot = true;
                 }
                 _canonicalPaths[normalized.ToUpperInvariant()] = normalized;
             }
         }
 
-        public string RootDirectory => _rootDirectory;
+        public string RootDirectory { get; }
 
         public bool ResolveAbsolute(string relativePath, out ResolvedPath resolvedPath)
         {
-            string fullPath = NormalizeSlashes(Path.Combine(_rootDirectory, relativePath));
+            string fullPath = NormalizeSlashes(Path.Combine(RootDirectory, relativePath));
             bool res = _canonicalPaths.TryGetValue(fullPath.ToUpperInvariant(), out string? actualPath);
             resolvedPath = new ResolvedPath(actualPath!);
             return res;
@@ -85,7 +84,7 @@ namespace NitroSharp.NsScript
             if (ResolveAbsolute(relativePath, out ResolvedPath absolutePath))
             {
                 ReadOnlySpan<char> canonical = absolutePath.Value
-                    .AsSpan(_rootDirectory.Length + 1);
+                    .AsSpan(RootDirectory.Length + 1);
                 string str = relativePath.AsSpan().Equals(canonical, StringComparison.Ordinal)
                     ? relativePath
                     : canonical.ToString();

@@ -142,7 +142,6 @@ namespace NitroSharp.NsScript.Syntax
             {
                 start++;
                 end--;
-
             }
             if ((Flags & SyntaxTokenFlags.HasDollarPrefix) == SyntaxTokenFlags.HasDollarPrefix
                 || (Flags & SyntaxTokenFlags.HasHashPrefix) == SyntaxTokenFlags.HasHashPrefix

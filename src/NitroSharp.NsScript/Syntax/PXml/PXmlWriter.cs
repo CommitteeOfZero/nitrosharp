@@ -13,7 +13,6 @@ namespace NitroSharp.NsScript.Syntax.PXml
 
         public override void VisitVoiceElement(VoiceElement voiceElement)
         {
-
         }
 
         private void Write(string s)

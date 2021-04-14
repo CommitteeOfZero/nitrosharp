@@ -8,7 +8,7 @@ using static NitroSharp.SourceGenerators.Common;
 
 namespace NitroSharp.SourceGenerators
 {
-    public class SerializeGenerator
+    public static class SerializeGenerator
     {
         public static MethodDeclarationSyntax GenerateMethod(INamedTypeSymbol type)
         {
@@ -155,8 +155,7 @@ namespace NitroSharp.SourceGenerators
                 target,
                 Block(Write(IdentifierName("item"), array.ElementType)));
 
-            stmts = stmts.Add(loop);
-            return stmts;
+            return stmts.Add(loop);
         }
     }
 }

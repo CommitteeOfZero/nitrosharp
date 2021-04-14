@@ -56,7 +56,7 @@ namespace NitroSharp.SourceGenerators
 
         private static void GenerateExtensions(GeneratorExecutionContext context)
         {
-            string mpWriterExtensions = @"
+            const string mpWriterExtensions = @"
 using System.Numerics;
 using MessagePack;
 
@@ -175,10 +175,8 @@ namespace ToolGeneratedExtensions
             }))
             .WithMembers(List(new[] { ctor, serializeMethod }));
 
-            var ns = NamespaceDeclaration(ParseName(GetFullName(type.ContainingNamespace)))
+            return NamespaceDeclaration(ParseName(GetFullName(type.ContainingNamespace)))
                 .WithMembers(SingletonList((MemberDeclarationSyntax)partialType));
-
-            return ns;
         }
 
         private static List<INamedTypeSymbol> GetSerializables(INamespaceSymbol root)

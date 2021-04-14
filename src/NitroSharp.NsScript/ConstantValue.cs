@@ -177,7 +177,7 @@ namespace NitroSharp.NsScript
         public bool IsNull => Type == BuiltInType.Null;
         public bool IsString => Type == BuiltInType.String;
         public bool IsZero => Type == BuiltInType.Numeric && FloatValue == 0;
-        public bool IsEmptyString => Type == BuiltInType.String && _stringValue == string.Empty;
+        public bool IsEmptyString => Type == BuiltInType.String && _stringValue!.Length == 0;
 
         public bool GetSlotInfo(out short slot)
         {
@@ -226,22 +226,19 @@ namespace NitroSharp.NsScript
 
         private static bool Equals(ConstantValue left, ConstantValue right)
         {
-            bool equal;
             (float? leftNum, float? rightNum) = (left.AsNumber(), right.AsNumber());
             if (leftNum.HasValue && rightNum.HasValue)
             {
-                equal = leftNum.Value == rightNum.Value;
+                return leftNum.Value == rightNum.Value;
             }
             else if (left.IsString && right.IsString)
             {
-                equal = left._stringValue!.Equals(right._stringValue!);
+                return left._stringValue!.Equals(right._stringValue!);
             }
             else
             {
-                equal = left.IsNull && right.IsNull;
+                return left.IsNull && right.IsNull;
             }
-
-            return equal;
         }
 
         public string ConvertToString() => Type switch
@@ -312,7 +309,6 @@ namespace NitroSharp.NsScript
                 _   => InvalidBinOp("/", left.Type, right.Type)
             };
         }
-
 
         public static ConstantValue operator %(in ConstantValue left, in ConstantValue right)
         {

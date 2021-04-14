@@ -103,7 +103,6 @@ namespace NitroSharp.SourceGenerators
                             SingletonSeparatedList(
                                 Argument(IdentifierName("reader"))
                                 .WithRefKindKeyword(Token(SyntaxKind.RefKeyword)))))));
-
         }
 
         private static SyntaxList<StatementSyntax> ReadEnum(ExpressionSyntax target, INamedTypeSymbol type)
@@ -116,7 +115,6 @@ namespace NitroSharp.SourceGenerators
                     CastExpression(
                         ParseTypeName(FullyQualifiedName(type)),
                         CallReadPrimitive(underlyingType)))));
-
         }
 
         private static StatementSyntax ReadPrimitiveTypeValue(ExpressionSyntax target, ITypeSymbol type)
@@ -165,8 +163,7 @@ namespace NitroSharp.SourceGenerators
                     target,
                     tuple));
 
-            stmts = stmts.Add(assignment);
-            return stmts;
+            return stmts.Add(assignment);
         }
 
         private static SyntaxList<StatementSyntax> ReadArray(ExpressionSyntax target, IArrayTypeSymbol arrayType)
@@ -219,8 +216,7 @@ namespace NitroSharp.SourceGenerators
                             SyntaxKind.PostIncrementExpression,
                             IdentifierName("i"))));
 
-            stmts = stmts.Add(loop);
-            return stmts;
+            return stmts.Add(loop);
         }
 
         private static LocalDeclarationStatementSyntax ReadArrayHeader(string variableName)

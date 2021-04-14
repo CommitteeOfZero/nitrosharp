@@ -8,22 +8,17 @@ namespace NitroSharp.NsScript.Utilities
     internal ref struct BufferReader
     {
         private readonly ReadOnlySpan<byte> _buffer;
-        private int _position;
 
         public BufferReader(ReadOnlySpan<byte> buffer)
         {
             _buffer = buffer;
-            _position = 0;
+            Position = 0;
         }
 
-        public int Position
-        {
-            get => _position;
-            set => _position = value;
-        }
+        public int Position { get; set; }
 
-        public ReadOnlySpan<byte> Consumed => _buffer[.._position];
-        public ReadOnlySpan<byte> Unconsumed => _buffer[_position..];
+        public ReadOnlySpan<byte> Consumed => _buffer[..Position];
+        public ReadOnlySpan<byte> Unconsumed => _buffer[Position..];
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ReadOnlySpan<byte> Consume(int byteCount)
@@ -40,7 +35,7 @@ namespace NitroSharp.NsScript.Utilities
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool TryConsume(int byteCount, out ReadOnlySpan<byte> slice)
         {
-            int start = _position;
+            int start = Position;
             int end = start + byteCount;
             if (end > _buffer.Length)
             {
@@ -49,7 +44,7 @@ namespace NitroSharp.NsScript.Utilities
             }
 
             slice = _buffer.Slice(start, byteCount);
-            _position += byteCount;
+            Position += byteCount;
             return true;
         }
 
@@ -84,10 +79,10 @@ namespace NitroSharp.NsScript.Utilities
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool TryReadByte(out byte value)
         {
-            if (_position < _buffer.Length)
+            if (Position < _buffer.Length)
             {
-                value = _buffer[_position];
-                _position++;
+                value = _buffer[Position];
+                Position++;
                 return true;
             }
 
@@ -100,7 +95,7 @@ namespace NitroSharp.NsScript.Utilities
         {
             if (BinaryPrimitives.TryReadInt32LittleEndian(Unconsumed, out value))
             {
-                _position += sizeof(int);
+                Position += sizeof(int);
                 return true;
             }
 
@@ -112,7 +107,7 @@ namespace NitroSharp.NsScript.Utilities
         {
             if (BinaryPrimitives.TryReadInt64LittleEndian(Unconsumed, out value))
             {
-                _position += sizeof(long);
+                Position += sizeof(long);
                 return true;
             }
 
@@ -124,7 +119,7 @@ namespace NitroSharp.NsScript.Utilities
         {
             if (BinaryPrimitives.TryReadInt16LittleEndian(Unconsumed, out value))
             {
-                _position += sizeof(short);
+                Position += sizeof(short);
                 return true;
             }
 
@@ -136,7 +131,7 @@ namespace NitroSharp.NsScript.Utilities
         {
             if (BinaryPrimitives.TryReadUInt16LittleEndian(Unconsumed, out value))
             {
-                _position += sizeof(ushort);
+                Position += sizeof(ushort);
                 return true;
             }
 
@@ -149,7 +144,7 @@ namespace NitroSharp.NsScript.Utilities
             if (BinaryPrimitives.TryReadInt32LittleEndian(Unconsumed, out int intValue))
             {
                 value = Unsafe.As<int, float>(ref intValue);
-                _position += sizeof(float);
+                Position += sizeof(float);
                 return true;
             }
 

@@ -608,7 +608,7 @@ namespace NitroSharp.NsScript.VM
                 BinaryOperatorKind.And => left && right,
                 BinaryOperatorKind.Or => left || right,
                 BinaryOperatorKind.Remainder => left % right,
-                _ => throw new NotImplementedException()
+                _ => ThrowHelper.Unreachable<ConstantValue>()
             };
         }
     }

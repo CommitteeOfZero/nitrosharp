@@ -11,19 +11,17 @@ namespace NitroSharp.NsScript
             public ImmutableArray<Diagnostic> Warnings;
             public ImmutableArray<Diagnostic> Errors;
         }
-
-        private readonly ImmutableArray<Diagnostic> _diagnostics;
         private readonly Lazy<DiagnosticCollections> _collections;
 
         internal DiagnosticBag(ImmutableArray<Diagnostic> diagnostics)
         {
-            _diagnostics = diagnostics;
+            All = diagnostics;
             _collections = new Lazy<DiagnosticCollections>(Categorize);
         }
 
-        public bool IsEmpty => _diagnostics.Length == 0;
+        public bool IsEmpty => All.Length == 0;
 
-        public ImmutableArray<Diagnostic> All => _diagnostics;
+        public ImmutableArray<Diagnostic> All { get; }
         public ImmutableArray<Diagnostic> Information
             => IsEmpty ? ImmutableArray<Diagnostic>.Empty : _collections.Value.Information;
         public ImmutableArray<Diagnostic> Warnings
@@ -36,7 +34,7 @@ namespace NitroSharp.NsScript
             var information = ImmutableArray.CreateBuilder<Diagnostic>();
             var warnings = ImmutableArray.CreateBuilder<Diagnostic>();
             var errors = ImmutableArray.CreateBuilder<Diagnostic>();
-            foreach (var diagnostic in _diagnostics)
+            foreach (var diagnostic in All)
             {
                 switch (diagnostic.Severity)
                 {

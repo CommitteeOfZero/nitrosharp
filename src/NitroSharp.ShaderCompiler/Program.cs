@@ -117,7 +117,7 @@ namespace NitroSharp.ShaderCompiler
         {
             string profile = stage == ShaderStages.Vertex ? "vs_4_0" : "ps_4_0";
 
-            ShaderFlags flags = ShaderFlags.OptimizationLevel3;
+            const ShaderFlags flags = ShaderFlags.OptimizationLevel3;
             CompilationResult result = ShaderBytecode.Compile(
                 sourceCode,
                 "main",
