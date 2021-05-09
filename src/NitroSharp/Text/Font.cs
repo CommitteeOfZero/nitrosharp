@@ -79,6 +79,9 @@ namespace NitroSharp.Text
         /// not including ascender and descender.
         /// </summary>
         public float LineGap => LineHeight - Ascender + Descender;
+
+        public VerticalMetrics Max(in VerticalMetrics other)
+            => LineHeight > other.LineHeight ? this : other;
     }
 
     internal readonly struct GlyphDimensions

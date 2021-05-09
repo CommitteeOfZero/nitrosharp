@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Numerics;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
@@ -480,7 +481,7 @@ namespace NitroSharp.Text
     {
         private readonly FontContext _fontContext;
         private readonly FontFace _fontFace;
-        private readonly Dictionary<char, uint> _glyphIndexCache;
+        private readonly Dictionary<int, uint> _glyphIndexCache;
         private readonly Dictionary<(uint index, PtFontSize fontSize), GlyphDimensions> _dimensionsCache;
         private readonly Dictionary<GlyphCacheKey, GlyphCacheEntry> _glyphCache;
 
@@ -488,7 +489,7 @@ namespace NitroSharp.Text
         {
             _fontContext = fontContext;
             _fontFace = fontFace;
-            _glyphIndexCache = new Dictionary<char, uint>();
+            _glyphIndexCache = new Dictionary<int, uint>();
             _dimensionsCache = new Dictionary<(uint, PtFontSize), GlyphDimensions>();
             _glyphCache = new Dictionary<GlyphCacheKey, GlyphCacheEntry>();
         }
@@ -502,12 +503,12 @@ namespace NitroSharp.Text
         public VerticalMetrics GetVerticalMetrics(PtFontSize fontSize)
             => _fontContext.GetFontMetrics(_fontFace, fontSize);
 
-        public uint GetGlyphIndex(char ch)
+        public uint GetGlyphIndex(Rune scalar)
         {
-            if (!_glyphIndexCache.TryGetValue(ch, out uint index))
+            if (!_glyphIndexCache.TryGetValue(scalar.Value, out uint index))
             {
-                index = _fontContext.GetGlyphIndex(_fontFace, ch);
-                _glyphIndexCache.Add(ch, index);
+                index = _fontContext.GetGlyphIndex(_fontFace, (uint)scalar.Value);
+                _glyphIndexCache.Add(scalar.Value, index);
             }
             return index;
         }
@@ -656,6 +657,9 @@ namespace NitroSharp.Text
 
         public FontFace? GetFontFace(FontFaceKey faceKey)
             => _faces.TryGetValue(faceKey, out FontFace? face) ? face : null;
+
+        public uint GetGlyphIndex(FontFace fontFace, uint scalar)
+            => FT.FT_Get_Char_Index(fontFace.FTFace, scalar);
 
         public uint GetGlyphIndex(FontFace fontFace, char c)
             => FT.FT_Get_Char_Index(fontFace.FTFace, c);

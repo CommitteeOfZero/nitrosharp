@@ -142,7 +142,7 @@ namespace NitroSharp.Graphics
         {
             foreach (ref readonly GlyphRun glyphRun in glyphRuns)
             {
-                ReadOnlySpan<PositionedGlyph> glyphs = textLayout.GetGlyphs(glyphRun.GlyphSpan);
+                ReadOnlySpan<PositionedGlyph> glyphs = textLayout.Glyphs[glyphRun.GlyphSpan];
                 _glyphRasterizer.RequestGlyphs(
                     glyphRun.Font,
                     glyphRun.FontSize,
@@ -194,7 +194,7 @@ namespace NitroSharp.Graphics
             for (int i = 0; i < glyphRuns.Length; i++)
             {
                 ref readonly GlyphRun glyphRun = ref glyphRuns[i];
-                ReadOnlySpan<PositionedGlyph> glyphs = layout.GetGlyphs(glyphRun.GlyphSpan);
+                ReadOnlySpan<PositionedGlyph> glyphs = layout.Glyphs[glyphRun.GlyphSpan];
                 ReadOnlySpan<float> opacityValues = layout.GetOpacityValues(glyphRun.GlyphSpan);
                 if (AppendRun(glyphRun, glyphs, opacityValues, finalTransform, opacity)
                     is GpuGlyphSlice gpuGlyphSlice)

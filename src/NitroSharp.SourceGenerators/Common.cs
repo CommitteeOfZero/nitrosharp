@@ -215,7 +215,7 @@ namespace NitroSharp.SourceGenerators
         }
 
         public static SourceGeneratorException Unreachable()
-            => new("his program location is expected to be unreachable.");
+            => new("This program location is expected to be unreachable.");
 
         public static string FullyQualifiedName(ISymbol symbol)
             => symbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);

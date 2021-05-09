@@ -225,7 +225,7 @@ namespace NitroSharp.Graphics
             var rasterizer = ctx.Text.GlyphRasterizer;
             foreach (var glyphRun in _layout.GlyphRuns)
             {
-                var glyphs = _layout.GetGlyphs(glyphRun.GlyphSpan);
+                var glyphs = _layout.Glyphs[glyphRun.GlyphSpan];
                 var font = rasterizer.GetFontData(glyphRun.Font);
                 foreach (PositionedGlyph g in glyphs)
                 {
@@ -264,6 +264,7 @@ namespace NitroSharp.Graphics
             _layout.Clear();
             _remainingSegments.Clear();
             _pxmlLines.Clear();
+            _animation = null;
         }
 
         public new DialoguePageSaveData ToSaveData(GameSavingContext ctx) => new()

@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Immutable;
-using System.Diagnostics;
 using System.Numerics;
 using NitroSharp.Content;
 using NitroSharp.Graphics;
@@ -298,8 +297,9 @@ namespace NitroSharp
         {
             static int mapFontSize(int size) => size switch
             {
-                //23 => 22,
-                //26 => 25,
+                23 => 22,
+                26 => 25,
+                32 => 31,
                 _ => size
             };
 

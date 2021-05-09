@@ -4,7 +4,7 @@
     <TargetFramework>net5.0</TargetFramework>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <NoWarn>1701;1702;CA1063;IDE1006;IDE0063;VSTHRD002;VSTHRD003;VSTHRD103;VSTHRD200</NoWarn>
-    <VeldridVersion>4.9.0-g4ed9046a20</VeldridVersion>
+    <VeldridVersion>4.9.0-gd0615acd77</VeldridVersion>
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
@@ -32,21 +32,27 @@
     <PackageReference Include="Veldrid.SDL2" Version="$(VeldridVersion)" />
     <PackageReference Include="Veldrid.StartupUtilities" Version="$(VeldridVersion)" />
     <PackageReference Include="Veldrid.ImGui" Version="5.72.0-g4ed9046a20 " />
+    <PackageReference Include="Veldrid.ImageSharp" Version="4.8.0" />
 
-    <PackageReference Include="SharpDX.Direct2D1" Version="4.2.0" />
     <PackageReference Include="SharpDX.XAudio2" Version="4.2.0" />
 
     <PackageReference Include="Sprintf.NET" Version="2.0.0" />
     <PackageReference Include="SixLabors.ImageSharp" Version="1.0.3" />
     <PackageReference Include="System.IO.Pipelines" Version="5.0.1" />
     <PackageReference Include="Microsoft.VisualStudio.Threading" Version="16.9.60" />
-    <PackageReference Include="Vortice.DirectX" Version="1.9.4-beta" />
-    <PackageReference Include="Vortice.Direct3D11" Version="1.9.4-beta" />
-    <PackageReference Include="Vortice.DXGI" Version="1.9.4-beta" />
+    <!--<PackageReference Include="Vortice.DirectX" Version="1.9.41" />
+    <PackageReference Include="Vortice.Direct3D11" Version="1.9.41" />
+    <PackageReference Include="Vortice.DXGI" Version="1.9.41" />-->
+    <PackageReference Include="Vortice.Direct2D1" Version="1.9.45" />
+    <PackageReference Include="SharpDX.Direct2D1" Version="4.2.0" />
+    <PackageReference Include="SharpGen.Runtime.COM" Version="2.0.0-beta.7" />
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="../../fonts/**/*.*" LinkBase="Fonts">
+    <Content Include="../../fonts/**/*.ttf" LinkBase="Fonts">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="../../fonts/**/*.otf" LinkBase="Fonts">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>

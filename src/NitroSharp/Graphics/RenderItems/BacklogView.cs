@@ -63,8 +63,7 @@ namespace NitroSharp.Graphics
             {
                 foreach (BacklogEntry entry in _backlog.Entries[_entriesAdded..])
                 {
-                    _textLayout.NewLine(ctx.GlyphRasterizer);
-
+                    _textLayout.NewLine();
                     var run = TextRun.Regular(
                         entry.Text.AsMemory(),
                         _fontConfig.DefaultFont,
@@ -88,11 +87,8 @@ namespace NitroSharp.Graphics
 
             Line firstLine = _textLayout.Lines[_range.start];
             Line lastLine = _textLayout.Lines[_range.end - 1];
-            uint start = firstLine.GlyphSpan.Start;
-            uint end = lastLine.GlyphSpan.End;
-            var span = new GlyphSpan(start, end - start);
+            var span = new Range(firstLine.GlyphSpan.Start, lastLine.GlyphSpan.End);
             _glyphRun = GetGlyphRun(span);
-
             ctx.RenderContext.Text.RequestGlyphs(_textLayout, _glyphRun);
         }
 
@@ -118,16 +114,17 @@ namespace NitroSharp.Graphics
             );
         }
 
-        private GlyphRun GetGlyphRun(GlyphSpan span)
+        private GlyphRun GetGlyphRun(Range span)
         {
-            return new(
-                _fontConfig.DefaultFont,
-                _fontConfig.DefaultFontSize,
-                new RgbaFloat(_fontConfig.DefaultTextColor),
-                _fontConfig.DefaultOutlineColor?.ToRgbaFloat() ?? RgbaFloat.White,
-                span,
-                GlyphRunFlags.Outline
-            );
+            return new()
+            {
+                Font = _fontConfig.DefaultFont,
+                FontSize = _fontConfig.DefaultFontSize,
+                Color = new RgbaFloat(_fontConfig.DefaultTextColor),
+                OutlineColor = _fontConfig.DefaultOutlineColor?.ToRgbaFloat() ?? RgbaFloat.White,
+                GlyphSpan = span,
+                Flags = GlyphRunFlags.Outline
+            };
         }
 
         public override Size GetUnconstrainedBounds(RenderContext ctx)

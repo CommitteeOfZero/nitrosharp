@@ -23,13 +23,6 @@
   </PropertyGroup>-->
 
   <ItemGroup>
-    <NativeLibrary Include="d3d11.lib" />
-    <NativeLibrary Include="dxgi.lib" />
-    <DirectPInvoke Include="d3d11.dll"></DirectPInvoke>
-    <DirectPInvoke Include="dxgi.dll"></DirectPInvoke>
-  </ItemGroup>
-
-  <ItemGroup>
     <Content Include="Game.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 

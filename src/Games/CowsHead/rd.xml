@@ -1,8 +1,9 @@
-﻿<Directives xmlns="http://schemas.microsoft.com/netfx/2013/01/metadata">
+﻿<Directives>
   <Application>
-    <Assembly Name="Vortice.Runtime.COM">
+    <Assembly Name="Vortice.Runtime.COM" Dynamic="Required All">
       <Type Name="SharpGen.Runtime.ComObject" Dynamic="Required All" />
       <Type Name="SharpGen.Runtime.ComObjectShadow" Dynamic="Required All" />
+      <Type Name="SharpGen.Runtime.Win32.ComStream" Dynamic="Required All" />
       <Type Name="SharpGen.Runtime.Win32.ComStreamProxy" Dynamic="Required All" />
     </Assembly>
 
@@ -45,16 +46,5 @@
       <Type Name="SharpDX.XAudio2.EngineShadow" Dynamic="Required All" />
       <Type Name="SharpDX.XAudio2.VoiceShadow" Dynamic="Required All" />
     </Assembly>
-
-    <!--<Assembly Name="SharpDX.DXGI">
-      <Type Name="SharpDX.DXGI.Device" Dynamic="Required All" />
-    </Assembly>
-
-    <Assembly Name="SharpDX.Direct3D11">
-      <Type Name="SharpDX.Direct3D11.Texture2D" Dynamic="Required All" />
-      <Type Name="SharpDX.Direct3D11.DeviceContext1" Dynamic="Required All" />
-      <Type Name="SharpDX.Direct3D11.DeviceDebug" Dynamic="Required All" />
-      <Type Name="SharpDX.Direct3D11.UserDefinedAnnotation" Dynamic="Required All" />
-    </Assembly>-->
   </Application>
 </Directives>

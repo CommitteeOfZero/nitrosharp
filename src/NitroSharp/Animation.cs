@@ -621,11 +621,11 @@ namespace NitroSharp
             {
                 ref readonly GlyphRun run = ref glyphRuns[i];
                 Debug.Assert(!run.IsRubyText);
-                var glyphSpan = new GlyphSpan(run.GlyphSpan.Start, 0);
+                var glyphSpan = new Range(run.GlyphSpan.Start, run.GlyphSpan.Start);
 
                 void flush()
                 {
-                    if (!glyphSpan.IsEmpty)
+                    if (textLayout.GetGlyphSpanLength(glyphSpan) > 0)
                     {
                         GlyphRunRevealAnimation anim = createAnim(glyphSpan, timePerGlyph);
                         _anims.Enqueue(new AnimationPair(anim, null));
@@ -654,23 +654,23 @@ namespace NitroSharp
                         break;
                     }
 
-                    glyphSpan = GlyphSpan.FromBounds(glyphSpan.Start, run.GlyphSpan.End);
+                    glyphSpan = new Range(glyphSpan.Start, run.GlyphSpan.End);
                     i++;
                 }
 
                 flush();
             }
 
-            GlyphRunRevealAnimation createAnim(GlyphSpan glyphSpan, float timePerGlyph)
+            GlyphRunRevealAnimation createAnim(Range glyphSpan, float timePerGlyph)
                 => new(_textLayout, glyphSpan, timePerGlyph);
         }
 
         public bool Skipping { get; private set; }
 
-        private uint NbNonWhitespaceGlyphs(GlyphSpan glyphSpan)
+        private uint NbNonWhitespaceGlyphs(Range glyphSpan)
         {
             uint nbNonWhitespace = 0;
-            foreach (ref readonly PositionedGlyph g in _textLayout.GetGlyphs(glyphSpan))
+            foreach (ref readonly PositionedGlyph g in _textLayout.Glyphs[glyphSpan])
             {
                 if (!g.IsWhitespace)
                 {
@@ -748,13 +748,13 @@ namespace NitroSharp
     internal class GlyphRunRevealAnimation : Animation
     {
         private readonly TextLayout _textLayout;
-        private readonly GlyphSpan _glyphSpan;
+        private readonly Range _glyphSpan;
         private readonly float _timePerGlyph;
 
         private int _glyphsRevealed;
         private int _pos;
 
-        public GlyphRunRevealAnimation(TextLayout textLayout, GlyphSpan glyphSpan, float timePerGlyph)
+        public GlyphRunRevealAnimation(TextLayout textLayout, Range glyphSpan, float timePerGlyph)
         {
             _textLayout = textLayout;
             _glyphSpan = glyphSpan;
@@ -763,15 +763,16 @@ namespace NitroSharp
             _pos = 0;
         }
 
-        public GlyphSpan RemainingGlyphs { get; private set; }
+        public Range RemainingGlyphs { get; private set; }
 
         protected override AdvanceResult Advance()
         {
             int nbGlyphsToReveal = (int)((Elapsed / _timePerGlyph) - _glyphsRevealed);
             Span<float> opacity = _textLayout.GetOpacityValuesMut(_glyphSpan);
-            while (nbGlyphsToReveal > 0 && _pos < _glyphSpan.Length)
+            int spanLength = opacity.Length;
+            while (nbGlyphsToReveal > 0 && _pos < spanLength)
             {
-                if (!_textLayout.Glyphs[(int)_glyphSpan.Start + _pos].IsWhitespace)
+                if (!_textLayout.Glyphs[_glyphSpan.Start.Value + _pos].IsWhitespace)
                 {
                     opacity[_pos] = 1.0f;
                     nbGlyphsToReveal--;
@@ -785,16 +786,13 @@ namespace NitroSharp
                 _pos++;
             }
 
-            if (_pos < _glyphSpan.Length)
+            if (_pos < spanLength)
             {
                 opacity[_pos] = (Elapsed % _timePerGlyph) / _timePerGlyph;
             }
 
-            RemainingGlyphs = new GlyphSpan(
-                (uint)(_glyphSpan.Start + _pos),
-                (uint)(_glyphSpan.Length - _pos)
-            );
-            return _pos == _glyphSpan.Length
+            RemainingGlyphs = Range.StartAt(_glyphSpan.Start.Value + _pos);
+            return _pos == spanLength
                 ? AdvanceResult.Stop
                 : AdvanceResult.KeepGoing;
         }
@@ -803,22 +801,22 @@ namespace NitroSharp
     internal class GlyphRunSkipAnimation : AnimationWithDuration
     {
         private readonly TextLayout _textLayout;
-        private readonly GlyphSpan _firstGlyph;
-        private readonly GlyphSpan _rest;
+        private readonly Range _firstGlyph;
+        private readonly Range _rest;
 
         private readonly float _initialFirstGlyphOpacity;
         private float _firstGlyphOpacity;
         private float _restOpacity;
 
-        public GlyphRunSkipAnimation(TextLayout textLayout, GlyphSpan glyphSpan)
+        public GlyphRunSkipAnimation(TextLayout textLayout, Range glyphSpan)
             : base(TimeSpan.FromMilliseconds(120))
         {
             _textLayout = textLayout;
-            if (!glyphSpan.IsEmpty)
+            if (textLayout.GetGlyphSpanLength(glyphSpan) > 0)
             {
-                _firstGlyph = new GlyphSpan(glyphSpan.Start, 1);
-                _rest = new GlyphSpan(glyphSpan.Start + 1, glyphSpan.Length - 1);
-                _initialFirstGlyphOpacity = textLayout.OpacityValues[(int)glyphSpan.Start];
+                _firstGlyph = new Range(glyphSpan.Start, glyphSpan.Start.Value + 1);
+                _rest = Range.StartAt(glyphSpan.Start.Value + 1);
+                _initialFirstGlyphOpacity = textLayout.OpacityValues[glyphSpan.Start];
             }
         }
 
