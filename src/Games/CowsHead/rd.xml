@@ -1,11 +1,11 @@
 ﻿<Directives>
   <Application>
-    <Assembly Name="Vortice.Runtime.COM" Dynamic="Required All">
-      <Type Name="SharpGen.Runtime.ComObject" Dynamic="Required All" />
-      <Type Name="SharpGen.Runtime.ComObjectShadow" Dynamic="Required All" />
-      <Type Name="SharpGen.Runtime.Win32.ComStream" Dynamic="Required All" />
-      <Type Name="SharpGen.Runtime.Win32.ComStreamProxy" Dynamic="Required All" />
-    </Assembly>
+<!--    <Assembly Name="Vortice.Runtime.COM" Dynamic="Required All">-->
+<!--      <Type Name="SharpGen.Runtime.ComObject" Dynamic="Required All" />-->
+<!--      <Type Name="SharpGen.Runtime.ComObjectShadow" Dynamic="Required All" />-->
+<!--      <Type Name="SharpGen.Runtime.Win32.ComStream" Dynamic="Required All" />-->
+<!--      <Type Name="SharpGen.Runtime.Win32.ComStreamProxy" Dynamic="Required All" />-->
+<!--    </Assembly>-->
 
     <Assembly Name="SharpGen.Runtime">
       <Type Name="SharpGen.Runtime.CppObject" Dynamic="Required All" />
