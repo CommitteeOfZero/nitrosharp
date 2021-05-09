@@ -86,7 +86,7 @@ namespace NitroSharp
         public bool UseUtf8 { get; set; } = false;
         public bool SkipUpToDateCheck { get; set; } = false;
 
-        public string FontFamily { get; set; } = "MS Gothic";
+        public string FontFamily { get; set; } = "VL Gothic";
         public int FontSize { get; set; } = 20;
 
         public IconPathPatterns IconPathPatterns { get; }
