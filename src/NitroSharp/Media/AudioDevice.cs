@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using NitroSharp.Media.NullAudio;
 using NitroSharp.Media.XAudio2;
+using NitroSharp.Media.OpenAL;
 
 namespace NitroSharp.Media
 {
@@ -47,6 +48,7 @@ namespace NitroSharp.Media
             {
                 AudioBackend.Null => new NullAudioDevice(audioParameters),
                 AudioBackend.XAudio2 => new XAudio2AudioDevice(audioParameters),
+                AudioBackend.OpenAL => new OpenALAudioDevice(audioParameters),
                 _ => throw new NotImplementedException($"Backend '{backend}' is not implemented")
             };
         }
