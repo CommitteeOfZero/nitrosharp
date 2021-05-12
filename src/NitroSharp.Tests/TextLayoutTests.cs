@@ -50,25 +50,6 @@ Nullam nisl ipsum, semper ac lacus sit amet, semper viverra diam.";
         }
 
         [Fact]
-        public void StartWithNewline()
-        {
-            TextLayout withoutLinebreak = Layout("meow", null, null);
-
-            TextRun[] runs =
-            {
-                Regular("\n"),
-                Regular("meow")
-            };
-
-            TextLayout layout = Layout(runs, null, null);
-            AssertGlyphs(layout, layout.Lines[1].GlyphSpan, "meow");
-            for (int i = 0; i < "meow".Length; i++)
-            {
-                Assert.True(layout.Glyphs[i].Position.Y > withoutLinebreak.Glyphs[i].Position.Y);
-            }
-        }
-
-        [Fact]
         public void HardBreak_InSeparateTextRun()
         {
             TextRun[] runs =
@@ -115,7 +96,7 @@ Nullam nisl ipsum, semper ac lacus sit amet, semper viverra diam.";
             };
 
             TextLayout layout = Layout(runs, null, null);
-            AssertLine(layout, "A gaze falls from the sky.");
+            AssertLine(layout, layout.Lines[0], "A gaze falls from the sky.");
         }
 
         [Fact]
@@ -134,7 +115,53 @@ Nullam nisl ipsum, semper ac lacus sit amet, semper viverra diam.";
                 layout.Append(_rasterizer, run);
             }
 
-            AssertLine(layout, "A gaze falls from the sky.");
+            AssertLine(layout, layout.Lines[0], "A gaze falls from the sky.");
+        }
+
+        [Theory]
+        [InlineData("\r\n")]
+        [InlineData("\n")]
+        public void StartWithNewline(string newlineSequence)
+        {
+            TextLayout withoutLinebreak = Layout("meow", null, null);
+
+            TextRun[] runs =
+            {
+                Regular(newlineSequence),
+                Regular("meow")
+            };
+
+            TextLayout layout = Layout(runs, null, null);
+            Assert.True(layout.Lines[0].IsEmpty);
+            AssertLine(layout, layout.Lines[1], "meow");
+            for (int i = 0; i < "meow".Length; i++)
+            {
+                Assert.True(layout.Glyphs[i].Position.Y > withoutLinebreak.Glyphs[i].Position.Y);
+            }
+        }
+
+        [Theory]
+        [InlineData("\r\n")]
+        [InlineData("\n")]
+        public void MultipleLines_AppendEach(string newlineSequence)
+        {
+            TextLayout layout = new();
+            layout.Append(_rasterizer, Regular("A gaze"));
+            layout.Append(_rasterizer, Regular(newlineSequence));
+            layout.Append(_rasterizer, Regular("falls from the sky."));
+
+            AssertLines(layout, new[] { "A gaze", "falls from the sky." });
+        }
+
+        [Theory]
+        [InlineData("\n")]
+        [InlineData("\r\n")]
+        public void AppendText_StartingWithNewline(string newlineSequence)
+        {
+            TextLayout layout = new();
+            layout.Append(_rasterizer, Regular("A gaze"));
+            layout.Append(_rasterizer, Regular($"{newlineSequence}falls from the sky."));
+            AssertLines(layout, new[] { "A gaze", "falls from the sky." });
         }
 
         [Fact]
@@ -145,7 +172,7 @@ Nullam nisl ipsum, semper ac lacus sit amet, semper viverra diam.";
             TextRun second = Regular(" falls from the sky.");
             layout.Append(_rasterizer, second);
             RectangleF bbAfter = layout.BoundingBox;
-            AssertLine(layout, "A gaze falls from the sky.");
+            AssertLine(layout, layout.Lines[0], "A gaze falls from the sky.");
             Assert.True(bbAfter.Width > bbBefore.Width);
 
             Assert.Equal(
@@ -183,7 +210,7 @@ Nullam nisl ipsum, semper ac lacus sit amet, semper viverra diam.";
         {
             for (int i = 0; i < lines.Length; i++)
             {
-                AssertGlyphs(layout, layout.Lines[i].GlyphSpan, lines[i]);
+                AssertLine(layout, layout.Lines[i], lines[i]);
                 if (i > 0)
                 {
                     PositionedGlyph curStart = layout.Glyphs[layout.Lines[i].GlyphSpan.Start.Value];
@@ -193,9 +220,14 @@ Nullam nisl ipsum, semper ac lacus sit amet, semper viverra diam.";
             }
         }
 
-        private void AssertLine(TextLayout layout, string text)
+        private void AssertLine(TextLayout layout, Line line, string text)
         {
-            AssertGlyphs(layout, layout.Lines[0].GlyphSpan, text);
+            AssertGlyphs(layout, line.GlyphSpan, text);
+            PositionedGlyph[] glyphs = layout.Glyphs[line.GlyphSpan].ToArray();
+            var positions = glyphs.Select(x => x.Position.X)
+                .ToArray();
+            var orderedByX = positions.OrderBy(x => x);
+            Assert.Equal(orderedByX, positions);
         }
 
         private void AssertGlyphs(TextLayout layout, Range span, string text)
