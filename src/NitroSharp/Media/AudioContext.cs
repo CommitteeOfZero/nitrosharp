@@ -47,6 +47,7 @@ namespace NitroSharp.Media
             AudioSource audioSource = _freeSources.TryDequeue(out AudioSource? pooled)
                 ? pooled
                 : Device.CreateAudioSource();
+            audioSource.Volume = 1.0f;
             return new PooledAudioSource(this, audioSource);
         }
 
