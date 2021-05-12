@@ -15,6 +15,7 @@ namespace NitroSharp.Text
         private readonly float _rubyFontSizeMultiplier;
         private Vector2 _caret = Vector2.Zero;
         private RectangleF _boundingBox;
+        private Line _lastLine;
 
         private readonly List<Line> _lines = new();
         private readonly List<GlyphRun> _glyphRuns = new();
@@ -70,6 +71,7 @@ namespace NitroSharp.Text
             _glyphs.Clear();
             _lines.Clear();
             _caret = Vector2.Zero;
+            _lastLine = default;
             _boundingBox = RectangleF.FromLTRB(
                 float.MaxValue, float.MaxValue,
                 float.MinValue, float.MinValue
@@ -81,8 +83,8 @@ namespace NitroSharp.Text
 
         public void Append(GlyphRasterizer glyphRasterizer, ReadOnlySpan<TextRun> textRuns)
         {
-            bool updateLastLine = _glyphRuns.Count > 0;
             int appendStart = _glyphs.Count;
+            bool updateLastLine = appendStart > 0;
             var glyphBuf = new List<TextRunGlyph>();
             var context = new TextLayoutContext
             {
@@ -102,17 +104,18 @@ namespace NitroSharp.Text
             float right = _boundingBox.Right;
             float top = _boundingBox.Top;
             float bottom = _boundingBox.Bottom;
-            Line prevLine = new();
             foreach (Line line in lines)
             {
                 float height = _fixedLineHeight ?? line.VerticalMetrics.LineHeight;
-                float newY = _caret.Y;
-                if (!updateLastLine && prevLine.VerticalMetrics.LineHeight > 0)
+                Vector2 newCaret = _caret;
+                if (_lines.Count > 0 && _lastLine.IsEmpty
+                    || (!_lastLine.IsEmpty && !updateLastLine))
                 {
-                    newY += _fixedLineHeight ?? prevLine.VerticalMetrics.LineHeight;
+                    newCaret.X = 0;
+                    newCaret.Y += _fixedLineHeight ?? _lastLine.VerticalMetrics.LineHeight;
                 }
-                if (newY + height > MaxBounds.Height) { return; }
-                _caret.Y = newY;
+                if (newCaret.Y + height > MaxBounds.Height) { return; }
+                _caret = newCaret;
 
                 Span<TextRunGlyph> glyphs = CollectionsMarshal.AsSpan(glyphBuf);
                 foreach (TextRunGlyph glyph in glyphs[line.GlyphSpan])
@@ -174,7 +177,7 @@ namespace NitroSharp.Text
 
                         if (endGlyphRun)
                         {
-                            AppendGlyphRun(lastRun.Value, appendStart);
+                            AddGlyphRun(lastRun.Value, appendStart);
                             runStart = pos;
                             runLength = 1;
                             lastRun = null;
@@ -192,24 +195,25 @@ namespace NitroSharp.Text
                     line.GlyphSpan.End.Value + appendStart
                 );
 
-                if (updateLastLine)
+                if (updateLastLine && !line.IsEmpty)
                 {
                     Line lastLine = _lines[^1];
                     var newSpan = new Range(lastLine.GlyphSpan.Start, actualLineSpan.End);
                     _lines[^1] = new Line
                     {
                         GlyphSpan = newSpan,
-                        BbLeft = lastLine.BbLeft,
+                        BbLeft = Math.Min(line.BbLeft, lastLine.BbLeft),
                         BbRight = line.BbRight,
+                        Right = line.Right,
                         BaselineY = line.BaselineY,
                         VerticalMetrics = line.VerticalMetrics,
                         ActualAscender = line.ActualAscender,
                         ActualDescender = line.ActualDescender
                     };
                 }
-                else
+                else if (!updateLastLine)
                 {
-                    _lines.Add(line.WithSpan(actualLineSpan));
+                    AddLine(line.WithSpan(actualLineSpan));
                 }
 
                 if (!line.IsEmpty)
@@ -219,23 +223,40 @@ namespace NitroSharp.Text
                     right = MathF.Max(right, line.BbRight);
                     top = MathF.Min(top, _caret.Y + line.BaselineY - line.ActualAscender);
                 }
-                else
-                {
-                    _caret.X = 0;
-                }
                 updateLastLine = false;
-                prevLine = line;
+                _lastLine = line;
             }
 
             if (lastRun.HasValue)
             {
-                AppendGlyphRun(lastRun.Value, appendStart);
+                AddGlyphRun(lastRun.Value, appendStart);
+            }
+
+            if (_lastLine.IsEmpty && !_lines[^1].IsEmpty)
+            {
+                NewLine();
             }
 
             _boundingBox = RectangleF.FromLTRB(left, top, right, bottom);
         }
 
-        private void AppendGlyphRun(in GlyphRun run, int appendStart)
+        public void NewLine()
+        {
+            if (_lines.Count > 0)
+            {
+                VerticalMetrics vMetrics = _lines[^1].VerticalMetrics;
+                AddLine(new Line
+                {
+                    GlyphSpan = new Range(_glyphs.Count, _glyphs.Count),
+                    BbLeft = float.PositiveInfinity,
+                    BbRight = float.NegativeInfinity,
+                    Right = float.NegativeInfinity,
+                    VerticalMetrics = vMetrics
+                });
+            }
+        }
+
+        private void AddGlyphRun(in GlyphRun run, int appendStart)
         {
             var actualSpan = new Range(
                 run.GlyphSpan.Start.Value + appendStart,
@@ -248,21 +269,13 @@ namespace NitroSharp.Text
             _glyphRuns.Add(run.WithSpan(actualSpan));
         }
 
-        public void NewLine()
+        private void AddLine(in Line line)
         {
-            if (_lines.Count > 0)
+            _lines.Add(line);
+            _lastLine = line;
+            if (line.IsEmpty)
             {
-                float newY = _caret.Y + (_fixedLineHeight ?? _lines[^1].VerticalMetrics.LineHeight);
-                if (newY < MaxBounds.Height)
-                {
-                    _caret = new Vector2(0, newY);
-                }
-
-                _lines.Add(new Line
-                {
-                    GlyphSpan = new Range(_glyphs.Count, _glyphs.Count),
-                    BbLeft = float.MaxValue
-                });
+                _caret.X = 0;
             }
         }
     }
@@ -472,15 +485,15 @@ namespace NitroSharp.Text
             Vector2 caret = _firstLine ? new Vector2(_caretStartX, 0) : Vector2.Zero;
             int start = int.MaxValue, end = int.MinValue;
             float ascender = 0, descender = 0;
-            float bbLeft = float.MaxValue;
+            float bbLeft = float.PositiveInfinity;
             float bbRight = 0;
             VerticalMetrics maxVMetrics = new();
             bool notEmpty = false;
             while (_peekedWord is { } || _words.MoveNext())
             {
                 Word word = _peekedWord ?? _words.Current;
-                bool firstWord = !notEmpty;
                 _peekedWord = null;
+                bool firstWord = !notEmpty;
                 float right = caret.X + word.AdvanceWidthNoTrail;
                 if (right > _context.MaxBounds.Width)
                 {
@@ -510,7 +523,7 @@ namespace NitroSharp.Text
                 end = Math.Max(end, word.GlyphRange.End.Value);
                 ascender = MathF.Max(ascender, word.ActualAscender);
                 descender = MathF.Max(descender, word.ActualDescender);
-                if (firstWord)
+                if (float.IsPositiveInfinity(bbLeft))
                 {
                     bbLeft = word.BbLeft;
                 }
@@ -568,7 +581,7 @@ namespace NitroSharp.Text
 
         public bool MoveNext()
         {
-            float bbLeft = float.NaN, bbRight = 0;
+            float bbLeft = float.PositiveInfinity, bbRight = 0;
             float caret = 0;
             float caretNoTrail = 0;
             bool hardBreak = false;
@@ -600,7 +613,7 @@ namespace NitroSharp.Text
                     ascender = MathF.Max(ascender, dims.Top);
                     descender = MathF.Max(descender, dims.Height - dims.Top - 1);
                     bbRight = glyph.Position.X + dims.Width;
-                    if (float.IsNaN(bbLeft))
+                    if (float.IsPositiveInfinity(bbLeft))
                     {
                         bbLeft = dims.Left;
                     }

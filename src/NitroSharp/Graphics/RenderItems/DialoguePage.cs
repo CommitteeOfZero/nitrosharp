@@ -116,6 +116,11 @@ namespace NitroSharp.Graphics
             {
             }
 
+            if (_remainingSegments.Count == 0)
+            {
+                ctx.Backlog.NewLine();
+            }
+
             if (_layout.GlyphRuns.Length != start && !ctx.Skipping && !DisableAnimation)
             {
                 _animation = new TypewriterAnimation(_layout, _layout.GlyphRuns[start..], 40);

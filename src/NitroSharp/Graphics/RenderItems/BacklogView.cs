@@ -63,7 +63,6 @@ namespace NitroSharp.Graphics
             {
                 foreach (BacklogEntry entry in _backlog.Entries[_entriesAdded..])
                 {
-                    _textLayout.NewLine();
                     var run = TextRun.Regular(
                         entry.Text.AsMemory(),
                         _fontConfig.DefaultFont,

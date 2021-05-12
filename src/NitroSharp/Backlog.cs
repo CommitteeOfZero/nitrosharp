@@ -22,6 +22,7 @@ namespace NitroSharp
         private readonly SystemVariableLookup _systemVariables;
         private ArrayBuilder<BacklogEntry> _entries;
         private readonly StringBuilder _sb;
+        private bool _newline;
 
         public Backlog(SystemVariableLookup systemVariables)
         {
@@ -30,9 +31,19 @@ namespace NitroSharp
             _sb = new StringBuilder();
         }
 
+        public void NewLine()
+        {
+            _newline = true;
+        }
+
         public void Append(TextSegment text)
         {
             _sb.Clear();
+            if (_newline)
+            {
+                _sb.Append('\n');
+                _newline = false;
+            }
             foreach (TextRun textRun in text.TextRuns)
             {
                 _sb.Append(textRun.Text);
