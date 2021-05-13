@@ -15,14 +15,8 @@ namespace NitroSharp.Media.OpenAL
             : base(audioParameters)
         {
             Device = ALC10.alcOpenDevice("");
-            if (Device == IntPtr.Zero) {
-                return; // TODO
-            }
-            int[] attrList = {};
-            Context = ALC10.alcCreateContext(Device, attrList);
-            if (!ALC10.alcMakeContextCurrent(Context)) { // I don't know how this would work with multiple devices
-                return; // TODO
-            }
+            Context = ALC10.alcCreateContext(Device, null);
+            ALC10.alcMakeContextCurrent(Context);
         }
 
         private IntPtr Context;

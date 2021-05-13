@@ -55,7 +55,8 @@ namespace NitroSharp.Media.OpenAL
 
         public override bool IsPlaying
         {
-            get {
+            get
+            {
                 AL10.alGetSourcei(_source, AL10.AL_SOURCE_STATE, out int state);
                 return state == AL10.AL_PLAYING;
             }
@@ -87,22 +88,31 @@ namespace NitroSharp.Media.OpenAL
 
         private async Task ConsumeLoop(PipeReader audioData)
         {
-            uint sampleRate = _audioDevice.AudioParameters.SampleRate;
             Task flushEvent = _flushBuffers.WaitAsync();
             while (!_cts.IsCancellationRequested)
             {
                 ReadResult readResult = await audioData.ReadAsync();
                 long bytesRead = BufferData(audioData, readResult);
-                double secondsRead = ((double) bytesRead / (AudioDevice.BitDepth / 8)) / sampleRate;
-                int milliseconds = (int) (secondsRead * 100 + 1);
+                double secondsRead = ((double)bytesRead / (AudioDevice.BitDepth / 8)) / _audioDevice.AudioParameters.SampleRate;
+                int milliseconds = (int)(secondsRead * 100 + 1);
                 _secondsElapsed += secondsRead;
 
-                try
+                if (_playSignal.IsSet)
                 {
-                    _playSignal.WaitAsync().Wait(_cts.Token);
-                } catch { }
+                    if (!this.IsPlaying) AL10.alSourcePlay(_source);
+                }
+                else
+                {
+                    AL10.alSourcePause(_source);
+                    try
+                    {
+                        _playSignal.WaitAsync().Wait(_cts.Token);
+                    }
+                    catch { }
+                }
 
-                if (flushEvent.Wait(milliseconds)) {
+                if (flushEvent.Wait(milliseconds))
+                {
                     AL10.alSourceStop(_source);
                     UnqueueBuffers();
 
@@ -120,20 +130,17 @@ namespace NitroSharp.Media.OpenAL
             }
         }
 
-        private int ALFormat(int bitDepth, int channels) {
-            return bitDepth switch {
-                16 => channels > 1 ? AL10.AL_FORMAT_STEREO16 : AL10.AL_FORMAT_MONO16,
-                8 => channels > 1 ?  AL10.AL_FORMAT_STEREO8 : AL10.AL_FORMAT_MONO8,
-                _ => -1,
-            };
-        }
+        private int ALFormat(int bitDepth, int channels) => bitDepth switch
+        {
+            16 => channels > 1 ? AL10.AL_FORMAT_STEREO16 : AL10.AL_FORMAT_MONO16,
+            8 => channels > 1 ? AL10.AL_FORMAT_STEREO8 : AL10.AL_FORMAT_MONO8,
+            _ => -1,
+        };
 
-        private int UnqueueBuffers() {
+        private int UnqueueBuffers()
+        {
             AL10.alGetSourcei(_source, AL10.AL_BUFFERS_PROCESSED, out int buffersProcessed);
-
-            uint[] processed = new uint[buffersProcessed];
-            AL10.alSourceUnqueueBuffers(_source, buffersProcessed, processed);
-
+            AL10.alSourceUnqueueBuffers(_source, buffersProcessed, new uint[buffersProcessed]);
             return buffersProcessed;
         }
 
@@ -143,7 +150,7 @@ namespace NitroSharp.Media.OpenAL
             _buffersLeft += UnqueueBuffers();
 
             int bytesRead = 0;
-            while (!sequence.IsEmpty &&  _buffersLeft > 0)
+            while (!sequence.IsEmpty && _buffersLeft > 0)
             {
                 int size = Math.Min((int)sequence.Length, _bufferSize);
                 ReadOnlySequence<byte> src = sequence.Slice(0, size);
@@ -156,7 +163,7 @@ namespace NitroSharp.Media.OpenAL
                         _format,
                         _bufferData[_nextBuffer],
                         size,
-                        (int) _audioDevice.AudioParameters.SampleRate
+                        (int)_audioDevice.AudioParameters.SampleRate
                 );
                 AL10.alSourceQueueBuffers(_source, 1, ref _buffers[_nextBuffer]);
 
@@ -165,25 +172,22 @@ namespace NitroSharp.Media.OpenAL
                 _buffersLeft--;
             }
 
-            if (!this.IsPlaying) {
-                AL10.alSourcePlay(_source);
-            }
-
             pipeReader.AdvanceTo(sequence.Start);
             return bytesRead;
         }
 
         public override void Pause()
         {
-            if (_consumeTask != null) {
+            if (_consumeTask is not null)
+            {
                 _playSignal.Reset();
-                AL10.alSourcePause(_source);
             }
         }
 
         public override void Resume()
         {
-            if (_consumeTask != null) {
+            if (_consumeTask is not null)
+            {
                 _playSignal.Set();
             }
         }
@@ -195,7 +199,7 @@ namespace NitroSharp.Media.OpenAL
 
         private async Task StopAsync()
         {
-            if (_consumeTask != null)
+            if (_consumeTask is not null)
             {
                 _cts.Cancel();
                 FlushBuffers();
@@ -208,7 +212,8 @@ namespace NitroSharp.Media.OpenAL
 
         public override void FlushBuffers()
         {
-            if (_consumeTask != null) {
+            if (_consumeTask is not null)
+            {
                 _flushBuffers.Set();
             }
         }
