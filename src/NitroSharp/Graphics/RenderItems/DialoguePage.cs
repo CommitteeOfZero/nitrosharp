@@ -118,7 +118,8 @@ namespace NitroSharp.Graphics
             {
             }
 
-            if (prevResult == ConsumeResult.Halt && AnimationEnabled(ctx))
+            if (prevResult == ConsumeResult.Halt || _lastResult == ConsumeResult.Halt
+                && AnimationEnabled(ctx))
             {
                 BeginAnimation(ctx.RenderContext, start);
             }
@@ -263,6 +264,14 @@ namespace NitroSharp.Graphics
             }
         }
 
+        public void EndLine(GameContext ctx)
+        {
+            if (AnimationEnabled(ctx))
+            {
+                BeginAnimation(ctx.RenderContext, start: 0);
+            }
+        }
+
         public override Size GetUnconstrainedBounds(RenderContext ctx)
         {
             RectangleF bb = _layout.BoundingBox;
@@ -291,14 +300,6 @@ namespace NitroSharp.Graphics
             PXmlLines = _pxmlLines.ToArray(),
             SegmentsRemaining = _remainingSegments.Count
         };
-
-        public void EndLine(GameContext ctx)
-        {
-            if (AnimationEnabled(ctx))
-            {
-                BeginAnimation(ctx.RenderContext, start: 0);
-            }
-        }
     }
 
     [Persistable]
