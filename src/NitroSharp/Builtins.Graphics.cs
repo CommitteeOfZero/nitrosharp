@@ -451,7 +451,7 @@ namespace NitroSharp
         {
             duration = AdjustDuration(duration);
             delay = AdjustDuration(delay);
-            foreach (RenderItem2D ri in Query<RenderItem2D>(query))
+            foreach (RenderItem ri in Query<RenderItem>(query))
             {
                 ri.Fade(dstOpacity, duration, easeFunction);
             }

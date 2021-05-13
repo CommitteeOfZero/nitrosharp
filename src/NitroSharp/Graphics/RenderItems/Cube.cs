@@ -85,7 +85,7 @@ namespace NitroSharp.Graphics
         };
 
         private Cube(in ResolvedEntityPath path, int priority, Texture texture, string[] texturePaths)
-            : base(in path, priority)
+            : base(path, priority)
         {
             _texture = texture;
             _texturePaths = texturePaths;

@@ -687,7 +687,7 @@ namespace NitroSharp.Graphics
 
             Pipeline = factory.CreateGraphicsPipeline(
                 new GraphicsPipelineDescription(
-                    BlendStateDescription.SingleOverrideBlend,
+                    BlendStateDescription.SingleAlphaBlend,
                     DepthStencilStateDescription.Disabled,
                     RasterizerStateDescription.CullNone,
                     PrimitiveTopology.TriangleList,
