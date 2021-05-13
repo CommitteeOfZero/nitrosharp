@@ -23,6 +23,7 @@ namespace NitroSharp.Graphics
         private readonly List<string> _pxmlLines = new();
         private readonly Queue<TextBufferSegment> _remainingSegments = new();
 
+        private ConsumeResult _lastResult;
         private TypewriterAnimation? _animation;
         private bool _skipping;
 
@@ -112,8 +113,14 @@ namespace NitroSharp.Graphics
             }
 
             int start = _layout.GlyphRuns.Length;
-            while (ConsumeSegment(ctx) == ConsumeResult.KeepGoing)
+            ConsumeResult prevResult = _lastResult;
+            while ((_lastResult = ConsumeSegment(ctx)) == ConsumeResult.KeepGoing)
             {
+            }
+
+            if (prevResult == ConsumeResult.Halt && AnimationEnabled(ctx))
+            {
+                BeginAnimation(ctx.RenderContext, start);
             }
 
             if (_remainingSegments.Count == 0)
@@ -121,13 +128,15 @@ namespace NitroSharp.Graphics
                 ctx.Backlog.NewLine();
             }
 
-            if (_layout.GlyphRuns.Length != start && !ctx.Skipping && !DisableAnimation)
-            {
-                _animation = new TypewriterAnimation(_layout, _layout.GlyphRuns[start..], 40);
-                ctx.RenderContext.Icons.WaitLine.Reset();
-            }
-
             return true;
+        }
+
+        private bool AnimationEnabled(GameContext ctx) => !ctx.Skipping && !DisableAnimation;
+
+        private void BeginAnimation(RenderContext renderCtx, int start)
+        {
+            _animation = new TypewriterAnimation(_layout, _layout.GlyphRuns[start..], 40);
+            renderCtx.Icons.WaitLine.Reset();
         }
 
         private ConsumeResult ConsumeSegment(GameContext ctx)
@@ -282,6 +291,14 @@ namespace NitroSharp.Graphics
             PXmlLines = _pxmlLines.ToArray(),
             SegmentsRemaining = _remainingSegments.Count
         };
+
+        public void EndLine(GameContext ctx)
+        {
+            if (AnimationEnabled(ctx))
+            {
+                BeginAnimation(ctx.RenderContext, start: 0);
+            }
+        }
     }
 
     [Persistable]

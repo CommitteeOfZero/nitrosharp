@@ -372,12 +372,16 @@ namespace NitroSharp
 
         public override void LineEnd(in EntityPath dialoguePage)
         {
-            _ctx.Wait(
-                CurrentThread,
-                WaitCondition.LineRead,
-                null,
-                new EntityQuery(dialoguePage.Value)
-            );
+            if (Get(dialoguePage) is DialoguePage page)
+            {
+                page.EndLine(_ctx);
+                _ctx.Wait(
+                    CurrentThread,
+                    WaitCondition.LineRead,
+                    null,
+                    new EntityQuery(dialoguePage.Value)
+                );
+            }
         }
 
         public override void WaitText(EntityQuery query, TimeSpan timeout)
