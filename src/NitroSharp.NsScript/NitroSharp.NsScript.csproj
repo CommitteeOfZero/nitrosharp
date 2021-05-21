@@ -11,10 +11,11 @@
 
   <ItemGroup>
     <ProjectReference Include="..\NitroSharp.Common\NitroSharp.Common.csproj" />
+    <ProjectReference Include="..\NitroSharp.SourceGenerators\NitroSharp.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\NitroSharp.SourceGenerators\NitroSharp.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <PackageReference Include="UTF.Unknown" Version="2.3.0" />
   </ItemGroup>
 
 </Project>

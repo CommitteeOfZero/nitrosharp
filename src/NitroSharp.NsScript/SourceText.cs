@@ -2,17 +2,18 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using UtfUnknown;
 
 namespace NitroSharp.NsScript
 {
     public sealed class SourceText
     {
-        private static readonly Encoding s_defaultEncoding;
+        public static readonly Encoding DefaultEncoding;
 
         static SourceText()
         {
             Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-            s_defaultEncoding = Encoding.GetEncoding("shift-jis");
+            DefaultEncoding = Encoding.GetEncoding("shift-jis");
         }
 
         private SourceText(string text, ResolvedPath filePath)
@@ -36,7 +37,8 @@ namespace NitroSharp.NsScript
                 throw new ArgumentException("Stream must support read operation.", nameof(stream));
             }
 
-            encoding ??= s_defaultEncoding;
+            encoding ??= CharsetDetector.DetectFromStream(stream).Detected.Encoding;
+            stream.Seek(0, SeekOrigin.Begin);
             string text = ReadStream(stream, encoding);
             return new SourceText(text, filePath);
         }

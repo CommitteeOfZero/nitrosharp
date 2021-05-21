@@ -37,7 +37,7 @@
 
     "CoZ": {
       "startupScript": "boot.nss",
-      "dev.useUtf8": true,
+      "dev.detectEncoding": true,
       "dev.scriptRoot": "coz/nss"
     },
 

@@ -83,8 +83,9 @@ namespace NitroSharp
         public bool EnableDiagnostics { get; set; }
         public SystemScripts SysScripts { get; } = new();
 
-        public bool UseUtf8 { get; set; } = false;
-        public bool SkipUpToDateCheck { get; set; } = false;
+        public bool UseUtf8 { get; set; }
+        public bool DetectEncoding { get; set; }
+        public bool SkipUpToDateCheck { get; set; }
 
         public string FontFamily { get; set; } = "VL Gothic";
         public int FontSize { get; set; } = 20;

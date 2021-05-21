@@ -315,7 +315,13 @@ namespace NitroSharp
                     }
                 }
 
-                Encoding? sourceEncoding = configuration.UseUtf8 ? Encoding.UTF8 : null;
+                Encoding? sourceEncoding = null;
+                if (!configuration.DetectEncoding)
+                {
+                    sourceEncoding = configuration.UseUtf8
+                        ? Encoding.UTF8
+                        : SourceText.DefaultEncoding;
+                }
                 var compilation = new Compilation(
                     nssFolder,
                     bytecodeCacheDir,

@@ -117,6 +117,9 @@ namespace NitroSharp.Launcher
                 case "dev.useUtf8":
                     configuration.UseUtf8 = property.Value;
                     break;
+                case "dev.detectEncoding":
+                    configuration.DetectEncoding = property.Value;
+                    break;
                 case "dev.skipUpToDateCheck":
                     configuration.SkipUpToDateCheck = property.Value;
                     break;
