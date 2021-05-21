@@ -964,7 +964,8 @@ namespace NitroSharp.NsScript.Syntax
             string name = extractBlockName(blockIdentifier);
 
             var statements = ImmutableArray.CreateBuilder<StatementSyntax>();
-            while (CurrentToken.Kind != SyntaxTokenKind.DialogueBlockEndTag)
+            while (CurrentToken.Kind is not
+                (SyntaxTokenKind.DialogueBlockEndTag or SyntaxTokenKind.EndOfFileToken))
             {
                 StatementSyntax? statement = ParseStatement();
                 if (statement != null)

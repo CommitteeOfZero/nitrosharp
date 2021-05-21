@@ -197,6 +197,16 @@ namespace NitroSharp.NsScriptCompiler.Tests
             Assert.Equal(SyntaxTokenFlags.Empty, token.Flags);
         }
 
+        [Fact]
+        public void PXml_CommentedOut_Code()
+        {
+            const string text = @"// this is a comment {
+Sample Text";
+            (SyntaxToken token, LexingContext ctx) = LexToken(text, LexingMode.DialogueBlock);
+            Assert.Equal(SyntaxTokenKind.PXmlString, token.Kind);
+            Assert.Equal(text, ctx.GetText(token).ToString());
+        }
+
         [Theory]
         [InlineData("<PRE box00>", SyntaxTokenKind.DialogueBlockStartTag)]
         [InlineData("<pre box00>", SyntaxTokenKind.DialogueBlockStartTag)]

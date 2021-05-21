@@ -62,18 +62,15 @@ namespace NitroSharp.NsScript.Syntax
                 case SyntaxTokenKind.OpenBrace:
                     _lexingModeStack.Push(LexingMode.Normal);
                     break;
-
                 case SyntaxTokenKind.CloseBrace:
                     if (_lexingModeStack.Count > 0)
                     {
                         _lexingModeStack.Pop();
                     }
                     break;
-
                 case SyntaxTokenKind.DialogueBlockStartTag:
                     _lexingModeStack.Push(LexingMode.DialogueBlock);
                     break;
-
                 case SyntaxTokenKind.DialogueBlockEndTag:
                     if (_lexingModeStack.Count > 0)
                     {
@@ -204,10 +201,6 @@ namespace NitroSharp.NsScript.Syntax
                         AdvanceChar(3);
                         token.Kind = SyntaxTokenKind.AtArrow;
                     }
-                    //else if (ScanIdentifier(ref token))
-                    //{
-                    //    token.Kind = SyntaxTokenKind.Identifier;
-                    //}
                     else
                     {
                         AdvanceChar();
@@ -664,6 +657,14 @@ namespace NitroSharp.NsScript.Syntax
                         preNestingLevel--;
                         continue;
                     }
+                }
+
+                if (c == '/' && PeekChar(1) == '/')
+                {
+                    AdvanceChar(2);
+                    ScanToEndOfLine();
+                    ScanEndOfLine();
+                    continue;
                 }
 
                 int pos = Position;
