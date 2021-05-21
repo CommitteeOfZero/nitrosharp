@@ -103,6 +103,18 @@ namespace NitroSharp.NsScriptCompiler.Tests
             Assert.Equal(partCount, dialogueBlock.Parts.Length);
         }
 
+        [Fact]
+        public void PXml_RawString_WithDoubleSlash()
+        {
+            const string text = "function foo() { <PRE box01><pre>https://sonome.dareno.me</pre></PRE>\r\nfoo(); }";
+            var func = (FunctionDeclarationSyntax)Parsing.ParseSubroutineDeclaration(text).Root;
+            var stmts = func.Body.Statements;
+            Assert.Equal(2, stmts.Length);
+            var pxml = Assert.IsType<PXmlString>(Assert.IsType<DialogueBlockSyntax>(stmts[0]).Parts[0]);
+            Assert.Equal("<pre>https://sonome.dareno.me</pre>", pxml.Text);
+            Assert.Equal(SyntaxNodeKind.ExpressionStatement, stmts[1].Kind);
+        }
+
         public static IEnumerable<object[]> GetDialogueBlockTestData()
         {
             yield return new object[]

@@ -659,7 +659,7 @@ namespace NitroSharp.NsScript.Syntax
                     }
                 }
 
-                if (c == '/' && PeekChar(1) == '/')
+                if (preNestingLevel == 0 && c == '/' && PeekChar(1) == '/')
                 {
                     AdvanceChar(2);
                     ScanToEndOfLine();
