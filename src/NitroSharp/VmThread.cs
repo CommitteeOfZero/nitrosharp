@@ -9,12 +9,15 @@ namespace NitroSharp
     {
         private readonly NsScriptVM _vm;
 
-        public VmThread(in ResolvedEntityPath path, NsScriptVM vm, NsScriptProcess process, string target)
-            : base(path)
+        public VmThread(
+            in ResolvedEntityPath path,
+            string target,
+            NsScriptVM vm,
+            NsScriptThread thread) : base(path)
         {
             _vm = vm;
             Target = target;
-            Thread = vm.CreateThread(process, Target);
+            Thread = thread;
             if (Parent is Choice choice)
             {
                 switch (Id.MouseState)
@@ -53,7 +56,7 @@ namespace NitroSharp
             {
                 _vm.TerminateThread(Thread);
             }
-            Thread = _vm.CreateThread(Thread.Process, Thread.EntryModule, Target, start: true);
+            Thread = _vm.CreateThread(Thread.Process, Thread.EntryModule, Target, start: true)!;
         }
 
         public void Suspend() => _vm.SuspendThread(Thread);

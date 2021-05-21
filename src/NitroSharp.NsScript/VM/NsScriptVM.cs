@@ -119,20 +119,25 @@ namespace NitroSharp.NsScript.VM
         public NsScriptProcess CreateProcess(string moduleName, string symbol)
         {
             uint pid = ++_lastProcessId;
-            NsScriptThread mainThread = CreateThread(moduleName, symbol);
+            NsScriptThread? mainThread = CreateThread(moduleName, symbol);
+            if (mainThread is null)
+            {
+                throw new ArgumentException($"Symbol '{symbol}' not found in module '{moduleName}'");
+            }
             return new NsScriptProcess(this, pid, mainThread);
         }
 
-        public NsScriptThread CreateThread(NsScriptProcess process, string symbol, bool start = false)
+        public NsScriptThread? CreateThread(NsScriptProcess process, string symbol, bool start = false)
             => CreateThread(process, process.CurrentThread!.CurrentFrame.Module.Name, symbol, start);
 
-        public NsScriptThread CreateThread(
+        public NsScriptThread? CreateThread(
             NsScriptProcess process,
             string moduleName,
             string symbol,
             bool start)
         {
-            NsScriptThread thread = CreateThread(moduleName, symbol);
+            NsScriptThread? thread = CreateThread(moduleName, symbol);
+            if (thread is null) { return null; }
             process.AttachThread(thread);
             if (!start)
             {
@@ -151,11 +156,25 @@ namespace NitroSharp.NsScript.VM
             return thread;
         }
 
-        private NsScriptThread CreateThread(string moduleName, string symbol)
+        private NsScriptThread? CreateThread(string moduleName, string symbol)
         {
-            NsxModule module = GetModule(moduleName);
-            ushort subIndex = (ushort)module.LookupSubroutineIndex(symbol);
-            var frame = new CallFrame(module, subIndex, 0);
+            NsxModule? module = GetModule(moduleName);
+            if (!module.TryLookupSubroutineIndex(symbol, out int index))
+            {
+                IEnumerable<NsxModule> imports = module.Imports.Select(GetModule);
+                module = null;
+                foreach (NsxModule import in imports)
+                {
+                    if (import.TryLookupSubroutineIndex(symbol, out index))
+                    {
+                        module = import;
+                        break;
+                    }
+                }
+            }
+
+            if (module is null) { return null; }
+            var frame = new CallFrame(module, (ushort)index, 0);
             return new NsScriptThread(++_lastThreadId, ref frame);
         }
 

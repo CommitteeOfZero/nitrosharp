@@ -102,10 +102,11 @@ namespace NitroSharp.NsScript.VM
             return s;
         }
 
+        public bool TryLookupSubroutineIndex(string name, out int index)
+            => _subroutineMap.TryGetValue(name, out index);
+
         public int LookupSubroutineIndex(string name)
-        {
-            return _subroutineMap[name];
-        }
+            => _subroutineMap[name];
 
         private void LoadSubroutine(int index)
         {
