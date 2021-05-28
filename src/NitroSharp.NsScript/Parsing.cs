@@ -1,5 +1,5 @@
 ﻿using NitroSharp.NsScript.Syntax;
-using NitroSharp.NsScript.Syntax.PXml;
+using NitroSharp.NsScript.Syntax.Markup;
 using System;
 using System.IO;
 using System.Text;
@@ -63,9 +63,9 @@ namespace NitroSharp.NsScript
             return new SyntaxTree(sourceText, root, parser.DiagnosticBuilder);
         }
 
-        public static PXmlContent ParsePXmlString(string text)
+        public static MarkupContent ParseMarkup(string text)
         {
-            var parser = new PXmlParser(text);
+            var parser = new MarkupParser(text);
             return parser.Parse();
         }
     }

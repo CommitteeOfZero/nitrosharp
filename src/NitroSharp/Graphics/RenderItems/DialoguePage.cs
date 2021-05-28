@@ -20,7 +20,7 @@ namespace NitroSharp.Graphics
         private readonly float _lineHeight;
         private readonly NsScriptThread _dialogueThread;
         private readonly TextLayout _layout;
-        private readonly List<string> _pxmlLines = new();
+        private readonly List<string> _lines = new();
         private readonly Queue<TextBufferSegment> _remainingSegments = new();
 
         private ConsumeResult _lastResult;
@@ -62,11 +62,11 @@ namespace NitroSharp.Graphics
             _dialogueThread = loadCtx.Process.VmProcess.GetThread(saveData.DialogueThreadId);
             Margin = saveData.Margin;
 
-            foreach (string pxmlLine in saveData.PXmlLines)
+            foreach (string line in saveData.Lines)
             {
-                _pxmlLines.Add(pxmlLine);
+                _lines.Add(line);
                 FontConfiguration fontConfig = loadCtx.Process.FontConfig;
-                var buffer = TextBuffer.FromPXmlString(pxmlLine, fontConfig);
+                var buffer = TextBuffer.FromMarkup(line, fontConfig);
                 foreach (TextBufferSegment seg in buffer.Segments)
                 {
                     _remainingSegments.Enqueue(seg);
@@ -81,10 +81,10 @@ namespace NitroSharp.Graphics
             loadCtx.Rendering.Text.RequestGlyphs(_layout);
         }
 
-        public void Append(GameContext ctx, string pxmlLine, FontConfiguration fontConfig)
+        public void Append(GameContext ctx, string markup, FontConfiguration fontConfig)
         {
-            _pxmlLines.Add(pxmlLine);
-            var buffer = TextBuffer.FromPXmlString(pxmlLine, fontConfig);
+            _lines.Add(markup);
+            var buffer = TextBuffer.FromMarkup(markup, fontConfig);
             foreach (TextBufferSegment seg in buffer.Segments)
             {
                 _remainingSegments.Enqueue(seg);
@@ -286,7 +286,7 @@ namespace NitroSharp.Graphics
         {
             _layout.Clear();
             _remainingSegments.Clear();
-            _pxmlLines.Clear();
+            _lines.Clear();
             _animation = null;
         }
 
@@ -297,7 +297,7 @@ namespace NitroSharp.Graphics
             LineHeight = _lineHeight,
             Margin = Margin,
             DialogueThreadId = _dialogueThread.Id,
-            PXmlLines = _pxmlLines.ToArray(),
+            Lines = _lines.ToArray(),
             SegmentsRemaining = _remainingSegments.Count
         };
     }
@@ -310,7 +310,7 @@ namespace NitroSharp.Graphics
         public float LineHeight { get; init; }
         public Vector4 Margin { get; init; }
         public uint DialogueThreadId { get; init; }
-        public string[] PXmlLines { get; init; }
+        public string[] Lines { get; init; }
         public int SegmentsRemaining { get; init; }
 
         public EntitySaveData CommonEntityData => Common.EntityData;

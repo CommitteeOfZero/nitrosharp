@@ -74,8 +74,8 @@ namespace NitroSharp.NsScript.Syntax
         DialogueBlockStartTag,
         DialogueBlockEndTag,
         DialogueBlockIdentifier,
-        PXmlString,
-        PXmlLineSeparator,
+        Markup,
+        MarkupBlankLine,
 
         EndOfFileToken
     }

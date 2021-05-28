@@ -226,7 +226,6 @@ namespace NitroSharp.NsScript.Syntax
                 case SyntaxTokenKind.FunctionKeyword:
                     _parameterMap.Clear();
                     return ParseFunctionDeclaration();
-
                 default:
                     throw new InvalidOperationException($"{CurrentToken.Kind} cannot start a declaration.");
             }
@@ -258,8 +257,7 @@ namespace NitroSharp.NsScript.Syntax
 
             Block body = ParseBlock();
             ImmutableArray<DialogueBlock> dialogueBlocks = _dialogueBlocks.ToImmutable();
-            return new FunctionDeclaration(
-                name, parameters, body, dialogueBlocks, SpanFrom(keyword));
+            return new FunctionDeclaration(name, parameters, body, dialogueBlocks, SpanFrom(keyword));
         }
 
         private ImmutableArray<Parameter> ParseParameterList()
@@ -362,14 +360,14 @@ namespace NitroSharp.NsScript.Syntax
                     return ParseCallSceneStatement();
                 case SyntaxTokenKind.DialogueBlockStartTag:
                     return ParseDialogueBlock();
-                case SyntaxTokenKind.PXmlString:
+                case SyntaxTokenKind.Markup:
                     SyntaxToken token = EatToken();
-                    return new PXmlString(GetText(token), token.TextSpan);
-                case SyntaxTokenKind.PXmlLineSeparator:
+                    return new MarkupNode(GetText(token), token.TextSpan);
+                case SyntaxTokenKind.MarkupBlankLine:
                     token = EatToken();
-                    return new PXmlLineSeparator(token.TextSpan);
+                    return new MarkupBlankLine(token.TextSpan);
                 case SyntaxTokenKind.LessThan:
-                    if (SkipStrayPXmlElementIfApplicable())
+                    if (SkipStrayMarkupNodeIfApplicable())
                     {
                         return null;
                     }
@@ -391,7 +389,7 @@ namespace NitroSharp.NsScript.Syntax
             }
         }
 
-        private bool SkipStrayPXmlElementIfApplicable()
+        private bool SkipStrayMarkupNodeIfApplicable()
         {
             Debug.Assert(CurrentToken.Kind == SyntaxTokenKind.LessThan);
             int currentLine = GetLineNumber();
@@ -412,7 +410,7 @@ namespace NitroSharp.NsScript.Syntax
             // Check if the current line ends with the '>' character that we found
             if (GetLineNumber(PeekToken(n + 1)) != currentLine)
             {
-                Report(DiagnosticId.StrayPXmlElement, SourceText.Lines[currentLine]);
+                Report(DiagnosticId.StrayMarkupBlock, SourceText.Lines[currentLine]);
                 EatTokens(n + 1); // skip to the next line
                 return true;
             }

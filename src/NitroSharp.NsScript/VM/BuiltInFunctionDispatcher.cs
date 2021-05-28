@@ -584,7 +584,7 @@ namespace NitroSharp.NsScript.VM
                y: args.TakeCoordinate(),
                width: args.TakeDimension(),
                height: args.TakeDimension(),
-               pxmlText: args.TakeString()
+               markup: args.TakeString()
             );
         }
 
@@ -777,7 +777,7 @@ namespace NitroSharp.NsScript.VM
                 }
                 else
                 {
-                    
+
                     if (args.AsSpan(0)[^1].AsBuiltInConstant() is null)
                     {
                         easeFunction = args.TakeEaseFunction();

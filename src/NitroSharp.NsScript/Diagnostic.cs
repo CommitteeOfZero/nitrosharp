@@ -18,7 +18,7 @@ namespace NitroSharp.NsScript
         MissingStatementTerminator,
         InvalidExpressionTerm,
         InvalidExpressionStatement,
-        StrayPXmlElement,
+        StrayMarkupBlock,
         MisplacedBreak,
         OrphanedSelectSection,
         InvalidBezierCurve,

@@ -33,8 +33,8 @@ namespace NitroSharp.NsScript
                     return "Only assignment, call, increment and decrement expressions can be used as a statement.";
                 case DiagnosticId.InvalidExpressionTerm:
                     return "Invalid expression term '{0}'.";
-                case DiagnosticId.StrayPXmlElement:
-                    return "Stray PXml element.";
+                case DiagnosticId.StrayMarkupBlock:
+                    return "Stray markup block.";
                 case DiagnosticId.MisplacedBreak:
                     return "Break statement cannot be used outside of a looping construct.";
                 case DiagnosticId.OrphanedSelectSection:
@@ -76,7 +76,7 @@ namespace NitroSharp.NsScript
                     return DiagnosticSeverity.Error;
 
                 case DiagnosticId.MisplacedSemicolon:
-                case DiagnosticId.StrayPXmlElement:
+                case DiagnosticId.StrayMarkupBlock:
                 case DiagnosticId.StrayToken:
                 case DiagnosticId.MisplacedBreak:
                 case DiagnosticId.OrphanedSelectSection:

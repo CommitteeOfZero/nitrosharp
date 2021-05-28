@@ -410,8 +410,8 @@ namespace NitroSharp.NsScript.Compiler
                     EmitOpcode(Opcode.ActivateBlock);
                     _code.WriteUInt16LE((ushort)_textId++);
                     break;
-                case SyntaxNodeKind.PXmlString:
-                    var text = (PXmlString)statement;
+                case SyntaxNodeKind.Markup:
+                    var text = (MarkupNode)statement;
                     if (_clearPage)
                     {
                         EmitOpcode(Opcode.ClearPage);
@@ -420,7 +420,7 @@ namespace NitroSharp.NsScript.Compiler
                     EmitOpcode(Opcode.AppendDialogue);
                     _code.WriteUInt16LE(_module.GetStringToken(text.Text));
                     break;
-                case SyntaxNodeKind.PXmlLineSeparator:
+                case SyntaxNodeKind.MarkupBlankLine:
                     EmitOpcode(Opcode.LineEnd);
                     _clearPage = true;
                     break;

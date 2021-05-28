@@ -40,7 +40,7 @@ namespace NitroSharp
 
         public override void SetBacklog(string text)
         {
-            TextSegment seg = TextBuffer.FromPXmlString(text, _ctx.ActiveProcess.FontConfig)
+            TextSegment seg = TextBuffer.FromMarkup(text, _ctx.ActiveProcess.FontConfig)
                 .AssertSingleTextSegment()!;
             _ctx.Backlog.Append(seg);
         }
@@ -267,7 +267,7 @@ namespace NitroSharp
             int priority,
             NsCoordinate x, NsCoordinate y,
             NsTextDimension width, NsTextDimension height,
-            string pxmlText)
+            string markup)
         {
             if (ResolvePath(entityPath, out ResolvedEntityPath resolvedPath))
             {
@@ -281,7 +281,7 @@ namespace NitroSharp
                     resolvedPath,
                     _renderCtx.Text,
                     priority,
-                    pxmlText,
+                    markup,
                     new Size(w, h),
                     _ctx.ActiveProcess.FontConfig,
                     margin

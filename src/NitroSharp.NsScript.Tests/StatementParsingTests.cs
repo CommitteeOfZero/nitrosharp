@@ -104,14 +104,14 @@ namespace NitroSharp.NsScriptCompiler.Tests
         }
 
         [Fact]
-        public void PXml_RawString_WithDoubleSlash()
+        public void Markup_RawString_WithDoubleSlash()
         {
             const string text = "function foo() { <PRE box01><pre>https://sonome.dareno.me</pre></PRE>\r\nfoo(); }";
             var func = (FunctionDeclaration)Parsing.ParseSubroutineDeclaration(text).Root;
             var stmts = func.Body.Statements;
             Assert.Equal(2, stmts.Length);
-            var pxml = Assert.IsType<PXmlString>(Assert.IsType<DialogueBlock>(stmts[0]).Parts[0]);
-            Assert.Equal("<pre>https://sonome.dareno.me</pre>", pxml.Text);
+            var markup = Assert.IsType<MarkupNode>(Assert.IsType<DialogueBlock>(stmts[0]).Parts[0]);
+            Assert.Equal("<pre>https://sonome.dareno.me</pre>", markup.Text);
             Assert.Equal(SyntaxNodeKind.ExpressionStatement, stmts[1].Kind);
         }
 

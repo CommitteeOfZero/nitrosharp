@@ -4,35 +4,35 @@ using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Text;
 
-namespace NitroSharp.NsScript.Syntax.PXml
+namespace NitroSharp.NsScript.Syntax.Markup
 {
-    internal sealed class PXmlParser : TextScanner
+    internal sealed class MarkupParser : TextScanner
     {
-        public PXmlParser(string sourceText) : base(sourceText)
+        public MarkupParser(string sourceText) : base(sourceText)
         {
         }
 
-        public PXmlContent Parse()
+        public MarkupContent Parse()
         {
             return ParseContent(rootElementName: null);
         }
 
-        private PXmlContent ParseContent(string? rootElementName)
+        private MarkupContent ParseContent(string? rootElementName)
         {
-            var children = ImmutableArray.Create<PXmlNode>();
-            ImmutableArray<PXmlNode>.Builder? builder = null;
+            var children = ImmutableArray.Create<MarkupNode>();
+            ImmutableArray<MarkupNode>.Builder? builder = null;
             while (PeekChar() != EofCharacter)
             {
                 if (IsEndTag())
                 {
-                    PXmlTag endTag = ParsePXmlTag();
+                    MarkupTag endTag = ParseTag();
                     if (rootElementName == endTag.Name)
                     {
                         break;
                     }
                 }
 
-                PXmlNode? node = ParseNode();
+                MarkupNode? node = ParseNode();
                 if (node is null) { continue; }
                 if (children.Length == 0)
                 {
@@ -43,18 +43,18 @@ namespace NitroSharp.NsScript.Syntax.PXml
                     Debug.Assert(children.Length == 1);
                     if (builder == null)
                     {
-                        builder = ImmutableArray.CreateBuilder<PXmlNode>();
+                        builder = ImmutableArray.CreateBuilder<MarkupNode>();
                         builder.Add(children[0]);
                     }
                     builder.Add(node);
                 }
             }
 
-            ImmutableArray<PXmlNode> array = builder?.ToImmutable() ?? children;
-            return new PXmlContent(array);
+            ImmutableArray<MarkupNode> array = builder?.ToImmutable() ?? children;
+            return new MarkupContent(array);
         }
 
-        private PXmlNode? ParseNode()
+        private MarkupNode? ParseNode()
         {
             SkipTrivia();
             StartScanning();
@@ -62,10 +62,10 @@ namespace NitroSharp.NsScript.Syntax.PXml
             return peek == '<' ? ParseElement() : ParsePlainText();
         }
 
-        private PXmlNode? ParseElement()
+        private MarkupNode? ParseElement()
         {
-            PXmlTag startTag = ParsePXmlTag();
-            PXmlNode? node;
+            MarkupTag startTag = ParseTag();
+            MarkupNode? node;
             switch (startTag.Name)
             {
                 case "FONT":
@@ -95,20 +95,20 @@ namespace NitroSharp.NsScript.Syntax.PXml
                     return new LinebreakElement();
                 case "i":
                 case "I":
-                    PXmlContent content = ParseContent(startTag.Name);
+                    MarkupContent content = ParseContent(startTag.Name);
                     return new ItalicElement(content);
                 case "u":
                 case "U":
                     return ParseContent(startTag.Name);
                 default:
-                    throw new NotImplementedException($"PXml tag '{startTag.Name}' is not yet supported.");
+                    throw new NotImplementedException($"Markup tag '{startTag.Name}' is not yet supported.");
             }
             return node;
         }
 
-        private SpanElement? ParseSpan(in PXmlTag tag)
+        private SpanElement? ParseSpan(in MarkupTag tag)
         {
-            PXmlContent content = ParseContent(tag.Name);
+            MarkupContent content = ParseContent(tag.Name);
             AttributeList attrs = tag.Attributes;
             if (attrs.Get("value") is string strValue
                 && int.TryParse(strValue, out int value))
@@ -119,7 +119,7 @@ namespace NitroSharp.NsScript.Syntax.PXml
             return null;
         }
 
-        private VoiceElement? ParseVoiceElement(in PXmlTag tag)
+        private VoiceElement? ParseVoiceElement(in MarkupTag tag)
         {
             AttributeList attrs = tag.Attributes;
             if (attrs.Get("name") is string characterName
@@ -134,7 +134,7 @@ namespace NitroSharp.NsScript.Syntax.PXml
             return null;
         }
 
-        private FontElement ParseFontElement(in PXmlTag startTag)
+        private FontElement ParseFontElement(in MarkupTag startTag)
         {
             int? size = null;
             NsColor? color = null, outlineColor = null;
@@ -153,22 +153,22 @@ namespace NitroSharp.NsScript.Syntax.PXml
                 outlineColor = NsColor.FromString(strOutlineColor);
             }
 
-            PXmlContent content = ParseContent(startTag.Name);
+            MarkupContent content = ParseContent(startTag.Name);
             return new FontElement(size, color, outlineColor, content);
         }
 
-        private RubyElement? ParseRubyElement(in PXmlTag startTag)
+        private RubyElement? ParseRubyElement(in MarkupTag startTag)
         {
             if (startTag.Attributes.Get("text") is string rubyText)
             {
-                PXmlContent rubyBase = ParseContent("RUBY");
+                MarkupContent rubyBase = ParseContent("RUBY");
                 return new RubyElement(rubyBase, rubyText);
             }
 
             return null;
         }
 
-        private PXmlText ParsePreformattedText()
+        private MarkupText ParsePreformattedText()
         {
             StartScanning();
             var sb = new StringBuilder();
@@ -181,10 +181,10 @@ namespace NitroSharp.NsScript.Syntax.PXml
             }
 
             AdvanceChar(6);
-            return new PXmlText(sb.ToString());
+            return new MarkupText(sb.ToString());
         }
 
-        private PXmlText ParsePlainText()
+        private MarkupText ParsePlainText()
         {
             StartScanning();
             var sb = new StringBuilder();
@@ -211,7 +211,7 @@ namespace NitroSharp.NsScript.Syntax.PXml
             }
 
             string processedText = sb.ToString();
-            return new PXmlText(processedText);
+            return new MarkupText(processedText);
         }
 
         private bool IsEndTag() => PeekChar() == '<' && PeekChar(1) == '/';
@@ -235,7 +235,7 @@ namespace NitroSharp.NsScript.Syntax.PXml
             } while (trivia);
         }
 
-        private PXmlTag ParsePXmlTag()
+        private MarkupTag ParseTag()
         {
             while (PeekChar() == '<' || PeekChar() == '/')
             {
@@ -266,7 +266,7 @@ namespace NitroSharp.NsScript.Syntax.PXml
             }
 
             EatChar('>');
-            return new PXmlTag(name, attributes.Build());
+            return new MarkupTag(name, attributes.Build());
         }
 
         private (string key, string value) ParseXmlAttribute()
@@ -294,9 +294,9 @@ namespace NitroSharp.NsScript.Syntax.PXml
             return (key, value);
         }
 
-        private readonly ref struct PXmlTag
+        private readonly ref struct MarkupTag
         {
-            public PXmlTag(string name, AttributeList attributes)
+            public MarkupTag(string name, AttributeList attributes)
             {
                 Name = name;
                 Attributes = attributes;

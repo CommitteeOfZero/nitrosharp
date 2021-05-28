@@ -141,9 +141,9 @@ namespace NitroSharp.NsScript.Syntax
         //    DefaultVisitNode(callSceneStatement);
         //}
 
-        public virtual void VisitPXmlString(PXmlString pxmlString)
+        public virtual void VisitMarkupNode(MarkupNode node)
         {
-            DefaultVisitNode(pxmlString);
+            DefaultVisitNode(node);
         }
 
         public virtual void VisitDialogueBlock(DialogueBlock dialogueBlock)
@@ -151,9 +151,9 @@ namespace NitroSharp.NsScript.Syntax
             DefaultVisitNode(dialogueBlock);
         }
 
-        public virtual void VisitPXmlLineSeparator(PXmlLineSeparator pxmlLineSeparator)
+        public virtual void VisitMarkupBlankLine(MarkupBlankLine blankLine)
         {
-            DefaultVisitNode(pxmlLineSeparator);
+            DefaultVisitNode(blankLine);
         }
     }
 }

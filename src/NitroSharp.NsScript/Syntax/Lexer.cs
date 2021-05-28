@@ -51,7 +51,7 @@ namespace NitroSharp.NsScript.Syntax
             {
                 if (PeekChar() != '{' && !Match(PRE_EndTag))
                 {
-                    LexPXmlToken(ref mutableTk);
+                    LexMarkupToken(ref mutableTk);
                     return;
                 }
             }
@@ -88,7 +88,7 @@ namespace NitroSharp.NsScript.Syntax
             {
                 if (PeekChar() != '{' && !Match("</pre>"))
                 {
-                    LexPXmlToken(ref mutableTk);
+                    LexMarkupToken(ref mutableTk);
                     Debug.Assert(tk.Kind != SyntaxTokenKind.None);
                     return tk;
                 }
@@ -441,7 +441,7 @@ namespace NitroSharp.NsScript.Syntax
             SkipSyntaxTrivia(isTrailing: true);
         }
 
-        private void LexPXmlToken(ref MutableToken token)
+        private void LexMarkupToken(ref MutableToken token)
         {
             bool skipTrailingTrivia = false;
             StartScanning();
@@ -456,7 +456,7 @@ namespace NitroSharp.NsScript.Syntax
 
                 case '\r':
                 case '\n':
-                    token.Kind = SyntaxTokenKind.PXmlLineSeparator;
+                    token.Kind = SyntaxTokenKind.MarkupBlankLine;
                     ScanEndOfLineSequence();
                     break;
 
@@ -465,7 +465,7 @@ namespace NitroSharp.NsScript.Syntax
                     break;
 
                 default:
-                    ScanPXmlString(ref token);
+                    ScanMarkup(ref token);
                     break;
             }
 
@@ -632,7 +632,7 @@ namespace NitroSharp.NsScript.Syntax
             return true;
         }
 
-        private void ScanPXmlString(ref MutableToken token)
+        private void ScanMarkup(ref MutableToken token)
         {
             int preNestingLevel = 0;
 
@@ -686,7 +686,7 @@ namespace NitroSharp.NsScript.Syntax
             }
 
         exit:
-            token.Kind = SyntaxTokenKind.PXmlString;
+            token.Kind = SyntaxTokenKind.Markup;
         }
 
         private bool ScanDialogueBlockStartTag(ref MutableToken token)

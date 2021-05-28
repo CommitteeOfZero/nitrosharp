@@ -252,43 +252,43 @@ namespace NitroSharp.NsScript.Syntax
         }
     }
 
-    public sealed class PXmlString : Statement
+    public sealed class MarkupNode : Statement
     {
-        internal PXmlString(string text, TextSpan span) : base(span)
+        internal MarkupNode(string text, TextSpan span) : base(span)
         {
             Text = text;
         }
 
         public string Text { get; }
-        public override SyntaxNodeKind Kind => SyntaxNodeKind.PXmlString;
+        public override SyntaxNodeKind Kind => SyntaxNodeKind.Markup;
 
         public override void Accept(SyntaxVisitor visitor)
         {
-            visitor.VisitPXmlString(this);
+            visitor.VisitMarkupNode(this);
         }
 
         public override TResult Accept<TResult>(SyntaxVisitor<TResult> visitor)
         {
-            return visitor.VisitPXmlString(this);
+            return visitor.VisitMarkupNode(this);
         }
     }
 
-    public sealed class PXmlLineSeparator : Statement
+    public sealed class MarkupBlankLine : Statement
     {
-        internal PXmlLineSeparator(TextSpan span) : base(span)
+        internal MarkupBlankLine(TextSpan span) : base(span)
         {
         }
 
-        public override SyntaxNodeKind Kind => SyntaxNodeKind.PXmlLineSeparator;
+        public override SyntaxNodeKind Kind => SyntaxNodeKind.MarkupBlankLine;
 
         public override void Accept(SyntaxVisitor visitor)
         {
-            visitor.VisitPXmlLineSeparator(this);
+            visitor.VisitMarkupBlankLine(this);
         }
 
         public override TResult Accept<TResult>(SyntaxVisitor<TResult> visitor)
         {
-            return visitor.VisitPXmlLineSeparator(this);
+            return visitor.VisitMarkupBlankLine(this);
         }
     }
 }

@@ -1,28 +1,28 @@
 ﻿using System;
 using System.Collections.Immutable;
 
-namespace NitroSharp.NsScript.Syntax.PXml
+namespace NitroSharp.NsScript.Syntax.Markup
 {
-    public class PXmlSyntaxVisitor
+    public class MarkupNodeVisitor
     {
-        public void Visit(PXmlNode node)
+        public void Visit(MarkupNode node)
         {
             node.Accept(this);
         }
 
-        public void VisitArray(ImmutableArray<PXmlNode> list)
+        public void VisitArray(ImmutableArray<MarkupNode> list)
         {
-            foreach (PXmlNode node in list)
+            foreach (MarkupNode node in list)
             {
                 Visit(node);
             }
         }
 
-        public virtual void VisitContent(PXmlContent content)
+        public virtual void VisitContent(MarkupContent content)
         {
         }
 
-        public virtual void VisitText(PXmlText text)
+        public virtual void VisitText(MarkupText text)
         {
         }
 

@@ -186,10 +186,10 @@ namespace NitroSharp.NsScriptCompiler.Tests
 
         [Theory]
         [InlineData("[text001]", SyntaxTokenKind.DialogueBlockIdentifier)]
-        [InlineData("\r", SyntaxTokenKind.PXmlLineSeparator)]
-        [InlineData("\n", SyntaxTokenKind.PXmlLineSeparator)]
-        [InlineData("foo", SyntaxTokenKind.PXmlString)]
-        public void Dynamic_PXml_Token(string text, SyntaxTokenKind kind)
+        [InlineData("\r", SyntaxTokenKind.MarkupBlankLine)]
+        [InlineData("\n", SyntaxTokenKind.MarkupBlankLine)]
+        [InlineData("foo", SyntaxTokenKind.Markup)]
+        public void Dynamic_Markup_Token(string text, SyntaxTokenKind kind)
         {
             (SyntaxToken token, LexingContext ctx) = LexToken(text, LexingMode.DialogueBlock);
             Assert.Equal(kind, token.Kind);
@@ -198,12 +198,12 @@ namespace NitroSharp.NsScriptCompiler.Tests
         }
 
         [Fact]
-        public void PXml_CommentedOut_Code()
+        public void Dialogue_CommentedOut_Code()
         {
             const string text = @"// this is a comment {
 Sample Text";
             (SyntaxToken token, LexingContext ctx) = LexToken(text, LexingMode.DialogueBlock);
-            Assert.Equal(SyntaxTokenKind.PXmlString, token.Kind);
+            Assert.Equal(SyntaxTokenKind.Markup, token.Kind);
             Assert.Equal(text, ctx.GetText(token).ToString());
         }
 
@@ -247,7 +247,7 @@ Sample Text";
         public static IEnumerable<object[]> GetStaticTokenData()
         {
             return from token in GetStaticTokens()
-                   where token.kind != SyntaxTokenKind.PXmlLineSeparator
+                   where token.kind != SyntaxTokenKind.MarkupBlankLine
                    select new object[] { token.kind, token.text };
         }
 
@@ -283,16 +283,16 @@ Sample Text";
                 SyntaxTokenKind.DialogueBlockStartTag,
                 SyntaxTokenKind.DialogueBlockIdentifier,
                 SyntaxTokenKind.DialogueBlockEndTag,
-                SyntaxTokenKind.PXmlString
+                SyntaxTokenKind.Markup
             };
         }
 
         private static IEnumerable<(SyntaxTokenKind t1Kind, string t1Text, SyntaxTokenKind t2Kind, string t2Text)> GetStaticTokenPairs()
         {
             return from tk1 in GetStaticTokens()
-                   where tk1.kind != SyntaxTokenKind.PXmlLineSeparator
+                   where tk1.kind != SyntaxTokenKind.MarkupBlankLine
                    from tk2 in GetStaticTokens()
-                   where tk2.kind != SyntaxTokenKind.PXmlLineSeparator
+                   where tk2.kind != SyntaxTokenKind.MarkupBlankLine
                    where !RequireSeparator(tk1.kind, tk2.kind)
                    select (tk1.kind, tk1.text, tk2.kind, tk2.text);
         }
@@ -302,9 +302,9 @@ Sample Text";
                                     SyntaxTokenKind t2Kind, string t2Text)> GetStaticTokenPairsWithSeparator()
         {
             return from tk1 in GetStaticTokens()
-                   where tk1.kind != SyntaxTokenKind.PXmlLineSeparator
+                   where tk1.kind != SyntaxTokenKind.MarkupBlankLine
                    from tk2 in GetStaticTokens()
-                   where tk2.kind != SyntaxTokenKind.PXmlLineSeparator
+                   where tk2.kind != SyntaxTokenKind.MarkupBlankLine
                    where RequireSeparator(tk1.kind, tk2.kind)
                    from separator in GetSeparators()
                    select (tk1.kind, tk1.text, separator, tk2.kind, tk2.text);

@@ -32,8 +32,8 @@ namespace NitroSharp.NsScript.Syntax
         BezierExpression,
 
         DialogueBlock,
-        PXmlString,
-        PXmlLineSeparator
+        Markup,
+        MarkupBlankLine
     }
 
     public abstract class SyntaxNode

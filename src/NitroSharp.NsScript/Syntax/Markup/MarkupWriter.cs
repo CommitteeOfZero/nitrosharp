@@ -1,12 +1,12 @@
 ﻿using System.IO;
 
-namespace NitroSharp.NsScript.Syntax.PXml
+namespace NitroSharp.NsScript.Syntax.Markup
 {
-    public class PXmlWriter : PXmlSyntaxVisitor
+    public class MarkupWriter : MarkupNodeVisitor
     {
         private readonly TextWriter _textWriter;
 
-        public PXmlWriter()
+        public MarkupWriter()
         {
             _textWriter = new StringWriter();
         }

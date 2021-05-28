@@ -2,14 +2,14 @@
 using System.Collections.Immutable;
 using System.Diagnostics;
 using NitroSharp.NsScript;
-using NitroSharp.NsScript.Syntax.PXml;
+using NitroSharp.NsScript.Syntax.Markup;
 using Veldrid;
 
 namespace NitroSharp.Text
 {
     internal sealed class TextBuffer
     {
-        private static readonly PXmlFlattener s_pxmlFlattener = new();
+        private static readonly MarkupTreeFlattener s_treeFlattener = new();
 
         private TextBuffer(
             ImmutableArray<TextBufferSegment> segments,
@@ -26,10 +26,10 @@ namespace NitroSharp.Text
         public uint TextLength { get; }
         public bool IsEmpty => Segments.Length == 0;
 
-        public static TextBuffer FromPXmlString(string pxmlString, FontConfiguration fontConfig)
+        public static TextBuffer FromMarkup(string markup, FontConfiguration fontConfig)
         {
-            PXmlContent root = Parsing.ParsePXmlString(pxmlString);
-            return s_pxmlFlattener.FlattenPXmlContent(root, fontConfig);
+            MarkupContent root = Parsing.ParseMarkup(markup);
+            return s_treeFlattener.FlattenContent(root, fontConfig);
         }
 
         public TextSegment? AssertSingleTextSegment()
@@ -38,7 +38,7 @@ namespace NitroSharp.Text
                 ? ts : null;
         }
 
-        private sealed class PXmlFlattener : PXmlSyntaxVisitor
+        private sealed class MarkupTreeFlattener : MarkupNodeVisitor
         {
             private struct TextRunData
             {
@@ -57,27 +57,27 @@ namespace NitroSharp.Text
             private uint _textLength;
             private VoiceSegment? _voice;
 
-            public PXmlFlattener()
+            public MarkupTreeFlattener()
             {
                 _segments = ImmutableArray.CreateBuilder<TextBufferSegment>(4);
                 _textRuns = ImmutableArray.CreateBuilder<TextRun>(1);
             }
 
-            public TextBuffer FlattenPXmlContent(PXmlNode pxmlRoot, FontConfiguration fontConfig)
+            public TextBuffer FlattenContent(MarkupNode rootNode, FontConfiguration fontConfig)
             {
                 _fontConfig = fontConfig;
                 _segments.Clear();
                 _textLength = 0;
                 _voice = null;
-                Visit(pxmlRoot);
+                Visit(rootNode);
                 FinalizeTextRun();
                 FinalizeTextSegment();
                 return new TextBuffer(_segments.ToImmutable(), _voice, _textLength);
             }
 
-            public override void VisitContent(PXmlContent content)
+            public override void VisitContent(MarkupContent content)
             {
-                foreach (PXmlNode child in content.Children)
+                foreach (MarkupNode child in content.Children)
                 {
                     Visit(child);
                     FinalizeTextRun();
@@ -111,7 +111,7 @@ namespace NitroSharp.Text
                 _textRunData = oldData;
             }
 
-            public override void VisitText(PXmlText text)
+            public override void VisitText(MarkupText text)
             {
                 if (text.Text.Length > 0)
                 {

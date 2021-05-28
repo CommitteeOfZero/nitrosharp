@@ -6,32 +6,32 @@ namespace NitroSharp.Graphics
 {
     internal sealed class TextBlock : RenderItem2D
     {
-        private readonly string _pxmlText;
+        private readonly string _markup;
         private readonly TextLayout _layout;
 
         public TextBlock(
             in ResolvedEntityPath path,
             TextRenderContext ctx,
             int priority,
-            string pxmlText,
+            string markup,
             Size maxBounds,
             FontConfiguration fontConfig,
             in Vector4 margin)
             : base(path, priority)
         {
             Margin = margin;
-            _pxmlText = pxmlText;
-            _layout = CreateLayout(ctx, pxmlText, maxBounds, fontConfig);
+            _markup = markup;
+            _layout = CreateLayout(ctx, markup, maxBounds, fontConfig);
         }
 
         public TextBlock(in ResolvedEntityPath path, in TextBlockSaveData saveData, GameLoadingContext loadCtx)
             : base(path, saveData.Common)
         {
             Margin = saveData.Margin;
-            _pxmlText = saveData.PXmlText;
+            _markup = saveData.Markup;
             _layout = CreateLayout(
                 loadCtx.Rendering.Text,
-                _pxmlText,
+                _markup,
                 saveData.LayoutBounds,
                 loadCtx.Process.FontConfig
             );
@@ -43,11 +43,11 @@ namespace NitroSharp.Graphics
 
         private static TextLayout CreateLayout(
             TextRenderContext ctx,
-            string pxmlText,
+            string markup,
             Size maxBounds,
             FontConfiguration fontConfig)
         {
-            var textBuffer = TextBuffer.FromPXmlString(pxmlText, fontConfig);
+            var textBuffer = TextBuffer.FromMarkup(markup, fontConfig);
             TextSegment segment = textBuffer.AssertSingleTextSegment()!;
             var layout = new TextLayout(
                 ctx.GlyphRasterizer,
@@ -126,7 +126,7 @@ namespace NitroSharp.Graphics
         {
             Common = base.ToSaveData(ctx),
             Margin = Margin,
-            PXmlText = _pxmlText,
+            Markup = _markup,
             LayoutBounds = _layout.MaxBounds
         };
     }
@@ -136,7 +136,7 @@ namespace NitroSharp.Graphics
     {
         public RenderItemSaveData Common { get; init; }
         public Vector4 Margin { get; init; }
-        public string PXmlText { get; init; }
+        public string Markup { get; init; }
         public Size LayoutBounds { get; init; }
 
         public EntitySaveData CommonEntityData => Common.EntityData;
