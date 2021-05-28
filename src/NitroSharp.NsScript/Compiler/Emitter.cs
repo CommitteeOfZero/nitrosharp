@@ -79,9 +79,9 @@ namespace NitroSharp.NsScript.Compiler
             emitter.EmitStatement(subroutine.Declaration.Body);
             emitter.EmitOpcode(Opcode.Return);
 
-            SubroutineDeclarationSyntax decl = subroutine.Declaration;
-            ImmutableArray<DialogueBlockSyntax> dialogueBlocks = decl.DialogueBlocks;
-            foreach (DialogueBlockSyntax dialogueBlock in dialogueBlocks)
+            SubroutineDeclaration decl = subroutine.Declaration;
+            ImmutableArray<DialogueBlock> dialogueBlocks = decl.DialogueBlocks;
+            foreach (DialogueBlock dialogueBlock in dialogueBlocks)
             {
                 dialogueBlockOffsets.Add(emitter._code.Position - start);
                 emitter.EmitDialogueBlock(dialogueBlock);
@@ -122,35 +122,35 @@ namespace NitroSharp.NsScript.Compiler
             }
         }
 
-        private void EmitExpression(ExpressionSyntax expression)
+        private void EmitExpression(Expression expression)
         {
             switch (expression.Kind)
             {
                 case SyntaxNodeKind.LiteralExpression:
-                    EmitLiteral((LiteralExpressionSyntax)expression);
+                    EmitLiteral((LiteralExpression)expression);
                     break;
                 case SyntaxNodeKind.NameExpression:
-                    EmitNameExpression((NameExpressionSyntax)expression);
+                    EmitNameExpression((NameExpression)expression);
                     break;
                 case SyntaxNodeKind.UnaryExpression:
-                    EmitUnaryExpression((UnaryExpressionSyntax)expression);
+                    EmitUnaryExpression((UnaryExpression)expression);
                     break;
                 case SyntaxNodeKind.BinaryExpression:
-                    EmitBinaryExpression((BinaryExpressionSyntax)expression);
+                    EmitBinaryExpression((BinaryExpression)expression);
                     break;
                 case SyntaxNodeKind.AssignmentExpression:
-                    EmitAssignmentExpression((AssignmentExpressionSyntax)expression);
+                    EmitAssignmentExpression((AssignmentExpression)expression);
                     break;
                 case SyntaxNodeKind.FunctionCallExpression:
-                    EmitFunctionCall((FunctionCallExpressionSyntax)expression);
+                    EmitFunctionCall((FunctionCallExpression)expression);
                     break;
                 case SyntaxNodeKind.BezierExpression:
-                    EmitBezierExpression((BezierExpressionSyntax)expression);
+                    EmitBezierExpression((BezierExpression)expression);
                     break;
             }
         }
 
-        private void EmitLiteral(LiteralExpressionSyntax literal)
+        private void EmitLiteral(LiteralExpression literal)
         {
             ConstantValue val = literal.Value;
             if (val.IsString && !_supressConstantLookup)
@@ -164,7 +164,7 @@ namespace NitroSharp.NsScript.Compiler
             EmitLoadImm(val);
         }
 
-        private void EmitNameExpression(NameExpressionSyntax expression)
+        private void EmitNameExpression(NameExpression expression)
         {
             LookupResult lookupResult = _checker.LookupNonInvocableSymbol(expression);
             switch (lookupResult.Variant)
@@ -191,20 +191,20 @@ namespace NitroSharp.NsScript.Compiler
             }
         }
 
-        private void EmitUnaryExpression(UnaryExpressionSyntax expression)
+        private void EmitUnaryExpression(UnaryExpression expression)
         {
             EmitExpression(expression.Operand);
             EmitUnary(expression.OperatorKind.Value);
         }
 
-        private void EmitBinaryExpression(BinaryExpressionSyntax expression)
+        private void EmitBinaryExpression(BinaryExpression expression)
         {
             EmitExpression(expression.Right);
             EmitExpression(expression.Left);
             EmitBinary(expression.OperatorKind.Value);
         }
 
-        private void EmitAssignmentExpression(AssignmentExpressionSyntax assignmentExpr)
+        private void EmitAssignmentExpression(AssignmentExpression assignmentExpr)
         {
             LookupResult target = _checker.ResolveAssignmentTarget(assignmentExpr.Target);
             if (target.IsEmpty) { return; }
@@ -264,12 +264,12 @@ namespace NitroSharp.NsScript.Compiler
             EmitStore(storeOp, token);
         }
 
-        private void EmitFunctionCall(FunctionCallExpressionSyntax callExpression)
+        private void EmitFunctionCall(FunctionCallExpression callExpression)
         {
             LookupResult lookupResult = _checker.LookupFunction(callExpression.TargetName);
             if (lookupResult.IsEmpty) { return; }
             bool isBuiltIn = lookupResult.Variant == LookupResultVariant.BuiltInFunction;
-            ImmutableArray<ExpressionSyntax> arguments = callExpression.Arguments;
+            ImmutableArray<Expression> arguments = callExpression.Arguments;
             bool supressConstantLookup = _supressConstantLookup;
 
             if (!isBuiltIn)
@@ -328,7 +328,7 @@ namespace NitroSharp.NsScript.Compiler
             }
         }
 
-        private void EmitBezierExpression(BezierExpressionSyntax expr)
+        private void EmitBezierExpression(BezierExpression expr)
         {
             if (_checker.ParseBezierCurve(expr, out ImmutableArray<CompileTimeBezierSegment> segments))
             {
@@ -336,7 +336,7 @@ namespace NitroSharp.NsScript.Compiler
                 foreach (CompileTimeBezierSegment seg in segments.Reverse())
                 {
                     seg.Points.Reverse();
-                    foreach (BezierControlPointSyntax cp in seg.Points)
+                    foreach (BezierControlPoint cp in seg.Points)
                     {
                         EmitExpression(cp.Y);
                         EmitExpression(cp.X);
@@ -347,7 +347,7 @@ namespace NitroSharp.NsScript.Compiler
             }
         }
 
-        private void EmitCallChapter(CallChapterStatementSyntax statement)
+        private void EmitCallChapter(CallChapterStatement statement)
         {
             if (_checker.ResolveCallChapterTarget(statement) is ChapterSymbol chapter)
             {
@@ -355,7 +355,7 @@ namespace NitroSharp.NsScript.Compiler
             }
         }
 
-        private void EmitCallScene(CallSceneStatementSyntax statement)
+        private void EmitCallScene(CallSceneStatement statement)
         {
             if (_checker.ResolveCallSceneTarget(statement) is SceneSymbol scene)
             {
@@ -372,39 +372,39 @@ namespace NitroSharp.NsScript.Compiler
             _code.WriteUInt16LE(externalNsxBuilder.GetSubroutineToken(target));
         }
 
-        private void EmitStatement(StatementSyntax statement)
+        private void EmitStatement(Statement statement)
         {
             switch (statement.Kind)
             {
                 case SyntaxNodeKind.Block:
-                    EmitBlock((BlockSyntax)statement);
+                    EmitBlock((Block)statement);
                     break;
                 case SyntaxNodeKind.ExpressionStatement:
-                    EmitExpression(((ExpressionStatementSyntax)statement).Expression);
+                    EmitExpression(((ExpressionStatement)statement).Expression);
                     break;
                 case SyntaxNodeKind.IfStatement:
-                    EmitIfStatement((IfStatementSyntax)statement);
+                    EmitIfStatement((IfStatement)statement);
                     break;
                 case SyntaxNodeKind.BreakStatement:
-                    EmitBreakStatement((BreakStatementSyntax)statement);
+                    EmitBreakStatement((BreakStatement)statement);
                     break;
                 case SyntaxNodeKind.WhileStatement:
-                    EmitWhileStatement((WhileStatementSyntax)statement);
+                    EmitWhileStatement((WhileStatement)statement);
                     break;
                 case SyntaxNodeKind.ReturnStatement:
                     EmitOpcode(Opcode.Return);
                     break;
                 case SyntaxNodeKind.CallChapterStatement:
-                    EmitCallChapter((CallChapterStatementSyntax)statement);
+                    EmitCallChapter((CallChapterStatement)statement);
                     break;
                 case SyntaxNodeKind.CallSceneStatement:
-                    EmitCallScene((CallSceneStatementSyntax)statement);
+                    EmitCallScene((CallSceneStatement)statement);
                     break;
                 case SyntaxNodeKind.SelectStatement:
-                    EmitSelect((SelectStatementSyntax)statement);
+                    EmitSelect((SelectStatement)statement);
                     break;
                 case SyntaxNodeKind.SelectSection:
-                    EmitSelectSection((SelectSectionSyntax)statement);
+                    EmitSelectSection((SelectSection)statement);
                     break;
                 case SyntaxNodeKind.DialogueBlock:
                     EmitOpcode(Opcode.ActivateBlock);
@@ -427,15 +427,15 @@ namespace NitroSharp.NsScript.Compiler
             }
         }
 
-        private void EmitBlock(BlockSyntax block)
+        private void EmitBlock(Block block)
         {
-            foreach (StatementSyntax statement in block.Statements)
+            foreach (Statement statement in block.Statements)
             {
                 EmitStatement(statement);
             }
         }
 
-        private void EmitIfStatement(IfStatementSyntax ifStmt)
+        private void EmitIfStatement(IfStatement ifStmt)
         {
             EmitExpression(ifStmt.Condition);
             if (ifStmt.IfFalseStatement == null)
@@ -480,7 +480,7 @@ namespace NitroSharp.NsScript.Compiler
             }
         }
 
-        private void EmitWhileStatement(WhileStatementSyntax whileStmt)
+        private void EmitWhileStatement(WhileStatement whileStmt)
         {
             // while (<condition>)
             //     <body>
@@ -502,7 +502,7 @@ namespace NitroSharp.NsScript.Compiler
             PatchBreaks(ref bodyScope, _code.Position);
         }
 
-        private void EmitSelect(SelectStatementSyntax selectStmt)
+        private void EmitSelect(SelectStatement selectStmt)
         {
             int loopStart = _code.Position;
             EmitOpcode(Opcode.SelectLoopStart);
@@ -513,7 +513,7 @@ namespace NitroSharp.NsScript.Compiler
             EmitOpcode(Opcode.SelectEnd);
         }
 
-        private void EmitSelectSection(SelectSectionSyntax section)
+        private void EmitSelectSection(SelectSection section)
         {
             EmitOpcode(Opcode.IsPressed);
             _code.WriteUInt16LE(_module.GetStringToken(section.Label.Value));
@@ -522,14 +522,14 @@ namespace NitroSharp.NsScript.Compiler
             PatchJump(jmp, _code.Position);
         }
 
-        private BreakScope EmitLoopBody(StatementSyntax body)
+        private BreakScope EmitLoopBody(Statement body)
         {
             _breakScopes.Push(new BreakScope());
             EmitStatement(body);
             return _breakScopes.Pop();
         }
 
-        private void EmitBreakStatement(BreakStatementSyntax breakStmt)
+        private void EmitBreakStatement(BreakStatement breakStmt)
         {
             if (_breakScopes.Count == 0)
             {
@@ -650,9 +650,9 @@ namespace NitroSharp.NsScript.Compiler
             }
         }
 
-        private void EmitDialogueBlock(DialogueBlockSyntax dialogueBlock)
+        private void EmitDialogueBlock(DialogueBlock dialogueBlock)
         {
-            foreach (StatementSyntax statement in dialogueBlock.Parts)
+            foreach (Statement statement in dialogueBlock.Parts)
             {
                 EmitStatement(statement);
             }

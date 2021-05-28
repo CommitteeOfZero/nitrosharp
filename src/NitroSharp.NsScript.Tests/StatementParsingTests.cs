@@ -10,7 +10,7 @@ namespace NitroSharp.NsScriptCompiler.Tests
         [Fact]
         public void Block()
         {
-            var block = AssertStatement<BlockSyntax>("{}", SyntaxNodeKind.Block);
+            var block = AssertStatement<Block>("{}", SyntaxNodeKind.Block);
             Assert.Empty(block.Statements);
         }
 
@@ -19,7 +19,7 @@ namespace NitroSharp.NsScriptCompiler.Tests
         [InlineData("if ($condition) {} else {}", true)]
         public void If(string text, bool hasElseClause)
         {
-            var ifStmt = AssertStatement<IfStatementSyntax>(text, SyntaxNodeKind.IfStatement);
+            var ifStmt = AssertStatement<IfStatement>(text, SyntaxNodeKind.IfStatement);
             Assert.NotNull(ifStmt.Condition);
             Assert.NotNull(ifStmt.IfTrueStatement);
             if (hasElseClause)
@@ -31,13 +31,13 @@ namespace NitroSharp.NsScriptCompiler.Tests
         [Fact]
         public void BreakStatement()
         {
-            AssertStatement<BreakStatementSyntax>("break;", SyntaxNodeKind.BreakStatement);
+            AssertStatement<BreakStatement>("break;", SyntaxNodeKind.BreakStatement);
         }
 
         [Fact]
         public void While()
         {
-            var whileStmt = AssertStatement<WhileStatementSyntax>("while (true) {}", SyntaxNodeKind.WhileStatement);
+            var whileStmt = AssertStatement<WhileStatement>("while (true) {}", SyntaxNodeKind.WhileStatement);
             Assert.NotNull(whileStmt.Condition);
             Assert.NotNull(whileStmt.Body);
         }
@@ -45,7 +45,7 @@ namespace NitroSharp.NsScriptCompiler.Tests
         [Fact]
         public void ReturnStatement()
         {
-            AssertStatement<ReturnStatementSyntax>("return;", SyntaxNodeKind.ReturnStatement);
+            AssertStatement<ReturnStatement>("return;", SyntaxNodeKind.ReturnStatement);
         }
 
         [Fact]
@@ -57,8 +57,8 @@ namespace NitroSharp.NsScriptCompiler.Tests
                     case foo: {}
                 }";
 
-            var selectStmt = AssertStatement<SelectStatementSyntax>(text, SyntaxNodeKind.SelectStatement);
-            var selectSection = Assert.IsType<SelectSectionSyntax>(
+            var selectStmt = AssertStatement<SelectStatement>(text, SyntaxNodeKind.SelectStatement);
+            var selectSection = Assert.IsType<SelectSection>(
                 Assert.Single(selectStmt.Body.Statements));
 
             Common.AssertSpannedText(text, "foo", selectSection.Label);
@@ -72,7 +72,7 @@ namespace NitroSharp.NsScriptCompiler.Tests
         public void CallChapter(string filePath)
         {
             string text = $"call_chapter {filePath}";
-            var callChapterStmt = AssertStatement<CallChapterStatementSyntax>(text, SyntaxNodeKind.CallChapterStatement);
+            var callChapterStmt = AssertStatement<CallChapterStatement>(text, SyntaxNodeKind.CallChapterStatement);
             Common.AssertSpannedText(text, filePath, callChapterStmt.TargetModule);
         }
 
@@ -83,7 +83,7 @@ namespace NitroSharp.NsScriptCompiler.Tests
         public void CallSceneStatement_Parses_Correctly(string path, string file, string scene)
         {
             string text = $"call_scene {path}";
-            var callSceneStmt = AssertStatement<CallSceneStatementSyntax>(text, SyntaxNodeKind.CallSceneStatement);
+            var callSceneStmt = AssertStatement<CallSceneStatement>(text, SyntaxNodeKind.CallSceneStatement);
             if (!string.IsNullOrEmpty(file))
             {
                 Assert.True(callSceneStmt.TargetModule.HasValue);
@@ -97,7 +97,7 @@ namespace NitroSharp.NsScriptCompiler.Tests
         [MemberData(nameof(GetDialogueBlockTestData))]
         public void DialogueBlock(string text, string blockName, string boxName, int partCount)
         {
-            var dialogueBlock = AssertStatement<DialogueBlockSyntax>(text, SyntaxNodeKind.DialogueBlock);
+            var dialogueBlock = AssertStatement<DialogueBlock>(text, SyntaxNodeKind.DialogueBlock);
             Assert.Equal(blockName, dialogueBlock.Name);
             Assert.Equal(boxName, dialogueBlock.AssociatedBox);
             Assert.Equal(partCount, dialogueBlock.Parts.Length);
@@ -107,10 +107,10 @@ namespace NitroSharp.NsScriptCompiler.Tests
         public void PXml_RawString_WithDoubleSlash()
         {
             const string text = "function foo() { <PRE box01><pre>https://sonome.dareno.me</pre></PRE>\r\nfoo(); }";
-            var func = (FunctionDeclarationSyntax)Parsing.ParseSubroutineDeclaration(text).Root;
+            var func = (FunctionDeclaration)Parsing.ParseSubroutineDeclaration(text).Root;
             var stmts = func.Body.Statements;
             Assert.Equal(2, stmts.Length);
-            var pxml = Assert.IsType<PXmlString>(Assert.IsType<DialogueBlockSyntax>(stmts[0]).Parts[0]);
+            var pxml = Assert.IsType<PXmlString>(Assert.IsType<DialogueBlock>(stmts[0]).Parts[0]);
             Assert.Equal("<pre>https://sonome.dareno.me</pre>", pxml.Text);
             Assert.Equal(SyntaxNodeKind.ExpressionStatement, stmts[1].Kind);
         }
@@ -149,7 +149,7 @@ namespace NitroSharp.NsScriptCompiler.Tests
             };
         }
 
-        private static T AssertStatement<T>(string text, SyntaxNodeKind expectedKind) where T : StatementSyntax
+        private static T AssertStatement<T>(string text, SyntaxNodeKind expectedKind) where T : Statement
         {
             var result = Assert.IsType<T>(Parsing.ParseStatement(text).Root);
             Assert.Equal(expectedKind, result.Kind);

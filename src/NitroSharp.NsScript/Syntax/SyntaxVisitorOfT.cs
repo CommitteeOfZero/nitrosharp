@@ -24,87 +24,87 @@ namespace NitroSharp.NsScript.Syntax
         //    return DefaultVisitNode(sourceFile);
         //}
 
-        public virtual TResult VisitChapter(ChapterDeclarationSyntax chapter)
+        public virtual TResult VisitChapter(ChapterDeclaration chapter)
         {
             return DefaultVisitNode(chapter);
         }
 
-        public virtual TResult VisitScene(SceneDeclarationSyntax scene)
+        public virtual TResult VisitScene(SceneDeclaration scene)
         {
             return DefaultVisitNode(scene);
         }
 
-        public virtual TResult VisitFunction(FunctionDeclarationSyntax function)
+        public virtual TResult VisitFunction(FunctionDeclaration function)
         {
             return DefaultVisitNode(function);
         }
 
-        public virtual TResult VisitParameter(ParameterSyntax parameter)
+        public virtual TResult VisitParameter(Parameter parameter)
         {
             return DefaultVisitNode(parameter);
         }
 
-        public virtual TResult VisitBlock(BlockSyntax block)
+        public virtual TResult VisitBlock(Block block)
         {
             return DefaultVisitNode(block);
         }
 
-        public virtual TResult VisitExpressionStatement(ExpressionStatementSyntax expressionStatement)
+        public virtual TResult VisitExpressionStatement(ExpressionStatement expressionStatement)
         {
             return DefaultVisitNode(expressionStatement);
         }
 
-        public virtual TResult VisitLiteral(LiteralExpressionSyntax literal)
+        public virtual TResult VisitLiteral(LiteralExpression literal)
         {
             return DefaultVisitNode(literal);
         }
 
-        public virtual TResult VisitUnaryExpression(UnaryExpressionSyntax unaryExpression)
+        public virtual TResult VisitUnaryExpression(UnaryExpression unaryExpression)
         {
             return DefaultVisitNode(unaryExpression);
         }
 
-        public virtual TResult VisitBinaryExpression(BinaryExpressionSyntax binaryExpression)
+        public virtual TResult VisitBinaryExpression(BinaryExpression binaryExpression)
         {
             return DefaultVisitNode(binaryExpression);
         }
 
-        public virtual TResult VisitAssignmentExpression(AssignmentExpressionSyntax assignmentExpression)
+        public virtual TResult VisitAssignmentExpression(AssignmentExpression assignmentExpression)
         {
             return DefaultVisitNode(assignmentExpression);
         }
 
-        public virtual TResult VisitFunctionCall(FunctionCallExpressionSyntax functionCall)
+        public virtual TResult VisitFunctionCall(FunctionCallExpression functionCall)
         {
             return DefaultVisitNode(functionCall);
         }
 
-        public virtual TResult VisitIfStatement(IfStatementSyntax ifStatement)
+        public virtual TResult VisitIfStatement(IfStatement ifStatement)
         {
             return DefaultVisitNode(ifStatement);
         }
 
-        public virtual TResult VisitBreakStatement(BreakStatementSyntax breakStatement)
+        public virtual TResult VisitBreakStatement(BreakStatement breakStatement)
         {
             return DefaultVisitNode(breakStatement);
         }
 
-        public virtual TResult VisitWhileStatement(WhileStatementSyntax whileStatement)
+        public virtual TResult VisitWhileStatement(WhileStatement whileStatement)
         {
             return DefaultVisitNode(whileStatement);
         }
 
-        public virtual TResult VisitReturnStatement(ReturnStatementSyntax returnStatement)
+        public virtual TResult VisitReturnStatement(ReturnStatement returnStatement)
         {
             return DefaultVisitNode(returnStatement);
         }
 
-        public virtual TResult VisitSelectStatement(SelectStatementSyntax selectStatement)
+        public virtual TResult VisitSelectStatement(SelectStatement selectStatement)
         {
             return DefaultVisitNode(selectStatement);
         }
 
-        public virtual TResult VisitSelectSection(SelectSectionSyntax selectSection)
+        public virtual TResult VisitSelectSection(SelectSection selectSection)
         {
             return DefaultVisitNode(selectSection);
         }
@@ -124,7 +124,7 @@ namespace NitroSharp.NsScript.Syntax
             return DefaultVisitNode(pxmlString);
         }
 
-        public virtual TResult VisitDialogueBlock(DialogueBlockSyntax dialogueBlock)
+        public virtual TResult VisitDialogueBlock(DialogueBlock dialogueBlock)
         {
             return DefaultVisitNode(dialogueBlock);
         }

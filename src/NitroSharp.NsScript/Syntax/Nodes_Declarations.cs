@@ -2,10 +2,12 @@
 
 namespace NitroSharp.NsScript.Syntax
 {
-    public abstract class SubroutineDeclarationSyntax : SyntaxNode
+    public abstract class SubroutineDeclaration : SyntaxNode
     {
-        protected SubroutineDeclarationSyntax(Spanned<string> name, BlockSyntax body,
-            ImmutableArray<DialogueBlockSyntax> dialogueBlocks, TextSpan span) : base(span)
+        protected SubroutineDeclaration(
+            Spanned<string> name, Block body,
+            ImmutableArray<DialogueBlock> dialogueBlocks, TextSpan span)
+            : base(span)
         {
             Name = name;
             Body = body;
@@ -13,8 +15,8 @@ namespace NitroSharp.NsScript.Syntax
         }
 
         public Spanned<string> Name { get; }
-        public BlockSyntax Body { get; }
-        public ImmutableArray<DialogueBlockSyntax> DialogueBlocks { get; }
+        public Block Body { get; }
+        public ImmutableArray<DialogueBlock> DialogueBlocks { get; }
 
         public override SyntaxNode? GetNodeSlot(int index)
         {
@@ -26,10 +28,11 @@ namespace NitroSharp.NsScript.Syntax
         }
     }
 
-    public sealed class ChapterDeclarationSyntax : SubroutineDeclarationSyntax
+    public sealed class ChapterDeclaration : SubroutineDeclaration
     {
-        internal ChapterDeclarationSyntax(Spanned<string> name, BlockSyntax body,
-            ImmutableArray<DialogueBlockSyntax> dialogueBlocks, TextSpan span)
+        internal ChapterDeclaration(
+            Spanned<string> name, Block body,
+            ImmutableArray<DialogueBlock> dialogueBlocks, TextSpan span)
             : base(name, body, dialogueBlocks, span)
         {
         }
@@ -47,10 +50,11 @@ namespace NitroSharp.NsScript.Syntax
         }
     }
 
-    public sealed class SceneDeclarationSyntax : SubroutineDeclarationSyntax
+    public sealed class SceneDeclaration : SubroutineDeclaration
     {
-        internal SceneDeclarationSyntax(Spanned<string> name, BlockSyntax body,
-            ImmutableArray<DialogueBlockSyntax> dialogueBlocks, TextSpan span)
+        internal SceneDeclaration(
+            Spanned<string> name, Block body,
+            ImmutableArray<DialogueBlock> dialogueBlocks, TextSpan span)
             : base(name, body, dialogueBlocks, span)
         {
         }
@@ -68,17 +72,17 @@ namespace NitroSharp.NsScript.Syntax
         }
     }
 
-    public sealed class FunctionDeclarationSyntax : SubroutineDeclarationSyntax
+    public sealed class FunctionDeclaration : SubroutineDeclaration
     {
-        internal FunctionDeclarationSyntax(
-            Spanned<string> name, ImmutableArray<ParameterSyntax> parameters,
-            BlockSyntax body, ImmutableArray<DialogueBlockSyntax> dialogueBlocks,
+        internal FunctionDeclaration(
+            Spanned<string> name, ImmutableArray<Parameter> parameters,
+            Block body, ImmutableArray<DialogueBlock> dialogueBlocks,
             TextSpan span) : base(name, body, dialogueBlocks, span)
         {
             Parameters = parameters;
         }
 
-        public ImmutableArray<ParameterSyntax> Parameters { get; }
+        public ImmutableArray<Parameter> Parameters { get; }
         public override SyntaxNodeKind Kind => SyntaxNodeKind.FunctionDeclaration;
 
         public override void Accept(SyntaxVisitor visitor)
@@ -92,9 +96,9 @@ namespace NitroSharp.NsScript.Syntax
         }
     }
 
-    public sealed class ParameterSyntax : SyntaxNode
+    public sealed class Parameter : SyntaxNode
     {
-        internal ParameterSyntax(string name, TextSpan span) : base(span)
+        internal Parameter(string name, TextSpan span) : base(span)
         {
             Name = name;
         }
@@ -113,11 +117,11 @@ namespace NitroSharp.NsScript.Syntax
         }
     }
 
-    public sealed class DialogueBlockSyntax : StatementSyntax
+    public sealed class DialogueBlock : Statement
     {
-        internal DialogueBlockSyntax(
+        internal DialogueBlock(
             string name, string associatedBox,
-            ImmutableArray<StatementSyntax> parts,
+            ImmutableArray<Statement> parts,
             TextSpan span) : base(span)
         {
             Name = name;
@@ -127,7 +131,7 @@ namespace NitroSharp.NsScript.Syntax
 
         public string Name { get; }
         public string AssociatedBox { get; }
-        public ImmutableArray<StatementSyntax> Parts { get; }
+        public ImmutableArray<Statement> Parts { get; }
 
         public override SyntaxNodeKind Kind => SyntaxNodeKind.DialogueBlock;
 

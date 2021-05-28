@@ -12,7 +12,7 @@ namespace NitroSharp.NsScript.Syntax
 
         private void DefaultVisitNode(SyntaxNode node) { }
 
-        protected void VisitArray(ImmutableArray<StatementSyntax> list)
+        protected void VisitArray(ImmutableArray<Statement> list)
         {
             foreach (var node in list)
             {
@@ -20,7 +20,7 @@ namespace NitroSharp.NsScript.Syntax
             }
         }
 
-        protected void VisitArray(ImmutableArray<ExpressionSyntax> list)
+        protected void VisitArray(ImmutableArray<Expression> list)
         {
             foreach (var node in list)
             {
@@ -28,7 +28,7 @@ namespace NitroSharp.NsScript.Syntax
             }
         }
 
-        protected void VisitArray(ImmutableArray<SubroutineDeclarationSyntax> list)
+        protected void VisitArray(ImmutableArray<SubroutineDeclaration> list)
         {
             foreach (var node in list)
             {
@@ -36,22 +36,22 @@ namespace NitroSharp.NsScript.Syntax
             }
         }
 
-        public virtual void VisitChapter(ChapterDeclarationSyntax chapter)
+        public virtual void VisitChapter(ChapterDeclaration chapter)
         {
             DefaultVisitNode(chapter);
         }
 
-        public virtual void VisitFunction(FunctionDeclarationSyntax function)
+        public virtual void VisitFunction(FunctionDeclaration function)
         {
             DefaultVisitNode(function);
         }
 
-        public virtual void VisitBlock(BlockSyntax block)
+        public virtual void VisitBlock(Block block)
         {
             DefaultVisitNode(block);
         }
 
-        public virtual void VisitExpressionStatement(ExpressionStatementSyntax expressionStatement)
+        public virtual void VisitExpressionStatement(ExpressionStatement expressionStatement)
         {
             DefaultVisitNode(expressionStatement);
         }
@@ -61,7 +61,7 @@ namespace NitroSharp.NsScript.Syntax
         //    DefaultVisitNode(sourceFile);
         //}
 
-        public virtual void VisitLiteral(LiteralExpressionSyntax literal)
+        public virtual void VisitLiteral(LiteralExpression literal)
         {
             DefaultVisitNode(literal);
         }
@@ -71,62 +71,62 @@ namespace NitroSharp.NsScript.Syntax
         //    DefaultVisitNode(identifier);
         //}
 
-        public virtual void VisitParameter(ParameterSyntax parameter)
+        public virtual void VisitParameter(Parameter parameter)
         {
             DefaultVisitNode(parameter);
         }
 
-        public virtual void VisitUnaryExpression(UnaryExpressionSyntax unaryExpression)
+        public virtual void VisitUnaryExpression(UnaryExpression unaryExpression)
         {
             DefaultVisitNode(unaryExpression);
         }
 
-        public virtual void VisitBinaryExpression(BinaryExpressionSyntax binaryExpression)
+        public virtual void VisitBinaryExpression(BinaryExpression binaryExpression)
         {
             DefaultVisitNode(binaryExpression);
         }
 
-        public virtual void VisitAssignmentExpression(AssignmentExpressionSyntax assignmentExpression)
+        public virtual void VisitAssignmentExpression(AssignmentExpression assignmentExpression)
         {
             DefaultVisitNode(assignmentExpression);
         }
 
-        public virtual void VisitFunctionCall(FunctionCallExpressionSyntax functionCall)
+        public virtual void VisitFunctionCall(FunctionCallExpression functionCall)
         {
             DefaultVisitNode(functionCall);
         }
 
-        public virtual void VisitIfStatement(IfStatementSyntax ifStatement)
+        public virtual void VisitIfStatement(IfStatement ifStatement)
         {
             DefaultVisitNode(ifStatement);
         }
 
-        public virtual void VisitBreakStatement(BreakStatementSyntax breakStatement)
+        public virtual void VisitBreakStatement(BreakStatement breakStatement)
         {
             DefaultVisitNode(breakStatement);
         }
 
-        public virtual void VisitWhileStatement(WhileStatementSyntax whileStatement)
+        public virtual void VisitWhileStatement(WhileStatement whileStatement)
         {
             DefaultVisitNode(whileStatement);
         }
 
-        public virtual void VisitReturnStatement(ReturnStatementSyntax returnStatement)
+        public virtual void VisitReturnStatement(ReturnStatement returnStatement)
         {
             DefaultVisitNode(returnStatement);
         }
 
-        public virtual void VisitSelectStatement(SelectStatementSyntax selectStatement)
+        public virtual void VisitSelectStatement(SelectStatement selectStatement)
         {
             DefaultVisitNode(selectStatement);
         }
 
-        public virtual void VisitScene(SceneDeclarationSyntax scene)
+        public virtual void VisitScene(SceneDeclaration scene)
         {
             DefaultVisitNode(scene);
         }
 
-        public virtual void VisitSelectSection(SelectSectionSyntax selectSection)
+        public virtual void VisitSelectSection(SelectSection selectSection)
         {
             DefaultVisitNode(selectSection);
         }
@@ -146,7 +146,7 @@ namespace NitroSharp.NsScript.Syntax
             DefaultVisitNode(pxmlString);
         }
 
-        public virtual void VisitDialogueBlock(DialogueBlockSyntax dialogueBlock)
+        public virtual void VisitDialogueBlock(DialogueBlock dialogueBlock)
         {
             DefaultVisitNode(dialogueBlock);
         }

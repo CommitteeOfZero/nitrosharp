@@ -185,7 +185,7 @@ namespace NitroSharp.NsScript.Compiler
             {
                 subroutineOffsets.Add(writer.Position);
 
-                SubroutineDeclarationSyntax decl = subroutine.Declaration;
+                SubroutineDeclaration decl = subroutine.Declaration;
                 int dialogueBlockCount = decl.DialogueBlocks.Length;
                 int start = writer.Position;
                 int offsetBlockSize = sizeof(ushort) + dialogueBlockCount * sizeof(ushort);
@@ -229,9 +229,9 @@ namespace NitroSharp.NsScript.Compiler
                 rtiWriter.WriteByte(kind);
                 rtiWriter.WriteLengthPrefixedUtf8String(subroutine.Name);
 
-                SubroutineDeclarationSyntax decl = subroutine.Declaration;
+                SubroutineDeclaration decl = subroutine.Declaration;
                 rtiWriter.WriteUInt16LE((ushort)decl.DialogueBlocks.Length);
-                foreach (DialogueBlockSyntax dialogueBlock in decl.DialogueBlocks)
+                foreach (DialogueBlock dialogueBlock in decl.DialogueBlocks)
                 {
                     rtiWriter.WriteLengthPrefixedUtf8String(dialogueBlock.AssociatedBox);
                     rtiWriter.WriteLengthPrefixedUtf8String(dialogueBlock.Name);
@@ -240,7 +240,6 @@ namespace NitroSharp.NsScript.Compiler
                 if (subroutine.Kind == SymbolKind.Function)
                 {
                     var function = (FunctionSymbol)subroutine;
-                    Debug.Assert(function != null);
                     rtiWriter.WriteByte((byte)function.Parameters.Length);
                     foreach (ParameterSymbol parameter in function.Parameters)
                     {

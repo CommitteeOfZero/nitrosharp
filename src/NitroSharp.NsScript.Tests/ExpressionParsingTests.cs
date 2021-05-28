@@ -11,7 +11,7 @@ namespace NitroSharp.NsScriptCompiler.Tests
         [MemberData(nameof(GetLiteralParsingTestData))]
         public void Literals_Parse_Correctly(string text, ConstantValue expectedValue)
         {
-            var expr = AssertExpression<LiteralExpressionSyntax>(text, SyntaxNodeKind.LiteralExpression);
+            var expr = AssertExpression<LiteralExpression>(text, SyntaxNodeKind.LiteralExpression);
             Assert.Equal(expectedValue, expr.Value);
         }
 
@@ -31,29 +31,29 @@ namespace NitroSharp.NsScriptCompiler.Tests
         public void At_Symbol_Plus_StringLiteral()
         {
             string text = "\"@\" + \"CH25\"";
-            var expr = AssertExpression<BinaryExpressionSyntax>(text, SyntaxNodeKind.BinaryExpression);
+            var expr = AssertExpression<BinaryExpression>(text, SyntaxNodeKind.BinaryExpression);
             Assert.Equal(BinaryOperatorKind.Add, expr.OperatorKind.Value);
-            Assert.IsType<LiteralExpressionSyntax>(expr.Left);
-            Assert.IsType<LiteralExpressionSyntax>(expr.Right);
+            Assert.IsType<LiteralExpression>(expr.Left);
+            Assert.IsType<LiteralExpression>(expr.Right);
         }
 
         [Fact]
         public void At_Symbol_Plus_Identifier()
         {
             string text = "\"@\"+$goo";
-            var expr = AssertExpression<BinaryExpressionSyntax>(text, SyntaxNodeKind.BinaryExpression);
+            var expr = AssertExpression<BinaryExpression>(text, SyntaxNodeKind.BinaryExpression);
             Assert.Equal(BinaryOperatorKind.Add, expr.OperatorKind.Value);
-            Assert.IsType<LiteralExpressionSyntax>(expr.Left);
-            var rhs = Assert.IsType<NameExpressionSyntax>(expr.Right);
+            Assert.IsType<LiteralExpression>(expr.Left);
+            var rhs = Assert.IsType<NameExpression>(expr.Right);
             Assert.Equal("goo", rhs.Name);
         }
 
         [Fact]
         public void DeltaOperator()
         {
-            var expr = AssertExpression<UnaryExpressionSyntax>("@42", SyntaxNodeKind.UnaryExpression);
+            var expr = AssertExpression<UnaryExpression>("@42", SyntaxNodeKind.UnaryExpression);
             Assert.Equal(UnaryOperatorKind.Delta, expr.OperatorKind.Value);
-            var operand = Assert.IsType<LiteralExpressionSyntax>(expr.Operand);
+            var operand = Assert.IsType<LiteralExpression>(expr.Operand);
             Assert.Equal(ConstantValue.Number(42), operand.Value);
         }
 
@@ -66,11 +66,11 @@ namespace NitroSharp.NsScriptCompiler.Tests
         [InlineData("Foo()", "Foo")]
         public void FunctionCall(string text, string functionName)
         {
-            var invocation = AssertExpression<FunctionCallExpressionSyntax>(text, SyntaxNodeKind.FunctionCallExpression);
+            var invocation = AssertExpression<FunctionCallExpression>(text, SyntaxNodeKind.FunctionCallExpression);
             Common.AssertSpannedText(text, functionName, invocation.TargetName);
         }
 
-        private T AssertExpression<T>(string text, SyntaxNodeKind expectedKind) where T : ExpressionSyntax
+        private T AssertExpression<T>(string text, SyntaxNodeKind expectedKind) where T : Expression
         {
             var result = Assert.IsType<T>(Parsing.ParseExpression(text).Root);
             Assert.Equal(expectedKind, result.Kind);

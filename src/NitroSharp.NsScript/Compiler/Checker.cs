@@ -59,19 +59,19 @@ namespace NitroSharp.NsScript.Compiler
         private int _count;
 
 #pragma warning disable CS0649
-        public BezierControlPointSyntax P0;
-        public BezierControlPointSyntax P1;
-        public BezierControlPointSyntax P2;
-        public BezierControlPointSyntax P3;
+        public BezierControlPoint P0;
+        public BezierControlPoint P1;
+        public BezierControlPoint P2;
+        public BezierControlPoint P3;
 #pragma warning restore CS0649
 
         public int PointCount => _count;
         public bool IsComplete => _count == 4;
 
-        public Span<BezierControlPointSyntax> Points
+        public Span<BezierControlPoint> Points
             => MemoryMarshal.CreateSpan(ref P0, 4);
 
-        public bool AddPoint(BezierControlPointSyntax pt)
+        public bool AddPoint(BezierControlPoint pt)
         {
             if (_count == 4) { return false; }
             Points[_count++] = pt;
@@ -92,9 +92,9 @@ namespace NitroSharp.NsScript.Compiler
             _diagnostics = diagnostics;
         }
 
-        public LookupResult ResolveAssignmentTarget(ExpressionSyntax expression)
+        public LookupResult ResolveAssignmentTarget(Expression expression)
         {
-            if (expression is NameExpressionSyntax nameExpression)
+            if (expression is NameExpression nameExpression)
             {
                 return LookupNonInvocableSymbol(nameExpression);
             }
@@ -103,7 +103,7 @@ namespace NitroSharp.NsScript.Compiler
             return LookupResult.Empty;
         }
 
-        public ChapterSymbol? ResolveCallChapterTarget(CallChapterStatementSyntax callChapterStmt)
+        public ChapterSymbol? ResolveCallChapterTarget(CallChapterStatement callChapterStmt)
         {
             string modulePath = callChapterStmt.TargetModule.Value;
             try
@@ -125,7 +125,7 @@ namespace NitroSharp.NsScript.Compiler
             }
         }
 
-        public SceneSymbol? ResolveCallSceneTarget(CallSceneStatementSyntax callSceneStmt)
+        public SceneSymbol? ResolveCallSceneTarget(CallSceneStatement callSceneStmt)
         {
             if (callSceneStmt.TargetModule == null)
             {
@@ -153,7 +153,7 @@ namespace NitroSharp.NsScript.Compiler
             }
         }
 
-        public LookupResult LookupNonInvocableSymbol(NameExpressionSyntax name)
+        public LookupResult LookupNonInvocableSymbol(NameExpression name)
         {
             if (name.Sigil == SigilKind.Dollar || _compilation.TryGetVariableToken(name.Name, out _))
             {
@@ -211,12 +211,12 @@ namespace NitroSharp.NsScript.Compiler
         }
 
         public bool ParseBezierCurve(
-            BezierExpressionSyntax bezierExpr,
+            BezierExpression bezierExpr,
             out ImmutableArray<CompileTimeBezierSegment> segments)
         {
             static bool consumePoint(
-                ref ReadOnlySpan<BezierControlPointSyntax> points,
-                out BezierControlPointSyntax pt)
+                ref ReadOnlySpan<BezierControlPoint> points,
+                out BezierControlPoint pt)
             {
                 if (points.Length == 0)
                 {
@@ -228,11 +228,11 @@ namespace NitroSharp.NsScript.Compiler
                 return true;
             }
 
-            ReadOnlySpan<BezierControlPointSyntax> remainingPoints = bezierExpr
+            ReadOnlySpan<BezierControlPoint> remainingPoints = bezierExpr
                 .ControlPoints.AsSpan();
             var mutSegments = ImmutableArray.CreateBuilder<CompileTimeBezierSegment>();
             CompileTimeBezierSegment seg = default;
-            while (consumePoint(ref remainingPoints, out BezierControlPointSyntax pt))
+            while (consumePoint(ref remainingPoints, out BezierControlPoint pt))
             {
                 if (pt.IsStartingPoint)
                 {

@@ -3,16 +3,16 @@ using System.Collections.Immutable;
 
 namespace NitroSharp.NsScript.Syntax
 {
-    public abstract class ExpressionSyntax : SyntaxNode
+    public abstract class Expression : SyntaxNode
     {
-        protected ExpressionSyntax(TextSpan span) : base(span)
+        protected Expression(TextSpan span) : base(span)
         {
         }
     }
 
-    public sealed class LiteralExpressionSyntax : ExpressionSyntax
+    public sealed class LiteralExpression : Expression
     {
-        internal LiteralExpressionSyntax(in ConstantValue value, TextSpan span) : base(span)
+        internal LiteralExpression(in ConstantValue value, TextSpan span) : base(span)
         {
             Value = value;
         }
@@ -31,9 +31,9 @@ namespace NitroSharp.NsScript.Syntax
         }
     }
 
-    public sealed class NameExpressionSyntax : ExpressionSyntax
+    public sealed class NameExpression : Expression
     {
-        internal NameExpressionSyntax(string name, SigilKind sigil, TextSpan span) : base(span)
+        internal NameExpression(string name, SigilKind sigil, TextSpan span) : base(span)
         {
             Name = name;
             Sigil = sigil;
@@ -55,10 +55,10 @@ namespace NitroSharp.NsScript.Syntax
         }
     }
 
-    public sealed class UnaryExpressionSyntax : ExpressionSyntax
+    public sealed class UnaryExpression : Expression
     {
-        internal UnaryExpressionSyntax(
-            ExpressionSyntax operand,
+        internal UnaryExpression(
+            Expression operand,
             Spanned<UnaryOperatorKind> operatorKind,
             TextSpan span) : base(span)
         {
@@ -66,7 +66,7 @@ namespace NitroSharp.NsScript.Syntax
             OperatorKind = operatorKind;
         }
 
-        public ExpressionSyntax Operand { get; }
+        public Expression Operand { get; }
         public Spanned<UnaryOperatorKind> OperatorKind { get; }
 
         public override SyntaxNodeKind Kind => SyntaxNodeKind.UnaryExpression;
@@ -91,12 +91,12 @@ namespace NitroSharp.NsScript.Syntax
         }
     }
 
-    public sealed class BinaryExpressionSyntax : ExpressionSyntax
+    public sealed class BinaryExpression : Expression
     {
-        internal BinaryExpressionSyntax(
-            ExpressionSyntax left,
+        internal BinaryExpression(
+            Expression left,
             Spanned<BinaryOperatorKind> operatorKind,
-            ExpressionSyntax right,
+            Expression right,
             TextSpan span) : base(span)
         {
             Left = left;
@@ -104,9 +104,9 @@ namespace NitroSharp.NsScript.Syntax
             Right = right;
         }
 
-        public ExpressionSyntax Left { get; }
+        public Expression Left { get; }
         public Spanned<BinaryOperatorKind> OperatorKind { get; }
-        public ExpressionSyntax Right { get; }
+        public Expression Right { get; }
 
         public override SyntaxNodeKind Kind => SyntaxNodeKind.BinaryExpression;
 
@@ -131,12 +131,12 @@ namespace NitroSharp.NsScript.Syntax
         }
     }
 
-    public sealed class AssignmentExpressionSyntax : ExpressionSyntax
+    public sealed class AssignmentExpression : Expression
     {
-        internal AssignmentExpressionSyntax(
-            ExpressionSyntax target,
+        internal AssignmentExpression(
+            Expression target,
             Spanned<AssignmentOperatorKind> operatorKind,
-            ExpressionSyntax value,
+            Expression value,
             TextSpan span) : base(span)
         {
             Target = target;
@@ -144,9 +144,9 @@ namespace NitroSharp.NsScript.Syntax
             Value = value;
         }
 
-        public ExpressionSyntax Target { get; }
+        public Expression Target { get; }
         public Spanned<AssignmentOperatorKind> OperatorKind { get; }
-        public ExpressionSyntax Value { get; }
+        public Expression Value { get; }
 
         public override SyntaxNodeKind Kind => SyntaxNodeKind.AssignmentExpression;
 
@@ -171,11 +171,11 @@ namespace NitroSharp.NsScript.Syntax
         }
     }
 
-    public sealed class FunctionCallExpressionSyntax : ExpressionSyntax
+    public sealed class FunctionCallExpression : Expression
     {
-        internal FunctionCallExpressionSyntax(
+        internal FunctionCallExpression(
             Spanned<string> targetName,
-            ImmutableArray<ExpressionSyntax> arguments,
+            ImmutableArray<Expression> arguments,
             TextSpan span) : base(span)
         {
             TargetName = targetName;
@@ -183,7 +183,7 @@ namespace NitroSharp.NsScript.Syntax
         }
 
         public Spanned<string> TargetName { get; }
-        public ImmutableArray<ExpressionSyntax> Arguments { get; }
+        public ImmutableArray<Expression> Arguments { get; }
 
         public override SyntaxNodeKind Kind => SyntaxNodeKind.FunctionCallExpression;
 
@@ -198,16 +198,16 @@ namespace NitroSharp.NsScript.Syntax
         }
     }
 
-    public sealed class BezierExpressionSyntax : ExpressionSyntax
+    public sealed class BezierExpression : Expression
     {
-        public BezierExpressionSyntax(
-            ImmutableArray<BezierControlPointSyntax> controlPoints,
+        public BezierExpression(
+            ImmutableArray<BezierControlPoint> controlPoints,
             TextSpan span) : base(span)
         {
             ControlPoints = controlPoints;
         }
 
-        public ImmutableArray<BezierControlPointSyntax> ControlPoints { get; }
+        public ImmutableArray<BezierControlPoint> ControlPoints { get; }
         public override SyntaxNodeKind Kind => SyntaxNodeKind.BezierExpression;
 
         public override void Accept(SyntaxVisitor visitor)
@@ -221,16 +221,16 @@ namespace NitroSharp.NsScript.Syntax
         }
     }
 
-    public readonly struct BezierControlPointSyntax
+    public readonly struct BezierControlPoint
     {
-        public readonly ExpressionSyntax X;
-        public readonly ExpressionSyntax Y;
+        public readonly Expression X;
+        public readonly Expression Y;
         public readonly bool IsStartingPoint;
 
-        public BezierControlPointSyntax(ExpressionSyntax x, ExpressionSyntax y, bool starting)
+        public BezierControlPoint(Expression x, Expression y, bool starting)
             => (X, Y, IsStartingPoint) = (x, y, starting);
 
-        public void Deconstruct(out ExpressionSyntax x, out ExpressionSyntax y)
+        public void Deconstruct(out Expression x, out Expression y)
         {
             x = X;
             y = Y;

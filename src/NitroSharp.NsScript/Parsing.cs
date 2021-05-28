@@ -36,7 +36,7 @@ namespace NitroSharp.NsScript
         public static SyntaxTree ParseText(SourceText sourceText)
         {
             var parser = new Parser(new Lexer(sourceText));
-            SourceFileRootSyntax root = parser.ParseSourceFile();
+            SourceFileRoot root = parser.ParseSourceFile();
             return new SyntaxTree(sourceText, root, parser.DiagnosticBuilder);
         }
 

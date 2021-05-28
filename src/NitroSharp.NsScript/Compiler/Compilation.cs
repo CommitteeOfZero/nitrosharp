@@ -174,7 +174,7 @@ namespace NitroSharp.NsScript.Compiler
 
         private SourceModuleSymbol CreateModuleSymbol(SyntaxTree syntaxTree)
         {
-            var root = syntaxTree.Root as SourceFileRootSyntax;
+            var root = syntaxTree.Root as SourceFileRoot;
             if (root.FileReferences.Length == 0)
             {
                 return new SourceModuleSymbol(this, ImmutableArray.Create(syntaxTree));
@@ -188,7 +188,7 @@ namespace NitroSharp.NsScript.Compiler
 
         private void CollectReferences(SyntaxTree syntaxTree, ImmutableArray<SyntaxTree>.Builder builder)
         {
-            var root = (SourceFileRootSyntax)syntaxTree.Root;
+            var root = (SourceFileRoot)syntaxTree.Root;
             foreach (Spanned<string> include in root.FileReferences)
             {
                 try

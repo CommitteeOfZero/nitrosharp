@@ -63,7 +63,7 @@ namespace NitroSharp.NsScript.Compiler
 
         private SourceFileSymbol MakeSourceFileSymbol(SyntaxTree syntaxTree)
         {
-            Debug.Assert(syntaxTree.Root is SourceFileRootSyntax);
+            Debug.Assert(syntaxTree.Root is SourceFileRoot);
             ResolvedPath filePath = syntaxTree.SourceText.FilePath;
             SourceReferenceResolver sourceRefResolver = Compilation.SourceReferenceResolver;
             string rootDir = sourceRefResolver.RootDirectory;
@@ -78,7 +78,7 @@ namespace NitroSharp.NsScript.Compiler
                 this,
                 filePath,
                 relativePathNoExtension,
-                (SourceFileRootSyntax)syntaxTree.Root
+                (SourceFileRoot)syntaxTree.Root
             );
         }
 
@@ -139,7 +139,7 @@ namespace NitroSharp.NsScript.Compiler
             SourceModuleSymbol module,
             ResolvedPath filePath,
             string relativePathNoExtension,
-            SourceFileRootSyntax syntax)
+            SourceFileRoot syntax)
             : base(relativePathNoExtension)
         {
             Module = module;
@@ -158,25 +158,25 @@ namespace NitroSharp.NsScript.Compiler
             var scenes = ImmutableArray.CreateBuilder<SceneSymbol>(sceneCount);
             var functions = ImmutableArray.CreateBuilder<FunctionSymbol>(functionCount);
 
-            foreach (SubroutineDeclarationSyntax decl in syntax.SubroutineDeclarations)
+            foreach (SubroutineDeclaration decl in syntax.SubroutineDeclarations)
             {
                 string declName = decl.Name.Value;
                 switch (decl.Kind)
                 {
                     case SyntaxNodeKind.ChapterDeclaration:
-                        var chapterDecl = (ChapterDeclarationSyntax)decl;
+                        var chapterDecl = (ChapterDeclaration)decl;
                         var chapter = new ChapterSymbol(this, declName, chapterDecl);
                         _chapterMap.Add(declName, chapter);
                         chapters.Add(chapter);
                         break;
                     case SyntaxNodeKind.FunctionDeclaration:
-                        var functionDecl = (FunctionDeclarationSyntax)decl;
+                        var functionDecl = (FunctionDeclaration)decl;
                         var function = new FunctionSymbol(this, declName, functionDecl);
                         _functionMap[declName] = function;
                         functions.Add(function);
                         break;
                     case SyntaxNodeKind.SceneDeclaration:
-                        var sceneDecl = (SceneDeclarationSyntax)decl;
+                        var sceneDecl = (SceneDeclaration)decl;
                         var scene = new SceneSymbol(this, declName, sceneDecl);
                         _sceneMap.Add(declName, scene);
                         scenes.Add(scene);
@@ -224,14 +224,14 @@ namespace NitroSharp.NsScript.Compiler
         protected SubroutineSymbol(
             SourceFileSymbol declaringSourceFile,
             string name,
-            SubroutineDeclarationSyntax declaration) : base(name)
+            SubroutineDeclaration declaration) : base(name)
         {
             DeclaringSourceFile = declaringSourceFile;
             Declaration = declaration;
         }
 
         public SourceFileSymbol DeclaringSourceFile { get; }
-        public SubroutineDeclarationSyntax Declaration { get; }
+        public SubroutineDeclaration Declaration { get; }
 
         public virtual ParameterSymbol? LookupParameter(string name) => null;
 
@@ -251,7 +251,7 @@ namespace NitroSharp.NsScript.Compiler
         internal FunctionSymbol(
             SourceFileSymbol declaringSourceFile,
             string name,
-            FunctionDeclarationSyntax declaration)
+            FunctionDeclaration declaration)
             : base(declaringSourceFile, name, declaration)
         {
             var parameters = ImmutableArray<ParameterSymbol>.Empty;
@@ -260,7 +260,7 @@ namespace NitroSharp.NsScript.Compiler
             {
                 var builder = ImmutableArray.CreateBuilder<ParameterSymbol>(paramCount);
                 _parameterMap = new Dictionary<string, ParameterSymbol>();
-                foreach (ParameterSyntax paramSyntax in declaration.Parameters)
+                foreach (Parameter paramSyntax in declaration.Parameters)
                 {
                     var parameter = new ParameterSymbol(this, paramSyntax.Name);
                     builder.Add(parameter);
@@ -276,7 +276,7 @@ namespace NitroSharp.NsScript.Compiler
 
         public override SymbolKind Kind => SymbolKind.Function;
 
-        public new FunctionDeclarationSyntax Declaration { get; }
+        public new FunctionDeclaration Declaration { get; }
         public ImmutableArray<ParameterSymbol> Parameters { get; }
 
         public override ParameterSymbol? LookupParameter(string name)
@@ -309,14 +309,14 @@ namespace NitroSharp.NsScript.Compiler
         internal ChapterSymbol(
             SourceFileSymbol declaringSourceFile,
             string name,
-            ChapterDeclarationSyntax declaration)
+            ChapterDeclaration declaration)
             : base(declaringSourceFile, name, declaration)
         {
             Declaration = declaration;
         }
 
         public override SymbolKind Kind => SymbolKind.Chapter;
-        public new ChapterDeclarationSyntax Declaration { get; }
+        public new ChapterDeclaration Declaration { get; }
 
         public bool Equals(ChapterSymbol? other) => ReferenceEquals(Declaration, other?.Declaration);
         public override int GetHashCode() => Declaration.GetHashCode();
@@ -328,14 +328,14 @@ namespace NitroSharp.NsScript.Compiler
         internal SceneSymbol(
             SourceFileSymbol declaringSourceFile,
             string name,
-            SceneDeclarationSyntax declaration)
+            SceneDeclaration declaration)
             : base(declaringSourceFile, name, declaration)
         {
             Declaration = declaration;
         }
 
         public override SymbolKind Kind => SymbolKind.Scene;
-        public new SceneDeclarationSyntax Declaration { get; }
+        public new SceneDeclaration Declaration { get; }
 
         public bool Equals(SceneSymbol? other) => ReferenceEquals(Declaration, other?.Declaration);
         public override int GetHashCode() => Declaration.GetHashCode();
