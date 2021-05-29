@@ -7,38 +7,34 @@ using Veldrid;
 
 namespace NitroSharp.Text
 {
-    internal sealed class TextBuffer
+    internal sealed class Dialogue
     {
-        private static readonly MarkupTreeFlattener s_treeFlattener = new();
+        private static readonly MarkupAstFlattener s_treeFlattener = new();
 
-        private TextBuffer(
-            ImmutableArray<TextBufferSegment> segments,
-            VoiceSegment? voice,
-            uint textLength)
+        private Dialogue(ImmutableArray<DialogueSegment> segments, VoiceSegment? voice)
         {
             Segments = segments;
             Voice = voice;
-            TextLength = textLength;
         }
 
-        public ImmutableArray<TextBufferSegment> Segments { get; }
+        public ImmutableArray<DialogueSegment> Segments { get; }
         public VoiceSegment? Voice { get; }
-        public uint TextLength { get; }
-        public bool IsEmpty => Segments.Length == 0;
 
-        public static TextBuffer FromMarkup(string markup, FontConfiguration fontConfig)
+        public static Dialogue Parse(string markup, FontConfiguration fontConfig)
         {
             MarkupContent root = Parsing.ParseMarkup(markup);
             return s_treeFlattener.FlattenContent(root, fontConfig);
         }
 
-        public TextSegment? AssertSingleTextSegment()
+        public static TextSegment ParseTextSegment(string text, FontConfiguration fontConfig)
         {
-            return Segments.Length == 1 && Segments[0] is TextSegment ts
-                ? ts : null;
+            Dialogue dialogue = Parse(text, fontConfig);
+            return dialogue.Segments.Length == 1 && dialogue.Segments[0] is TextSegment ts
+                ? ts
+                : throw new InvalidOperationException($"Not a valid text segment: '{text}'");
         }
 
-        private sealed class MarkupTreeFlattener : MarkupNodeVisitor
+        private sealed class MarkupAstFlattener : MarkupNodeVisitor
         {
             private struct TextRunData
             {
@@ -51,28 +47,26 @@ namespace NitroSharp.Text
             }
 
             private FontConfiguration? _fontConfig;
-            private readonly ImmutableArray<TextBufferSegment>.Builder _segments;
+            private readonly ImmutableArray<DialogueSegment>.Builder _segments;
             private readonly ImmutableArray<TextRun>.Builder _textRuns;
             private TextRunData _textRunData;
-            private uint _textLength;
             private VoiceSegment? _voice;
 
-            public MarkupTreeFlattener()
+            public MarkupAstFlattener()
             {
-                _segments = ImmutableArray.CreateBuilder<TextBufferSegment>(4);
+                _segments = ImmutableArray.CreateBuilder<DialogueSegment>(4);
                 _textRuns = ImmutableArray.CreateBuilder<TextRun>(1);
             }
 
-            public TextBuffer FlattenContent(MarkupNode rootNode, FontConfiguration fontConfig)
+            public Dialogue FlattenContent(MarkupNode rootNode, FontConfiguration fontConfig)
             {
                 _fontConfig = fontConfig;
                 _segments.Clear();
-                _textLength = 0;
                 _voice = null;
                 Visit(rootNode);
                 FinalizeTextRun();
                 FinalizeTextSegment();
-                return new TextBuffer(_segments.ToImmutable(), _voice, _textLength);
+                return new Dialogue(_segments.ToImmutable(), _voice);
             }
 
             public override void VisitContent(MarkupContent content)
@@ -175,7 +169,8 @@ namespace NitroSharp.Text
                     : _fontConfig.DefaultFontSize;
 
                 RgbaFloat color = data.Color ?? new RgbaFloat(_fontConfig.DefaultTextColor);
-                RgbaFloat? outlineColor = data.OutlineColor ?? _fontConfig.DefaultOutlineColor?.ToRgbaFloat();
+                RgbaFloat? outlineColor = data.OutlineColor ??
+                    _fontConfig.DefaultOutlineColor?.ToRgbaFloat();
 
                 TextRun textRun;
                 if (data.RubyText is null)
@@ -198,7 +193,6 @@ namespace NitroSharp.Text
                 _textRuns.Add(textRun);
                 _textRunData.RubyText = null;
                 _textRunData.Text = null;
-                //_textRunData = default;
             }
 
             private void FinalizeTextSegment()
@@ -212,19 +206,19 @@ namespace NitroSharp.Text
         }
     }
 
-    internal enum TextBufferSegmentKind
+    internal enum DialogueSegmentKind
     {
         Text,
         Voice,
         Marker
     }
 
-    internal abstract class TextBufferSegment
+    internal abstract class DialogueSegment
     {
-        public abstract TextBufferSegmentKind SegmentKind { get; }
+        public abstract DialogueSegmentKind SegmentKind { get; }
     }
 
-    internal sealed class TextSegment : TextBufferSegment
+    internal sealed class TextSegment : DialogueSegment
     {
         public TextSegment(ImmutableArray<TextRun> textRuns)
         {
@@ -232,10 +226,10 @@ namespace NitroSharp.Text
         }
 
         public ImmutableArray<TextRun> TextRuns { get; }
-        public override TextBufferSegmentKind SegmentKind => TextBufferSegmentKind.Text;
+        public override DialogueSegmentKind SegmentKind => DialogueSegmentKind.Text;
     }
 
-    internal sealed class VoiceSegment : TextBufferSegment
+    internal sealed class VoiceSegment : DialogueSegment
     {
         public VoiceSegment(string characterName, string fileName, NsVoiceAction action)
         {
@@ -248,7 +242,7 @@ namespace NitroSharp.Text
         public string FileName { get; }
         public NsVoiceAction Action { get; }
 
-        public override TextBufferSegmentKind SegmentKind => TextBufferSegmentKind.Voice;
+        public override DialogueSegmentKind SegmentKind => DialogueSegmentKind.Voice;
     }
 
     internal enum MarkerKind
@@ -257,7 +251,7 @@ namespace NitroSharp.Text
         NoLinebreaks
     }
 
-    internal sealed class MarkerSegment : TextBufferSegment
+    internal sealed class MarkerSegment : DialogueSegment
     {
         public MarkerSegment(MarkerKind kind)
         {
@@ -265,6 +259,6 @@ namespace NitroSharp.Text
         }
 
         public MarkerKind MarkerKind { get; }
-        public override TextBufferSegmentKind SegmentKind => TextBufferSegmentKind.Marker;
+        public override DialogueSegmentKind SegmentKind => DialogueSegmentKind.Marker;
     }
 }

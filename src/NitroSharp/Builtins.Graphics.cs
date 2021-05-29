@@ -40,8 +40,7 @@ namespace NitroSharp
 
         public override void SetBacklog(string text)
         {
-            TextSegment seg = TextBuffer.FromMarkup(text, _ctx.ActiveProcess.FontConfig)
-                .AssertSingleTextSegment()!;
+            TextSegment seg = Dialogue.ParseTextSegment(text, _ctx.ActiveProcess.FontConfig);
             _ctx.Backlog.Append(seg);
         }
 

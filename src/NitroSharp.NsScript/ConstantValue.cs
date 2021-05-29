@@ -231,14 +231,10 @@ namespace NitroSharp.NsScript
             {
                 return leftNum.Value == rightNum.Value;
             }
-            else if (left.IsString && right.IsString)
-            {
-                return left._stringValue!.Equals(right._stringValue!);
-            }
-            else
-            {
-                return left.IsNull && right.IsNull;
-            }
+
+            return left.IsString && right.IsString
+                ? left._stringValue!.Equals(right._stringValue!)
+                : left.IsNull && right.IsNull;
         }
 
         public string ConvertToString() => Type switch

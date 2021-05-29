@@ -47,8 +47,7 @@ namespace NitroSharp.Graphics
             Size maxBounds,
             FontConfiguration fontConfig)
         {
-            var textBuffer = TextBuffer.FromMarkup(markup, fontConfig);
-            TextSegment segment = textBuffer.AssertSingleTextSegment()!;
+            TextSegment segment = Dialogue.ParseTextSegment(markup, fontConfig);
             var layout = new TextLayout(
                 ctx.GlyphRasterizer,
                 segment.TextRuns.AsSpan(),

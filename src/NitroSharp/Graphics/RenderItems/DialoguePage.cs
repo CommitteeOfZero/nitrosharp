@@ -21,7 +21,7 @@ namespace NitroSharp.Graphics
         private readonly NsScriptThread _dialogueThread;
         private readonly TextLayout _layout;
         private readonly List<string> _lines = new();
-        private readonly Queue<TextBufferSegment> _remainingSegments = new();
+        private readonly Queue<DialogueSegment> _remainingSegments = new();
 
         private ConsumeResult _lastResult;
         private TypewriterAnimation? _animation;
@@ -66,8 +66,8 @@ namespace NitroSharp.Graphics
             {
                 _lines.Add(line);
                 FontConfiguration fontConfig = loadCtx.Process.FontConfig;
-                var buffer = TextBuffer.FromMarkup(line, fontConfig);
-                foreach (TextBufferSegment seg in buffer.Segments)
+                var buffer = Dialogue.Parse(line, fontConfig);
+                foreach (DialogueSegment seg in buffer.Segments)
                 {
                     _remainingSegments.Enqueue(seg);
                 }
@@ -84,8 +84,8 @@ namespace NitroSharp.Graphics
         public void Append(GameContext ctx, string markup, FontConfiguration fontConfig)
         {
             _lines.Add(markup);
-            var buffer = TextBuffer.FromMarkup(markup, fontConfig);
-            foreach (TextBufferSegment seg in buffer.Segments)
+            var buffer = Dialogue.Parse(markup, fontConfig);
+            foreach (DialogueSegment seg in buffer.Segments)
             {
                 _remainingSegments.Enqueue(seg);
             }
@@ -143,16 +143,16 @@ namespace NitroSharp.Graphics
         private ConsumeResult ConsumeSegment(GameContext ctx)
         {
             GlyphRasterizer glyphRasterizer = ctx.RenderContext.GlyphRasterizer;
-            if (_remainingSegments.TryDequeue(out TextBufferSegment? seg))
+            if (_remainingSegments.TryDequeue(out DialogueSegment? seg))
             {
                 switch (seg.SegmentKind)
                 {
-                    case TextBufferSegmentKind.Text:
+                    case DialogueSegmentKind.Text:
                         var textSegment = (TextSegment)seg;
                         _layout.Append(glyphRasterizer, textSegment.TextRuns.AsSpan());
                         ctx.Backlog.Append(textSegment);
                         return ConsumeResult.KeepGoing;
-                    case TextBufferSegmentKind.Marker:
+                    case DialogueSegmentKind.Marker:
                         var marker = (MarkerSegment)seg;
                         switch (marker.MarkerKind)
                         {
@@ -160,7 +160,7 @@ namespace NitroSharp.Graphics
                                 return ConsumeResult.Halt;
                         }
                         break;
-                    case TextBufferSegmentKind.Voice:
+                    case DialogueSegmentKind.Voice:
                         var voice = (VoiceSegment)seg;
                         if (voice.Action == NsVoiceAction.Play)
                         {

@@ -286,7 +286,7 @@ namespace NitroSharp
             _endValue = endValue;
         }
 
-        public VolumeAnimation(in AnimationSaveData saveData) : base(in saveData)
+        public VolumeAnimation(in AnimationSaveData saveData) : base(saveData)
         {
         }
 
