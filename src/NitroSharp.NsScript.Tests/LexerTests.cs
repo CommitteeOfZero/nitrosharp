@@ -1,11 +1,10 @@
-﻿using NitroSharp.NsScript;
-using NitroSharp.NsScript.Syntax;
+﻿using NitroSharp.NsScript.Syntax;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using Xunit;
 
-namespace NitroSharp.NsScriptCompiler.Tests
+namespace NitroSharp.NsScript.Tests
 {
     public class LexerTests
     {
@@ -182,29 +181,6 @@ namespace NitroSharp.NsScriptCompiler.Tests
             Assert.Equal(3, tokens.Length);
             Assert.Equal(SyntaxTokenKind.Dollar, tokens[0].Kind);
             Assert.Equal(SyntaxTokenKind.Dot, tokens[1].Kind);
-        }
-
-        [Theory]
-        [InlineData("[text001]", SyntaxTokenKind.DialogueBlockIdentifier)]
-        [InlineData("\r", SyntaxTokenKind.MarkupBlankLine)]
-        [InlineData("\n", SyntaxTokenKind.MarkupBlankLine)]
-        [InlineData("foo", SyntaxTokenKind.Markup)]
-        public void Dynamic_Markup_Token(string text, SyntaxTokenKind kind)
-        {
-            (SyntaxToken token, LexingContext ctx) = LexToken(text, LexingMode.DialogueBlock);
-            Assert.Equal(kind, token.Kind);
-            Assert.Equal(text, ctx.GetText(token).ToString());
-            Assert.Equal(SyntaxTokenFlags.Empty, token.Flags);
-        }
-
-        [Fact]
-        public void Dialogue_CommentedOut_Code()
-        {
-            const string text = @"// this is a comment {
-Sample Text";
-            (SyntaxToken token, LexingContext ctx) = LexToken(text, LexingMode.DialogueBlock);
-            Assert.Equal(SyntaxTokenKind.Markup, token.Kind);
-            Assert.Equal(text, ctx.GetText(token).ToString());
         }
 
         [Theory]

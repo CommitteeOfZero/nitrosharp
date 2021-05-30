@@ -3,7 +3,7 @@ using NitroSharp.NsScript.Syntax;
 using System.Collections.Generic;
 using Xunit;
 
-namespace NitroSharp.NsScriptCompiler.Tests
+namespace NitroSharp.NsScript.Tests
 {
     public class StatementParsingTests
     {

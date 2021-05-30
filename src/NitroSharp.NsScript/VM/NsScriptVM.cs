@@ -673,6 +673,8 @@ namespace NitroSharp.NsScript.VM
         private readonly int _skipLock;
         private readonly int _backlogLock;
 
+        private ConstantValue _missingVariable = ConstantValue.Null;
+
         public SystemVariableLookup(NsScriptVM vm)
         {
             _vm = vm;
@@ -718,7 +720,10 @@ namespace NitroSharp.NsScript.VM
         {
             if (!_nameLookup.TryLookupSystemVariable(name, out int index))
             {
-                _nameLookup.TryLookupSystemFlag(name, out index);
+                if (!_nameLookup.TryLookupSystemFlag(name, out index))
+                {
+                    return -1;
+                }
             }
             return index;
         }
@@ -741,8 +746,19 @@ namespace NitroSharp.NsScript.VM
         public ref ConstantValue X360LbButtonDown => ref Var(_x360ButtonLbDown);
         public ref ConstantValue X360RbButtonDown => ref Var(_x360ButtonRbDown);
 
-        private ref ConstantValue Var(int index) => ref _vm.GetVariable(index);
-        private ref ConstantValue Flag(int index) => ref _vm.GetFlag(index);
+        private ref ConstantValue Var(int index)
+        {
+            return ref index >= 0
+                ? ref _vm.GetVariable(index)
+                : ref _missingVariable;
+        }
+
+        private ref ConstantValue Flag(int index)
+        {
+            return ref index >= 0
+               ? ref _vm.GetFlag(index)
+               : ref _missingVariable;
+        }
 
         public ref ConstantValue BacklogEnable => ref _vm.GetVariable(_backlogEnable);
         public ref ConstantValue BacklogRowMax => ref _vm.GetVariable(_backlogRowMax);

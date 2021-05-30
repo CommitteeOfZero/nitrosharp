@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System;
 using System.Runtime.InteropServices;
-using System.Diagnostics;
 
 namespace NitroSharp.NsScript.Syntax
 {
@@ -44,6 +43,13 @@ namespace NitroSharp.NsScript.Syntax
         private LexingMode CurrentMode
             => _lexingModeStack.Count > 0 ? _lexingModeStack.Peek() : _initialMode;
 
+        public SyntaxToken Lex()
+        {
+            SyntaxToken tk = default;
+            Lex(ref tk);
+            return tk;
+        }
+
         public void Lex(ref SyntaxToken syntaxToken)
         {
             ref MutableToken mutableTk = ref Unsafe.As<SyntaxToken, MutableToken>(ref syntaxToken);
@@ -51,12 +57,16 @@ namespace NitroSharp.NsScript.Syntax
             {
                 if (PeekChar() != '{' && !Match(PRE_EndTag))
                 {
-                    LexMarkupToken(ref mutableTk);
-                    return;
+                    if (LexMarkupToken(ref mutableTk))
+                    {
+                        return;
+                    }
                 }
             }
 
             LexSyntaxToken(ref mutableTk);
+            bool keepWhitespace = false;
+            LexingMode prevLexingMode = CurrentMode;
             switch (mutableTk.Kind)
             {
                 case SyntaxTokenKind.OpenBrace:
@@ -66,6 +76,8 @@ namespace NitroSharp.NsScript.Syntax
                     if (_lexingModeStack.Count > 0)
                     {
                         _lexingModeStack.Pop();
+                        keepWhitespace = prevLexingMode == LexingMode.Normal
+                            && CurrentMode == LexingMode.DialogueBlock;
                     }
                     break;
                 case SyntaxTokenKind.DialogueBlockStartTag:
@@ -78,50 +90,15 @@ namespace NitroSharp.NsScript.Syntax
                     }
                     break;
             }
-        }
 
-        public SyntaxToken Lex()
-        {
-            SyntaxToken tk = default;
-            ref MutableToken mutableTk = ref Unsafe.As<SyntaxToken, MutableToken>(ref tk);
-            if (CurrentMode == LexingMode.DialogueBlock)
+            if (!keepWhitespace)
             {
-                if (PeekChar() != '{' && !Match("</pre>"))
-                {
-                    LexMarkupToken(ref mutableTk);
-                    Debug.Assert(tk.Kind != SyntaxTokenKind.None);
-                    return tk;
-                }
+                SkipSyntaxTrivia(isTrailing: true);
             }
-
-            LexSyntaxToken(ref mutableTk);
-            switch (mutableTk.Kind)
+            else
             {
-                case SyntaxTokenKind.OpenBrace:
-                    _lexingModeStack.Push(LexingMode.Normal);
-                    break;
-
-                case SyntaxTokenKind.CloseBrace:
-                    if (_lexingModeStack.Count > 0)
-                    {
-                        _lexingModeStack.Pop();
-                    }
-                    break;
-
-                case SyntaxTokenKind.DialogueBlockStartTag:
-                    _lexingModeStack.Push(LexingMode.DialogueBlock);
-                    break;
-
-                case SyntaxTokenKind.DialogueBlockEndTag:
-                    if (_lexingModeStack.Count > 0)
-                    {
-                        _lexingModeStack.Pop();
-                    }
-                    break;
+                SkipTrailingEndOfLineSequence();
             }
-
-            Debug.Assert(tk.Kind != SyntaxTokenKind.None);
-            return tk;
         }
 
         private void LexSyntaxToken(ref MutableToken token)
@@ -129,7 +106,6 @@ namespace NitroSharp.NsScript.Syntax
             token = default;
             SkipSyntaxTrivia(isTrailing: false);
             StartScanning();
-
             char character = PeekChar();
             switch (character)
             {
@@ -438,42 +414,42 @@ namespace NitroSharp.NsScript.Syntax
             }
 
             token.TextSpan = CurrentLexemeSpan;
-            SkipSyntaxTrivia(isTrailing: true);
         }
 
-        private void LexMarkupToken(ref MutableToken token)
+        private bool LexMarkupToken(ref MutableToken token)
         {
-            bool skipTrailingTrivia = false;
             StartScanning();
-
-            char character = PeekChar();
-            switch (character)
+            switch (PeekChar())
             {
                 case '[':
                     ScanDialogueBlockIdentifier(ref token);
-                    skipTrailingTrivia = true;
                     break;
-
                 case '\r':
                 case '\n':
-                    token.Kind = SyntaxTokenKind.MarkupBlankLine;
-                    ScanEndOfLineSequence();
+                    int newlineSequenceLength = ScanEndOfLineSequence();
+                    if (newlineSequenceLength == 2)
+                    {
+                        token.TextSpan = CurrentLexemeSpan;
+                        token.Kind = SyntaxTokenKind.MarkupBlankLine;
+                        return true;
+                    }
                     break;
-
                 case EofCharacter:
                     token.Kind = SyntaxTokenKind.EndOfFileToken;
                     break;
-
                 default:
-                    ScanMarkup(ref token);
+                    if (!ScanMarkup(ref token))
+                    {
+                        return false;
+                    }
                     break;
             }
-
             token.TextSpan = CurrentLexemeSpan;
-            if (skipTrailingTrivia)
+            if (token.Kind == SyntaxTokenKind.DialogueBlockIdentifier)
             {
                 SkipSyntaxTrivia(isTrailing: true);
             }
+            return true;
         }
 
         private bool ScanIdentifier(ref MutableToken token)
@@ -632,10 +608,10 @@ namespace NitroSharp.NsScript.Syntax
             return true;
         }
 
-        private void ScanMarkup(ref MutableToken token)
+        private bool ScanMarkup(ref MutableToken token)
         {
             int preNestingLevel = 0;
-
+            int nbNonWhitespace = 0;
             char c;
             while ((c = PeekChar()) != '{' && c != EofCharacter)
             {
@@ -668,25 +644,25 @@ namespace NitroSharp.NsScript.Syntax
                 }
 
                 int pos = Position;
-                int newlineSequenceLength = 0;
-                while (SyntaxFacts.IsNewLine(PeekChar()))
+                int newlineSequenceLength = ScanEndOfLineSequence();
+                if (newlineSequenceLength == 2)
                 {
-                    ScanEndOfLine();
-                    if (++newlineSequenceLength == 2)
-                    {
-                        SetPosition(pos);
-                        goto exit;
-                    }
+                    SetPosition(pos);
+                    goto exit;
                 }
-
                 if (newlineSequenceLength == 0)
                 {
                     AdvanceChar();
+                    if (!SyntaxFacts.IsWhitespace(c))
+                    {
+                        nbNonWhitespace++;
+                    }
                 }
             }
 
         exit:
             token.Kind = SyntaxTokenKind.Markup;
+            return nbNonWhitespace > 0;
         }
 
         private bool ScanDialogueBlockStartTag(ref MutableToken token)
@@ -800,6 +776,17 @@ namespace NitroSharp.NsScript.Syntax
                         break;
                 }
             } while (trivia);
+        }
+
+        private void SkipTrailingEndOfLineSequence()
+        {
+            StartScanning();
+            int pos = Position;
+            int newlineSeqLen = ScanEndOfLineSequence();
+            if (newlineSeqLen == 2)
+            {
+                SetPosition(pos);
+            }
         }
 
         private void ScanMultiLineComment()

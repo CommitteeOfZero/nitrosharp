@@ -1,8 +1,7 @@
-﻿using NitroSharp.NsScript;
-using NitroSharp.NsScript.Syntax;
+﻿using NitroSharp.NsScript.Syntax;
 using Xunit;
 
-namespace NitroSharp.NsScriptCompiler.Tests
+namespace NitroSharp.NsScript.Tests
 {
     internal static class Common
     {

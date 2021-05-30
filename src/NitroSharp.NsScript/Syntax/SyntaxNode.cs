@@ -5,6 +5,7 @@ namespace NitroSharp.NsScript.Syntax
 {
     public enum SyntaxNodeKind
     {
+        None,
         SourceFileRoot,
 
         ChapterDeclaration,

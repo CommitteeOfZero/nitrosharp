@@ -4,7 +4,7 @@ using System.Linq;
 using NitroSharp.NsScript.Syntax;
 using Xunit;
 
-namespace NitroSharp.NsScriptCompiler.Tests
+namespace NitroSharp.NsScript.Tests
 {
     internal class AssertingEnumerator
     {

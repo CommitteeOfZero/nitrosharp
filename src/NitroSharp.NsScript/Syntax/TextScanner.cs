@@ -42,12 +42,9 @@ namespace NitroSharp.NsScript.Syntax
 
         protected char PeekChar(int offset)
         {
-            if (_position + offset >= Text.Length)
-            {
-                return EofCharacter;
-            }
-
-            return Text[_position + offset];
+            return _position + offset < Text.Length
+                ? Text[_position + offset]
+                : EofCharacter;
         }
 
         protected void AdvanceChar() => _position++;
@@ -134,11 +131,9 @@ namespace NitroSharp.NsScript.Syntax
                         AdvanceChar();
                     }
                     break;
-
                 case '\n':
                     AdvanceChar();
                     break;
-
                 default:
                     if (SyntaxFacts.IsNewLine(c))
                     {
@@ -148,12 +143,15 @@ namespace NitroSharp.NsScript.Syntax
             }
         }
 
-        protected void ScanEndOfLineSequence()
+        protected int ScanEndOfLineSequence()
         {
+            int len = 0;
             while (SyntaxFacts.IsNewLine(PeekChar()))
             {
                 ScanEndOfLine();
+                len++;
             }
+            return len;
         }
     }
 }

@@ -8,7 +8,7 @@ using NitroSharp.NsScript.Compiler;
 using NitroSharp.NsScript.VM;
 using Xunit;
 
-namespace NitroSharp.NsScriptCompiler.Tests
+namespace NitroSharp.NsScript.Tests
 {
     public class TestDiscoverer : IEnumerable<object[]>
     {

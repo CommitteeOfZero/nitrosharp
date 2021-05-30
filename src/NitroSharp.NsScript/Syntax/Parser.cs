@@ -952,8 +952,7 @@ namespace NitroSharp.NsScript.Syntax
             string extractBlockName(in SyntaxToken identifierToken)
             {
                 ReadOnlySpan<char> span = SourceText.GetCharacterSpan(identifierToken.TextSpan);
-                Debug.Assert(span.Length >= 3);
-                return span[1..^1].ToString();
+                return span.Length > 2 ? span[1..^1].ToString() : "";
             }
 
             SyntaxToken startTag = EatToken(SyntaxTokenKind.DialogueBlockStartTag);
