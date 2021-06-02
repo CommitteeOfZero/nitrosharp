@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
-#nullable enable
-
 namespace NitroSharp.Utilities
 {
     public struct ArrayBuilder<T>
