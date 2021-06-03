@@ -21,7 +21,9 @@ if ($Runtime -eq "") {
     }
 }
 
-$PublishDir = "publish/$Runtime"
+if ($PublishDir -eq "") {
+    $PublishDir = "publish/$Runtime"
+}
 
 if (!$msvc) {
     $env:CppCompilerAndLinker = $CppCompiler
