@@ -47,6 +47,8 @@ namespace NitroSharp.Content
         private readonly ConcurrentBag<(string, IDisposable)> _loadedAssets;
         private volatile int _nbPending;
 
+        private ArchiveManager _archiveManager;
+
         [StructLayout(LayoutKind.Auto)]
         private struct CacheEntry
         {
@@ -55,11 +57,12 @@ namespace NitroSharp.Content
             public IDisposable? Asset;
         }
 
-        public ContentManager(string rootDirectory, TextureLoader textureLoader)
+        public ContentManager(string rootDirectory, TextureLoader textureLoader, ArchiveManager archiveManager)
         {
             RootDirectory = rootDirectory;
             _textureLoader = textureLoader;
             _loadTextureFunc = (stream, staging) => _textureLoader.LoadTexture(stream, staging);
+            _archiveManager = archiveManager;
             _cache = new FreeList<CacheEntry>();
             _strongHandles = new Dictionary<string, FreeListHandle>();
             _loadedAssets = new ConcurrentBag<(string, IDisposable)>();
@@ -187,13 +190,20 @@ namespace NitroSharp.Content
 
         public Stream OpenStream(string path)
         {
+            string fsPath = path;
             if (Path.GetDirectoryName(path) is string dir
                 && Path.GetFileName(path) is string filename)
             {
-                path = Path.Combine(dir, filename.ToLowerInvariant());
+                fsPath = Path.Combine(dir, filename.ToLowerInvariant());
             }
-            string fullPath = Path.Combine(RootDirectory, path);
-            return File.OpenRead(fullPath);
+            string fullPath = Path.Combine(RootDirectory, fsPath);
+
+            if (File.Exists(fullPath))
+            {
+                return File.OpenRead(fullPath);
+            }
+
+            return _archiveManager.OpenStream(path);
         }
 
         public void Dispose()

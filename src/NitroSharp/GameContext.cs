@@ -282,7 +282,10 @@ namespace NitroSharp
                 textureLoader = new FFmpegTextureLoader(device);
             }
 
-            var content = new ContentManager(configuration.ContentRoot, textureLoader);
+            var archive = new ArchiveManager();
+            var content = new ContentManager(configuration.ContentRoot, textureLoader, archive);
+            if (configuration.MountPoints != null)
+                archive.AddMounts(configuration.MountPoints, configuration.ContentRoot, content);
             return content;
         }
 
