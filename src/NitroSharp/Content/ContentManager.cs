@@ -47,7 +47,7 @@ namespace NitroSharp.Content
         private readonly ConcurrentBag<(string, IDisposable)> _loadedAssets;
         private volatile int _nbPending;
 
-        private ArchiveManager _archiveManager;
+        private readonly ArchiveManager _archiveManager;
 
         [StructLayout(LayoutKind.Auto)]
         private struct CacheEntry

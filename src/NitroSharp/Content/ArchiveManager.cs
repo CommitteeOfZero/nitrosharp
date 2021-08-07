@@ -74,6 +74,8 @@ namespace NitroSharp.Content
 
     internal class ArchiveManager : IDisposable
     {
+        public static readonly string DefaultEncoding = "shift-jis";
+
         private VFSNode _root;
         private Encoding _encoding;
 
@@ -83,7 +85,15 @@ namespace NitroSharp.Content
         {
             if (encoding == null)
             {
-                encoding = Encoding.GetEncoding("shift-jis");
+                try
+                {
+                    encoding = Encoding.GetEncoding(DefaultEncoding);
+                }
+                catch (ArgumentException)
+                {
+                    Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+                    encoding = Encoding.GetEncoding(DefaultEncoding);
+                }
             }
             _encoding = encoding;
             _root = new VFSNode();
