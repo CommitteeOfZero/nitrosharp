@@ -79,15 +79,15 @@ namespace NitroSharp.Content
 
                 uint stringOffset = reader.ReadUInt32();
                 stream.Seek(stringOffset, SeekOrigin.Begin);
+                Span<byte> name = stackalloc byte[32];
+                Span<byte> unk = stackalloc byte[16];
                 for (uint fileIndex = 0; fileIndex < _entriesCount; fileIndex++)
                 {
-                    byte[] name = new byte[32];
-                    reader.Read(name, 0, 32);
+                    reader.Read(name);
                     string decodedName = _encoding.GetString(name).ToLowerInvariant();
                     _builtinFileNames[decodedName] = fileIndex;
 
-                    byte[] unk = new byte[16];
-                    reader.Read(unk, 0, 16);
+                    reader.Read(unk);
                 }
             }
         }
