@@ -17,8 +17,8 @@ namespace NitroSharp.Content
         private readonly Dictionary<string, uint> _builtinFileNames;
         private readonly Dictionary<string, uint> _iniFileNames;
 
-        protected readonly MemoryMappedFile _mmFile;
-        protected readonly uint _archiveOffset;
+        private readonly MemoryMappedFile _mmFile;
+        private readonly uint _archiveOffset;
 
         private readonly Encoding _encoding;
 
@@ -143,7 +143,7 @@ namespace NitroSharp.Content
             return _iniFileNames.ContainsKey(path) || _builtinFileNames.ContainsKey(path);
         }
 
-        protected (uint offset, uint size) GetFile(string path)
+        private (uint offset, uint size) GetFile(string path)
         {
             uint? fileId = null;
             if (_iniFileNames.ContainsKey(path))

@@ -55,8 +55,8 @@ namespace NitroSharp.Content
     {
         public static readonly string DefaultEncoding = "shift-jis";
 
-        private VFSNode _root;
-        private Encoding _encoding;
+        private readonly VFSNode _root;
+        private readonly Encoding _encoding;
 
         public ArchiveManager(Encoding? encoding = null)
         {
