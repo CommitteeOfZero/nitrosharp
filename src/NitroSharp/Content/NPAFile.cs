@@ -20,16 +20,30 @@ namespace NitroSharp.Content
 
         private readonly Encoding _encoding;
 
-        public NPAFile(MemoryMappedFile mmFile, Encoding encoding)
+        private NPAFile(MemoryMappedFile mmFile, Encoding encoding)
         {
             _files = new Dictionary<string, (uint offset, uint size)>();
             _mmFile = mmFile;
             _encoding = encoding;
         }
 
-        public static IArchiveFile Create(MemoryMappedFile mmFile, Encoding encoding)
+        public static IArchiveFile? TryLoad(MemoryMappedFile mmFile, Encoding encoding)
         {
-            return new NPAFile(mmFile, encoding);
+            try
+            {
+                return NPAFile.Load(mmFile, encoding);
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        public static IArchiveFile Load(MemoryMappedFile mmFile, Encoding encoding)
+        {
+            NPAFile archive = new NPAFile(mmFile, encoding);
+            archive.OpenArchive();
+            return archive;
         }
 
         public void Dispose()
@@ -37,7 +51,7 @@ namespace NitroSharp.Content
             _mmFile.Dispose();
         }
 
-        public void OpenArchive()
+        private void OpenArchive()
         {
             using (MemoryMappedViewStream stream = _mmFile.CreateViewStream(0, 0, MemoryMappedFileAccess.Read))
             {

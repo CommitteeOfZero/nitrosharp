@@ -8,7 +8,6 @@ namespace NitroSharp.Content
 {
     internal interface IArchiveFile : IDisposable
     {
-        public void OpenArchive();
         public Stream OpenStream(string path);
         public bool Contains(string path);
     }
@@ -118,24 +117,19 @@ namespace NitroSharp.Content
             string fullPath = Path.Combine(rootDirectory, mountPoint.ArchiveName);
             if (File.Exists(fullPath))
             {
-                Func<MemoryMappedFile,Encoding,IArchiveFile>[] constructors = new Func<MemoryMappedFile,Encoding,IArchiveFile>[]
+                Func<MemoryMappedFile,Encoding,IArchiveFile?>[] constructors = new Func<MemoryMappedFile,Encoding,IArchiveFile?>[]
                 {
-                    NPAFile.Create,
-                    AFSFile.Create,
+                    NPAFile.TryLoad,
+                    AFSFile.TryLoad,
                 };
                 MemoryMappedFile mmFile = MemoryMappedFile.CreateFromFile(fullPath, FileMode.Open, null, 0, MemoryMappedFileAccess.Read);
                 IArchiveFile? archive = null;
-                foreach (Func<MemoryMappedFile,Encoding,IArchiveFile> constructor in constructors)
+                foreach (Func<MemoryMappedFile,Encoding,IArchiveFile?> constructor in constructors)
                 {
-                    try
+                    archive = constructor(mmFile, _encoding);
+                    if (archive != null)
                     {
-                        archive = constructor(mmFile, _encoding);
-                        archive.OpenArchive();
                         break;
-                    }
-                    catch
-                    {
-                        continue;
                     }
                 }
                 if (archive == null)
@@ -157,8 +151,7 @@ namespace NitroSharp.Content
                 {
                     throw new FileNotFoundException("Sub-archive not found", mountPoint.ArchiveName);
                 }
-                AFSFile archive = new AFSFile((AFSFile) parentArchive, archivePath, _encoding);
-                archive.OpenArchive();
+                AFSFile archive = (AFSFile) AFSFile.Load((AFSFile) parentArchive, archivePath, _encoding);
                 if (mountPoint.FileNamesIni != null)
                 {
                     archive.LoadFileNames(content.OpenStream(mountPoint.FileNamesIni));

@@ -22,7 +22,7 @@ namespace NitroSharp.Content
 
         private readonly Encoding _encoding;
 
-        public AFSFile(MemoryMappedFile mmFile, Encoding encoding)
+        private AFSFile(MemoryMappedFile mmFile, Encoding encoding)
         {
             _builtinFileNames = new Dictionary<string, uint>();
             _iniFileNames = new Dictionary<string, uint>();
@@ -31,7 +31,7 @@ namespace NitroSharp.Content
             _archiveOffset = 0;
         }
 
-        public AFSFile(AFSFile parent, string name, Encoding encoding)
+        private AFSFile(AFSFile parent, string name, Encoding encoding)
         {
             _builtinFileNames = new Dictionary<string, uint>();
             _iniFileNames = new Dictionary<string, uint>();
@@ -40,9 +40,30 @@ namespace NitroSharp.Content
             _archiveOffset = parent._archiveOffset + parent.GetFile(name).offset;
         }
 
-        public static IArchiveFile Create(MemoryMappedFile mmFile, Encoding encoding)
+        public static IArchiveFile? TryLoad(MemoryMappedFile mmFile, Encoding encoding)
         {
-            return new AFSFile(mmFile, encoding);
+            try
+            {
+                return AFSFile.Load(mmFile, encoding);
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        public static IArchiveFile Load(MemoryMappedFile mmFile, Encoding encoding)
+        {
+            AFSFile archive = new AFSFile(mmFile, encoding);
+            archive.OpenArchive();
+            return archive;
+        }
+
+        public static IArchiveFile Load(AFSFile parent, string name, Encoding encoding)
+        {
+            AFSFile archive = new AFSFile(parent, name, encoding);
+            archive.OpenArchive();
+            return archive;
         }
 
         public void Dispose()
@@ -54,7 +75,7 @@ namespace NitroSharp.Content
             }
         }
 
-        public void OpenArchive()
+        private void OpenArchive()
         {
             using (MemoryMappedViewStream stream = _mmFile.CreateViewStream(_archiveOffset, 0, MemoryMappedFileAccess.Read))
             {
