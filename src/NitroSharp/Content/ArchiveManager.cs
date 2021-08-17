@@ -13,52 +13,32 @@ namespace NitroSharp.Content
         public bool Contains(string path);
     }
 
-    internal class VFSNode : IDisposable
+    internal sealed class VFSNode : IDisposable
     {
         public List<IArchiveFile>? MountedArchives { get; set; }
         public Dictionary<string, VFSNode>? Children { get; set; }
 
-        private bool _disposed = false;
-
-        ~VFSNode()
-        {
-            Dispose(false);
-        }
-
         public void Dispose()
         {
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
-
-        public virtual void Dispose(bool disposing)
-        {
-            if (!_disposed)
+            if (Children != null)
             {
-                if (disposing)
+                foreach (KeyValuePair<string, VFSNode> pair in Children)
                 {
-                    if (Children != null)
-                    {
-                        foreach (KeyValuePair<string, VFSNode> pair in Children)
-                        {
-                            pair.Value.Dispose();
-                        }
-                    }
-
-                    if (MountedArchives != null)
-                    {
-                        foreach (IArchiveFile mountedArchive in MountedArchives)
-                        {
-                            mountedArchive.Dispose();
-                        }
-                    }
+                    pair.Value.Dispose();
                 }
-                _disposed = true;
+            }
+
+            if (MountedArchives != null)
+            {
+                foreach (IArchiveFile mountedArchive in MountedArchives)
+                {
+                    mountedArchive.Dispose();
+                }
             }
         }
     }
 
-    public class ArchiveException : Exception
+    internal sealed class ArchiveException : Exception
     {
         public ArchiveException()
             : base("Unable to open the archive")
@@ -72,14 +52,12 @@ namespace NitroSharp.Content
 
     }
 
-    internal class ArchiveManager : IDisposable
+    internal sealed class ArchiveManager : IDisposable
     {
         public static readonly string DefaultEncoding = "shift-jis";
 
         private VFSNode _root;
         private Encoding _encoding;
-
-        private bool _disposed = false;
 
         public ArchiveManager(Encoding? encoding = null)
         {
@@ -99,27 +77,9 @@ namespace NitroSharp.Content
             _root = new VFSNode();
         }
 
-        ~ArchiveManager()
-        {
-            Dispose(false);
-        }
-
         public void Dispose()
         {
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
-
-        public virtual void Dispose(bool disposing)
-        {
-            if (!_disposed)
-            {
-                if (disposing)
-                {
-                    _root?.Dispose();
-                }
-                _disposed = true;
-            }
+            _root.Dispose();
         }
 
         public void AddMounts(MountPoint[] mountPoints, string rootDirectory, ContentManager content)

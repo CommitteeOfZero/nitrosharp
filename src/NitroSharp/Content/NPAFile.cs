@@ -7,7 +7,7 @@ using System.Text;
 
 namespace NitroSharp.Content
 {
-    internal class NPAFile : IArchiveFile
+    internal sealed class NPAFile : IArchiveFile
     {
         public static readonly byte[] Magic = {0x4E, 0x50, 0x41, 0x01, 0x00, 0x00, 0x00};
 
@@ -17,8 +17,6 @@ namespace NitroSharp.Content
         private readonly Dictionary<string, (uint offset, uint size)> _files;
 
         private readonly MemoryMappedFile _mmFile;
-
-        private bool _disposed = false;
 
         private readonly Encoding _encoding;
 
@@ -34,27 +32,9 @@ namespace NitroSharp.Content
             return new NPAFile(mmFile, encoding);
         }
 
-        ~NPAFile()
-        {
-            Dispose(false);
-        }
-
         public void Dispose()
         {
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
-
-        public virtual void Dispose(bool disposing)
-        {
-            if (!_disposed)
-            {
-                if (disposing)
-                {
-                    _mmFile?.Dispose();
-                }
-                _disposed = true;
-            }
+            _mmFile.Dispose();
         }
 
         public void OpenArchive()

@@ -7,7 +7,7 @@ using System.Text;
 
 namespace NitroSharp.Content
 {
-    internal class AFSFile : IArchiveFile
+    internal sealed class AFSFile : IArchiveFile
     {
         public static readonly byte[] Magic = {0x41, 0x46, 0x53, 0x00};
 
@@ -21,8 +21,6 @@ namespace NitroSharp.Content
         protected readonly uint _archiveOffset;
 
         private readonly Encoding _encoding;
-
-        private bool _disposed = false;
 
         public AFSFile(MemoryMappedFile mmFile, Encoding encoding)
         {
@@ -47,26 +45,12 @@ namespace NitroSharp.Content
             return new AFSFile(mmFile, encoding);
         }
 
-        ~AFSFile()
-        {
-            Dispose(false);
-        }
-
         public void Dispose()
         {
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
-
-        public virtual void Dispose(bool disposing)
-        {
-            if (!_disposed)
+            // We only dispose the MemoryMappedFile if we're the parent archive
+            if (_archiveOffset == 0)
             {
-                if (disposing && _archiveOffset == 0)
-                {
-                    _mmFile?.Dispose();
-                }
-                _disposed = true;
+                _mmFile.Dispose();
             }
         }
 
