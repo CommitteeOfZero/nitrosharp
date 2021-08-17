@@ -53,24 +53,22 @@ namespace NitroSharp.Content
 
     internal sealed class ArchiveManager : IDisposable
     {
-        public static readonly string DefaultEncoding = "shift-jis";
+        public static readonly Encoding DefaultEncoding;
 
         private readonly VFSNode _root;
         private readonly Encoding _encoding;
+
+        static ArchiveManager()
+        {
+            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+            DefaultEncoding = Encoding.GetEncoding("shift-jis");
+        }
 
         public ArchiveManager(Encoding? encoding = null)
         {
             if (encoding == null)
             {
-                try
-                {
-                    encoding = Encoding.GetEncoding(DefaultEncoding);
-                }
-                catch (ArgumentException)
-                {
-                    Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-                    encoding = Encoding.GetEncoding(DefaultEncoding);
-                }
+                encoding = DefaultEncoding;
             }
             _encoding = encoding;
             _root = new VFSNode();
