@@ -144,11 +144,12 @@ namespace NitroSharp.Content
             else
             {
                 // Only AFSFile supports sub-archives
-                (IArchiveFile? parentArchive, string? archivePath) = LocateFileInArchives(mountPoint.ArchiveName);
-                if (parentArchive == null || archivePath == null)
+                (IArchiveFile, string)? parentArchiveDetails = LocateFileInArchives(mountPoint.ArchiveName);
+                if (parentArchiveDetails == null)
                 {
                     throw new FileNotFoundException("Sub-archive not found", mountPoint.ArchiveName);
                 }
+                (IArchiveFile parentArchive, string archivePath) = parentArchiveDetails.Value;
                 AFSFile archive = (AFSFile) AFSFile.Load((AFSFile) parentArchive, archivePath, _encoding);
                 if (mountPoint.FileNamesIni != null)
                 {
@@ -158,7 +159,7 @@ namespace NitroSharp.Content
             }
         }
 
-        private (IArchiveFile? parentArchive, string? archivePath) LocateFileInArchives(string path)
+        private (IArchiveFile archive, string path)? LocateFileInArchives(string path)
         {
             string[] splitedPath = path.ToLowerInvariant().Split("/");
             VFSNode head = _root;
@@ -190,16 +191,17 @@ namespace NitroSharp.Content
                     }
                 }
             }
-            return (null, null);
+            return null;
         }
 
         public Stream OpenStream(string path)
         {
-            (IArchiveFile? archive, string? archivePath) = LocateFileInArchives(path);
-            if (archive == null || archivePath == null)
+            (IArchiveFile, string)? archiveDetails = LocateFileInArchives(path);
+            if (archiveDetails == null)
             {
                 throw new FileNotFoundException("File not found in the VFS", path);
             }
+            (IArchiveFile archive, string archivePath) = archiveDetails.Value;
             return archive.OpenStream(archivePath);
         }
     }
