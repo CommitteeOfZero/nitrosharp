@@ -11,9 +11,7 @@ namespace NitroSharp.Content
     {
         public static readonly byte[] Magic = {0x41, 0x46, 0x53, 0x00};
 
-        private uint _entriesCount;
-
-        private (uint offset, uint size)[]? _files;
+        private readonly (uint offset, uint size)[] _files;
         private readonly Dictionary<string, uint> _builtinFileNames;
         private readonly Dictionary<string, uint> _iniFileNames;
 
@@ -22,48 +20,27 @@ namespace NitroSharp.Content
 
         private readonly Encoding _encoding;
 
-        private AFSFile(MemoryMappedFile mmFile, Encoding encoding)
+        private AFSFile(MemoryMappedFile mmFile, uint archiveOffset, Encoding encoding, (uint offset, uint size)[] files, Dictionary<string, uint> builtinFileNames)
         {
-            _builtinFileNames = new Dictionary<string, uint>();
+            _files = files;
+            _builtinFileNames = builtinFileNames;
             _iniFileNames = new Dictionary<string, uint>();
             _encoding = encoding;
             _mmFile = mmFile;
-            _archiveOffset = 0;
+            _archiveOffset = archiveOffset;
         }
 
-        private AFSFile(AFSFile parent, string name, Encoding encoding)
+        public static IArchiveFile Load(MemoryMappedFile mmFile, Encoding encoding, uint archiveOffset = 0)
         {
-            _builtinFileNames = new Dictionary<string, uint>();
-            _iniFileNames = new Dictionary<string, uint>();
-            _encoding = encoding;
-            _mmFile = parent._mmFile;
-            _archiveOffset = parent._archiveOffset + parent.GetFile(name).offset;
-        }
-
-        public static IArchiveFile? TryLoad(MemoryMappedFile mmFile, Encoding encoding)
-        {
-            try
-            {
-                return AFSFile.Load(mmFile, encoding);
-            }
-            catch
-            {
-                return null;
-            }
-        }
-
-        public static IArchiveFile Load(MemoryMappedFile mmFile, Encoding encoding)
-        {
-            AFSFile archive = new AFSFile(mmFile, encoding);
-            archive.OpenArchive();
-            return archive;
+            return TryLoad(mmFile, encoding, archiveOffset) is AFSFile file
+                ? file
+                : throw new ArchiveException("AFS", "Unknown magic");
         }
 
         public static IArchiveFile Load(AFSFile parent, string name, Encoding encoding)
         {
-            AFSFile archive = new AFSFile(parent, name, encoding);
-            archive.OpenArchive();
-            return archive;
+            uint archiveOffset = parent._archiveOffset + parent.GetFile(name).offset;
+            return Load(parent._mmFile, encoding, archiveOffset);
         }
 
         public void Dispose()
@@ -75,9 +52,9 @@ namespace NitroSharp.Content
             }
         }
 
-        private void OpenArchive()
+        public static IArchiveFile? TryLoad(MemoryMappedFile mmFile, Encoding encoding, uint archiveOffset = 0)
         {
-            using (MemoryMappedViewStream stream = _mmFile.CreateViewStream(_archiveOffset, 0, MemoryMappedFileAccess.Read))
+            using (MemoryMappedViewStream stream = mmFile.CreateViewStream(archiveOffset, 0, MemoryMappedFileAccess.Read))
             {
                 // BinaryReader should always be in little endian
                 BinaryReader reader = new BinaryReader(stream);
@@ -86,30 +63,33 @@ namespace NitroSharp.Content
                 reader.Read(magic, 0, 4);
                 if (!magic.SequenceEqual(AFSFile.Magic))
                 {
-                    throw new ArchiveException("AFS", "Unknown magic");
+                    return null;
                 }
-                _entriesCount = reader.ReadUInt32();
+                uint entriesCount = reader.ReadUInt32();
 
-                _files = new (uint offset, uint size)[_entriesCount];
-                for (uint fileIndex = 0; fileIndex < _entriesCount; fileIndex++)
+                (uint offset, uint size)[] files = new (uint offset, uint size)[entriesCount];
+                for (uint fileIndex = 0; fileIndex < entriesCount; fileIndex++)
                 {
                     uint offset = reader.ReadUInt32();
                     uint size = reader.ReadUInt32();
-                    _files[fileIndex] = (offset, size);
+                    files[fileIndex] = (offset, size);
                 }
 
+                Dictionary<string, uint> builtinFileNames = new Dictionary<string, uint>();
                 uint stringOffset = reader.ReadUInt32();
                 stream.Seek(stringOffset, SeekOrigin.Begin);
                 Span<byte> name = stackalloc byte[32];
                 Span<byte> unk = stackalloc byte[16];
-                for (uint fileIndex = 0; fileIndex < _entriesCount; fileIndex++)
+                for (uint fileIndex = 0; fileIndex < entriesCount; fileIndex++)
                 {
                     reader.Read(name);
-                    string decodedName = _encoding.GetString(name).ToLowerInvariant();
-                    _builtinFileNames[decodedName] = fileIndex;
+                    string decodedName = encoding.GetString(name).ToLowerInvariant();
+                    builtinFileNames[decodedName] = fileIndex;
 
                     reader.Read(unk);
                 }
+
+                return new AFSFile(mmFile, archiveOffset, encoding, files, builtinFileNames);
             }
         }
 
@@ -155,10 +135,6 @@ namespace NitroSharp.Content
                 fileId = _builtinFileNames[path];
             }
 
-            if (_files == null)
-            {
-                throw new ArchiveException("AFS", "The archive is not opened");
-            }
             if (fileId == null)
             {
                 throw new FileNotFoundException("File not found in the AFS archive", path);

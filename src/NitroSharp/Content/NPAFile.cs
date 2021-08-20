@@ -11,39 +11,26 @@ namespace NitroSharp.Content
     {
         public static readonly byte[] Magic = {0x4E, 0x50, 0x41, 0x01, 0x00, 0x00, 0x00};
 
-        private uint _key1, _key2;
-        private uint _dataStart;
-        private uint _entriesCount;
+        private readonly uint _dataStart;
         private readonly Dictionary<string, (uint offset, uint size)> _files;
 
         private readonly MemoryMappedFile _mmFile;
 
         private readonly Encoding _encoding;
 
-        private NPAFile(MemoryMappedFile mmFile, Encoding encoding)
+        private NPAFile(MemoryMappedFile mmFile, Encoding encoding, uint dataStart, Dictionary<string, (uint offset, uint size)> files)
         {
-            _files = new Dictionary<string, (uint offset, uint size)>();
+            _files = files;
             _mmFile = mmFile;
             _encoding = encoding;
-        }
-
-        public static IArchiveFile? TryLoad(MemoryMappedFile mmFile, Encoding encoding)
-        {
-            try
-            {
-                return NPAFile.Load(mmFile, encoding);
-            }
-            catch
-            {
-                return null;
-            }
+            _dataStart = dataStart;
         }
 
         public static IArchiveFile Load(MemoryMappedFile mmFile, Encoding encoding)
         {
-            NPAFile archive = new NPAFile(mmFile, encoding);
-            archive.OpenArchive();
-            return archive;
+            return TryLoad(mmFile, encoding) is NPAFile file
+                ? file
+                : throw new ArchiveException("NPA", "Unknown magic");
         }
 
         public void Dispose()
@@ -51,17 +38,62 @@ namespace NitroSharp.Content
             _mmFile.Dispose();
         }
 
-        private void OpenArchive()
+        public static IArchiveFile? TryLoad(MemoryMappedFile mmFile, Encoding encoding)
         {
-            using (MemoryMappedViewStream stream = _mmFile.CreateViewStream(0, 0, MemoryMappedFileAccess.Read))
+            using (MemoryMappedViewStream stream = mmFile.CreateViewStream(0, 0, MemoryMappedFileAccess.Read))
             {
                 // BinaryReader should always be in little endian
                 BinaryReader reader = new BinaryReader(stream);
-                ReadHeader(reader);
-                for (uint fileIndex = 0; fileIndex < _entriesCount; fileIndex++)
+
+                byte[] magic = new byte[7];
+                reader.Read(magic, 0, 7);
+                if (!magic.SequenceEqual(NPAFile.Magic))
                 {
-                    ReadFileEntry(reader, fileIndex);
+                    return null;
                 }
+
+                uint key1 = reader.ReadUInt32();
+                uint key2 = reader.ReadUInt32();
+
+                bool compression = System.Convert.ToBoolean(reader.ReadByte());
+                if (compression)
+                {
+                    throw new ArchiveException("NPA", "Compression is not supported");
+                }
+                bool encryption = System.Convert.ToBoolean(reader.ReadByte());
+                if (encryption)
+                {
+                    throw new ArchiveException("NPA", "Data encryption is not supported");
+                }
+
+                uint entriesCount = reader.ReadUInt32();
+                uint folderCount = reader.ReadUInt32();
+                uint fileCount = reader.ReadUInt32();
+                if (entriesCount != folderCount + fileCount)
+                {
+                    throw new ArchiveException("NPA", "entriesCount != folderCount + fileCount");
+                }
+
+                ulong zero = reader.ReadUInt64();
+                if (zero != 0)
+                {
+                    throw new ArchiveException("NPA", "Expected 8 null bytes");
+                }
+
+                uint dataStart = reader.ReadUInt32();
+
+                Dictionary<string, (uint offset, uint size)> files = new Dictionary<string, (uint offset, uint size)>();
+                for (uint fileIndex = 0; fileIndex < entriesCount; fileIndex++)
+                {
+                    (string, (uint, uint))? fileDetails = ReadFileEntry(reader, fileIndex, (key1, key2), encoding);
+                    if (fileDetails != null)
+                    {
+                        (string fileName, (uint offset, uint size)) = fileDetails.Value;
+                        files[fileName] = (offset, size);
+                    }
+                }
+
+                return new NPAFile(mmFile, encoding, dataStart, files);
             }
         }
 
@@ -82,54 +114,15 @@ namespace NitroSharp.Content
             return _files.ContainsKey(path);
         }
 
-        private void ReadHeader(BinaryReader reader)
-        {
-            byte[] magic = new byte[7];
-            reader.Read(magic, 0, 7);
-            if (!magic.SequenceEqual(NPAFile.Magic))
-            {
-                throw new ArchiveException("NPA", "Unknown magic");
-            }
-
-            _key1 = reader.ReadUInt32();
-            _key2 = reader.ReadUInt32();
-
-            bool compression = System.Convert.ToBoolean(reader.ReadByte());
-            if (compression)
-            {
-                throw new ArchiveException("NPA", "Compression is not supported");
-            }
-            bool encryption = System.Convert.ToBoolean(reader.ReadByte());
-            if (encryption)
-            {
-                throw new ArchiveException("NPA", "Data encryption is not supported");
-            }
-
-            _entriesCount = reader.ReadUInt32();
-            uint folderCount = reader.ReadUInt32();
-            uint fileCount = reader.ReadUInt32();
-            if (_entriesCount != folderCount + fileCount)
-            {
-                throw new ArchiveException("NPA", "entriesCount != folderCount + fileCount");
-            }
-
-            ulong zero = reader.ReadUInt64();
-            if (zero != 0)
-            {
-                throw new ArchiveException("NPA", "Expected 8 null bytes");
-            }
-
-            _dataStart = reader.ReadUInt32();
-        }
-
-        private byte crypt(uint charIndex, uint fileIndex)
+        private static byte crypt(uint charIndex, uint fileIndex, (uint, uint) keys)
         {
             uint key = 0xFC * charIndex;
+            uint keys_multiplied = keys.Item1 * keys.Item2;
 
-            key -= (_key1 * _key2) >> 0x18;
-            key -= (_key1 * _key2) >> 0x10;
-            key -= (_key1 * _key2) >> 0x08;
-            key -= (_key1 * _key2)  & 0xff;
+            key -= keys_multiplied >> 0x18;
+            key -= keys_multiplied >> 0x10;
+            key -= keys_multiplied >> 0x08;
+            key -= keys_multiplied  & 0xff;
 
             key -= fileIndex >> 0x18;
             key -= fileIndex >> 0x10;
@@ -139,7 +132,7 @@ namespace NitroSharp.Content
             return (byte) key;
         }
 
-        private void ReadFileEntry(BinaryReader reader, uint fileIndex)
+        private static (string name, (uint offset, uint size))? ReadFileEntry(BinaryReader reader, uint fileIndex, (uint, uint) keys, Encoding encoding)
         {
             uint nameLength = reader.ReadUInt32();
 
@@ -147,9 +140,9 @@ namespace NitroSharp.Content
             reader.Read(name, 0, (int) nameLength);
             for (uint charIndex = 0; charIndex < nameLength; charIndex++)
             {
-                name[charIndex] += crypt(charIndex, fileIndex);
+                name[charIndex] += crypt(charIndex, fileIndex, keys);
             }
-            string decodedName = _encoding.GetString(name);
+            string decodedName = encoding.GetString(name);
 
             byte fileType = reader.ReadByte();
             uint id = reader.ReadUInt32();
@@ -168,8 +161,9 @@ namespace NitroSharp.Content
                 // and no file name contains a '/'
                 decodedName = decodedName.Replace("\\", "/");
                 decodedName = decodedName.ToLowerInvariant();
-                _files.Add(decodedName, (offset, originalSize));
+                return (decodedName, (offset, originalSize));
             }
+            return null;
         }
     }
 }

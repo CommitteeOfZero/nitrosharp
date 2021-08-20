@@ -118,8 +118,8 @@ namespace NitroSharp.Content
             {
                 Func<MemoryMappedFile,Encoding,IArchiveFile?>[] loadMethods = new Func<MemoryMappedFile,Encoding,IArchiveFile?>[]
                 {
-                    NPAFile.TryLoad,
-                    AFSFile.TryLoad,
+                    (m, e) => NPAFile.TryLoad(m, e),
+                    (m, e) => AFSFile.TryLoad(m, e),
                 };
                 MemoryMappedFile mmFile = MemoryMappedFile.CreateFromFile(fullPath, FileMode.Open, null, 0, MemoryMappedFileAccess.Read);
                 IArchiveFile? archive = loadMethods
