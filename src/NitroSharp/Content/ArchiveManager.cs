@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.MemoryMappedFiles;
+using System.Linq;
 using System.Text;
 
 namespace NitroSharp.Content
@@ -115,21 +116,15 @@ namespace NitroSharp.Content
             string fullPath = Path.Combine(rootDirectory, mountPoint.ArchiveName);
             if (File.Exists(fullPath))
             {
-                Func<MemoryMappedFile,Encoding,IArchiveFile?>[] constructors = new Func<MemoryMappedFile,Encoding,IArchiveFile?>[]
+                Func<MemoryMappedFile,Encoding,IArchiveFile?>[] loadMethods = new Func<MemoryMappedFile,Encoding,IArchiveFile?>[]
                 {
                     NPAFile.TryLoad,
                     AFSFile.TryLoad,
                 };
                 MemoryMappedFile mmFile = MemoryMappedFile.CreateFromFile(fullPath, FileMode.Open, null, 0, MemoryMappedFileAccess.Read);
-                IArchiveFile? archive = null;
-                foreach (Func<MemoryMappedFile,Encoding,IArchiveFile?> constructor in constructors)
-                {
-                    archive = constructor(mmFile, _encoding);
-                    if (archive != null)
-                    {
-                        break;
-                    }
-                }
+                IArchiveFile? archive = loadMethods
+                    .Select(load => load(mmFile, _encoding))
+                    .FirstOrDefault(archive => archive is not null);
                 if (archive == null)
                 {
                     throw new FileLoadException("Archive format not recognized", fullPath);
