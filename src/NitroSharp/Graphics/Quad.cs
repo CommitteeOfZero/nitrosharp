@@ -153,14 +153,11 @@ namespace NitroSharp.Graphics
 
         public static QuadGeometryUV3 FromQuad(in QuadGeometry quad, uint layer)
         {
-            static QuadVertexUV3 vertex(in QuadVertex v, uint layer)
+            static QuadVertexUV3 vertex(in QuadVertex v, uint layer) => new()
             {
-                return new()
-                {
-                    Position = v.Position,
-                    TexCoord = new Vector3(v.TexCoord, layer),
-                };
-            }
+                Position = v.Position,
+                TexCoord = new Vector3(v.TexCoord, layer),
+            };
 
             return new QuadGeometryUV3
             {

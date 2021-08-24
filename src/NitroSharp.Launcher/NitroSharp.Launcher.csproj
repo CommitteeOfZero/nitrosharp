@@ -3,6 +3,7 @@
   <PropertyGroup>
     <TargetFramework>net5.0</TargetFramework>
     <Nullable>enable</Nullable>
+    <NoWarn>VSTHRD103;VSTHRD200</NoWarn>
   </PropertyGroup>
 
   <Import Project="..\..\OutputPath.props" />

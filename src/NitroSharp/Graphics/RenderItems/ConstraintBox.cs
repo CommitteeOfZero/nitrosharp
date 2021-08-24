@@ -1,5 +1,3 @@
-#nullable enable
-
 namespace NitroSharp.Graphics
 {
     internal abstract class ConstraintBox : RenderItem2D

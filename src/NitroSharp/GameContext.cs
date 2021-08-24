@@ -354,13 +354,19 @@ namespace NitroSharp
             return (vm, process);
         }
 
+        private static NsScriptProcess CreateProcess(NsScriptVM vm, string modulePath)
+        {
+            string moduleName = Path.ChangeExtension(modulePath, null);
+            return vm.CreateProcess(moduleName, "main");
+        }
+
         private static GameProcess CreateProcess(
             NsScriptVM vm,
             string modulePath,
             FontConfiguration fontConfig)
         {
-            string moduleName = Path.ChangeExtension(modulePath, null);
-            return new GameProcess(vm.CreateProcess(moduleName, "main"), fontConfig.Clone());
+            NsScriptProcess vmProcess = CreateProcess(vm, modulePath);
+            return new GameProcess(vmProcess, fontConfig.Clone());
         }
 
         private static bool ValidateBytecodeCache(
@@ -684,6 +690,7 @@ namespace NitroSharp
                     prevVoice.Dispose();
                 }
 
+                AudioContext.VoiceAudioSource.Volume = 1.0f;
                 var voice = new MediaStream(
                     file,
                     graphicsDevice: null,
@@ -727,8 +734,10 @@ namespace NitroSharp
         {
             SysProcess?.Dispose();
             SysProcess = null;
-            MainProcess.Dispose();
-            MainProcess = CreateProcess(VM, Config.SysScripts.Startup, _fontConfig);
+            MainProcess.VmProcess.Terminate();
+            MainProcess.World.Reset();
+            NsScriptProcess newVmProcess = CreateProcess(VM, Config.SysScripts.Startup);
+            MainProcess = new GameProcess(newVmProcess, MainProcess.World, _fontConfig);
         }
     }
 }

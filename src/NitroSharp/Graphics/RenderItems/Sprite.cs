@@ -303,7 +303,7 @@ namespace NitroSharp.Graphics
         }
     }
 
-     [Persistable]
+    [Persistable]
     internal readonly partial struct SpriteSaveData : IEntitySaveData
     {
         public RenderItemSaveData RenderItemData { get; init; }

@@ -77,6 +77,13 @@ namespace NitroSharp
             FontConfig = fontConfig;
         }
 
+        public GameProcess(NsScriptProcess vmProcess, World world, FontConfiguration fontConfig)
+        {
+            VmProcess = vmProcess;
+            World = world;
+            FontConfig = fontConfig;
+        }
+
         public GameProcess(
             GameContext ctx,
             in GameProcessSaveData saveData,

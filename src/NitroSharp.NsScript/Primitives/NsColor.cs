@@ -31,19 +31,17 @@ namespace NitroSharp.NsScript
             return new NsColor(r, g, b);
         }
 
-        public static NsColor FromConstant(BuiltInConstant constant)
+        public static NsColor FromConstant(BuiltInConstant constant) => constant switch
         {
-            return constant switch
-            {
-                BuiltInConstant.Black => Black,
-                BuiltInConstant.White => White,
-                BuiltInConstant.Gray => Gray,
-                BuiltInConstant.Red => Red,
-                BuiltInConstant.Green => Green,
-                BuiltInConstant.Blue => Blue,
-                _ => throw ThrowHelper.UnexpectedValue(nameof(constant)),
-            };
-        }
+            BuiltInConstant.Black => Black,
+            BuiltInConstant.White => White,
+            BuiltInConstant.Whited => White,
+            BuiltInConstant.Gray => Gray,
+            BuiltInConstant.Red => Red,
+            BuiltInConstant.Green => Green,
+            BuiltInConstant.Blue => Blue,
+            _ => throw ThrowHelper.UnexpectedValue(nameof(constant)),
+        };
 
         public static NsColor FromString(string colorString)
         {

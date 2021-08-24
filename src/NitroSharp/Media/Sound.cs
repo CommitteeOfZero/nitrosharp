@@ -80,7 +80,6 @@ namespace NitroSharp.Media
             }
         }
 
-
         public override void Dispose()
         {
             Stream.Dispose();

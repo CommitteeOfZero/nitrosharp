@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Diagnostics;
-using NitroSharp.NsScript.Primitives;
 using NitroSharp.Utilities;
 
 namespace NitroSharp.NsScript
