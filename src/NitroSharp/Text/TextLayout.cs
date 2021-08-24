@@ -94,6 +94,7 @@ namespace NitroSharp.Text
                 GlyphBuffer = glyphBuf
             };
 
+        append:
             var lines = new LineEnumerable(context, textRuns, _caret.X);
             int runStart = 0, runLength = 0;
             int pos = 0;
@@ -114,16 +115,17 @@ namespace NitroSharp.Text
                     newCaret.X = 0;
                     newCaret.Y += _fixedLineHeight ?? _lastLine.VerticalMetrics.LineHeight;
                 }
-                if (newCaret.Y + height > MaxBounds.Height) { return; }
+                if (newCaret.Y + height > MaxBounds.Height) { goto exit; }
                 _caret = newCaret;
 
                 Span<TextRunGlyph> glyphs = CollectionsMarshal.AsSpan(glyphBuf);
+                const float rubyTextOffset = 2.0f;
                 foreach (TextRunGlyph glyph in glyphs[line.GlyphSpan])
                 {
                     var glyphPos = new Vector2(glyph.Position.X, _caret.Y + glyph.Position.Y);
                     if (glyph.Kind == CharacterKind.RubyText)
                     {
-                        glyphPos.Y -= line.VerticalMetrics.Ascender + 3;
+                        glyphPos.Y -= line.VerticalMetrics.Ascender + rubyTextOffset;
                     }
                     _glyphs.Add(new PositionedGlyph(glyph.GlyphIndex, glyph.IsWhitespace, glyphPos));
                     _opacityValues.Add(1.0f);
@@ -211,7 +213,7 @@ namespace NitroSharp.Text
                         ActualDescender = line.ActualDescender
                     };
                 }
-                else if (!updateLastLine)
+                else
                 {
                     AddLine(line.WithSpan(actualLineSpan));
                 }
@@ -221,18 +223,37 @@ namespace NitroSharp.Text
                     bottom = _caret.Y + (_fixedLineHeight ?? (line.BaselineY + line.ActualDescender + 1));
                     left = MathF.Min(left, line.BbLeft);
                     right = MathF.Max(right, line.BbRight);
-                    top = MathF.Min(top, _caret.Y + line.BaselineY - line.ActualAscender);
+                    float newTop = _caret.Y + line.BaselineY - line.ActualAscender;
+                    if (line.RubyTextAscender > 0)
+                    {
+                        newTop -= rubyTextOffset + line.RubyTextAscender;
+                    }
+                    top = MathF.Min(top, newTop);
                 }
-                updateLastLine = false;
+
+                if (!line.IsEmpty)
+                {
+                    updateLastLine = false;
+                }
+
                 _lastLine = line;
             }
 
+            glyphBuf.Clear();
+            if (_caret.X > 0 && appendStart == _glyphs.Count)
+            {
+                _caret.X = 0;
+                updateLastLine = false;
+                goto append;
+            }
+
+        exit:
             if (lastRun.HasValue)
             {
                 AddGlyphRun(lastRun.Value, appendStart);
             }
 
-            if (_lastLine.IsEmpty && !_lines[^1].IsEmpty)
+            if (_lastLine.HardBreak && !_lastLine.IsEmpty)
             {
                 NewLine();
             }
@@ -240,7 +261,7 @@ namespace NitroSharp.Text
             _boundingBox = RectangleF.FromLTRB(left, top, right, bottom);
         }
 
-        public void NewLine()
+        private void NewLine()
         {
             if (_lines.Count > 0)
             {
@@ -251,7 +272,8 @@ namespace NitroSharp.Text
                     BbLeft = float.PositiveInfinity,
                     BbRight = float.NegativeInfinity,
                     Right = float.NegativeInfinity,
-                    VerticalMetrics = vMetrics
+                    VerticalMetrics = vMetrics,
+                    HardBreak = true
                 });
             }
         }
@@ -365,6 +387,8 @@ namespace NitroSharp.Text
         public float BbRight { get; init; }
         public float ActualAscender { get; init; }
         public float ActualDescender { get; init; }
+        public float RubyTextAscender { get; init; }
+        public bool HardBreak { get; init; }
 
         public bool IsEmpty => GlyphSpan.End.Value == GlyphSpan.Start.Value;
 
@@ -376,14 +400,16 @@ namespace NitroSharp.Text
             BbLeft = BbLeft,
             BbRight = BbRight,
             ActualAscender = ActualAscender,
-            ActualDescender = ActualDescender
+            ActualDescender = ActualDescender,
+            HardBreak = HardBreak,
+            RubyTextAscender = RubyTextAscender
         };
     }
 
     [StructLayout(LayoutKind.Auto)]
     internal readonly struct Word
     {
-        public Range GlyphRange { get; init; }
+        public Range GlyphSpan { get; init; }
         public float BbLeft { get; init; }
         public float BbRight { get; init; }
         public float AdvanceWidth { get; init; }
@@ -392,12 +418,13 @@ namespace NitroSharp.Text
         public bool HardBreak { get; init; }
         public float ActualAscender { get; init; }
         public float ActualDescender { get; init; }
+        public float RubyTextAscender { get; init; }
 
-        public int Length => GlyphRange.End.Value - GlyphRange.Start.Value;
+        public int Length => GlyphSpan.End.Value - GlyphSpan.Start.Value;
 
-        public Word WithRange(Range glyphRange) => new()
+        public Word Update(Range glyphSpan, float rubyTextAscender) => new()
         {
-            GlyphRange = glyphRange,
+            GlyphSpan = glyphSpan,
             BbLeft = BbLeft,
             BbRight = BbRight,
             AdvanceWidth = AdvanceWidth,
@@ -405,7 +432,8 @@ namespace NitroSharp.Text
             MaxVMetrics = MaxVMetrics,
             HardBreak = HardBreak,
             ActualAscender = ActualAscender,
-            ActualDescender = ActualDescender
+            ActualDescender = ActualDescender,
+            RubyTextAscender = rubyTextAscender
         };
     }
 
@@ -484,11 +512,12 @@ namespace NitroSharp.Text
         {
             Vector2 caret = _firstLine ? new Vector2(_caretStartX, 0) : Vector2.Zero;
             int start = int.MaxValue, end = int.MinValue;
-            float ascender = 0, descender = 0;
+            float ascender = 0, descender = 0, rubyAscender = 0;
             float bbLeft = float.PositiveInfinity;
             float bbRight = 0;
             VerticalMetrics maxVMetrics = new();
             bool notEmpty = false;
+            bool hardBreak = false;
             while (_peekedWord is { } || _words.MoveNext())
             {
                 Word word = _peekedWord ?? _words.Current;
@@ -519,17 +548,18 @@ namespace NitroSharp.Text
                     maxVMetrics = word.MaxVMetrics;
                 }
 
-                start = Math.Min(start, word.GlyphRange.Start.Value);
-                end = Math.Max(end, word.GlyphRange.End.Value);
+                start = Math.Min(start, word.GlyphSpan.Start.Value);
+                end = Math.Max(end, word.GlyphSpan.End.Value);
                 ascender = MathF.Max(ascender, word.ActualAscender);
                 descender = MathF.Max(descender, word.ActualDescender);
+                rubyAscender = MathF.Max(rubyAscender, word.RubyTextAscender);
                 if (float.IsPositiveInfinity(bbLeft))
                 {
                     bbLeft = word.BbLeft;
                 }
 
                 Span<TextRunGlyph> span = CollectionsMarshal
-                    .AsSpan(_context.GlyphBuffer)[word.GlyphRange];
+                    .AsSpan(_context.GlyphBuffer)[word.GlyphSpan];
                 foreach (ref TextRunGlyph g in span)
                 {
                     g.Position += caret;
@@ -538,6 +568,7 @@ namespace NitroSharp.Text
                 caret.X += word.AdvanceWidth;
                 if (word.HardBreak)
                 {
+                    hardBreak = true;
                     break;
                 }
             }
@@ -555,6 +586,8 @@ namespace NitroSharp.Text
                     Right = caret.X,
                     ActualAscender = ascender,
                     ActualDescender = descender,
+                    RubyTextAscender = rubyAscender,
+                    HardBreak = hardBreak
                 };
                 return true;
             }
@@ -634,7 +667,7 @@ namespace NitroSharp.Text
             {
                 Current = new Word
                 {
-                    GlyphRange = new Range(start, end),
+                    GlyphSpan = new Range(start, end),
                     AdvanceWidth = caret,
                     AdvanceWidthNoTrail = caretNoTrail,
                     HardBreak = hardBreak,
@@ -660,6 +693,7 @@ namespace NitroSharp.Text
         {
             var chars = new List<Character>();
             float rtWidth = 0, rtWidthNoTrail = 0;
+            float ascender = 0;
             do
             {
                 Character c = _characters.Current;
@@ -671,6 +705,7 @@ namespace NitroSharp.Text
                     rtWidthNoTrail = rtWidth;
                 }
                 chars.Add(c);
+                ascender = MathF.Max(ascender, dims.Top);
             } while (_characters.MoveNext());
 
             if (_characters.Current.Kind != CharacterKind.RubyText)
@@ -729,11 +764,11 @@ namespace NitroSharp.Text
                 }
             }
 
-            var updatedRange = new Range(
-                Current.GlyphRange.Start,
-                Current.GlyphRange.End.Value + chars.Count
+            var updatedSpan = new Range(
+                Current.GlyphSpan.Start,
+                Current.GlyphSpan.End.Value + chars.Count
             );
-            Current = Current.WithRange(updatedRange);
+            Current = Current.Update(updatedSpan, ascender);
         }
     }
 

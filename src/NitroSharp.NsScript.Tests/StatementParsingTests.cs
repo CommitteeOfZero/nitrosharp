@@ -1,5 +1,4 @@
-﻿using NitroSharp.NsScript;
-using NitroSharp.NsScript.Syntax;
+﻿using NitroSharp.NsScript.Syntax;
 using System.Collections.Generic;
 using Xunit;
 

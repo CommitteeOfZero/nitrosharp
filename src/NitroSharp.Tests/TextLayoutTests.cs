@@ -39,6 +39,16 @@ namespace NitroSharp.Tests
         }
 
         [Fact]
+        public void Chat()
+        {
+            var layout = new TextLayout(645, 400, 25);
+            layout.Append(_rasterizer, Regular("ナイトハルト：\"パンモロ"));
+            layout.Append(_rasterizer, Regular("\"より\"はいてない"));
+            layout.Append(_rasterizer, Regular("\"の方がいいだろ？　それと同じことさ"));
+            Assert.Equal(2, layout.Lines.Length);
+        }
+
+        [Fact]
         public void HardBreaks()
         {
             const string s = @"Lorem ipsum dolor sit amet,
@@ -64,7 +74,7 @@ Nullam nisl ipsum, semper ac lacus sit amet, semper viverra diam.";
         }
 
         [Fact]
-        public void ConstrainedVerticalSpace()
+        public void ConstrainedHeight()
         {
             const string text = "meow meow meow meow meow meow ";
             TextLayout layout = Layout(text, maxW: 128, maxH: 50);
@@ -72,6 +82,24 @@ Nullam nisl ipsum, semper ac lacus sit amet, semper viverra diam.";
             IEnumerable<int> lengths = layout.Lines.ToArray()
                 .Select(x => layout.GetGlyphSpanLength(x.GlyphSpan));
             Assert.Equal(new[] { 10, 10 }, lengths);
+        }
+
+        [Fact]
+        public void ConstainedWidth()
+        {
+            // w: 40
+            const string text = "meow meow";
+            TextLayout layout = Layout(text, maxW: 41, null);
+            AssertLines(layout, new[] { "meow", "meow" });
+        }
+
+        [Fact]
+        public void ConstrainedWidth_AppendSeparately()
+        {
+            TextLayout layout = new(maxWidth: 41);
+            layout.Append(_rasterizer, Regular("meow"));
+            layout.Append(_rasterizer, Regular("meow"));
+            AssertLines(layout, new[] { "meow", "meow" });
         }
 
         [Fact]
@@ -121,13 +149,13 @@ Nullam nisl ipsum, semper ac lacus sit amet, semper viverra diam.";
         [Theory]
         [InlineData("\r\n")]
         [InlineData("\n")]
-        public void StartWithNewline(string newlineSequence)
+        public void StartWithNewline(string newline)
         {
             TextLayout withoutLinebreak = Layout("meow", null, null);
 
             TextRun[] runs =
             {
-                Regular(newlineSequence),
+                Regular(newline),
                 Regular("meow")
             };
 
@@ -143,25 +171,61 @@ Nullam nisl ipsum, semper ac lacus sit amet, semper viverra diam.";
         [Theory]
         [InlineData("\r\n")]
         [InlineData("\n")]
-        public void MultipleLines_AppendEach(string newlineSequence)
+        public void MultipleLines_AppendEach(string newline)
         {
             TextLayout layout = new();
             layout.Append(_rasterizer, Regular("A gaze"));
-            layout.Append(_rasterizer, Regular(newlineSequence));
+            layout.Append(_rasterizer, Regular(newline));
             layout.Append(_rasterizer, Regular("falls from the sky."));
-
             AssertLines(layout, new[] { "A gaze", "falls from the sky." });
         }
 
         [Theory]
         [InlineData("\n")]
         [InlineData("\r\n")]
-        public void AppendText_StartingWithNewline(string newlineSequence)
+        public void AppendText_StartingWithNewline(string newline)
         {
             TextLayout layout = new();
             layout.Append(_rasterizer, Regular("A gaze"));
-            layout.Append(_rasterizer, Regular($"{newlineSequence}falls from the sky."));
+            layout.Append(_rasterizer, Regular($"{newline}falls from the sky."));
             AssertLines(layout, new[] { "A gaze", "falls from the sky." });
+        }
+
+        [Theory]
+        [InlineData("\n")]
+        [InlineData("\r\n")]
+        public void AppendNewline(string newline)
+        {
+            TextLayout a = new(_rasterizer, new[] { Regular("a") });
+            float prevY = a.Glyphs[0].Position.Y;
+            TextLayout prev = new();
+            for (int nbLines = 1; nbLines <= 4; nbLines++)
+            {
+                TextLayout layout = new();
+                for (int i = 0; i < nbLines; i++)
+                {
+                    layout.Append(_rasterizer, Regular(newline));
+                }
+
+                Assert.Equal(nbLines, layout.Lines.Length);
+                layout.Append(_rasterizer, Regular("a"));
+                Assert.Equal(nbLines + 1, layout.Lines.Length);
+                float y = layout.Glyphs[^1].Position.Y;
+                Assert.True(y > prevY);
+                prevY = y;
+                prev = layout;
+            }
+        }
+
+        [Theory]
+        [InlineData("\n")]
+        [InlineData("\r\n")]
+        public void AppendText_EndingWithNewline(string newline)
+        {
+            TextLayout layout = new();
+            layout.Append(_rasterizer, Regular($"A gaze{newline}"));
+            layout.Append(_rasterizer, Regular("fell from the sky."));
+            AssertLines(layout, new[] { "A gaze", "fell from the sky." });
         }
 
         [Fact]

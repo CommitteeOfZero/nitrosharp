@@ -142,6 +142,29 @@ Sample Text",
                     (SyntaxTokenKind.Markup, @"// this is a comment {
 Sample Text") }
             };
+
+            yield return new object[]
+            {
+                @"
+// this
+// is
+// a comment
+Sample Text",
+                new[]
+                {
+                    (SyntaxTokenKind.Markup, "Sample Text")
+                }
+            };
+
+            yield return new object[]
+            {
+                @"
+// this is
+Line 1
+// a comment
+
+"
+            };
         }
 
         private static void AssertTokens(string text, (SyntaxTokenKind, string)[] expectedTokens)
