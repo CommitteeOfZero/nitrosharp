@@ -40,53 +40,10 @@ namespace NitroSharp.Content
         public override string ToString() => $"Asset '{Path}'";
     }
 
-    internal interface IArchiveFile : IDisposable
-    {
-        public Stream OpenStream(string path);
-        public bool Contains(string path);
-    }
-
-    internal sealed class VFSNode : IDisposable
-    {
-        public List<IArchiveFile>? MountedArchives { get; set; }
-        public Dictionary<string, VFSNode>? Children { get; set; }
-
-        public void Dispose()
-        {
-            if (Children != null)
-            {
-                foreach (KeyValuePair<string, VFSNode> pair in Children)
-                {
-                    pair.Value.Dispose();
-                }
-            }
-
-            if (MountedArchives != null)
-            {
-                foreach (IArchiveFile mountedArchive in MountedArchives)
-                {
-                    mountedArchive.Dispose();
-                }
-            }
-        }
-    }
-
-    internal sealed class ArchiveException : Exception
-    {
-        public ArchiveException()
-            : base("Unable to open the archive")
-        {
-        }
-
-        public ArchiveException(string format, string message)
-            : base($"{format} : {message}")
-        {
-        }
-
-    }
-
     internal class ContentManager : IDisposable
     {
+        private static readonly Encoding s_defaultEncoding;
+
         private readonly TextureLoader _textureLoader;
         private readonly Func<Stream, bool, Texture> _loadTextureFunc;
 
@@ -95,10 +52,9 @@ namespace NitroSharp.Content
         private readonly ConcurrentBag<(string, IDisposable)> _loadedAssets;
         private volatile int _nbPending;
 
-        public static readonly Encoding DefaultEncoding;
-
-        private readonly VFSNode _root;
+        private readonly VfsNode _root;
         private readonly Encoding _encoding;
+        private readonly Func<MemoryMappedFile, Encoding, ArchiveFile?>[] _archiveLoadFuncs;
 
         [StructLayout(LayoutKind.Auto)]
         private struct CacheEntry
@@ -111,10 +67,14 @@ namespace NitroSharp.Content
         static ContentManager()
         {
             Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-            DefaultEncoding = Encoding.GetEncoding("shift-jis");
+            s_defaultEncoding = Encoding.GetEncoding("shift-jis");
         }
 
-        public ContentManager(string rootDirectory, TextureLoader textureLoader, MountPoint[]? mountPoints, Encoding? encoding = null)
+        public ContentManager(
+            string rootDirectory,
+            TextureLoader textureLoader,
+            MountPoint[]? mountPoints,
+            Encoding? encoding = null)
         {
             RootDirectory = rootDirectory;
             _textureLoader = textureLoader;
@@ -122,9 +82,14 @@ namespace NitroSharp.Content
             _cache = new FreeList<CacheEntry>();
             _strongHandles = new Dictionary<string, FreeListHandle>();
             _loadedAssets = new ConcurrentBag<(string, IDisposable)>();
-            _encoding = encoding ?? DefaultEncoding;
-            _root = new VFSNode();
-            if (mountPoints != null)
+            _encoding = encoding ?? s_defaultEncoding;
+            _root = new VfsNode();
+            _archiveLoadFuncs = new Func<MemoryMappedFile, Encoding, ArchiveFile?>[]
+            {
+                NpaFile.TryLoad,
+                AfsFile.TryLoad
+            };
+            if (mountPoints is not null)
             {
                 foreach (MountPoint mountPoint in mountPoints)
                 {
@@ -268,93 +233,83 @@ namespace NitroSharp.Content
                 return File.OpenRead(fullPath);
             }
 
-            (IArchiveFile, string)? archiveDetails = LocateFileInArchives(path);
-            if (archiveDetails == null)
+            (ArchiveFile, string)? archiveDetails = LocateFileInArchives(path);
+            if (archiveDetails is null)
             {
                 throw new FileNotFoundException("File not found in the VFS", path);
             }
-            (IArchiveFile archive, string archivePath) = archiveDetails.Value;
+            (ArchiveFile archive, string archivePath) = archiveDetails.Value;
             return archive.OpenStream(archivePath);
         }
 
         private void AddMount(MountPoint mountPoint)
         {
+            VfsNode head = _root;
             string[] splitedPath = mountPoint.MountName.ToLowerInvariant().Split("/");
-
-            VFSNode head = _root;
             foreach (string part in splitedPath)
             {
-                if (head.Children == null)
-                {
-                    head.Children = new Dictionary<string, VFSNode>();
-                }
-
+                head.Children ??= new Dictionary<string, VfsNode>();
                 if (!head.Children.ContainsKey(part))
                 {
-                    head.Children[part] = new VFSNode();
+                    head.Children[part] = new VfsNode();
                 }
-
                 head = head.Children[part];
-            }
-
-            if (head.MountedArchives == null)
-            {
-                head.MountedArchives = new List<IArchiveFile>();
             }
 
             string fullPath = Path.Combine(RootDirectory, mountPoint.ArchiveName);
             if (File.Exists(fullPath))
             {
-                Func<MemoryMappedFile,Encoding,IArchiveFile?>[] loadMethods = new Func<MemoryMappedFile,Encoding,IArchiveFile?>[]
-                {
-                    NPAFile.TryLoad,
-                    (m, e) => AFSFile.TryLoad(m, e),
-                };
-                MemoryMappedFile mmFile = MemoryMappedFile.CreateFromFile(fullPath, FileMode.Open, null, 0, MemoryMappedFileAccess.Read);
-                IArchiveFile? archive = loadMethods
-                    .Select(load => load(mmFile, _encoding))
+                var file = MemoryMappedFile.CreateFromFile(
+                    fullPath,
+                    FileMode.Open,
+                    mapName: null,
+                    capacity: 0,
+                    MemoryMappedFileAccess.Read
+                );
+                ArchiveFile? archive = _archiveLoadFuncs
+                    .Select(load => load(file, _encoding))
                     .FirstOrDefault(archive => archive is not null);
-                if (archive == null)
+                if (archive is null)
                 {
                     throw new FileLoadException("Archive format not recognized", fullPath);
                 }
-                if (mountPoint.FileNamesIni != null)
+                if (mountPoint.FileNamesIni is string fileNamesIni)
                 {
                     // Only AFSFile supports INI files
-                    ((AFSFile)archive).LoadFileNames(OpenStream(mountPoint.FileNamesIni));
+                    ((AfsFile)archive).LoadFileNames(OpenStream(fileNamesIni));
                 }
                 head.MountedArchives.Add(archive);
             }
             else
             {
                 // Only AFSFile supports sub-archives
-                (IArchiveFile, string)? parentArchiveDetails = LocateFileInArchives(mountPoint.ArchiveName);
-                if (parentArchiveDetails == null)
+                (ArchiveFile, string)? parentArchiveDetails = LocateFileInArchives(mountPoint.ArchiveName);
+                if (parentArchiveDetails is null)
                 {
                     throw new FileNotFoundException("Sub-archive not found", mountPoint.ArchiveName);
                 }
-                (IArchiveFile parentArchive, string archivePath) = parentArchiveDetails.Value;
-                AFSFile archive = (AFSFile) AFSFile.Load((AFSFile) parentArchive, archivePath, _encoding);
-                if (mountPoint.FileNamesIni != null)
+                (ArchiveFile parentArchive, string archivePath) = parentArchiveDetails.Value;
+                AfsFile archive = AfsFile.Load((AfsFile) parentArchive, archivePath, _encoding);
+                if (mountPoint.FileNamesIni is string fileNamesIni)
                 {
-                    archive.LoadFileNames(OpenStream(mountPoint.FileNamesIni));
+                    archive.LoadFileNames(OpenStream(fileNamesIni));
                 }
                 head.MountedArchives.Add(archive);
             }
         }
 
-        private (IArchiveFile archive, string path)? LocateFileInArchives(string path)
+        private (ArchiveFile archive, string path)? LocateFileInArchives(string path)
         {
             string[] splitedPath = path.ToLowerInvariant().Split("/");
-            VFSNode head = _root;
+            VfsNode head = _root;
 
             // This way of browsing folders is not perfect beacause we can have two possible paths :
             // one through the Children and one through the MountedArchives.
             // If nobody does weird stuff with the archives, this shouldn't happen.
             int depth;
-            for (depth = 0; depth < (splitedPath.Length - 1); depth++)
+            for (depth = 0; depth < splitedPath.Length - 1; depth++)
             {
-                if (head.Children != null)
+                if (head.Children is not null)
                 {
                     head = head.Children[splitedPath[depth]];
                 }
@@ -364,17 +319,15 @@ namespace NitroSharp.Content
                 }
             }
 
-            string archivePath = String.Join("/", splitedPath, depth, splitedPath.Length - depth);
-            if (head.MountedArchives != null)
+            string archivePath = string.Join("/", splitedPath, depth, splitedPath.Length - depth);
+            foreach (ArchiveFile archive in head.MountedArchives)
             {
-                foreach (IArchiveFile archive in head.MountedArchives)
+                if (archive.Contains(archivePath))
                 {
-                    if (archive.Contains(archivePath))
-                    {
-                         return (archive, archivePath);
-                    }
+                    return (archive, archivePath);
                 }
             }
+
             return null;
         }
 
