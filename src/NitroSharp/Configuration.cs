@@ -66,6 +66,13 @@ namespace NitroSharp
         public IconPathPattern BacklogVoice { get; init; }
     }
 
+    public struct MountPoint
+    {
+        public string ArchiveName { get; set; }
+        public string MountName { get; set; }
+        public string FileNamesIni { get; set; }
+    }
+
     public sealed class Configuration
     {
         public string ProfileName { get; }
@@ -92,6 +99,8 @@ namespace NitroSharp
 
         public IconPathPatterns IconPathPatterns { get; }
         public int PlatformId { get; set; } = 100;
+
+        public MountPoint[]? MountPoints { get; set; }
 
         public Configuration(string profileName, IconPathPatterns iconPathPatterns)
         {
