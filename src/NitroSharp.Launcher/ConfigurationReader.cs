@@ -130,35 +130,21 @@ namespace NitroSharp.Launcher
                     configuration.PlatformId = property.Value;
                     break;
                 case "dev.mounts":
-                    MountPoint[] mountPoints = new MountPoint[property.Value.Count];
+                    var mountPoints = new MountPoint[property.Value.Count];
                     for (int i = 0; i < property.Value.Count; i++)
                     {
-                        mountPoints[i] = ParseMountPoint(property.Value[i]);
+                        mountPoints[i] = mountPoint(property.Value[i]);
                     }
                     configuration.MountPoints = mountPoints;
                     break;
             }
-        }
 
-        private static MountPoint ParseMountPoint(JsonValue inputMountPoint)
-        {
-            MountPoint mountPoint = new MountPoint();
-            foreach (KeyValuePair<string, JsonValue> property in inputMountPoint)
+            static MountPoint mountPoint(JsonValue json) => new()
             {
-                switch (property.Key)
-                {
-                    case "archive":
-                        mountPoint.ArchiveName = property.Value;
-                        break;
-                    case "mount":
-                        mountPoint.MountName = property.Value;
-                        break;
-                    case "fileNamesIni":
-                        mountPoint.FileNamesIni = property.Value;
-                        break;
-                }
-            }
-            return mountPoint;
+                ArchiveName = json["archive"],
+                MountName = json["mount"],
+                FileNamesIni = json.ContainsKey("fileNamesIni") ? json["fileNamesIni"] : null
+            };
         }
 
         private static AudioBackend? GetAudioBackend(string name)
