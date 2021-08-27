@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.IO.MemoryMappedFiles;
 using System.Text;
@@ -97,23 +98,31 @@ namespace NitroSharp.Content
         {
             using var reader = new StreamReader(iniFile, _encoding);
             string? line = reader.ReadLine();
-            if (line is null)
+            if (line is null || !uint.TryParse(line, out uint nameCount))
             {
-                throw new ArchiveException("AFS", "Expected amount of file names in the INI file");
+                malformed();
             }
-            uint nameCount = uint.Parse(line);
+
+            Span<char> fileNameBuf = stackalloc char[256];
             for (uint i = 0; i < nameCount; i++)
             {
                 line = reader.ReadLine();
-                if (line is null)
-                {
-                    throw new ArchiveException("AFS", "Unexpected end of the INI file");
-                }
-                string[] lineParts = line.Split(",");
-                string fileName = lineParts[0].ToLowerInvariant();
-                uint fileIndex = uint.Parse(lineParts[1]);
-                _iniFileNames[fileName] = fileIndex;
+                if (line is null) { malformed(); }
+                int idxSeprator = line.IndexOf(',');
+                if (idxSeprator == -1) { malformed(); }
+                int fileNameLen = idxSeprator;
+                Span<char> fileName = fileNameLen < 256
+                    ? fileNameBuf[..fileNameLen]
+                    : new char[fileNameLen];
+                line.AsSpan()[..fileNameLen].ToLowerInvariant(fileName);
+                ReadOnlySpan<char> fileIndex = line.AsSpan()[(idxSeprator + 1)..];
+                if (!uint.TryParse(fileIndex, out uint index)) { malformed(); }
+                _iniFileNames[fileName.ToString()] = index;
             }
+
+            [DoesNotReturn]
+            static void malformed()
+                => throw new ArchiveException("AFS", "Malformed INI file.");
         }
 
         public override bool Contains(string path)

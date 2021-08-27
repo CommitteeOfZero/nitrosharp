@@ -66,11 +66,11 @@ namespace NitroSharp
         public IconPathPattern BacklogVoice { get; init; }
     }
 
-    public struct MountPoint
+    public readonly struct MountPoint
     {
-        public string ArchiveName { get; set; }
-        public string MountName { get; set; }
-        public string FileNamesIni { get; set; }
+        public string ArchiveName { get; init; }
+        public string MountName { get; init; }
+        public string? FileNamesIni { get; init; }
     }
 
     public sealed class Configuration
