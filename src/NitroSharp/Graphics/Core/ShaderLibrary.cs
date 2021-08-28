@@ -34,7 +34,7 @@ namespace NitroSharp.Graphics.Core
                 $"-{stage.ToString().ToLower()}{GetExtension(factory.BackendType)}";
 
             Stream? stream = s_assembly.GetManifestResourceStream(name);
-            if (stream == null)
+            if (stream is null)
             {
                 throw new InvalidOperationException(
                     $"Couldn't find shader set '{set}'. " +

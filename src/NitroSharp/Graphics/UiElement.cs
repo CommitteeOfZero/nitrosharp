@@ -1,5 +1,4 @@
 using System.Numerics;
-using FFmpeg.AutoGen;
 using NitroSharp.NsScript;
 
 namespace NitroSharp.Graphics

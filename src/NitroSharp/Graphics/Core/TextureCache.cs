@@ -453,7 +453,7 @@ namespace NitroSharp.Graphics.Core
                    "The requested TextureCache texture is currently in use. " +
                    "Did you forget to call EndFrame()?");
 
-                Debug.Assert(_sampledTexture != null);
+                Debug.Assert(_sampledTexture is not null);
                 if (_mapped) { inUse(); }
                 return _sampledTexture;
             }
@@ -479,7 +479,7 @@ namespace NitroSharp.Graphics.Core
             Texture newStaging = rf.CreateTexture(ref desc);
             desc.Usage = TextureUsage.Sampled;
             Texture newSampled = rf.CreateTexture(ref desc);
-            if (_stagingTexture != null)
+            if (_stagingTexture is not null)
             {
                 foreach (ref Layer layer in _layers.AsSpan())
                 {
@@ -584,7 +584,7 @@ namespace NitroSharp.Graphics.Core
                 else if (layer.SlabSize == slabSize)
                 {
                     Point2DU? point = layer.AllocateBlock();
-                    if (point != null)
+                    if (point is not null)
                     {
                         return new ArrayTextureAllocation((uint)i, point.Value);
                     }
@@ -596,7 +596,7 @@ namespace NitroSharp.Graphics.Core
                 ref Layer layer = ref _layers[emptyLayer];
                 layer.Initialize(slabSize);
                 Point2DU? point = layer.AllocateBlock();
-                if (point != null)
+                if (point is not null)
                 {
                     return new ArrayTextureAllocation(emptyLayer, point.Value);
                 }
@@ -635,7 +635,7 @@ namespace NitroSharp.Graphics.Core
             where TPix : unmanaged
         {
             ref readonly Layer layer = ref _layers[allocation.Layer];
-            Debug.Assert(layer.Map.Resource != null);
+            Debug.Assert(layer.Map.Resource is not null);
             uint bpp = BytesPerPixel;
             uint srcRowPitch = size.Width * bpp;
             uint srcDepthPitch = srcRowPitch * size.Height;
@@ -657,8 +657,8 @@ namespace NitroSharp.Graphics.Core
 
         public void Dispose()
         {
-            Debug.Assert(_stagingTexture != null);
-            Debug.Assert(_sampledTexture != null);
+            Debug.Assert(_stagingTexture is not null);
+            Debug.Assert(_sampledTexture is not null);
             if (_mapped)
             {
                 _gd.Unmap(_stagingTexture);

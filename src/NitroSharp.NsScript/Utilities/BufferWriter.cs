@@ -139,7 +139,7 @@ namespace NitroSharp.NsScript.Utilities
         [MethodImpl(MethodImplOptions.NoInlining)]
         private void Resize(uint desiredSize = 0)
         {
-            if (_resizableBuffer != null)
+            if (_resizableBuffer is not null)
             {
                 uint newSize = Math.Max(desiredSize, _resizableBuffer.Length * 2);
                 _resizableBuffer.Resize(newSize);

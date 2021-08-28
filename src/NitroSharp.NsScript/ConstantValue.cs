@@ -186,7 +186,7 @@ namespace NitroSharp.NsScript
         }
 
         public bool IsAtCharacter =>
-            _stringValue != null && _stringValue == "@";
+            _stringValue is not null && _stringValue == "@";
 
         public float? AsDeltaNumber()
             => Type == BuiltInType.DeltaNumeric

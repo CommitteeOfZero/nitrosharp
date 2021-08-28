@@ -20,7 +20,7 @@ namespace NitroSharp.NsScript.VM
 
         private void SetResult(in ConstantValue value)
         {
-            Debug.Assert(_result == null);
+            Debug.Assert(_result is null);
             _result = value;
         }
 
@@ -965,7 +965,7 @@ namespace NitroSharp.NsScript.VM
             foreach (ref readonly ConstantValue arg in args.AsSpan(1))
             {
                 int? num = (int?)arg.AsNumber();
-                if (num != null)
+                if (num is not null)
                 {
                     list.Add(num.Value);
                 }

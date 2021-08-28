@@ -102,7 +102,7 @@ namespace NitroSharp.Graphics
 
         public (DeviceBuffer buffer, uint index) Append(in T vertex)
         {
-            Debug.Assert(_buffer != null);
+            Debug.Assert(_buffer is not null);
             EnsureCapacity(_cursor + 1);
             var ptr = (T*)Unsafe.Add<T>((void*)_map.Data, _cursor);
             *ptr = vertex;
@@ -111,7 +111,7 @@ namespace NitroSharp.Graphics
 
         public GpuListSlice<T> Append(uint count, out uint position)
         {
-            Debug.Assert(_buffer != null);
+            Debug.Assert(_buffer is not null);
             EnsureCapacity(_cursor + count);
             position = (uint)_cursor;
             var span = new Span<T>((void*)_map.Data, (int)_capacity)
@@ -122,7 +122,7 @@ namespace NitroSharp.Graphics
 
         public GpuListSlice<T> Append(uint count)
         {
-            Debug.Assert(_buffer != null);
+            Debug.Assert(_buffer is not null);
             EnsureCapacity(_cursor + count);
             var dst = new Span<T>((void*)_map.Data, (int)_capacity);
             int cursor = _cursor;
@@ -166,7 +166,7 @@ namespace NitroSharp.Graphics
                 new BufferDescription(size, _usage)
             );
 
-            if (_buffer != null && _stagingBuffer != null)
+            if (_buffer is not null && _stagingBuffer is not null)
             {
                 _oldBuffers.Add((_stagingBuffer, _buffer));
                 MappedResource newMap = _gd.Map(newStagingBuffer, _mapMode);

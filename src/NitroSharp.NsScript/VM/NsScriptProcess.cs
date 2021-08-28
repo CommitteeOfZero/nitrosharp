@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -191,7 +190,7 @@ namespace NitroSharp.NsScript.VM
                         CommitSuspendThread(thread, action.Timeout);
                         break;
                     case ThreadAction.ActionKind.Join:
-                        Debug.Assert(action.JoinedThread is object);
+                        Debug.Assert(action.JoinedThread is not null);
                         CommitJoin(thread, action.JoinedThread);
                         break;
                     case ThreadAction.ActionKind.Resume:

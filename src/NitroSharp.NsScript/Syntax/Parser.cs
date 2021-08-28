@@ -306,7 +306,7 @@ namespace NitroSharp.NsScript.Syntax
                    && tk != SyntaxTokenKind.EndOfFileToken)
             {
                 Statement? statement = ParseStatement();
-                if (statement != null)
+                if (statement is not null)
                 {
                     statements.Add(statement);
                     if (statement.Kind == SyntaxNodeKind.DialogueBlock)
@@ -325,7 +325,7 @@ namespace NitroSharp.NsScript.Syntax
             do
             {
                 statement = ParseStatementCore();
-                if (statement != null) { break; }
+                if (statement is not null) { break; }
                 SyntaxTokenKind tk = CurrentToken.Kind;
                 if (tk == SyntaxTokenKind.EndOfFileToken || tk == SyntaxTokenKind.CloseBrace)
                 {
@@ -421,7 +421,7 @@ namespace NitroSharp.NsScript.Syntax
         private ExpressionStatement? ParseExpressionStatement()
         {
             Expression? expr = ParseExpression();
-            if (expr == null) { return null; }
+            if (expr is null) { return null; }
 
             if (!SyntaxFacts.IsStatementExpression(expr))
             {
@@ -437,7 +437,7 @@ namespace NitroSharp.NsScript.Syntax
         private ExpressionStatement? ParseFunctionCallWithOmittedParentheses()
         {
             FunctionCallExpression? call = ParseFunctionCall();
-            if (call == null) { return null; }
+            if (call is null) { return null; }
             EatStatementTerminator();
             return new ExpressionStatement(call, SpanFrom(call));
         }
@@ -503,7 +503,7 @@ namespace NitroSharp.NsScript.Syntax
                 EatToken();
                 newPrecedence = Precedence.Unary;
                 Expression? operand = ParseSubExpression(newPrecedence);
-                if (operand == null) { return null; }
+                if (operand is null) { return null; }
                 var fullSpan = TextSpan.FromBounds(tkSpan.Start, operand.Span.End);
                 leftOperand = new UnaryExpression(
                     operand, new Spanned<UnaryOperatorKind>(unaryOperator, tkSpan), fullSpan);
@@ -511,7 +511,7 @@ namespace NitroSharp.NsScript.Syntax
             else
             {
                 leftOperand = ParseTerm(minPrecedence);
-                if (leftOperand == null)
+                if (leftOperand is null)
                 {
                     return null;
                 }
@@ -545,19 +545,19 @@ namespace NitroSharp.NsScript.Syntax
                 EatToken();
 
                 bool hasRightOperand = assignOpKind != AssignmentOperatorKind.Increment
-                                       && assignOpKind != AssignmentOperatorKind.Decrement;
+                    && assignOpKind != AssignmentOperatorKind.Decrement;
                 Expression? rightOperand = hasRightOperand
                     ? ParseSubExpression(newPrecedence)
                     : leftOperand;
 
-                if (rightOperand == null)
+                if (rightOperand is null)
                 {
                     return null;
                 }
 
                 var span = TextSpan.FromBounds(tkSpan.Start, rightOperand.Span.End);
                 leftOperand = binary
-                    ? (Expression)new BinaryExpression(
+                    ? new BinaryExpression(
                         leftOperand, new Spanned<BinaryOperatorKind>(binOpKind, tkSpan), rightOperand, span)
                     : new AssignmentExpression(
                         leftOperand, new Spanned<AssignmentOperatorKind>(assignOpKind, tkSpan), rightOperand, span);
@@ -571,13 +571,11 @@ namespace NitroSharp.NsScript.Syntax
             switch (CurrentToken.Kind)
             {
                 case SyntaxTokenKind.Identifier:
-                    return IsFunctionCall()
-                        ? (Expression?)ParseFunctionCall()
-                        : ParseNameExpression();
+                    return IsFunctionCall() ? ParseFunctionCall() : ParseNameExpression();
 
                 case SyntaxTokenKind.StringLiteralOrQuotedIdentifier:
                     return IsParameter() || (CurrentToken.Flags & SyntaxTokenFlags.HasDollarPrefix) == SyntaxTokenFlags.HasDollarPrefix
-                        ? (Expression)ParseNameExpression()
+                        ? ParseNameExpression()
                         : ParseLiteral();
 
                 case SyntaxTokenKind.NumericLiteral:
@@ -589,7 +587,7 @@ namespace NitroSharp.NsScript.Syntax
                 case SyntaxTokenKind.OpenParen:
                     SyntaxToken openParen = EatToken(SyntaxTokenKind.OpenParen);
                     Expression? expr = ParseSubExpression(Precedence.Expression);
-                    if (expr == null) { return null; }
+                    if (expr is null) { return null; }
                     if (CurrentToken.Kind == SyntaxTokenKind.Comma)
                     {
                         return ParseBezierExpression(openParen, expr);
@@ -613,10 +611,10 @@ namespace NitroSharp.NsScript.Syntax
                     : (SyntaxTokenKind.OpenBrace, SyntaxTokenKind.CloseBrace);
                 EatToken(startTk);
                 Expression? x = ParseSubExpression(Precedence.Expression);
-                if (x == null) { return null; }
+                if (x is null) { return null; }
                 EatToken(SyntaxTokenKind.Comma);
                 Expression? y = ParseSubExpression(Precedence.Expression);
-                if (y == null) { return null; }
+                if (y is null) { return null; }
                 EatToken(endTk);
                 return new BezierControlPoint(x, y, starting);
             }
@@ -624,7 +622,7 @@ namespace NitroSharp.NsScript.Syntax
             var controlPoints = ImmutableArray.CreateBuilder<BezierControlPoint>();
             EatToken(SyntaxTokenKind.Comma);
             Expression? y0 = ParseSubExpression(Precedence.Expression);
-            if (y0 != null)
+            if (y0 is not null)
             {
                 controlPoints.Add(new BezierControlPoint(x0, y0, starting: true));
             }
@@ -637,9 +635,9 @@ namespace NitroSharp.NsScript.Syntax
                     SyntaxTokenKind.OpenBrace => false,
                     _ => null
                 };
-                if (paren == null) { break; }
+                if (paren is null) { break; }
                 BezierControlPoint? cp = parseControlPoint(paren.Value);
-                if (cp == null) { return null; }
+                if (cp is null) { return null; }
                 controlPoints.Add(cp.Value);
             }
 
@@ -683,19 +681,13 @@ namespace NitroSharp.NsScript.Syntax
         private Spanned<string> ParseIdentifier()
         {
             SyntaxToken token = EatToken();
-            switch (token.Kind)
-            {
-                case SyntaxTokenKind.Identifier:
-                case SyntaxTokenKind.StringLiteralOrQuotedIdentifier:
-                default:
-                    return new Spanned<string>(InternValueText(token), token.TextSpan);
-            }
+            return new Spanned<string>(InternValueText(token), token.TextSpan);
         }
 
         private NameExpression ParseNameExpression()
         {
-            Debug.Assert(CurrentToken.Kind == SyntaxTokenKind.Identifier
-                      || CurrentToken.Kind == SyntaxTokenKind.StringLiteralOrQuotedIdentifier);
+            Debug.Assert(CurrentToken.Kind is SyntaxTokenKind.Identifier
+                or SyntaxTokenKind.StringLiteralOrQuotedIdentifier);
 
             SyntaxToken token = EatToken();
             var identifier = new Spanned<string>(InternValueText(token), token.TextSpan);
@@ -788,7 +780,7 @@ namespace NitroSharp.NsScript.Syntax
                     case SyntaxTokenKind.TrueKeyword:
                     case SyntaxTokenKind.FalseKeyword:
                         Expression? arg = ParseExpression();
-                        if (arg == null) { return null; }
+                        if (arg is null) { return null; }
                         arguments.Add(arg);
                         break;
 
@@ -801,7 +793,7 @@ namespace NitroSharp.NsScript.Syntax
 
                     default:
                         Expression? expr = ParseExpression();
-                        if (expr == null) { return null; }
+                        if (expr is null) { return null; }
                         arguments.Add(expr);
                         break;
                 }
@@ -816,11 +808,11 @@ namespace NitroSharp.NsScript.Syntax
             SyntaxToken ifKeyword = EatToken(SyntaxTokenKind.IfKeyword);
             EatToken(SyntaxTokenKind.OpenParen);
             Expression? condition = ParseExpression();
-            if (condition == null) { return null; }
+            if (condition is null) { return null; }
             EatToken(SyntaxTokenKind.CloseParen);
 
             Statement? ifTrue = ParseStatement();
-            if (ifTrue == null) { return null; }
+            if (ifTrue is null) { return null; }
             Statement? ifFalse = null;
             if (CurrentToken.Kind == SyntaxTokenKind.ElseKeyword)
             {
@@ -843,10 +835,10 @@ namespace NitroSharp.NsScript.Syntax
             SyntaxToken keyword = EatToken(SyntaxTokenKind.WhileKeyword);
             EatToken(SyntaxTokenKind.OpenParen);
             Expression? condition = ParseExpression();
-            if (condition == null) { return null; }
+            if (condition is null) { return null; }
             EatToken(SyntaxTokenKind.CloseParen);
             Statement? body = ParseStatement();
-            if (body == null) { return null; }
+            if (body is null) { return null; }
             return new WhileStatement(condition, body, SpanFrom(keyword));
         }
 
@@ -906,7 +898,7 @@ namespace NitroSharp.NsScript.Syntax
             }
 
             Spanned<string>? filePath = null;
-            Spanned<string> symbolName = default;
+            Spanned<string> symbolName;
             Spanned<string> part = ConsumeTextUntil(
                 tk => tk == SyntaxTokenKind.Semicolon || tk == SyntaxTokenKind.Arrow
             );
@@ -965,7 +957,7 @@ namespace NitroSharp.NsScript.Syntax
                 (SyntaxTokenKind.DialogueBlockEndTag or SyntaxTokenKind.EndOfFileToken))
             {
                 Statement? statement = ParseStatement();
-                if (statement != null)
+                if (statement is not null)
                 {
                     statements.Add(statement);
                 }

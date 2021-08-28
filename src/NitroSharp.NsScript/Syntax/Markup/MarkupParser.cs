@@ -41,7 +41,7 @@ namespace NitroSharp.NsScript.Syntax.Markup
                 else
                 {
                     Debug.Assert(children.Length == 1);
-                    if (builder == null)
+                    if (builder is null)
                     {
                         builder = ImmutableArray.CreateBuilder<MarkupNode>();
                         builder.Add(children[0]);
@@ -312,7 +312,7 @@ namespace NitroSharp.NsScript.Syntax.Markup
 
             public void Add((string key, string value) attribute)
             {
-                if (Get(attribute.key) is object)
+                if (Get(attribute.key) is not null)
                 {
                     throw new Exception($"Attribute '{attribute.key}' specified more than once.");
                 }

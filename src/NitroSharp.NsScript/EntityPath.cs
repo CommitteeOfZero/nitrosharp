@@ -98,7 +98,7 @@ namespace NitroSharp.NsScript
 
         public ReadOnlySpan<char> Name => Value.AsSpan(NameStartIndex);
         public bool IsEmpty => string.IsNullOrEmpty(Value);
-        public bool HasParent => _parent is object;
+        public bool HasParent => _parent is not null;
 
         public static EntityPath Empty => new(string.Empty);
 
@@ -113,7 +113,7 @@ namespace NitroSharp.NsScript
 
         public bool GetParent(out EntityPath parent)
         {
-            if (_parent == null)
+            if (_parent is null)
             {
                 parent = Empty;
                 return false;

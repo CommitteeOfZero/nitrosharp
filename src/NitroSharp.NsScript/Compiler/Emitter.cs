@@ -438,7 +438,7 @@ namespace NitroSharp.NsScript.Compiler
         private void EmitIfStatement(IfStatement ifStmt)
         {
             EmitExpression(ifStmt.Condition);
-            if (ifStmt.IfFalseStatement == null)
+            if (ifStmt.IfFalseStatement is null)
             {
                 // if (<condition>)
                 //      <consequence>

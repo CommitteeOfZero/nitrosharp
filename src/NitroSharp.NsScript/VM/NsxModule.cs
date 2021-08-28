@@ -88,7 +88,7 @@ namespace NitroSharp.NsScript.VM
         public string GetString(ushort token)
         {
             ref string? s = ref _stringHeap[token];
-            if (s == null)
+            if (s is null)
             {
                 _stream.Position = _stringOffsets[token];
                 int length = ReadUInt16();
@@ -231,7 +231,7 @@ namespace NitroSharp.NsScript.VM
         private readonly byte[] _bytes;
         private readonly int _codeStart;
 
-        public bool IsEmpty => _bytes == null;
+        public bool IsEmpty => _bytes is null!;
         public readonly int[] DialogueBlockOffsets;
 
         public Subroutine(byte[] bytes)
@@ -294,7 +294,7 @@ namespace NitroSharp.NsScript.VM
 
         internal readonly int LookupDialogueBlockIndex(string dialogueBlockName)
         {
-            Debug.Assert(_dialogueBlockMap != null);
+            Debug.Assert(_dialogueBlockMap is not null);
             return _dialogueBlockMap[dialogueBlockName];
         }
 
@@ -305,10 +305,10 @@ namespace NitroSharp.NsScript.VM
                 return Array.Empty<string>();
             }
 
-            if (_parameterNames == null)
+            if (_parameterNames is null)
             {
                 DecodeParameterNames(rtiTable);
-                Debug.Assert(_parameterNames != null);
+                Debug.Assert(_parameterNames is not null);
             }
 
             return _parameterNames;

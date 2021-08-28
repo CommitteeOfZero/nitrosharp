@@ -80,7 +80,7 @@ namespace NitroSharp.NsScript.Syntax
 
             public SyntaxNode?[] ToArray()
             {
-                if (_node.GetNodeSlot(0) == null)
+                if (_node.GetNodeSlot(0) is null)
                 {
                     return Array.Empty<SyntaxNode>();
                 }
@@ -113,7 +113,7 @@ namespace NitroSharp.NsScript.Syntax
             public bool MoveNext()
             {
                 _current = _node.GetNodeSlot(_index);
-                if (_current != null)
+                if (_current is not null)
                 {
                     _index++;
                     return true;

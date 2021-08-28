@@ -66,7 +66,7 @@ namespace NitroSharp
 
         public override void WaitPlay(in EntityPath entityPath)
         {
-            if (Get(entityPath) is object)
+            if (Get(entityPath) is not null)
             {
                 _ctx.Wait(CurrentThread,
                     WaitCondition.EntityIdle, null, new EntityQuery(entityPath.Value)

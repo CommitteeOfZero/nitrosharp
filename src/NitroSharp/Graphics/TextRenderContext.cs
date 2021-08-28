@@ -330,7 +330,7 @@ namespace NitroSharp.Graphics
             }
 
             return buffer is null
-                ? (GpuGlyphSlice?)null
+                ? null
                 : new GpuGlyphSlice(buffer, instanceBase, _gpuGlyphs.Count - instanceBase);
         }
 

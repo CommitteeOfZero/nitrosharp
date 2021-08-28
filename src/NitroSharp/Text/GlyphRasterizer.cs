@@ -187,7 +187,7 @@ namespace NitroSharp.Text
                 }
             }
 
-            if (newGlyphIndices != null)
+            if (newGlyphIndices is not null)
             {
                 Interlocked.Increment(ref _pendingBatches);
                 _ = Task.Run(() => RasterizeBatch(font, fontSize, newGlyphIndices, generateOutlines))
@@ -242,7 +242,7 @@ namespace NitroSharp.Text
                     textureCache.Update<byte>(ref handle, PixelFormat.R8_UNorm, size, glyph.Bytes);
 
                     var outlineHandle = TextureCacheHandle.Invalid;
-                    if (batch.OutlineResults != null)
+                    if (batch.OutlineResults is not null)
                     {
                         rasterRes = ref batch.OutlineResults[i];
                         ref readonly RasterizedGlyph outline = ref rasterRes.Glyph;
@@ -374,7 +374,7 @@ namespace NitroSharp.Text
             RasterResult[]? outlineResults = null;
             if (rasterizeOutlines)
             {
-                Debug.Assert(outlineTasks != null);
+                Debug.Assert(outlineTasks is not null);
                 outlineResults = await Task.WhenAll(outlineTasks);
             }
 

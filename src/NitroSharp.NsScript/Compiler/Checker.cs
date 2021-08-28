@@ -49,7 +49,7 @@ namespace NitroSharp.NsScript.Compiler
         public LookupResult(LookupResultVariant variant, string name) : this()
             => (Variant, Global) = (variant, name);
 
-        public static LookupResult Empty = default;
+        public static LookupResult Empty;
 
         public bool IsEmpty => Variant == LookupResultVariant.Empty;
     }
@@ -110,7 +110,7 @@ namespace NitroSharp.NsScript.Compiler
             {
                 SourceModuleSymbol targetSourceModule = _compilation.GetSourceModule(modulePath);
                 ChapterSymbol? chapter = targetSourceModule.LookupChapter("main");
-                if (chapter == null)
+                if (chapter is null)
                 {
                     Report(callChapterStmt.TargetModule, DiagnosticId.ChapterMainNotFound);
                 }
@@ -127,7 +127,7 @@ namespace NitroSharp.NsScript.Compiler
 
         public SceneSymbol? ResolveCallSceneTarget(CallSceneStatement callSceneStmt)
         {
-            if (callSceneStmt.TargetModule == null)
+            if (callSceneStmt.TargetModule is null)
             {
                 return LookupScene(callSceneStmt.TargetScene);
             }
@@ -138,7 +138,7 @@ namespace NitroSharp.NsScript.Compiler
             {
                 SourceModuleSymbol targetSourceModule = _compilation.GetSourceModule(modulePath);
                 SceneSymbol? scene = targetSourceModule.LookupScene(callSceneStmt.TargetScene.Value);
-                if (scene == null)
+                if (scene is null)
                 {
                     ReportUnresolvedIdentifier(callSceneStmt.TargetScene);
                 }
@@ -183,7 +183,7 @@ namespace NitroSharp.NsScript.Compiler
             }
 
             FunctionSymbol? function = _module.LookupFunction(name);
-            if (function != null)
+            if (function is not null)
             {
                 return new LookupResult(function);
             }
@@ -195,7 +195,7 @@ namespace NitroSharp.NsScript.Compiler
         public ChapterSymbol? LookupChapter(Spanned<string> identifier)
         {
             ChapterSymbol? chapter = _module.LookupChapter(identifier.Value);
-            if (chapter != null) { return chapter; }
+            if (chapter is not null) { return chapter; }
 
             ReportUnresolvedIdentifier(identifier);
             return null;
@@ -204,7 +204,7 @@ namespace NitroSharp.NsScript.Compiler
         public SceneSymbol? LookupScene(Spanned<string> identifier)
         {
             SceneSymbol? scene = _module.LookupScene(identifier.Value);
-            if (scene != null) { return scene; }
+            if (scene is not null) { return scene; }
 
             ReportUnresolvedIdentifier(identifier);
             return null;
@@ -254,7 +254,7 @@ namespace NitroSharp.NsScript.Compiler
                         goto error;
                     }
                 }
-                else if (seg.PointCount > 0 && seg.PointCount < 3)
+                else if (seg.PointCount is > 0 and < 3)
                 {
                     seg.AddPoint(pt);
                 }

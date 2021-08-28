@@ -28,7 +28,7 @@ namespace NitroSharp.Media
         }
 
         public static bool IsNullPacket(this in AVPacket packet)
-            => packet.data == null;
+            => packet.data is null;
 
         public static double ToDouble(this AVRational rational)
             => rational.num / (double)rational.den;

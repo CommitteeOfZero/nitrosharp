@@ -53,7 +53,7 @@ namespace NitroSharp.Graphics
             );
             _rs = resourceFactory.CreateResourceSet(new ResourceSetDescription(
                 inputLayout,
-                input2 == null
+                input2 is null
                     ? new BindableResource[]
                     {
                         input1,
@@ -67,7 +67,7 @@ namespace NitroSharp.Graphics
                     }
             ));
             _pipeline = shaderResources.Effects.GetPipeline(effectKind);
-            _ownsFramebuffer = framebuffer == null;
+            _ownsFramebuffer = framebuffer is null;
         }
 
         public Texture Apply(CommandList commandList)
@@ -124,7 +124,7 @@ namespace NitroSharp.Graphics
 
             _srcResourceSet = resourceFactory.CreateResourceSet(new ResourceSetDescription(
                 shaderResources.Effects.ResourceLayout,
-                input2 == null
+                input2 is null
                     ? new BindableResource[]
                     {
                         input1,
@@ -150,7 +150,7 @@ namespace NitroSharp.Graphics
                 ));
                 ResourceSet rs = resourceFactory.CreateResourceSet(new ResourceSetDescription(
                     shaderResources.Effects.ResourceLayout,
-                    input2 == null
+                    input2 is null
                         ? new BindableResource[]
                         {
                             fb.ColorTargets[0].Target,
@@ -194,7 +194,7 @@ namespace NitroSharp.Graphics
                 }
             }
 
-            Debug.Assert(result != null);
+            Debug.Assert(result is not null);
             return result;
         }
 

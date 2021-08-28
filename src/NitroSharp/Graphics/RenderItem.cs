@@ -83,8 +83,8 @@ namespace NitroSharp.Graphics
 
         public virtual bool IsAnimationActive(AnimationKind kind) => kind switch
         {
-            AnimationKind.Rotate => _rotateAnim is object,
-            AnimationKind.Fade => _fadeAnim is object,
+            AnimationKind.Rotate => _rotateAnim is not null,
+            AnimationKind.Fade => _fadeAnim is not null,
             _ => false
         };
 
@@ -261,9 +261,9 @@ namespace NitroSharp.Graphics
 
         public override bool IsAnimationActive(AnimationKind kind) => kind switch
         {
-            AnimationKind.Move => _moveAnim is object,
-            AnimationKind.Zoom => _scaleAnim is object,
-            AnimationKind.BezierMove => _bezierMoveAnim is object,
+            AnimationKind.Move => _moveAnim is not null,
+            AnimationKind.Zoom => _scaleAnim is not null,
+            AnimationKind.BezierMove => _bezierMoveAnim is not null,
             _ => base.IsAnimationActive(kind)
         };
 

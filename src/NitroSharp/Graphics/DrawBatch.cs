@@ -138,12 +138,6 @@ namespace NitroSharp.Graphics
         public BufferBindings(DeviceBuffer vertices, DeviceBuffer indices)
             : this() => (Vertices, Indices) = (vertices, indices);
 
-        public BufferBindings(
-            DeviceBuffer vertices,
-            DeviceBuffer instanceData,
-            DeviceBuffer? indices = null)
-            => (Vertices, InstanceData, Indices) = (vertices, instanceData, indices);
-
         public bool Equals(BufferBindings other)
         {
             return ReferenceEquals(Vertices, other.Vertices)
@@ -210,7 +204,7 @@ namespace NitroSharp.Graphics
         public void UpdateBuffer<T>(GpuBuffer<T> buffer, in T data)
             where T : unmanaged
         {
-            Debug.Assert(_commandList is object);
+            Debug.Assert(_commandList is not null);
             Flush();
             buffer.Update(_commandList, data);
         }
@@ -223,7 +217,7 @@ namespace NitroSharp.Graphics
             BlendMode blendMode,
             FilterMode filterMode)
         {
-            Debug.Assert(_commandList is object && Target is object);
+            Debug.Assert(_commandList is not null);
             ViewProjection vp = Target.OrthoProjection;
 
             QuadShaderResources resources = _ctx.ShaderResources.Quad;
@@ -249,7 +243,7 @@ namespace NitroSharp.Graphics
 
         public void PushQuad(QuadGeometry quad, Pipeline pipeline, in ResourceBindings resources)
         {
-            Debug.Assert(_commandList is object && Target is object);
+            Debug.Assert(_commandList is not null);
             Span<QuadVertex> vertices = MemoryMarshal.CreateSpan(ref quad.TopLeft, 4);
             Mesh<QuadVertex> mesh = _ctx.Quads.Append(vertices);
             PushDraw(new Draw
@@ -263,7 +257,7 @@ namespace NitroSharp.Graphics
 
         public void PushQuadUV3(QuadGeometryUV3 quad, Pipeline pipeline, in ResourceBindings resources)
         {
-            Debug.Assert(_commandList is object && Target is object);
+            Debug.Assert(_commandList is not null);
             Span<QuadVertexUV3> vertices = MemoryMarshal.CreateSpan(ref quad.TopLeft, 4);
             Mesh<QuadVertexUV3> mesh = _ctx.QuadsUV3.Append(vertices);
             PushDraw(new Draw
@@ -277,7 +271,7 @@ namespace NitroSharp.Graphics
 
         public void PushDraw(in Draw draw)
         {
-            Debug.Assert(_commandList is object && Target is object);
+            Debug.Assert(_commandList is not null);
             if (ReferenceEquals(draw.Pipeline, _lastDraw.Pipeline)
                 && draw.ResourceBindings.Equals(_lastDraw.ResourceBindings)
                 && draw.BufferBindings.Equals(_lastDraw.BufferBindings)
@@ -287,7 +281,7 @@ namespace NitroSharp.Graphics
                 return;
             }
 
-            if (_lastDraw.Pipeline is object)
+            if (_lastDraw.Pipeline is not null!)
             {
                 Flush();
             }
@@ -297,7 +291,7 @@ namespace NitroSharp.Graphics
 
         private void Flush()
         {
-            if (_commandList is null || Target is null || _lastDraw.Pipeline is null)
+            if (_commandList is null || _lastDraw.Pipeline is null!)
             {
                 return;
             }

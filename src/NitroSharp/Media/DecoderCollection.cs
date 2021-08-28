@@ -25,7 +25,7 @@ namespace NitroSharp.Media
             if (!_decoders.TryGetValue(codecId, out IntPtr decoder))
             {
                 AVCodec* pCodec = ffmpeg.avcodec_find_decoder(codecId);
-                if (pCodec == null)
+                if (pCodec is null)
                 {
                     ThrowMissing(codecId);
                 }

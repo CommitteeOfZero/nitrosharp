@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using NitroSharp.Graphics;
 using NitroSharp.Media;
@@ -279,8 +278,8 @@ namespace NitroSharp
             _markedEntities.Enqueue(entity.Id);
         }
 
-        private bool GetRecord(in EntityId entiytId, out EntityRec rec)
-            => _entities.TryGetValue(entiytId, out rec);
+        private bool GetRecord(in EntityId entityId, out EntityRec rec)
+            => _entities.TryGetValue(entityId, out rec);
 
         private EntityId CreateId(uint contextId, in EntityPath path)
         {
@@ -316,7 +315,7 @@ namespace NitroSharp
             where T : Entity
         {
             EntityId id = entity.Id;
-            if (Get(id) is object)
+            if (Get(id) is not null)
             {
                 DestroyEntity(id);
             }
@@ -327,12 +326,7 @@ namespace NitroSharp
             }
 
             EntityLocation location = group.Add(entity, EntityBucket.Inactive);
-            _entities[id] = new EntityRec(
-                entity,
-                group,
-                location
-            );
-
+            _entities[id] = new EntityRec(entity, group, location);
             if (enable)
             {
                 _pendingBucketChanges.Add((id, EntityBucket.Active));
@@ -367,7 +361,7 @@ namespace NitroSharp
 
         private void UpdateLocation(EntityMove entityMove)
         {
-            if (entityMove.Entity != null)
+            if (entityMove.Entity is not null)
             {
                 EntityId id = entityMove.Entity.Id;
                 EntityRec rec = _entities[id];

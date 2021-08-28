@@ -9,7 +9,6 @@ using System.Threading.Channels;
 using System.Threading.Tasks;
 using FFmpeg.AutoGen;
 using Microsoft.VisualStudio.Threading;
-using NitroSharp.Media.XAudio2;
 using NitroSharp.Utilities;
 using Veldrid;
 using static NitroSharp.Media.FFmpegUtil;
@@ -53,11 +52,11 @@ namespace NitroSharp.Media
         private readonly double _videoFrameDuration;
         private readonly double _maxFrameDuration;
 
-        // ReSharper disable PrivateFieldCanBeConvertedToLocalVariable
         // The delegates must be kept alive for the entire lifetime of the object.
+        // ReSharper disable once NotAccessedField.Local
         private readonly avio_alloc_context_read_packet _readFunc;
+        // ReSharper disable once NotAccessedField.Local
         private readonly avio_alloc_context_seek _seekFunc;
-        // ReSharper restore PrivateFieldCanBeConvertedToLocalVariable
 
         private Task? _combinedTask;
         private readonly CancellationTokenSource _cts = new();
@@ -449,7 +448,7 @@ namespace NitroSharp.Media
                 double time = _timer.Elapsed.TotalSeconds;
                 if (_lastDisplayedFrameInfo.Serial != frame.Serial)
                 {
-                    if (_video.SeekRequest is TimeSpan)
+                    if (_video.SeekRequest is not null)
                     {
                         _externalClock.Set(double.NaN, 0);
                         _video.SeekRequest = null;
@@ -588,11 +587,11 @@ namespace NitroSharp.Media
                 {
                     ignoreEof = false;
                     StreamContext streamCtx;
-                    if (packet.Value.stream_index == _video?.Index)
+                    if (_video is not null && packet.Value.stream_index == _video.Index)
                     {
                         streamCtx = _video;
                     }
-                    else if (packet.Value.stream_index == _audio?.Index)
+                    else if (_audio is not null && packet.Value.stream_index == _audio.Index)
                     {
                         streamCtx = _audio;
                     }
@@ -950,7 +949,7 @@ namespace NitroSharp.Media
             return result == 0 ? ffmpeg.AVERROR_EOF : result;
         }
 
-        public unsafe void Dispose()
+        public void Dispose()
         {
             _audioSource?.Pause();
             _audioSource?.FlushBuffers();
@@ -962,7 +961,7 @@ namespace NitroSharp.Media
 
             if (_combinedTask is not null)
             {
-                _combinedTask.ContinueWith(
+                _ = _combinedTask.ContinueWith(
                     _ => finishDispose(),
                     TaskContinuationOptions.ExecuteSynchronously
                 );

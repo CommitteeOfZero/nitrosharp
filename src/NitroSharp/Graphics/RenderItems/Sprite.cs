@@ -192,7 +192,7 @@ namespace NitroSharp.Graphics
 
         public override bool IsAnimationActive(AnimationKind kind) => kind switch
         {
-            AnimationKind.Transition => _transition is object,
+            AnimationKind.Transition => _transition is not null,
             _ => base.IsAnimationActive(kind)
         };
 

@@ -82,7 +82,7 @@ namespace NitroSharp.Graphics
             renderContext.GraphicsDevice.SubmitCommands(cl);
             renderContext.ReturnCommandList(cl);
 
-            Debug.Assert(texture is object);
+            Debug.Assert(texture is not null);
             return new Icon(texture);
         }
 

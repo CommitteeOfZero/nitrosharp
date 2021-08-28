@@ -43,7 +43,7 @@ namespace NitroSharp
             {
                 _current = _results[_pos++] as T;
             }
-            return _current is object;
+            return _current is not null;
         }
     }
 

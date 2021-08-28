@@ -405,7 +405,7 @@ namespace NitroSharp.NsScript.VM
                         break;
                     case Opcode.Invert:
                         val = ref stack.Peek();
-                        Debug.Assert(val.AsBool() != null);
+                        Debug.Assert(val.AsBool() is not null);
                         val = ConstantValue.Boolean(!val.AsBool()!.Value);
                         break;
                     case Opcode.Call:
@@ -518,7 +518,7 @@ namespace NitroSharp.NsScript.VM
                                 }
                                 ConstantValue? result = _builtInCallDispatcher.Dispatch(builtins, func, args);
                                 stack.Pop(argCount);
-                                if (result != null)
+                                if (result is not null)
                                 {
                                     stack.Push(result.Value);
                                 }

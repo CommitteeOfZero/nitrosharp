@@ -48,7 +48,7 @@ namespace NitroSharp.Utilities
             }
             else
             {
-                if (_array == null)
+                if (_array is null)
                 {
                     _array = new T[MaxFixed * 2];
                     fixedElements.CopyTo(_array);
@@ -86,7 +86,7 @@ namespace NitroSharp.Utilities
             ptr = last;
             last = default!;
 
-            if (_array is object && _count <= MaxFixed)
+            if (_array is not null && _count <= MaxFixed)
             {
                 elements = elements[1..];
                 elements.CopyTo(_fixedItems.AsSpan());
@@ -109,7 +109,7 @@ namespace NitroSharp.Utilities
                     return ref fixedElements[index];
                 }
 
-                Debug.Assert(_array != null);
+                Debug.Assert(_array is not null);
                 return ref _array[index];
             }
         }

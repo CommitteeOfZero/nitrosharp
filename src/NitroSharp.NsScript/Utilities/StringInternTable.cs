@@ -13,7 +13,7 @@ namespace NitroSharp.Utilities
         private struct Entry
         {
             public int HashCode;
-            public string Text;
+            public string? Text;
         }
 
         // Size of local cache.
@@ -58,18 +58,17 @@ namespace NitroSharp.Utilities
             Entry[] entires = _localTable;
             int idx = LocalIdxFromHash(hashCode);
 
-            string text = entires[idx].Text;
-            if (text != null && entires[idx].HashCode == hashCode)
+            string? text = entires[idx].Text;
+            if (text is not null && entires[idx].HashCode == hashCode)
             {
-                string result = entires[idx].Text;
-                if (TextEquals(result, span))
+                if (TextEquals(text, span))
                 {
-                    return result;
+                    return text;
                 }
             }
 
             string? shared = FindSharedEntry(span, hashCode);
-            if (shared != null)
+            if (shared is not null)
             {
                 // PERF: the following code does element-wise assignment of a struct
                 //       because current JIT produces better code compared to
@@ -96,7 +95,7 @@ namespace NitroSharp.Utilities
                 e = arr[idx].Text;
                 int hash = arr[idx].HashCode;
 
-                if (e != null)
+                if (e is not null)
                 {
                     if (hash == hashCode && TextEquals(e, span))
                     {
@@ -148,7 +147,7 @@ namespace NitroSharp.Utilities
             int curIdx = idx;
             for (int i = 1; i < SharedBucketSize + 1; i++)
             {
-                if (arr[curIdx].Text == null)
+                if (arr[curIdx].Text is null)
                 {
                     idx = curIdx;
                     goto foundIdx;

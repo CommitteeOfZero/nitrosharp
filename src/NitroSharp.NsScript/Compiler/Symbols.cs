@@ -87,12 +87,12 @@ namespace NitroSharp.NsScript.Compiler
         public ChapterSymbol? LookupChapter(string name)
         {
             ChapterSymbol? chapter = RootSourceFile.LookupChapter(name);
-            if (chapter != null) { return chapter; }
+            if (chapter is not null) { return chapter; }
 
             foreach (SourceFileSymbol file in ReferencedSourceFiles)
             {
                 chapter = file.LookupChapter(name);
-                if (chapter != null) { break; }
+                if (chapter is not null) { break; }
             }
 
             return chapter;
@@ -101,12 +101,12 @@ namespace NitroSharp.NsScript.Compiler
         public SceneSymbol? LookupScene(string name)
         {
             SceneSymbol? scene = RootSourceFile.LookupScene(name);
-            if (scene != null) { return scene; }
+            if (scene is not null) { return scene; }
 
             foreach (SourceFileSymbol file in ReferencedSourceFiles)
             {
                 scene = file.LookupScene(name);
-                if (scene != null) { break; }
+                if (scene is not null) { break; }
             }
 
             return scene;
@@ -115,12 +115,12 @@ namespace NitroSharp.NsScript.Compiler
         public FunctionSymbol? LookupFunction(string name)
         {
             FunctionSymbol? function = RootSourceFile.LookupFunction(name);
-            if (function != null) { return function; }
+            if (function is not null) { return function; }
 
             foreach (SourceFileSymbol file in ReferencedSourceFiles)
             {
                 function = file.LookupFunction(name);
-                if (function != null) { break; }
+                if (function is not null) { break; }
             }
 
             return function;
@@ -281,7 +281,7 @@ namespace NitroSharp.NsScript.Compiler
 
         public override ParameterSymbol? LookupParameter(string name)
         {
-            if (_parameterMap == null) { return null; }
+            if (_parameterMap is null) { return null; }
             return _parameterMap.TryGetValue(name, out ParameterSymbol? symbol) ? symbol : null;
         }
 

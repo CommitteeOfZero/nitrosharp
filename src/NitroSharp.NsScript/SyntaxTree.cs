@@ -20,7 +20,7 @@ namespace NitroSharp.NsScript
         {
             get
             {
-                if (_diagnostics == null || _diagnostics.All.Length != _diagnosticBuilder.Count)
+                if (_diagnostics is null || _diagnostics.All.Length != _diagnosticBuilder.Count)
                 {
                     _diagnostics = _diagnosticBuilder.ToImmutableBag();
                 }

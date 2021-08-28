@@ -124,7 +124,7 @@ namespace NitroSharp.ShaderCompiler
                 profile,
                 flags);
 
-            if (result.ResultCode.Failure || result.Bytecode == null)
+            if (result.ResultCode.Failure || result.Bytecode is null)
             {
                 Console.WriteLine($"Failed to compile HLSL code: {result.Message}");
                 return Array.Empty<byte>();
