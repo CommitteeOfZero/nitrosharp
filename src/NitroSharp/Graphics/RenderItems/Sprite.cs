@@ -243,7 +243,10 @@ namespace NitroSharp.Graphics
             base.AdvanceAnimations(ctx, dt, assetsReady);
             if (assetsReady)
             {
-                _transition?.Update(dt);
+                if (_transition?.Update(dt) == false)
+                {
+                    Color.SetAlpha(_transition.FadeAmount);
+                }
             }
         }
 
