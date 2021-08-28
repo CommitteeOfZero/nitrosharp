@@ -31,7 +31,7 @@
     <PackageReference Include="Veldrid" Version="$(VeldridVersion)" />
     <PackageReference Include="Veldrid.SDL2" Version="$(VeldridVersion)" />
     <PackageReference Include="Veldrid.StartupUtilities" Version="$(VeldridVersion)" />
-    <PackageReference Include="Veldrid.ImGui" Version="5.72.0-g4ed9046a20 " />
+    <PackageReference Include="Veldrid.ImGui" Version="5.72.0" />
     <PackageReference Include="Veldrid.ImageSharp" Version="4.8.0" />
 
     <PackageReference Include="SharpDX.XAudio2" Version="4.2.0" />
