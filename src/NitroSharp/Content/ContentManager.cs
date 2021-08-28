@@ -93,7 +93,7 @@ namespace NitroSharp.Content
             {
                 foreach (MountPoint mountPoint in mountPoints)
                 {
-                    AddMount(mountPoint);
+                    TryAddMount(mountPoint);
                 }
             }
         }
@@ -242,7 +242,7 @@ namespace NitroSharp.Content
             return archive.OpenStream(archivePath);
         }
 
-        private void AddMount(MountPoint mountPoint)
+        private void TryAddMount(in MountPoint mountPoint)
         {
             VfsNode head = _root;
             string[] splitedPath = mountPoint.MountName.ToLowerInvariant().Split("/");
@@ -286,7 +286,7 @@ namespace NitroSharp.Content
                 (ArchiveFile, string)? parentArchiveDetails = LocateFileInArchives(mountPoint.ArchiveName);
                 if (parentArchiveDetails is null)
                 {
-                    throw new FileNotFoundException("Sub-archive not found", mountPoint.ArchiveName);
+                    return;
                 }
                 (ArchiveFile parentArchive, string archivePath) = parentArchiveDetails.Value;
                 AfsFile archive = AfsFile.Load((AfsFile) parentArchive, archivePath, _encoding);
