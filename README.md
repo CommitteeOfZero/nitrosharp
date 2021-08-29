@@ -10,9 +10,9 @@ NitroSharp is close to being feature-complete. You should be able to reach at le
 * Do not use NitroSharp if you simply want to enjoy the game.
 
 ### Missing features:
-* Support for the archive formats
-  * AFS
-  * NPA
+* ~~Support for the archive formats~~
+  * ~~AFS~~
+  * ~~NPA~~
 * Decent, reliable save system
 * Graphical effects
   * Motion blur
