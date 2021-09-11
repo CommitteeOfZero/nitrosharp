@@ -68,17 +68,24 @@ namespace NitroSharp
 
         private SmallList<Entity> QuerySlow(uint contextId, EntityQuery query)
         {
-            static bool match(ref SmallList<EntityQueryPart> queryParts, string entityPath)
+            static bool match(World world, ref SmallList<EntityQueryPart> queryParts, string entityPath)
             {
                 var pathParts = new EntityQuery(entityPath).EnumerateParts();
                 ReadOnlySpan<EntityQueryPart> remainingQueryParts = queryParts.AsSpan();
                 bool matches = false;
                 foreach (EntityQueryPart pathPart in pathParts)
                 {
-                    if (remainingQueryParts.IsEmpty || !matchParts(remainingQueryParts[0], pathPart))
+                    if (remainingQueryParts.IsEmpty) { return false; }
+                    EntityQueryPart queryPart = remainingQueryParts[0];
+                    if (!queryPart.SearchInAliases && !matchParts(queryPart, pathPart))
                     {
-                        matches = false;
-                        break;
+                        return false;
+                    }
+                    if (queryPart.SearchInAliases && queryPart.IsLast)
+                    {
+                        var path = new EntityPath(queryPart.Value.ToString());
+                        return world._aliases.TryGetValue(path, out EntityId id)
+                            && id.Path.Equals(entityPath, StringComparison.Ordinal);
                     }
 
                     remainingQueryParts = remainingQueryParts[1..];
@@ -128,7 +135,7 @@ namespace NitroSharp
 
             foreach ((EntityId id, EntityRec _) in _entities)
             {
-                if (id.Context == contextId && match(ref queryParts, id.Path))
+                if (id.Context == contextId && match(this, ref queryParts, id.Path))
                 {
                     results.Add(Get(id)!);
                 }

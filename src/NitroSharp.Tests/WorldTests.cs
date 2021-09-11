@@ -80,18 +80,31 @@ namespace NitroSharp.Tests
         [Fact]
         public void SetAlias()
         {
-            var resolvedPath = _world.ResolvePath(0, new EntityPath("parent"));
-            var parent = _world.Add(new BasicEntity(resolvedPath));
+            var parent = Entity("parent");
             _world.SetAlias(parent.Id, new EntityPath("alias"));
             Assert.Equal(parent, _world.Get(0, new EntityPath("@alias")));
 
-            resolvedPath = _world.ResolvePath(0, new EntityPath("parent/child"));
-            var child = _world.Add(new BasicEntity(resolvedPath));
+            var child = Entity("parent/child");
             Assert.Equal(child, _world.Get(0, new EntityPath("@alias/child")));
 
             _world.DestroyEntity(child);
             Assert.Null(_world.Get(0, new EntityPath("parent/child")));
             Assert.Null(_world.Get(0, new EntityPath("@alias/child")));
+        }
+
+        [Fact]
+        public void SetAlias_Child_Nonsense()
+        {
+            var parent = Entity("parent");
+            var child = Entity("parent/child");
+            _world.SetAlias(child.Id, new EntityPath("alias"));
+            Assert.Equal(child, _world.Query(0, new EntityQuery("parent/@alias"))[0]);
+        }
+
+        private BasicEntity Entity(string path)
+        {
+            var resolvedPath = _world.ResolvePath(0, new EntityPath(path));
+            return _world.Add(new BasicEntity(resolvedPath));
         }
 
         [Fact]
