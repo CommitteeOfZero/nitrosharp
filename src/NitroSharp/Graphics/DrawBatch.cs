@@ -281,7 +281,7 @@ namespace NitroSharp.Graphics
                 return;
             }
 
-            if (_lastDraw.Pipeline is not null!)
+            if (_lastDraw.Pipeline is not null)
             {
                 Flush();
             }
@@ -291,7 +291,7 @@ namespace NitroSharp.Graphics
 
         private void Flush()
         {
-            if (_commandList is null || _lastDraw.Pipeline is null!)
+            if (_commandList is null || _lastDraw.Pipeline is null)
             {
                 return;
             }

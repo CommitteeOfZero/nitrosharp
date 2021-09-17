@@ -231,7 +231,7 @@ namespace NitroSharp.NsScript.VM
         private readonly byte[] _bytes;
         private readonly int _codeStart;
 
-        public bool IsEmpty => _bytes is null!;
+        public bool IsEmpty => _bytes is null;
         public readonly int[] DialogueBlockOffsets;
 
         public Subroutine(byte[] bytes)

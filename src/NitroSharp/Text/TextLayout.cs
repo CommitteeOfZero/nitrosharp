@@ -791,7 +791,7 @@ namespace NitroSharp.Text
                 NextBreak = default
             };
 
-            public bool IsNone => Font is null!;
+            public bool IsNone => Font is null;
         }
 
         private readonly TextLayoutContext _context;

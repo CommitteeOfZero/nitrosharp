@@ -56,7 +56,7 @@ namespace NitroSharp
         public static EntityId Invalid => default;
 
         public ReadOnlySpan<char> Name => Path.AsSpan(_nameStart);
-        public bool IsValid => Path is not null!;
+        public bool IsValid => Path is not null;
 
         public override int GetHashCode() => HashCode.Combine(_hashCode, Context);
         public bool Equals(EntityId other) => string.Equals(Path, other.Path);
