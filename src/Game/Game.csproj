@@ -5,17 +5,17 @@
     <OutputType>Exe</OutputType>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <ApplicationIcon>CoZ.ico</ApplicationIcon>
     <PlatformTarget>x64</PlatformTarget>
     <DebugType>pdbonly</DebugType>
+    <NoWarn>VSTHRD103;VSTHRD200</NoWarn>
+    <ApplicationIcon>CoZ.ico</ApplicationIcon>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
     <RootAllApplicationAssemblies>false</RootAllApplicationAssemblies>
     <IlcGenerateCompleteTypeMetadata>false</IlcGenerateCompleteTypeMetadata>
     <IlcGenerateStackTraceData>false</IlcGenerateStackTraceData>
     <InvariantGlobalization>true</InvariantGlobalization>
     <TrimMode>link</TrimMode>
-    <RootNamespace>CowsHead</RootNamespace>
-    <NoWarn>VSTHRD103;VSTHRD200</NoWarn>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
 
   <Import Project="..\..\OutputPath.props" />
