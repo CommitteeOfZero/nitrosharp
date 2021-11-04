@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net5.0</TargetFramework>
+    <TargetFramework>net6.0</TargetFramework>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <NoWarn>1701;1702;CA1063;IDE1006;IDE0063;VSTHRD002;VSTHRD003;VSTHRD103;VSTHRD105;VSTHRD200</NoWarn>
     <VeldridVersion>4.9.0-g32bf3145d0</VeldridVersion>
@@ -37,9 +37,9 @@
     <PackageReference Include="SharpDX.XAudio2" Version="4.2.0" />
 
     <PackageReference Include="Sprintf.NET" Version="2.0.0" />
-    <PackageReference Include="SixLabors.ImageSharp" Version="1.0.3" />
+    <PackageReference Include="SixLabors.ImageSharp" Version="1.0.4" />
     <PackageReference Include="System.IO.Pipelines" Version="5.0.1" />
-    <PackageReference Include="Microsoft.VisualStudio.Threading" Version="16.10.56" />
+    <PackageReference Include="Microsoft.VisualStudio.Threading" Version="17.0.63" />
     <PackageReference Include="SharpDX.Direct2D1" Version="4.2.0" />
   </ItemGroup>
 

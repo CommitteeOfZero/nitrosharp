@@ -7,12 +7,11 @@ using NitroSharp.Launcher;
 
 using FFmpegLibs = FFmpeg.AutoGen.NativeLibs;
 
-#nullable enable
-
 namespace CowsHead
 {
-    class Program
+    internal static class Program
     {
+        // ReSharper disable InconsistentNaming
         private static class CoreRTWorkaround
         {
             public static void InitializeCOM()
@@ -34,6 +33,7 @@ namespace CowsHead
                 COINIT_SPEED_OVER_MEMORY = 0x8,
             }
         }
+        // ReSharper restore InconsistentNaming
 
         private static IntPtr s_libfreetype;
         private static IntPtr s_libopenal;
@@ -52,7 +52,7 @@ namespace CowsHead
             Linux
         }
 
-        static Task Main()
+        private static Task Main()
         {
 #if PORTABLE
             LoadNativeDependencies();

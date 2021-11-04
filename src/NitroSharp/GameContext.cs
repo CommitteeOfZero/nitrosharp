@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -496,7 +495,7 @@ namespace NitroSharp
 
                 ProcessSystemVariables(VM.SystemVariables);
 
-                if (SysProcess is GameProcess { VmProcess: { IsTerminated: true } } sysProc)
+                if (SysProcess is { VmProcess.IsTerminated: true } sysProc)
                 {
                     sysProc.Dispose();
                     SysProcess = null;
