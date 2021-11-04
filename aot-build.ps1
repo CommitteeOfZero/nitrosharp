@@ -45,7 +45,7 @@ $dotnetArgs = @(
 dotnet($dotnetArgs)
 
 Remove-Item -Path $PublishDir -Recurse -ErrorAction SilentlyContinue
-Copy-Item -Path bin/Release/Games/CowsHead/$Framework/$Runtime/publish -Destination $PublishDir `
+Copy-Item -Path bin/Release/Game/$Framework/$Runtime/publish -Destination $PublishDir `
     -Recurse -Container -Force -Exclude *.pdb,*.deps.json,*.runtimeconfig.json
 
 if ($linuxBuild) {

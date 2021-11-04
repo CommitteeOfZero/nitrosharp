@@ -1,35 +1,31 @@
 <Project>
   <PropertyGroup>
-    <OutputPath>$(RepoRootDirectory)\bin\$(Configuration)\</OutputPath>
+    <OutputPath>$(RepoRootDirectory)\bin\$(Configuration)</OutputPath>
   </PropertyGroup>
 
   <Choose>
-    <When Condition="'$(OutputType)' == 'Exe' OR '$(OutputType)' == 'WinExe'">
-      <Choose>
-        <When Condition="'$(ExeProjectKind)' == 'Dev'">
-          <PropertyGroup>
-            <OutputPath>$(OutputPath)Dev\$(MSBuildProjectName)\</OutputPath>
-          </PropertyGroup>
-        </When>
-
-        <Otherwise>
-          <PropertyGroup>
-            <OutputPath>$(OutputPath)Games\$(MSBuildProjectName)\</OutputPath>
-          </PropertyGroup>
-        </Otherwise>
-      </Choose>
+    <When Condition="'$(ExeProjectKind)' == 'Dev'">
+      <PropertyGroup>
+        <OutputPath>$(OutputPath)Dev\$(MSBuildProjectName)</OutputPath>
+      </PropertyGroup>
     </When>
 
-    <When Condition="'$(OutputType)' == 'Library' AND !$(MSBuildProjectName.Contains('Tests'))">
+    <When Condition="'$(OutputType)' == 'Library' AND !$(MSBuildProjectName.Contains('NitroSharp'))">
       <PropertyGroup>
-        <OutputPath>$(OutputPath)Libraries\$(MSBuildProjectName)\</OutputPath>
+        <OutputPath>$(OutputPath)\Dependencies\$(MSBuildProjectName)</OutputPath>
       </PropertyGroup>
     </When>
 
     <When Condition="'$(OutputType)' == 'Library' AND $(MSBuildProjectName.Contains('Tests'))">
       <PropertyGroup>
-        <OutputPath>$(OutputPath)UnitTests\$(MSBuildProjectName)\</OutputPath>
+        <OutputPath>$(OutputPath)\UnitTests\$(MSBuildProjectName)</OutputPath>
       </PropertyGroup>
     </When>
+
+     <Otherwise>
+       <PropertyGroup>
+         <OutputPath>$(OutputPath)\$(MSBuildProjectName)</OutputPath>
+       </PropertyGroup>
+     </Otherwise>
   </Choose>
 </Project>
