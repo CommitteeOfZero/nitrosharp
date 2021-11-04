@@ -2,10 +2,11 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Json;
+using NitroSharp;
 using NitroSharp.Media;
 using Veldrid;
 
-namespace NitroSharp.Launcher
+namespace Game
 {
     internal sealed class BadConfigException : Exception
     {
@@ -17,7 +18,7 @@ namespace NitroSharp.Launcher
 
     internal static class ConfigurationReader
     {
-        /// <exception cref="BadConfigException"></exception>
+        /// <exception cref="BadConfigException" />
         public static Configuration Read(string configPath)
         {
             static JsonValue getRequired(JsonValue settings, string key)
@@ -32,45 +33,46 @@ namespace NitroSharp.Launcher
                 }
             }
 
-            using (FileStream stream = File.OpenRead(configPath))
+            using FileStream stream = File.OpenRead(configPath);
+            var root = JsonValue.Load(stream);
+            var icons = new IconPathPatterns
             {
-                var root = JsonValue.Load(stream);
-                var icons = new IconPathPatterns
-                {
-                    WaitLine = new IconPathPattern(getRequired(root, "icons.waitLine")),
-                    WaitPage = new IconPathPattern(getRequired(root, "icons.waitPage")),
-                    WaitAuto = new IconPathPattern(getRequired(root, "icons.waitAuto")),
-                    BacklogVoice = new IconPathPattern(getRequired(root, "icons.backlogVoice"))
-                };
+                WaitLine = new IconPathPattern(getRequired(root, "icons.waitLine")),
+                WaitPage = new IconPathPattern(getRequired(root, "icons.waitPage")),
+                WaitAuto = new IconPathPattern(getRequired(root, "icons.waitAuto")),
+                BacklogVoice = new IconPathPattern(getRequired(root, "icons.backlogVoice"))
+            };
 
-                string profileName = root["activeProfile"];
-                JsonValue profile = root["profiles"][profileName];
+            string profileName = root["activeProfile"];
+            JsonValue profile = root["profiles"][profileName];
 
-                var configuration = new Configuration(profileName, icons);
-                foreach (KeyValuePair<string, JsonValue>? property in root)
+            var configuration = new Configuration(profileName, icons);
+            foreach (KeyValuePair<string, JsonValue>? property in root)
+            {
+                if (property is { } p)
                 {
-                    if (property is { } p)
-                    {
-                        Set(configuration, p);
-                    }
+                    Set(configuration, p);
                 }
-
-                foreach (KeyValuePair<string, JsonValue>? property in profile)
-                {
-                    if (property is { } prop)
-                    {
-                        Set(configuration, prop);
-                    }
-                }
-
-                return configuration;
             }
+
+            foreach (KeyValuePair<string, JsonValue>? property in profile)
+            {
+                if (property is { } prop)
+                {
+                    Set(configuration, prop);
+                }
+            }
+
+            return configuration;
         }
 
         private static void Set(Configuration configuration, KeyValuePair<string, JsonValue> property)
         {
             switch (property.Key)
             {
+                case "productName":
+                    configuration.ProductName = property.Value;
+                    break;
                 case "window.width":
                     configuration.WindowWidth = property.Value;
                     break;

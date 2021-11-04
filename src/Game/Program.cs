@@ -3,11 +3,10 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
-using NitroSharp.Launcher;
-
+using NitroSharp;
 using FFmpegLibs = FFmpeg.AutoGen.NativeLibs;
 
-namespace CowsHead
+namespace Game
 {
     internal static class Program
     {
@@ -52,7 +51,7 @@ namespace CowsHead
             Linux
         }
 
-        private static Task Main()
+        private static async Task Main()
         {
 #if PORTABLE
             LoadNativeDependencies();
@@ -62,7 +61,19 @@ namespace CowsHead
             NativeLibrary.SetDllImportResolver(typeof(FFmpeg.AutoGen.ffmpeg).Assembly, ResolveDllImport);
 #endif
             Console.OutputEncoding = Encoding.UTF8;
-            return GameLauncher.Launch("COWS;HEAD NOAH", "Game.json");
+
+            Configuration config = ConfigurationReader.Read("Game.json");
+            var window = new DesktopWindow(config.WindowTitle, (uint)config.WindowWidth, (uint)config.WindowHeight);
+            GameContext ctx = GameContext.Create(window, config).Result;
+            try
+            {
+                await ctx.Run();
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+                Console.WriteLine(e.StackTrace);
+            }
         }
 
         private static void LoadNativeDependencies()

@@ -5,7 +5,6 @@
     <OutputType>Exe</OutputType>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <AssemblyName>Game</AssemblyName>
     <ApplicationIcon>CoZ.ico</ApplicationIcon>
     <PlatformTarget>x64</PlatformTarget>
     <DebugType>pdbonly</DebugType>
@@ -15,9 +14,11 @@
     <IlcGenerateStackTraceData>false</IlcGenerateStackTraceData>
     <InvariantGlobalization>true</InvariantGlobalization>
     <TrimMode>link</TrimMode>
+    <RootNamespace>CowsHead</RootNamespace>
+    <NoWarn>VSTHRD103;VSTHRD200</NoWarn>
   </PropertyGroup>
 
-  <Import Project="..\..\..\OutputPath.props" />
+  <Import Project="..\..\OutputPath.props" />
 
   <!--<PropertyGroup Condition="'$(Configuration)' == 'Release'">
     <OutputType>WinExe</OutputType>
@@ -25,17 +26,13 @@
 
   <ItemGroup>
     <Content Include="Game.json" CopyToOutputDirectory="PreserveNewest" />
-  </ItemGroup>
-
-  <ItemGroup>
     <RdXmlFile Include="rd.xml" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\NitroSharp.Launcher\NitroSharp.Launcher.csproj" />
-  </ItemGroup>
+    <ProjectReference Include="..\NitroSharp\NitroSharp.csproj" />
 
-  <ItemGroup>
+    <PackageReference Include="System.Json" Version="4.7.1" />
     <PackageReference Condition="'$(Native)' == 'true'" Include="Microsoft.DotNet.ILCompiler" Version="6.0.0-rc.1.21420.1" />
   </ItemGroup>
 

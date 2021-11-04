@@ -37,7 +37,7 @@ $dotnetArgs = @(
 dotnet($dotnetArgs)
 
 $dotnetArgs = @(
-    "publish", "src/Games/CowsHead/CowsHead.csproj",
+    "publish", "src/Game/Game.csproj",
     "-r", "$Runtime",
     "-c", "Release",
     "/p:Native=true"
