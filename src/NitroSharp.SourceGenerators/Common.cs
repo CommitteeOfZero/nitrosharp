@@ -26,7 +26,7 @@ namespace NitroSharp.SourceGenerators
         public static bool IsSerializable(ITypeSymbol type)
         {
             bool partial = type.DeclaringSyntaxReferences
-                .Any(x => x.GetSyntax() is TypeDeclarationSyntax decl and (StructDeclarationSyntax or ClassDeclarationSyntax)
+                .Any(x => x.GetSyntax() is TypeDeclarationSyntax decl
                     && decl.Modifiers.Any(x => x.Kind() == SyntaxKind.PartialKeyword));
 
             if (!partial) { return false; }
@@ -85,12 +85,11 @@ namespace NitroSharp.SourceGenerators
         {
             var symbols = new Stack<ISymbol>();
             ITypeSymbol? currentType = type;
-            while (currentType is ITypeSymbol { SpecialType: not SpecialType.System_Object })
+            while (currentType is { SpecialType: not SpecialType.System_Object })
             {
                 foreach (ISymbol sym in currentType.GetMembers().Reverse())
                 {
-                    if (sym is IFieldSymbol { IsStatic: false }
-                        or IPropertySymbol { IsStatic: false })
+                    if (sym is IFieldSymbol { IsStatic: false } or IPropertySymbol { IsStatic: false })
                     {
                         if (sym is IPropertySymbol prop && !prop.IsAutoProperty()) { continue; }
                         if (currentType.IsTupleType || !sym.IsImplicitlyDeclared)

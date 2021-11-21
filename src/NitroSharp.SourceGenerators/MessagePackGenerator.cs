@@ -161,22 +161,22 @@ namespace ToolGeneratedExtensions
 
         private static MemberDeclarationSyntax GenerateMembersForType(INamedTypeSymbol type)
         {
+            var firstDecl = (TypeDeclarationSyntax)type.DeclaringSyntaxReferences[0].GetSyntax();
+
             MemberDeclarationSyntax serializeMethod = SerializeGenerator.GenerateMethod(type);
             MemberDeclarationSyntax ctor = DeserializeGenerator.GenerateConstructor(type);
 
-            TypeDeclarationSyntax partialType = type.IsValueType
-                ? StructDeclaration(type.Name)
-                : ClassDeclaration(type.Name);
-            partialType = partialType
-            .WithModifiers(TokenList(new[]
+            TypeDeclarationSyntax newDecl = firstDecl
+                .WithMembers(List(new[] { ctor, serializeMethod }))
+                .WithAttributeLists(default);
+
+            if (newDecl is RecordDeclarationSyntax recordDecl)
             {
-                Token(AccessibilityKeyword(type)),
-                Token(SyntaxKind.PartialKeyword)
-            }))
-            .WithMembers(List(new[] { ctor, serializeMethod }));
+                newDecl = recordDecl.WithParameterList(null);
+            }
 
             return NamespaceDeclaration(ParseName(GetFullName(type.ContainingNamespace)))
-                .WithMembers(SingletonList((MemberDeclarationSyntax)partialType));
+                .WithMembers(SingletonList((MemberDeclarationSyntax)newDecl));
         }
 
         private static List<INamedTypeSymbol> GetSerializables(INamespaceSymbol root)

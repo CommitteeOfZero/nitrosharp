@@ -14,7 +14,7 @@ namespace NitroSharp.SourceGenerators
     {
         public static MemberDeclarationSyntax GenerateConstructor(INamedTypeSymbol type)
         {
-            return ConstructorDeclaration(Identifier(type.Name))
+            ConstructorDeclarationSyntax ctor = ConstructorDeclaration(Identifier(type.Name))
                 .WithModifiers(TokenList(Token(SyntaxKind.PublicKeyword)))
                 .WithParameterList(
                     ParameterList(
@@ -23,6 +23,13 @@ namespace NitroSharp.SourceGenerators
                                 .WithModifiers(TokenList(Token(SyntaxKind.RefKeyword)))
                                 .WithType(IdentifierName("MessagePackReader")))))
                 .WithBody(DeserializeMembers(type, ThisExpression()));
+
+            if (type.IsRecord)
+            {
+                ctor = ctor.WithInitializer(ConstructorInitializer(SyntaxKind.ThisConstructorInitializer));
+            }
+
+            return ctor;
         }
 
         private static BlockSyntax DeserializeMembers(INamedTypeSymbol type, ExpressionSyntax target)
