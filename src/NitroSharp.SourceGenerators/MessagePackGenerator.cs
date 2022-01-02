@@ -1,62 +1,91 @@
-﻿using System.Collections.Generic;
+﻿using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
-using static NitroSharp.SourceGenerators.Common;
 
-namespace NitroSharp.SourceGenerators
+namespace NitroSharp.SourceGenerators;
+
+[Generator(LanguageNames.CSharp)]
+public sealed class MessagePackGenerator : IIncrementalGenerator
 {
-    [Generator]
-    public class MessagePackGenerator : ISourceGenerator
+    public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        private const string PersistableAttributeName = "NitroSharp.PersistableAttribute";
+        IncrementalValuesProvider<INamedTypeSymbol> serializableTypes = context.SyntaxProvider.CreateSyntaxProvider(
+            predicate: static (node, _) => node is TypeDeclarationSyntax typeDecl && Common.IsSerializableCandidate(typeDecl),
+            transform: Resolve
+        ).Where(x => x is not null)!;
 
-        public void Execute(GeneratorExecutionContext context)
+        context.RegisterSourceOutput(
+            serializableTypes.Collect(),
+            static (ctx, source) => Execute(ctx, source)
+        );
+    }
+
+    private static INamedTypeSymbol? Resolve(GeneratorSyntaxContext ctx, CancellationToken cancellationToken)
+    {
+        Compilation compilation = ctx.SemanticModel.Compilation;
+        if (Common.PersistableAttribute is null)
         {
-            if (context.Compilation is CSharpCompilation compilation)
+            if (compilation.GetTypeByMetadataName(Common.PersistableAttributeFqn) is not { } persistableAttribute)
             {
-                Execute(context, compilation);
+                throw new SourceGeneratorException($"The type {Common.PersistableAttributeFqn} does not exist.");
             }
+
+            Common.PersistableAttribute = persistableAttribute;
         }
 
-        public void Initialize(GeneratorInitializationContext context)
+        if (ctx.SemanticModel.GetDeclaredSymbol(ctx.Node, cancellationToken) is not INamedTypeSymbol typeSymbol)
         {
+            return null;
         }
 
-        private void Execute(GeneratorExecutionContext context, CSharpCompilation compilation)
-        {
-            if (compilation.GetTypeByMetadataName(PersistableAttributeName) is not INamedTypeSymbol attrType)
+        return Common.HasPersistableAttribute(typeSymbol)
+            ? typeSymbol
+            : null;
+    }
+
+    private static void Execute(SourceProductionContext context, ImmutableArray<INamedTypeSymbol> serializableTypes)
+    {
+        CompilationUnitSyntax cu = CompilationUnit()
+            .WithUsings(List(new[]
             {
-                throw new SourceGeneratorException($"The type {PersistableAttributeName} does not exist.");
-            }
+                UsingDirective(IdentifierName("ToolGeneratedExtensions")),
+                UsingDirective(IdentifierName("MessagePack")), UsingDirective(IdentifierName("System"))
+            }))
+            .WithMembers(List(serializableTypes.Select(GenerateMembersForType)))
+            .NormalizeWhitespace();
 
-            INamespaceSymbol ns = compilation.Assembly.GlobalNamespace
-                .GetNamespaceMembers()
-                .First(x => x.Name == "NitroSharp");
+        context.AddSource("SaveData.Generated.cs", cu.GetText(Encoding.UTF8));
+        GenerateExtensions(context);
+    }
 
-            SerializableAttribute = attrType;
-            List<INamedTypeSymbol> serializableTypes = GetSerializables(ns);
+    private static MemberDeclarationSyntax GenerateMembersForType(INamedTypeSymbol type)
+    {
+        var firstDecl = (TypeDeclarationSyntax)type.DeclaringSyntaxReferences[0].GetSyntax();
 
-            CompilationUnitSyntax cu = CompilationUnit()
-                .WithUsings(List(new[]
-                {
-                    UsingDirective(IdentifierName("ToolGeneratedExtensions")),
-                    UsingDirective(IdentifierName("MessagePack")), UsingDirective(IdentifierName("System"))
-                }))
-                .WithMembers(List(serializableTypes.Select(GenerateMembersForType)))
-                .NormalizeWhitespace();
+        MemberDeclarationSyntax serializeMethod = SerializeGenerator.GenerateMethod(type);
+        MemberDeclarationSyntax ctor = DeserializeGenerator.GenerateConstructor(type);
 
-            context.AddSource("SaveData.Generated.cs", cu.GetText(Encoding.UTF8));
-            GenerateExtensions(context);
+        TypeDeclarationSyntax newDecl = firstDecl
+            .WithMembers(List(new[] { ctor, serializeMethod }))
+            .WithAttributeLists(default);
+
+        if (newDecl is RecordDeclarationSyntax recordDecl)
+        {
+            newDecl = recordDecl.WithParameterList(null);
         }
 
-        private static void GenerateExtensions(GeneratorExecutionContext context)
-        {
-            const string mpWriterExtensions = @"
+        return NamespaceDeclaration(ParseName(Common.GetFullName(type.ContainingNamespace)))
+            .WithMembers(SingletonList((MemberDeclarationSyntax)newDecl));
+    }
+
+    private static void GenerateExtensions(SourceProductionContext context)
+    {
+        const string mpWriterExtensions = @"
 using System.Numerics;
 using MessagePack;
 
@@ -156,50 +185,6 @@ namespace ToolGeneratedExtensions
         }
     }
 }";
-            context.AddSource("MessagePackExtensions.cs", SourceText.From(mpWriterExtensions, Encoding.UTF8));
-        }
-
-        private static MemberDeclarationSyntax GenerateMembersForType(INamedTypeSymbol type)
-        {
-            var firstDecl = (TypeDeclarationSyntax)type.DeclaringSyntaxReferences[0].GetSyntax();
-
-            MemberDeclarationSyntax serializeMethod = SerializeGenerator.GenerateMethod(type);
-            MemberDeclarationSyntax ctor = DeserializeGenerator.GenerateConstructor(type);
-
-            TypeDeclarationSyntax newDecl = firstDecl
-                .WithMembers(List(new[] { ctor, serializeMethod }))
-                .WithAttributeLists(default);
-
-            if (newDecl is RecordDeclarationSyntax recordDecl)
-            {
-                newDecl = recordDecl.WithParameterList(null);
-            }
-
-            return NamespaceDeclaration(ParseName(GetFullName(type.ContainingNamespace)))
-                .WithMembers(SingletonList((MemberDeclarationSyntax)newDecl));
-        }
-
-        private static List<INamedTypeSymbol> GetSerializables(INamespaceSymbol root)
-        {
-            static void doGetTypes(List<INamedTypeSymbol> list, INamespaceOrTypeSymbol symbol)
-            {
-                if (symbol is INamedTypeSymbol type && IsSerializable(type))
-                {
-                    list.Add(type);
-                }
-
-                foreach (ISymbol child in symbol.GetMembers())
-                {
-                    if (child is INamespaceOrTypeSymbol namespaceOrType)
-                    {
-                        doGetTypes(list, namespaceOrType);
-                    }
-                }
-            }
-
-            var list = new List<INamedTypeSymbol>();
-            doGetTypes(list, root);
-            return list;
-        }
+        context.AddSource("MessagePackExtensions.cs", SourceText.From(mpWriterExtensions, Encoding.UTF8));
     }
 }

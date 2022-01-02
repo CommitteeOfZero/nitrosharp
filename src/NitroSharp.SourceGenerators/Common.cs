@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -21,30 +22,53 @@ namespace NitroSharp.SourceGenerators
 
     internal static class Common
     {
-        public static ITypeSymbol SerializableAttribute = null!;
+        public const string PersistableAttributeFqn = "NitroSharp.PersistableAttribute";
+        private const string PersistableAttributeShortName = "Persistable";
+
+        public static ITypeSymbol? PersistableAttribute;
 
         public static bool IsSerializable(ITypeSymbol type)
         {
-            bool partial = type.DeclaringSyntaxReferences
+            bool isPartial = type.DeclaringSyntaxReferences
                 .Any(x => x.GetSyntax() is TypeDeclarationSyntax decl
                     && decl.Modifiers.Any(x => x.Kind() == SyntaxKind.PartialKeyword));
 
-            if (!partial) { return false; }
-
-            bool marked = type.GetAttributes()
-                .Any(attr => SymbolEqualityComparer.Default.Equals(attr.AttributeClass, SerializableAttribute));
-
-            return marked;
+            return isPartial && HasPersistableAttribute(type);
         }
 
-        public static SyntaxKind AccessibilityKeyword(ITypeSymbol type)
+        public static bool HasPersistableAttribute(ITypeSymbol type)
         {
-            return type.DeclaredAccessibility switch
+            Debug.Assert(PersistableAttribute is not null);
+            return type.GetAttributes()
+                .Any(attr => SymbolEqualityComparer.Default.Equals(attr.AttributeClass, PersistableAttribute));
+        }
+
+        public static bool IsSerializableCandidate(TypeDeclarationSyntax typeDeclaration)
+        {
+            bool isPartial = false;
+            foreach (SyntaxToken modifier in typeDeclaration.Modifiers)
             {
-                Accessibility.Public => SyntaxKind.PublicKeyword,
-                Accessibility.Internal => SyntaxKind.InternalKeyword,
-                _ => throw new SourceGeneratorException("Serializable types must be either public or internal.")
-            };
+                if (modifier.IsKind(SyntaxKind.PartialKeyword))
+                {
+                    isPartial = true;
+                    break;
+                }
+            }
+
+            if (!isPartial) { return false; }
+
+            foreach (AttributeListSyntax attributeList in typeDeclaration.AttributeLists)
+            {
+                foreach (AttributeSyntax attribute in attributeList.Attributes)
+                {
+                    if (attribute.Name.ToString() is PersistableAttributeShortName or PersistableAttributeFqn)
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
         }
 
         public static MemberAccessExpressionSyntax MemberAccess(ExpressionSyntax expr, string memberName)
@@ -130,7 +154,7 @@ namespace NitroSharp.SourceGenerators
                 }
             }
             else if (type.TypeKind == TypeKind.Enum
-                && type is INamedTypeSymbol { EnumUnderlyingType: INamedTypeSymbol underlyingType }
+                && type is INamedTypeSymbol { EnumUnderlyingType: { } underlyingType }
                 && IsPrimitiveType(underlyingType))
             {
                 return FieldTypeKind.Enum;
