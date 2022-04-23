@@ -165,7 +165,8 @@ namespace NitroSharp.NsScript.VM
 
         public virtual DateTime GetDateTime() => DateTime.Now;
 
-        public virtual bool X360_IsSignedIn() => true;
+        public virtual void X360_InitUser() {}
+        public virtual bool X360_IsSignedIn() => false;
         public virtual bool X360_UserDataExists() => false;
         public virtual bool X360_CheckStorage() => true;
 
