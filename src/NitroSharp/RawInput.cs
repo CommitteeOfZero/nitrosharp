@@ -207,7 +207,7 @@ namespace NitroSharp
         private readonly bool[] _buttonState = new bool[16];
         private readonly bool[] _newButtons = new bool[16];
 
-        public unsafe SdlGamepad(int index)
+        private unsafe SdlGamepad(int index)
         {
             _controller = SDL_GameControllerOpen(index);
             SDL_Joystick joystick = SDL_GameControllerGetJoystick(_controller);

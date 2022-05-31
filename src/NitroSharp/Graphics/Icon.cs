@@ -102,9 +102,11 @@ namespace NitroSharp.Graphics
             IconShaderResources shaderResources = context.ShaderResources.Icon;
             ViewProjection vp = context.OrthoProjection;
 
+            Matrix4x4 transform = Matrix4x4.CreateTranslation(new Vector3(position, 0))
+                * Matrix4x4.CreateScale(context.WorldToDeviceScale.Factor);
             (QuadGeometry quad, _) = QuadGeometry.Create(
-                new SizeF(_texture.Width, _texture.Height),
-                Matrix4x4.CreateTranslation(new Vector3(position, 0)),
+                new DesignSize(_texture.Width, _texture.Height),
+                transform,
                 Vector2.Zero,
                 Vector2.One,
                 color: Vector4.One

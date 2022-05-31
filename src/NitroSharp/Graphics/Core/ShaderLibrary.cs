@@ -9,15 +9,15 @@ namespace NitroSharp.Graphics.Core
     internal sealed class ShaderLibrary : IDisposable
     {
         private static readonly Assembly s_assembly = typeof(ShaderLibrary).Assembly;
+
+        private readonly GraphicsDevice _graphicsDevice;
         private readonly List<(Shader, Shader)> _shaderSets;
 
         public ShaderLibrary(GraphicsDevice graphicsDevice)
         {
-            GraphicsDevice = graphicsDevice;
+            _graphicsDevice = graphicsDevice;
             _shaderSets = new List<(Shader, Shader)>();
         }
-
-        public GraphicsDevice GraphicsDevice { get; }
 
         public (Shader vs, Shader fs) LoadShaderSet(string name)
         {
@@ -29,7 +29,7 @@ namespace NitroSharp.Graphics.Core
 
         private Shader LoadShader(string set, ShaderStages stage, string entryPoint)
         {
-            ResourceFactory factory = GraphicsDevice.ResourceFactory;
+            ResourceFactory factory = _graphicsDevice.ResourceFactory;
             string name = "NitroSharp.Graphics.Shaders." + set +
                 $"-{stage.ToString().ToLower()}{GetExtension(factory.BackendType)}";
 

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using FFmpeg.AutoGen;
@@ -17,7 +16,10 @@ namespace NitroSharp.Media
             }
         }
 
-        private static void Throw(int result) => throw new FFmpegException(GetErrorMessage(result));
+        private static void Throw(int result)
+        {
+            throw new FFmpegException(GetErrorMessage(result));
+        }
 
         private static string GetErrorMessage(int error)
         {

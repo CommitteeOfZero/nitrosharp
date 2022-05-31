@@ -13,25 +13,27 @@ namespace NitroSharp.Graphics
         public ResourceBindings ResourceBindings;
         public BufferBindings BufferBindings;
         public DrawParams Params;
-        public RectangleU? ScissorRect;
+        public PhysicalRectU? ScissorRect;
+
+        public bool IsValid => Pipeline is not null;
     }
 
     [StructLayout(LayoutKind.Auto)]
     internal readonly struct DrawParams
     {
-        public readonly DrawMethod Method;
+        private readonly DrawMethod _method;
         public readonly (uint start, uint count) Vertices;
         public readonly (uint start, uint count) Indices;
         public readonly (uint start, uint count) Instances;
 
-        public bool IsIndexed => Method switch
+        public bool IsIndexed => _method switch
         {
             DrawMethod.DrawIndexed => true,
             DrawMethod.DrawIndexedInstanced => true,
             _ => false
         };
 
-        private bool IsInstanced => Method switch
+        private bool IsInstanced => _method switch
         {
             DrawMethod.DrawInstanced => true,
             DrawMethod.DrawIndexedInstanced => true,
@@ -49,7 +51,7 @@ namespace NitroSharp.Graphics
             Vertices = (vertexBase, vertexCount);
             Indices = (indexBase, indexCount);
             Instances = (instanceBase, instanceCount);
-            Method = (Indices, Instances) switch
+            _method = (Indices, Instances) switch
             {
                 ((0, 0), (0, 1)) => DrawMethod.Draw,
                 ((0, 0), _) => DrawMethod.DrawInstanced,
@@ -73,10 +75,10 @@ namespace NitroSharp.Graphics
             uint instanceCount = 1)
             => new(vertexBase, 0, indexBase, indexCount, instanceBase, instanceCount);
 
-        public static bool CanMerge(in DrawParams a, in DrawParams b)
+        private static bool CanMerge(in DrawParams a, in DrawParams b)
         {
-            if (a.Method != b.Method) { return false; }
-            return a.Method switch
+            if (a._method != b._method) { return false; }
+            return a._method switch
             {
                 DrawMethod.Draw => areConsecutive(a.Vertices, b.Vertices),
                 DrawMethod.DrawInstanced => areConsecutive(a.Vertices, b.Vertices)
@@ -126,7 +128,7 @@ namespace NitroSharp.Graphics
         DrawIndexedInstanced
     }
 
-    internal readonly struct BufferBindings : IEquatable<BufferBindings>
+    internal readonly record struct BufferBindings
     {
         public readonly DeviceBuffer? Vertices;
         public readonly DeviceBuffer? InstanceData;
@@ -135,15 +137,8 @@ namespace NitroSharp.Graphics
         public BufferBindings(DeviceBuffer vertices) : this()
             => Vertices = vertices;
 
-        public BufferBindings(DeviceBuffer vertices, DeviceBuffer indices)
-            : this() => (Vertices, Indices) = (vertices, indices);
-
-        public bool Equals(BufferBindings other)
-        {
-            return ReferenceEquals(Vertices, other.Vertices)
-                && ReferenceEquals(InstanceData, other.InstanceData)
-                && ReferenceEquals(Indices, other.Indices);
-        }
+        public BufferBindings(DeviceBuffer vertices, DeviceBuffer indices) : this()
+            => (Vertices, Indices) = (vertices, indices);
     }
 
     internal readonly struct ResourceBindings : IEquatable<ResourceBindings>
@@ -180,7 +175,7 @@ namespace NitroSharp.Graphics
         private CommandList? _commandList;
 
         private Draw _lastDraw;
-        private Vector2 _lastAlphaMaskPosition;
+        private Vector2 _lastAlphaMaskPosition = new(float.NaN);
 
         public DrawBatch(RenderContext context)
         {
@@ -195,7 +190,7 @@ namespace NitroSharp.Graphics
             _commandList = commandList;
             commandList.SetFramebuffer(target.Framebuffer);
             Target = target;
-            if (clearColor is RgbaFloat clear)
+            if (clearColor is { } clear)
             {
                 commandList.ClearColorTarget(0, clear);
             }
@@ -215,7 +210,7 @@ namespace NitroSharp.Graphics
             Texture alphaMask,
             Vector2 alphaMaskPosition,
             BlendMode blendMode,
-            FilterMode filterMode)
+            Sampler sampler)
         {
             Debug.Assert(_commandList is not null);
             ViewProjection vp = Target.OrthoProjection;
@@ -223,7 +218,8 @@ namespace NitroSharp.Graphics
             QuadShaderResources resources = _ctx.ShaderResources.Quad;
             if (alphaMaskPosition != _lastAlphaMaskPosition)
             {
-                UpdateBuffer(resources.AlphaMaskPositionBuffer, new Vector4(alphaMaskPosition, 0, 0));
+                (Vector2, Vector2) newValue = (alphaMaskPosition, new Vector2(_ctx.WorldToDeviceScale.Factor));
+                UpdateBuffer(resources.AlphaMaskPositionBuffer, newValue);
                 _lastAlphaMaskPosition = alphaMaskPosition;
             }
 
@@ -234,7 +230,7 @@ namespace NitroSharp.Graphics
                         _ctx.ShaderResources.Quad.ResourceLayout,
                         texture,
                         alphaMask,
-                        _ctx.GetSampler(filterMode),
+                        sampler,
                         resources.AlphaMaskPositionBuffer.VdBuffer
                     )
                 )
@@ -281,7 +277,7 @@ namespace NitroSharp.Graphics
                 return;
             }
 
-            if (_lastDraw.Pipeline is not null)
+            if (_lastDraw.IsValid)
             {
                 Flush();
             }
@@ -291,7 +287,7 @@ namespace NitroSharp.Graphics
 
         private void Flush()
         {
-            if (_commandList is null || _lastDraw.Pipeline is null)
+            if (_commandList is null || !_lastDraw.IsValid)
             {
                 return;
             }
@@ -308,16 +304,16 @@ namespace NitroSharp.Graphics
                 cl.SetFullScissorRect(0);
             }
             ref BufferBindings buffers = ref _lastDraw.BufferBindings;
-            if (buffers.Vertices is DeviceBuffer vertices)
+            if (buffers.Vertices is { } vertices)
             {
                 cl.SetVertexBuffer(0, vertices);
             }
-            if (buffers.InstanceData is DeviceBuffer instanceData)
+            if (buffers.InstanceData is { } instanceData)
             {
                 cl.SetVertexBuffer(1, instanceData);
 
             }
-            if (buffers.Indices is DeviceBuffer indices)
+            if (buffers.Indices is { } indices)
             {
                 cl.SetIndexBuffer(indices, IndexFormat.UInt16);
             }
@@ -331,7 +327,7 @@ namespace NitroSharp.Graphics
 
             void setResources(CommandList cl, uint slot, ResourceSetKey? rsKeyOpt)
             {
-                if (rsKeyOpt is ResourceSetKey rsKey)
+                if (rsKeyOpt is { } rsKey)
                 {
                     ResourceSet rs = rsCache.GetResourceSet(rsKey);
                     cl.SetGraphicsResourceSet(slot, rs);

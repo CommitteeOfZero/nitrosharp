@@ -9,7 +9,6 @@ using NitroSharp.Graphics;
 using NitroSharp.Media;
 using NitroSharp.NsScript;
 using NitroSharp.Text;
-using NitroSharp.Utilities;
 using Veldrid;
 
 namespace NitroSharp
@@ -133,11 +132,10 @@ namespace NitroSharp
             _duration = TimeSpan.FromMilliseconds(saveData.DurationMs);
         }
 
-        protected TimeSpan Duration => _duration;
         public bool HasCompleted => Elapsed >= _duration.TotalMilliseconds;
 
         protected float Progress
-            => MathUtil.Clamp(Elapsed / (float)_duration.TotalMilliseconds, 0.0f, 1.0f);
+            => Math.Clamp(Elapsed / (float)_duration.TotalMilliseconds, 0.0f, 1.0f);
 
         protected override AdvanceResult Advance()
         {
@@ -148,7 +146,7 @@ namespace NitroSharp
 
         protected AnimationSaveData ToSaveData() => new()
         {
-            DurationMs = (float)Duration.TotalMilliseconds,
+            DurationMs = (float)_duration.TotalMilliseconds,
             EaseFunction = _easeFunction,
             Repeat = _repeat,
             Elapsed = Elapsed
@@ -251,8 +249,8 @@ namespace NitroSharp
     internal abstract class FloatAnimation<TEntity> : PropertyAnimation<TEntity, float>
        where TEntity : Entity
     {
-        protected readonly float _startValue;
-        protected readonly float _endValue;
+        private readonly float _startValue;
+        private readonly float _endValue;
 
         protected FloatAnimation(
             TEntity entity,
@@ -302,7 +300,6 @@ namespace NitroSharp
     {
         private readonly float _srcFadeAmount;
         private readonly float _dstFadeAmount;
-        private float _fadeAmount;
 
         public TransitionAnimation(
             AssetRef<Texture> mask,
@@ -325,12 +322,12 @@ namespace NitroSharp
         }
 
         public AssetRef<Texture> Mask { get; }
-        public float FadeAmount => _fadeAmount;
+        public float FadeAmount { get; private set; }
 
         protected override AdvanceResult Advance()
         {
             float delta = _dstFadeAmount - _srcFadeAmount;
-            _fadeAmount = _srcFadeAmount + delta * GetFactor(Progress, _easeFunction);
+            FadeAmount = _srcFadeAmount + delta * GetFactor(Progress, _easeFunction);
             return base.Advance();
         }
 
@@ -579,7 +576,7 @@ namespace NitroSharp
         protected override void InterpolateValue(ref Vector3 value, float factor)
         {
             int segCount = _curve.Segments.Length;
-            int segIndex = (int)MathUtil.Clamp(factor * segCount, 0, segCount - 1);
+            int segIndex = (int)Math.Clamp(factor * segCount, 0, segCount - 1);
             float t = factor * segCount - segIndex;
             ProcessedBezierSegment seg = _curve.Segments[segIndex];
             value = new Vector3(seg.CalcPoint(t), value.Z);
@@ -607,7 +604,15 @@ namespace NitroSharp
         }
 
         private readonly TextLayout _textLayout;
+        private readonly float _timePerGlyph;
         private Queue<AnimationPair> _anims;
+
+        public TypewriterAnimation(TextLayout textLayout, float timePerGlyph)
+        {
+            _textLayout = textLayout;
+            _timePerGlyph = timePerGlyph;
+            _anims = new Queue<AnimationPair>();
+        }
 
         public TypewriterAnimation(
             TextLayout textLayout,
@@ -615,8 +620,13 @@ namespace NitroSharp
             float timePerGlyph)
         {
             _textLayout = textLayout;
+            _timePerGlyph = timePerGlyph;
             _anims = new Queue<AnimationPair>();
+            Append(textLayout, glyphRuns);
+        }
 
+        public void Append(TextLayout textLayout, ReadOnlySpan<GlyphRun> glyphRuns)
+        {
             for (int i = 0; i < glyphRuns.Length; i++)
             {
                 ref readonly GlyphRun run = ref glyphRuns[i];
@@ -627,7 +637,7 @@ namespace NitroSharp
                 {
                     if (textLayout.GetGlyphSpanLength(glyphSpan) > 0)
                     {
-                        GlyphRunRevealAnimation anim = createAnim(glyphSpan, timePerGlyph);
+                        GlyphRunRevealAnimation anim = createAnim(glyphSpan, _timePerGlyph);
                         _anims.Enqueue(new AnimationPair(anim, null));
                         glyphSpan = default;
                     }
@@ -645,8 +655,8 @@ namespace NitroSharp
                         flush();
                         uint baseGlyphCount = NbNonWhitespaceGlyphs(rb.GlyphSpan);
                         uint rubyGlyphCount = NbNonWhitespaceGlyphs(rt.GlyphSpan);
-                        float rubyGlyphTime = timePerGlyph * baseGlyphCount / rubyGlyphCount;
-                        GlyphRunRevealAnimation baseAnim = createAnim(rb.GlyphSpan, timePerGlyph);
+                        float rubyGlyphTime = _timePerGlyph * baseGlyphCount / rubyGlyphCount;
+                        GlyphRunRevealAnimation baseAnim = createAnim(rb.GlyphSpan, _timePerGlyph);
                         GlyphRunRevealAnimation rubyAnim = createAnim(rt.GlyphSpan, rubyGlyphTime);
                         _anims.Enqueue(new AnimationPair(baseAnim, rubyAnim));
                         i++;
@@ -687,7 +697,7 @@ namespace NitroSharp
                 if (_anims.TryPeek(out AnimationPair animPair))
                 {
                     bool inProgress = animPair.Text.Update(dt);
-                    if (animPair.RubyText is object)
+                    if (animPair.RubyText is not null)
                     {
                         inProgress |= animPair.RubyText.Update(dt);
                     }
@@ -703,7 +713,7 @@ namespace NitroSharp
                 foreach (AnimationPair animPair in _anims)
                 {
                     inProgress |= animPair.Text.Update(dt);
-                    if (animPair.RubyText is object)
+                    if (animPair.RubyText is not null)
                     {
                         inProgress |= animPair.RubyText.Update(dt);
                     }

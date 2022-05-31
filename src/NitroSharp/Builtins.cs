@@ -57,7 +57,7 @@ namespace NitroSharp
 
         public override int GetPlatformId()
         {
-            return _ctx.Config.PlatformId;
+            return _ctx.Profile.PlatformId;
         }
 
         public override void Exit()
@@ -151,7 +151,7 @@ namespace NitroSharp
                         break;
                     case (_, NsEntityAction.DestroyWhenIdle):
                         // Demo 5 HACK
-                        //if (entity is DialoguePage)
+                        if (entity is DialoguePage)
                         {
                             World.DestroyWhenIdle(entity);
                         }
@@ -194,7 +194,7 @@ namespace NitroSharp
         {
             if (ResolvePath(entityPath, out ResolvedEntityPath resolvedPath))
             {
-                if (VM.CreateThread(CurrentProcess, target) is NsScriptThread thread)
+                if (VM.CreateThread(CurrentProcess, target) is { } thread)
                 {
                     World.Add(new VmThread(resolvedPath, target, _ctx.VM, thread));
                 }
@@ -253,7 +253,7 @@ namespace NitroSharp
 
         public override bool FileExists(string path)
         {
-            string fullPath = Path.Combine(_ctx.Config.ContentRoot, path);
+            string fullPath = Path.Combine(_ctx.Profile.ContentRoot, path);
             return File.Exists(fullPath);
         }
 

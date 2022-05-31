@@ -86,7 +86,7 @@ namespace NitroSharp.Content
             return stagingTexture;
         }
 
-        public override Size GetTextureSize(Stream stream)
+        public override PhysicalSizeU GetTextureSize(Stream stream)
         {
             stream.Seek(0, SeekOrigin.Begin);
             using var context = new FormatContext(stream);
@@ -96,7 +96,7 @@ namespace NitroSharp.Content
                 -1, -1, null, 0
             );
             AVCodecParameters* codecpar = context.Inner->streams[streamId]->codecpar;
-            return new Size((uint)codecpar->width, (uint)codecpar->height);
+            return new PhysicalSizeU((uint)codecpar->width, (uint)codecpar->height);
         }
     }
 }

@@ -14,20 +14,26 @@ namespace NitroSharp.Graphics.Core
         public readonly BindableResource? Resource3;
 
         public ResourceSetKey(ResourceLayout layout, BindableResource res) : this()
-            => (ResourceLayout, Resource0) = (layout, res);
+        {
+            (ResourceLayout, Resource0) = (layout, res);
+        }
 
-         public ResourceSetKey(
+        public ResourceSetKey(
              ResourceLayout layout,
              BindableResource res0,
              BindableResource res1) : this()
-            => (ResourceLayout, Resource0, Resource1) = (layout, res0, res1);
+        {
+            (ResourceLayout, Resource0, Resource1) = (layout, res0, res1);
+        }
 
-         public ResourceSetKey(
+        public ResourceSetKey(
              ResourceLayout layout,
              BindableResource res0,
              BindableResource res1,
              BindableResource res2) : this()
-            => (ResourceLayout, Resource0, Resource1, Resource2) = (layout, res0, res1, res2);
+        {
+            (ResourceLayout, Resource0, Resource1, Resource2) = (layout, res0, res1, res2);
+        }
 
         public ResourceSetKey(
             ResourceLayout layout,
@@ -121,7 +127,9 @@ namespace NitroSharp.Graphics.Core
             public readonly FrameStamp LastAccess;
 
             public CacheEntry(ResourceSet resourceSet, FrameStamp lastAccess)
-                => (ResourceSet, LastAccess) = (resourceSet, lastAccess);
+            {
+                (ResourceSet, LastAccess) = (resourceSet, lastAccess);
+            }
         }
 
         private readonly Dictionary<ResourceSetKey, CacheEntry> _cache;
@@ -208,7 +216,7 @@ namespace NitroSharp.Graphics.Core
             };
         }
 
-        public void Clear()
+        private void Clear()
         {
             foreach (KeyValuePair<ResourceSetKey, CacheEntry> entry in _cache)
             {

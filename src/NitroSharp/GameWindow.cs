@@ -9,7 +9,8 @@ namespace NitroSharp
     {
         SwapchainSource SwapchainSource { get; }
         AutoResetEvent Mobile_HandledSurfaceDestroyed { get; }
-        Size Size { get; }
+        PhysicalSize Size { get; }
+        Scale<DesignPixel, ScreenPixel> ScaleFactor { get; }
         bool Exists { get; }
 
         event Action Resized;

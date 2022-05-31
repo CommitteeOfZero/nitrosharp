@@ -6,7 +6,7 @@ namespace NitroSharp.Graphics
 {
     internal sealed class ColorSource : Entity
     {
-        public ColorSource(in ResolvedEntityPath path, in RgbaFloat color, Size size)
+        public ColorSource(in ResolvedEntityPath path, in RgbaFloat color, DesignSizeU size)
             : base(path)
         {
             Color = color;
@@ -21,7 +21,7 @@ namespace NitroSharp.Graphics
         }
 
         public RgbaFloat Color { get; }
-        public Size Size { get; }
+        public DesignSizeU Size { get; }
 
         public override EntityKind Kind => EntityKind.ColorSource;
         public override bool IsIdle => true;
@@ -39,7 +39,7 @@ namespace NitroSharp.Graphics
     {
         public EntitySaveData Common { get; init; }
         public Vector4 Color { get; init; }
-        public Size Size { get; init; }
+        public DesignSizeU Size { get; init; }
 
         public EntitySaveData CommonEntityData => Common;
     }

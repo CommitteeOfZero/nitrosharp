@@ -4,7 +4,7 @@ param(
     [string]$PublishDir
 )
 
-$Framework = "net6.0"
+$Framework = "net7.0"
 $ExeName = "Game"
 
 if ($Runtime -eq "") {

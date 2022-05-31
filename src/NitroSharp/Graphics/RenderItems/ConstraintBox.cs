@@ -28,7 +28,7 @@ namespace NitroSharp.Graphics
     {
         public RenderItemSaveData Common { get; init; }
         public bool IsContainer { get; init; }
-        public Size? Size { get; init; }
+        public DesignSizeU? Size { get; init; }
         public string? AlphaMaskPath { get; init; }
 
         public EntitySaveData CommonEntityData => Common.EntityData;

@@ -1,12 +1,9 @@
 ﻿{
-  "activeProfile": "Noah",
-  "productName": "COWS;HEAD NOAH",
-  "graphics.vsync": true,
-  "graphics.backend": "D3D11",
-  "audio.backend": "Auto",
-  "window.title": "COWS;HEAD NOAH",
-  "window.width": 1280,
-  "window.height": 720,
+  "activeProfile": "Test",
+  "product.name": "COWS;HEAD NOAH",
+  "product.displayName": "COWS;HEAD NOAH",
+  "designWidth": 1280,
+  "designHeight": 720,
   "icons.waitLine": "cg/sys/icon/line/%03d.png#21",
   "icons.waitPage": "cg/sys/icon/page/%03d.png#21",
   "icons.waitAuto": "cg/sys/icon/auto/%03d.png#21",
@@ -70,6 +67,12 @@
       "dev.scriptRoot": "coz/nss"
     },
 
+    "Load": {
+      "startupScript": "sys_load.nss",
+      "dev.detectEncoding": true,
+      "dev.scriptRoot": "coz/nss"
+    },
+
     "Any": {
       "startupScript": "boot_any.nss"
     },
@@ -79,9 +82,10 @@
     },
 
     "CH": {
-      "window.title": "Cows;Head",
-      "window.width": 800,
-      "window.height": 600,
+      "product.name": "Cows;Head",
+      "product.displayName": "Cows;Head",
+      "designWidth": 800,
+      "designHeight": 600,
       "startupScript": "boot.nss",
       "dev.contentRoot": "C:/src/ChaosContent/CH"
     }

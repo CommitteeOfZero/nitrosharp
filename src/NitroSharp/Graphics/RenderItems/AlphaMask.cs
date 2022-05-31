@@ -4,7 +4,7 @@ using Veldrid;
 
 namespace NitroSharp.Graphics
 {
-    internal sealed class AlphaMask :  ConstraintBox
+    internal sealed class AlphaMask : ConstraintBox
     {
         public AlphaMask(
             in ResolvedEntityPath path,
@@ -25,8 +25,8 @@ namespace NitroSharp.Graphics
 
         public override EntityKind Kind => EntityKind.AlphaMask;
 
-        public override Size GetUnconstrainedBounds(RenderContext ctx)
-            => ctx.Content.GetTextureSize(Texture);
+        public override DesignSize GetUnconstrainedBounds(RenderContext ctx)
+            => ctx.Content.GetTextureSize(Texture).ToSizeF().Convert(Scale<ScreenPixel, DesignPixel>.Identity);
 
         public override void Dispose()
         {

@@ -20,15 +20,15 @@ namespace NitroSharp.Text
         public ImmutableArray<DialogueSegment> Segments { get; }
         public VoiceSegment? Voice { get; }
 
-        public static Dialogue Parse(string markup, FontConfiguration fontConfig)
+        public static Dialogue Parse(string markup, FontSettings fontConfig)
         {
             MarkupContent root = Parsing.ParseMarkup(markup);
             return s_treeFlattener.FlattenContent(root, fontConfig);
         }
 
-        public static TextSegment ParseTextSegment(string text, FontConfiguration fontConfig)
+        public static TextSegment ParseTextSegment(string text, FontSettings fontSettings)
         {
-            Dialogue dialogue = Parse(text, fontConfig);
+            Dialogue dialogue = Parse(text, fontSettings);
             return dialogue.Segments.Length == 1 && dialogue.Segments[0] is TextSegment ts
                 ? ts
                 : throw new InvalidOperationException($"Not a valid text segment: '{text}'");
@@ -40,13 +40,13 @@ namespace NitroSharp.Text
             {
                 public string? Text;
                 public string? RubyText;
-                public int? FontSize;
+                public uint? FontSize;
                 public RgbaFloat? Color;
                 public RgbaFloat? OutlineColor;
                 public bool Italic;
             }
 
-            private FontConfiguration? _fontConfig;
+            private FontSettings? _fontConfig;
             private readonly ImmutableArray<DialogueSegment>.Builder _segments;
             private readonly ImmutableArray<TextRun>.Builder _textRuns;
             private TextRunData _textRunData;
@@ -58,7 +58,7 @@ namespace NitroSharp.Text
                 _textRuns = ImmutableArray.CreateBuilder<TextRun>(1);
             }
 
-            public Dialogue FlattenContent(MarkupNode rootNode, FontConfiguration fontConfig)
+            public Dialogue FlattenContent(MarkupNode rootNode, FontSettings fontConfig)
             {
                 _fontConfig = fontConfig;
                 _segments.Clear();

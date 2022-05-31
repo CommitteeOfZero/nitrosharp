@@ -43,9 +43,8 @@ namespace NitroSharp.Content
 
         private static AfsFile Load(MemoryMappedFile mmFile, Encoding encoding, uint archiveOffset = 0)
         {
-            return TryLoad(mmFile, encoding, archiveOffset) is AfsFile file
-                ? file
-                : throw new ArchiveException("AFS", "Unknown magic");
+            return TryLoad(mmFile, encoding, archiveOffset)
+                ?? throw new ArchiveException("AFS", "Unknown magic");
         }
 
         public static AfsFile? TryLoad(MemoryMappedFile file, Encoding encoding)
@@ -108,14 +107,14 @@ namespace NitroSharp.Content
             {
                 line = reader.ReadLine();
                 if (line is null) { malformed(); }
-                int idxSeprator = line.IndexOf(',');
-                if (idxSeprator == -1) { malformed(); }
-                int fileNameLen = idxSeprator;
+                int idxSeparator = line.IndexOf(',');
+                if (idxSeparator == -1) { malformed(); }
+                int fileNameLen = idxSeparator;
                 Span<char> fileName = fileNameLen < 256
                     ? fileNameBuf[..fileNameLen]
                     : new char[fileNameLen];
                 line.AsSpan()[..fileNameLen].ToLowerInvariant(fileName);
-                ReadOnlySpan<char> fileIndex = line.AsSpan()[(idxSeprator + 1)..];
+                ReadOnlySpan<char> fileIndex = line.AsSpan()[(idxSeparator + 1)..];
                 if (!uint.TryParse(fileIndex, out uint index)) { malformed(); }
                 _iniFileNames[fileName.ToString()] = index;
             }

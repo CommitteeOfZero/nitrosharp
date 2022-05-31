@@ -7,6 +7,9 @@ using NitroSharp.Text;
 using Veldrid;
 using Xunit;
 
+using PhysicalRectF = NitroSharp.RectangleF<NitroSharp.ScreenPixel>;
+using DesignDimension = NitroSharp.DimensionU<NitroSharp.DesignPixel>;
+
 namespace NitroSharp.Tests
 {
     public sealed class FontContext : IDisposable
@@ -41,7 +44,7 @@ namespace NitroSharp.Tests
         [Fact]
         public void Chat()
         {
-            var layout = new TextLayout(645, 400, 25);
+            var layout = new TextLayout(maxWidth: 400, maxHeight: 25);
             layout.Append(_rasterizer, Regular("ナイトハルト：\"パンモロ"));
             layout.Append(_rasterizer, Regular("\"より\"はいてない"));
             layout.Append(_rasterizer, Regular("\"の方がいいだろ？　それと同じことさ"));
@@ -124,7 +127,7 @@ Nullam nisl ipsum, semper ac lacus sit amet, semper viverra diam.";
             };
 
             TextLayout layout = Layout(runs, null, null);
-            AssertLine(layout, layout.Lines[0], "A gaze falls from the sky.");
+            AssertText(layout, "A gaze falls from the sky.");
         }
 
         [Fact]
@@ -143,7 +146,22 @@ Nullam nisl ipsum, semper ac lacus sit amet, semper viverra diam.";
                 layout.Append(_rasterizer, run);
             }
 
-            AssertLine(layout, layout.Lines[0], "A gaze falls from the sky.");
+            AssertText(layout, "A gaze falls from the sky.");
+        }
+
+        [Fact]
+        public void LastRun_SingleCharacter()
+        {
+            TextRun[] runs =
+            {
+                Regular("\""),
+                Regular("meow"),
+                Regular("\"")
+            };
+
+            TextLayout layout = new();
+            layout.Append(_rasterizer, runs);
+            AssertText(layout, "\"meow\"");
         }
 
         [Theory]
@@ -196,7 +214,7 @@ Nullam nisl ipsum, semper ac lacus sit amet, semper viverra diam.";
         [InlineData("\r\n")]
         public void AppendNewline(string newline)
         {
-            TextLayout a = new(_rasterizer, new[] { Regular("a") });
+            TextLayout a = new(maxWidth: new[] { Regular("a") });
             float prevY = a.Glyphs[0].Position.Y;
             TextLayout prev = new();
             for (int nbLines = 1; nbLines <= 4; nbLines++)
@@ -232,11 +250,11 @@ Nullam nisl ipsum, semper ac lacus sit amet, semper viverra diam.";
         public void AppendText_SameLine()
         {
             TextLayout layout = Layout("A gaze", null, null);
-            RectangleF bbBefore = layout.BoundingBox;
+            PhysicalRectF bbBefore = layout.BoundingBox;
             TextRun second = Regular(" falls from the sky.");
             layout.Append(_rasterizer, second);
-            RectangleF bbAfter = layout.BoundingBox;
-            AssertLine(layout, layout.Lines[0], "A gaze falls from the sky.");
+            PhysicalRectF bbAfter = layout.BoundingBox;
+            AssertText(layout, "A gaze falls from the sky.");
             Assert.True(bbAfter.Width > bbBefore.Width);
 
             Assert.Equal(
@@ -294,6 +312,14 @@ Nullam nisl ipsum, semper ac lacus sit amet, semper viverra diam.";
             Assert.Equal(orderedByX, positions);
         }
 
+        private void AssertText(TextLayout layout, string text)
+        {
+            Assert.True(layout.Lines.Length == 1);
+            AssertLine(layout, layout.Lines[0], text);
+            var span = new Range(layout.GlyphRuns[0].GlyphSpan.Start, layout.GlyphRuns[^1].GlyphSpan.End);
+            AssertGlyphs(layout, span, text);
+        }
+
         private void AssertGlyphs(TextLayout layout, Range span, string text)
         {
             ReadOnlySpan<PositionedGlyph> glyphs = layout.Glyphs[span];
@@ -310,9 +336,9 @@ Nullam nisl ipsum, semper ac lacus sit amet, semper viverra diam.";
             }
         }
 
-        private TextLayout Layout(TextRun[] textRuns, uint? maxW, uint? maxH, float? fixedLineHeight = null)
+        private TextLayout Layout(TextRun[] textRuns, DesignDimension? maxW, DesignDimension? maxH, DesignDimension? fixedLineHeight = null)
         {
-            return new(_rasterizer, textRuns, maxW, maxH, fixedLineHeight);
+            return new(_rasterizer, textRuns, maxWidth: maxH, maxHeight: fixedLineHeight);
         }
 
         private TextLayout Layout(string s, uint? maxW, uint? maxH)

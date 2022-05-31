@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Immutable;
 using System.Numerics;
-using NitroSharp.Content;
 using NitroSharp.Graphics;
 using NitroSharp.NsScript;
 using NitroSharp.NsScript.Primitives;
@@ -40,13 +39,13 @@ namespace NitroSharp
 
         public override void SetBacklog(string text)
         {
-            TextSegment seg = Dialogue.ParseTextSegment(text, _ctx.ActiveProcess.FontConfig);
+            TextSegment seg = Dialogue.ParseTextSegment(text, _ctx.ActiveProcess.FontSettings);
             _ctx.Backlog.Append(seg);
         }
 
         public override Vector2 GetCursorPosition()
         {
-            return _ctx.InputContext.MousePosition;
+            return _ctx.InputContext.MousePosition / _ctx.Window.ScaleFactor.Factor;
         }
 
         public override void CreateScrollbar(
@@ -59,7 +58,7 @@ namespace NitroSharp
             string knobImage)
         {
             if (ResolvePath(path, out ResolvedEntityPath resolvedPath)
-                && ResolveSpriteSource(knobImage) is SpriteTexture knob)
+                && ResolveSpriteSource(knobImage) is { } knob)
             {
                 World.Add(new Scrollbar(
                     resolvedPath,
@@ -110,8 +109,7 @@ namespace NitroSharp
             };
 
             (Entity? entityA, Entity? entityB) = (Get(first), Get(second));
-            if ((getUiElement(entityA), getUiElement(entityB))
-                is (UiElement elementA, UiElement elementB))
+            if ((getUiElement(entityA), getUiElement(entityB)) is ({ } elementA, { } elementB))
             {
                 elementA.SetNextFocus(focusDirection, elementB.Id);
             }
@@ -137,7 +135,7 @@ namespace NitroSharp
                     _ctx.FocusedUiElement = EntityId.Invalid;
                 }
 
-                if (_ctx.RequestedFocusChange is NsFocusDirection focusDirection)
+                if (_ctx.RequestedFocusChange is { } focusDirection)
                 {
                     if (uiElement.IsFocused &&
                         Get(uiElement.GetNextFocus(focusDirection)) is UiElement nextFocus)
@@ -170,7 +168,7 @@ namespace NitroSharp
                 World.Add(new ColorSource(
                     resolvedPath,
                     color.ToRgbaFloat(),
-                    new Size(width, height)
+                    new DesignSizeU(width, height)
                 ));
             }
         }
@@ -178,7 +176,7 @@ namespace NitroSharp
         public override void LoadImage(in EntityPath entityPath, string source)
         {
             if (ResolvePath(entityPath, out ResolvedEntityPath resolvedPath)
-                && ResolveSpriteSource(source) is SpriteTexture texture)
+                && ResolveSpriteSource(source) is { } texture)
             {
                 World.Add(new Image(resolvedPath, texture));
             }
@@ -195,7 +193,7 @@ namespace NitroSharp
             {
                 World.Add(new Sprite(
                     resolvedPath, priority,
-                    SpriteTexture.SolidColor(color.ToRgbaFloat(), new Size(width, height))
+                    SpriteTexture.SolidColor(color.ToRgbaFloat(), new DesignSizeU(width, height))
                 ).WithPosition(_renderCtx, x, y));
             }
         }
@@ -207,7 +205,7 @@ namespace NitroSharp
             string source)
         {
             if (ResolvePath(entityPath, out ResolvedEntityPath resolvedPath)
-                && ResolveSpriteSource(source) is SpriteTexture texture)
+                && ResolveSpriteSource(source) is { } texture)
             {
                 World.Add(new Sprite(
                     resolvedPath,
@@ -217,17 +215,17 @@ namespace NitroSharp
             }
         }
 
-        private SpriteTexture? ResolveSpriteSource(string src, in RectangleU? srcRect = null)
+        private SpriteTexture? ResolveSpriteSource(string src, in DesignRectU? srcRect = null)
         {
             if (src is "SCREEN" or "Screen" or "VIDEO" or "Video")
             {
                 Texture screenshotTexture = _renderCtx.CreateFullscreenTexture();
-                var result = SpriteTexture.FromStandalone(screenshotTexture);
+                var result = SpriteTexture.FromStandalone(screenshotTexture, _ctx.RenderContext);
                 _ctx.Defer(DeferredOperation.CaptureFramebuffer(screenshotTexture));
                 return result;
             }
 
-            if (_ctx.Content.RequestTexture(src) is AssetRef<Texture> asset)
+            if (_ctx.Content.RequestTexture(src) is { } asset)
             {
                 return SpriteTexture.FromAsset(asset, srcRect);
             }
@@ -249,9 +247,9 @@ namespace NitroSharp
             uint width, uint height,
             string source)
         {
-            var srcRect = new RectangleU(srcX, srcY, width, height);
+            var srcRect = new DesignRectU(srcX, srcY, width, height);
             if (ResolvePath(entityPath, out ResolvedEntityPath resolvedPath)
-                && ResolveSpriteSource(source, srcRect) is SpriteTexture texture)
+                && ResolveSpriteSource(source, srcRect) is { } texture)
             {
                 World.Add(new Sprite(
                     resolvedPath,
@@ -270,7 +268,7 @@ namespace NitroSharp
         {
             if (ResolvePath(entityPath, out ResolvedEntityPath resolvedPath))
             {
-                var margin = new Vector4(0, 15, 34, 28);
+                var margin = new DesignMarginU(0, 15, 34, 28);
                 uint w = width is { Variant: NsTextDimensionVariant.Value, Value: { } sWidth }
                     ? (uint)sWidth : uint.MaxValue;
                 uint h = height  is { Variant: NsTextDimensionVariant.Value, Value: { } sHeight }
@@ -281,20 +279,20 @@ namespace NitroSharp
                     _renderCtx.Text,
                     priority,
                     markup,
-                    new Size(w, h),
-                    _ctx.ActiveProcess.FontConfig,
+                    new DesignSizeU(w, h),
+                    _ctx.ActiveProcess.FontSettings,
                     margin
                 ).WithPosition(_renderCtx, x, y));
             }
         }
 
         public override void SetFont(
-            string family, int size,
+            string family, uint size,
             NsColor color, NsColor outlineColor,
             NsFontWeight weight,
             NsOutlineOffset outlineOffset)
         {
-            static int mapFontSize(int size) => size switch
+            static uint mapFontSize(uint size) => size switch
             {
                 23 => 22,
                 26 => 25,
@@ -306,10 +304,14 @@ namespace NitroSharp
                 ? outlineColor.ToVector4()
                 : null;
 
-            _ctx.ActiveProcess.FontConfig
-                .WithDefaultSize(new PtFontSize(mapFontSize(size)))
-                .WithOutlineColor(outlinec)
-                .WithDefaultColor(color.ToVector4());
+            _ctx.ActiveProcess.ChangeFontSettings(
+                settings => settings with
+                {
+                    DefaultFontSize = new PtFontSize(mapFontSize(size)),
+                    DefaultTextColor = color.ToVector4(),
+                    DefaultOutlineColor = outlinec
+                }
+            );
         }
 
         public override void CreateDialogueBox(
@@ -324,7 +326,7 @@ namespace NitroSharp
                 World.Add(new DialogueBox(
                     resolvedPath,
                     priority,
-                    new Size(width, height),
+                    new DesignSizeU(width, height),
                     inheritTransform
                 ).WithPosition(_renderCtx, x, y));
             }
@@ -339,15 +341,16 @@ namespace NitroSharp
             if (ResolvePath(path, out ResolvedEntityPath resolvedPath)
                 && resolvedPath.Parent is RenderItem2D box)
             {
-                var margin = new Vector4(0, 10, 0, 0);
+                var margin = new DesignMarginU(0, 10, 0, 0);
                 NsScriptThread thread = _ctx.VM.ActivateDialogueBlock(blockToken);
                 var page = World.Add(new DialoguePage(
                     resolvedPath,
                     box.Key.Priority,
-                    new Size(maxWidth, maxHeight),
-                    lineSpacing,
+                    new DesignSizeU(maxWidth, maxHeight),
+                    new DimensionU<DesignPixel>((uint)lineSpacing),
                     margin,
-                    thread
+                    thread,
+                    _renderCtx
                 )).WithPosition(_renderCtx, default, default);
                 World.SetAlias(page.Id, new EntityPath(page.Id.Name.ToString()));
             }
@@ -361,19 +364,18 @@ namespace NitroSharp
             }
         }
 
-        public override void AppendDialogue(in EntityPath dialoguePage, string text)
+        public override void AppendDialogue(in EntityPath dialoguePage, string markup)
         {
             if (Get(dialoguePage) is DialoguePage page)
             {
-                page.Append(_ctx, text, _ctx.ActiveProcess.FontConfig);
+                page.Append(_ctx, markup, _ctx.ActiveProcess.FontSettings);
             }
         }
 
         public override void LineEnd(in EntityPath dialoguePage)
         {
-            if (Get(dialoguePage) is DialoguePage page)
+            if (Get(dialoguePage) is DialoguePage)
             {
-                page.EndLine(_ctx);
                 _ctx.Wait(
                     CurrentThread,
                     WaitCondition.LineRead,
@@ -396,7 +398,7 @@ namespace NitroSharp
             bool inheritTransform)
         {
             if (ResolvePath(entityPath, out ResolvedEntityPath resolvedPath)
-                && _ctx.Content.RequestTexture(imagePath) is AssetRef<Texture> texture)
+                && _ctx.Content.RequestTexture(imagePath) is { } texture)
             {
                 World.Add(new AlphaMask(
                     resolvedPath,
@@ -560,7 +562,7 @@ namespace NitroSharp
         {
             duration = AdjustDuration(duration);
             delay = AdjustDuration(delay);
-            if (_ctx.Content.RequestTexture(maskFileName) is AssetRef<Texture> mask)
+            if (_ctx.Content.RequestTexture(maskFileName) is { } mask)
             {
                 foreach (Sprite sprite in Query<Sprite>(query))
                 {

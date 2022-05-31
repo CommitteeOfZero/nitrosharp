@@ -358,23 +358,17 @@ namespace NitroSharp.NsScript.VM
 
         private void AvailableFile(ref ArgConsumer args)
         {
-            _result = ConstantValue.Boolean(
-                _impl.FileExists(path: args.TakeString())
-            );
+            _result = ConstantValue.Boolean(_impl.FileExists(path: args.TakeString()));
         }
 
         private void MountSavedata(ref ArgConsumer args)
         {
-            _result = ConstantValue.Boolean(
-                _impl.MountSaveData(slot: args.TakeUInt())
-            );
+            _result = ConstantValue.Boolean(_impl.MountSaveData(slot: args.TakeUInt()));
         }
 
         private void ExistSave(ref ArgConsumer args)
         {
-            _result = ConstantValue.Boolean(
-                _impl.SaveExists(slot: args.TakeUInt())
-            );
+            _result = ConstantValue.Boolean(_impl.SaveExists(slot: args.TakeUInt()));
         }
 
         private void Save(ref ArgConsumer args)
@@ -468,7 +462,7 @@ namespace NitroSharp.NsScript.VM
         {
             _impl.SetFont(
                 family: args.TakeString(),
-                size: args.TakeInt(),
+                size: args.TakeUInt(),
                 color: args.TakeColor(),
                 outlineColor: args.TakeColor(),
                 weight: NsFontWeight.From(args.Take()),

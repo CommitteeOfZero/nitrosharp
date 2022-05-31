@@ -5,12 +5,12 @@ namespace NitroSharp.Graphics
 {
     internal sealed class DialogueBox :  ConstraintBox
     {
-        private readonly Size _size;
+        private readonly DesignSizeU _size;
 
         public DialogueBox(
             in ResolvedEntityPath path,
             int priority,
-            Size size,
+            DesignSizeU size,
             bool isContainer)
             : base(path, priority, isContainer)
         {
@@ -26,7 +26,8 @@ namespace NitroSharp.Graphics
 
         public override EntityKind Kind => EntityKind.DialogueBox;
 
-        public override Size GetUnconstrainedBounds(RenderContext ctx) => _size;
+        public override DesignSize GetUnconstrainedBounds(RenderContext ctx) => _size.ToSizeF();
+
         public override bool IsIdle => false;
 
         public new ConstraintBoxSaveData ToSaveData(GameSavingContext ctx) => new()

@@ -5,6 +5,11 @@ using Veldrid;
 
 namespace NitroSharp
 {
+    internal static class TextureExtensions
+    {
+        public static PhysicalSizeU Size(this Texture texture) => new(texture.Width, texture.Height);
+    }
+
     internal static class RgbaFloatExtensions
     {
         public static RgbaFloat Multiply(this RgbaFloat source, float value)
@@ -54,7 +59,7 @@ namespace NitroSharp
     {
         public static void Write(this ref MessagePackWriter writer, int? nullableInteger)
         {
-            if (nullableInteger is int n)
+            if (nullableInteger is { } n)
             {
                 writer.Write(n);
             }

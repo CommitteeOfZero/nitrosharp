@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using NitroSharp.Media.NullAudio;
 using NitroSharp.Media.XAudio2;
@@ -57,5 +56,18 @@ namespace NitroSharp.Media
         Null,
         XAudio2,
         OpenAL
+    }
+
+    public readonly record struct AudioParameters(ChannelLayout ChannelLayout, uint SampleRate)
+    {
+        public static readonly AudioParameters Default = new(ChannelLayout.Stereo, 44100);
+
+        public int ChannelCount => ChannelLayout == ChannelLayout.Mono ? 1 : 2;
+    }
+
+    public enum ChannelLayout
+    {
+        Mono,
+        Stereo
     }
 }

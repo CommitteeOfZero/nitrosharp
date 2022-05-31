@@ -54,7 +54,7 @@ namespace NitroSharp.Graphics
 
         public override EntityKind Kind => EntityKind.Scrollbar;
 
-        public RenderItem2D? RenderItem => this;
+        public RenderItem2D RenderItem => this;
         public bool CanFocus => true;
         public ref UiElementFocusData FocusData => ref _focusData;
         public bool IsFocused => _state != State.Normal;
@@ -83,7 +83,7 @@ namespace NitroSharp.Graphics
             bool held = _state == State.Held;
             if (held)
             {
-                float value = MathUtil.Clamp(_mousePos.Get(_axis), _min, _max);
+                float value = Math.Clamp(_mousePos.Get(_axis), _min, _max);
                 //if (_p1.Get(_axis) > _p2.Get(_axis))
                 //{
                 //    value = _p1.Get(_axis) - value;
@@ -103,12 +103,12 @@ namespace NitroSharp.Graphics
                 ctx.WhiteTexture,
                 default,
                 BlendMode,
-                FilterMode
+                ctx.GetSampler(FilterMode)
             );
         }
 
-        public override Size GetUnconstrainedBounds(RenderContext ctx)
-            => _knob.GetSize(ctx);
+        public override DesignSize GetUnconstrainedBounds(RenderContext ctx)
+            => _knob.GetSize(ctx).ToSizeF();
 
         public override void Dispose()
         {

@@ -17,8 +17,10 @@ namespace NitroSharp.Utilities
 
         public ref T Unwrap()
         {
-            static void panic() => throw new InvalidOperationException(
-                "Unwrap() has been called on a None value.");
+            static void panic()
+            {
+                throw new InvalidOperationException("Unwrap() has been called on a None value.");
+            }
 
             if (!HasValue) { panic(); }
             return ref _span[0];
@@ -27,39 +29,16 @@ namespace NitroSharp.Utilities
         public static RefOption<T> None => default;
     }
 
-    internal readonly struct FreeListHandle : IEquatable<FreeListHandle>
+    internal readonly record struct FreeListHandle(uint Index, uint Version)
     {
-        public readonly uint Index;
-        public readonly uint Version;
-
-        public FreeListHandle(uint index, uint version)
-            => (Index, Version) = (index, version);
-
         public static FreeListHandle Invalid => new(0, 0);
 
-        public WeakFreeListHandle GetWeakHandle()
-            => new(Index, Version);
-
-        public bool Equals(FreeListHandle other)
-            => Index == other.Index && Version == other.Version;
-
-        public override int GetHashCode() => HashCode.Combine(Index, Version);
+        public WeakFreeListHandle GetWeakHandle() => new(Index, Version);
     }
 
-    internal readonly struct WeakFreeListHandle : IEquatable<WeakFreeListHandle>
+    internal readonly record struct WeakFreeListHandle(uint Index, uint Version)
     {
-        public readonly uint Index;
-        public readonly uint Version;
-
-        public WeakFreeListHandle(uint index, uint version)
-            => (Index, Version) = (index, version);
-
         public static WeakFreeListHandle Invalid => new(0, 0);
-
-        public bool Equals(WeakFreeListHandle other)
-            => Index == other.Index && Version == other.Version;
-
-        public override int GetHashCode() => HashCode.Combine(Index, Version);
     }
 
     public sealed class InvalidHandleException : Exception
@@ -93,8 +72,6 @@ namespace NitroSharp.Utilities
             slot.Version = InitialVersion;
             _head = 0;
         }
-
-        public uint TotalSlots => _slots.Count;
 
         public FreeListHandle Insert(in T value)
         {
@@ -162,7 +139,7 @@ namespace NitroSharp.Utilities
         {
             return GetOpt(handle).HasValue
                 ? Free(new FreeListHandle(handle.Index, handle.Version))
-                : (T?)null;
+                : null;
         }
 
         public T Free(FreeListHandle handle)
@@ -202,8 +179,6 @@ namespace NitroSharp.Utilities
             _head = 0;
         }
 
-        public uint TotalSlots => _slots.Count;
-
         public FreeListHandle Next()
         {
             uint head = _head;
@@ -241,8 +216,8 @@ namespace NitroSharp.Utilities
 
         public bool ValidateHandle(FreeListHandle handle)
         {
-            return handle.Index < _slots.Count &&
-                _slots[handle.Index].Version == handle.Version;
+            return handle.Index < _slots.Count
+                && _slots[handle.Index].Version == handle.Version;
         }
 
         public void Free(ref FreeListHandle handle)

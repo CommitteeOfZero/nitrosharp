@@ -61,7 +61,7 @@ namespace NitroSharp.Content
             _wicFactory.Dispose();
         }
 
-        public override Size GetTextureSize(Stream stream)
+        public override PhysicalSizeU GetTextureSize(Stream stream)
         {
             using var wicStream = new WICStream(_wicFactory, stream);
             using var decoder = new BitmapDecoder(_wicFactory, wicStream, DecodeOptions.CacheOnDemand);
@@ -69,7 +69,7 @@ namespace NitroSharp.Content
             // Seems like it's owned by the decoder, so hopefully there should be no leaks.
             BitmapFrameDecode frame = decoder.GetFrame(0);
             stream.Seek(0, SeekOrigin.Begin);
-            return new Size((uint)frame.Size.Width, (uint)frame.Size.Height);
+            return new PhysicalSizeU((uint)frame.Size.Width, (uint)frame.Size.Height);
         }
     }
 }

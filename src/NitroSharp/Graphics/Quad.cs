@@ -2,6 +2,8 @@
 using System.Numerics;
 using Veldrid;
 
+// ReSharper disable NotAccessedField.Global
+
 namespace NitroSharp.Graphics
 {
     internal struct QuadVertex
@@ -33,7 +35,9 @@ namespace NitroSharp.Graphics
     {
         public Vector2 Position;
         public Vector3 TexCoord;
+#pragma warning disable CS0169
         private Vector3 _padding;
+#pragma warning restore CS0169
 
         public static readonly VertexLayoutDescription LayoutDescription = new(
             stride: 32,
@@ -64,13 +68,13 @@ namespace NitroSharp.Graphics
         public QuadVertex BottomLeft;
         public QuadVertex BottomRight;
 
-        public static (QuadGeometry, RectangleF) Create(
-            SizeF localBounds,
+        public static (QuadGeometry, DesignRect) Create(
+            DesignSize localBounds,
             in Matrix4x4 transform,
             Vector2 uvTopLeft,
             Vector2 uvBottomRight,
             in Vector4 color,
-            in RectangleF? constraintRect = null)
+            in DesignRect? constraintRect = null)
         {
             QuadGeometry quad = default;
             ref QuadVertex topLeft = ref quad.TopLeft;
@@ -105,26 +109,39 @@ namespace NitroSharp.Graphics
             bottomRight.Position = Vector2.Transform(bottomRight.Position, transform);
             bottomRight.Color = color;
 
-            RectangleF boundingRect = quad.GetBoundingRect();
-            if (constraintRect is RectangleF constraint)
+            DesignRect boundingRect = quad.GetBoundingRect();
+            if (constraintRect is { } constraint)
             {
                 quad.Constrain(ref boundingRect, constraint);
             }
+
             return (quad, boundingRect);
         }
 
-        private RectangleF GetBoundingRect()
+        public (QuadGeometry, PhysicalRect) Scale(Scale<DesignPixel, ScreenPixel> conversion)
+        {
+            QuadGeometry quad = this;
+            var scale = Matrix4x4.CreateScale(conversion.Factor);
+            quad.TopLeft.Position = Vector2.Transform(quad.TopLeft.Position, scale);
+            quad.TopRight.Position = Vector2.Transform(quad.TopRight.Position, scale);
+            quad.BottomLeft.Position = Vector2.Transform(quad.BottomLeft.Position, scale);
+            quad.BottomRight.Position = Vector2.Transform(quad.BottomRight.Position, scale);
+            PhysicalRect boundingRect = quad.GetBoundingRect().Convert(Scale<DesignPixel, ScreenPixel>.Identity);
+            return (quad, boundingRect);
+        }
+
+        private DesignRect GetBoundingRect()
         {
             float left = MathF.Min(TopLeft.Position.X, BottomLeft.Position.X);
             float top = MathF.Min(TopLeft.Position.Y, TopRight.Position.Y);
             float right = MathF.Max(TopRight.Position.X, BottomRight.Position.X);
             float bottom = MathF.Max(BottomLeft.Position.Y, BottomRight.Position.Y);
-            return RectangleF.FromLTRB(left, top, right, bottom);
+            return DesignRect.FromLTRB(left, top, right, bottom);
         }
 
-        private void Constrain(ref RectangleF boundingRect, in RectangleF constraintRect)
+        private void Constrain(ref DesignRect boundingRect, in DesignRect constraintRect)
         {
-            static void clamp(ref QuadVertex vert, Vector2 bounds, in RectangleF constraint)
+            static void clamp(ref QuadVertex vert, Vector2 bounds, in DesignRect constraint)
             {
                 Vector2 oldPos = vert.Position;
                 vert.Position = Vector2.Clamp(

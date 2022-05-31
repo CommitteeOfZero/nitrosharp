@@ -14,7 +14,7 @@ namespace NitroSharp.Graphics
 
         public static Transform Default => new() { Scale = Vector3.One };
 
-        public Matrix4x4 GetMatrix(Size? unconstrainedBounds = null)
+        public Matrix4x4 GetMatrix(DesignSize? unconstrainedBounds = null)
         {
             static float rad(float deg) => deg / 180.0f * MathF.PI;
 

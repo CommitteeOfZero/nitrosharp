@@ -35,23 +35,24 @@ namespace NitroSharp.Graphics
         private readonly Swapchain _mainSwapchain;
 
         private readonly DrawBatch _offscreenBatch;
-
-        public ViewProjection OrthoProjection { get; }
-        public ViewProjection PerspectiveViewProjection { get; }
+        private readonly Sampler _linearSampler;
 
         public RenderContext(
             GameWindow window,
-            Configuration gameConfiguration,
+            Config config,
+            GameProfile gameProfile,
             GraphicsDevice graphicsDevice,
             Swapchain swapchain,
             ContentManager contentManager,
             GlyphRasterizer glyphRasterizer,
             SystemVariableLookup systemVariables)
         {
-            DesignResolution = new Size(
-                (uint)gameConfiguration.WindowWidth,
-                (uint)gameConfiguration.WindowHeight
-            );
+            DesignResolution = gameProfile.DesignResolution;
+            RenderResolution = config.RenderResolution;
+
+            WorldToDeviceScale = window.ScaleFactor;
+            DeviceToWorldScale = new DeviceToWorldScale((float)DesignResolution.Width / RenderResolution.Width);
+
             Window = window;
             GraphicsDevice = graphicsDevice;
             ResourceFactory = graphicsDevice.ResourceFactory;
@@ -72,13 +73,13 @@ namespace NitroSharp.Graphics
 
             OrthoProjection = ViewProjection.CreateOrtho(
                 graphicsDevice,
-                new RectangleF(Vector2.Zero, DesignResolution)
+                new PhysicalRectU(PhysicalPointU.Zero, RenderResolution)
             );
 
             var view = Matrix4x4.CreateLookAt(Vector3.Zero, Vector3.UnitZ, Vector3.UnitY);
             var projection = Matrix4x4.CreatePerspectiveFieldOfView(
                 MathF.PI / 3.0f,
-                (float)DesignResolution.Width / DesignResolution.Height,
+                (float)RenderResolution.Width / RenderResolution.Height,
                 0.1f,
                 1000.0f
             );
@@ -114,21 +115,35 @@ namespace NitroSharp.Graphics
             Text = new TextRenderContext(
                 GraphicsDevice,
                 GlyphRasterizer,
-                TextureCache
+                TextureCache,
+                WorldToDeviceScale
             );
 
             MainBatch = new DrawBatch(this);
             _offscreenBatch = new DrawBatch(this);
 
-            Icons = LoadIcons(gameConfiguration);
+            Icons = LoadIcons(gameProfile);
+
+            var samplerDesc = SamplerDescription.Aniso4x with
+            {
+                AddressModeU = SamplerAddressMode.Clamp,
+                AddressModeV = SamplerAddressMode.Clamp,
+                AddressModeW = SamplerAddressMode.Clamp,
+            };
+            _linearSampler = ResourceFactory.CreateSampler(ref samplerDesc);
         }
 
         public GameWindow Window { get; }
+        public DesignSizeU DesignResolution { get; }
+        public PhysicalSizeU RenderResolution { get; }
+        public WorldToDeviceScale WorldToDeviceScale { get; }
+        public DeviceToWorldScale DeviceToWorldScale { get; }
+        public ViewProjection OrthoProjection { get; }
+        public ViewProjection PerspectiveViewProjection { get; }
         public MeshList<QuadVertex> Quads { get; }
         public MeshList<QuadVertexUV3> QuadsUV3 { get; }
         public MeshList<CubeVertex> Cubes { get; }
 
-        public Size DesignResolution { get; }
         public GraphicsDevice GraphicsDevice { get; }
         public ResourceFactory ResourceFactory { get; }
 
@@ -174,7 +189,7 @@ namespace NitroSharp.Graphics
         public void BeginFrame(in FrameStamp frameStamp, bool clear)
         {
             _drawCommands.Begin();
-            RgbaFloat? clearColor = clear ? RgbaFloat.Black : (RgbaFloat?)null;
+            RgbaFloat? clearColor = clear ? RgbaFloat.Black : null;
             MainBatch.Begin(_drawCommands, _swapchainTarget, clearColor);
 
             _secondaryCommandList.Begin();
@@ -188,11 +203,11 @@ namespace NitroSharp.Graphics
             TransferCommands.Begin();
         }
 
-        private AnimatedIcons LoadIcons(Configuration config)
+        private AnimatedIcons LoadIcons(GameProfile gameProfile)
         {
             CommandList cl = RentCommandList();
             cl.Begin();
-            var waitLine = Icon.Load(this, config.IconPathPatterns.WaitLine);
+            var waitLine = Icon.Load(this, gameProfile.IconPathPatterns.WaitLine);
             cl.End();
             GraphicsDevice.SubmitCommands(cl);
             ReturnCommandList(cl);
@@ -207,7 +222,7 @@ namespace NitroSharp.Graphics
 
         public Texture CreateFullscreenTexture(bool staging = false)
         {
-            Size size = _swapchainTarget.Size;
+            PhysicalSizeU size = _swapchainTarget.Size;
             var desc = TextureDescription.Texture2D(
                 size.Width, size.Height,
                 mipLevels: 1, arrayLayers: 1,
@@ -254,14 +269,27 @@ namespace NitroSharp.Graphics
         }
 
         public void Present()
-            => GraphicsDevice.SwapBuffers(_mainSwapchain);
-
-        public Sampler GetSampler(FilterMode filterMode) => filterMode switch
         {
-            FilterMode.Linear => GraphicsDevice.LinearSampler,
-            FilterMode.Point => GraphicsDevice.PointSampler,
-            _ => ThrowHelper.Unreachable<Sampler>()
-        };
+            GraphicsDevice.SwapBuffers(_mainSwapchain);
+        }
+
+        public Sampler GetSampler(FilterMode filterMode, PhysicalSize? bounds = null)
+        {
+            if (bounds is { } size)
+            {
+                if (size.Width < 32 || size.Height < 32)
+                {
+                    return GraphicsDevice.PointSampler;
+                }
+            }
+
+            return filterMode switch
+            {
+                FilterMode.Linear => _linearSampler,
+                FilterMode.Point => _linearSampler,
+                _ => ThrowHelper.Unreachable<Sampler>()
+            };
+        }
 
         private Texture CreateWhiteTexture()
         {
@@ -290,6 +318,7 @@ namespace NitroSharp.Graphics
         public void Dispose()
         {
             GraphicsDevice.WaitForIdle();
+            _linearSampler.Dispose();
             OrthoProjection.Dispose();
             Icons.Dispose();
             TransferCommands.Dispose();

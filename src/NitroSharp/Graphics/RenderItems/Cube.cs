@@ -40,7 +40,7 @@ namespace NitroSharp.Graphics
         private readonly Texture _texture;
         private readonly string[] _texturePaths;
 
-        public static ReadOnlySpan<CubeVertex> Vertices => new[]
+        private static ReadOnlySpan<CubeVertex> Vertices => new[]
         {
             // Top
             new CubeVertex(-0.5f,0.5f,-0.5f),

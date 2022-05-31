@@ -37,23 +37,8 @@ namespace FreeTypeBindings
             return new Fixed26Dot6(value);
         }
 
-        private Fixed26Dot6(double value)
-        {
-            Value = (int)(value * 64);
-        }
-
-        private Fixed26Dot6(decimal value)
-        {
-            Value = (int)(value * 64);
-        }
-
         public int Value { get; private set; }
 
-        public static implicit operator Fixed26Dot6(short value) => new Fixed26Dot6(value);
-        public static implicit operator Fixed26Dot6(int value) => new Fixed26Dot6(value);
-        public static implicit operator Fixed26Dot6(float value) => new Fixed26Dot6(value);
-        public static implicit operator Fixed26Dot6(double value) => new Fixed26Dot6(value);
-        public static implicit operator Fixed26Dot6(decimal value) => new Fixed26Dot6(value);
         public static explicit operator int(Fixed26Dot6 value) => value.ToInt32();
         public static explicit operator float(Fixed26Dot6 value) => value.ToSingle();
         public static implicit operator double(Fixed26Dot6 value) => value.ToDouble();

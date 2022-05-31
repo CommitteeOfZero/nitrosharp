@@ -86,7 +86,7 @@ namespace NitroSharp.NsScript.VM
         /// </summary>
         public virtual void CreateTextBlock(in EntityPath entityPath, int priority, NsCoordinate x, NsCoordinate y, NsTextDimension width, NsTextDimension height, string markup) { }
 
-        public virtual void SetFont(string family, int size, NsColor color, NsColor outlineColor, NsFontWeight weight, NsOutlineOffset outlineOffset) { }
+        public virtual void SetFont(string family, uint size, NsColor color, NsColor outlineColor, NsFontWeight weight, NsOutlineOffset outlineOffset) { }
         public virtual void LoadDialogueBlock(in DialogueBlockToken blockToken, uint maxWidth, uint maxHeight, int letterSpacing, int lineSpacing) { }
         public virtual void WaitText(EntityQuery query, TimeSpan timeout) { }
 
@@ -147,7 +147,7 @@ namespace NitroSharp.NsScript.VM
 
         // --- NitroSharp only ---
         public virtual void ClearDialoguePage(in EntityPath dialoguePage) { }
-        public virtual void AppendDialogue(in EntityPath dialoguePage, string text) { }
+        public virtual void AppendDialogue(in EntityPath dialoguePage, string markup) { }
         public virtual bool HandleInputEvents(in EntityPath uiElementPath) => false;
         public virtual void AssertTrue(bool value) { }
 

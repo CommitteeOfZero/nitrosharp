@@ -20,7 +20,7 @@ namespace NitroSharp.Saving
 
         private readonly string _commonDir;
 
-        public GameSaveManager(Configuration configuration)
+        public GameSaveManager(GameProfile gameProfile)
         {
             string localAppData = Environment.GetFolderPath(
                 Environment.SpecialFolder.LocalApplicationData,
@@ -28,9 +28,9 @@ namespace NitroSharp.Saving
             );
             SaveDirectory = Path.Combine(
                 localAppData,
-                Path.Combine("Committee of Zero", configuration.ProductName)
+                Path.Combine("Committee of Zero", gameProfile.ProductName)
             );
-            SaveDirectory = Path.Combine(SaveDirectory, configuration.ProfileName);
+            SaveDirectory = Path.Combine(SaveDirectory, gameProfile.Name);
             Directory.CreateDirectory(SaveDirectory);
             _commonDir = Path.Combine(SaveDirectory, "common");
             Directory.CreateDirectory(_commonDir);
@@ -58,7 +58,7 @@ namespace NitroSharp.Saving
                 return;
             }
 
-            var savingCtx = new GameSavingContext(ctx.MainProcess.World);
+            var savingCtx = new GameSavingContext(ctx.MainProcess.World, ctx.RenderContext);
             var buffer = new ArrayBufferWriter<byte>();
             var writer = new MessagePackWriter(buffer);
 
@@ -184,7 +184,7 @@ namespace NitroSharp.Saving
         {
             MappedResource map = ctx.GraphicsDevice.Map(texture, MapMode.Read);
             var span = new ReadOnlySpan<Bgra32>(map.Data.ToPointer(), (int)map.SizeInBytes / 4);
-            Image<Bgra32> image = Image.LoadPixelData(span, (int)texture.Width, (int)texture.Height);
+            var image = Image.LoadPixelData(span, (int)texture.Width, (int)texture.Height);
             ctx.GraphicsDevice.Unmap(texture);
             if (dstWidth != texture.Width || dstHeight != texture.Height)
             {

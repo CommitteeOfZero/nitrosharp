@@ -5,7 +5,7 @@ using System.Runtime.CompilerServices;
 using NitroSharp.Utilities;
 using Veldrid;
 
-namespace NitroSharp.Graphics
+namespace NitroSharp.Graphics.Core
 {
     internal readonly ref struct GpuListSlice<T>
         where T : unmanaged
@@ -72,9 +72,12 @@ namespace NitroSharp.Graphics
 
         private ref T Get(uint index)
         {
-            static void notMapped() =>
+            static void notMapped()
+            {
                 throw new InvalidOperationException(
-                    "Cannot access the contents of the buffer as it is not currently mapped.");
+                    "Cannot access the contents of the buffer as it is not currently mapped."
+                );
+            }
 
             static void outOfBounds() => throw new IndexOutOfRangeException();
 

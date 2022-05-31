@@ -11,33 +11,21 @@ namespace NitroSharp
 {
     internal sealed partial class World : IDisposable
     {
-        internal readonly struct EntityRec
+        internal readonly record struct EntityRec(
+            Entity Entity,
+            EntityGroup Group,
+            EntityLocation Location)
         {
-            public readonly Entity Entity;
-            public readonly EntityGroup Group;
-            public readonly EntityLocation Location;
-
-            public EntityRec(
-                Entity entity,
-                EntityGroup group,
-                EntityLocation location)
-            {
-                Entity = entity;
-                Group = group;
-                Location = location;
-            }
-
-            public bool IsEnabled
-                => Location.Bucket == EntityBucket.Active;
+            public bool IsEnabled => Location.Bucket == EntityBucket.Active;
 
             public EntityRec WithBucket(EntityBucket newBucket)
             {
                 var location = new EntityLocation(newBucket, Location.Index);
-                return new EntityRec(Entity, Group, location);
+                return this with { Location = location };
             }
 
             public EntityRec WithLocation(EntityLocation newLocation)
-                => new(Entity, Group, newLocation);
+                => this with { Location = newLocation };
         }
 
         private sealed class EntityContext
@@ -98,7 +86,7 @@ namespace NitroSharp
                 _contextLookup.Remove(id);
                 foreach (EntityId entityId in ctx.Entities)
                 {
-                    if (Get(entityId) is Entity { IsIdle: true, IsLocked: false } entity)
+                    if (Get(entityId) is { IsIdle: true, IsLocked: false } entity)
                     {
                         DestroyEntity(entity);
                     }
@@ -116,7 +104,7 @@ namespace NitroSharp
 
             while (_markedEntities.TryDequeue(out EntityId id))
             {
-                if (Get(id) is Entity entity)
+                if (Get(id) is { } entity)
                 {
                     if (entity.IsIdle)
                     {
@@ -143,7 +131,7 @@ namespace NitroSharp
 
         public void SetAlias(in EntityId entityId, in EntityPath alias)
         {
-            if (Get(entityId) is Entity entity)
+            if (Get(entityId) is { } entity)
             {
                 if (!entity.Alias.IsEmpty)
                 {
@@ -160,7 +148,7 @@ namespace NitroSharp
 
         public Entity? Get(uint contextId, in EntityPath entityPath)
         {
-            return CreateId(contextId, entityPath) is EntityId { IsValid: true } id
+            return CreateId(contextId, entityPath) is { IsValid: true } id
                 ? Get(id)
                 : null;
         }
@@ -175,7 +163,7 @@ namespace NitroSharp
         public bool ResolvePath(uint contextId, in EntityPath path, out ResolvedEntityPath resolvedPath)
         {
             resolvedPath = default;
-            if (CreateId(contextId, path) is not EntityId { IsValid: true } id)
+            if (CreateId(contextId, path) is not { IsValid: true } id)
             {
                 return false;
             }
@@ -183,7 +171,7 @@ namespace NitroSharp
             if (path.GetParent(out EntityPath parentPath)
                 && CreateId(contextId, parentPath) is { IsValid: true } parentId)
             {
-                if (Get(parentId) is Entity parent)
+                if (Get(parentId) is { } parent)
                 {
                     resolvedPath = new ResolvedEntityPath(parentId.Context, id, parent);
                     return true;
@@ -204,7 +192,9 @@ namespace NitroSharp
         }
 
         public void Add(VmThread thread, bool enable = true)
-            => Add(thread, _vmThreads, enable);
+        {
+            Add(thread, _vmThreads, enable);
+        }
 
         public T Add<T>(T renderItem, bool enable = true)
             where T : RenderItem
@@ -214,13 +204,19 @@ namespace NitroSharp
         }
 
         public void Add(ColorSource colorSource, bool enable = true)
-            => Add(colorSource, _colorSources, enable);
+        {
+            Add(colorSource, _colorSources, enable);
+        }
 
         public void Add(Image image, bool enable = true)
-            => Add(image, _images, enable);
+        {
+            Add(image, _images, enable);
+        }
 
         public void Add(Choice choice, bool enable = true)
-            => Add(choice, _choices, enable);
+        {
+            Add(choice, _choices, enable);
+        }
 
         public Sound Add(Sound sound, bool enable = true)
         {
@@ -235,24 +231,28 @@ namespace NitroSharp
         }
 
         public void EnableEntity(Entity entity)
-            => _pendingBucketChanges.Add((entity.Id, EntityBucket.Active));
+        {
+            _pendingBucketChanges.Add((entity.Id, EntityBucket.Active));
+        }
 
         public void DisableEntity(Entity entity)
-            => _pendingBucketChanges.Add((entity.Id, EntityBucket.Inactive));
+        {
+            _pendingBucketChanges.Add((entity.Id, EntityBucket.Inactive));
+        }
 
         public void DestroyEntity(Entity entity)
         {
             DestroyEntity(entity.Id);
         }
 
-        public void DestroyEntity(in EntityId id)
+        private void DestroyEntity(in EntityId id)
         {
             if (!GetRecord(id, out EntityRec rec)) { return; }
             Entity entity = rec.Entity;
             EntityMove move = rec.Group.Remove(rec.Location);
             UpdateLocation(move);
 
-            if (entity.Parent is Entity parent)
+            if (entity.Parent is { } parent)
             {
                 ((EntityInternal)parent).RemoveChild(entity);
             }
@@ -292,7 +292,7 @@ namespace NitroSharp
                         : EntityId.Invalid;
                 }
 
-                if (CreateId(contextId, parentAlias) is EntityId { IsValid: true } parentId)
+                if (CreateId(contextId, parentAlias) is { IsValid: true } parentId)
                 {
                     string newPath = path.Value.Replace(parentAlias.Value, parentId.Path);
                     return new EntityId(
@@ -320,7 +320,7 @@ namespace NitroSharp
                 DestroyEntity(id);
             }
 
-            if (entity.Parent is Entity parent)
+            if (entity.Parent is { } parent)
             {
                 ((EntityInternal)parent).AddChild(entity);
             }
@@ -558,7 +558,9 @@ namespace NitroSharp
             uint contextId,
             in EntityId id,
             Entity? parent)
-            => (ContextId, Id, Parent) = (contextId, id, parent);
+        {
+            (ContextId, Id, Parent) = (contextId, id, parent);
+        }
     }
 
     internal enum EntityBucket
@@ -573,7 +575,9 @@ namespace NitroSharp
         public readonly uint Index;
 
         public EntityLocation(EntityBucket bucket, uint index)
-            => (Bucket, Index) = (bucket, index);
+        {
+            (Bucket, Index) = (bucket, index);
+        }
     }
 
     internal readonly struct EntityMove
@@ -582,7 +586,9 @@ namespace NitroSharp
         public readonly EntityLocation NewLocation;
 
         public EntityMove(Entity? entity, EntityLocation newLocation)
-            => (Entity, NewLocation) = (entity, newLocation);
+        {
+            (Entity, NewLocation) = (entity, newLocation);
+        }
 
         public static EntityMove Empty => default;
     }
@@ -593,7 +599,9 @@ namespace NitroSharp
         public readonly EntityMove Swap;
 
         public BucketChangeResult(EntityLocation newLocation, EntityMove swap)
-            => (NewLocation, Swap) = (newLocation, swap);
+        {
+            (NewLocation, Swap) = (newLocation, swap);
+        }
     }
 
     internal abstract class EntityGroup
@@ -638,8 +646,7 @@ namespace NitroSharp
 
         public ReadOnlySpan<T> SortActive() => _group.SortActive();
 
-        public static implicit operator SortableEntityGroupView<T>(
-            SortableEntityGroup<T> group)
+        public static implicit operator SortableEntityGroupView<T>(SortableEntityGroup<T> group)
             => new(group);
     }
 

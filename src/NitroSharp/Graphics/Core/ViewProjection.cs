@@ -6,7 +6,7 @@ namespace NitroSharp.Graphics.Core
 {
     internal sealed class ViewProjection : IDisposable
     {
-        public static ViewProjection CreateOrtho(GraphicsDevice graphicsDevice, in RectangleF viewport)
+        public static ViewProjection CreateOrtho(GraphicsDevice graphicsDevice, in PhysicalRectU viewport)
         {
             var projection = Matrix4x4.CreateOrthographicOffCenter(
                 left: viewport.Left, right: viewport.Right,
@@ -32,7 +32,7 @@ namespace NitroSharp.Graphics.Core
         public ResourceLayout ResourceLayout { get; }
         public GpuBuffer<Matrix4x4> Buffer { get; }
 
-        public void UpdateOrtho(CommandList cl, in RectangleF viewport)
+        public void UpdateOrtho(CommandList cl, in PhysicalRect viewport)
         {
             var projection = Matrix4x4.CreateOrthographicOffCenter(
                 left: viewport.Left, right: viewport.Right,
@@ -42,7 +42,7 @@ namespace NitroSharp.Graphics.Core
             cl.UpdateBuffer(Buffer.VdBuffer, 0, ref projection);
         }
 
-        public void UpdateOrtho(GraphicsDevice graphicsDevice, in RectangleF viewport)
+        public void UpdateOrtho(GraphicsDevice graphicsDevice, in PhysicalRect viewport)
         {
             var projection = Matrix4x4.CreateOrthographicOffCenter(
                 left: viewport.Left, right: viewport.Right,

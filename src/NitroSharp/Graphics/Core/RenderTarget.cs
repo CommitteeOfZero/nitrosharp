@@ -1,5 +1,4 @@
 using System;
-using System.Numerics;
 using Veldrid;
 
 namespace NitroSharp.Graphics.Core
@@ -14,7 +13,7 @@ namespace NitroSharp.Graphics.Core
 
         public RenderTarget(
             GraphicsDevice graphicsDevice,
-            Size size,
+            PhysicalSizeU size,
             PixelFormat format = PixelFormat.B8_G8_R8_A8_UNorm)
         {
             var textureDesc = TextureDescription.Texture2D(
@@ -32,7 +31,7 @@ namespace NitroSharp.Graphics.Core
             OutputDescription = Framebuffer.OutputDescription;
             OrthoProjection = ViewProjection.CreateOrtho(
                 graphicsDevice,
-                new RectangleF(Vector2.Zero, Size)
+                new PhysicalRectU(PhysicalPointU.Zero, Size)
             );
         }
 
@@ -41,15 +40,15 @@ namespace NitroSharp.Graphics.Core
             Framebuffer = existingFramebuffer;
             ColorTarget = existingFramebuffer.ColorTargets[0].Target;
             _ownsFramebuffer = false;
-            Size = new Size(ColorTarget.Width, ColorTarget.Height);
+            Size = new PhysicalSizeU(ColorTarget.Width, ColorTarget.Height);
             OutputDescription = Framebuffer.OutputDescription;
             OrthoProjection = ViewProjection.CreateOrtho(
                 graphicsDevice,
-                new RectangleF(Vector2.Zero, Size)
+                new PhysicalRectU(PhysicalPointU.Zero, Size)
             );
         }
 
-        public Size Size { get; }
+        public PhysicalSizeU Size { get; }
         public Framebuffer Framebuffer { get; }
         public Texture ColorTarget { get; }
         public OutputDescription OutputDescription { get; }

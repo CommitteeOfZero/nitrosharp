@@ -43,15 +43,15 @@ namespace NitroSharp.Graphics
 
         public override bool IsIdle => !Stream.IsPlaying;
 
-        public override Size GetUnconstrainedBounds(RenderContext ctx)
+        public override DesignSize GetUnconstrainedBounds(RenderContext ctx)
         {
-            Size res = Stream.VideoResolution;
+            DesignSizeU res = Stream.VideoResolution.Convert(Scale<ScreenPixel, DesignPixel>.Identity);
             if (_enableAlpha)
             {
-                res = new Size(res.Width, res.Height / 2);
+                res = res with { Height = res.Height / 2 };
             }
 
-            return res;
+            return res.ToSizeF();
         }
 
         protected override void Render(RenderContext ctx, DrawBatch batch)
@@ -61,7 +61,6 @@ namespace NitroSharp.Graphics
                 return;
             }
 
-            RenderContext context = ctx;
             GraphicsDevice gd = ctx.GraphicsDevice;
             if (Stream.GetNextFrame(out YCbCrFrame frame))
             {
@@ -80,7 +79,7 @@ namespace NitroSharp.Graphics
             if (!_playbackStarted) { return; }
 
             (Texture luma, Texture chroma) = Stream.VideoFrames.GetDeviceTextures();
-            VideoShaderResources shaderResources = context.ShaderResources.Video;
+            VideoShaderResources shaderResources = ctx.ShaderResources.Video;
             ViewProjection vp = batch.Target.OrthoProjection;
 
             Vector4 enableAlpha = _enableAlpha ? Vector4.One : Vector4.Zero;
@@ -93,7 +92,7 @@ namespace NitroSharp.Graphics
                         shaderResources.InputLayout,
                         luma,
                         chroma,
-                        context.GetSampler(FilterMode.Linear)
+                        ctx.GetSampler(FilterMode.Linear)
                     ),
                     new ResourceSetKey(
                         shaderResources.ParamLayout,

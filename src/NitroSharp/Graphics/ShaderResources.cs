@@ -64,6 +64,11 @@ namespace NitroSharp.Graphics
 
     internal sealed class QuadShaderResources : IDisposable
     {
+        private readonly Pipeline _alphaBlend;
+        private readonly Pipeline _additiveBlend;
+        private readonly Pipeline _reverseSubtractiveBlend;
+        private readonly Pipeline _multiplicativeBlend;
+
         public QuadShaderResources(
             GraphicsDevice graphicsDevice,
             ShaderLibrary shaderLibrary,
@@ -109,7 +114,7 @@ namespace NitroSharp.Graphics
                 new[] { viewProjectionLayout, ResourceLayout },
                 outputDescription
             );
-            AlphaBlend = factory.CreateGraphicsPipeline(ref pipelineDesc);
+            _alphaBlend = factory.CreateGraphicsPipeline(ref pipelineDesc);
 
             pipelineDesc.BlendState = new BlendStateDescription
             {
@@ -127,7 +132,7 @@ namespace NitroSharp.Graphics
                     }
                 }
             };
-            AdditiveBlend = factory.CreateGraphicsPipeline(ref pipelineDesc);
+            _additiveBlend = factory.CreateGraphicsPipeline(ref pipelineDesc);
 
             pipelineDesc.BlendState = new BlendStateDescription
             {
@@ -145,7 +150,7 @@ namespace NitroSharp.Graphics
                     }
                 }
             };
-            ReverseSubtractiveBlend = factory.CreateGraphicsPipeline(ref pipelineDesc);
+            _reverseSubtractiveBlend = factory.CreateGraphicsPipeline(ref pipelineDesc);
 
             pipelineDesc.BlendState = new BlendStateDescription
             {
@@ -163,38 +168,33 @@ namespace NitroSharp.Graphics
                     }
                 }
             };
-            MultiplicativeBlend = factory.CreateGraphicsPipeline(ref pipelineDesc);
+            _multiplicativeBlend = factory.CreateGraphicsPipeline(ref pipelineDesc);
 
-            AlphaMaskPositionBuffer = new GpuBuffer<Vector4>(
+            AlphaMaskPositionBuffer = new GpuBuffer<(Vector2, Vector2)>(
                 graphicsDevice,
                 BufferUsage.UniformBuffer | BufferUsage.Dynamic,
-                Vector4.Zero
+                (Vector2.Zero, Vector2.One)
             );
         }
 
         public ResourceLayout ResourceLayout { get; }
-        public Pipeline AlphaBlend { get; }
-        public Pipeline AdditiveBlend { get; }
-        public Pipeline ReverseSubtractiveBlend { get; }
-        public Pipeline MultiplicativeBlend { get; }
-
-        public GpuBuffer<Vector4> AlphaMaskPositionBuffer { get; }
+        public GpuBuffer<(Vector2, Vector2)> AlphaMaskPositionBuffer { get; }
 
         public Pipeline GetPipeline(BlendMode blendMode) => blendMode switch
         {
-            BlendMode.Alpha => AlphaBlend,
-            BlendMode.Additive => AdditiveBlend,
-            BlendMode.ReverseSubtractive => ReverseSubtractiveBlend,
-            BlendMode.Multiplicative => MultiplicativeBlend,
+            BlendMode.Alpha => _alphaBlend,
+            BlendMode.Additive => _additiveBlend,
+            BlendMode.ReverseSubtractive => _reverseSubtractiveBlend,
+            BlendMode.Multiplicative => _multiplicativeBlend,
             _ => ThrowHelper.UnexpectedValue<Pipeline>()
         };
 
         public void Dispose()
         {
-            AlphaBlend.Dispose();
-            AdditiveBlend.Dispose();
-            ReverseSubtractiveBlend.Dispose();
-            MultiplicativeBlend.Dispose();
+            _alphaBlend.Dispose();
+            _additiveBlend.Dispose();
+            _reverseSubtractiveBlend.Dispose();
+            _multiplicativeBlend.Dispose();
             ResourceLayout.Dispose();
             AlphaMaskPositionBuffer.Dispose();
         }
@@ -252,6 +252,10 @@ namespace NitroSharp.Graphics
 
     internal sealed class VideoShaderResources : IDisposable
     {
+        private readonly Pipeline _alphaBlend;
+        private readonly Pipeline _additiveBlend;
+        private readonly Pipeline _multiplicativeBlend;
+
         public VideoShaderResources(
             GraphicsDevice graphicsDevice,
             ShaderLibrary shaderLibrary,
@@ -300,7 +304,7 @@ namespace NitroSharp.Graphics
                 new[] { viewProjectionLayout, InputLayout, ParamLayout },
                 outputDescription
             );
-            AlphaBlend = factory.CreateGraphicsPipeline(ref pipelineDesc);
+            _alphaBlend = factory.CreateGraphicsPipeline(ref pipelineDesc);
             pipelineDesc.BlendState = new BlendStateDescription
             {
                 AttachmentStates = new[]
@@ -317,7 +321,7 @@ namespace NitroSharp.Graphics
                     }
                 }
             };
-            AdditiveBlend = factory.CreateGraphicsPipeline(ref pipelineDesc);
+            _additiveBlend = factory.CreateGraphicsPipeline(ref pipelineDesc);
             pipelineDesc.BlendState = new BlendStateDescription
             {
                 AttachmentStates = new[]
@@ -334,7 +338,7 @@ namespace NitroSharp.Graphics
                     }
                 }
             };
-            MultiplicativeBlend = factory.CreateGraphicsPipeline(ref pipelineDesc);
+            _multiplicativeBlend = factory.CreateGraphicsPipeline(ref pipelineDesc);
             EnableAlphaBuffer = new GpuBuffer<Vector4>(
                 graphicsDevice,
                 BufferUsage.UniformBuffer,
@@ -344,24 +348,21 @@ namespace NitroSharp.Graphics
 
         public ResourceLayout InputLayout { get; }
         public ResourceLayout ParamLayout { get; }
-        public Pipeline AlphaBlend { get; }
-        public Pipeline AdditiveBlend { get; }
-        public Pipeline MultiplicativeBlend { get; }
         public GpuBuffer<Vector4> EnableAlphaBuffer { get; }
 
         public Pipeline GetPipeline(BlendMode blendMode) => blendMode switch
         {
-            BlendMode.Alpha => AlphaBlend,
-            BlendMode.Additive => AdditiveBlend,
-            BlendMode.Multiplicative => MultiplicativeBlend,
+            BlendMode.Alpha => _alphaBlend,
+            BlendMode.Additive => _additiveBlend,
+            BlendMode.Multiplicative => _multiplicativeBlend,
             _ => ThrowHelper.UnexpectedValue<Pipeline>()
         };
 
         public void Dispose()
         {
-            AlphaBlend.Dispose();
+            _alphaBlend.Dispose();
             InputLayout.Dispose();
-            AdditiveBlend.Dispose();
+            _additiveBlend.Dispose();
             EnableAlphaBuffer.Dispose();
         }
     }
@@ -528,6 +529,10 @@ namespace NitroSharp.Graphics
 
     internal sealed class EffectShaderResources : IDisposable
     {
+        private readonly Pipeline _blit;
+        private readonly Pipeline _grayscale;
+        private readonly Pipeline _boxBlur;
+
         public EffectShaderResources(
             GraphicsDevice graphicsDevice,
             ShaderLibrary shaderLibrary,
@@ -547,9 +552,9 @@ namespace NitroSharp.Graphics
                 )
             ));
 
-            Blit = createPipeline("blit", ResourceLayout);
-            Grayscale = createPipeline("grayscale", ResourceLayout);
-            BoxBlur = createPipeline("boxblur", ResourceLayout);
+            _blit = createPipeline("blit", ResourceLayout);
+            _grayscale = createPipeline("grayscale", ResourceLayout);
+            _boxBlur = createPipeline("boxblur", ResourceLayout);
 
             Pipeline createPipeline(string shaderSetName, ResourceLayout layout)
             {
@@ -572,26 +577,23 @@ namespace NitroSharp.Graphics
         }
 
         public ResourceLayout ResourceLayout { get; }
-        public Pipeline Blit { get; }
-        public Pipeline Grayscale { get; }
-        public Pipeline BoxBlur { get; }
 
         public Pipeline GetPipeline(EffectKind effect)
         {
             return effect switch
             {
-                EffectKind.Blit => Blit,
-                EffectKind.Grayscale => Grayscale,
-                EffectKind.BoxBlur => BoxBlur,
+                EffectKind.Blit => _blit,
+                EffectKind.Grayscale => _grayscale,
+                EffectKind.BoxBlur => _boxBlur,
                 _ => ThrowHelper.UnexpectedValue<Pipeline>()
             };
         }
 
         public void Dispose()
         {
-            Blit.Dispose();
-            Grayscale.Dispose();
-            BoxBlur.Dispose();
+            _blit.Dispose();
+            _grayscale.Dispose();
+            _boxBlur.Dispose();
             ResourceLayout.Dispose();
         }
     }

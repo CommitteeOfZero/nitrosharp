@@ -5,23 +5,7 @@ using MessagePack;
 namespace NitroSharp.Text
 {
     [Persistable]
-    internal readonly partial struct FontFaceKey : IEquatable<FontFaceKey>
-    {
-        public string FamilyName { get; init; }
-        public FontStyle Style { get; init; }
-
-        public FontFaceKey(string familyName, FontStyle style)
-        {
-            FamilyName = familyName;
-            Style = style;
-        }
-
-        public bool Equals(FontFaceKey other)
-            => FamilyName.Equals(other.FamilyName) && Style == other.Style;
-
-        public override int GetHashCode() => HashCode.Combine(FamilyName, Style);
-        public override string ToString() => $"{FamilyName} {Style}";
-    }
+    internal readonly partial record struct FontFaceKey(string FamilyName, FontStyle Style);
 
     [Flags]
     internal enum FontStyle
@@ -32,13 +16,15 @@ namespace NitroSharp.Text
         Bold = 1 << 2
     }
 
-    internal readonly struct PtFontSize : IEquatable<PtFontSize>
+    public readonly record struct PtFontSize(Fixed26Dot6 Value)
     {
-        public readonly Fixed26Dot6 Value;
+        public PtFontSize(uint value) : this(Fixed26Dot6.FromInt32((int)value))
+        {
+        }
 
         public PtFontSize(ref MessagePackReader reader)
+            : this(Fixed26Dot6.FromRawValue(reader.ReadInt32()))
         {
-            Value = Fixed26Dot6.FromRawValue(reader.ReadInt32());
         }
 
         public void Serialize(ref MessagePackWriter writer)
@@ -46,34 +32,29 @@ namespace NitroSharp.Text
             writer.WriteInt32(Value.Value);
         }
 
-        public PtFontSize(int value) => Value = Fixed26Dot6.FromInt32(value);
         public float ToFloat() => Value.ToSingle();
         public int ToInt32() => Value.ToInt32();
-        public override int GetHashCode() => Value.GetHashCode();
-        public bool Equals(PtFontSize other) => Value.Equals(other.Value);
 
-        public override string? ToString() => $"{Value.ToInt32()}pt";
+        public override string ToString() => $"{Value.ToInt32()}pt";
     }
 
-    internal readonly struct VerticalMetrics
+    internal readonly record struct VerticalMetrics(float Ascender, float Descender, float LineHeight)
     {
-        public VerticalMetrics(float ascender, float descender, float lineHeight)
-            => (Ascender, Descender, LineHeight) = (ascender, descender, lineHeight);
-
         /// <summary>
         /// The highest point that any glyph in the font extends to above
         /// the baseline. Typically positive.
         /// </summary>
-        public readonly float Ascender;
+        public readonly float Ascender = Ascender;
         /// <summary>
         /// The lowest point that any glyph in the font extends to below
         /// the baseline. Typically negative.
         /// </summary>
-        public readonly float Descender;
+        public readonly float Descender = Descender;
         /// <summary>
         /// The recommended distance between two consecutive baselines.
         /// </summary>
-        public readonly float LineHeight;
+        public readonly float LineHeight = LineHeight;
+
         /// <summary>
         /// The recommended gap between two lines of text,
         /// not including ascender and descender.
@@ -84,21 +65,5 @@ namespace NitroSharp.Text
             => LineHeight > other.LineHeight ? this : other;
     }
 
-    internal readonly struct GlyphDimensions
-    {
-        public readonly int Top;
-        public readonly int Left;
-        public readonly uint Width;
-        public readonly uint Height;
-        public readonly float Advance;
-
-        public GlyphDimensions(int top, int left, uint width, uint height, float advance)
-        {
-            Top = top;
-            Left = left;
-            Width = width;
-            Height = height;
-            Advance = advance;
-        }
-    }
+    internal readonly record struct GlyphDimensions(int Top, int Left, uint Width, uint Height, float Advance);
 }

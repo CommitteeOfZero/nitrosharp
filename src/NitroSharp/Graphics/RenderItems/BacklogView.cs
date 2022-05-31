@@ -9,10 +9,10 @@ namespace NitroSharp.Graphics
     internal sealed class BacklogView : RenderItem2D
     {
         private readonly Backlog _backlog;
-        private readonly FontConfiguration _fontConfig;
+        private readonly FontSettings _fontSettings;
         private readonly TextLayout _textLayout;
-        private readonly uint _lineHeight;
-        private readonly uint _visibleHeight;
+        private readonly DesignDimensionU _lineHeight;
+        private readonly DesignDimensionU _visibleHeight;
         private readonly int _maxLines;
 
         private (int start, int end) _range;
@@ -27,7 +27,7 @@ namespace NitroSharp.Graphics
             : base(path, priority)
         {
             _backlog = ctx.Backlog;
-            _fontConfig = ctx.ActiveProcess.FontConfig;
+            _fontSettings = ctx.ActiveProcess.FontSettings;
             SystemVariableLookup sys = ctx.VM.SystemVariables;
 
             uint x = (uint)sys.BacklogPositionX.AsNumber()!.Value;
@@ -36,11 +36,12 @@ namespace NitroSharp.Graphics
 
             uint glyphWidth = (uint)sys.BacklogCharacterWidth.AsNumber()!.Value;
             const uint glyphsPerLine = 32; // called "word_in_row" in system.ini
-            uint maxWidth = glyphWidth * glyphsPerLine;
-            _lineHeight = (uint)sys.BacklogRowInterval.AsNumber()!.Value;
+            var maxWidth = new DesignDimensionU(glyphWidth * glyphsPerLine);
+            _lineHeight = (DesignDimensionU)sys.BacklogRowInterval.AsNumber()!.Value;
+            _visibleHeight = (DesignDimensionU)(_lineHeight * _maxLines);
             _maxLines = (int)sys.BacklogRowMax.AsNumber()!.Value;
-            _visibleHeight = (uint)(_lineHeight * _maxLines);
-            _textLayout = new TextLayout(maxWidth, null, _lineHeight);
+            WorldToDeviceScale scale = ctx.RenderContext.WorldToDeviceScale;
+            _textLayout = new TextLayout(scale, maxWidth, maxHeight: null, fixedLineHeight: _lineHeight);
         }
 
         public EntityId Scrollbar { get; internal set; }
@@ -65,10 +66,10 @@ namespace NitroSharp.Graphics
                 {
                     var run = TextRun.Regular(
                         entry.Text.AsMemory(),
-                        _fontConfig.DefaultFont,
-                        _fontConfig.DefaultFontSize,
-                        new RgbaFloat(_fontConfig.DefaultTextColor),
-                        _fontConfig.DefaultOutlineColor?.ToRgbaFloat()
+                        _fontSettings.DefaultFont,
+                        _fontSettings.DefaultFontSize,
+                        new RgbaFloat(_fontSettings.DefaultTextColor),
+                        _fontSettings.DefaultOutlineColor?.ToRgbaFloat()
                     );
                     _textLayout.Append(ctx.GlyphRasterizer, run);
                     _entriesAdded++;
@@ -93,9 +94,10 @@ namespace NitroSharp.Graphics
 
         protected override void Render(RenderContext ctx, DrawBatch batch)
         {
-            var offset = new Vector2(0, -_range.start * _lineHeight);
-            Vector3 pos = Transform.Position;
-            var scissorRect = new RectangleU(
+            var offset = new Vector2(0, - _range.start * _lineHeight);
+
+            Vector3 pos = WorldMatrix.Translation;
+            var scissorRect = new PhysicalRect(
                 (uint)pos.X,
                 (uint)pos.Y,
                 _textLayout.MaxBounds.Width,
@@ -107,28 +109,25 @@ namespace NitroSharp.Graphics
                 _textLayout,
                 _glyphRun,
                 WorldMatrix,
-                offset,
+                new DesignPoint((uint)offset.X, (uint)offset.Y).Convert(ctx.WorldToDeviceScale),
                 scissorRect,
                 Color.A
             );
         }
 
-        private GlyphRun GetGlyphRun(Range span)
+        private GlyphRun GetGlyphRun(Range span) => new()
         {
-            return new()
-            {
-                Font = _fontConfig.DefaultFont,
-                FontSize = _fontConfig.DefaultFontSize,
-                Color = new RgbaFloat(_fontConfig.DefaultTextColor),
-                OutlineColor = _fontConfig.DefaultOutlineColor?.ToRgbaFloat() ?? RgbaFloat.White,
-                GlyphSpan = span,
-                Flags = GlyphRunFlags.Outline
-            };
-        }
+            Font = _fontSettings.DefaultFont,
+            FontSize = _fontSettings.DefaultFontSize,
+            Color = new RgbaFloat(_fontSettings.DefaultTextColor),
+            OutlineColor = _fontSettings.DefaultOutlineColor?.ToRgbaFloat() ?? RgbaFloat.White,
+            GlyphSpan = span,
+            Flags = GlyphRunFlags.Outline
+        };
 
-        public override Size GetUnconstrainedBounds(RenderContext ctx)
+        public override DesignSize GetUnconstrainedBounds(RenderContext ctx)
         {
-            return _textLayout.BoundingBox.Size.ToSize();
+            return _textLayout.BoundingBox.Convert(ctx.DeviceToWorldScale).Size;
         }
     }
 }

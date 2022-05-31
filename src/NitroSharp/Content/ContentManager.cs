@@ -22,7 +22,9 @@ namespace NitroSharp.Content
         public readonly FreeListHandle Handle;
 
         public AssetRef(ContentManager contentManager, string path, FreeListHandle handle)
-            => (_contentManager, Path, Handle) = (contentManager, path, handle);
+        {
+            (_contentManager, Path, Handle) = (contentManager, path, handle);
+        }
 
         public AssetRef<T> Clone()
         {
@@ -40,7 +42,7 @@ namespace NitroSharp.Content
         public override string ToString() => $"Asset '{Path}'";
     }
 
-    internal class ContentManager : IDisposable
+    internal sealed class ContentManager : IDisposable
     {
         private static readonly Encoding s_defaultEncoding;
 
@@ -60,7 +62,7 @@ namespace NitroSharp.Content
         private struct CacheEntry
         {
             public uint RefCount;
-            public Size TextureSize;
+            public PhysicalSizeU TextureSize;
             public IDisposable? Asset;
         }
 
@@ -128,13 +130,13 @@ namespace NitroSharp.Content
             }
         }
 
-        public Size GetTextureSize(AssetRef<Texture> textureRef)
+        public PhysicalSizeU GetTextureSize(AssetRef<Texture> textureRef)
             => _cache.Get(textureRef.Handle).TextureSize;
 
         public AssetRef<Texture>? RequestTexture(string path, bool staging = false)
             => RequestTexture(path, out _, staging);
 
-        private AssetRef<Texture>? RequestTexture(string path, out Size size, bool staging = false)
+        private AssetRef<Texture>? RequestTexture(string path, out PhysicalSizeU size, bool staging = false)
         {
             if (_strongHandles.TryGetValue(path, out FreeListHandle existing))
             {
@@ -159,7 +161,7 @@ namespace NitroSharp.Content
             }
             catch
             {
-                size = Size.Zero;
+                size = PhysicalSizeU.Zero;
                 return null;
             }
             Interlocked.Increment(ref _nbPending);
@@ -221,8 +223,7 @@ namespace NitroSharp.Content
         public Stream OpenStream(string path)
         {
             string fsPath = path;
-            if (Path.GetDirectoryName(path) is string dir
-                && Path.GetFileName(path) is string filename)
+            if (Path.GetDirectoryName(path) is { } dir && Path.GetFileName(path) is { } filename)
             {
                 fsPath = Path.Combine(dir, filename.ToLowerInvariant());
             }
@@ -273,7 +274,7 @@ namespace NitroSharp.Content
                 {
                     throw new FileLoadException("Archive format not recognized", fullPath);
                 }
-                if (mountPoint.FileNamesIni is string fileNamesIni)
+                if (mountPoint.FileNamesIni is { } fileNamesIni)
                 {
                     // Only AFSFile supports INI files
                     ((AfsFile)archive).LoadFileNames(OpenStream(fileNamesIni));
@@ -289,8 +290,8 @@ namespace NitroSharp.Content
                     return;
                 }
                 (ArchiveFile parentArchive, string archivePath) = parentArchiveDetails.Value;
-                AfsFile archive = AfsFile.Load((AfsFile) parentArchive, archivePath, _encoding);
-                if (mountPoint.FileNamesIni is string fileNamesIni)
+                var archive = AfsFile.Load((AfsFile) parentArchive, archivePath, _encoding);
+                if (mountPoint.FileNamesIni is { } fileNamesIni)
                 {
                     archive.LoadFileNames(OpenStream(fileNamesIni));
                 }
@@ -303,7 +304,7 @@ namespace NitroSharp.Content
             string[] splitedPath = path.ToLowerInvariant().Split("/");
             VfsNode head = _root;
 
-            // This way of browsing folders is not perfect beacause we can have two possible paths :
+            // This way of browsing folders is not perfect because we can have two possible paths :
             // one through the Children and one through the MountedArchives.
             // If nobody does weird stuff with the archives, this shouldn't happen.
             int depth;

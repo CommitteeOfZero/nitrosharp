@@ -19,7 +19,7 @@ namespace NitroSharp.Content
         }
 
         protected abstract Texture LoadStaging(Stream stream);
-        public abstract Size GetTextureSize(Stream stream);
+        public abstract PhysicalSizeU GetTextureSize(Stream stream);
 
         public Texture LoadTexture(Stream stream, bool staging)
         {

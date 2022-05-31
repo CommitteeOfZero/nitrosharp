@@ -15,15 +15,20 @@ namespace NitroSharp
         private IntPtr _wait;
         private SystemCursor _cursor;
 
-        public DesktopWindow(string title, uint width, uint height)
+        public DesktopWindow(string title, PhysicalSizeU size, WorldToDeviceScale scaleFactor, bool enableFullscreen)
         {
+            ScaleFactor = scaleFactor;
             const int centered = Sdl2Native.SDL_WINDOWPOS_CENTERED;
             Sdl2Native.SDL_Init(SDLInitFlags.Video | SDLInitFlags.GameController);
+            SDL_WindowFlags flags = SDL_WindowFlags.OpenGL | SDL_WindowFlags.AllowHighDpi;
+            if (enableFullscreen)
+            {
+                flags |= SDL_WindowFlags.Borderless | SDL_WindowFlags.FullScreenDesktop;
+            }
             _window = new Sdl2Window(title,
                 centered, centered,
-                (int)width, (int)height,
-                SDL_WindowFlags.OpenGL,
-                threadedProcessing: false
+                (int)size.Width, (int)size.Height,
+                flags, threadedProcessing: false
             );
             SwapchainSource = VeldridStartup.GetSwapchainSource(_window);
 
@@ -35,21 +40,28 @@ namespace NitroSharp
 
         public SwapchainSource SwapchainSource { get; }
         public Sdl2Window SdlWindow => _window;
-        public Size Size => new((uint)_window.Width, (uint)_window.Height);
+        public PhysicalSize Size => new((uint)_window.Width, (uint)_window.Height);
+        public WorldToDeviceScale ScaleFactor { get; }
         public bool Exists => _window.Exists;
 
         public AutoResetEvent Mobile_HandledSurfaceDestroyed => throw new NotImplementedException();
 
         public event Action? Resized;
+
         public event Action<SwapchainSource>? Mobile_SurfaceCreated
         {
             add => value?.Invoke(SwapchainSource);
             remove => throw new NotImplementedException();
         }
+
         public event Action? Mobile_SurfaceDestroyed;
 
         public InputSnapshot PumpEvents() => _window.PumpEvents();
-        public void SetMousePosition(Vector2 pos) => _window.SetMousePosition(pos);
+
+        public void SetMousePosition(Vector2 pos)
+        {
+            _window.SetMousePosition(pos * ScaleFactor.Factor);
+        }
 
         public void SetCursor(SystemCursor cursor)
         {

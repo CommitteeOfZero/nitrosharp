@@ -3,6 +3,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
@@ -14,6 +15,17 @@ public sealed class MessagePackGenerator : IIncrementalGenerator
 {
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
+        const string persistableAttribute = @"
+using System;
+namespace NitroSharp;
+[AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct)]
+internal sealed class PersistableAttribute : Attribute
+{
+}";
+        context.RegisterPostInitializationOutput(ctx => ctx.AddSource(
+            "PersistableAttribute.g.cs",
+            SourceText.From(persistableAttribute, Encoding.UTF8)));
+
         IncrementalValuesProvider<INamedTypeSymbol> serializableTypes = context.SyntaxProvider.CreateSyntaxProvider(
             predicate: static (node, _) => node is TypeDeclarationSyntax typeDecl && Common.IsSerializableCandidate(typeDecl),
             transform: Resolve
@@ -27,25 +39,12 @@ public sealed class MessagePackGenerator : IIncrementalGenerator
 
     private static INamedTypeSymbol? Resolve(GeneratorSyntaxContext ctx, CancellationToken cancellationToken)
     {
-        Compilation compilation = ctx.SemanticModel.Compilation;
-        if (Common.PersistableAttribute is null)
-        {
-            if (compilation.GetTypeByMetadataName(Common.PersistableAttributeFqn) is not { } persistableAttribute)
-            {
-                throw new SourceGeneratorException($"The type {Common.PersistableAttributeFqn} does not exist.");
-            }
-
-            Common.PersistableAttribute = persistableAttribute;
-        }
-
         if (ctx.SemanticModel.GetDeclaredSymbol(ctx.Node, cancellationToken) is not INamedTypeSymbol typeSymbol)
         {
             return null;
         }
 
-        return Common.HasPersistableAttribute(typeSymbol)
-            ? typeSymbol
-            : null;
+        return Common.HasPersistableAttribute(typeSymbol) ? typeSymbol : null;
     }
 
     private static void Execute(SourceProductionContext context, ImmutableArray<INamedTypeSymbol> serializableTypes)
@@ -53,7 +52,6 @@ public sealed class MessagePackGenerator : IIncrementalGenerator
         CompilationUnitSyntax cu = CompilationUnit()
             .WithUsings(List(new[]
             {
-                UsingDirective(IdentifierName("ToolGeneratedExtensions")),
                 UsingDirective(IdentifierName("MessagePack")), UsingDirective(IdentifierName("System"))
             }))
             .WithMembers(List(serializableTypes.Select(GenerateMembersForType)))
@@ -72,11 +70,15 @@ public sealed class MessagePackGenerator : IIncrementalGenerator
 
         TypeDeclarationSyntax newDecl = firstDecl
             .WithMembers(List(new[] { ctor, serializeMethod }))
+            .WithBaseList(null)
             .WithAttributeLists(default);
 
         if (newDecl is RecordDeclarationSyntax recordDecl)
         {
-            newDecl = recordDecl.WithParameterList(null);
+            newDecl = recordDecl
+                .WithParameterList(null)
+                .WithOpenBraceToken(Token(SyntaxKind.OpenBraceToken))
+                .WithCloseBraceToken(Token(SyntaxKind.CloseBraceToken));
         }
 
         return NamespaceDeclaration(ParseName(Common.GetFullName(type.ContainingNamespace)))
@@ -89,7 +91,7 @@ public sealed class MessagePackGenerator : IIncrementalGenerator
 using System.Numerics;
 using MessagePack;
 
-namespace ToolGeneratedExtensions
+namespace NitroSharp
 {
     internal static class MessagePackExtensions
     {
@@ -185,6 +187,6 @@ namespace ToolGeneratedExtensions
         }
     }
 }";
-        context.AddSource("MessagePackExtensions.cs", SourceText.From(mpWriterExtensions, Encoding.UTF8));
+        context.AddSource("MessagePackExtensions.g.cs", SourceText.From(mpWriterExtensions, Encoding.UTF8));
     }
 }

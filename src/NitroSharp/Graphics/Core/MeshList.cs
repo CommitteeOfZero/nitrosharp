@@ -39,6 +39,8 @@ namespace NitroSharp.Graphics.Core
         where TVertex : unmanaged
     {
         private readonly MeshDescription _meshDesc;
+        private readonly GpuList<TVertex> _vertices;
+        private readonly GpuList<ushort> _indices;
 
         public MeshList(
             GraphicsDevice graphicsDevice,
@@ -46,33 +48,32 @@ namespace NitroSharp.Graphics.Core
             uint initialCapacity)
         {
             _meshDesc = meshDescription;
-            Vertices = new GpuList<TVertex>(
+            _vertices = new GpuList<TVertex>(
                 graphicsDevice,
                 BufferUsage.VertexBuffer,
                 initialCapacity * meshDescription.VerticesPerMesh
             );
-            Indices = new GpuList<ushort>(
+            _indices = new GpuList<ushort>(
                 graphicsDevice,
                 BufferUsage.IndexBuffer,
                 initialCapacity * meshDescription.IndicesPerMesh
             );
         }
 
-        public GpuList<TVertex> Vertices { get; }
-        public GpuList<ushort> Indices { get; }
-
-        public uint Count => Vertices.Count / _meshDesc.VerticesPerMesh;
+        private uint Count => _vertices.Count / _meshDesc.VerticesPerMesh;
 
         public void Begin()
         {
-            Vertices.Begin();
-            Indices.Begin();
+            _vertices.Begin();
+            _indices.Begin();
         }
 
         public Mesh<TVertex> Append(ReadOnlySpan<TVertex> vertices)
         {
             static void unexpectedLength()
-                => throw new ArgumentException("Unexpected number of vertices.");
+            {
+                throw new ArgumentException("Unexpected number of vertices.");
+            }
 
             if (vertices.Length != _meshDesc.VerticesPerMesh)
             {
@@ -80,9 +81,9 @@ namespace NitroSharp.Graphics.Core
             }
 
             uint oldCount = Count;
-            GpuListSlice<TVertex> dstVertices = Vertices.Append((uint)vertices.Length);
+            GpuListSlice<TVertex> dstVertices = _vertices.Append((uint)vertices.Length);
             vertices.CopyTo(dstVertices.Data);
-            GpuListSlice<ushort> dstIndices = Indices.Append(_meshDesc.IndicesPerMesh);
+            GpuListSlice<ushort> dstIndices = _indices.Append(_meshDesc.IndicesPerMesh);
             for (int i = 0; i < dstIndices.Data.Length; i++)
             {
                 dstIndices.Data[i] = (ushort)(_meshDesc.Indices[i]
@@ -97,14 +98,14 @@ namespace NitroSharp.Graphics.Core
 
         public void End(CommandList cl)
         {
-            Vertices.End(cl);
-            Indices.End(cl);
+            _vertices.End(cl);
+            _indices.End(cl);
         }
 
         public void Dispose()
         {
-            Vertices.Dispose();
-            Indices.Dispose();
+            _vertices.Dispose();
+            _indices.Dispose();
         }
     }
 }

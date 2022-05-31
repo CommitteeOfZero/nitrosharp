@@ -10,46 +10,10 @@ using Veldrid;
 
 namespace NitroSharp.Graphics
 {
-    internal struct GpuGlyph
-    {
-        public Vector2 Offset;
-        public int GlyphRunId;
-        public int GlyphId;
-        public int OutlineId;
-        public float Opacity;
-
-        public static VertexLayoutDescription LayoutDescription => new(
-            stride: 24, instanceStepRate: 1,
-            new VertexElementDescription(
-                "vs_Offset",
-                VertexElementSemantic.TextureCoordinate,
-                VertexElementFormat.Float2
-            ),
-            new VertexElementDescription(
-                "vs_GlyphRunID",
-                VertexElementSemantic.TextureCoordinate,
-                VertexElementFormat.Int1
-            ),
-            new VertexElementDescription(
-                "vs_GlyphID",
-                VertexElementSemantic.TextureCoordinate,
-                VertexElementFormat.Int1
-            ),
-            new VertexElementDescription(
-                "vs_OutlineID",
-                VertexElementSemantic.TextureCoordinate,
-                VertexElementFormat.Int1
-            ),
-            new VertexElementDescription(
-                "vs_Opacity",
-                VertexElementSemantic.TextureCoordinate,
-                VertexElementFormat.Float1
-            )
-        );
-    }
-
     internal sealed class TextRenderContext : IDisposable
     {
+        private readonly record struct GpuGlyphSlice(DeviceBuffer Buffer, uint InstanceBase, uint InstanceCount);
+
         private readonly struct GpuGlyphRun : GpuType
         {
             public const uint SizeInGpuBlocks = 2;
@@ -70,26 +34,18 @@ namespace NitroSharp.Graphics
             }
         }
 
-        internal readonly struct GpuTransform : GpuType
+        private readonly record struct GpuTransform(in Matrix4x4 Matrix) : GpuType
         {
+            public readonly Matrix4x4 Matrix = Matrix;
+
             public const uint SizeInGpuBlocks = 4;
-
-            public readonly Matrix4x4 Transform;
-
-            public GpuTransform(in Matrix4x4 transform)
-                => Transform = transform;
 
             public void WriteGpuBlocks(Span<Vector4> blocks)
             {
-                ref readonly Matrix4x4 tr = ref Transform;
-                blocks[0] = new Vector4(tr.M11, tr.M12, tr.M13, tr.M14);
-                blocks[1] = new Vector4(tr.M21, tr.M22, tr.M23, tr.M24);
-                blocks[2] = new Vector4(tr.M31, tr.M32, tr.M33, tr.M34);
-                blocks[3] = new Vector4(tr.M41, tr.M42, tr.M43, tr.M44);
+                MemoryMarshal.Cast<Vector4, Matrix4x4>(blocks).Fill(Matrix);
             }
         }
 
-        private readonly GlyphRasterizer _glyphRasterizer;
         private readonly TextureCache _textureCache;
         private readonly GpuList<GpuGlyph> _gpuGlyphs;
         private readonly GpuCache<GpuGlyphRun> _gpuGlyphRuns;
@@ -100,30 +56,20 @@ namespace NitroSharp.Graphics
         public TextRenderContext(
             GraphicsDevice gd,
             GlyphRasterizer glyphRasterizer,
-            TextureCache textureCache)
+            TextureCache textureCache,
+            WorldToDeviceScale worldToDeviceScale)
         {
-            _glyphRasterizer = glyphRasterizer;
+            GlyphRasterizer = glyphRasterizer;
             _textureCache = textureCache;
-            _gpuGlyphs = new GpuList<GpuGlyph>(
-                gd,
-                BufferUsage.VertexBuffer,
-                initialCapacity: 2048
-             );
-            _gpuGlyphRuns = new GpuCache<GpuGlyphRun>(
-               gd,
-               GpuGlyphRun.SizeInGpuBlocks,
-               dimension: 128
-           );
-            _gpuTransforms = new GpuCache<GpuTransform>(
-                gd,
-                GpuTransform.SizeInGpuBlocks,
-                dimension: 128
-            );
-
+            _gpuGlyphs = new GpuList<GpuGlyph>(gd, BufferUsage.VertexBuffer, initialCapacity: 2048);
+            _gpuGlyphRuns = new GpuCache<GpuGlyphRun>(gd, GpuGlyphRun.SizeInGpuBlocks, dimension: 128);
+            _gpuTransforms = new GpuCache<GpuTransform>(gd, GpuTransform.SizeInGpuBlocks, dimension: 128);
             _pendingDraws = new ArrayBuilder<(Draw, int)>(4);
+            WorldToDeviceScale = worldToDeviceScale;
         }
 
-        public GlyphRasterizer GlyphRasterizer => _glyphRasterizer;
+        public GlyphRasterizer GlyphRasterizer { get; }
+        private WorldToDeviceScale WorldToDeviceScale { get; }
 
         public void BeginFrame()
         {
@@ -133,17 +79,21 @@ namespace NitroSharp.Graphics
         }
 
         public void RequestGlyphs(TextLayout textLayout)
-            => RequestGlyphs(textLayout, textLayout.GlyphRuns);
+        {
+            RequestGlyphs(textLayout, textLayout.GlyphRuns);
+        }
 
         public void RequestGlyphs(TextLayout textLayout, GlyphRun glyphRun)
-            => RequestGlyphs(textLayout, MemoryMarshal.CreateReadOnlySpan(ref glyphRun, 1));
+        {
+            RequestGlyphs(textLayout, MemoryMarshal.CreateReadOnlySpan(ref glyphRun, 1));
+        }
 
-        public void RequestGlyphs(TextLayout textLayout, ReadOnlySpan<GlyphRun> glyphRuns)
+        private void RequestGlyphs(TextLayout textLayout, ReadOnlySpan<GlyphRun> glyphRuns)
         {
             foreach (ref readonly GlyphRun glyphRun in glyphRuns)
             {
                 ReadOnlySpan<PositionedGlyph> glyphs = textLayout.Glyphs[glyphRun.GlyphSpan];
-                _glyphRasterizer.RequestGlyphs(
+                GlyphRasterizer.RequestGlyphs(
                     glyphRun.Font,
                     glyphRun.FontSize,
                     glyphs,
@@ -158,8 +108,8 @@ namespace NitroSharp.Graphics
             DrawBatch drawBatch,
             TextLayout layout,
             in Matrix4x4 transform,
-            Vector2 offset,
-            in RectangleU rect,
+            PhysicalPoint offset,
+            in PhysicalRect rect,
             float opacity)
         {
             Render(ctx, drawBatch, layout, layout.GlyphRuns, transform, offset, rect, opacity);
@@ -171,8 +121,8 @@ namespace NitroSharp.Graphics
            TextLayout layout,
            GlyphRun glyphRun,
            in Matrix4x4 transform,
-           Vector2 offset,
-           in RectangleU rect,
+           PhysicalPoint offset,
+           in PhysicalRect rect,
            float opacity)
         {
             var span = MemoryMarshal.CreateReadOnlySpan(ref glyphRun, 1);
@@ -185,19 +135,18 @@ namespace NitroSharp.Graphics
             TextLayout layout,
             ReadOnlySpan<GlyphRun> glyphRuns,
             in Matrix4x4 transform,
-            Vector2 offset,
-            in RectangleU rect,
+            PhysicalPoint offset,
+            in PhysicalRect rect,
             float opacity)
         {
-            Matrix4x4 finalTransform = Matrix4x4.CreateTranslation(new Vector3(offset, 0)) * transform;
+            Matrix4x4 finalTransform = Matrix4x4.CreateTranslation(new Vector3(offset.ToVector2(), 0)) * transform;
             TextShaderResources shaderResources = ctx.ShaderResources.Text;
             for (int i = 0; i < glyphRuns.Length; i++)
             {
                 ref readonly GlyphRun glyphRun = ref glyphRuns[i];
                 ReadOnlySpan<PositionedGlyph> glyphs = layout.Glyphs[glyphRun.GlyphSpan];
                 ReadOnlySpan<float> opacityValues = layout.GetOpacityValues(glyphRun.GlyphSpan);
-                if (AppendRun(glyphRun, glyphs, opacityValues, finalTransform, opacity)
-                    is GpuGlyphSlice gpuGlyphSlice)
+                if (AppendRun(glyphRun, glyphs, opacityValues, finalTransform, opacity) is { } gpuGlyphSlice)
                 {
                     _pendingDraws.Add() = (new Draw
                     {
@@ -223,7 +172,7 @@ namespace NitroSharp.Graphics
                             gpuGlyphSlice.InstanceBase,
                             gpuGlyphSlice.InstanceCount
                         ),
-                        ScissorRect = rect
+                        //ScissorRect = rect
                     }, i);
                 }
             }
@@ -262,24 +211,10 @@ namespace NitroSharp.Graphics
 
         public void ResolveGlyphs()
         {
-            ValueTask vt = _glyphRasterizer.ResolveGlyphs(_textureCache);
+            ValueTask vt = GlyphRasterizer.ResolveGlyphs(_textureCache);
             if (!vt.IsCompleted)
             {
                 vt.GetAwaiter().GetResult();
-            }
-        }
-
-        private readonly struct GpuGlyphSlice
-        {
-            public readonly DeviceBuffer Buffer;
-            public readonly uint InstanceBase;
-            public readonly uint InstanceCount;
-
-            public GpuGlyphSlice(DeviceBuffer buffer, uint instanceBase, uint instanceCount)
-            {
-                Buffer = buffer;
-                InstanceBase = instanceBase;
-                InstanceCount = instanceCount;
             }
         }
 
@@ -288,17 +223,22 @@ namespace NitroSharp.Graphics
             ReadOnlySpan<PositionedGlyph> positionedGlyphs,
             ReadOnlySpan<float> opacityValues,
             in Matrix4x4 transform,
-            float opacityMul)
+            float opacityMultiplier)
         {
             var gpuGlyphRun = new GpuGlyphRun(run.Color, run.OutlineColor);
             GpuCacheHandle glyphRunHandle = _gpuGlyphRuns.Insert(ref gpuGlyphRun);
             int glyphRunId = _gpuGlyphRuns.GetCachePosition(glyphRunHandle);
 
+            //Matrix4x4 finalTransform = transform with
+            //{
+            //    M41 = transform.M41 * WorldToDeviceScale.Factor,
+            //    M42 = transform.M42 * WorldToDeviceScale.Factor
+            //};
             var gpuTransform = new GpuTransform(transform);
             GpuCacheHandle transformHandle = _gpuTransforms.Insert(ref gpuTransform);
             Debug.Assert(_gpuTransforms.GetCachePosition(transformHandle) == glyphRunId);
 
-            FontData fontData = _glyphRasterizer.GetFontData(run.Font);
+            FontData fontData = GlyphRasterizer.GetFontData(run.Font);
             uint instanceBase = _gpuGlyphs.Count;
             DeviceBuffer? buffer = null;
             for (int i = 0; i < positionedGlyphs.Length; i++)
@@ -309,22 +249,21 @@ namespace NitroSharp.Graphics
                 {
                     Debug.Assert(cachedGlyph.Kind != GlyphCacheEntryKind.Pending);
                     if (cachedGlyph.Kind == GlyphCacheEntryKind.Blank) { continue; }
-                    TextureCacheItem glyphTci = _textureCache.Get(cachedGlyph.TextureCacheHandle);
+                    TextureCacheItem glyphCacheItem = _textureCache.Get(cachedGlyph.TextureCacheHandle);
                     int outlineId = 0;
                     if (cachedGlyph.OutlineTextureCacheHandle.IsValid)
                     {
-                        TextureCacheItem outlineTci = _textureCache
-                            .Get(cachedGlyph.OutlineTextureCacheHandle);
-                        outlineId = outlineTci.UvRectPosition;
+                        TextureCacheItem outlineCacheItem = _textureCache.Get(cachedGlyph.OutlineTextureCacheHandle);
+                        outlineId = outlineCacheItem.UvRectPosition;
                     }
 
                     (buffer, _) = _gpuGlyphs.Append(new GpuGlyph
                     {
                         Offset = glyph.Position,
                         GlyphRunId = glyphRunId,
-                        GlyphId = glyphTci.UvRectPosition,
+                        GlyphId = glyphCacheItem.UvRectPosition,
                         OutlineId = outlineId,
-                        Opacity = opacityValues[i] * opacityMul
+                        Opacity = opacityValues[i] * opacityMultiplier
                     });
                 }
             }
@@ -347,5 +286,45 @@ namespace NitroSharp.Graphics
             _gpuGlyphRuns.Dispose();
             _gpuTransforms.Dispose();
         }
+    }
+
+    internal struct GpuGlyph
+    {
+        // ReSharper disable NotAccessedField.Global
+        public Vector2 Offset;
+        public int GlyphRunId;
+        public int GlyphId;
+        public int OutlineId;
+        public float Opacity;
+        // ReSharper restore NotAccessedField.Global
+
+        public static VertexLayoutDescription LayoutDescription => new(
+            stride: 24, instanceStepRate: 1,
+            new VertexElementDescription(
+                "vs_Offset",
+                VertexElementSemantic.TextureCoordinate,
+                VertexElementFormat.Float2
+            ),
+            new VertexElementDescription(
+                "vs_GlyphRunID",
+                VertexElementSemantic.TextureCoordinate,
+                VertexElementFormat.Int1
+            ),
+            new VertexElementDescription(
+                "vs_GlyphID",
+                VertexElementSemantic.TextureCoordinate,
+                VertexElementFormat.Int1
+            ),
+            new VertexElementDescription(
+                "vs_OutlineID",
+                VertexElementSemantic.TextureCoordinate,
+                VertexElementFormat.Int1
+            ),
+            new VertexElementDescription(
+                "vs_Opacity",
+                VertexElementSemantic.TextureCoordinate,
+                VertexElementFormat.Float1
+            )
+        );
     }
 }

@@ -1,0 +1,8 @@
+﻿{
+  "graphics.vsync": true,
+  "graphics.backend": "Auto",
+  "graphics.fullscreen": false,
+  "audio.backend": "Auto",
+  "window.width": 1920,
+  "window.height": 1080
+}

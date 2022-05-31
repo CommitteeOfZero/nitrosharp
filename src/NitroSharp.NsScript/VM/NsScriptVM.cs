@@ -73,10 +73,14 @@ namespace NitroSharp.NsScript.VM
         public GlobalsDump DumpFlags() => DumpGlobals(_flags, GlobalsLookup.Flags);
 
         public void RestoreVariables(GlobalsDump dump)
-            => RestoreGlobals(_variables, GlobalsLookup.Variables, dump);
+        {
+            RestoreGlobals(_variables, GlobalsLookup.Variables, dump);
+        }
 
         public void RestoreFlags(GlobalsDump dump)
-            => RestoreGlobals(_flags, GlobalsLookup.Flags, dump);
+        {
+            RestoreGlobals(_flags, GlobalsLookup.Flags, dump);
+        }
 
         private static GlobalsDump DumpGlobals(
             ConstantValue[] table,
@@ -184,7 +188,7 @@ namespace NitroSharp.NsScript.VM
                 .Enqueue(ThreadAction.Suspend(thread, timeout));
         }
 
-        public void Join(NsScriptThread callingThread, NsScriptThread targetThread)
+        private void Join(NsScriptThread callingThread, NsScriptThread targetThread)
         {
             callingThread.Process.PendingThreadActions
                 .Enqueue(ThreadAction.Join(callingThread, targetThread));
@@ -205,7 +209,7 @@ namespace NitroSharp.NsScript.VM
         public NsScriptThread ActivateDialogueBlock(in DialogueBlockToken blockToken)
             => ActivateDialogueBlock(CurrentProcess!, blockToken);
 
-        public NsScriptThread ActivateDialogueBlock(
+        private NsScriptThread ActivateDialogueBlock(
             NsScriptProcess process,
             in DialogueBlockToken blockToken)
         {
@@ -249,8 +253,7 @@ namespace NitroSharp.NsScript.VM
                         }
                         else if (thread.DoneExecuting)
                         {
-                            if (thread.WaitingThread is
-                                NsScriptThread { DoneExecuting: false } waitingThread)
+                            if (thread.WaitingThread is { DoneExecuting: false } waitingThread)
                             {
                                 ResumeThread(waitingThread);
                                 nbActive++;
