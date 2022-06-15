@@ -354,18 +354,13 @@ namespace NitroSharp
             return (vm, process);
         }
 
-        private static NsScriptProcess CreateProcess(NsScriptVM vm, string modulePath)
-        {
-            string moduleName = Path.ChangeExtension(modulePath, null);
-            return vm.CreateProcess(moduleName, "main");
-        }
-
         private static GameProcess CreateProcess(
             NsScriptVM vm,
             string modulePath,
             FontConfiguration fontConfig)
         {
-            NsScriptProcess vmProcess = CreateProcess(vm, modulePath);
+            string moduleName = Path.ChangeExtension(modulePath, null);
+            NsScriptProcess vmProcess = vm.CreateProcess(moduleName, "main");
             return new GameProcess(vmProcess, fontConfig.Clone());
         }
 
@@ -734,10 +729,8 @@ namespace NitroSharp
         {
             SysProcess?.Dispose();
             SysProcess = null;
-            MainProcess.VmProcess.Terminate();
-            MainProcess.World.Reset();
-            NsScriptProcess newVmProcess = CreateProcess(VM, Config.SysScripts.Startup);
-            MainProcess = new GameProcess(newVmProcess, MainProcess.World, _fontConfig);
+            MainProcess.Dispose();
+            MainProcess = CreateProcess(VM, Config.SysScripts.Startup, _fontConfig);
         }
     }
 }
