@@ -8,16 +8,20 @@ namespace NitroSharp
     internal sealed class VmThread : Entity
     {
         private readonly NsScriptVM _vm;
+        private readonly NsScriptProcess _process;
 
         public VmThread(
             in ResolvedEntityPath path,
+            string module,
             string target,
             NsScriptVM vm,
-            NsScriptThread thread) : base(path)
+            NsScriptProcess process) : base(path)
         {
             _vm = vm;
+            _process = process;
+            Module = module;
             Target = target;
-            Thread = thread;
+            Thread = null;
             if (Parent is Choice choice)
             {
                 switch (Id.MouseState)
@@ -40,28 +44,76 @@ namespace NitroSharp
             : base(path, saveData.Common)
         {
             _vm = vm;
+            _process = process;
+            Module = saveData.Module;
             Target = saveData.Target;
-            Thread = process.GetThread(saveData.ThreadId);
+            Thread = null;
+            if (saveData.ThreadId is uint threadId)
+            {
+                Thread = process.GetThread(threadId);
+            }
         }
 
+        public string Module { get; }
         public string Target { get; }
-        public NsScriptThread Thread { get; private set; }
-        public override bool IsIdle => !Thread.IsActive || Thread.DoneExecuting;
+        public NsScriptThread? Thread { get; private set; }
+        public override bool IsIdle
+        {
+            get
+            {
+                if (Thread is NsScriptThread thread)
+                {
+                    return Thread.DoneExecuting;
+                }
+                return true;
+            }
+        }
 
         public override EntityKind Kind => EntityKind.VmThread;
 
-        public void Restart()
+        public void Start()
         {
-            if (!Thread.DoneExecuting)
+            if (Thread is NsScriptThread thread && !thread.DoneExecuting)
             {
-                _vm.TerminateThread(Thread);
+                _vm.ResumeThread(thread);
+                return;
             }
-            Thread = _vm.CreateThread(Thread.Process, Thread.EntryModule, Target, start: true)!;
+            Thread = _vm.CreateThread(_process, Module, Target, start: true);
         }
 
-        public void Suspend() => _vm.SuspendThread(Thread);
-        public void Resume() => _vm.ResumeThread(Thread);
-        public void Terminate() => _vm.TerminateThread(Thread);
+        public void Restart()
+        {
+            if (Thread is NsScriptThread thread && !thread.DoneExecuting)
+            {
+                _vm.TerminateThread(thread);
+            }
+            Thread = _vm.CreateThread(_process, Module, Target, start: true);
+        }
+
+        public void Suspend()
+        {
+            if (Thread is NsScriptThread thread)
+            {
+                _vm.SuspendThread(thread);
+            }
+        }
+
+        public void Resume()
+        {
+            if (Thread is NsScriptThread thread)
+            {
+                _vm.ResumeThread(thread);
+            }
+        }
+
+        public void Terminate()
+        {
+            if (Thread is NsScriptThread thread)
+            {
+                _vm.TerminateThread(thread);
+                Thread = null;
+            }
+        }
 
         public override void Dispose()
         {
@@ -71,7 +123,8 @@ namespace NitroSharp
         public new VmThreadSaveData ToSaveData(GameSavingContext ctx) => new()
         {
             Common = base.ToSaveData(ctx),
-            ThreadId = Thread.Id,
+            ThreadId = Thread?.Id,
+            Module = Module,
             Target = Target
         };
     }
@@ -80,7 +133,8 @@ namespace NitroSharp
     internal readonly partial struct VmThreadSaveData : IEntitySaveData
     {
         public EntitySaveData Common { get; init; }
-        public uint ThreadId { get; init; }
+        public uint? ThreadId { get; init; }
+        public string Module { get; init; }
         public string Target { get; init; }
 
         public EntitySaveData CommonEntityData => Common;

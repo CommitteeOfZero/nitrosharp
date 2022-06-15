@@ -97,7 +97,7 @@ namespace NitroSharp
                         ri.FilterMode = FilterMode.Linear;
                         break;
                     case (VmThread thread, NsEntityAction.Start):
-                        thread.Restart();
+                        thread.Start();
                         break;
                     case (VmThread thread, NsEntityAction.Resume):
                         thread.Resume();
@@ -106,7 +106,7 @@ namespace NitroSharp
                         thread.Suspend();
                         break;
                     case (VmThread thread, NsEntityAction.Stop):
-                        thread.Suspend();
+                        thread.Terminate();
                         break;
                     case (RenderItem ri, NsEntityAction.Enable):
                         if (ri.Parent is Choice)
@@ -194,10 +194,8 @@ namespace NitroSharp
         {
             if (ResolvePath(entityPath, out ResolvedEntityPath resolvedPath))
             {
-                if (VM.CreateThread(CurrentProcess, target) is NsScriptThread thread)
-                {
-                    World.Add(new VmThread(resolvedPath, target, _ctx.VM, thread));
-                }
+                string module = CurrentThread.CurrentModule;
+                World.Add(new VmThread(resolvedPath, module, target, VM, CurrentProcess));
             }
         }
 

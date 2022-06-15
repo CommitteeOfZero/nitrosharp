@@ -72,6 +72,7 @@ namespace NitroSharp.NsScript.VM
         public uint Id { get; }
         public uint DeclaredId { get; }
         public string EntryModule { get; }
+        public string CurrentModule => CurrentFrame.Module.Name;
         public bool DoneExecuting => CallFrameStack.Count == 0;
         public bool IsActive => SuspensionTime is null;
 
