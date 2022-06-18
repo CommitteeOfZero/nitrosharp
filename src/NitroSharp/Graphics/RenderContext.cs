@@ -52,6 +52,7 @@ namespace NitroSharp.Graphics
                 (uint)gameConfiguration.WindowWidth,
                 (uint)gameConfiguration.WindowHeight
             );
+
             Window = window;
             GraphicsDevice = graphicsDevice;
             ResourceFactory = graphicsDevice.ResourceFactory;
@@ -174,7 +175,7 @@ namespace NitroSharp.Graphics
         public void BeginFrame(in FrameStamp frameStamp, bool clear)
         {
             _drawCommands.Begin();
-            RgbaFloat? clearColor = clear ? RgbaFloat.Black : (RgbaFloat?)null;
+            RgbaFloat? clearColor = clear ? RgbaFloat.Black : null;
             MainBatch.Begin(_drawCommands, _swapchainTarget, clearColor);
 
             _secondaryCommandList.Begin();
@@ -254,14 +255,19 @@ namespace NitroSharp.Graphics
         }
 
         public void Present()
-            => GraphicsDevice.SwapBuffers(_mainSwapchain);
-
-        public Sampler GetSampler(FilterMode filterMode) => filterMode switch
         {
-            FilterMode.Linear => GraphicsDevice.LinearSampler,
-            FilterMode.Point => GraphicsDevice.PointSampler,
-            _ => ThrowHelper.Unreachable<Sampler>()
-        };
+            GraphicsDevice.SwapBuffers(_mainSwapchain);
+        }
+
+        public Sampler GetSampler(FilterMode filterMode)
+        {
+            return filterMode switch
+            {
+                FilterMode.Linear => GraphicsDevice.LinearSampler,
+                FilterMode.Point => GraphicsDevice.PointSampler,
+                _ => ThrowHelper.Unreachable<Sampler>()
+            };
+        }
 
         private Texture CreateWhiteTexture()
         {

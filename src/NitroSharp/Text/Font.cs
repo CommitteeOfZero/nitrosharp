@@ -46,7 +46,11 @@ namespace NitroSharp.Text
             writer.WriteInt32(Value.Value);
         }
 
-        public PtFontSize(int value) => Value = Fixed26Dot6.FromInt32(value);
+        public PtFontSize(int value)
+        {
+            Value = Fixed26Dot6.FromInt32(value);
+        }
+
         public float ToFloat() => Value.ToSingle();
         public int ToInt32() => Value.ToInt32();
         public override int GetHashCode() => Value.GetHashCode();
@@ -74,6 +78,7 @@ namespace NitroSharp.Text
         /// The recommended distance between two consecutive baselines.
         /// </summary>
         public readonly float LineHeight;
+
         /// <summary>
         /// The recommended gap between two lines of text,
         /// not including ascender and descender.

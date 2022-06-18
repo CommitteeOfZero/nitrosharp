@@ -58,12 +58,8 @@ namespace NitroSharp.NsScript
         public static ConstantValue Delta(float delta) => new(delta, true);
         public static ConstantValue String(string value) => new(value);
         public static ConstantValue Boolean(bool value) => value ? True : False;
-
-        public static ConstantValue BezierCurve(CompositeBezier bezierCurve)
-            => new(bezierCurve);
-
-        public static ConstantValue BuiltInConstant(BuiltInConstant value)
-            => new(value);
+        public static ConstantValue BezierCurve(CompositeBezier bezierCurve) => new(bezierCurve);
+        public static ConstantValue BuiltInConstant(BuiltInConstant value) => new(value);
 
         public ConstantValue WithSlot(short slot) => new(this, slot);
 
@@ -185,24 +181,20 @@ namespace NitroSharp.NsScript
             return slot != UnspecifiedSlot;
         }
 
-        public bool IsAtCharacter =>
-            _stringValue is not null && _stringValue == "@";
+        public bool IsAtCharacter => _stringValue is not null && _stringValue == "@";
 
         public float? AsDeltaNumber()
             => Type == BuiltInType.DeltaNumeric
                 ? FloatValue
                 : null;
 
-        public float? AsNumber()
+        public float? AsNumber() => Type switch
         {
-            return Type switch
-            {
-                BuiltInType.Numeric => FloatValue,
-                BuiltInType.Boolean or BuiltInType.BuiltInConstant => _numericValue,
-                BuiltInType.String => _stringValue == string.Empty ? 0 : null,
-                _ => null,
-            };
-        }
+            BuiltInType.Numeric => FloatValue,
+            BuiltInType.Boolean or BuiltInType.BuiltInConstant => _numericValue,
+            BuiltInType.String => _stringValue == string.Empty ? 0 : null,
+            _ => null,
+        };
 
         public bool? AsBool() => Type switch
         {

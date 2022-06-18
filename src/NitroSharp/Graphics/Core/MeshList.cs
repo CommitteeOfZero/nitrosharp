@@ -72,7 +72,9 @@ namespace NitroSharp.Graphics.Core
         public Mesh<TVertex> Append(ReadOnlySpan<TVertex> vertices)
         {
             static void unexpectedLength()
-                => throw new ArgumentException("Unexpected number of vertices.");
+            {
+                throw new ArgumentException("Unexpected number of vertices.");
+            }
 
             if (vertices.Length != _meshDesc.VerticesPerMesh)
             {

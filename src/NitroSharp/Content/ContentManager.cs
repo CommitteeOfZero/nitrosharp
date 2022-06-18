@@ -22,7 +22,9 @@ namespace NitroSharp.Content
         public readonly FreeListHandle Handle;
 
         public AssetRef(ContentManager contentManager, string path, FreeListHandle handle)
-            => (_contentManager, Path, Handle) = (contentManager, path, handle);
+        {
+            (_contentManager, Path, Handle) = (contentManager, path, handle);
+        }
 
         public AssetRef<T> Clone()
         {
@@ -221,8 +223,7 @@ namespace NitroSharp.Content
         public Stream OpenStream(string path)
         {
             string fsPath = path;
-            if (Path.GetDirectoryName(path) is string dir
-                && Path.GetFileName(path) is string filename)
+            if (Path.GetDirectoryName(path) is { } dir && Path.GetFileName(path) is { } filename)
             {
                 fsPath = Path.Combine(dir, filename.ToLowerInvariant());
             }
@@ -273,7 +274,7 @@ namespace NitroSharp.Content
                 {
                     throw new FileLoadException("Archive format not recognized", fullPath);
                 }
-                if (mountPoint.FileNamesIni is string fileNamesIni)
+                if (mountPoint.FileNamesIni is { } fileNamesIni)
                 {
                     // Only AFSFile supports INI files
                     ((AfsFile)archive).LoadFileNames(OpenStream(fileNamesIni));
@@ -289,8 +290,8 @@ namespace NitroSharp.Content
                     return;
                 }
                 (ArchiveFile parentArchive, string archivePath) = parentArchiveDetails.Value;
-                AfsFile archive = AfsFile.Load((AfsFile) parentArchive, archivePath, _encoding);
-                if (mountPoint.FileNamesIni is string fileNamesIni)
+                var archive = AfsFile.Load((AfsFile) parentArchive, archivePath, _encoding);
+                if (mountPoint.FileNamesIni is { } fileNamesIni)
                 {
                     archive.LoadFileNames(OpenStream(fileNamesIni));
                 }

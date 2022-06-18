@@ -59,7 +59,7 @@ namespace NitroSharp
             string knobImage)
         {
             if (ResolvePath(path, out ResolvedEntityPath resolvedPath)
-                && ResolveSpriteSource(knobImage) is SpriteTexture knob)
+                && ResolveSpriteSource(knobImage) is { } knob)
             {
                 World.Add(new Scrollbar(
                     resolvedPath,
@@ -110,8 +110,7 @@ namespace NitroSharp
             };
 
             (Entity? entityA, Entity? entityB) = (Get(first), Get(second));
-            if ((getUiElement(entityA), getUiElement(entityB))
-                is (UiElement elementA, UiElement elementB))
+            if ((getUiElement(entityA), getUiElement(entityB)) is ({ } elementA, { } elementB))
             {
                 elementA.SetNextFocus(focusDirection, elementB.Id);
             }
@@ -137,7 +136,7 @@ namespace NitroSharp
                     _ctx.FocusedUiElement = EntityId.Invalid;
                 }
 
-                if (_ctx.RequestedFocusChange is NsFocusDirection focusDirection)
+                if (_ctx.RequestedFocusChange is { } focusDirection)
                 {
                     if (uiElement.IsFocused &&
                         Get(uiElement.GetNextFocus(focusDirection)) is UiElement nextFocus)
@@ -178,7 +177,7 @@ namespace NitroSharp
         public override void LoadImage(in EntityPath entityPath, string source)
         {
             if (ResolvePath(entityPath, out ResolvedEntityPath resolvedPath)
-                && ResolveSpriteSource(source) is SpriteTexture texture)
+                && ResolveSpriteSource(source) is { } texture)
             {
                 World.Add(new Image(resolvedPath, texture));
             }
@@ -207,7 +206,7 @@ namespace NitroSharp
             string source)
         {
             if (ResolvePath(entityPath, out ResolvedEntityPath resolvedPath)
-                && ResolveSpriteSource(source) is SpriteTexture texture)
+                && ResolveSpriteSource(source) is { } texture)
             {
                 World.Add(new Sprite(
                     resolvedPath,
@@ -227,7 +226,7 @@ namespace NitroSharp
                 return result;
             }
 
-            if (_ctx.Content.RequestTexture(src) is AssetRef<Texture> asset)
+            if (_ctx.Content.RequestTexture(src) is { } asset)
             {
                 return SpriteTexture.FromAsset(asset, srcRect);
             }
@@ -251,7 +250,7 @@ namespace NitroSharp
         {
             var srcRect = new RectangleU(srcX, srcY, width, height);
             if (ResolvePath(entityPath, out ResolvedEntityPath resolvedPath)
-                && ResolveSpriteSource(source, srcRect) is SpriteTexture texture)
+                && ResolveSpriteSource(source, srcRect) is { } texture)
             {
                 World.Add(new Sprite(
                     resolvedPath,
@@ -396,7 +395,7 @@ namespace NitroSharp
             bool inheritTransform)
         {
             if (ResolvePath(entityPath, out ResolvedEntityPath resolvedPath)
-                && _ctx.Content.RequestTexture(imagePath) is AssetRef<Texture> texture)
+                && _ctx.Content.RequestTexture(imagePath) is { } texture)
             {
                 World.Add(new AlphaMask(
                     resolvedPath,
@@ -560,7 +559,7 @@ namespace NitroSharp
         {
             duration = AdjustDuration(duration);
             delay = AdjustDuration(delay);
-            if (_ctx.Content.RequestTexture(maskFileName) is AssetRef<Texture> mask)
+            if (_ctx.Content.RequestTexture(maskFileName) is { } mask)
             {
                 foreach (Sprite sprite in Query<Sprite>(query))
                 {

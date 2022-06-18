@@ -93,7 +93,8 @@ namespace NitroSharp.Graphics
 
         protected override void Render(RenderContext ctx, DrawBatch batch)
         {
-            var offset = new Vector2(0, -_range.start * _lineHeight);
+            var offset = new Vector2(0, - _range.start * _lineHeight);
+
             Vector3 pos = Transform.Position;
             var scissorRect = new RectangleU(
                 (uint)pos.X,
@@ -113,18 +114,15 @@ namespace NitroSharp.Graphics
             );
         }
 
-        private GlyphRun GetGlyphRun(Range span)
+        private GlyphRun GetGlyphRun(Range span) => new()
         {
-            return new()
-            {
-                Font = _fontConfig.DefaultFont,
-                FontSize = _fontConfig.DefaultFontSize,
-                Color = new RgbaFloat(_fontConfig.DefaultTextColor),
-                OutlineColor = _fontConfig.DefaultOutlineColor?.ToRgbaFloat() ?? RgbaFloat.White,
-                GlyphSpan = span,
-                Flags = GlyphRunFlags.Outline
-            };
-        }
+            Font = _fontConfig.DefaultFont,
+            FontSize = _fontConfig.DefaultFontSize,
+            Color = new RgbaFloat(_fontConfig.DefaultTextColor),
+            OutlineColor = _fontConfig.DefaultOutlineColor?.ToRgbaFloat() ?? RgbaFloat.White,
+            GlyphSpan = span,
+            Flags = GlyphRunFlags.Outline
+        };
 
         public override Size GetUnconstrainedBounds(RenderContext ctx)
         {

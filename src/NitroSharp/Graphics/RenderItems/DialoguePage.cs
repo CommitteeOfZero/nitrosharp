@@ -97,7 +97,7 @@ namespace NitroSharp.Graphics
 
         private bool Advance(GameContext ctx)
         {
-            if (_animation is object)
+            if (_animation is not null)
             {
                 if (!_animation.Skipping)
                 {

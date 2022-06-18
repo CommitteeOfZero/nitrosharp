@@ -54,7 +54,7 @@ namespace NitroSharp
     {
         public static void Write(this ref MessagePackWriter writer, int? nullableInteger)
         {
-            if (nullableInteger is int n)
+            if (nullableInteger is { } n)
             {
                 writer.Write(n);
             }

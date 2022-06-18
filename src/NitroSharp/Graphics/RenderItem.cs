@@ -58,11 +58,11 @@ namespace NitroSharp.Graphics
             _key = saveData.Key;
             _transform = saveData.Transform;
             _color = new RgbaFloat(saveData.Color);
-            if (saveData.RotateAnimation is Vector3AnimationSaveData rotateAnim)
+            if (saveData.RotateAnimation is { } rotateAnim)
             {
                 _rotateAnim = new RotateAnimation(this, rotateAnim);
             }
-            if (saveData.FadeAnimation is FloatAnimationSaveData fadeAnim)
+            if (saveData.FadeAnimation is { } fadeAnim)
             {
                 _fadeAnim = new OpacityAnimation(this, fadeAnim);
             }
@@ -88,8 +88,15 @@ namespace NitroSharp.Graphics
             _ => false
         };
 
-        public void Hide() => IsHidden = true;
-        public void Reveal() => IsHidden = false;
+        public void Hide()
+        {
+            IsHidden = true;
+        }
+
+        public void Reveal()
+        {
+            IsHidden = false;
+        }
 
         protected virtual void AdvanceAnimations(RenderContext ctx, float dt, bool assetsReady)
         {
@@ -238,21 +245,22 @@ namespace NitroSharp.Graphics
         {
             BlendMode = saveData.BlendMode;
             FilterMode = saveData.FilterMode;
-            if (saveData.MoveAnimation is Vector3AnimationSaveData moveAnim)
+            if (saveData.MoveAnimation is { } moveAnim)
             {
                 _moveAnim  = new MoveAnimation(this, moveAnim);
             }
-            if (saveData.ZoomAnimation is Vector3AnimationSaveData zoomAnim)
+            if (saveData.ZoomAnimation is { } zoomAnim)
             {
                 _scaleAnim  = new ScaleAnimation(this, zoomAnim);
             }
-            if (saveData.BezierMoveAnimation is BezierAnimationSaveData bezierMoveAnim)
+            if (saveData.BezierMoveAnimation is { } bezierMoveAnim)
             {
                 _bezierMoveAnim  = new BezierMoveAnimation(this, bezierMoveAnim);
             }
         }
 
         protected RectangleF BoundingRect { get; private set; }
+
         protected ref QuadGeometry Quad => ref _quad;
         protected ref Matrix4x4 WorldMatrix => ref _worldMatrix;
 
@@ -268,8 +276,7 @@ namespace NitroSharp.Graphics
         };
 
         public override bool IsIdle
-            => _moveAnim is null && _scaleAnim is null
-                && _rotateAnim is null && _fadeAnim is null;
+            => _moveAnim is null && _scaleAnim is null && _rotateAnim is null && _fadeAnim is null;
 
         protected virtual bool PreciseHitTest => false;
 
@@ -290,7 +297,7 @@ namespace NitroSharp.Graphics
         protected override void LayoutPass(RenderContext ctx)
         {
             base.LayoutPass(ctx);
-            if (!(Parent is RenderItem or Choice { Parent: ConstraintBox }))
+            if (Parent is not (RenderItem or Choice { Parent: ConstraintBox }))
             {
                 Layout(ctx, constraintRect: null);
             }
@@ -309,6 +316,7 @@ namespace NitroSharp.Graphics
                 Color.ToVector4(),
                 constraintRect
             );
+
             if (this is ConstraintBox)
             {
                 constraintRect = BoundingRect;
@@ -375,7 +383,7 @@ namespace NitroSharp.Graphics
                         return;
                     }
 
-                    if (RenderOffscreen(ctx) is Texture && !IsHidden)
+                    if (RenderOffscreen(ctx) is not null && !IsHidden)
                     {
                         Render(ctx, ctx.MainBatch);
                         //ctx.MainBatch.PushQuad(
@@ -448,30 +456,30 @@ namespace NitroSharp.Graphics
             };
             pos.X = x switch
             {
-                NsCoordinate { Kind: NsCoordinateKind.Value, Value: var val }
+                { Kind: NsCoordinateKind.Value, Value: var val }
                     => val.isRelative ? pos.X + val.pos : origin.X + val.pos,
-                NsCoordinate { Kind: NsCoordinateKind.Inherit } => origin.X,
-                NsCoordinate { Kind: NsCoordinateKind.Alignment, Alignment: var align } => align switch
-                {
-                    NsAlignment.Left => origin.X,
-                    NsAlignment.Center => screenBounds.Width / 2.0f,
-                    NsAlignment.Right => origin.X + parentBounds.Width,
-                    _ => ThrowHelper.UnexpectedValue<float>()
-                },
+                { Kind: NsCoordinateKind.Inherit } => origin.X,
+                { Kind: NsCoordinateKind.Alignment, Alignment: var align } => align switch
+                    {
+                        NsAlignment.Left => origin.X,
+                        NsAlignment.Center => screenBounds.Width / 2.0f,
+                        NsAlignment.Right => origin.X + parentBounds.Width,
+                        _ => ThrowHelper.UnexpectedValue<float>()
+                    },
                 _ => 0.0f
             };
             pos.Y = y switch
             {
-                NsCoordinate { Kind: NsCoordinateKind.Value, Value: var val }
+                { Kind: NsCoordinateKind.Value, Value: var val }
                     => val.isRelative ? pos.Y + val.pos : origin.Y + val.pos,
-                NsCoordinate { Kind: NsCoordinateKind.Inherit } => origin.Y,
-                NsCoordinate { Kind: NsCoordinateKind.Alignment, Alignment: var align } => align switch
-                {
-                    NsAlignment.Top => origin.Y,
-                    NsAlignment.Center => screenBounds.Height / 2.0f,
-                    NsAlignment.Bottom => origin.Y + parentBounds.Height,
-                    _ => ThrowHelper.UnexpectedValue<float>()
-                },
+                { Kind: NsCoordinateKind.Inherit } => origin.Y,
+                { Kind: NsCoordinateKind.Alignment, Alignment: var align } => align switch
+                    {
+                        NsAlignment.Top => origin.Y,
+                        NsAlignment.Center => screenBounds.Height / 2.0f,
+                        NsAlignment.Bottom => origin.Y + parentBounds.Height,
+                        _ => ThrowHelper.UnexpectedValue<float>()
+                    },
                 _ => 0.0f
             };
             var anchorPoint = new Vector2(x.AnchorPoint, y.AnchorPoint);

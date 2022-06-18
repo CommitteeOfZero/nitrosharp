@@ -41,15 +41,21 @@ namespace NitroSharp
         public AutoResetEvent Mobile_HandledSurfaceDestroyed => throw new NotImplementedException();
 
         public event Action? Resized;
+
         public event Action<SwapchainSource>? Mobile_SurfaceCreated
         {
             add => value?.Invoke(SwapchainSource);
             remove => throw new NotImplementedException();
         }
+
         public event Action? Mobile_SurfaceDestroyed;
 
         public InputSnapshot PumpEvents() => _window.PumpEvents();
-        public void SetMousePosition(Vector2 pos) => _window.SetMousePosition(pos);
+
+        public void SetMousePosition(Vector2 pos)
+        {
+            _window.SetMousePosition(pos);
+        }
 
         public void SetCursor(SystemCursor cursor)
         {

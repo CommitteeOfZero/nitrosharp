@@ -281,10 +281,7 @@ namespace NitroSharp.Media
                 {
                     AVStream* s = ctx->streams[videoStreamId];
                     duration = Math.Max(duration, s->duration * s->time_base.ToDouble());
-                    _videoResolution = new Size(
-                        (uint)s->codecpar->width,
-                        (uint)s->codecpar->height
-                    );
+                    _videoResolution = new Size((uint)s->codecpar->width, (uint)s->codecpar->height);
                     AVRational framerate = ffmpeg.av_guess_frame_rate(ctx, s, null);
                     _videoFrameDuration = framerate.den > 0
                         ? new AVRational { num = framerate.den, den = framerate.num }.ToDouble()
@@ -343,7 +340,7 @@ namespace NitroSharp.Media
         {
             get
             {
-                if (_videoBuffer is not YCbCrBuffer buffer)
+                if (_videoBuffer is not { } buffer)
                 {
                     NoVideoStream();
                     return default;
@@ -370,7 +367,7 @@ namespace NitroSharp.Media
             _unpauseSignal.Set();
             var tasks = new List<Task>(5);
             tasks.Add(Task.Run(Read));
-            if (_audio is { } && _audioSource is AudioSource audioSource)
+            if (_audio is { } && _audioSource is { } audioSource)
             {
                 Debug.Assert(_audioPipe is not null);
                 tasks.Add(Task.Run(() => Decode(_audio)));
@@ -536,7 +533,7 @@ namespace NitroSharp.Media
             {
                 await _unpauseSignal.WaitAsync();
 
-                if (_seekRequest is TimeSpan seekTarget)
+                if (_seekRequest is { } seekTarget)
                 {
                     _seekRequest = null;
                     long timestamp = (long)Math.Round(seekTarget.TotalSeconds * ffmpeg.AV_TIME_BASE);
@@ -610,11 +607,11 @@ namespace NitroSharp.Media
                     // Flush packet
                     packet.Value = default;
                     packet.Serial = serial;
-                    if (_audio is StreamContext audio)
+                    if (_audio is { } audio)
                     {
                         await audio.PacketQueue.Writer.WriteAsync(packet);
                     }
-                    if (_video is StreamContext video)
+                    if (_video is { } video)
                     {
                         await video.PacketQueue.Writer.WriteAsync(packet);
                     }
@@ -624,11 +621,11 @@ namespace NitroSharp.Media
                     // EOF packet
                     packet.Value = default;
                     packet.Serial = int.MinValue;
-                    if (_audio is StreamContext audio)
+                    if (_audio is { } audio)
                     {
                         await audio.PacketQueue.Writer.WriteAsync(packet);
                     }
-                    if (_video is StreamContext video)
+                    if (_video is { } video)
                     {
                         await video.PacketQueue.Writer.WriteAsync(packet);
                     }
@@ -706,7 +703,7 @@ namespace NitroSharp.Media
                         *ctx.Frame = default;
                     }
 
-                    if (ctx.SeekRequest is TimeSpan seekTarget && !ctx.DecoderDoneSeeking)
+                    if (ctx.SeekRequest is { } seekTarget && !ctx.DecoderDoneSeeking)
                     {
                         if (FrameIsClosestTo(ctx, frame.Value, seekTarget))
                         {
@@ -808,7 +805,7 @@ namespace NitroSharp.Media
                 Memory<byte> buffer = writer.GetMemory(bufferReqs.SizeInBytes);
                 int bytesWritten = resampler.Convert(frame.Value, bufferReqs, buffer.Span);
 
-                if (_loopingEnabled && _loopRegion is LoopRegion loopRegion)
+                if (_loopingEnabled && _loopRegion is { } loopRegion)
                 {
                     if (FrameIsClosestTo(audio, frame.Value, loopRegion.End))
                     {

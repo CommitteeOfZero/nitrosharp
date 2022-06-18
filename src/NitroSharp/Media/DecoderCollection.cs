@@ -37,6 +37,8 @@ namespace NitroSharp.Media
         }
 
         private static void ThrowMissing(AVCodecID codecId)
-            => throw new FFmpegException($"Decoder '{codecId}' is missing.");
+        {
+            throw new FFmpegException($"Decoder '{codecId}' is missing.");
+        }
     }
 }

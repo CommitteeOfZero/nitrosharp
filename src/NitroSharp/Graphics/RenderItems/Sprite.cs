@@ -84,13 +84,21 @@ namespace NitroSharp.Graphics
         public static SpriteTexture FromAsset(AssetRef<Texture> assetRef, RectangleU? srcRectangle = null)
             => new(SpriteTextureKind.Asset, assetRef, srcRectangle, null, RgbaFloat.White);
 
-        public static SpriteTexture SolidColor(in RgbaFloat color, Size size)
-            => new(SpriteTextureKind.SolidColor, null,
-                new RectangleU(0, 0, size.Width, size.Height), null, color);
+        public static SpriteTexture SolidColor(in RgbaFloat color, Size size) => new(
+            SpriteTextureKind.SolidColor,
+            null,
+            new RectangleU(0, 0, size.Width, size.Height),
+            null,
+            color
+        );
 
-        public static SpriteTexture FromStandalone(Texture texture)
-            => new(SpriteTextureKind.StandaloneTexture, null,
-                new RectangleU(0, 0, texture.Width, texture.Height), texture, RgbaFloat.White);
+        public static SpriteTexture FromStandalone(Texture texture) => new(
+            SpriteTextureKind.StandaloneTexture,
+            null,
+            new RectangleU(0, 0, texture.Width, texture.Height),
+            texture,
+            RgbaFloat.White
+        );
 
         public Texture Resolve(RenderContext ctx) => this switch
         {
@@ -168,7 +176,7 @@ namespace NitroSharp.Graphics
         {
             _texture = SpriteTexture.FromSaveData(saveData.Texture, ctx);
             PreciseHitTest = NeedPreciseHitTest();
-            if (saveData.TransitionData is TransitionAnimationSaveData transitionData)
+            if (saveData.TransitionData is { } transitionData)
             {
                 _transition = new TransitionAnimation(transitionData, ctx.Content);
             }
@@ -200,7 +208,7 @@ namespace NitroSharp.Graphics
 
         public override void Render(RenderContext ctx, bool assetsReady)
         {
-            if (assetsReady && _transition is TransitionAnimation transition)
+            if (assetsReady && _transition is { } transition)
             {
                 Texture src = RenderOffscreen(ctx);
                 Texture mask = ctx.Content.Get(transition.Mask);
@@ -374,7 +382,7 @@ namespace NitroSharp.Graphics
                     break;
                 case SpriteTextureKind.Asset:
                     writer.Write(AssetPath);
-                    if (SourceRectangle is RectangleU srcRect)
+                    if (SourceRectangle is { } srcRect)
                     {
                         srcRect.Serialize(ref writer);
                     }

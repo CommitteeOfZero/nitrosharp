@@ -32,7 +32,7 @@ namespace NitroSharp.Media
             Device = device;
             _freeSources = new ConcurrentQueue<AudioSource>();
 
-            VoiceAudioSource = Device.CreateAudioSource( bufferSize: 4400, bufferCount: 64);
+            VoiceAudioSource = Device.CreateAudioSource(bufferSize: 4400, bufferCount: 64);
             for (int i = 0; i < initialSize; i++)
             {
                 _freeSources.Enqueue(Device.CreateAudioSource());

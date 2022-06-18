@@ -89,7 +89,9 @@ namespace NitroSharp
             pollController(SDL_GameControllerButton.RightShoulder, ref sys.X360RbButtonDown);
 
             static void set(ref ConstantValue target, bool value)
-                => target = ConstantValue.Boolean(value);
+            {
+                target = ConstantValue.Boolean(value);
+            }
 
             void pollController(SDL_GameControllerButton button, ref ConstantValue val)
             {

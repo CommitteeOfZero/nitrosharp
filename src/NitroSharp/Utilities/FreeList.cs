@@ -17,8 +17,10 @@ namespace NitroSharp.Utilities
 
         public ref T Unwrap()
         {
-            static void panic() => throw new InvalidOperationException(
-                "Unwrap() has been called on a None value.");
+            static void panic()
+            {
+                throw new InvalidOperationException("Unwrap() has been called on a None value.");
+            }
 
             if (!HasValue) { panic(); }
             return ref _span[0];
@@ -37,8 +39,7 @@ namespace NitroSharp.Utilities
 
         public static FreeListHandle Invalid => new(0, 0);
 
-        public WeakFreeListHandle GetWeakHandle()
-            => new(Index, Version);
+        public WeakFreeListHandle GetWeakHandle() => new(Index, Version);
 
         public bool Equals(FreeListHandle other)
             => Index == other.Index && Version == other.Version;
@@ -162,7 +163,7 @@ namespace NitroSharp.Utilities
         {
             return GetOpt(handle).HasValue
                 ? Free(new FreeListHandle(handle.Index, handle.Version))
-                : (T?)null;
+                : null;
         }
 
         public T Free(FreeListHandle handle)
@@ -241,8 +242,8 @@ namespace NitroSharp.Utilities
 
         public bool ValidateHandle(FreeListHandle handle)
         {
-            return handle.Index < _slots.Count &&
-                _slots[handle.Index].Version == handle.Version;
+            return handle.Index < _slots.Count
+                && _slots[handle.Index].Version == handle.Version;
         }
 
         public void Free(ref FreeListHandle handle)

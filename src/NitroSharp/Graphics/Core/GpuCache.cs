@@ -16,7 +16,9 @@ namespace NitroSharp.Graphics.Core
         public readonly FreeListHandle Value;
 
         public GpuCacheHandle(FreeListHandle freeListHandle)
-            => Value = freeListHandle;
+        {
+            Value = freeListHandle;
+        }
 
         public static GpuCacheHandle Invalid => default;
     }

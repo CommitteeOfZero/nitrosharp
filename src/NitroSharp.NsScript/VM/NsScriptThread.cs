@@ -60,7 +60,7 @@ namespace NitroSharp.NsScript.VM
                 CallFrameStack.Push(callFrame);
             }
 
-            if (dump.DialoguePage is string dialoguePage)
+            if (dump.DialoguePage is { } dialoguePage)
             {
                 DialoguePage = new EntityPath(dialoguePage);
             }

@@ -135,8 +135,8 @@ namespace NitroSharp.Graphics
         public BufferBindings(DeviceBuffer vertices) : this()
             => Vertices = vertices;
 
-        public BufferBindings(DeviceBuffer vertices, DeviceBuffer indices)
-            : this() => (Vertices, Indices) = (vertices, indices);
+        public BufferBindings(DeviceBuffer vertices, DeviceBuffer indices) : this()
+            => (Vertices, Indices) = (vertices, indices);
 
         public bool Equals(BufferBindings other)
         {
@@ -195,7 +195,7 @@ namespace NitroSharp.Graphics
             _commandList = commandList;
             commandList.SetFramebuffer(target.Framebuffer);
             Target = target;
-            if (clearColor is RgbaFloat clear)
+            if (clearColor is { } clear)
             {
                 commandList.ClearColorTarget(0, clear);
             }
@@ -308,16 +308,16 @@ namespace NitroSharp.Graphics
                 cl.SetFullScissorRect(0);
             }
             ref BufferBindings buffers = ref _lastDraw.BufferBindings;
-            if (buffers.Vertices is DeviceBuffer vertices)
+            if (buffers.Vertices is { } vertices)
             {
                 cl.SetVertexBuffer(0, vertices);
             }
-            if (buffers.InstanceData is DeviceBuffer instanceData)
+            if (buffers.InstanceData is { } instanceData)
             {
                 cl.SetVertexBuffer(1, instanceData);
 
             }
-            if (buffers.Indices is DeviceBuffer indices)
+            if (buffers.Indices is { } indices)
             {
                 cl.SetIndexBuffer(indices, IndexFormat.UInt16);
             }
@@ -331,7 +331,7 @@ namespace NitroSharp.Graphics
 
             void setResources(CommandList cl, uint slot, ResourceSetKey? rsKeyOpt)
             {
-                if (rsKeyOpt is ResourceSetKey rsKey)
+                if (rsKeyOpt is { } rsKey)
                 {
                     ResourceSet rs = rsCache.GetResourceSet(rsKey);
                     cl.SetGraphicsResourceSet(slot, rs);
