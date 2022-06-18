@@ -5,6 +5,9 @@
     <Nullable>enable</Nullable>
     <WarningsAsErrors>NU1605;CS8625;CS8600;CS8603</WarningsAsErrors>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+
+    <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+    <CompilerGeneratedFilesOutputPath>$(BaseIntermediateOutputPath)\GeneratedFiles</CompilerGeneratedFilesOutputPath>
   </PropertyGroup>
 
   <Import Project="..\..\OutputPath.props" />
