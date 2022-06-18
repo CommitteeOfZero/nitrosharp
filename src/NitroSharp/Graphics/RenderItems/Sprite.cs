@@ -7,7 +7,6 @@ using NitroSharp.Graphics.Core;
 using NitroSharp.NsScript;
 using NitroSharp.Saving;
 using Veldrid;
-using ToolGeneratedExtensions;
 
 namespace NitroSharp.Graphics
 {
