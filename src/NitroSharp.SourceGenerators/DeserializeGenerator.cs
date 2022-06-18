@@ -26,7 +26,27 @@ namespace NitroSharp.SourceGenerators
 
             if (type.IsRecord)
             {
-                ctor = ctor.WithInitializer(ConstructorInitializer(SyntaxKind.ThisConstructorInitializer));
+                ParameterListSyntax? primaryCtorParams = null;
+
+                foreach (SyntaxReference declReference in type.DeclaringSyntaxReferences)
+                {
+                    if (declReference.GetSyntax() is RecordDeclarationSyntax { ParameterList: { } parameterList })
+                    {
+                        primaryCtorParams = parameterList;
+                        break;
+                    }
+                }
+
+                ArgumentListSyntax? args = null;
+                if (primaryCtorParams is not null)
+                {
+                    int count = primaryCtorParams.Parameters.Count;
+                    LiteralExpressionSyntax defaultLiteral = LiteralExpression(SyntaxKind.DefaultLiteralExpression);
+                    IEnumerable<ArgumentSyntax> values = Enumerable.Repeat(Argument(defaultLiteral), count);
+                    args = ArgumentList(SeparatedList(values));
+                }
+
+                ctor = ctor.WithInitializer(ConstructorInitializer(SyntaxKind.ThisConstructorInitializer, args));
             }
 
             return ctor;

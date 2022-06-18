@@ -1,5 +1,4 @@
 ﻿using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -22,40 +21,42 @@ namespace NitroSharp.SourceGenerators
 
     internal static class Common
     {
-        public const string PersistableAttributeFqn = "NitroSharp.PersistableAttribute";
+        private const string PersistableAttributeFqn = "NitroSharp.PersistableAttribute";
         private const string PersistableAttributeShortName = "Persistable";
 
-        public static ITypeSymbol? PersistableAttribute;
-
-        public static bool IsSerializable(ITypeSymbol type)
+        public static bool HasPersistableAttribute(ITypeSymbol type)
         {
-            bool isPartial = type.DeclaringSyntaxReferences
-                .Any(x => x.GetSyntax() is TypeDeclarationSyntax decl
-                    && decl.Modifiers.Any(x => x.Kind() == SyntaxKind.PartialKeyword));
+            foreach (AttributeData attribute in type.GetAttributes())
+            {
+                if (attribute.AttributeClass is { } attributeClass
+                    && attributeClass.ToDisplayString() == PersistableAttributeFqn)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool IsSerializable(ITypeSymbol type)
+        {
+            bool isPartial = false;
+            foreach (SyntaxReference syntaxReference in type.DeclaringSyntaxReferences)
+            {
+                if (syntaxReference.GetSyntax() is TypeDeclarationSyntax typeDecl)
+                {
+                    isPartial |= IsPartial(typeDecl);
+                    if (isPartial) { break; }
+                }
+
+            }
 
             return isPartial && HasPersistableAttribute(type);
         }
 
-        public static bool HasPersistableAttribute(ITypeSymbol type)
-        {
-            Debug.Assert(PersistableAttribute is not null);
-            return type.GetAttributes()
-                .Any(attr => SymbolEqualityComparer.Default.Equals(attr.AttributeClass, PersistableAttribute));
-        }
-
         public static bool IsSerializableCandidate(TypeDeclarationSyntax typeDeclaration)
         {
-            bool isPartial = false;
-            foreach (SyntaxToken modifier in typeDeclaration.Modifiers)
-            {
-                if (modifier.IsKind(SyntaxKind.PartialKeyword))
-                {
-                    isPartial = true;
-                    break;
-                }
-            }
-
-            if (!isPartial) { return false; }
+            if (!IsPartial(typeDeclaration)) return false;
 
             foreach (AttributeListSyntax attributeList in typeDeclaration.AttributeLists)
             {
@@ -69,6 +70,21 @@ namespace NitroSharp.SourceGenerators
             }
 
             return false;
+        }
+
+        private static bool IsPartial(TypeDeclarationSyntax typeDeclaration)
+        {
+            bool isPartial = false;
+            foreach (SyntaxToken modifier in typeDeclaration.Modifiers)
+            {
+                if (modifier.IsKind(SyntaxKind.PartialKeyword))
+                {
+                    isPartial = true;
+                    break;
+                }
+            }
+
+            return isPartial;
         }
 
         public static MemberAccessExpressionSyntax MemberAccess(ExpressionSyntax expr, string memberName)
@@ -128,7 +144,7 @@ namespace NitroSharp.SourceGenerators
             return symbols;
         }
 
-        public static bool IsAutoProperty(this IPropertySymbol property)
+        private static bool IsAutoProperty(this IPropertySymbol property)
         {
             IEnumerable<IFieldSymbol> fields = property.ContainingType
                 .GetMembers().OfType<IFieldSymbol>();
