@@ -10,46 +10,22 @@ using Veldrid;
 
 namespace NitroSharp.Graphics
 {
-    internal struct GpuGlyph
-    {
-        public Vector2 Offset;
-        public int GlyphRunId;
-        public int GlyphId;
-        public int OutlineId;
-        public float Opacity;
-
-        public static VertexLayoutDescription LayoutDescription => new(
-            stride: 24, instanceStepRate: 1,
-            new VertexElementDescription(
-                "vs_Offset",
-                VertexElementSemantic.TextureCoordinate,
-                VertexElementFormat.Float2
-            ),
-            new VertexElementDescription(
-                "vs_GlyphRunID",
-                VertexElementSemantic.TextureCoordinate,
-                VertexElementFormat.Int1
-            ),
-            new VertexElementDescription(
-                "vs_GlyphID",
-                VertexElementSemantic.TextureCoordinate,
-                VertexElementFormat.Int1
-            ),
-            new VertexElementDescription(
-                "vs_OutlineID",
-                VertexElementSemantic.TextureCoordinate,
-                VertexElementFormat.Int1
-            ),
-            new VertexElementDescription(
-                "vs_Opacity",
-                VertexElementSemantic.TextureCoordinate,
-                VertexElementFormat.Float1
-            )
-        );
-    }
-
     internal sealed class TextRenderContext : IDisposable
     {
+        private readonly struct GpuGlyphSlice
+        {
+            public readonly DeviceBuffer Buffer;
+            public readonly uint InstanceBase;
+            public readonly uint InstanceCount;
+
+            public GpuGlyphSlice(DeviceBuffer buffer, uint instanceBase, uint instanceCount)
+            {
+                Buffer = buffer;
+                InstanceBase = instanceBase;
+                InstanceCount = instanceCount;
+            }
+        }
+
         private readonly struct GpuGlyphRun : GpuType
         {
             public const uint SizeInGpuBlocks = 2;
@@ -259,20 +235,6 @@ namespace NitroSharp.Graphics
             }
         }
 
-        private readonly struct GpuGlyphSlice
-        {
-            public readonly DeviceBuffer Buffer;
-            public readonly uint InstanceBase;
-            public readonly uint InstanceCount;
-
-            public GpuGlyphSlice(DeviceBuffer buffer, uint instanceBase, uint instanceCount)
-            {
-                Buffer = buffer;
-                InstanceBase = instanceBase;
-                InstanceCount = instanceCount;
-            }
-        }
-
         private GpuGlyphSlice? AppendRun(
             in GlyphRun run,
             ReadOnlySpan<PositionedGlyph> positionedGlyphs,
@@ -336,5 +298,43 @@ namespace NitroSharp.Graphics
             _gpuGlyphRuns.Dispose();
             _gpuTransforms.Dispose();
         }
+    }
+
+    internal struct GpuGlyph
+    {
+        public Vector2 Offset;
+        public int GlyphRunId;
+        public int GlyphId;
+        public int OutlineId;
+        public float Opacity;
+
+        public static VertexLayoutDescription LayoutDescription => new(
+            stride: 24, instanceStepRate: 1,
+            new VertexElementDescription(
+                "vs_Offset",
+                VertexElementSemantic.TextureCoordinate,
+                VertexElementFormat.Float2
+            ),
+            new VertexElementDescription(
+                "vs_GlyphRunID",
+                VertexElementSemantic.TextureCoordinate,
+                VertexElementFormat.Int1
+            ),
+            new VertexElementDescription(
+                "vs_GlyphID",
+                VertexElementSemantic.TextureCoordinate,
+                VertexElementFormat.Int1
+            ),
+            new VertexElementDescription(
+                "vs_OutlineID",
+                VertexElementSemantic.TextureCoordinate,
+                VertexElementFormat.Int1
+            ),
+            new VertexElementDescription(
+                "vs_Opacity",
+                VertexElementSemantic.TextureCoordinate,
+                VertexElementFormat.Float1
+            )
+        );
     }
 }

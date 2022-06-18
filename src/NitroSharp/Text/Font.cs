@@ -36,6 +36,11 @@ namespace NitroSharp.Text
     {
         public readonly Fixed26Dot6 Value;
 
+        public PtFontSize(int value)
+        {
+            Value = Fixed26Dot6.FromInt32(value);
+        }
+
         public PtFontSize(ref MessagePackReader reader)
         {
             Value = Fixed26Dot6.FromRawValue(reader.ReadInt32());
@@ -44,11 +49,6 @@ namespace NitroSharp.Text
         public void Serialize(ref MessagePackWriter writer)
         {
             writer.WriteInt32(Value.Value);
-        }
-
-        public PtFontSize(int value)
-        {
-            Value = Fixed26Dot6.FromInt32(value);
         }
 
         public float ToFloat() => Value.ToSingle();

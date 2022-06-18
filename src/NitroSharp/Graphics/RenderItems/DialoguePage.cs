@@ -95,6 +95,24 @@ namespace NitroSharp.Graphics
             LineRead = false;
         }
 
+        public override Size GetUnconstrainedBounds(RenderContext ctx)
+        {
+            RectangleF bb = _layout.BoundingBox;
+            var size = new Size(
+                (uint)(Margin.X + bb.Right + Margin.Z),
+                (uint)(Margin.Y + bb.Bottom + Margin.W)
+            );
+            return size.Constrain(_layout.MaxBounds);
+        }
+
+        public void Clear()
+        {
+            _layout.Clear();
+            _remainingSegments.Clear();
+            _lines.Clear();
+            _animation = null;
+        }
+
         private bool Advance(GameContext ctx)
         {
             if (_animation is not null)
@@ -130,64 +148,6 @@ namespace NitroSharp.Graphics
             }
 
             return true;
-        }
-
-        private bool AnimationEnabled(GameContext ctx) => !ctx.Skipping && !DisableAnimation;
-
-        private void BeginAnimation(RenderContext renderCtx, int start)
-        {
-            _animation = new TypewriterAnimation(_layout, _layout.GlyphRuns[start..], 40);
-            renderCtx.Icons.WaitLine.Reset();
-        }
-
-        private ConsumeResult ConsumeSegment(GameContext ctx)
-        {
-            GlyphRasterizer glyphRasterizer = ctx.RenderContext.GlyphRasterizer;
-            if (_remainingSegments.TryDequeue(out DialogueSegment? seg))
-            {
-                switch (seg.SegmentKind)
-                {
-                    case DialogueSegmentKind.Text:
-                        var textSegment = (TextSegment)seg;
-                        _layout.Append(glyphRasterizer, textSegment.TextRuns.AsSpan());
-                        ctx.Backlog.Append(textSegment);
-                        return ConsumeResult.KeepGoing;
-                    case DialogueSegmentKind.Marker:
-                        var marker = (MarkerSegment)seg;
-                        switch (marker.MarkerKind)
-                        {
-                            case MarkerKind.Halt:
-                                return ConsumeResult.Halt;
-                        }
-                        break;
-                    case DialogueSegmentKind.Voice:
-                        var voice = (VoiceSegment)seg;
-                        if (voice.Action == NsVoiceAction.Play)
-                        {
-                            ctx.PlayVoice(voice.CharacterName, voice.FileName);
-                        }
-                        else
-                        {
-                            ctx.StopVoice();
-                        }
-                        break;
-
-                }
-
-                return ConsumeResult.KeepGoing;
-            }
-
-            return ConsumeResult.AllDone;
-        }
-
-        protected override void AdvanceAnimations(RenderContext ctx, float dt, bool assetsReady)
-        {
-            AdvanceAnimation(ref _animation, dt);
-            if (_animation is null)
-            {
-                ctx.Icons.WaitLine.Update(dt);
-            }
-            base.AdvanceAnimations(ctx, dt, assetsReady);
         }
 
         protected override void Update(GameContext ctx)
@@ -264,30 +224,70 @@ namespace NitroSharp.Graphics
             }
         }
 
+        private bool AnimationEnabled(GameContext ctx) => !ctx.Skipping && !DisableAnimation;
+
+        private void BeginAnimation(RenderContext renderCtx, int start)
+        {
+            _animation = new TypewriterAnimation(_layout, _layout.GlyphRuns[start..], 40);
+            renderCtx.Icons.WaitLine.Reset();
+        }
+
+        private ConsumeResult ConsumeSegment(GameContext ctx)
+        {
+            GlyphRasterizer glyphRasterizer = ctx.RenderContext.GlyphRasterizer;
+            if (_remainingSegments.TryDequeue(out DialogueSegment? seg))
+            {
+                switch (seg.SegmentKind)
+                {
+                    case DialogueSegmentKind.Text:
+                        var textSegment = (TextSegment)seg;
+                        _layout.Append(glyphRasterizer, textSegment.TextRuns.AsSpan());
+                        ctx.Backlog.Append(textSegment);
+                        return ConsumeResult.KeepGoing;
+                    case DialogueSegmentKind.Marker:
+                        var marker = (MarkerSegment)seg;
+                        switch (marker.MarkerKind)
+                        {
+                            case MarkerKind.Halt:
+                                return ConsumeResult.Halt;
+                        }
+                        break;
+                    case DialogueSegmentKind.Voice:
+                        var voice = (VoiceSegment)seg;
+                        if (voice.Action == NsVoiceAction.Play)
+                        {
+                            ctx.PlayVoice(voice.CharacterName, voice.FileName);
+                        }
+                        else
+                        {
+                            ctx.StopVoice();
+                        }
+                        break;
+
+                }
+
+                return ConsumeResult.KeepGoing;
+            }
+
+            return ConsumeResult.AllDone;
+        }
+
+        protected override void AdvanceAnimations(RenderContext ctx, float dt, bool assetsReady)
+        {
+            AdvanceAnimation(ref _animation, dt);
+            if (_animation is null)
+            {
+                ctx.Icons.WaitLine.Update(dt);
+            }
+            base.AdvanceAnimations(ctx, dt, assetsReady);
+        }
+
         public void EndLine(GameContext ctx)
         {
             if (AnimationEnabled(ctx))
             {
                 BeginAnimation(ctx.RenderContext, start: 0);
             }
-        }
-
-        public override Size GetUnconstrainedBounds(RenderContext ctx)
-        {
-            RectangleF bb = _layout.BoundingBox;
-            var size = new Size(
-                (uint)(Margin.X + bb.Right + Margin.Z),
-                (uint)(Margin.Y + bb.Bottom + Margin.W)
-            );
-            return size.Constrain(_layout.MaxBounds);
-        }
-
-        public void Clear()
-        {
-            _layout.Clear();
-            _remainingSegments.Clear();
-            _lines.Clear();
-            _animation = null;
         }
 
         public new DialoguePageSaveData ToSaveData(GameSavingContext ctx) => new()
