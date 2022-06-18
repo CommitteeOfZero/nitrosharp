@@ -125,11 +125,11 @@ namespace NitroSharp.Graphics
         }
 
         public GameWindow Window { get; }
+        public Size DesignResolution { get; }
         public MeshList<QuadVertex> Quads { get; }
         public MeshList<QuadVertexUV3> QuadsUV3 { get; }
         public MeshList<CubeVertex> Cubes { get; }
 
-        public Size DesignResolution { get; }
         public GraphicsDevice GraphicsDevice { get; }
         public ResourceFactory ResourceFactory { get; }
 

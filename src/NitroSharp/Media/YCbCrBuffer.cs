@@ -272,11 +272,6 @@ namespace NitroSharp.Media
 
         void YCbCrBufferInternal.TakeFrame()
         {
-            static void emtpy()
-            {
-                throw new InvalidOperationException("The video buffer is empty.");
-            }
-
             int head = _head;
             if (head == _tail)
             {
@@ -285,6 +280,11 @@ namespace NitroSharp.Media
 
             _head = Inc(head);
             _slotAvailable.Set();
+
+            static void emtpy()
+            {
+                throw new InvalidOperationException("The video buffer is empty.");
+            }
         }
 
         private static int Inc(int i) => (i + 1) % BufferSize;
