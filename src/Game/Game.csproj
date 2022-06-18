@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>net7.0</TargetFramework>
     <OutputType>Exe</OutputType>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -9,12 +9,18 @@
     <DebugType>pdbonly</DebugType>
     <NoWarn>VSTHRD103;VSTHRD200</NoWarn>
     <ApplicationIcon>CoZ.ico</ApplicationIcon>
+    <PublishTrimmed>true</PublishTrimmed>
+    <TrimMode>link</TrimMode>
+    <TrimmerDefaultAction>link</TrimmerDefaultAction>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
-    <RootAllApplicationAssemblies>false</RootAllApplicationAssemblies>
+    <IlcTrimMetadata>true</IlcTrimMetadata>
+    <IlcFoldIdenticalMethodBodies>true</IlcFoldIdenticalMethodBodies>
     <IlcGenerateCompleteTypeMetadata>false</IlcGenerateCompleteTypeMetadata>
     <IlcGenerateStackTraceData>false</IlcGenerateStackTraceData>
+    <IlcOptimizationPreference>speed</IlcOptimizationPreference>
+    <IlcInstructionSet>avx2,bmi2,fma,pclmul,popcnt,aes</IlcInstructionSet>
+    <IlcDisableReflection>false</IlcDisableReflection>
     <InvariantGlobalization>true</InvariantGlobalization>
-    <TrimMode>link</TrimMode>
     <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
 
@@ -33,7 +39,7 @@
     <ProjectReference Include="..\NitroSharp\NitroSharp.csproj" />
 
     <PackageReference Include="System.Json" Version="4.7.1" />
-    <PackageReference Condition="'$(Native)' == 'true'" Include="Microsoft.DotNet.ILCompiler" Version="6.0.0-rc.1.21420.1" />
+    <PackageReference Condition="'$(Native)' == 'true'" Include="Microsoft.DotNet.ILCompiler" Version="7.0.0-preview.4.22229.4" />
   </ItemGroup>
 
 </Project>
