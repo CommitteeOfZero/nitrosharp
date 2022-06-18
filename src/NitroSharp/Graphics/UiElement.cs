@@ -23,7 +23,7 @@ namespace NitroSharp.Graphics
 
         public void Focus(RenderContext renderContext)
         {
-            if (RenderItem is RenderItem2D visual)
+            if (RenderItem is { } visual)
             {
                 Size bounds = visual.GetUnconstrainedBounds(renderContext);
                 var center = new Vector2(bounds.Width / 2.0f, bounds.Height / 2.0f);

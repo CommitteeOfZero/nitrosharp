@@ -16,8 +16,7 @@ namespace NitroSharp
 
         public bool IsEmpty => _results.Count == 0;
 
-        public QueryResultsEnumerator<T> GetEnumerator()
-            => new(_results);
+        public QueryResultsEnumerator<T> GetEnumerator() => new(_results);
     }
 
     internal struct QueryResultsEnumerator<T>
@@ -59,7 +58,7 @@ namespace NitroSharp
         public SmallList<Entity> Query(uint contextId, EntityQuery query)
         {
             if (EntityPath.IsValidPath(query, out EntityPath simplePath)
-                && Get(contextId, simplePath) is Entity result)
+                && Get(contextId, simplePath) is { } result)
             {
                 return new SmallList<Entity>(result);
             }

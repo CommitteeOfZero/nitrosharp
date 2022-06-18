@@ -87,19 +87,29 @@ namespace NitroSharp.Media
     {
         private readonly YCbCrBufferInternal _buffer;
 
-        public YCbCrBufferWriter(YCbCrBufferInternal buffer) => _buffer = buffer;
+        public YCbCrBufferWriter(YCbCrBufferInternal buffer)
+        {
+            _buffer = buffer;
+        }
 
         public ValueTask WriteFrameAsync(AVFrame frame, int serial, double timestamp, double duration)
             => _buffer.WriteFrameAsync(frame, serial, timestamp, duration);
 
-        public void Clear() => _buffer.Clear();
+        public void Clear()
+        {
+            _buffer.Clear();
+        }
     }
 
     internal readonly struct YCbCrBufferReader
     {
         private readonly YCbCrBufferInternal _buffer;
 
-        public YCbCrBufferReader(YCbCrBufferInternal buffer) => _buffer = buffer;
+        public YCbCrBufferReader(YCbCrBufferInternal buffer)
+        {
+            _buffer = buffer;
+        }
+
         public bool PeekFrame(out YCbCrFrame frame) => _buffer.PeekFrame(out frame);
 
         public (Texture luma, Texture chroma) GetDeviceTextures()
@@ -263,7 +273,9 @@ namespace NitroSharp.Media
         void YCbCrBufferInternal.TakeFrame()
         {
             static void emtpy()
-                => throw new InvalidOperationException("The video buffer is empty.");
+            {
+                throw new InvalidOperationException("The video buffer is empty.");
+            }
 
             int head = _head;
             if (head == _tail)

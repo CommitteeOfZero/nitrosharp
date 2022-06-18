@@ -184,7 +184,7 @@ namespace NitroSharp.Saving
         {
             MappedResource map = ctx.GraphicsDevice.Map(texture, MapMode.Read);
             var span = new ReadOnlySpan<Bgra32>(map.Data.ToPointer(), (int)map.SizeInBytes / 4);
-            Image<Bgra32> image = Image.LoadPixelData(span, (int)texture.Width, (int)texture.Height);
+            var image = Image.LoadPixelData(span, (int)texture.Width, (int)texture.Height);
             ctx.GraphicsDevice.Unmap(texture);
             if (dstWidth != texture.Width || dstHeight != texture.Height)
             {

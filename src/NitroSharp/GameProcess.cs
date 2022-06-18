@@ -43,7 +43,7 @@ namespace NitroSharp
         {
             Condition = saveData.WaitCondition;
             EntityQuery = null;
-            if (saveData.EntityQuery is string entityQuery)
+            if (saveData.EntityQuery is { } entityQuery)
             {
                 EntityQuery = new EntityQuery(entityQuery);
             }

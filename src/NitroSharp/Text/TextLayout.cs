@@ -53,6 +53,7 @@ namespace NitroSharp.Text
         public ReadOnlySpan<float> OpacityValues => CollectionsMarshal.AsSpan(_opacityValues);
         public ReadOnlySpan<Line> Lines => CollectionsMarshal.AsSpan(_lines);
         public RectangleF BoundingBox => _boundingBox;
+
         public Size MaxBounds { get; }
 
         public int GetGlyphSpanLength(Range span)
@@ -79,7 +80,10 @@ namespace NitroSharp.Text
         }
 
         public void Append(GlyphRasterizer glyphRasterizer, TextRun textRun)
-            => Append(glyphRasterizer, MemoryMarshal.CreateReadOnlySpan(ref textRun, 1));
+        {
+            Append(glyphRasterizer, MemoryMarshal.CreateReadOnlySpan(ref textRun, 1));
+        }
+
 
         public void Append(GlyphRasterizer glyphRasterizer, ReadOnlySpan<TextRun> textRuns)
         {
@@ -109,8 +113,7 @@ namespace NitroSharp.Text
             {
                 float height = _fixedLineHeight ?? line.VerticalMetrics.LineHeight;
                 Vector2 newCaret = _caret;
-                if (_lines.Count > 0 && _lastLine.IsEmpty
-                    || (!_lastLine.IsEmpty && !updateLastLine))
+                if (_lines.Count > 0 && _lastLine.IsEmpty || (!_lastLine.IsEmpty && !updateLastLine))
                 {
                     newCaret.X = 0;
                     newCaret.Y += _fixedLineHeight ?? _lastLine.VerticalMetrics.LineHeight;
@@ -120,6 +123,7 @@ namespace NitroSharp.Text
 
                 Span<TextRunGlyph> glyphs = CollectionsMarshal.AsSpan(glyphBuf);
                 const float rubyTextOffset = 2.0f;
+
                 foreach (TextRunGlyph glyph in glyphs[line.GlyphSpan])
                 {
                     var glyphPos = new Vector2(glyph.Position.X, _caret.Y + glyph.Position.Y);
@@ -558,8 +562,7 @@ namespace NitroSharp.Text
                     bbLeft = word.BbLeft;
                 }
 
-                Span<TextRunGlyph> span = CollectionsMarshal
-                    .AsSpan(_context.GlyphBuffer)[word.GlyphSpan];
+                Span<TextRunGlyph> span = CollectionsMarshal.AsSpan(_context.GlyphBuffer)[word.GlyphSpan];
                 foreach (ref TextRunGlyph g in span)
                 {
                     g.Position += caret;
@@ -852,8 +855,7 @@ namespace NitroSharp.Text
                     }
 
                     LineBreak? lineBreak = null;
-                    if (part.NextBreak is { } nextBreak
-                        && nextBreak.PosInScalars == part.Position + 1)
+                    if (part.NextBreak is { } nextBreak && nextBreak.PosInScalars == part.Position + 1)
                     {
                         lineBreak = nextBreak;
                     }

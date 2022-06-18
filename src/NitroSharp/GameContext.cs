@@ -141,13 +141,12 @@ namespace NitroSharp
             var createSurface = new TaskCompletionSource<SwapchainSource>();
             window.Mobile_SurfaceCreated += surf => createSurface.SetResult(surf);
             (Logger logger, LogEventRecorder logEventRecorder) = SetupLogging();
-            Task<AudioContext> initAudio = Task.Run(() => InitAudio(configuration));
-            Task<(GlyphRasterizer, FontConfiguration)> loadFonts = Task
+            var initAudio = Task.Run(() => InitAudio(configuration));
+            var loadFonts = Task
                 .Run(async () => await LoadFonts(configuration));
 
             (GlyphRasterizer glyphRasterizer, FontConfiguration fontConfig) = await loadFonts;
-            Task<(NsScriptVM vm, GameProcess mainProcess)> startVM = Task
-                .Run(() => LoadStartupScript(configuration, fontConfig, logger));
+            var startVM = Task.Run(() => LoadStartupScript(configuration, fontConfig, logger));
 
             SwapchainSource swapchainSource = await createSurface.Task;
             (GraphicsDevice gd, Swapchain swapchain) = InitGraphics(window, configuration);
@@ -223,7 +222,7 @@ namespace NitroSharp
         {
             var audioParameters = AudioParameters.Default;
             AudioBackend backend = AudioDevice.GetPlatformDefaultBackend();
-            if (configuration.PreferredAudioBackend is AudioBackend preferredBackend
+            if (configuration.PreferredAudioBackend is { } preferredBackend
                 && AudioDevice.IsBackendAvailable(preferredBackend))
             {
                 backend = preferredBackend;
@@ -243,9 +242,12 @@ namespace NitroSharp
 #endif
             GraphicsBackend backend = configuration.PreferredGraphicsBackend
                 ?? VeldridStartup.GetPlatformDefaultBackend();
-            var swapchainDesc = new SwapchainDescription(window.SwapchainSource,
+            var swapchainDesc = new SwapchainDescription(
+                window.SwapchainSource,
                 (uint)configuration.WindowWidth, (uint)configuration.WindowHeight,
-                options.SwapchainDepthFormat, options.SyncToVerticalBlank);
+                options.SwapchainDepthFormat,
+                options.SyncToVerticalBlank
+            );
 
             if (backend is GraphicsBackend.OpenGL or GraphicsBackend.OpenGLES)
             {
@@ -681,9 +683,9 @@ namespace NitroSharp
         internal void PlayVoice(string characterName, string filePath)
         {
             if (Skipping) { return; }
-            if (Content.TryOpenStream($"voice/{filePath}") is Stream file)
+            if (Content.TryOpenStream($"voice/{filePath}") is { } file)
             {
-                if (_activeVoice is (string character, MediaStream prevVoice))
+                if (_activeVoice is ({ } character, { } prevVoice))
                 {
                     _voices.Remove(character);
                     prevVoice.Dispose();
@@ -704,7 +706,7 @@ namespace NitroSharp
 
         internal void StopVoice()
         {
-            if (_activeVoice is (string character, MediaStream voice))
+            if (_activeVoice is ({ } character, { } voice))
             {
                 voice.Dispose();
                 _voices.Remove(character);

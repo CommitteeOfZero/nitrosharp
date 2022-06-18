@@ -194,7 +194,7 @@ namespace NitroSharp
         {
             if (ResolvePath(entityPath, out ResolvedEntityPath resolvedPath))
             {
-                if (VM.CreateThread(CurrentProcess, target) is NsScriptThread thread)
+                if (VM.CreateThread(CurrentProcess, target) is { } thread)
                 {
                     World.Add(new VmThread(resolvedPath, target, _ctx.VM, thread));
                 }

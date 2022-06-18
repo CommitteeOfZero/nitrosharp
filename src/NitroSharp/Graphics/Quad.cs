@@ -106,10 +106,11 @@ namespace NitroSharp.Graphics
             bottomRight.Color = color;
 
             RectangleF boundingRect = quad.GetBoundingRect();
-            if (constraintRect is RectangleF constraint)
+            if (constraintRect is { } constraint)
             {
                 quad.Constrain(ref boundingRect, constraint);
             }
+
             return (quad, boundingRect);
         }
 

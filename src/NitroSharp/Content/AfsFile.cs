@@ -43,9 +43,8 @@ namespace NitroSharp.Content
 
         private static AfsFile Load(MemoryMappedFile mmFile, Encoding encoding, uint archiveOffset = 0)
         {
-            return TryLoad(mmFile, encoding, archiveOffset) is AfsFile file
-                ? file
-                : throw new ArchiveException("AFS", "Unknown magic");
+            return TryLoad(mmFile, encoding, archiveOffset)
+                ?? throw new ArchiveException("AFS", "Unknown magic");
         }
 
         public static AfsFile? TryLoad(MemoryMappedFile file, Encoding encoding)

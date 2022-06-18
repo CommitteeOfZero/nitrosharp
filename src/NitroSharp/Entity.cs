@@ -116,8 +116,7 @@ namespace NitroSharp
             _children.Remove(child);
         }
 
-        ref ArrayBuilder<Entity> EntityInternal.GetChildrenMut()
-            => ref _children;
+        ref ArrayBuilder<Entity> EntityInternal.GetChildrenMut() => ref _children;
 
         public virtual void Dispose()
         {
@@ -137,10 +136,11 @@ namespace NitroSharp
             private readonly ReadOnlySpan<Entity> _children;
 
             public ChildEnumerable(ReadOnlySpan<Entity> children)
-                => _children = children;
+            {
+                _children = children;
+            }
 
-            public ChildEnumerator<T> GetEnumerator()
-                => new(_children);
+            public ChildEnumerator<T> GetEnumerator() => new(_children);
         }
 
         internal ref struct ChildEnumerator<T>

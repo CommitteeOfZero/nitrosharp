@@ -4,7 +4,7 @@ using Veldrid;
 
 namespace NitroSharp.Graphics
 {
-    internal sealed class AlphaMask :  ConstraintBox
+    internal sealed class AlphaMask : ConstraintBox
     {
         public AlphaMask(
             in ResolvedEntityPath path,

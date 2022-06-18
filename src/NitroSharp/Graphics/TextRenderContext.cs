@@ -104,22 +104,9 @@ namespace NitroSharp.Graphics
         {
             _glyphRasterizer = glyphRasterizer;
             _textureCache = textureCache;
-            _gpuGlyphs = new GpuList<GpuGlyph>(
-                gd,
-                BufferUsage.VertexBuffer,
-                initialCapacity: 2048
-             );
-            _gpuGlyphRuns = new GpuCache<GpuGlyphRun>(
-               gd,
-               GpuGlyphRun.SizeInGpuBlocks,
-               dimension: 128
-           );
-            _gpuTransforms = new GpuCache<GpuTransform>(
-                gd,
-                GpuTransform.SizeInGpuBlocks,
-                dimension: 128
-            );
-
+            _gpuGlyphs = new GpuList<GpuGlyph>(gd, BufferUsage.VertexBuffer, initialCapacity: 2048);
+            _gpuGlyphRuns = new GpuCache<GpuGlyphRun>(gd, GpuGlyphRun.SizeInGpuBlocks, dimension: 128);
+            _gpuTransforms = new GpuCache<GpuTransform>(gd, GpuTransform.SizeInGpuBlocks, dimension: 128);
             _pendingDraws = new ArrayBuilder<(Draw, int)>(4);
         }
 
@@ -133,10 +120,14 @@ namespace NitroSharp.Graphics
         }
 
         public void RequestGlyphs(TextLayout textLayout)
-            => RequestGlyphs(textLayout, textLayout.GlyphRuns);
+        {
+            RequestGlyphs(textLayout, textLayout.GlyphRuns);
+        }
 
         public void RequestGlyphs(TextLayout textLayout, GlyphRun glyphRun)
-            => RequestGlyphs(textLayout, MemoryMarshal.CreateReadOnlySpan(ref glyphRun, 1));
+        {
+            RequestGlyphs(textLayout, MemoryMarshal.CreateReadOnlySpan(ref glyphRun, 1));
+        }
 
         public void RequestGlyphs(TextLayout textLayout, ReadOnlySpan<GlyphRun> glyphRuns)
         {
@@ -196,8 +187,7 @@ namespace NitroSharp.Graphics
                 ref readonly GlyphRun glyphRun = ref glyphRuns[i];
                 ReadOnlySpan<PositionedGlyph> glyphs = layout.Glyphs[glyphRun.GlyphSpan];
                 ReadOnlySpan<float> opacityValues = layout.GetOpacityValues(glyphRun.GlyphSpan);
-                if (AppendRun(glyphRun, glyphs, opacityValues, finalTransform, opacity)
-                    is GpuGlyphSlice gpuGlyphSlice)
+                if (AppendRun(glyphRun, glyphs, opacityValues, finalTransform, opacity) is { } gpuGlyphSlice)
                 {
                     _pendingDraws.Add() = (new Draw
                     {
@@ -313,8 +303,7 @@ namespace NitroSharp.Graphics
                     int outlineId = 0;
                     if (cachedGlyph.OutlineTextureCacheHandle.IsValid)
                     {
-                        TextureCacheItem outlineTci = _textureCache
-                            .Get(cachedGlyph.OutlineTextureCacheHandle);
+                        TextureCacheItem outlineTci = _textureCache.Get(cachedGlyph.OutlineTextureCacheHandle);
                         outlineId = outlineTci.UvRectPosition;
                     }
 

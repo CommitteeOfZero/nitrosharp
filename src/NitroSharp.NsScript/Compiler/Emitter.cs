@@ -156,7 +156,7 @@ namespace NitroSharp.NsScript.Compiler
             if (val.IsString && !_supressConstantLookup)
             {
                 string strVal = val.AsString()!;
-                if (WellKnownSymbols.LookupBuiltInConstant(strVal) is BuiltInConstant constant)
+                if (WellKnownSymbols.LookupBuiltInConstant(strVal) is { } constant)
                 {
                     val = ConstantValue.BuiltInConstant(constant);
                 }
@@ -349,7 +349,7 @@ namespace NitroSharp.NsScript.Compiler
 
         private void EmitCallChapter(CallChapterStatement statement)
         {
-            if (_checker.ResolveCallChapterTarget(statement) is ChapterSymbol chapter)
+            if (_checker.ResolveCallChapterTarget(statement) is { } chapter)
             {
                 EmitCall(Opcode.CallScene, chapter);
             }
@@ -357,7 +357,7 @@ namespace NitroSharp.NsScript.Compiler
 
         private void EmitCallScene(CallSceneStatement statement)
         {
-            if (_checker.ResolveCallSceneTarget(statement) is SceneSymbol scene)
+            if (_checker.ResolveCallSceneTarget(statement) is { } scene)
             {
                 EmitCall(Opcode.CallScene, scene);
             }

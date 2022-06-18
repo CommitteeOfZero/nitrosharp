@@ -687,7 +687,7 @@ namespace NitroSharp
                 if (_anims.TryPeek(out AnimationPair animPair))
                 {
                     bool inProgress = animPair.Text.Update(dt);
-                    if (animPair.RubyText is object)
+                    if (animPair.RubyText is not null)
                     {
                         inProgress |= animPair.RubyText.Update(dt);
                     }
@@ -703,7 +703,7 @@ namespace NitroSharp
                 foreach (AnimationPair animPair in _anims)
                 {
                     inProgress |= animPair.Text.Update(dt);
-                    if (animPair.RubyText is object)
+                    if (animPair.RubyText is not null)
                     {
                         inProgress |= animPair.RubyText.Update(dt);
                     }

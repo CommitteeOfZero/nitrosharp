@@ -59,9 +59,20 @@ namespace NitroSharp
             Thread = _vm.CreateThread(Thread.Process, Thread.EntryModule, Target, start: true)!;
         }
 
-        public void Suspend() => _vm.SuspendThread(Thread);
-        public void Resume() => _vm.ResumeThread(Thread);
-        public void Terminate() => _vm.TerminateThread(Thread);
+        public void Suspend()
+        {
+            _vm.SuspendThread(Thread);
+        }
+
+        public void Resume()
+        {
+            _vm.ResumeThread(Thread);
+        }
+
+        public void Terminate()
+        {
+            _vm.TerminateThread(Thread);
+        }
 
         public override void Dispose()
         {

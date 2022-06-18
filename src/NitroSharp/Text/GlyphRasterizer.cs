@@ -439,7 +439,7 @@ namespace NitroSharp.Text
             TextureCacheHandle textureCacheHandle,
             TextureCacheHandle outlineTextureCacheHandle)
         {
-            return new(
+            return new GlyphCacheEntry(
                GlyphCacheEntryKind.Regular,
                textureCacheHandle,
                outlineTextureCacheHandle
@@ -495,7 +495,9 @@ namespace NitroSharp.Text
         }
 
         public void UpsertCachedGlyph(GlyphCacheKey key, in GlyphCacheEntry entry)
-            => _glyphCache[key] = entry;
+        {
+            _glyphCache[key] = entry;
+        }
 
         public bool TryGetCachedGlyph(GlyphCacheKey cacheKey, out GlyphCacheEntry cacheEntry)
             => _glyphCache.TryGetValue(cacheKey, out cacheEntry);

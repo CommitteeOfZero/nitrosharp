@@ -73,10 +73,14 @@ namespace NitroSharp.Graphics
         public override bool IsIdle => true;
 
         public void AddMouseOver(RenderItem2D visual)
-            => _mouseOverVisuals.Add(visual);
+        {
+            _mouseOverVisuals.Add(visual);
+        }
 
         public void AddMouseDown(RenderItem2D visual)
-            => _mouseDownVisuals.Add(visual);
+        {
+            _mouseDownVisuals.Add(visual);
+        }
 
         public bool HandleEvents(GameContext ctx)
         {
@@ -88,7 +92,7 @@ namespace NitroSharp.Graphics
                 }
             }
 
-            if (DefaultVisual is RenderItem2D visual)
+            if (DefaultVisual is { } visual)
             {
                 bool hovered = visual.HitTest(ctx.RenderContext, ctx.InputContext);
                 bool pressed = ctx.InputContext.VKeyState(VirtualKey.Enter);

@@ -78,8 +78,7 @@ namespace NitroSharp.NsScript.Primitives
             }
         }
 
-        public static NsCoordinate Inherit()
-            => new(NsCoordinateKind.Inherit);
+        public static NsCoordinate Inherit() => new(NsCoordinateKind.Inherit);
 
         public static NsCoordinate FromValue(ConstantValue val) => val.Type switch
         {

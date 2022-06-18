@@ -12,7 +12,7 @@ namespace NitroSharp
         public override void LoadAudio(in EntityPath entityPath, NsAudioKind kind, string fileName)
         {
             if (ResolvePath(entityPath, out ResolvedEntityPath path)
-                && _ctx.Content.TryOpenStream(fileName) is Stream stream)
+                && _ctx.Content.TryOpenStream(fileName) is { } stream)
             {
                 World.Add(new Sound(path, kind, stream, _ctx.AudioContext));
             }
@@ -26,7 +26,7 @@ namespace NitroSharp
             string source)
         {
             if (ResolvePath(entityPath, out ResolvedEntityPath resolvedPath)
-                && _ctx.Content.TryOpenStream(source) is Stream fs)
+                && _ctx.Content.TryOpenStream(source) is { } fs)
             {
                 Video video = World.Add(new Video(
                     resolvedPath, priority,
@@ -76,7 +76,7 @@ namespace NitroSharp
 
         public override int GetSoundAmplitude(string characterName)
         {
-            if (_ctx.GetVoice(characterName) is MediaStream voice)
+            if (_ctx.GetVoice(characterName) is { } voice)
             {
                 ReadOnlySpan<short> samples = voice.AudioSource.GetCurrentBuffer();
                 if (samples.Length > 0)

@@ -17,7 +17,10 @@ namespace NitroSharp.Media
             }
         }
 
-        private static void Throw(int result) => throw new FFmpegException(GetErrorMessage(result));
+        private static void Throw(int result)
+        {
+            throw new FFmpegException(GetErrorMessage(result));
+        }
 
         private static string GetErrorMessage(int error)
         {

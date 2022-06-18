@@ -110,8 +110,7 @@ namespace NitroSharp.NsScript.Syntax.Markup
         {
             MarkupContent content = ParseContent(tag.Name);
             AttributeList attrs = tag.Attributes;
-            if (attrs.Get("value") is string strValue
-                && int.TryParse(strValue, out int value))
+            if (attrs.Get("value") is { } strValue && int.TryParse(strValue, out int value))
             {
                 return new SpanElement(value, content);
             }
@@ -122,8 +121,7 @@ namespace NitroSharp.NsScript.Syntax.Markup
         private VoiceElement? ParseVoiceElement(in MarkupTag tag)
         {
             AttributeList attrs = tag.Attributes;
-            if (attrs.Get("name") is string characterName
-                && attrs.Get("src") is string fileName)
+            if (attrs.Get("name") is { } characterName && attrs.Get("src") is { } fileName)
             {
                 bool stop = attrs.Get("mode") is "off";
                 var action = stop ? NsVoiceAction.Stop : NsVoiceAction.Play;
@@ -140,15 +138,15 @@ namespace NitroSharp.NsScript.Syntax.Markup
             NsColor? color = null, outlineColor = null;
 
             AttributeList attributes = startTag.Attributes;
-            if (attributes.Get("size") is string strSize)
+            if (attributes.Get("size") is { } strSize)
             {
                 size = int.Parse(strSize);
             }
-            if (attributes.Get("incolor") is string strColor)
+            if (attributes.Get("incolor") is { } strColor)
             {
                 color = NsColor.FromString(strColor);
             }
-            if (attributes.Get("outcolor") is string strOutlineColor)
+            if (attributes.Get("outcolor") is { } strOutlineColor)
             {
                 outlineColor = NsColor.FromString(strOutlineColor);
             }
@@ -159,7 +157,7 @@ namespace NitroSharp.NsScript.Syntax.Markup
 
         private RubyElement? ParseRubyElement(in MarkupTag startTag)
         {
-            if (startTag.Attributes.Get("text") is string rubyText)
+            if (startTag.Attributes.Get("text") is { } rubyText)
             {
                 MarkupContent rubyBase = ParseContent("RUBY");
                 return new RubyElement(rubyBase, rubyText);
@@ -326,8 +324,7 @@ namespace NitroSharp.NsScript.Syntax.Markup
                 return list;
             }
 
-            private string? Get(string key)
-                => AttributeList.Get(_attributes, key);
+            private string? Get(string key) => AttributeList.Get(_attributes, key);
         }
 
         private readonly ref struct AttributeList
@@ -335,10 +332,11 @@ namespace NitroSharp.NsScript.Syntax.Markup
             private readonly SmallList<(string, string)> _attributes;
 
             public AttributeList(SmallList<(string, string)> attributes)
-                => _attributes = attributes;
+            {
+                _attributes = attributes;
+            }
 
-            public string? Get(string key)
-                => Get(_attributes, key);
+            public string? Get(string key) => Get(_attributes, key);
 
             public static string? Get(SmallList<(string, string)> list, string key)
             {

@@ -18,7 +18,9 @@ namespace NitroSharp.Graphics
         public readonly byte NumberOfPasses;
 
         public EffectDescription(EffectKind kind, uint nbPasses = 1u)
-            => (EffectKind, NumberOfPasses) = (kind, (byte)nbPasses);
+        {
+            (EffectKind, NumberOfPasses) = (kind, (byte)nbPasses);
+        }
 
         public override int GetHashCode()
             => HashCode.Combine(EffectKind, NumberOfPasses);
