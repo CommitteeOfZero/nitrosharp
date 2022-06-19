@@ -16,13 +16,13 @@ namespace NitroSharp.Graphics
             int priority,
             string markup,
             Size maxBounds,
-            FontConfiguration fontConfig,
+            FontSettings fontSettings,
             in Vector4 margin)
             : base(path, priority)
         {
             _margin = margin;
             _markup = markup;
-            _layout = CreateLayout(ctx, markup, maxBounds, fontConfig);
+            _layout = CreateLayout(ctx, markup, maxBounds, fontSettings);
         }
 
         public TextBlock(in ResolvedEntityPath path, in TextBlockSaveData saveData, GameLoadingContext loadCtx)
@@ -34,7 +34,7 @@ namespace NitroSharp.Graphics
                 loadCtx.Rendering.Text,
                 _markup,
                 saveData.LayoutBounds,
-                loadCtx.Process.FontConfig
+                loadCtx.Process.FontSettings
             );
         }
 
@@ -44,9 +44,9 @@ namespace NitroSharp.Graphics
             TextRenderContext ctx,
             string markup,
             Size maxBounds,
-            FontConfiguration fontConfig)
+            FontSettings fontSettings)
         {
-            TextSegment segment = Dialogue.ParseTextSegment(markup, fontConfig);
+            TextSegment segment = Dialogue.ParseTextSegment(markup, fontSettings);
             var layout = new TextLayout(
                 ctx.GlyphRasterizer,
                 segment.TextRuns.AsSpan(),

@@ -39,7 +39,7 @@ namespace NitroSharp
 
         public override void SetBacklog(string text)
         {
-            TextSegment seg = Dialogue.ParseTextSegment(text, _ctx.ActiveProcess.FontConfig);
+            TextSegment seg = Dialogue.ParseTextSegment(text, _ctx.ActiveProcess.FontSettings);
             _ctx.Backlog.Append(seg);
         }
 
@@ -280,7 +280,7 @@ namespace NitroSharp
                     priority,
                     markup,
                     new Size(w, h),
-                    _ctx.ActiveProcess.FontConfig,
+                    _ctx.ActiveProcess.FontSettings,
                     margin
                 ).WithPosition(_renderCtx, x, y));
             }
@@ -304,10 +304,14 @@ namespace NitroSharp
                 ? outlineColor.ToVector4()
                 : null;
 
-            _ctx.ActiveProcess.FontConfig
-                .WithDefaultSize(new PtFontSize(mapFontSize(size)))
-                .WithOutlineColor(outlinec)
-                .WithDefaultColor(color.ToVector4());
+            _ctx.ActiveProcess.ChangeFontSettings(
+                settings => settings with
+                {
+                    DefaultFontSize = new PtFontSize(mapFontSize(size)),
+                    DefaultTextColor = color.ToVector4(),
+                    DefaultOutlineColor = outlinec
+                }
+            );
         }
 
         public override void CreateDialogueBox(
@@ -363,7 +367,7 @@ namespace NitroSharp
         {
             if (Get(dialoguePage) is DialoguePage page)
             {
-                page.Append(_ctx, markup, _ctx.ActiveProcess.FontConfig);
+                page.Append(_ctx, markup, _ctx.ActiveProcess.FontSettings);
             }
         }
 
