@@ -15,14 +15,14 @@ namespace NitroSharp
         private IntPtr _wait;
         private SystemCursor _cursor;
 
-        public DesktopWindow(string title, uint width, uint height)
+        public DesktopWindow(string title, Size size)
         {
             const int centered = Sdl2Native.SDL_WINDOWPOS_CENTERED;
             Sdl2Native.SDL_Init(SDLInitFlags.Video | SDLInitFlags.GameController);
             SDL_WindowFlags flags = SDL_WindowFlags.OpenGL;
             _window = new Sdl2Window(title,
                 centered, centered,
-                (int)width, (int)height,
+                (int)size.Width, (int)size.Height,
                 flags, threadedProcessing: false
             );
             SwapchainSource = VeldridStartup.GetSwapchainSource(_window);

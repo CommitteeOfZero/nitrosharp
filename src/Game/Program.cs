@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -38,9 +39,24 @@ namespace Game
 #endif
             Console.OutputEncoding = Encoding.UTF8;
 
-            Configuration config = ConfigurationReader.Read("Game.json");
-            var window = new DesktopWindow(config.WindowTitle, (uint)config.WindowWidth, (uint)config.WindowHeight);
-            GameContext ctx = GameContext.Create(window, config).Result;
+            Config config;
+            using (FileStream configStream = File.OpenRead("config.json"))
+            {
+                config = Config.Read(configStream);
+            }
+
+            GameProfile gameProfile;
+            using (FileStream profileStream = File.OpenRead("profiles.json"))
+            {
+                gameProfile = GameProfile.Read(profileStream);
+            }
+
+            var window = new DesktopWindow(
+                gameProfile.ProductDisplayName,
+                gameProfile.DesignResolution
+            );
+
+            GameContext ctx = GameContext.Create(window, config, gameProfile).Result;
             try
             {
                 await ctx.Run();
