@@ -8,19 +8,7 @@ using Veldrid;
 
 namespace NitroSharp.Media
 {
-    public readonly struct VideoFrameInfo
-    {
-        public readonly int Serial;
-        public readonly double Timestamp;
-        public readonly double Duration;
-
-        public VideoFrameInfo(int serial, double timestamp, double duration)
-        {
-            Timestamp = timestamp;
-            Duration = duration;
-            Serial = serial;
-        }
-    }
+    public readonly record struct VideoFrameInfo(int Serial, double Timestamp, double Duration);
 
     internal readonly ref struct YCbCrFrame
     {

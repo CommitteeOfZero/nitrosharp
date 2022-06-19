@@ -8,19 +8,11 @@ using Veldrid;
 
 namespace NitroSharp.Graphics.Core
 {
-    internal readonly struct TextureCacheHandle : IEquatable<TextureCacheHandle>
+    internal readonly record struct TextureCacheHandle(WeakFreeListHandle Value)
     {
-        public readonly WeakFreeListHandle Value;
-
-        public TextureCacheHandle(WeakFreeListHandle value)
-            => Value = value;
-
         public static TextureCacheHandle Invalid => new(WeakFreeListHandle.Invalid);
 
         public bool IsValid => Value.Version != 0;
-
-        public bool Equals(TextureCacheHandle other) => Value.Equals(other.Value);
-        public override int GetHashCode() => Value.GetHashCode();
     }
 
     [StructLayout(LayoutKind.Auto)]

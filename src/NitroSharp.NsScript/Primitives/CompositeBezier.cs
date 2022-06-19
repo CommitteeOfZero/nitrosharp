@@ -44,37 +44,13 @@ namespace NitroSharp.NsScript.Primitives
     }
 
     [Persistable]
-    public readonly partial struct CubicBezierSegment
-    {
-        public readonly BezierControlPoint P0;
-        public readonly BezierControlPoint P1;
-        public readonly BezierControlPoint P2;
-        public readonly BezierControlPoint P3;
-
-        public CubicBezierSegment(
-            BezierControlPoint p0,
-            BezierControlPoint p1,
-            BezierControlPoint p2,
-            BezierControlPoint p3)
-        {
-            P0 = p0;
-            P1 = p1;
-            P2 = p2;
-            P3 = p3;
-        }
-
-        public override int GetHashCode() => HashCode.Combine(P0, P1, P2, P3);
-    }
+    public readonly partial record struct CubicBezierSegment(
+        BezierControlPoint P0,
+        BezierControlPoint P1,
+        BezierControlPoint P2,
+        BezierControlPoint P3
+    );
 
     [Persistable]
-    public readonly partial struct BezierControlPoint
-    {
-        public readonly NsCoordinate X;
-        public readonly NsCoordinate Y;
-
-        public BezierControlPoint(NsCoordinate x, NsCoordinate y)
-            => (X, Y) = (x, y);
-
-        public override int GetHashCode() => HashCode.Combine(X, Y);
-    }
+    public readonly partial record struct BezierControlPoint(NsCoordinate X, NsCoordinate Y);
 }

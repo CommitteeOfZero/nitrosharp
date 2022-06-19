@@ -5,17 +5,7 @@ using static NitroSharp.Media.FFmpegUtil;
 
 namespace NitroSharp.Media
 {
-    internal readonly struct BufferRequirements
-    {
-        public readonly int SamplesPerChannel;
-        public readonly int SizeInBytes;
-
-        public BufferRequirements(int samplesPerChannel, int sizeInBytes)
-        {
-            SamplesPerChannel = samplesPerChannel;
-            SizeInBytes = sizeInBytes;
-        }
-    }
+    internal readonly record struct BufferRequirements(int SamplesPerChannel, int SizeInBytes);
 
     internal unsafe class Resampler : IDisposable
     {

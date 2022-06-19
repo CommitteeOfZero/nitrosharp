@@ -29,38 +29,16 @@ namespace NitroSharp.Utilities
         public static RefOption<T> None => default;
     }
 
-    internal readonly struct FreeListHandle : IEquatable<FreeListHandle>
+    internal readonly record struct FreeListHandle(uint Index, uint Version)
     {
-        public readonly uint Index;
-        public readonly uint Version;
-
-        public FreeListHandle(uint index, uint version)
-            => (Index, Version) = (index, version);
-
         public static FreeListHandle Invalid => new(0, 0);
 
         public WeakFreeListHandle GetWeakHandle() => new(Index, Version);
-
-        public bool Equals(FreeListHandle other)
-            => Index == other.Index && Version == other.Version;
-
-        public override int GetHashCode() => HashCode.Combine(Index, Version);
     }
 
-    internal readonly struct WeakFreeListHandle : IEquatable<WeakFreeListHandle>
+    internal readonly record struct WeakFreeListHandle(uint Index, uint Version)
     {
-        public readonly uint Index;
-        public readonly uint Version;
-
-        public WeakFreeListHandle(uint index, uint version)
-            => (Index, Version) = (index, version);
-
         public static WeakFreeListHandle Invalid => new(0, 0);
-
-        public bool Equals(WeakFreeListHandle other)
-            => Index == other.Index && Version == other.Version;
-
-        public override int GetHashCode() => HashCode.Combine(Index, Version);
     }
 
     public sealed class InvalidHandleException : Exception
