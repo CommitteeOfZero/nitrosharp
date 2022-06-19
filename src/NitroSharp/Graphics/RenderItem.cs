@@ -259,7 +259,7 @@ namespace NitroSharp.Graphics
             }
         }
 
-        protected RectangleF BoundingRect { get; private set; }
+        public RectangleF BoundingRect { get; private set; }
 
         protected ref QuadGeometry Quad => ref _quad;
         protected ref Matrix4x4 WorldMatrix => ref _worldMatrix;

@@ -133,7 +133,6 @@ namespace NitroSharp
             _duration = TimeSpan.FromMilliseconds(saveData.DurationMs);
         }
 
-        protected TimeSpan Duration => _duration;
         public bool HasCompleted => Elapsed >= _duration.TotalMilliseconds;
 
         protected float Progress
@@ -148,7 +147,7 @@ namespace NitroSharp
 
         protected AnimationSaveData ToSaveData() => new()
         {
-            DurationMs = (float)Duration.TotalMilliseconds,
+            DurationMs = (float)_duration.TotalMilliseconds,
             EaseFunction = _easeFunction,
             Repeat = _repeat,
             Elapsed = Elapsed
@@ -251,8 +250,8 @@ namespace NitroSharp
     internal abstract class FloatAnimation<TEntity> : PropertyAnimation<TEntity, float>
        where TEntity : Entity
     {
-        protected readonly float _startValue;
-        protected readonly float _endValue;
+        private readonly float _startValue;
+        private readonly float _endValue;
 
         protected FloatAnimation(
             TEntity entity,
@@ -302,7 +301,6 @@ namespace NitroSharp
     {
         private readonly float _srcFadeAmount;
         private readonly float _dstFadeAmount;
-        private float _fadeAmount;
 
         public TransitionAnimation(
             AssetRef<Texture> mask,
@@ -325,12 +323,12 @@ namespace NitroSharp
         }
 
         public AssetRef<Texture> Mask { get; }
-        public float FadeAmount => _fadeAmount;
+        public float FadeAmount { get; private set; }
 
         protected override AdvanceResult Advance()
         {
             float delta = _dstFadeAmount - _srcFadeAmount;
-            _fadeAmount = _srcFadeAmount + delta * GetFactor(Progress, _easeFunction);
+            FadeAmount = _srcFadeAmount + delta * GetFactor(Progress, _easeFunction);
             return base.Advance();
         }
 

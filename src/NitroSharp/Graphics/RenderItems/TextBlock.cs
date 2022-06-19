@@ -8,6 +8,7 @@ namespace NitroSharp.Graphics
     {
         private readonly string _markup;
         private readonly TextLayout _layout;
+        private readonly Vector4 _margin;
 
         public TextBlock(
             in ResolvedEntityPath path,
@@ -19,7 +20,7 @@ namespace NitroSharp.Graphics
             in Vector4 margin)
             : base(path, priority)
         {
-            Margin = margin;
+            _margin = margin;
             _markup = markup;
             _layout = CreateLayout(ctx, markup, maxBounds, fontConfig);
         }
@@ -27,7 +28,7 @@ namespace NitroSharp.Graphics
         public TextBlock(in ResolvedEntityPath path, in TextBlockSaveData saveData, GameLoadingContext loadCtx)
             : base(path, saveData.Common)
         {
-            Margin = saveData.Margin;
+            _margin = saveData.Margin;
             _markup = saveData.Markup;
             _layout = CreateLayout(
                 loadCtx.Rendering.Text,
@@ -36,8 +37,6 @@ namespace NitroSharp.Graphics
                 loadCtx.Process.FontConfig
             );
         }
-
-        public Vector4 Margin { get; }
 
         public override EntityKind Kind => EntityKind.TextBlock;
 
@@ -62,8 +61,8 @@ namespace NitroSharp.Graphics
         {
             RectangleF bb = _layout.BoundingBox;
             var size = new Size(
-                (uint)(Margin.X + bb.Right + Margin.Z),
-                (uint)(Margin.Y + bb.Bottom + Margin.W)
+                (uint)(_margin.X + bb.Right + _margin.Z),
+                (uint)(_margin.Y + bb.Bottom + _margin.W)
             );
             return size.Constrain(_layout.MaxBounds);
         }
@@ -77,7 +76,7 @@ namespace NitroSharp.Graphics
         {
             RectangleF br = BoundingRect;
             var rect = new RectangleU((uint)br.X, (uint)br.Y, (uint)br.Width, (uint)br.Height);
-            ctx.Text.Render(ctx, drawBatch, _layout, WorldMatrix, Margin.XY(), rect, Color.A);
+            ctx.Text.Render(ctx, drawBatch, _layout, WorldMatrix, _margin.XY(), rect, Color.A);
             RectangleF bb = _layout.BoundingBox;
             //ctx.MainBatch.PushQuad(
             //    QuadGeometry.Create(
@@ -124,7 +123,7 @@ namespace NitroSharp.Graphics
         public new TextBlockSaveData ToSaveData(GameSavingContext ctx) => new()
         {
             Common = base.ToSaveData(ctx),
-            Margin = Margin,
+            Margin = _margin,
             Markup = _markup,
             LayoutBounds = _layout.MaxBounds
         };

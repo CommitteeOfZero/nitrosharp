@@ -216,7 +216,7 @@ namespace NitroSharp.Graphics.Core
             };
         }
 
-        public void Clear()
+        private void Clear()
         {
             foreach (KeyValuePair<ResourceSetKey, CacheEntry> entry in _cache)
             {
