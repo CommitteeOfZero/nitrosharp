@@ -287,12 +287,12 @@ namespace NitroSharp
         }
 
         public override void SetFont(
-            string family, int size,
+            string family, uint size,
             NsColor color, NsColor outlineColor,
             NsFontWeight weight,
             NsOutlineOffset outlineOffset)
         {
-            static int mapFontSize(int size) => size switch
+            static uint mapFontSize(uint size) => size switch
             {
                 23 => 22,
                 26 => 25,

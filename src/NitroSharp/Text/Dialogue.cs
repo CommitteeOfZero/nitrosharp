@@ -40,7 +40,7 @@ namespace NitroSharp.Text
             {
                 public string? Text;
                 public string? RubyText;
-                public int? FontSize;
+                public uint? FontSize;
                 public RgbaFloat? Color;
                 public RgbaFloat? OutlineColor;
                 public bool Italic;

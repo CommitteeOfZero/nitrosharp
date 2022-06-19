@@ -18,7 +18,7 @@ namespace NitroSharp.Text
 
     public readonly record struct PtFontSize(Fixed26Dot6 Value)
     {
-        public PtFontSize(int value) : this(Fixed26Dot6.FromInt32(value))
+        public PtFontSize(uint value) : this(Fixed26Dot6.FromInt32((int)value))
         {
         }
 

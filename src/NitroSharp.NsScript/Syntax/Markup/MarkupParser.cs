@@ -110,7 +110,7 @@ namespace NitroSharp.NsScript.Syntax.Markup
         {
             MarkupContent content = ParseContent(tag.Name);
             AttributeList attrs = tag.Attributes;
-            if (attrs.Get("value") is { } strValue && int.TryParse(strValue, out int value))
+            if (attrs.Get("value") is { } strValue && uint.TryParse(strValue, out uint value))
             {
                 return new SpanElement(value, content);
             }
@@ -134,13 +134,13 @@ namespace NitroSharp.NsScript.Syntax.Markup
 
         private FontElement ParseFontElement(in MarkupTag startTag)
         {
-            int? size = null;
+            uint? size = null;
             NsColor? color = null, outlineColor = null;
 
             AttributeList attributes = startTag.Attributes;
             if (attributes.Get("size") is { } strSize)
             {
-                size = int.Parse(strSize);
+                size = uint.Parse(strSize);
             }
             if (attributes.Get("incolor") is { } strColor)
             {
