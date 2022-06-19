@@ -95,7 +95,7 @@ namespace NitroSharp
         public bool SkipUpToDateCheck { get; set; }
 
         public string FontFamily { get; set; } = "VL Gothic";
-        public int FontSize { get; set; } = 20;
+        public uint FontSize { get; set; } = 20;
 
         public IconPathPatterns IconPathPatterns { get; }
         public int PlatformId { get; set; } = 100;

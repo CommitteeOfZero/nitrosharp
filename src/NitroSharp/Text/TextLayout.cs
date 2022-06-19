@@ -147,7 +147,7 @@ namespace NitroSharp.Text
                             : ((int)glyph.TextRunIndex, glyph.Kind);
                         ref readonly TextRun textRun = ref textRuns[runIndex];
                         PtFontSize fontSize = kind == CharacterKind.RubyText
-                            ? new PtFontSize((int)(textRun.FontSize.Value * _rubyFontSizeMultiplier))
+                            ? new PtFontSize((uint)(textRun.FontSize.Value * _rubyFontSizeMultiplier))
                             : textRun.FontSize;
 
                         GlyphRunFlags flags = textRun.DrawOutline
@@ -825,7 +825,7 @@ namespace NitroSharp.Text
 
                     PtFontSize fontSize = !_processingRubyText
                         ? textRun.FontSize
-                        : new PtFontSize((int)(textRun.FontSize.Value * _context.RubyFontSizeMultiplier));
+                        : new PtFontSize((uint)(textRun.FontSize.Value * _context.RubyFontSizeMultiplier));
                     CharacterKind kind = CharacterKind.Regular;
                     if (textRun.HasRubyText)
                     {

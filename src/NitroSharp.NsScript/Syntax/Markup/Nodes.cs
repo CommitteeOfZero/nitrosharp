@@ -77,7 +77,7 @@ namespace NitroSharp.NsScript.Syntax.Markup
 
     public sealed class FontElement : MarkupNode
     {
-        internal FontElement(int? size, NsColor? color, NsColor? outlineColor, MarkupContent content)
+        internal FontElement(uint? size, NsColor? color, NsColor? outlineColor, MarkupContent content)
         {
             Size = size;
             Color = color;
@@ -85,7 +85,7 @@ namespace NitroSharp.NsScript.Syntax.Markup
             Content = content;
         }
 
-        public int? Size { get; }
+        public uint? Size { get; }
         public NsColor? Color { get; }
         public NsColor? OutlineColor { get; }
         public MarkupContent Content { get; }
@@ -100,10 +100,10 @@ namespace NitroSharp.NsScript.Syntax.Markup
 
     public sealed class SpanElement : MarkupNode
     {
-        public int Size { get; }
+        public uint Size { get; }
         public MarkupContent Content { get; }
 
-        public SpanElement(int size, MarkupContent content)
+        public SpanElement(uint size, MarkupContent content)
         {
             Size = size;
             Content = content;

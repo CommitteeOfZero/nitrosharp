@@ -462,7 +462,7 @@ namespace NitroSharp.NsScript.VM
         {
             _impl.SetFont(
                 family: args.TakeString(),
-                size: args.TakeInt(),
+                size: args.TakeUInt(),
                 color: args.TakeColor(),
                 outlineColor: args.TakeColor(),
                 weight: NsFontWeight.From(args.Take()),
