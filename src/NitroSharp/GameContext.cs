@@ -23,14 +23,8 @@ using Veldrid.StartupUtilities;
 
 namespace NitroSharp
 {
-    internal readonly struct FrameStamp
+    internal readonly record struct FrameStamp(long FrameId, long StopwatchTicks)
     {
-        public readonly long FrameId;
-        public readonly long StopwatchTicks;
-
-        public FrameStamp(long frameId, long stopwatchTicks)
-            => (FrameId, StopwatchTicks) = (frameId, stopwatchTicks);
-
         public static FrameStamp Invalid => new(-1, -1);
         public bool IsValid => FrameId >= 0 && StopwatchTicks >= 0;
     }

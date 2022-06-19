@@ -27,30 +27,17 @@ namespace NitroSharp.Text
         private volatile int _pendingBatches;
 
         [StructLayout(LayoutKind.Auto)]
-        private readonly struct RasterResult
+        private readonly record struct RasterResult(uint GlyphIndex, RasterizedGlyph Glyph)
         {
-            public readonly uint GlyphIndex;
-            public readonly RasterizedGlyph Glyph;
-
-            public RasterResult(uint glyphIndex, RasterizedGlyph glyph)
-                => (GlyphIndex, Glyph) = (glyphIndex, glyph);
+            public readonly RasterizedGlyph Glyph = Glyph;
         }
 
-        private readonly struct RasterBatch
-        {
-            public readonly FontFaceKey Font;
-            public readonly PtFontSize FontSize;
-            public readonly RasterResult[] Results;
-            public readonly RasterResult[]? OutlineResults;
-
-            public RasterBatch(
-                FontFaceKey font,
-                PtFontSize fontSize,
-                RasterResult[] results,
-                RasterResult[]? outlineResults)
-                => (Font, FontSize, Results, OutlineResults)
-                    = (font, fontSize, results, outlineResults);
-        }
+        private readonly record struct RasterBatch(
+            FontFaceKey Font,
+            PtFontSize FontSize,
+            RasterResult[] Results,
+            RasterResult[]? OutlineResults
+        );
 
         public GlyphRasterizer()
         {
@@ -394,20 +381,7 @@ namespace NitroSharp.Text
         }
     }
 
-    internal readonly struct GlyphCacheKey : IEquatable<GlyphCacheKey>
-    {
-        public readonly uint Index;
-        public readonly PtFontSize FontSize;
-
-        public GlyphCacheKey(uint index, PtFontSize fontSize)
-            => (Index, FontSize) = (index, fontSize);
-
-        public bool Equals(GlyphCacheKey other)
-            => Index == other.Index && FontSize.Equals(other.FontSize);
-
-        public override int GetHashCode()
-            => HashCode.Combine(Index, FontSize);
-    }
+    internal readonly record struct GlyphCacheKey(uint Index, PtFontSize FontSize);
 
     internal enum GlyphCacheEntryKind
     {
@@ -526,31 +500,14 @@ namespace NitroSharp.Text
         }
     }
 
-    internal readonly struct RasterizedGlyph
-    {
-        public readonly byte[] Bytes;
-        public readonly int Top;
-        public readonly int Left;
-        public readonly uint Width;
-        public readonly uint Height;
-        public readonly int Bottom;
-
-        public RasterizedGlyph(
-            byte[] bytes,
-            int top,
-            int left,
-            uint width,
-            uint height,
-            int bottom = 0)
-        {
-            Bytes = bytes;
-            Top = top;
-            Left = left;
-            Width = width;
-            Height = height;
-            Bottom = bottom;
-        }
-    }
+    internal readonly record struct RasterizedGlyph(
+        byte[] Bytes,
+        int Top,
+        int Left,
+        uint Width,
+        uint Height,
+        int Bottom = 0
+    );
 
     internal readonly unsafe struct NativeBitmapGlyph : IDisposable
     {

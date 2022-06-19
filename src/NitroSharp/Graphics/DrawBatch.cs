@@ -126,7 +126,7 @@ namespace NitroSharp.Graphics
         DrawIndexedInstanced
     }
 
-    internal readonly struct BufferBindings : IEquatable<BufferBindings>
+    internal readonly record struct BufferBindings
     {
         public readonly DeviceBuffer? Vertices;
         public readonly DeviceBuffer? InstanceData;
@@ -137,13 +137,6 @@ namespace NitroSharp.Graphics
 
         public BufferBindings(DeviceBuffer vertices, DeviceBuffer indices) : this()
             => (Vertices, Indices) = (vertices, indices);
-
-        public bool Equals(BufferBindings other)
-        {
-            return ReferenceEquals(Vertices, other.Vertices)
-                && ReferenceEquals(InstanceData, other.InstanceData)
-                && ReferenceEquals(Indices, other.Indices);
-        }
     }
 
     internal readonly struct ResourceBindings : IEquatable<ResourceBindings>

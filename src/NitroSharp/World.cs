@@ -11,24 +11,12 @@ namespace NitroSharp
 {
     internal sealed partial class World : IDisposable
     {
-        internal readonly struct EntityRec
+        internal readonly record struct EntityRec(
+            Entity Entity,
+            EntityGroup Group,
+            EntityLocation Location)
         {
-            public readonly Entity Entity;
-            public readonly EntityGroup Group;
-            public readonly EntityLocation Location;
-
-            public EntityRec(
-                Entity entity,
-                EntityGroup group,
-                EntityLocation location)
-            {
-                Entity = entity;
-                Group = group;
-                Location = location;
-            }
-
-            public bool IsEnabled
-                => Location.Bucket == EntityBucket.Active;
+            public bool IsEnabled => Location.Bucket == EntityBucket.Active;
 
             public EntityRec WithBucket(EntityBucket newBucket)
             {

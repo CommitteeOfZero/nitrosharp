@@ -23,32 +23,18 @@ namespace NitroSharp
         LineRead
     }
 
-    internal readonly struct WaitOperation
+    internal readonly record struct WaitOperation(
+        NsScriptThread Thread,
+        WaitCondition Condition,
+        EntityQuery? EntityQuery)
     {
-        public readonly NsScriptThread Thread;
-        public readonly WaitCondition Condition;
-        public readonly EntityQuery? EntityQuery;
-
-        public WaitOperation(
-            NsScriptThread thread,
-            WaitCondition condition,
-            EntityQuery? entityQuery)
-        {
-            Thread = thread;
-            Condition = condition;
-            EntityQuery = entityQuery;
-        }
-
         public WaitOperation(NsScriptProcess vmProcess, in WaitOperationSaveData saveData)
+            : this(vmProcess.GetThread(saveData.ThreadId), saveData.WaitCondition, null)
         {
-            Condition = saveData.WaitCondition;
-            EntityQuery = null;
             if (saveData.EntityQuery is { } entityQuery)
             {
                 EntityQuery = new EntityQuery(entityQuery);
             }
-
-            Thread = vmProcess.GetThread(saveData.ThreadId);
         }
 
         public void Deconstruct(out WaitCondition condition, out EntityQuery? query)

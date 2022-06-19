@@ -12,19 +12,7 @@ namespace NitroSharp.Graphics
 {
     internal sealed class TextRenderContext : IDisposable
     {
-        private readonly struct GpuGlyphSlice
-        {
-            public readonly DeviceBuffer Buffer;
-            public readonly uint InstanceBase;
-            public readonly uint InstanceCount;
-
-            public GpuGlyphSlice(DeviceBuffer buffer, uint instanceBase, uint instanceCount)
-            {
-                Buffer = buffer;
-                InstanceBase = instanceBase;
-                InstanceCount = instanceCount;
-            }
-        }
+        private readonly record struct GpuGlyphSlice(DeviceBuffer Buffer, uint InstanceBase, uint InstanceCount);
 
         private readonly struct GpuGlyphRun : GpuType
         {
@@ -46,18 +34,15 @@ namespace NitroSharp.Graphics
             }
         }
 
-        private readonly struct GpuTransform : GpuType
+        private readonly record struct GpuTransform(in Matrix4x4 Matrix) : GpuType
         {
+            public readonly Matrix4x4 Matrix = Matrix;
+
             public const uint SizeInGpuBlocks = 4;
-
-            public readonly Matrix4x4 Transform;
-
-            public GpuTransform(in Matrix4x4 transform)
-                => Transform = transform;
 
             public void WriteGpuBlocks(Span<Vector4> blocks)
             {
-                ref readonly Matrix4x4 tr = ref Transform;
+                ref readonly Matrix4x4 tr = ref Matrix;
                 blocks[0] = new Vector4(tr.M11, tr.M12, tr.M13, tr.M14);
                 blocks[1] = new Vector4(tr.M21, tr.M22, tr.M23, tr.M24);
                 blocks[2] = new Vector4(tr.M31, tr.M32, tr.M33, tr.M34);

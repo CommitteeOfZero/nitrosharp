@@ -9,14 +9,8 @@ using Veldrid;
 namespace NitroSharp.Graphics
 {
     [Persistable]
-    internal readonly partial struct RenderItemKey : IComparable<RenderItemKey>
+    internal readonly partial record struct RenderItemKey(int Priority, int Id) : IComparable<RenderItemKey>
     {
-        public readonly int Priority;
-        public readonly int Id;
-
-        public RenderItemKey(int priority, int id)
-            => (Priority, Id) = (priority, id);
-
         public int CompareTo(RenderItemKey other)
         {
             if (Priority > other.Priority) { return 1; }
