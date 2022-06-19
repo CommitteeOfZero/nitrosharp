@@ -57,7 +57,7 @@ namespace NitroSharp
 
         public override int GetPlatformId()
         {
-            return _ctx.Config.PlatformId;
+            return _ctx.Profile.PlatformId;
         }
 
         public override void Exit()
@@ -253,7 +253,7 @@ namespace NitroSharp
 
         public override bool FileExists(string path)
         {
-            string fullPath = Path.Combine(_ctx.Config.ContentRoot, path);
+            string fullPath = Path.Combine(_ctx.Profile.ContentRoot, path);
             return File.Exists(fullPath);
         }
 

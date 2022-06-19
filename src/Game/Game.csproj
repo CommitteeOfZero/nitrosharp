@@ -31,14 +31,13 @@
   </PropertyGroup>-->
 
   <ItemGroup>
-    <Content Include="Game.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="profiles.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="config.json" CopyToOutputDirectory="PreserveNewest" />
     <RdXmlFile Include="rd.xml" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\NitroSharp\NitroSharp.csproj" />
-
-    <PackageReference Include="System.Json" Version="4.7.1" />
     <PackageReference Condition="'$(Native)' == 'true'" Include="Microsoft.DotNet.ILCompiler" Version="7.0.0-preview.4.22229.4" />
   </ItemGroup>
 

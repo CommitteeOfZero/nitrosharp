@@ -41,17 +41,15 @@ namespace NitroSharp.Graphics
 
         public RenderContext(
             GameWindow window,
-            Configuration gameConfiguration,
+            Config config,
+            GameProfile gameProfile,
             GraphicsDevice graphicsDevice,
             Swapchain swapchain,
             ContentManager contentManager,
             GlyphRasterizer glyphRasterizer,
             SystemVariableLookup systemVariables)
         {
-            DesignResolution = new Size(
-                (uint)gameConfiguration.WindowWidth,
-                (uint)gameConfiguration.WindowHeight
-            );
+            DesignResolution = gameProfile.DesignResolution;
 
             Window = window;
             GraphicsDevice = graphicsDevice;
@@ -121,7 +119,7 @@ namespace NitroSharp.Graphics
             MainBatch = new DrawBatch(this);
             _offscreenBatch = new DrawBatch(this);
 
-            Icons = LoadIcons(gameConfiguration);
+            Icons = LoadIcons(gameProfile);
         }
 
         public GameWindow Window { get; }
@@ -189,11 +187,11 @@ namespace NitroSharp.Graphics
             TransferCommands.Begin();
         }
 
-        private AnimatedIcons LoadIcons(Configuration config)
+        private AnimatedIcons LoadIcons(GameProfile gameProfile)
         {
             CommandList cl = RentCommandList();
             cl.Begin();
-            var waitLine = Icon.Load(this, config.IconPathPatterns.WaitLine);
+            var waitLine = Icon.Load(this, gameProfile.IconPathPatterns.WaitLine);
             cl.End();
             GraphicsDevice.SubmitCommands(cl);
             ReturnCommandList(cl);

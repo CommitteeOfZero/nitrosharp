@@ -20,7 +20,7 @@ namespace NitroSharp.Saving
 
         private readonly string _commonDir;
 
-        public GameSaveManager(Configuration configuration)
+        public GameSaveManager(GameProfile gameProfile)
         {
             string localAppData = Environment.GetFolderPath(
                 Environment.SpecialFolder.LocalApplicationData,
@@ -28,9 +28,9 @@ namespace NitroSharp.Saving
             );
             SaveDirectory = Path.Combine(
                 localAppData,
-                Path.Combine("Committee of Zero", configuration.ProductName)
+                Path.Combine("Committee of Zero", gameProfile.ProductName)
             );
-            SaveDirectory = Path.Combine(SaveDirectory, configuration.ProfileName);
+            SaveDirectory = Path.Combine(SaveDirectory, gameProfile.Name);
             Directory.CreateDirectory(SaveDirectory);
             _commonDir = Path.Combine(SaveDirectory, "common");
             Directory.CreateDirectory(_commonDir);

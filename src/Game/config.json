@@ -1,0 +1,5 @@
+{
+  "graphics.vsync": true,
+  "graphics.backend": "Auto",
+  "audio.backend": "Auto"
+}
