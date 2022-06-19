@@ -69,7 +69,7 @@ namespace NitroSharp
         private readonly Logger _logger;
         private readonly LogEventRecorder _logEventRecorder;
         private readonly BuiltInFunctions _builtInFunctions;
-        private readonly FontConfiguration _fontConfig;
+        private readonly FontSettings _fontSettings;
         private readonly Dictionary<string, MediaStream> _voices = new();
         private (string, MediaStream?) _activeVoice;
         private readonly Queue<DeferredOperation> _deferredOperations = new();
@@ -83,7 +83,7 @@ namespace NitroSharp
             RenderContext renderContext,
             ContentManager content,
             GlyphRasterizer glyphRasterizer,
-            FontConfiguration fontConfig,
+            FontSettings fontSettings,
             AudioContext audioContext,
             InputContext inputContext,
             NsScriptVM vm,
@@ -97,7 +97,7 @@ namespace NitroSharp
             GlyphRasterizer = glyphRasterizer;
             _logger = logger;
             _logEventRecorder = logEventRecorder;
-            _fontConfig = fontConfig;
+            _fontSettings = fontSettings;
             AudioContext = audioContext;
             InputContext = inputContext;
             VM = vm;
@@ -139,7 +139,7 @@ namespace NitroSharp
             var loadFonts = Task
                 .Run(async () => await LoadFonts(configuration));
 
-            (GlyphRasterizer glyphRasterizer, FontConfiguration fontConfig) = await loadFonts;
+            (GlyphRasterizer glyphRasterizer, FontSettings fontConfig) = await loadFonts;
             var startVM = Task.Run(() => LoadStartupScript(configuration, fontConfig, logger));
 
             SwapchainSource swapchainSource = await createSurface.Task;
@@ -185,19 +185,20 @@ namespace NitroSharp
             return (logger, recorder);
         }
 
-        private static async Task<(GlyphRasterizer, FontConfiguration)> LoadFonts(
+        private static async Task<(GlyphRasterizer, FontSettings)> LoadFonts(
             Configuration configuration)
         {
             var glyphRasterizer = new GlyphRasterizer();
             var defaultFont = new FontFaceKey(configuration.FontFamily, FontStyle.Regular);
-            var defaultFontConfig = new FontConfiguration(
-                defaultFont,
-                italicFont: null,
-                new PtFontSize(configuration.FontSize),
-                defaultTextColor: RgbaFloat.White.ToVector4(),
-                defaultOutlineColor: RgbaFloat.Black.ToVector4(),
-                rubyFontSizeMultiplier: 0.4f
-            );
+            var defaultFontSettings = new FontSettings
+            {
+                DefaultFont = defaultFont,
+                ItalicFont = null,
+                DefaultFontSize = new PtFontSize(configuration.FontSize),
+                DefaultTextColor = RgbaFloat.White.ToVector4(),
+                DefaultOutlineColor = RgbaFloat.Black.ToVector4(),
+                RubyFontSizeMultiplier = 0.4f
+            };
 
             if (OperatingSystem.IsWindows())
             {
@@ -209,7 +210,7 @@ namespace NitroSharp
                 await glyphRasterizer.AddFontsAsync(Directory.EnumerateFiles("Fonts"));
             }
 
-            return (glyphRasterizer, defaultFontConfig);
+            return (glyphRasterizer, defaultFontSettings);
         }
 
         private static AudioContext InitAudio(Configuration configuration)
@@ -283,7 +284,7 @@ namespace NitroSharp
 
         private static (NsScriptVM vm, GameProcess mainProcess) LoadStartupScript(
             Configuration configuration,
-            FontConfiguration fontConfig,
+            FontSettings fontSettings,
             Logger logger)
         {
             const string globalsFileName = "_globals";
@@ -345,7 +346,7 @@ namespace NitroSharp
 
             var nsxLocator = new FileSystemNsxModuleLocator(bytecodeCacheDir);
             var vm = new NsScriptVM(nsxLocator, File.OpenRead(globalsPath));
-            GameProcess process = CreateProcess(vm, configuration.SysScripts.Startup, fontConfig);
+            GameProcess process = CreateProcess(vm, configuration.SysScripts.Startup, fontSettings);
             return (vm, process);
         }
 
@@ -358,10 +359,10 @@ namespace NitroSharp
         private static GameProcess CreateProcess(
             NsScriptVM vm,
             string modulePath,
-            FontConfiguration fontConfig)
+            FontSettings fontSettings)
         {
             NsScriptProcess vmProcess = CreateProcess(vm, modulePath);
-            return new GameProcess(vmProcess, fontConfig.Clone());
+            return new GameProcess(vmProcess, fontSettings);
         }
 
         private static bool ValidateBytecodeCache(
@@ -626,7 +627,7 @@ namespace NitroSharp
                 LastScreenshot ??= RenderContext.CreateFullscreenTexture(staging: true);
                 RenderContext.CaptureFramebuffer(LastScreenshot);
                 MainProcess.VmProcess.Suspend();
-                SysProcess = CreateProcess(VM, mainModule, _fontConfig);
+                SysProcess = CreateProcess(VM, mainModule, _fontSettings);
                 _clearFramebuffer = false;
             }
         }
@@ -732,7 +733,7 @@ namespace NitroSharp
             MainProcess.VmProcess.Terminate();
             MainProcess.World.Reset();
             NsScriptProcess newVmProcess = CreateProcess(VM, Config.SysScripts.Startup);
-            MainProcess = new GameProcess(newVmProcess, MainProcess.World, _fontConfig);
+            MainProcess = new GameProcess(newVmProcess, MainProcess.World, _fontSettings);
         }
     }
 }

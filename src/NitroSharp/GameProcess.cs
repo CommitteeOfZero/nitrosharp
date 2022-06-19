@@ -5,6 +5,7 @@ using NitroSharp.Graphics;
 using NitroSharp.NsScript;
 using NitroSharp.NsScript.VM;
 using NitroSharp.Saving;
+using NitroSharp.Text;
 using Veldrid;
 
 namespace NitroSharp
@@ -56,18 +57,18 @@ namespace NitroSharp
         private readonly Dictionary<uint, WaitOperation> _waitOperations = new();
         private readonly Queue<NsScriptThread> _threadsToResume = new();
 
-        public GameProcess(NsScriptProcess vmProcess, FontConfiguration fontConfig)
+        public GameProcess(NsScriptProcess vmProcess, FontSettings fontSettings)
         {
             VmProcess = vmProcess;
             World = new World();
-            FontConfig = fontConfig;
+            FontSettings = fontSettings;
         }
 
-        public GameProcess(NsScriptProcess vmProcess, World world, FontConfiguration fontConfig)
+        public GameProcess(NsScriptProcess vmProcess, World world, FontSettings fontSettings)
         {
             VmProcess = vmProcess;
             World = world;
-            FontConfig = fontConfig;
+            FontSettings = fontSettings;
         }
 
         public GameProcess(
@@ -75,7 +76,7 @@ namespace NitroSharp
             in GameProcessSaveData saveData,
             IReadOnlyList<Texture> standaloneTextures)
         {
-            FontConfig = saveData.FontConfig;
+            FontSettings = saveData.FontSettings;
             VmProcess = ctx.VM.RestoreProcess(saveData.VmProcessDump);
 
             var loadingCtx = new GameLoadingContext
@@ -98,7 +99,12 @@ namespace NitroSharp
 
         public NsScriptProcess VmProcess { get; }
         public World World { get; }
-        public FontConfiguration FontConfig { get; }
+        public FontSettings FontSettings { get; private set; }
+
+        public void ChangeFontSettings(Func<FontSettings, FontSettings> mutateFunc)
+        {
+            FontSettings = mutateFunc(FontSettings);
+        }
 
         public void Wait(
             NsScriptThread thread,
@@ -138,7 +144,7 @@ namespace NitroSharp
                 .Select(x => x.ToSaveData())
                 .ToArray(),
             VmProcessDump = VmProcess.Dump(),
-            FontConfig = FontConfig
+            FontSettings = FontSettings
         };
 
         public void Dispose()
@@ -206,7 +212,7 @@ namespace NitroSharp
         public NsScriptProcessDump VmProcessDump { get; init; }
         public WorldSaveData World { get; init; }
         public WaitOperationSaveData[] WaitOperations { get; init; }
-        public FontConfiguration FontConfig { get; init; }
+        public FontSettings FontSettings { get; init; }
     }
 
     [Persistable]

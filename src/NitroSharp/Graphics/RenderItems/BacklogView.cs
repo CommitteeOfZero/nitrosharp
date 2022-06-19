@@ -9,7 +9,7 @@ namespace NitroSharp.Graphics
     internal sealed class BacklogView : RenderItem2D
     {
         private readonly Backlog _backlog;
-        private readonly FontConfiguration _fontConfig;
+        private readonly FontSettings _fontSettings;
         private readonly TextLayout _textLayout;
         private readonly uint _lineHeight;
         private readonly uint _visibleHeight;
@@ -27,7 +27,7 @@ namespace NitroSharp.Graphics
             : base(path, priority)
         {
             _backlog = ctx.Backlog;
-            _fontConfig = ctx.ActiveProcess.FontConfig;
+            _fontSettings = ctx.ActiveProcess.FontSettings;
             SystemVariableLookup sys = ctx.VM.SystemVariables;
 
             uint x = (uint)sys.BacklogPositionX.AsNumber()!.Value;
@@ -65,10 +65,10 @@ namespace NitroSharp.Graphics
                 {
                     var run = TextRun.Regular(
                         entry.Text.AsMemory(),
-                        _fontConfig.DefaultFont,
-                        _fontConfig.DefaultFontSize,
-                        new RgbaFloat(_fontConfig.DefaultTextColor),
-                        _fontConfig.DefaultOutlineColor?.ToRgbaFloat()
+                        _fontSettings.DefaultFont,
+                        _fontSettings.DefaultFontSize,
+                        new RgbaFloat(_fontSettings.DefaultTextColor),
+                        _fontSettings.DefaultOutlineColor?.ToRgbaFloat()
                     );
                     _textLayout.Append(ctx.GlyphRasterizer, run);
                     _entriesAdded++;
@@ -116,10 +116,10 @@ namespace NitroSharp.Graphics
 
         private GlyphRun GetGlyphRun(Range span) => new()
         {
-            Font = _fontConfig.DefaultFont,
-            FontSize = _fontConfig.DefaultFontSize,
-            Color = new RgbaFloat(_fontConfig.DefaultTextColor),
-            OutlineColor = _fontConfig.DefaultOutlineColor?.ToRgbaFloat() ?? RgbaFloat.White,
+            Font = _fontSettings.DefaultFont,
+            FontSize = _fontSettings.DefaultFontSize,
+            Color = new RgbaFloat(_fontSettings.DefaultTextColor),
+            OutlineColor = _fontSettings.DefaultOutlineColor?.ToRgbaFloat() ?? RgbaFloat.White,
             GlyphSpan = span,
             Flags = GlyphRunFlags.Outline
         };

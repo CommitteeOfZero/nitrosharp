@@ -65,7 +65,7 @@ namespace NitroSharp.Graphics
             foreach (string line in saveData.Lines)
             {
                 _lines.Add(line);
-                FontConfiguration fontConfig = loadCtx.Process.FontConfig;
+                FontSettings fontConfig = loadCtx.Process.FontSettings;
                 var buffer = Dialogue.Parse(line, fontConfig);
                 foreach (DialogueSegment seg in buffer.Segments)
                 {
@@ -81,11 +81,10 @@ namespace NitroSharp.Graphics
             loadCtx.Rendering.Text.RequestGlyphs(_layout);
         }
 
-        public void Append(GameContext ctx, string markup, FontConfiguration fontConfig)
+        public void Append(GameContext ctx, string markup, FontSettings fontSettings)
         {
             _lines.Add(markup);
-            var buffer = Dialogue.Parse(markup, fontConfig);
-            foreach (DialogueSegment seg in buffer.Segments)
+            foreach (DialogueSegment seg in Dialogue.Parse(markup, fontSettings).Segments)
             {
                 _remainingSegments.Enqueue(seg);
             }
