@@ -1,5 +1,4 @@
 using System;
-using System.IO;
 using NitroSharp.Graphics;
 using NitroSharp.Media;
 using NitroSharp.NsScript;

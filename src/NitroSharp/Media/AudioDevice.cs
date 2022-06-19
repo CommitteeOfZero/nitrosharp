@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using NitroSharp.Media.NullAudio;
 using NitroSharp.Media.XAudio2;

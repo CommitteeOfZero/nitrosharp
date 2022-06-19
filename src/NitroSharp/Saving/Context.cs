@@ -28,12 +28,12 @@ namespace NitroSharp.Saving
 
     internal sealed class GameLoadingContext
     {
-        public IReadOnlyList<Texture> StandaloneTextures { get; init; }
-        public GameContext GameContext { get; init; }
-        public RenderContext Rendering { get; init; }
-        public ContentManager Content { get; init; }
-        public NsScriptVM VM { get; init; }
-        public GameProcess Process { get; init; }
-        public Backlog Backlog { get; init; }
+        public IReadOnlyList<Texture> StandaloneTextures { get; init; } = null!;
+        public GameContext GameContext { get; init; } = null!;
+        public RenderContext Rendering { get; init; } = null!;
+        public ContentManager Content { get; init; } = null!;
+        public NsScriptVM VM { get; init; } = null!;
+        public GameProcess Process { get; init; } = null!;
+        public Backlog Backlog { get; init; } = null!;
     }
 }

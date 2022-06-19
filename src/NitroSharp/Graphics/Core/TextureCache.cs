@@ -207,6 +207,7 @@ namespace NitroSharp.Graphics.Core
             _uvRectCache.Upsert(ref entry.UvRectHandle, ref location);
         }
 
+        // TODO: never used?
         public void Clear()
         {
             if (_strongHandles.Count == 0) { return; }
@@ -327,7 +328,7 @@ namespace NitroSharp.Graphics.Core
             _uvRectCache.Dispose();
         }
 
-        private ArrayTexture UnsupportedPixelFormat(PixelFormat format)
+        private static ArrayTexture UnsupportedPixelFormat(PixelFormat format)
             => throw new InvalidOperationException(
                 $"The following pixel format is not supported by the texture cache: {format}");
     }

@@ -107,14 +107,14 @@ namespace NitroSharp.Content
             {
                 line = reader.ReadLine();
                 if (line is null) { malformed(); }
-                int idxSeprator = line.IndexOf(',');
-                if (idxSeprator == -1) { malformed(); }
-                int fileNameLen = idxSeprator;
+                int idxSeparator = line.IndexOf(',');
+                if (idxSeparator == -1) { malformed(); }
+                int fileNameLen = idxSeparator;
                 Span<char> fileName = fileNameLen < 256
                     ? fileNameBuf[..fileNameLen]
                     : new char[fileNameLen];
                 line.AsSpan()[..fileNameLen].ToLowerInvariant(fileName);
-                ReadOnlySpan<char> fileIndex = line.AsSpan()[(idxSeprator + 1)..];
+                ReadOnlySpan<char> fileIndex = line.AsSpan()[(idxSeparator + 1)..];
                 if (!uint.TryParse(fileIndex, out uint index)) { malformed(); }
                 _iniFileNames[fileName.ToString()] = index;
             }

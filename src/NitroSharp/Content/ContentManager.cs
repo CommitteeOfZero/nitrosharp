@@ -304,7 +304,7 @@ namespace NitroSharp.Content
             string[] splitedPath = path.ToLowerInvariant().Split("/");
             VfsNode head = _root;
 
-            // This way of browsing folders is not perfect beacause we can have two possible paths :
+            // This way of browsing folders is not perfect because we can have two possible paths :
             // one through the Children and one through the MountedArchives.
             // If nobody does weird stuff with the archives, this shouldn't happen.
             int depth;

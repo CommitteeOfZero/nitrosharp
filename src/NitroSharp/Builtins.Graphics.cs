@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Immutable;
 using System.Numerics;
-using NitroSharp.Content;
 using NitroSharp.Graphics;
 using NitroSharp.NsScript;
 using NitroSharp.NsScript.Primitives;
@@ -360,11 +359,11 @@ namespace NitroSharp
             }
         }
 
-        public override void AppendDialogue(in EntityPath dialoguePage, string text)
+        public override void AppendDialogue(in EntityPath dialoguePage, string markup)
         {
             if (Get(dialoguePage) is DialoguePage page)
             {
-                page.Append(_ctx, text, _ctx.ActiveProcess.FontConfig);
+                page.Append(_ctx, markup, _ctx.ActiveProcess.FontConfig);
             }
         }
 

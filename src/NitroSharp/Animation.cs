@@ -9,7 +9,6 @@ using NitroSharp.Graphics;
 using NitroSharp.Media;
 using NitroSharp.NsScript;
 using NitroSharp.Text;
-using NitroSharp.Utilities;
 using Veldrid;
 
 namespace NitroSharp
@@ -136,7 +135,7 @@ namespace NitroSharp
         public bool HasCompleted => Elapsed >= _duration.TotalMilliseconds;
 
         protected float Progress
-            => MathUtil.Clamp(Elapsed / (float)_duration.TotalMilliseconds, 0.0f, 1.0f);
+            => Math.Clamp(Elapsed / (float)_duration.TotalMilliseconds, 0.0f, 1.0f);
 
         protected override AdvanceResult Advance()
         {
@@ -577,7 +576,7 @@ namespace NitroSharp
         protected override void InterpolateValue(ref Vector3 value, float factor)
         {
             int segCount = _curve.Segments.Length;
-            int segIndex = (int)MathUtil.Clamp(factor * segCount, 0, segCount - 1);
+            int segIndex = (int)Math.Clamp(factor * segCount, 0, segCount - 1);
             float t = factor * segCount - segIndex;
             ProcessedBezierSegment seg = _curve.Segments[segIndex];
             value = new Vector3(seg.CalcPoint(t), value.Z);
@@ -605,6 +604,7 @@ namespace NitroSharp
         }
 
         private readonly TextLayout _textLayout;
+        private readonly float _timePerGlyph;
         private Queue<AnimationPair> _anims;
 
         public TypewriterAnimation(
@@ -613,8 +613,13 @@ namespace NitroSharp
             float timePerGlyph)
         {
             _textLayout = textLayout;
+            _timePerGlyph = timePerGlyph;
             _anims = new Queue<AnimationPair>();
+            Append(textLayout, glyphRuns);
+        }
 
+        public void Append(TextLayout textLayout, ReadOnlySpan<GlyphRun> glyphRuns)
+        {
             for (int i = 0; i < glyphRuns.Length; i++)
             {
                 ref readonly GlyphRun run = ref glyphRuns[i];
@@ -625,7 +630,7 @@ namespace NitroSharp
                 {
                     if (textLayout.GetGlyphSpanLength(glyphSpan) > 0)
                     {
-                        GlyphRunRevealAnimation anim = createAnim(glyphSpan, timePerGlyph);
+                        GlyphRunRevealAnimation anim = createAnim(glyphSpan, _timePerGlyph);
                         _anims.Enqueue(new AnimationPair(anim, null));
                         glyphSpan = default;
                     }
@@ -643,8 +648,8 @@ namespace NitroSharp
                         flush();
                         uint baseGlyphCount = NbNonWhitespaceGlyphs(rb.GlyphSpan);
                         uint rubyGlyphCount = NbNonWhitespaceGlyphs(rt.GlyphSpan);
-                        float rubyGlyphTime = timePerGlyph * baseGlyphCount / rubyGlyphCount;
-                        GlyphRunRevealAnimation baseAnim = createAnim(rb.GlyphSpan, timePerGlyph);
+                        float rubyGlyphTime = _timePerGlyph * baseGlyphCount / rubyGlyphCount;
+                        GlyphRunRevealAnimation baseAnim = createAnim(rb.GlyphSpan, _timePerGlyph);
                         GlyphRunRevealAnimation rubyAnim = createAnim(rt.GlyphSpan, rubyGlyphTime);
                         _anims.Enqueue(new AnimationPair(baseAnim, rubyAnim));
                         i++;

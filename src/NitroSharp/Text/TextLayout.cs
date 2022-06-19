@@ -205,17 +205,7 @@ namespace NitroSharp.Text
                 {
                     Line lastLine = _lines[^1];
                     var newSpan = new Range(lastLine.GlyphSpan.Start, actualLineSpan.End);
-                    _lines[^1] = new Line
-                    {
-                        GlyphSpan = newSpan,
-                        BbLeft = Math.Min(line.BbLeft, lastLine.BbLeft),
-                        BbRight = line.BbRight,
-                        Right = line.Right,
-                        BaselineY = line.BaselineY,
-                        VerticalMetrics = line.VerticalMetrics,
-                        ActualAscender = line.ActualAscender,
-                        ActualDescender = line.ActualDescender
-                    };
+                    _lines[^1] = line with { GlyphSpan = newSpan, BbLeft = Math.Min(line.BbLeft, lastLine.BbLeft) };
                 }
                 else
                 {
@@ -352,15 +342,7 @@ namespace NitroSharp.Text
         public bool IsRubyBase => (Flags & GlyphRunFlags.RubyBase) == GlyphRunFlags.RubyBase;
         public bool IsRubyText => (Flags & GlyphRunFlags.RubyText) == GlyphRunFlags.RubyText;
 
-        public GlyphRun WithSpan(Range span) => new()
-        {
-            Font = Font,
-            FontSize = FontSize,
-            Color = Color,
-            OutlineColor = OutlineColor,
-            GlyphSpan = span,
-            Flags = Flags
-        };
+        public GlyphRun WithSpan(Range span) => this with { GlyphSpan = span };
     }
 
     [Flags]
@@ -396,18 +378,7 @@ namespace NitroSharp.Text
 
         public bool IsEmpty => GlyphSpan.End.Value == GlyphSpan.Start.Value;
 
-        public Line WithSpan(Range span) => new()
-        {
-            GlyphSpan = span,
-            VerticalMetrics = VerticalMetrics,
-            BaselineY = BaselineY,
-            BbLeft = BbLeft,
-            BbRight = BbRight,
-            ActualAscender = ActualAscender,
-            ActualDescender = ActualDescender,
-            HardBreak = HardBreak,
-            RubyTextAscender = RubyTextAscender
-        };
+        public Line WithSpan(Range span) => this with { GlyphSpan = span };
     }
 
     [StructLayout(LayoutKind.Auto)]
@@ -426,17 +397,9 @@ namespace NitroSharp.Text
 
         public int Length => GlyphSpan.End.Value - GlyphSpan.Start.Value;
 
-        public Word Update(Range glyphSpan, float rubyTextAscender) => new()
+        public Word Update(Range glyphSpan, float rubyTextAscender) => this with
         {
             GlyphSpan = glyphSpan,
-            BbLeft = BbLeft,
-            BbRight = BbRight,
-            AdvanceWidth = AdvanceWidth,
-            AdvanceWidthNoTrail = AdvanceWidthNoTrail,
-            MaxVMetrics = MaxVMetrics,
-            HardBreak = HardBreak,
-            ActualAscender = ActualAscender,
-            ActualDescender = ActualDescender,
             RubyTextAscender = rubyTextAscender
         };
     }
