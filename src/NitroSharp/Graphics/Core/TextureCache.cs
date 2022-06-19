@@ -28,10 +28,10 @@ namespace NitroSharp.Graphics.Core
     {
         public const uint SizeInGpuBlocks = 2;
 
-        public readonly Point2DU Origin;
-        public readonly Size Size;
-        public readonly uint Layer;
-        public readonly Vector3 UserData;
+        private readonly Point2DU _origin;
+        private readonly Size _size;
+        private readonly uint _layer;
+        private readonly Vector3 _userData;
 
         public TextureLocation(
             Point2DU origin,
@@ -39,16 +39,16 @@ namespace NitroSharp.Graphics.Core
             uint layer,
             Vector3 userData)
         {
-            Origin = origin;
-            Size = size;
-            Layer = layer;
-            UserData = userData;
+            _origin = origin;
+            _size = size;
+            _layer = layer;
+            _userData = userData;
         }
 
         public void WriteGpuBlocks(Span<Vector4> blocks)
         {
-            blocks[0] = new Vector4(Layer, Origin.X, Origin.Y, Size.Width);
-            blocks[1] = new Vector4(Size.Height, UserData.X, UserData.Y, UserData.Z);
+            blocks[0] = new Vector4(_layer, _origin.X, _origin.Y, _size.Width);
+            blocks[1] = new Vector4(_size.Height, _userData.X, _userData.Y, _userData.Z);
         }
     }
 

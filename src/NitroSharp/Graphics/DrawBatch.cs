@@ -19,19 +19,19 @@ namespace NitroSharp.Graphics
     [StructLayout(LayoutKind.Auto)]
     internal readonly struct DrawParams
     {
-        public readonly DrawMethod Method;
+        private readonly DrawMethod _method;
         public readonly (uint start, uint count) Vertices;
         public readonly (uint start, uint count) Indices;
         public readonly (uint start, uint count) Instances;
 
-        public bool IsIndexed => Method switch
+        public bool IsIndexed => _method switch
         {
             DrawMethod.DrawIndexed => true,
             DrawMethod.DrawIndexedInstanced => true,
             _ => false
         };
 
-        private bool IsInstanced => Method switch
+        private bool IsInstanced => _method switch
         {
             DrawMethod.DrawInstanced => true,
             DrawMethod.DrawIndexedInstanced => true,
@@ -49,7 +49,7 @@ namespace NitroSharp.Graphics
             Vertices = (vertexBase, vertexCount);
             Indices = (indexBase, indexCount);
             Instances = (instanceBase, instanceCount);
-            Method = (Indices, Instances) switch
+            _method = (Indices, Instances) switch
             {
                 ((0, 0), (0, 1)) => DrawMethod.Draw,
                 ((0, 0), _) => DrawMethod.DrawInstanced,
@@ -73,10 +73,10 @@ namespace NitroSharp.Graphics
             uint instanceCount = 1)
             => new(vertexBase, 0, indexBase, indexCount, instanceBase, instanceCount);
 
-        public static bool CanMerge(in DrawParams a, in DrawParams b)
+        private static bool CanMerge(in DrawParams a, in DrawParams b)
         {
-            if (a.Method != b.Method) { return false; }
-            return a.Method switch
+            if (a._method != b._method) { return false; }
+            return a._method switch
             {
                 DrawMethod.Draw => areConsecutive(a.Vertices, b.Vertices),
                 DrawMethod.DrawInstanced => areConsecutive(a.Vertices, b.Vertices)

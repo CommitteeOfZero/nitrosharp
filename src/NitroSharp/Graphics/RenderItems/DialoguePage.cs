@@ -17,6 +17,7 @@ namespace NitroSharp.Graphics
         }
 
         private readonly Size? _bounds;
+        private readonly Vector4 _margin;
         private readonly float _lineHeight;
         private readonly NsScriptThread _dialogueThread;
         private readonly TextLayout _layout;
@@ -36,7 +37,7 @@ namespace NitroSharp.Graphics
             NsScriptThread dialogueThread)
             : base(path, priority)
         {
-            Margin = margin;
+            _margin = margin;
             _bounds = bounds;
             _lineHeight = lineHeight;
             _dialogueThread = dialogueThread;
@@ -45,7 +46,6 @@ namespace NitroSharp.Graphics
 
         public override EntityKind Kind => EntityKind.DialoguePage;
 
-        public Vector4 Margin { get; }
         public override bool IsIdle => _dialogueThread.DoneExecuting && LineRead;
         public bool LineRead { get; private set; }
         public bool DisableAnimation { get; set; }
@@ -60,7 +60,7 @@ namespace NitroSharp.Graphics
             _lineHeight = saveData.LineHeight;
             _layout = new TextLayout(_bounds?.Width, _bounds?.Height, _lineHeight);
             _dialogueThread = loadCtx.Process.VmProcess.GetThread(saveData.DialogueThreadId);
-            Margin = saveData.Margin;
+            _margin = saveData.Margin;
 
             foreach (string line in saveData.Lines)
             {
@@ -99,8 +99,8 @@ namespace NitroSharp.Graphics
         {
             RectangleF bb = _layout.BoundingBox;
             var size = new Size(
-                (uint)(Margin.X + bb.Right + Margin.Z),
-                (uint)(Margin.Y + bb.Bottom + Margin.W)
+                (uint)(_margin.X + bb.Right + _margin.Z),
+                (uint)(_margin.Y + bb.Bottom + _margin.W)
             );
             return size.Constrain(_layout.MaxBounds);
         }
@@ -170,7 +170,7 @@ namespace NitroSharp.Graphics
         {
             RectangleF br = BoundingRect;
             var rect = new RectangleU((uint)br.X, (uint)br.Y, (uint)br.Width, (uint)br.Height);
-            ctx.Text.Render(ctx, batch, _layout, WorldMatrix, Margin.XY(), rect, Color.A);
+            ctx.Text.Render(ctx, batch, _layout, WorldMatrix, _margin.XY(), rect, Color.A);
 
             if (_animation is null && !_skipping)
             {
@@ -185,7 +185,7 @@ namespace NitroSharp.Graphics
             ctx.MainBatch.PushQuad(
                 QuadGeometry.Create(
                     new SizeF(bb.Size.Width, bb.Size.Height),
-                    WorldMatrix * Matrix4x4.CreateTranslation(new Vector3(Margin.XY() + bb.Position, 0)),
+                    WorldMatrix * Matrix4x4.CreateTranslation(new Vector3(_margin.XY() + bb.Position, 0)),
                     Vector2.Zero,
                     Vector2.One,
                     new Vector4(0, 0.8f, 0.0f, 0.3f)
@@ -209,7 +209,7 @@ namespace NitroSharp.Graphics
                     ctx.MainBatch.PushQuad(
                         QuadGeometry.Create(
                             new SizeF(dims.Width, dims.Height),
-                            WorldMatrix * Matrix4x4.CreateTranslation(new Vector3(Margin.XY() + g.Position + new Vector2(0, 0), 0)),
+                            WorldMatrix * Matrix4x4.CreateTranslation(new Vector3(_margin.XY() + g.Position + new Vector2(0, 0), 0)),
                             Vector2.Zero,
                             Vector2.One,
                             new Vector4(0.8f, 0.0f, 0.0f, 0.3f)
@@ -295,7 +295,7 @@ namespace NitroSharp.Graphics
             Common = base.ToSaveData(ctx),
             Bounds = _bounds,
             LineHeight = _lineHeight,
-            Margin = Margin,
+            Margin = _margin,
             DialogueThreadId = _dialogueThread.Id,
             Lines = _lines.ToArray(),
             SegmentsRemaining = _remainingSegments.Count

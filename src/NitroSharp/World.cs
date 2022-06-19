@@ -257,7 +257,7 @@ namespace NitroSharp
             DestroyEntity(entity.Id);
         }
 
-        public void DestroyEntity(in EntityId id)
+        private void DestroyEntity(in EntityId id)
         {
             if (!GetRecord(id, out EntityRec rec)) { return; }
             Entity entity = rec.Entity;

@@ -188,7 +188,7 @@ namespace NitroSharp.NsScript.VM
                 .Enqueue(ThreadAction.Suspend(thread, timeout));
         }
 
-        public void Join(NsScriptThread callingThread, NsScriptThread targetThread)
+        private void Join(NsScriptThread callingThread, NsScriptThread targetThread)
         {
             callingThread.Process.PendingThreadActions
                 .Enqueue(ThreadAction.Join(callingThread, targetThread));
@@ -209,7 +209,7 @@ namespace NitroSharp.NsScript.VM
         public NsScriptThread ActivateDialogueBlock(in DialogueBlockToken blockToken)
             => ActivateDialogueBlock(CurrentProcess!, blockToken);
 
-        public NsScriptThread ActivateDialogueBlock(
+        private NsScriptThread ActivateDialogueBlock(
             NsScriptProcess process,
             in DialogueBlockToken blockToken)
         {

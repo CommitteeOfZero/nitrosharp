@@ -42,7 +42,7 @@ namespace NitroSharp.Content
         public override string ToString() => $"Asset '{Path}'";
     }
 
-    internal class ContentManager : IDisposable
+    internal sealed class ContentManager : IDisposable
     {
         private static readonly Encoding s_defaultEncoding;
 

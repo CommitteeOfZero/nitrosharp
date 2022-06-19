@@ -8,6 +8,8 @@ namespace NitroSharp
     internal sealed class VmThread : Entity
     {
         private readonly NsScriptVM _vm;
+        private readonly string _target;
+        private NsScriptThread _thread;
 
         public VmThread(
             in ResolvedEntityPath path,
@@ -16,8 +18,8 @@ namespace NitroSharp
             NsScriptThread thread) : base(path)
         {
             _vm = vm;
-            Target = target;
-            Thread = thread;
+            _target = target;
+            _thread = thread;
             if (Parent is Choice choice)
             {
                 switch (Id.MouseState)
@@ -40,38 +42,36 @@ namespace NitroSharp
             : base(path, saveData.Common)
         {
             _vm = vm;
-            Target = saveData.Target;
-            Thread = process.GetThread(saveData.ThreadId);
+            _target = saveData.Target;
+            _thread = process.GetThread(saveData.ThreadId);
         }
 
-        public string Target { get; }
-        public NsScriptThread Thread { get; private set; }
-        public override bool IsIdle => !Thread.IsActive || Thread.DoneExecuting;
+        public override bool IsIdle => !_thread.IsActive || _thread.DoneExecuting;
 
         public override EntityKind Kind => EntityKind.VmThread;
 
         public void Restart()
         {
-            if (!Thread.DoneExecuting)
+            if (!_thread.DoneExecuting)
             {
-                _vm.TerminateThread(Thread);
+                _vm.TerminateThread(_thread);
             }
-            Thread = _vm.CreateThread(Thread.Process, Thread.EntryModule, Target, start: true)!;
+            _thread = _vm.CreateThread(_thread.Process, _thread.EntryModule, _target, start: true)!;
         }
 
         public void Suspend()
         {
-            _vm.SuspendThread(Thread);
+            _vm.SuspendThread(_thread);
         }
 
         public void Resume()
         {
-            _vm.ResumeThread(Thread);
+            _vm.ResumeThread(_thread);
         }
 
         public void Terminate()
         {
-            _vm.TerminateThread(Thread);
+            _vm.TerminateThread(_thread);
         }
 
         public override void Dispose()
@@ -82,8 +82,8 @@ namespace NitroSharp
         public new VmThreadSaveData ToSaveData(GameSavingContext ctx) => new()
         {
             Common = base.ToSaveData(ctx),
-            ThreadId = Thread.Id,
-            Target = Target
+            ThreadId = _thread.Id,
+            Target = _target
         };
     }
 

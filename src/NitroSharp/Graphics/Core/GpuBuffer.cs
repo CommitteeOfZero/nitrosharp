@@ -10,6 +10,8 @@ namespace NitroSharp.Graphics.Core
     internal sealed class GpuBuffer<T> : IDisposable
         where T : unmanaged
     {
+        private readonly uint _capacity;
+
         public static GpuBuffer<T> CreateIndex(GraphicsDevice gd, Span<T> data)
             => new(gd, BufferUsage.IndexBuffer, data);
 
@@ -24,7 +26,7 @@ namespace NitroSharp.Graphics.Core
         {
         }
 
-        public GpuBuffer(
+        private GpuBuffer(
             GraphicsDevice graphicsDevice,
             BufferUsage usage,
             Span<T> data)
@@ -32,21 +34,19 @@ namespace NitroSharp.Graphics.Core
             ResourceFactory factory = graphicsDevice.ResourceFactory;
             uint bufSize = (uint)Unsafe.SizeOf<T>() * (uint)data.Length;
             bufSize = MathUtil.RoundUp(bufSize, 16);
-            Capacity = (uint)data.Length;
+            _capacity = (uint)data.Length;
             VdBuffer = factory.CreateBuffer(new BufferDescription(bufSize, usage));
             Update(graphicsDevice, data);
         }
 
         public DeviceBuffer VdBuffer { get; }
 
-        public uint Capacity { get; }
-
         public void Update(GraphicsDevice gd, T data)
             => Update(gd, MemoryMarshal.CreateSpan(ref data, 1));
 
-        public void Update(GraphicsDevice graphicsDevice, Span<T> data)
+        private void Update(GraphicsDevice graphicsDevice, Span<T> data)
         {
-            Debug.Assert(data.Length <= Capacity);
+            Debug.Assert(data.Length <= _capacity);
             graphicsDevice.UpdateBuffer(
                 VdBuffer, 0, ref data[0],
                 (uint)(data.Length * Unsafe.SizeOf<T>())
@@ -56,9 +56,9 @@ namespace NitroSharp.Graphics.Core
         public void Update(CommandList commandList, T data)
             => Update(commandList, MemoryMarshal.CreateSpan(ref data, 1));
 
-        public void Update(CommandList commandList, Span<T> data)
+        private void Update(CommandList commandList, Span<T> data)
         {
-            Debug.Assert(data.Length <= Capacity);
+            Debug.Assert(data.Length <= _capacity);
             commandList.UpdateBuffer(
                 VdBuffer, 0, ref data[0],
                 (uint)(data.Length * Unsafe.SizeOf<T>())

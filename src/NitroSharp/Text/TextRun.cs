@@ -21,7 +21,7 @@ namespace NitroSharp.Text
         public readonly PtFontSize FontSize;
         public readonly RgbaFloat Color;
         public readonly RgbaFloat OutlineColor;
-        public readonly TextRunFlags Flags;
+        private readonly TextRunFlags Flags;
 
         public bool DrawOutline => (Flags & TextRunFlags.Outline) == TextRunFlags.Outline;
         public bool HasRubyText => (Flags & TextRunFlags.RubyText) == TextRunFlags.RubyText;

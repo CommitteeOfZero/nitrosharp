@@ -28,9 +28,10 @@ namespace NitroSharp.Media
         private readonly uint _index;
         private readonly uint _width;
         private readonly uint _height;
+        private readonly double _duration;
+
         public readonly int Serial;
         public readonly double Timestamp;
-        public readonly double Duration;
 
         public YCbCrFrame(
             YCbCrBufferInternal buffer,
@@ -44,11 +45,11 @@ namespace NitroSharp.Media
             _height = height;
             Serial = serial;
             Timestamp = timestamp;
-            Duration = duration;
+            _duration = duration;
             Serial = serial;
         }
 
-        public VideoFrameInfo GetInfo() => new(Serial, Timestamp, Duration);
+        public VideoFrameInfo GetInfo() => new(Serial, Timestamp, _duration);
 
         public void CopyToDeviceMemory(CommandList commandList)
         {

@@ -46,7 +46,7 @@ namespace NitroSharp.Graphics
             }
         }
 
-        internal readonly struct GpuTransform : GpuType
+        private readonly struct GpuTransform : GpuType
         {
             public const uint SizeInGpuBlocks = 4;
 
@@ -65,7 +65,6 @@ namespace NitroSharp.Graphics
             }
         }
 
-        private readonly GlyphRasterizer _glyphRasterizer;
         private readonly TextureCache _textureCache;
         private readonly GpuList<GpuGlyph> _gpuGlyphs;
         private readonly GpuCache<GpuGlyphRun> _gpuGlyphRuns;
@@ -78,7 +77,7 @@ namespace NitroSharp.Graphics
             GlyphRasterizer glyphRasterizer,
             TextureCache textureCache)
         {
-            _glyphRasterizer = glyphRasterizer;
+            GlyphRasterizer = glyphRasterizer;
             _textureCache = textureCache;
             _gpuGlyphs = new GpuList<GpuGlyph>(gd, BufferUsage.VertexBuffer, initialCapacity: 2048);
             _gpuGlyphRuns = new GpuCache<GpuGlyphRun>(gd, GpuGlyphRun.SizeInGpuBlocks, dimension: 128);
@@ -86,7 +85,7 @@ namespace NitroSharp.Graphics
             _pendingDraws = new ArrayBuilder<(Draw, int)>(4);
         }
 
-        public GlyphRasterizer GlyphRasterizer => _glyphRasterizer;
+        public GlyphRasterizer GlyphRasterizer { get; }
 
         public void BeginFrame()
         {
@@ -105,12 +104,12 @@ namespace NitroSharp.Graphics
             RequestGlyphs(textLayout, MemoryMarshal.CreateReadOnlySpan(ref glyphRun, 1));
         }
 
-        public void RequestGlyphs(TextLayout textLayout, ReadOnlySpan<GlyphRun> glyphRuns)
+        private void RequestGlyphs(TextLayout textLayout, ReadOnlySpan<GlyphRun> glyphRuns)
         {
             foreach (ref readonly GlyphRun glyphRun in glyphRuns)
             {
                 ReadOnlySpan<PositionedGlyph> glyphs = textLayout.Glyphs[glyphRun.GlyphSpan];
-                _glyphRasterizer.RequestGlyphs(
+                GlyphRasterizer.RequestGlyphs(
                     glyphRun.Font,
                     glyphRun.FontSize,
                     glyphs,
@@ -228,7 +227,7 @@ namespace NitroSharp.Graphics
 
         public void ResolveGlyphs()
         {
-            ValueTask vt = _glyphRasterizer.ResolveGlyphs(_textureCache);
+            ValueTask vt = GlyphRasterizer.ResolveGlyphs(_textureCache);
             if (!vt.IsCompleted)
             {
                 vt.GetAwaiter().GetResult();
@@ -250,7 +249,7 @@ namespace NitroSharp.Graphics
             GpuCacheHandle transformHandle = _gpuTransforms.Insert(ref gpuTransform);
             Debug.Assert(_gpuTransforms.GetCachePosition(transformHandle) == glyphRunId);
 
-            FontData fontData = _glyphRasterizer.GetFontData(run.Font);
+            FontData fontData = GlyphRasterizer.GetFontData(run.Font);
             uint instanceBase = _gpuGlyphs.Count;
             DeviceBuffer? buffer = null;
             for (int i = 0; i < positionedGlyphs.Length; i++)

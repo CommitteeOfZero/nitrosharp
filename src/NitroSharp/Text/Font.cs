@@ -32,7 +32,7 @@ namespace NitroSharp.Text
         Bold = 1 << 2
     }
 
-    internal readonly struct PtFontSize : IEquatable<PtFontSize>
+    public readonly struct PtFontSize : IEquatable<PtFontSize>
     {
         public readonly Fixed26Dot6 Value;
 
