@@ -318,7 +318,6 @@ namespace NitroSharp.Text
                 }
                 return new RasterizedGlyph(
                     buffer,
-                    largest.Top,
                     largest.Left,
                     largest.Width,
                     largest.Height,
@@ -502,7 +501,6 @@ namespace NitroSharp.Text
 
     internal readonly record struct RasterizedGlyph(
         byte[] Bytes,
-        int Top,
         int Left,
         uint Width,
         uint Height,
@@ -512,7 +510,6 @@ namespace NitroSharp.Text
     internal readonly unsafe struct NativeBitmapGlyph : IDisposable
     {
         private readonly BitmapGlyph* _ftGlyph;
-        public readonly int Top;
         public readonly int Left;
         public readonly uint Width;
         public readonly uint Height;
@@ -521,7 +518,6 @@ namespace NitroSharp.Text
         {
             _ftGlyph = ftGlyph;
             Bottom = bottom;
-            Top = _ftGlyph->top;
             Left = _ftGlyph->left;
             Width = (uint)_ftGlyph->bitmap.width;
             Height = (uint)_ftGlyph->bitmap.rows;
@@ -620,9 +616,6 @@ namespace NitroSharp.Text
         public uint GetGlyphIndex(FontFace fontFace, uint scalar)
             => FT.FT_Get_Char_Index(fontFace.FTFace, scalar);
 
-        public uint GetGlyphIndex(FontFace fontFace, char c)
-            => FT.FT_Get_Char_Index(fontFace.FTFace, c);
-
         public VerticalMetrics GetFontMetrics(FontFace font, PtFontSize fontSize)
         {
             Face* ftFace = font.FTFace;
@@ -719,7 +712,7 @@ namespace NitroSharp.Text
                 }
             }
 
-            return new RasterizedGlyph(buffer, bitmapTop, bitmapLeft, (uint)width, (uint)height);
+            return new RasterizedGlyph(buffer, bitmapLeft, (uint)width, (uint)height);
         }
 
         public NativeBitmapGlyph StrokeGlyph(FontFace fontFace, PtFontSize fontSize, uint index, uint radius)

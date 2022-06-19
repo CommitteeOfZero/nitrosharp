@@ -10,30 +10,6 @@ namespace Game
 {
     internal static class Program
     {
-        // ReSharper disable InconsistentNaming
-        private static class CoreRTWorkaround
-        {
-            public static void InitializeCOM()
-            {
-                CoInitializeEx(IntPtr.Zero, COINIT.COINIT_MULTITHREADED);
-            }
-
-            [DllImport("ole32.dll", SetLastError = true)]
-            private static extern int CoInitializeEx(
-                [In, Optional] IntPtr pvReserved,
-                [In] COINIT dwCoInit
-            );
-
-            private enum COINIT : uint
-            {
-                COINIT_MULTITHREADED = 0x0,
-                COINIT_APARTMENTTHREADED = 0x2,
-                COINIT_DISABLE_OLE1DDE = 0x4,
-                COINIT_SPEED_OVER_MEMORY = 0x8,
-            }
-        }
-        // ReSharper restore InconsistentNaming
-
         private static IntPtr s_libfreetype;
         private static IntPtr s_libopenal;
         private static IntPtr s_libavcodec;
@@ -82,7 +58,6 @@ namespace Game
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 platform = Platform.Windows;
-                CoreRTWorkaround.InitializeCOM();
             }
             else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
             {

@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Diagnostics;
 using System.Threading.Tasks;
-using NitroSharp.Media.XAudio2;
 
 namespace NitroSharp.Media
 {

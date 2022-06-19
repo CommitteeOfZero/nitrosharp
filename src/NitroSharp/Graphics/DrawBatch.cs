@@ -14,6 +14,8 @@ namespace NitroSharp.Graphics
         public BufferBindings BufferBindings;
         public DrawParams Params;
         public RectangleU? ScissorRect;
+
+        public bool IsValid => Pipeline is not null;
     }
 
     [StructLayout(LayoutKind.Auto)]
@@ -173,7 +175,7 @@ namespace NitroSharp.Graphics
         private CommandList? _commandList;
 
         private Draw _lastDraw;
-        private Vector2 _lastAlphaMaskPosition;
+        private Vector2 _lastAlphaMaskPosition = new(float.NaN);
 
         public DrawBatch(RenderContext context)
         {
@@ -216,7 +218,8 @@ namespace NitroSharp.Graphics
             QuadShaderResources resources = _ctx.ShaderResources.Quad;
             if (alphaMaskPosition != _lastAlphaMaskPosition)
             {
-                UpdateBuffer(resources.AlphaMaskPositionBuffer, new Vector4(alphaMaskPosition, 0, 0));
+                Vector4 newValue = new Vector4(alphaMaskPosition, 0, 0);
+                UpdateBuffer(resources.AlphaMaskPositionBuffer, newValue);
                 _lastAlphaMaskPosition = alphaMaskPosition;
             }
 
@@ -274,7 +277,7 @@ namespace NitroSharp.Graphics
                 return;
             }
 
-            if (_lastDraw.Pipeline is not null)
+            if (_lastDraw.IsValid)
             {
                 Flush();
             }
@@ -284,7 +287,7 @@ namespace NitroSharp.Graphics
 
         private void Flush()
         {
-            if (_commandList is null || _lastDraw.Pipeline is null)
+            if (_commandList is null || !_lastDraw.IsValid)
             {
                 return;
             }

@@ -35,7 +35,7 @@ namespace NitroSharp.Text
         public float ToFloat() => Value.ToSingle();
         public int ToInt32() => Value.ToInt32();
 
-        public override string? ToString() => $"{Value.ToInt32()}pt";
+        public override string ToString() => $"{Value.ToInt32()}pt";
     }
 
     internal readonly record struct VerticalMetrics(float Ascender, float Descender, float LineHeight)

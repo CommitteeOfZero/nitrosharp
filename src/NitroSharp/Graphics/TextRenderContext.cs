@@ -42,11 +42,7 @@ namespace NitroSharp.Graphics
 
             public void WriteGpuBlocks(Span<Vector4> blocks)
             {
-                ref readonly Matrix4x4 tr = ref Matrix;
-                blocks[0] = new Vector4(tr.M11, tr.M12, tr.M13, tr.M14);
-                blocks[1] = new Vector4(tr.M21, tr.M22, tr.M23, tr.M24);
-                blocks[2] = new Vector4(tr.M31, tr.M32, tr.M33, tr.M34);
-                blocks[3] = new Vector4(tr.M41, tr.M42, tr.M43, tr.M44);
+                MemoryMarshal.Cast<Vector4, Matrix4x4>(blocks).Fill(Matrix);
             }
         }
 
@@ -224,7 +220,7 @@ namespace NitroSharp.Graphics
             ReadOnlySpan<PositionedGlyph> positionedGlyphs,
             ReadOnlySpan<float> opacityValues,
             in Matrix4x4 transform,
-            float opacityMul)
+            float opacityMultiplier)
         {
             var gpuGlyphRun = new GpuGlyphRun(run.Color, run.OutlineColor);
             GpuCacheHandle glyphRunHandle = _gpuGlyphRuns.Insert(ref gpuGlyphRun);
@@ -245,21 +241,21 @@ namespace NitroSharp.Graphics
                 {
                     Debug.Assert(cachedGlyph.Kind != GlyphCacheEntryKind.Pending);
                     if (cachedGlyph.Kind == GlyphCacheEntryKind.Blank) { continue; }
-                    TextureCacheItem glyphTci = _textureCache.Get(cachedGlyph.TextureCacheHandle);
+                    TextureCacheItem glyphCacheItem = _textureCache.Get(cachedGlyph.TextureCacheHandle);
                     int outlineId = 0;
                     if (cachedGlyph.OutlineTextureCacheHandle.IsValid)
                     {
-                        TextureCacheItem outlineTci = _textureCache.Get(cachedGlyph.OutlineTextureCacheHandle);
-                        outlineId = outlineTci.UvRectPosition;
+                        TextureCacheItem outlineCacheItem = _textureCache.Get(cachedGlyph.OutlineTextureCacheHandle);
+                        outlineId = outlineCacheItem.UvRectPosition;
                     }
 
                     (buffer, _) = _gpuGlyphs.Append(new GpuGlyph
                     {
                         Offset = glyph.Position,
                         GlyphRunId = glyphRunId,
-                        GlyphId = glyphTci.UvRectPosition,
+                        GlyphId = glyphCacheItem.UvRectPosition,
                         OutlineId = outlineId,
-                        Opacity = opacityValues[i] * opacityMul
+                        Opacity = opacityValues[i] * opacityMultiplier
                     });
                 }
             }

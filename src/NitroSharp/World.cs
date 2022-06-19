@@ -21,11 +21,11 @@ namespace NitroSharp
             public EntityRec WithBucket(EntityBucket newBucket)
             {
                 var location = new EntityLocation(newBucket, Location.Index);
-                return new EntityRec(Entity, Group, location);
+                return this with { Location = location };
             }
 
             public EntityRec WithLocation(EntityLocation newLocation)
-                => new(Entity, Group, newLocation);
+                => this with { Location = newLocation };
         }
 
         private sealed class EntityContext

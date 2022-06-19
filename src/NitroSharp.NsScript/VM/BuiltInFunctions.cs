@@ -147,7 +147,7 @@ namespace NitroSharp.NsScript.VM
 
         // --- NitroSharp only ---
         public virtual void ClearDialoguePage(in EntityPath dialoguePage) { }
-        public virtual void AppendDialogue(in EntityPath dialoguePage, string text) { }
+        public virtual void AppendDialogue(in EntityPath dialoguePage, string markup) { }
         public virtual bool HandleInputEvents(in EntityPath uiElementPath) => false;
         public virtual void AssertTrue(bool value) { }
 

@@ -488,7 +488,7 @@ namespace NitroSharp.Media
         private double CalcTargetDelay(double delay)
         {
             double diff = _videoClock.Get() - GetSecondsElapsed();
-            double syncThreshold = MathUtil.Clamp(delay, SyncThresholdMin, SyncThresholdMax);
+            double syncThreshold = Math.Clamp(delay, SyncThresholdMin, SyncThresholdMax);
             if (!double.IsNaN(diff) && Math.Abs(diff) < _maxFrameDuration)
             {
                 if (diff <= -syncThreshold)

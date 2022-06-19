@@ -34,7 +34,6 @@ namespace NitroSharp.Media
             Serial = serial;
             Timestamp = timestamp;
             _duration = duration;
-            Serial = serial;
         }
 
         public VideoFrameInfo GetInfo() => new(Serial, Timestamp, _duration);

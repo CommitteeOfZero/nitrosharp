@@ -73,8 +73,6 @@ namespace NitroSharp.Utilities
             _head = 0;
         }
 
-        public uint TotalSlots => _slots.Count;
-
         public FreeListHandle Insert(in T value)
         {
             uint head = _head;
@@ -180,8 +178,6 @@ namespace NitroSharp.Utilities
             slot.Version = InitialVersion;
             _head = 0;
         }
-
-        public uint TotalSlots => _slots.Count;
 
         public FreeListHandle Next()
         {
