@@ -39,6 +39,7 @@ namespace Game
 #endif
             Console.OutputEncoding = Encoding.UTF8;
 
+            // ReSharper disable UseAwaitUsing
             Config config;
             using (FileStream configStream = File.OpenRead("config.json"))
             {
@@ -50,6 +51,7 @@ namespace Game
             {
                 gameProfile = GameProfile.Read(profileStream);
             }
+            // ReSharper restore UseAwaitUsing
 
             var window = new DesktopWindow(
                 gameProfile.ProductDisplayName,

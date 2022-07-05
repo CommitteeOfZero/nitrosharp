@@ -380,7 +380,9 @@ namespace NitroSharp.Text
         }
     }
 
+    // ReSharper disable NotAccessedPositionalProperty.Global
     internal readonly record struct GlyphCacheKey(uint Index, PtFontSize FontSize);
+    // ReSharper restore NotAccessedPositionalProperty.Global
 
     internal enum GlyphCacheEntryKind
     {

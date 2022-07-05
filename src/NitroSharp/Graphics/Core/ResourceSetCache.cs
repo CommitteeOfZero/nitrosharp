@@ -8,14 +8,15 @@ namespace NitroSharp.Graphics.Core
     internal readonly struct ResourceSetKey : IEquatable<ResourceSetKey>
     {
         public readonly ResourceLayout ResourceLayout;
-        public readonly BindableResource Resource0;
-        public readonly BindableResource? Resource1;
-        public readonly BindableResource? Resource2;
-        public readonly BindableResource? Resource3;
+
+        private readonly BindableResource _resource0;
+        private readonly BindableResource? _resource1;
+        private readonly BindableResource? _resource2;
+        private readonly BindableResource? _resource3;
 
         public ResourceSetKey(ResourceLayout layout, BindableResource res) : this()
         {
-            (ResourceLayout, Resource0) = (layout, res);
+            (ResourceLayout, _resource0) = (layout, res);
         }
 
         public ResourceSetKey(
@@ -23,7 +24,7 @@ namespace NitroSharp.Graphics.Core
              BindableResource res0,
              BindableResource res1) : this()
         {
-            (ResourceLayout, Resource0, Resource1) = (layout, res0, res1);
+            (ResourceLayout, _resource0, _resource1) = (layout, res0, res1);
         }
 
         public ResourceSetKey(
@@ -32,7 +33,7 @@ namespace NitroSharp.Graphics.Core
              BindableResource res1,
              BindableResource res2) : this()
         {
-            (ResourceLayout, Resource0, Resource1, Resource2) = (layout, res0, res1, res2);
+            (ResourceLayout, _resource0, _resource1, _resource2) = (layout, res0, res1, res2);
         }
 
         public ResourceSetKey(
@@ -43,10 +44,10 @@ namespace NitroSharp.Graphics.Core
             BindableResource? res3)
         {
             ResourceLayout = layout;
-            Resource0 = res0;
-            Resource1 = res1;
-            Resource2 = res2;
-            Resource3 = res3;
+            _resource0 = res0;
+            _resource1 = res1;
+            _resource2 = res2;
+            _resource3 = res3;
         }
 
         public ResourceSetKey(ResourceLayout layout, ReadOnlySpan<BindableResource> resources)
@@ -59,18 +60,18 @@ namespace NitroSharp.Graphics.Core
                     "ResourceSets that include up to 4 resources."
                 );
             }
-            Resource0 = resources[0];
+            _resource0 = resources[0];
             if (resources.Length > 1)
             {
-                Resource1 = resources[1];
+                _resource1 = resources[1];
             }
             if (resources.Length > 2)
             {
-                Resource2 = resources[2];
+                _resource2 = resources[2];
             }
             if (resources.Length > 3)
             {
-                Resource3 = resources[3];
+                _resource3 = resources[3];
             }
         }
 
@@ -78,20 +79,20 @@ namespace NitroSharp.Graphics.Core
         {
             return HashCode.Combine(
                 ResourceLayout,
-                Resource0,
-                Resource1,
-                Resource2,
-                Resource3
+                _resource0,
+                _resource1,
+                _resource2,
+                _resource3
             );
         }
 
         public bool Equals(ResourceSetKey other)
         {
             return ReferenceEquals(ResourceLayout, other.ResourceLayout)
-                && ReferenceEquals(Resource0, other.Resource0)
-                && ReferenceEquals(Resource1, other.Resource1)
-                && ReferenceEquals(Resource2, other.Resource2)
-                && ReferenceEquals(Resource3, other.Resource3);
+                && ReferenceEquals(_resource0, other._resource0)
+                && ReferenceEquals(_resource1, other._resource1)
+                && ReferenceEquals(_resource2, other._resource2)
+                && ReferenceEquals(_resource3, other._resource3);
         }
 
         public BindableResource GetResource(int index)
@@ -99,21 +100,21 @@ namespace NitroSharp.Graphics.Core
             Debug.Assert(index < GetResourceCount());
             return index switch
             {
-                0 => Resource0,
-                1 => Resource1!,
-                2 => Resource2!,
-                3 => Resource3!,
+                0 => _resource0,
+                1 => _resource1!,
+                2 => _resource2!,
+                3 => _resource3!,
                 _ => ThrowHelper.Unreachable<BindableResource>()
             };
         }
 
         public uint GetResourceCount()
         {
-            return (Resource1, Resource2, Resource3) switch
+            return (Resource1: _resource1, Resource2: _resource2, Resource3: _resource3) switch
             {
                 (null, _, _) => 1u,
-                ({}, null, _) => 2u,
-                ({}, {}, null) => 3u,
+                ({ }, null, _) => 2u,
+                ({ }, { }, null) => 3u,
                 _ => 4u
             };
         }
@@ -204,17 +205,14 @@ namespace NitroSharp.Graphics.Core
             return cacheEntry.ResourceSet;
         }
 
-        private BindableResource[] GetArray(uint length)
+        private BindableResource[] GetArray(uint length) => length switch
         {
-            return length switch
-            {
-                1 => _array1,
-                2 => _array2,
-                3 => _array3,
-                4 => _array4,
-                _ => ThrowHelper.Unreachable<BindableResource[]>()
-            };
-        }
+            1 => _array1,
+            2 => _array2,
+            3 => _array3,
+            4 => _array4,
+            _ => ThrowHelper.Unreachable<BindableResource[]>()
+        };
 
         private void Clear()
         {

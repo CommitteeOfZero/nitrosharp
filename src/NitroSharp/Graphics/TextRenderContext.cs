@@ -282,11 +282,13 @@ namespace NitroSharp.Graphics
 
     internal struct GpuGlyph
     {
+        // ReSharper disable NotAccessedField.Global
         public Vector2 Offset;
         public int GlyphRunId;
         public int GlyphId;
         public int OutlineId;
         public float Opacity;
+        // ReSharper restore NotAccessedField.Global
 
         public static VertexLayoutDescription LayoutDescription => new(
             stride: 24, instanceStepRate: 1,
