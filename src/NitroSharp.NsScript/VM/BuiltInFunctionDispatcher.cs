@@ -1197,13 +1197,7 @@ namespace NitroSharp.NsScript.VM
             public NsColor TakeColor()
             {
                 ConstantValue val = TakeOpt(ConstantValue.Null);
-                return val.Type switch
-                {
-                    BuiltInType.String => NsColor.FromString(val.AsString()!),
-                    BuiltInType.Numeric => NsColor.FromRgb((int)val.AsNumber()!.Value),
-                    BuiltInType.BuiltInConstant => NsColor.FromConstant(val.AsBuiltInConstant()!.Value),
-                    _ => UnexpectedType<NsColor>(val.Type)
-                };
+                return NsColor.FromString(val.ConvertToString());
             }
 
             public NsCoordinate TakeCoordinate()
