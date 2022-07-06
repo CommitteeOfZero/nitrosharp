@@ -101,7 +101,7 @@ namespace NitroSharp.NsScript.Tests
         [Theory]
         [InlineData("42", SyntaxTokenKind.NumericLiteral, "42")]
         [InlineData("42.2", SyntaxTokenKind.NumericLiteral, "42.2", SyntaxTokenFlags.HasDecimalPoint)]
-        [InlineData("#FFFFFF", SyntaxTokenKind.NumericLiteral, "FFFFFF", SyntaxTokenFlags.IsHexTriplet)]
+        [InlineData("#FFFFFF", SyntaxTokenKind.StringLiteralOrQuotedIdentifier, "#FFFFFF")]
         [InlineData("\"foo\"", SyntaxTokenKind.StringLiteralOrQuotedIdentifier, "foo", SyntaxTokenFlags.IsQuoted)]
         [InlineData("\"@\"", SyntaxTokenKind.StringLiteralOrQuotedIdentifier, "@", SyntaxTokenFlags.IsQuoted)]
         public void Literal(string text, SyntaxTokenKind tokenKind, string valueText,
