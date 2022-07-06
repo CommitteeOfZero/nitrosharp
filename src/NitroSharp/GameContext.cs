@@ -733,10 +733,8 @@ namespace NitroSharp
         {
             SysProcess?.Dispose();
             SysProcess = null;
-            MainProcess.VmProcess.Terminate();
-            MainProcess.World.Reset();
-            NsScriptProcess newVmProcess = CreateProcess(VM, Profile.SysScripts.Startup);
-            MainProcess = new GameProcess(newVmProcess, MainProcess.World, _fontSettings);
+            MainProcess.Dispose();
+            MainProcess = CreateProcess(VM, Profile.SysScripts.Startup, _fontSettings);
         }
     }
 }
