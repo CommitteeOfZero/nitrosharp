@@ -126,6 +126,7 @@ namespace NitroSharp
 
         internal bool Skipping { get; private set; }
         internal bool Advance { get; set; }
+        internal bool SignedIn { get; set; }
         internal Texture? LastScreenshot { get; private set; }
         internal EntityId FocusedUiElement { get; set; }
         internal NsFocusDirection? RequestedFocusChange { get; set; }

@@ -1031,6 +1031,7 @@ namespace NitroSharp.NsScript.VM
 
         private void XBOX360_InitUser()
         {
+            _impl.X360_InitUser();
         }
 
         private void XBOX360_SelectStorage(ref ArgConsumer args)

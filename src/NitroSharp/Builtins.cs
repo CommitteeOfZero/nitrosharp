@@ -267,6 +267,16 @@ namespace NitroSharp
             _ctx.Defer(DeferredOperation.LoadGame(slot));
         }
 
+        public override bool X360_IsSignedIn()
+        {
+            return _ctx.SignedIn;
+        }
+
+        public override void X360_InitUser()
+        {
+            _ctx.SignedIn = true;
+        }
+
         public override bool X360_UserDataExists()
         {
             return _ctx.SaveManager.CommonSaveDataExists();
