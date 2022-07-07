@@ -156,11 +156,17 @@ namespace NitroSharp.Graphics.Core
         public void BeginFrame(in FrameStamp frameStamp)
         {
             _now = frameStamp;
-            if (SecondsElapsed(_lastGC, _now) >= 5)
+            if (SecondsElapsed(_lastGC, frameStamp) >= 5)
             {
+                gc();
+            }
+
+            void gc()
+            {
+                FrameStamp now = _now;
                 foreach (KeyValuePair<ResourceSetKey, CacheEntry> entry in _cache)
                 {
-                    if (SecondsElapsed(entry.Value.LastAccess, frameStamp) >= 5)
+                    if (SecondsElapsed(entry.Value.LastAccess, now) >= 5)
                     {
                         _entriesToEvict.Add(entry.Key);
                     }
@@ -168,11 +174,12 @@ namespace NitroSharp.Graphics.Core
 
                 foreach (ResourceSetKey key in _entriesToEvict)
                 {
-                    _cache.Remove(key);
+                    _cache.Remove(key, out CacheEntry evictedEntry);
+                    evictedEntry.ResourceSet.Dispose();
                 }
 
                 _entriesToEvict.Clear();
-                _lastGC = frameStamp;
+                _lastGC = now;
             }
         }
 
