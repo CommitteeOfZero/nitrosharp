@@ -527,7 +527,10 @@ namespace NitroSharp
             try
             {
                 RenderContext.EndFrame();
-                RenderContext.Present();
+                if (Window.Exists)
+                {
+                    RenderContext.Present();
+                }
             }
             catch (VeldridException e)
                 when (e.Message == "The Swapchain's underlying surface has been lost.")
