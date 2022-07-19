@@ -16,7 +16,11 @@ namespace NitroSharp
         Up,
         Right,
         Down,
-        Skip
+        Skip,
+        Y,
+        Start,
+        BumperLeft,
+        BumperRight
     }
 
     internal enum VirtualAxis
@@ -29,8 +33,10 @@ namespace NitroSharp
     {
         private readonly RawInput _rawInput;
 
-        private readonly bool[] _vkeyState = new bool[8];
-        private readonly bool[] _newVkeys = new bool[8];
+        private static readonly int _vkeysCount = Enum.GetValues<VirtualKey>().Length;
+        private readonly bool[] _vkeyState = new bool[_vkeysCount];
+        private readonly bool[] _newVkeys = new bool[_vkeysCount];
+        private readonly bool[] _oldVkeys = new bool[_vkeysCount];
 
         public InputContext(GameWindow window)
         {
@@ -43,15 +49,16 @@ namespace NitroSharp
 
         public bool VKeyState(VirtualKey vkey) => _vkeyState[(int)vkey];
         public bool VKeyDown(VirtualKey vkey) => _newVkeys[(int)vkey];
+        public bool VKeyUp(VirtualKey vkey) => _oldVkeys[(int)vkey];
 
         public float GetAxis(VirtualAxis axis)
         {
             return axis switch
             {
-                VirtualAxis.TriggerLeft => _rawInput.IsKeyDown(Key.Left)
+                VirtualAxis.TriggerLeft => _rawInput.KeyState(Key.Z)
                     ? 1.0f
                     : _rawInput.Gamepad.GetAxis(SDL_GameControllerAxis.TriggerLeft),
-                VirtualAxis.TriggerRight => _rawInput.IsKeyDown(Key.Right)
+                VirtualAxis.TriggerRight => _rawInput.KeyState(Key.C)
                     ? 1.0f
                     : _rawInput.Gamepad.GetAxis(SDL_GameControllerAxis.TriggerRight),
                 _ => 0.0f
@@ -65,38 +72,52 @@ namespace NitroSharp
             MousePosition = input.Snapshot.MousePosition;
             WheelDelta = input.WheelDelta;
 
-            PollVkey(input, VirtualKey.Enter);
-            PollVkey(input, VirtualKey.Advance);
-            PollVkey(input, VirtualKey.Back);
-            PollVkey(input, VirtualKey.Left);
-            PollVkey(input, VirtualKey.Up);
-            PollVkey(input, VirtualKey.Right);
-            PollVkey(input, VirtualKey.Down);
-            PollVkey(input, VirtualKey.Skip);
+            foreach (VirtualKey key in Enum.GetValues<VirtualKey>())
+            {
+                PollVkey(input, key);
+            }
 
             Gamepad gamepad = input.Gamepad;
             SystemVariableLookup sys = systemVariables;
-            set(ref sys.RightButtonDown, VKeyState(VirtualKey.Back));
-            pollController(SDL_GameControllerButton.Start, ref sys.X360StartButtonDown);
-            set(ref sys.X360AButtonDown, VKeyState(VirtualKey.Advance));
-            set(ref sys.X360BButtonDown, VKeyState(VirtualKey.Back));
-            pollController(SDL_GameControllerButton.Y, ref sys.X360YButtonDown);
-            set(ref sys.X360LeftButtonDown, VKeyState(VirtualKey.Left));
-            set(ref sys.X360UpButtonDown, VKeyState(VirtualKey.Down));
-            set(ref sys.X360RightButtonDown, VKeyState(VirtualKey.Right));
-            set(ref sys.X360DownButtonDown, VKeyState(VirtualKey.Down));
-            pollController(SDL_GameControllerButton.LeftShoulder, ref sys.X360LbButtonDown);
-            pollController(SDL_GameControllerButton.RightShoulder, ref sys.X360RbButtonDown);
+
+            setDown(ref sys.X360AButtonDown, VirtualKey.Advance);
+            setDown(ref sys.X360BButtonDown, VirtualKey.Back);
+            setDownUp(ref sys.X360YButtonDown, VirtualKey.Y);
+
+            setDownUp(ref sys.X360UpButtonDown, VirtualKey.Up);
+            setDownUp(ref sys.X360DownButtonDown, VirtualKey.Down);
+            setDownUp(ref sys.X360LeftButtonDown, VirtualKey.Left);
+            setDownUp(ref sys.X360RightButtonDown, VirtualKey.Right);
+
+            setDownUp(ref sys.X360StartButtonDown, VirtualKey.Start);
+            setDownUp(ref sys.X360LbButtonDown, VirtualKey.BumperLeft);
+            setDownUp(ref sys.X360RbButtonDown, VirtualKey.BumperRight);
 
             static void set(ref ConstantValue target, bool value)
             {
                 target = ConstantValue.Boolean(value);
             }
 
-            void pollController(SDL_GameControllerButton button, ref ConstantValue val)
+            void setDown(ref ConstantValue target, VirtualKey key)
             {
-                bool down = gamepad.ButtonState(button);
-                set(ref val, down);
+                if (VKeyDown(key))
+                {
+                    set(ref target, true);
+                }
+            }
+
+            void setUp(ref ConstantValue target, VirtualKey key)
+            {
+                if (VKeyUp(key))
+                {
+                    set(ref target, false);
+                }
+            }
+
+            void setDownUp(ref ConstantValue target, VirtualKey key)
+            {
+                setDown(ref target, key);
+                setUp(ref target, key);
             }
         }
 
@@ -129,6 +150,16 @@ namespace NitroSharp
                                    input.WheelDelta < 0 |
                                    gamepad.ButtonState(SDL_GameControllerButton.DPadDown),
                 VirtualKey.Skip => input.KeyState(Key.ControlLeft) | input.KeyState(Key.ControlRight),
+                VirtualKey.Y => input.KeyState(Key.BackSlash) |
+                                gamepad.ButtonState(SDL_GameControllerButton.Y),
+                VirtualKey.Start => input.MouseState(MouseButton.Left) |
+                                    input.KeyState(Key.Enter) |
+                                    input.KeyState(Key.KeypadEnter) |
+                                    gamepad.ButtonState(SDL_GameControllerButton.Start),
+                VirtualKey.BumperLeft => input.KeyState(Key.BracketLeft) |
+                                         gamepad.ButtonState(SDL_GameControllerButton.LeftShoulder),
+                VirtualKey.BumperRight => input.KeyState(Key.BracketRight) |
+                                          gamepad.ButtonState(SDL_GameControllerButton.RightShoulder),
                 _ => false
             };
         }
@@ -138,6 +169,7 @@ namespace NitroSharp
             int index = (int)vkey;
             bool down = VKeyState(input, vkey);
             _newVkeys[index] = !_vkeyState[index] & down;
+            _oldVkeys[index] = _vkeyState[index] & !down;
             _vkeyState[index] = down;
         }
 
