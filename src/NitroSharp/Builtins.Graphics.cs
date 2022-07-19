@@ -135,10 +135,10 @@ namespace NitroSharp
                     _ctx.FocusedUiElement = EntityId.Invalid;
                 }
 
-                if (_ctx.RequestedFocusChange is { } focusDirection)
+                if (_ctx.RequestedFocusChange is { } focusDirection &&
+                    Get(uiElement.GetNextFocus(focusDirection)) is UiElement nextFocus)
                 {
-                    if (uiElement.IsFocused &&
-                        Get(uiElement.GetNextFocus(focusDirection)) is UiElement nextFocus)
+                    if (uiElement.IsFocused)
                     {
                         nextFocus.Focus(_renderCtx);
                         _ctx.FocusedUiElement = uiElement.Id;

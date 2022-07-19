@@ -603,8 +603,7 @@ namespace NitroSharp.NsScript.Syntax
                 return false;
             }
 
-            token.Kind = SyntaxTokenKind.NumericLiteral;
-            token.Flags |= SyntaxTokenFlags.IsHexTriplet;
+            token.Kind = SyntaxTokenKind.StringLiteralOrQuotedIdentifier;
             return true;
         }
 
