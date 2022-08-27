@@ -276,8 +276,7 @@ namespace NitroSharp.Graphics
         protected override void LayoutPass(GameContext ctx)
         {
             base.LayoutPass(ctx);
-            if (Parent is RenderItem { Parent: ConstraintBox }
-                || TryGetOwningChoice() is { Parent: ConstraintBox })
+            if (Parent is ConstraintBox || TryGetOwningChoice() is { Parent: ConstraintBox })
             {
                 return;
             }
