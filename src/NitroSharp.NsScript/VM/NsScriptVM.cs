@@ -532,8 +532,8 @@ namespace NitroSharp.NsScript.VM
                                 Console.WriteLine($"[VM]: {arg.ConvertToString()}");
                                 break;
                             case BuiltInFunction.fail:
-                                string subName = thisModule.GetSubroutineRuntimeInfo(
-                                    frame.SubroutineIndex).SubroutineName;
+                                string subName = thisModule
+                                    .GetSubroutineRuntimeInfo(frame.SubroutineIndex).SubroutineName;
                                 Console.WriteLine($"{subName} + {program.Position - 1}: test failed.");
                                 break;
                             case BuiltInFunction.fail_msg:

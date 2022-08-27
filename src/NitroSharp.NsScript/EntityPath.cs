@@ -13,7 +13,6 @@ namespace NitroSharp.NsScript
     {
         private readonly string? _parent;
         public readonly string Value;
-        public readonly MouseState MouseState;
         public readonly int NameStartIndex;
 
         private enum ParseResult
@@ -62,16 +61,11 @@ namespace NitroSharp.NsScript
             int pos = 0;
             _parent = null;
             NameStartIndex = 0;
-            MouseState = MouseState.Invalid;
             result = ParseResult.Ok;
             Value = path;
             foreach (EntityQueryPart part in query.EnumerateParts())
             {
-                if (part.IsMouseState)
-                {
-                    MouseState = part.MouseState;
-                }
-                if ((part.IsMouseState || part.IsLast) && pos > 0)
+                if (part.IsLast && pos > 0)
                 {
                     _parent ??= path[..(pos - 1)];
                 }
@@ -100,7 +94,7 @@ namespace NitroSharp.NsScript
         public bool IsEmpty => string.IsNullOrEmpty(Value);
         public bool HasParent => _parent is not null;
 
-        public static EntityPath Empty => new(string.Empty);
+        private static EntityPath Empty => new(string.Empty);
 
         private ReadOnlySpan<char> CharsToHash
         {
@@ -122,6 +116,9 @@ namespace NitroSharp.NsScript
             parent = new EntityPath(_parent);
             return true;
         }
+
+        private EntityPath Join(in EntityPath other) => new($"{Value}/{other.Value}");
+        public EntityPath Join(string other) => Join(new EntityPath(other));
 
         public override int GetHashCode() => string.GetHashCode(CharsToHash);
         public override string ToString() => Value;

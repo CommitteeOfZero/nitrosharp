@@ -1,7 +1,6 @@
 using System;
 using System.Numerics;
 using NitroSharp.NsScript;
-using NitroSharp.Utilities;
 
 namespace NitroSharp.Graphics
 {
@@ -54,7 +53,7 @@ namespace NitroSharp.Graphics
 
         public override EntityKind Kind => EntityKind.Scrollbar;
 
-        public RenderItem2D RenderItem => this;
+        public override UiElement UiElement => this;
         public bool CanFocus => true;
         public ref UiElementFocusData FocusData => ref _focusData;
         public bool IsFocused => _state != State.Normal;

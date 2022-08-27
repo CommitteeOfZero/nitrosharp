@@ -97,7 +97,7 @@ namespace NitroSharp.NsScript.VM
 
             foreach ((NsScriptThread thread, NsScriptThreadDump threadDump) in threads.Zip(dump.Threads))
             {
-                if (threadDump.WaitingThread is uint waitingThread)
+                if (threadDump.WaitingThread is { } waitingThread)
                 {
                     thread.WaitingThread = threads.First(x => x.Id == waitingThread);
                 }

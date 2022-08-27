@@ -1,5 +1,3 @@
-using NitroSharp.Graphics;
-using NitroSharp.NsScript;
 using NitroSharp.NsScript.VM;
 using NitroSharp.Saving;
 
@@ -20,18 +18,6 @@ namespace NitroSharp
             _vm = vm;
             _target = target;
             _thread = thread;
-            if (Parent is Choice choice)
-            {
-                switch (Id.MouseState)
-                {
-                    case MouseState.Over:
-                        choice.MouseEnterThread = this;
-                        break;
-                    case MouseState.Leave:
-                        choice.MouseLeaveThread = this;
-                        break;
-                }
-            }
         }
 
         public VmThread(

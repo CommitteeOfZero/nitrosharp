@@ -189,7 +189,7 @@ namespace NitroSharp.Graphics
 
         private bool NeedPreciseHitTest()
         {
-            return Parent is Choice
+            return Parent.IsMouseStateEntity()
                 && _texture.Kind == SpriteTextureKind.Asset
                 && _texture.SourceRectangle is null;
         }

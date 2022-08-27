@@ -1,168 +1,123 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using NitroSharp.Saving;
+﻿using System;
+using NitroSharp.NsScript;
 
-namespace NitroSharp.Graphics
+namespace NitroSharp.Graphics;
+
+internal sealed class Choice : UiElement
 {
-    internal sealed class Choice : Entity, UiElement
+    private enum State
     {
-        private enum State
+        Normal,
+        Focused,
+        Pressed
+    }
+
+    private enum StateTransition
+    {
+        None,
+        GotFocus,
+        LostFocus,
+        GotPressed
+    }
+
+    private readonly EntityId _entityId;
+    private readonly EntityId _mouseUsualEntityId;
+    private readonly EntityId _mouseOverEntityId;
+    private readonly EntityId _mouseLeaveEntityId;
+    private readonly EntityQuery _mouseOverQuery;
+    private readonly EntityQuery _mouseClickQuery;
+
+    private State _state;
+    private UiElementFocusData _focusData;
+
+    public Choice(EntityId entityId)
+    {
+        _entityId = entityId;
+        _mouseUsualEntityId = entityId.Child(MouseStateEntities.MouseUsual);
+        _mouseOverEntityId = entityId.Child(MouseStateEntities.MouseOver);
+        _mouseLeaveEntityId = entityId.Child(MouseStateEntities.MouseLeave);
+        _mouseOverQuery = new EntityQuery($"{entityId.Path}/{MouseStateEntities.MouseOver}/*");
+        _mouseClickQuery = new EntityQuery($"{entityId.Path}/{MouseStateEntities.MouseClick}/*");
+    }
+
+    public EntityId Id => _entityId;
+    public ref UiElementFocusData FocusData => ref _focusData;
+    public bool IsFocused => _state == State.Focused;
+
+    public RenderItem2D? TryGetMouseUsualVisual(World world)
+        => world.Get(_mouseUsualEntityId)?.GetSingleChild<RenderItem2D>();
+
+    public QueryResultsEnumerable<RenderItem2D> QueryMouseClickVisuals(World world)
+        => world.Query<RenderItem2D>(_entityId.Context, _mouseClickQuery);
+
+    public QueryResultsEnumerable<RenderItem2D> QueryMouseOverVisuals(World world)
+        => world.Query<RenderItem2D>(_entityId.Context, _mouseOverQuery);
+
+     public bool HandleEvents(GameContext ctx)
+     {
+        World world = ctx.ActiveProcess.World;
+        if (TryGetMouseUsualVisual(world) is not { } visual)
         {
-            Normal,
-            Focused,
-            Pressed
-        }
-
-        private enum StateTransition
-        {
-            None,
-            GotFocus,
-            LostFocus,
-            GotPressed
-        }
-
-        private UiElementFocusData _focusData;
-        private State _state;
-        private readonly List<RenderItem2D> _mouseOverVisuals;
-        private readonly List<RenderItem2D> _mouseDownVisuals;
-
-        public Choice(in ResolvedEntityPath path)
-            : base(path)
-        {
-            _mouseOverVisuals = new List<RenderItem2D>();
-            _mouseDownVisuals = new List<RenderItem2D>();
-        }
-
-        public Choice(in ResolvedEntityPath path, ChoiceSaveData saveData, World world)
-            : base(path, saveData.CommonEntityData)
-        {
-            if (saveData.DefaultVisual.IsValid)
-            {
-                DefaultVisual = world.Get(saveData.DefaultVisual) as RenderItem2D;
-            }
-
-            _focusData = saveData.NextFocus;
-            _mouseOverVisuals = new List<RenderItem2D>();
-            _mouseDownVisuals = new List<RenderItem2D>();
-            foreach (EntityId entityId in saveData.MouseOverVisuals)
-            {
-                if (world.Get(entityId) is RenderItem2D mouseOver)
-                {
-                    _mouseOverVisuals.Add(mouseOver);
-                }
-            }
-            foreach (EntityId entityId in saveData.MouseDownVisuals)
-            {
-                if (world.Get(entityId) is RenderItem2D mouseDown)
-                {
-                    _mouseDownVisuals.Add(mouseDown);
-                }
-            }
-        }
-
-        public RenderItem2D? DefaultVisual { get; set; }
-        public VmThread? MouseEnterThread { get; set; }
-        public VmThread? MouseLeaveThread { get; set; }
-
-        public RenderItem2D? RenderItem => DefaultVisual;
-        public ref UiElementFocusData FocusData => ref _focusData;
-        public bool IsFocused => _state == State.Focused;
-
-        public override EntityKind Kind => EntityKind.Choice;
-        public override bool IsIdle => true;
-
-        public void AddMouseOver(RenderItem2D visual)
-        {
-            _mouseOverVisuals.Add(visual);
-        }
-
-        public void AddMouseDown(RenderItem2D visual)
-        {
-            _mouseDownVisuals.Add(visual);
-        }
-
-        public bool HandleEvents(GameContext ctx)
-        {
-            static void fade(List<RenderItem2D> list, float dstOpacity, TimeSpan duration)
-            {
-                foreach (RenderItem2D ri in list)
-                {
-                    ri.Fade(dstOpacity, duration);
-                }
-            }
-
-            if (DefaultVisual is { } visual)
-            {
-                bool hovered = visual.HitTest(ctx.RenderContext, ctx.InputContext);
-                bool pressed = ctx.InputContext.VKeyState(VirtualKey.Enter);
-                State newState = (hovered, pressed) switch
-                {
-                    (true, true) => State.Pressed,
-                    (true, false) => State.Focused,
-                    _ => State.Normal
-                };
-                StateTransition transition = (_state, newState) switch
-                {
-                    (not State.Focused, State.Focused) => StateTransition.GotFocus,
-                    (State.Focused, State.Normal) => StateTransition.LostFocus,
-                    (State.Focused, State.Pressed) => StateTransition.GotPressed,
-                    (State.Pressed, State.Normal) => StateTransition.LostFocus,
-                    _ => StateTransition.None
-                };
-                _state = newState;
-
-                var duration = TimeSpan.FromMilliseconds(200);
-                switch (transition)
-                {
-                    case StateTransition.GotFocus:
-                        visual.Fade(0.0f, duration);
-                        fade(_mouseDownVisuals, 0.0f, TimeSpan.Zero);
-                        fade(_mouseOverVisuals, 1.0f, TimeSpan.Zero);
-                        MouseLeaveThread?.Terminate();
-                        MouseEnterThread?.Restart();
-                        break;
-                    case StateTransition.LostFocus:
-                        fade(_mouseOverVisuals, 0.0f, duration);
-                        fade(_mouseDownVisuals, 0.0f, TimeSpan.Zero);
-                        visual.Fade(1.0f, duration);
-                        MouseEnterThread?.Terminate();
-                        MouseLeaveThread?.Restart();
-                        break;
-                    case StateTransition.GotPressed:
-                        visual.Fade(0, TimeSpan.Zero);
-                        fade(_mouseOverVisuals, 0.0f, TimeSpan.Zero);
-                        fade(_mouseDownVisuals, 1.0f, TimeSpan.Zero);
-                        MouseEnterThread?.Terminate();
-                        MouseLeaveThread?.Terminate();
-                        break;
-                }
-
-                return transition == StateTransition.GotPressed;
-            }
-
             return false;
         }
 
-        public new ChoiceSaveData ToSaveData(GameSavingContext ctx) => new()
+        QueryResultsEnumerable<RenderItem2D> mouseOverVisuals = QueryMouseOverVisuals(world);
+        QueryResultsEnumerable<RenderItem2D> mouseClickVisuals = QueryMouseClickVisuals(world);
+        VmThread? mouseOverThread = world.Get(_mouseOverEntityId)?.GetSingleChild<VmThread>();
+        VmThread? mouseLeaveThread = world.Get(_mouseLeaveEntityId)?.GetSingleChild<VmThread>();
+
+        bool hovered = visual.HitTest(ctx.RenderContext, ctx.InputContext);
+        bool pressed = ctx.InputContext.VKeyState(VirtualKey.Enter);
+        State newState = (hovered, pressed) switch
         {
-            Common = base.ToSaveData(ctx),
-            DefaultVisual = DefaultVisual?.Id ?? EntityId.Invalid,
-            MouseOverVisuals = _mouseOverVisuals.Select(x => x.Id).ToArray(),
-            MouseDownVisuals = _mouseDownVisuals.Select(x => x.Id).ToArray(),
-            NextFocus = _focusData
+            (true, true) => State.Pressed,
+            (true, false) => State.Focused,
+            _ => State.Normal
         };
-    }
+        StateTransition transition = (_state, newState) switch
+        {
+            (not State.Focused, State.Focused) => StateTransition.GotFocus,
+            (State.Focused, State.Normal) => StateTransition.LostFocus,
+            (State.Focused, State.Pressed) => StateTransition.GotPressed,
+            (State.Pressed, State.Normal) => StateTransition.LostFocus,
+            _ => StateTransition.None
+        };
+        _state = newState;
 
-    [Persistable]
-    internal readonly partial struct ChoiceSaveData : IEntitySaveData
-    {
-        public EntitySaveData Common { get; init; }
-        public EntityId DefaultVisual { get; init; }
-        public EntityId[] MouseOverVisuals { get; init; }
-        public EntityId[] MouseDownVisuals { get; init; }
-        public UiElementFocusData NextFocus { get; init; }
+        var duration = TimeSpan.FromMilliseconds(200);
+        switch (transition)
+        {
+            case StateTransition.GotFocus:
+                visual.Fade(0.0f, duration);
+                fade(mouseClickVisuals, 0.0f, TimeSpan.Zero);
+                fade(mouseOverVisuals, 1.0f, TimeSpan.Zero);
+                mouseLeaveThread?.Terminate();
+                mouseOverThread?.Restart();
+                break;
+            case StateTransition.LostFocus:
+                fade(mouseOverVisuals, 0.0f, duration);
+                fade(mouseClickVisuals, 0.0f, TimeSpan.Zero);
+                visual.Fade(1.0f, duration);
+                mouseOverThread?.Terminate();
+                mouseLeaveThread?.Restart();
+                break;
+            case StateTransition.GotPressed:
+                visual.Fade(0, TimeSpan.Zero);
+                fade(mouseOverVisuals, 0.0f, TimeSpan.Zero);
+                fade(mouseClickVisuals, 1.0f, TimeSpan.Zero);
+                mouseOverThread?.Terminate();
+                mouseLeaveThread?.Terminate();
+                break;
+        }
 
-        public EntitySaveData CommonEntityData => Common;
+        return transition == StateTransition.GotPressed;
+
+        static void fade(QueryResultsEnumerable<RenderItem2D> visuals, float dstOpacity, TimeSpan duration)
+        {
+            foreach (RenderItem2D renderItem in visuals)
+            {
+                renderItem.Fade(dstOpacity, duration);
+            }
+        }
     }
 }

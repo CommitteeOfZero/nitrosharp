@@ -54,7 +54,6 @@ namespace NitroSharp
         private readonly SortableEntityGroup<RenderItem> _renderItems;
         private readonly EntityGroup<ColorSource> _colorSources;
         private readonly EntityGroup<Image> _images;
-        private readonly EntityGroup<Choice> _choices;
         private readonly EntityGroup<Sound> _sounds = new();
 
         public World()
@@ -72,11 +71,9 @@ namespace NitroSharp
             _renderItems = new SortableEntityGroup<RenderItem>();
             _colorSources = new EntityGroup<ColorSource>();
             _images = new EntityGroup<Image>();
-            _choices = new EntityGroup<Choice>();
         }
 
         public SortableEntityGroupView<RenderItem> RenderItems => _renderItems;
-        public EntityGroupView<Choice> Choices => _choices;
         public EntityGroup<Sound> Sounds => _sounds;
 
         public void DestroyContext(uint id)
@@ -181,7 +178,7 @@ namespace NitroSharp
                 return false;
             }
 
-            resolvedPath = new ResolvedEntityPath(contextId, id, parent: null);
+            resolvedPath = new ResolvedEntityPath(contextId, id, Parent: null);
             return true;
         }
 
@@ -211,11 +208,6 @@ namespace NitroSharp
         public void Add(Image image, bool enable = true)
         {
             Add(image, _images, enable);
-        }
-
-        public void Add(Choice choice, bool enable = true)
-        {
-            Add(choice, _choices, enable);
         }
 
         public Sound Add(Sound sound, bool enable = true)
@@ -298,8 +290,7 @@ namespace NitroSharp
                     return new EntityId(
                         parentId.Context,
                         newPath,
-                        parentId.Path.Length + 1,
-                        path.MouseState
+                        parentId.Path.Length + 1
                     );
                 }
 
@@ -307,7 +298,7 @@ namespace NitroSharp
             }
 
             return path.Value[0] != '@'
-                ? new EntityId(contextId, path.Value, path.NameStartIndex, path.MouseState)
+                ? new EntityId(contextId, path.Value, path.NameStartIndex)
                 : lookupSlow(path);
         }
 
@@ -401,8 +392,7 @@ namespace NitroSharp
             DialoguePages = _renderItems.CollectAll().OfType<DialoguePage>().Select(x => x.ToSaveData(ctx)).ToArray(),
             TextBlocks = _renderItems.CollectAll().OfType<TextBlock>().Select(x => x.ToSaveData(ctx)).ToArray(),
             Sprites = _renderItems.CollectAll().OfType<Sprite>().Select(x => x.ToSaveData(ctx)).ToArray(),
-            Cubes = _renderItems.CollectAll().OfType<Cube>().Select(x => x.ToSaveData(ctx)).ToArray(),
-            Choices = _choices.CollectAll().Select(x => x.ToSaveData(ctx)).ToArray()
+            Cubes = _renderItems.CollectAll().OfType<Cube>().Select(x => x.ToSaveData(ctx)).ToArray()
         };
 
         public static World Load(WorldSaveData saveData, GameLoadingContext loadCtx)
@@ -513,11 +503,6 @@ namespace NitroSharp
                         var cube = new Cube(resolvedPath, cubeData, loadCtx.Rendering);
                         world.Add(cube, cubeData.Common.EntityData.IsEnabled);
                         break;
-                    case EntityKind.Choice:
-                        ChoiceSaveData choiceData = worldData.Choices[saveDataLoc.Index];
-                        var choice = new Choice(resolvedPath, choiceData, world);
-                        world.Add(choice, choiceData.Common.IsEnabled);
-                        break;
                 }
             }
 
@@ -548,20 +533,7 @@ namespace NitroSharp
         }
     }
 
-    internal readonly struct ResolvedEntityPath
-    {
-        public readonly uint ContextId;
-        public readonly EntityId Id;
-        public readonly Entity? Parent;
-
-        public ResolvedEntityPath(
-            uint contextId,
-            in EntityId id,
-            Entity? parent)
-        {
-            (ContextId, Id, Parent) = (contextId, id, parent);
-        }
-    }
+    internal readonly record struct ResolvedEntityPath(uint ContextId, in EntityId Id, Entity? Parent);
 
     internal enum EntityBucket
     {
@@ -765,7 +737,6 @@ namespace NitroSharp
         public TextBlockSaveData[] TextBlocks { get; init; }
         public SpriteSaveData[] Sprites { get; init; }
         public CubeSaveData[] Cubes { get; init; }
-        public ChoiceSaveData[] Choices { get; init; }
 
         public IEnumerable<(EntityKind, IEntitySaveData[])> EnumerateEntityTables()
         {
@@ -779,7 +750,6 @@ namespace NitroSharp
             yield return (EntityKind.TextBlock, TextBlocks.Cast<IEntitySaveData>().ToArray());
             yield return (EntityKind.Sprite, Sprites.Cast<IEntitySaveData>().ToArray());
             yield return (EntityKind.Cube, Cubes.Cast<IEntitySaveData>().ToArray());
-            yield return (EntityKind.Choice, Choices.Cast<IEntitySaveData>().ToArray());
         }
     }
 }

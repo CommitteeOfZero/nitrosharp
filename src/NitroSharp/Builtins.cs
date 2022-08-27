@@ -109,7 +109,7 @@ namespace NitroSharp
                         thread.Suspend();
                         break;
                     case (RenderItem ri, NsEntityAction.Enable):
-                        if (ri.Parent is Choice)
+                        if (ri.Parent.IsMouseStateEntity())
                         {
                             ri.Reveal();
                         }
@@ -119,7 +119,7 @@ namespace NitroSharp
                         }
                         break;
                     case (RenderItem ri, NsEntityAction.Disable):
-                        if (ri.Parent is Choice)
+                        if (ri.Parent.IsMouseStateEntity())
                         {
                             ri.Hide();
                         }

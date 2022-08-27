@@ -115,14 +115,14 @@ namespace NitroSharp.Graphics
         {
             AdvanceAnimations(ctx.RenderContext, dt, assetsReady);
             Update(ctx);
-            LayoutPass(ctx.RenderContext);
+            LayoutPass(ctx);
         }
 
         protected virtual void Update(GameContext ctx)
         {
         }
 
-        protected virtual void LayoutPass(RenderContext ctx)
+        protected virtual void LayoutPass(GameContext ctx)
         {
         }
 
@@ -217,21 +217,6 @@ namespace NitroSharp.Graphics
         protected RenderItem2D(in ResolvedEntityPath path, int priority)
             : base(path, priority)
         {
-            if (Parent is Choice choice)
-            {
-                switch (Id.MouseState)
-                {
-                    case MouseState.Normal:
-                        choice.DefaultVisual = this;
-                        break;
-                    case MouseState.Over:
-                        choice.AddMouseOver(this);
-                        break;
-                    case MouseState.Down:
-                        choice.AddMouseDown(this);
-                        break;
-                }
-            }
         }
 
         protected RenderItem2D(in ResolvedEntityPath path, in RenderItemSaveData saveData)
@@ -288,20 +273,23 @@ namespace NitroSharp.Graphics
             AdvanceAnimation(ref _bezierMoveAnim, dt);
         }
 
-        protected override void LayoutPass(RenderContext ctx)
+        protected override void LayoutPass(GameContext ctx)
         {
             base.LayoutPass(ctx);
-            if (Parent is not (RenderItem or Choice { Parent: ConstraintBox }))
+            if (Parent is RenderItem { Parent: ConstraintBox }
+                || TryGetOwningChoice() is { Parent: ConstraintBox })
             {
-                Layout(ctx, constraintRect: null);
+                return;
             }
+
+            Layout(ctx, constraintRect: null);
         }
 
-        private void Layout(RenderContext ctx, RectangleF? constraintRect)
+        private void Layout(GameContext ctx, RectangleF? constraintRect)
         {
-            Size unconstrainedBounds = GetUnconstrainedBounds(ctx);
+            Size unconstrainedBounds = GetUnconstrainedBounds(ctx.RenderContext);
             WorldMatrix = Transform.GetMatrix(unconstrainedBounds);
-            (Vector2 uvTopLeft, Vector2 uvBottomRight) = GetTexCoords(ctx);
+            (Vector2 uvTopLeft, Vector2 uvBottomRight) = GetTexCoords(ctx.RenderContext);
             (Quad, BoundingRect) = QuadGeometry.Create(
                 unconstrainedBounds.ToSizeF(),
                 WorldMatrix,
@@ -316,23 +304,36 @@ namespace NitroSharp.Graphics
                 constraintRect = BoundingRect;
             }
 
-            foreach (RenderItem2D child in GetChildren<RenderItem2D>())
+            World world = ctx.ActiveProcess.World;
+            foreach (Entity child in GetChildren())
             {
-                child.Layout(ctx, constraintRect);
-            }
-
-            foreach (Choice child in GetChildren<Choice>())
-            {
-                foreach (RenderItem2D grandchild in child.GetChildren<RenderItem2D>())
+                if (child is RenderItem2D renderItem)
                 {
-                    grandchild.Layout(ctx, constraintRect);
+                    renderItem.Layout(ctx, constraintRect);
+                }
+                else if (child.UiElement is Choice choice)
+                {
+                    if (choice.TryGetMouseUsualVisual(world) is { } mouseUsual)
+                    {
+                        mouseUsual.Layout(ctx, constraintRect);
+                    }
+
+                    foreach (RenderItem2D mouseOver in choice.QueryMouseOverVisuals(world))
+                    {
+                        mouseOver.Layout(ctx, constraintRect);
+                    }
+
+                    foreach (RenderItem2D mouseClick in choice.QueryMouseClickVisuals(world))
+                    {
+                        mouseClick.Layout(ctx, constraintRect);
+                    }
                 }
             }
         }
 
         public bool HitTest(RenderContext ctx, InputContext input)
         {
-            return PreciseHitTest && _offscreenTarget is RenderTarget offscreenTarget
+            return PreciseHitTest && _offscreenTarget is { } offscreenTarget
                 ? PixelPerfectHitTest(ctx, offscreenTarget, input)
                 : BoundingRect.Contains(input.MousePosition);
         }

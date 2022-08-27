@@ -92,7 +92,20 @@ namespace NitroSharp
         {
             if (ResolvePath(entityPath, out ResolvedEntityPath resolvedPath))
             {
-                World.Add(new Choice(resolvedPath));
+                World.Add(new BasicEntity(resolvedPath));
+                foreach (string mouseState in MouseStateEntities.All)
+                {
+                    createStateEntity(entityPath, mouseState);
+                }
+            }
+
+            void createStateEntity(EntityPath choicePath, string stateName)
+            {
+                EntityPath stateEntity = choicePath.Join(stateName);
+                if (ResolvePath(stateEntity, out ResolvedEntityPath resolvedStateEntityPath))
+                {
+                    World.Add(new BasicEntity(resolvedStateEntityPath));
+                }
             }
         }
 
@@ -101,15 +114,8 @@ namespace NitroSharp
             in EntityPath second,
             NsFocusDirection focusDirection)
         {
-            static UiElement? getUiElement(Entity? entity) => entity switch
-            {
-                RenderItem2D { Parent: UiElement parent } => parent,
-                UiElement element => element,
-                _ => null
-            };
-
             (Entity? entityA, Entity? entityB) = (Get(first), Get(second));
-            if ((getUiElement(entityA), getUiElement(entityB)) is ({ } elementA, { } elementB))
+            if ((entityA?.UiElement, entityB?.UiElement) is ({ } elementA, { } elementB))
             {
                 elementA.SetNextFocus(focusDirection, elementB.Id);
             }
@@ -122,7 +128,7 @@ namespace NitroSharp
 
         public override bool HandleInputEvents(in EntityPath uiElementPath)
         {
-            if (Get(uiElementPath) is UiElement uiElement)
+            if (Get(uiElementPath)?.UiElement is { } uiElement)
             {
                 bool wasFocused = uiElement.IsFocused;
                 bool selected = uiElement.HandleEvents(_ctx);
