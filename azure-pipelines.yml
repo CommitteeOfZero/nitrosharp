@@ -10,7 +10,7 @@ jobs:
   - task: UseDotNet@2
     inputs:
       packageType: 'sdk'
-      version: '7.0.100-preview.6.22352.1'
+      version: '7.0.100-preview.5.22307.18'
       includePreviewVersions: true
   - task: PowerShell@2
     inputs:

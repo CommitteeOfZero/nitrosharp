@@ -39,7 +39,8 @@ dotnet($dotnetArgs)
 $dotnetArgs = @(
     "publish", "src/Game/Game.csproj",
     "-r", "$Runtime",
-    "-c", "Release"
+    "-c", "Release",
+    "/p:Native=true"
 )
 dotnet($dotnetArgs)
 
