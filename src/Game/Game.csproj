@@ -9,9 +9,7 @@
     <DebugType>pdbonly</DebugType>
     <NoWarn>VSTHRD103;VSTHRD200</NoWarn>
     <ApplicationIcon>CoZ.ico</ApplicationIcon>
-    <PublishTrimmed>true</PublishTrimmed>
-    <TrimMode>link</TrimMode>
-    <TrimmerDefaultAction>link</TrimmerDefaultAction>
+    <PublishAot>true</PublishAot>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
     <IlcTrimMetadata>true</IlcTrimMetadata>
     <IlcFoldIdenticalMethodBodies>true</IlcFoldIdenticalMethodBodies>
@@ -38,7 +36,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\NitroSharp\NitroSharp.csproj" />
-    <PackageReference Condition="'$(Native)' == 'true'" Include="Microsoft.DotNet.ILCompiler" Version="7.0.0-preview.4.22229.4" />
   </ItemGroup>
 
 </Project>
