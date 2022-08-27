@@ -229,7 +229,7 @@ namespace NitroSharp.Graphics
         {
             Texture alphaMaskTex = ctx.WhiteTexture;
             Vector2 alphaMaskPos = Vector2.Zero;
-            if (Parent is AlphaMask alphaMask)
+            if (TryGetAlphaMaskAscendant() is { } alphaMask)
             {
                 alphaMaskTex = ctx.Content.Get(alphaMask.Texture);
                 alphaMaskPos = alphaMask.Transform.Position.XY();

@@ -264,6 +264,17 @@ namespace NitroSharp.Graphics
         protected virtual (Vector2, Vector2) GetTexCoords(RenderContext ctx)
             => (Vector2.Zero, Vector2.One);
 
+        protected AlphaMask? TryGetAlphaMaskAscendant()
+        {
+            Entity? current = Parent;
+            while (current is not (AlphaMask or null))
+            {
+                current = current.Parent;
+            }
+
+            return current as AlphaMask;
+        }
+
         protected override void AdvanceAnimations(RenderContext ctx, float dt, bool assetsReady)
         {
             base.AdvanceAnimations(ctx, dt, assetsReady);
