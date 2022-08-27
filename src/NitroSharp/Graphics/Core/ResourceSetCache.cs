@@ -110,7 +110,7 @@ namespace NitroSharp.Graphics.Core
 
         public uint GetResourceCount()
         {
-            return (Resource1: _resource1, Resource2: _resource2, Resource3: _resource3) switch
+            return (_resource1, _resource2, _resource3) switch
             {
                 (null, _, _) => 1u,
                 ({ }, null, _) => 2u,

@@ -469,7 +469,7 @@ namespace NitroSharp
             }
         }
 
-        // Note to self: do not reoder anything inside the main loop unless absolutely
+        // Note to self: do not reorder anything inside the main loop unless absolutely
         // necessary or until the engine is both feature-complete and stable.
         private void Tick(FrameStamp framestamp, float dt)
         {

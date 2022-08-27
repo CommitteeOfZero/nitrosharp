@@ -398,7 +398,7 @@ namespace NitroSharp.Text
         private readonly TextureCacheHandle _outlineHandle;
         public readonly GlyphCacheEntryKind Kind;
 
-        public GlyphCacheEntry(
+        private GlyphCacheEntry(
             GlyphCacheEntryKind kind,
             TextureCacheHandle textureCacheHandle,
             TextureCacheHandle outlineTextureCacheHandle)

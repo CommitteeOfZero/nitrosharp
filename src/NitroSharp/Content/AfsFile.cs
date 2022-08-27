@@ -9,7 +9,7 @@ namespace NitroSharp.Content
 {
     internal sealed class AfsFile : ArchiveFile
     {
-        private static ReadOnlySpan<byte> Magic =>new byte[] { 0x41, 0x46, 0x53, 0x00 };
+        private static ReadOnlySpan<byte> Magic => new byte[] { 0x41, 0x46, 0x53, 0x00 };
 
         private readonly (uint offset, uint size)[] _entries;
         private readonly Dictionary<string, uint> _builtinFileNames;
@@ -121,7 +121,9 @@ namespace NitroSharp.Content
 
             [DoesNotReturn]
             static void malformed()
-                => throw new ArchiveException("AFS", "Malformed INI file.");
+            {
+                throw new ArchiveException("AFS", "Malformed INI file.");
+            }
         }
 
         public override bool Contains(string path)

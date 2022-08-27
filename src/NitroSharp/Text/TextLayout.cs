@@ -84,7 +84,6 @@ namespace NitroSharp.Text
             Append(glyphRasterizer, MemoryMarshal.CreateReadOnlySpan(ref textRun, 1));
         }
 
-
         public void Append(GlyphRasterizer glyphRasterizer, ReadOnlySpan<TextRun> textRuns)
         {
             int appendStart = _glyphs.Count;
@@ -126,7 +125,7 @@ namespace NitroSharp.Text
 
                 foreach (TextRunGlyph glyph in glyphs[line.GlyphSpan])
                 {
-                    var glyphPos = new Vector2(glyph.Position.X, _caret.Y + glyph.Position.Y);
+                    Vector2 glyphPos = glyph.Position with { Y = _caret.Y + glyph.Position.Y };
                     if (glyph.Kind == CharacterKind.RubyText)
                     {
                         glyphPos.Y -= line.VerticalMetrics.Ascender + rubyTextOffset;

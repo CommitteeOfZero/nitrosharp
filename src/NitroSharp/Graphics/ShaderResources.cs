@@ -578,16 +578,13 @@ namespace NitroSharp.Graphics
 
         public ResourceLayout ResourceLayout { get; }
 
-        public Pipeline GetPipeline(EffectKind effect)
+        public Pipeline GetPipeline(EffectKind effect) => effect switch
         {
-            return effect switch
-            {
-                EffectKind.Blit => _blit,
-                EffectKind.Grayscale => _grayscale,
-                EffectKind.BoxBlur => _boxBlur,
-                _ => ThrowHelper.UnexpectedValue<Pipeline>()
-            };
-        }
+            EffectKind.Blit => _blit,
+            EffectKind.Grayscale => _grayscale,
+            EffectKind.BoxBlur => _boxBlur,
+            _ => ThrowHelper.UnexpectedValue<Pipeline>()
+        };
 
         public void Dispose()
         {
@@ -600,6 +597,9 @@ namespace NitroSharp.Graphics
 
     internal sealed class BarrelDistortionShaderResources : IDisposable
     {
+        private readonly ResourceLayout _resourceLayout;
+        private readonly Pipeline _pipeline;
+
         public BarrelDistortionShaderResources(
             GraphicsDevice graphicsDevice,
             ShaderLibrary shaderLibrary,
@@ -607,7 +607,7 @@ namespace NitroSharp.Graphics
             ResourceLayout viewProjectionLayout)
         {
             ResourceFactory factory = graphicsDevice.ResourceFactory;
-            ResourceLayout = factory.CreateResourceLayout(new ResourceLayoutDescription(
+            _resourceLayout = factory.CreateResourceLayout(new ResourceLayoutDescription(
                 new ResourceLayoutElementDescription(
                     "Texture",
                     ResourceKind.TextureReadOnly,
@@ -636,19 +636,16 @@ namespace NitroSharp.Graphics
                 RasterizerStateDescription.CullNone,
                 PrimitiveTopology.TriangleList,
                 lensShaderSet,
-                new[] { viewProjectionLayout, ResourceLayout },
+                new[] { viewProjectionLayout, _resourceLayout },
                 outputDescription
             );
-            Pipeline = factory.CreateGraphicsPipeline(ref lensPipelineDesc);
+            _pipeline = factory.CreateGraphicsPipeline(ref lensPipelineDesc);
         }
-
-        public ResourceLayout ResourceLayout { get; }
-        public Pipeline Pipeline { get; }
 
         public void Dispose()
         {
-            Pipeline.Dispose();
-            ResourceLayout.Dispose();
+            _pipeline.Dispose();
+            _resourceLayout.Dispose();
         }
     }
 

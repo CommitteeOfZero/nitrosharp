@@ -320,12 +320,12 @@ namespace NitroSharp.Graphics
 
             ResourceSetCache rsCache = _ctx.ResourceSetCache;
             ref ResourceBindings resources = ref _lastDraw.ResourceBindings;
-            setResources(cl, 0, resources.ResourceSet0);
-            setResources(cl, 1, resources.ResourceSet1);
-            setResources(cl, 2, resources.ResourceSet2);
-            setResources(cl, 3, resources.ResourceSet3);
+            setResources(0, resources.ResourceSet0);
+            setResources(1, resources.ResourceSet1);
+            setResources(2, resources.ResourceSet2);
+            setResources(3, resources.ResourceSet3);
 
-            void setResources(CommandList cl, uint slot, ResourceSetKey? rsKeyOpt)
+            void setResources(uint slot, ResourceSetKey? rsKeyOpt)
             {
                 if (rsKeyOpt is { } rsKey)
                 {
