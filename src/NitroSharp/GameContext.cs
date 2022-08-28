@@ -126,6 +126,7 @@ namespace NitroSharp
 
         internal bool Skipping { get; private set; }
         internal bool Advance { get; set; }
+        internal bool SignedIn { get; set; }
         internal Texture? LastScreenshot { get; private set; }
         internal EntityId FocusedUiElement { get; set; }
         internal NsFocusDirection? RequestedFocusChange { get; set; }
@@ -732,10 +733,8 @@ namespace NitroSharp
         {
             SysProcess?.Dispose();
             SysProcess = null;
-            MainProcess.VmProcess.Terminate();
-            MainProcess.World.Reset();
-            NsScriptProcess newVmProcess = CreateProcess(VM, Profile.SysScripts.Startup);
-            MainProcess = new GameProcess(newVmProcess, MainProcess.World, _fontSettings);
+            MainProcess.Dispose();
+            MainProcess = CreateProcess(VM, Profile.SysScripts.Startup, _fontSettings);
         }
     }
 }

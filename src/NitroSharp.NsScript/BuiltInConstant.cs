@@ -39,7 +39,6 @@
         // Colors
         Black,
         White,
-        Whited,
         Gray,
         Red,
         Green,
