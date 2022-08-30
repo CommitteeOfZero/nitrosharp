@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Numerics;
 using NitroSharp.Content;
 using NitroSharp.Graphics.Core;
@@ -29,19 +28,16 @@ namespace NitroSharp.Graphics
 
         private readonly CommandList _drawCommands;
         private readonly CommandList _secondaryCommandList;
-        private readonly Queue<CommandList> _commandListPool = new();
+        private readonly ResourcePool<CommandList> _commandListPool;
 
-        private readonly RenderTarget _swapchainTarget;
         private readonly Swapchain _mainSwapchain;
-
+        private readonly RenderTarget _swapchainTarget;
+        private readonly RenderTarget _offscreenTarget;
+        private readonly ResourcePool<Texture> _offscreenTexturePool;
         private readonly DrawBatch _offscreenBatch;
-
-        public ViewProjection OrthoProjection { get; }
-        public ViewProjection PerspectiveViewProjection { get; }
 
         public RenderContext(
             GameWindow window,
-            Config config,
             GameProfile gameProfile,
             GraphicsDevice graphicsDevice,
             Swapchain swapchain,
@@ -50,13 +46,22 @@ namespace NitroSharp.Graphics
             SystemVariableLookup systemVariables)
         {
             DesignResolution = gameProfile.DesignResolution;
-
             Window = window;
             GraphicsDevice = graphicsDevice;
             ResourceFactory = graphicsDevice.ResourceFactory;
-
+            Content = contentManager;
+            GlyphRasterizer = glyphRasterizer;
+            SystemVariables = systemVariables;
             _mainSwapchain = swapchain;
+            _shaderLibrary = new ShaderLibrary(graphicsDevice);
+
             _swapchainTarget = RenderTarget.Swapchain(graphicsDevice, swapchain.Framebuffer);
+            _offscreenTarget = new RenderTarget(graphicsDevice, _swapchainTarget.Size);
+            _offscreenTexturePool = new ResourcePool<Texture>(
+                CreateOffscreenTexture,
+                x => x.Dispose(),
+                initialSize: 4
+            );
 
             TransferCommands = ResourceFactory.CreateCommandList();
             TransferCommands.Name = "Transfer commands";
@@ -64,16 +69,16 @@ namespace NitroSharp.Graphics
             _drawCommands.Name = "Draw commands (primary)";
             _secondaryCommandList = ResourceFactory.CreateCommandList();
             _secondaryCommandList.Name = "Secondary";
-            Content = contentManager;
-            GlyphRasterizer = glyphRasterizer;
-            SystemVariables = systemVariables;
-            _shaderLibrary = new ShaderLibrary(graphicsDevice);
+            _commandListPool = new ResourcePool<CommandList>(
+                ResourceFactory.CreateCommandList,
+                static x => x.Dispose(),
+                initialSize: 2
+            );
 
             OrthoProjection = ViewProjection.CreateOrtho(
                 graphicsDevice,
                 new RectangleF(Vector2.Zero, DesignResolution)
             );
-
             var view = Matrix4x4.CreateLookAt(Vector3.Zero, Vector3.UnitZ, Vector3.UnitY);
             var projection = Matrix4x4.CreatePerspectiveFieldOfView(
                 MathF.PI / 3.0f,
@@ -124,6 +129,8 @@ namespace NitroSharp.Graphics
 
         public GameWindow Window { get; }
         public Size DesignResolution { get; }
+        public ViewProjection OrthoProjection { get; }
+        public ViewProjection PerspectiveViewProjection { get; }
         public MeshList<QuadVertex> Quads { get; }
         public MeshList<QuadVertexUV3> QuadsUV3 { get; }
         public MeshList<CubeVertex> Cubes { get; }
@@ -132,6 +139,7 @@ namespace NitroSharp.Graphics
         public ResourceFactory ResourceFactory { get; }
 
         public CommandList TransferCommands { get; }
+        public ref readonly ResourcePool<CommandList> CommandListPool => ref _commandListPool;
 
         public ContentManager Content { get; }
         public GlyphRasterizer GlyphRasterizer { get; }
@@ -149,25 +157,51 @@ namespace NitroSharp.Graphics
 
         public SystemVariableLookup SystemVariables { get; }
 
-        public CommandList RentCommandList()
+        private Texture CreateWhiteTexture()
         {
-            if (!_commandListPool.TryDequeue(out CommandList? cl))
-            {
-                cl = ResourceFactory.CreateCommandList();
-            }
+            var textureDesc = TextureDescription.Texture2D(
+                width: 1, height: 1, mipLevels: 1, arrayLayers: 1,
+                PixelFormat.R8_G8_B8_A8_UNorm, TextureUsage.Staging
+            );
+            Texture stagingWhite = ResourceFactory.CreateTexture(ref textureDesc);
+            MappedResourceView<RgbaByte> pixels = GraphicsDevice.Map<RgbaByte>(
+                stagingWhite, MapMode.Write
+            );
+            pixels[0] = RgbaByte.White;
+            GraphicsDevice.Unmap(stagingWhite);
 
-            return cl;
+            textureDesc.Usage = TextureUsage.Sampled;
+            Texture texture = ResourceFactory.CreateTexture(ref textureDesc);
+
+            TransferCommands.Begin();
+            TransferCommands.CopyTexture(stagingWhite, texture);
+            TransferCommands.End();
+            GraphicsDevice.SubmitCommands(TransferCommands);
+            stagingWhite.Dispose();
+            return texture;
         }
 
-        public void ReturnCommandList(CommandList cl)
+        private Texture CreateOffscreenTexture()
         {
-            _commandListPool.Enqueue(cl);
+            Size size = _swapchainTarget.Size;
+            var desc = TextureDescription.Texture2D(
+                size.Width, size.Height,
+                mipLevels: 1, arrayLayers: 1,
+                PixelFormat.B8_G8_R8_A8_UNorm,
+                TextureUsage.Sampled
+            );
+            return ResourceFactory.CreateTexture(ref desc);
         }
 
-        public DrawBatch BeginBatch(RenderTarget renderTarget, RgbaFloat? clearColor)
+        private AnimatedIcons LoadIcons(GameProfile gameProfile)
         {
-            _offscreenBatch.Begin(_secondaryCommandList, renderTarget, clearColor);
-            return _offscreenBatch;
+            CommandList cl = _commandListPool.Rent();
+            cl.Begin();
+            var waitLine = Icon.Load(this, gameProfile.IconPathPatterns.WaitLine);
+            cl.End();
+            GraphicsDevice.SubmitCommands(cl);
+            _commandListPool.Return(cl);
+            return new AnimatedIcons(waitLine);
         }
 
         public void BeginFrame(in FrameStamp frameStamp, bool clear)
@@ -187,15 +221,22 @@ namespace NitroSharp.Graphics
             TransferCommands.Begin();
         }
 
-        private AnimatedIcons LoadIcons(GameProfile gameProfile)
+        public DrawBatch BeginOffscreenBatch(RenderTarget renderTarget, RgbaFloat? clearColor)
         {
-            CommandList cl = RentCommandList();
-            cl.Begin();
-            var waitLine = Icon.Load(this, gameProfile.IconPathPatterns.WaitLine);
-            cl.End();
-            GraphicsDevice.SubmitCommands(cl);
-            ReturnCommandList(cl);
-            return new AnimatedIcons(waitLine);
+            _offscreenBatch.Begin(_secondaryCommandList, renderTarget, clearColor);
+            return _offscreenBatch;
+        }
+
+        public PooledTexture RenderToTexture(Action<DrawBatch> renderFunc)
+        {
+            using (DrawBatch batch = BeginOffscreenBatch(_offscreenTarget, RgbaFloat.Black))
+            {
+                renderFunc(batch);
+            }
+
+            Texture destination = _offscreenTexturePool.Rent();
+            _secondaryCommandList.CopyTexture(source: _offscreenTarget.ColorTarget, destination);
+            return new PooledTexture(_offscreenTexturePool, destination);
         }
 
         public void ResolveGlyphs()
@@ -204,27 +245,10 @@ namespace NitroSharp.Graphics
             TextureCache.EndFrame(TransferCommands);
         }
 
-        public Texture CreateFullscreenTexture(bool staging = false)
-        {
-            Size size = _swapchainTarget.Size;
-            var desc = TextureDescription.Texture2D(
-                size.Width, size.Height,
-                mipLevels: 1, arrayLayers: 1,
-                PixelFormat.B8_G8_R8_A8_UNorm,
-                staging ? TextureUsage.Staging : TextureUsage.Sampled
-            );
-            return ResourceFactory.CreateTexture(ref desc);
-        }
-
-        public void CaptureFramebuffer(Texture dstTexture)
-        {
-            _drawCommands.CopyTexture(_swapchainTarget.ColorTarget, dstTexture);
-        }
-
         public Texture ReadbackTexture(CommandList cl, Texture texture)
         {
             Texture staging = ResourceFactory.CreateTexture(TextureDescription.Texture2D(
-                texture.Width, texture.Height, texture.MipLevels, texture.ArrayLayers,
+                texture.Width, texture.Height,texture.MipLevels, texture.ArrayLayers,
                 texture.Format, TextureUsage.Staging
             ));
 
@@ -258,38 +282,12 @@ namespace NitroSharp.Graphics
         }
 
         public Sampler GetSampler(FilterMode filterMode)
-        {
-            return filterMode switch
+            => filterMode switch
             {
                 FilterMode.Linear => GraphicsDevice.LinearSampler,
                 FilterMode.Point => GraphicsDevice.PointSampler,
                 _ => ThrowHelper.Unreachable<Sampler>()
             };
-        }
-
-        private Texture CreateWhiteTexture()
-        {
-            var textureDesc = TextureDescription.Texture2D(
-                width: 1, height: 1, mipLevels: 1, arrayLayers: 1,
-                PixelFormat.R8_G8_B8_A8_UNorm, TextureUsage.Staging
-            );
-            Texture stagingWhite = ResourceFactory.CreateTexture(ref textureDesc);
-            MappedResourceView<RgbaByte> pixels = GraphicsDevice.Map<RgbaByte>(
-                stagingWhite, MapMode.Write
-            );
-            pixels[0] = RgbaByte.White;
-            GraphicsDevice.Unmap(stagingWhite);
-
-            textureDesc.Usage = TextureUsage.Sampled;
-            Texture texture = ResourceFactory.CreateTexture(ref textureDesc);
-
-            TransferCommands.Begin();
-            TransferCommands.CopyTexture(stagingWhite, texture);
-            TransferCommands.End();
-            GraphicsDevice.SubmitCommands(TransferCommands);
-            stagingWhite.Dispose();
-            return texture;
-        }
 
         public void Dispose()
         {
@@ -299,10 +297,7 @@ namespace NitroSharp.Graphics
             TransferCommands.Dispose();
             _drawCommands.Dispose();
             _secondaryCommandList.Dispose();
-            while (_commandListPool.TryDequeue(out CommandList? cl))
-            {
-                cl.Dispose();
-            }
+            _commandListPool.Dispose();
             ShaderResources.Dispose();
             WhiteTexture.Dispose();
             Text.Dispose();
@@ -311,6 +306,8 @@ namespace NitroSharp.Graphics
             TextureCache.Dispose();
             ResourceSetCache.Dispose();
             _swapchainTarget.Dispose();
+            _offscreenTarget.Dispose();
+            _offscreenTexturePool.Dispose();
             _shaderLibrary.Dispose();
             _mainSwapchain.Dispose();
             GraphicsDevice.Dispose();

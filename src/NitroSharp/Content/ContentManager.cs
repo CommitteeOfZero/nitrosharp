@@ -108,10 +108,13 @@ namespace NitroSharp.Content
             return _textureLoader.LoadTexture(stream, staging);
         }
 
+        public T? TryGet<T>(AssetRef<T> assetRef) where T : class, IDisposable
+            => _cache.Get(assetRef.Handle).Asset as T;
+
         public T Get<T>(AssetRef<T> assetRef)
             where T : class, IDisposable
         {
-            if (!(_cache.Get(assetRef.Handle).Asset is T loadedAsset))
+            if (_cache.Get(assetRef.Handle).Asset is not T loadedAsset)
             {
                 throw new InvalidOperationException(
                     $"BUG: asset '{assetRef.Path}' is missing from the cache."
@@ -220,7 +223,7 @@ namespace NitroSharp.Content
             }
         }
 
-        public Stream OpenStream(string path)
+        private Stream OpenStream(string path)
         {
             string fsPath = path;
             if (Path.GetDirectoryName(path) is { } dir && Path.GetFileName(path) is { } filename)

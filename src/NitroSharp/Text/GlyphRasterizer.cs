@@ -592,7 +592,7 @@ namespace NitroSharp.Text
             int idxFace = 0;
             int newFaces = 0;
             faces = ImmutableArray.Create<(FontFaceKey, FontFace)>();
-            while ((FT.FT_New_Face(_freetypeLib, path, idxFace, out Face* ftFace)) == Error.Ok)
+            while (FT.FT_New_Face(_freetypeLib, path, idxFace, out Face* ftFace) == Error.Ok)
             {
                 var face = new FontFace(ftFace);
                 var key = new FontFaceKey(face.FontFamily, face.Style);

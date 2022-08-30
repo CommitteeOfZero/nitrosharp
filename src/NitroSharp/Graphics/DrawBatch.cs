@@ -173,7 +173,7 @@ namespace NitroSharp.Graphics
     {
         private readonly RenderContext _ctx;
         private CommandList? _commandList;
-
+        private bool _began;
         private Draw _lastDraw;
         private Vector2 _lastAlphaMaskPosition = new(float.NaN);
 
@@ -187,6 +187,7 @@ namespace NitroSharp.Graphics
 
         public void Begin(CommandList commandList, RenderTarget target, RgbaFloat? clearColor)
         {
+            Debug.Assert(!_began);
             _commandList = commandList;
             commandList.SetFramebuffer(target.Framebuffer);
             Target = target;
@@ -194,6 +195,8 @@ namespace NitroSharp.Graphics
             {
                 commandList.ClearColorTarget(0, clear);
             }
+
+            _began = true;
         }
 
         public void UpdateBuffer<T>(GpuBuffer<T> buffer, in T data)
@@ -218,7 +221,7 @@ namespace NitroSharp.Graphics
             QuadShaderResources resources = _ctx.ShaderResources.Quad;
             if (alphaMaskPosition != _lastAlphaMaskPosition)
             {
-                Vector4 newValue = new Vector4(alphaMaskPosition, 0, 0);
+                var newValue = new Vector4(alphaMaskPosition, 0, 0);
                 UpdateBuffer(resources.AlphaMaskPositionBuffer, newValue);
                 _lastAlphaMaskPosition = alphaMaskPosition;
             }
@@ -357,7 +360,15 @@ namespace NitroSharp.Graphics
             _lastDraw = default;
         }
 
-        public void End() => Flush();
-        public void Dispose() => Flush();
+        public void End()
+        {
+            Flush();
+            _began = false;
+        }
+
+        public void Dispose()
+        {
+            End();
+        }
     }
 }

@@ -72,7 +72,7 @@ namespace NitroSharp.Graphics
             ctx.RenderContext.Text.RequestGlyphs(_layout);
         }
 
-        protected override void Render(RenderContext ctx, DrawBatch drawBatch)
+        protected override void RenderCore(RenderContext ctx, DrawBatch drawBatch)
         {
             RectangleF br = BoundingRect;
             var rect = new RectangleU((uint)br.X, (uint)br.Y, (uint)br.Width, (uint)br.Height);

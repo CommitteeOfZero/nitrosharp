@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using NitroSharp.Content;
 using NitroSharp.Graphics;
+using NitroSharp.Graphics.Core;
 using NitroSharp.Media;
 using NitroSharp.NsScript;
 using NitroSharp.NsScript.Compiler;
@@ -31,7 +32,6 @@ namespace NitroSharp
 
     internal enum DeferredOperationKind
     {
-        CaptureFramebuffer,
         SaveGame,
         LoadGame
     }
@@ -39,27 +39,17 @@ namespace NitroSharp
     internal readonly struct DeferredOperation
     {
         public DeferredOperationKind Kind { get; private init; }
-        public Texture? ScreenshotTexture { get; private init; }
         public uint? SaveSlot { get; private init; }
-
-        public static DeferredOperation CaptureFramebuffer(Texture dstTexture) => new()
-        {
-            Kind = DeferredOperationKind.CaptureFramebuffer,
-            ScreenshotTexture = dstTexture,
-            SaveSlot = null
-        };
 
         public static DeferredOperation SaveGame(uint slot) => new()
         {
             Kind = DeferredOperationKind.SaveGame,
-            ScreenshotTexture = null,
             SaveSlot = slot
         };
 
         public static DeferredOperation LoadGame(uint slot) => new()
         {
             Kind = DeferredOperationKind.LoadGame,
-            ScreenshotTexture = null,
             SaveSlot = slot
         };
     }
@@ -74,6 +64,7 @@ namespace NitroSharp
         private (string, MediaStream?) _activeVoice;
         private readonly Queue<DeferredOperation> _deferredOperations = new();
         private bool _clearFramebuffer;
+        private FrameStamp _now;
 
         private GameContext(
             Logger logger,
@@ -126,7 +117,7 @@ namespace NitroSharp
 
         internal bool Skipping { get; private set; }
         internal bool Advance { get; set; }
-        internal Texture? LastScreenshot { get; private set; }
+
         internal EntityId FocusedUiElement { get; set; }
         internal NsFocusDirection? RequestedFocusChange { get; set; }
 
@@ -152,7 +143,6 @@ namespace NitroSharp
             var saveManager = new GameSaveManager(profile);
             var renderContext = new RenderContext(
                 window,
-                config,
                 profile,
                 gd,
                 swapchain,
@@ -473,6 +463,7 @@ namespace NitroSharp
         // necessary or until the engine is both feature-complete and stable.
         private void Tick(FrameStamp framestamp, float dt)
         {
+            _now = framestamp;
             RenderContext.BeginFrame(framestamp, _clearFramebuffer);
             _clearFramebuffer = true;
             InputContext.Update(VM.SystemVariables);
@@ -518,15 +509,21 @@ namespace NitroSharp
             ProcessSounds(world, dt);
             RenderFrame(framestamp, world.RenderItems, dt, assetsReady);
             HandleInput();
-            RunDeferredOperations();
 
             if (assetsReady)
             {
                 ActiveProcess.ProcessWaitOperations(this);
             }
+
+            if (assetsReady)
+            {
+                RunDeferredOperations();
+            }
+
+            RenderContext.EndFrame();
+
             try
             {
-                RenderContext.EndFrame();
                 RenderContext.Present();
             }
             catch (VeldridException e)
@@ -556,7 +553,7 @@ namespace NitroSharp
 
             foreach (RenderItem ri in active)
             {
-                ri.Render(RenderContext, assetsReady);
+                ri.Render(RenderContext);
             }
 
             RenderContext.TextureCache.BeginFrame(frameStamp);
@@ -626,8 +623,7 @@ namespace NitroSharp
             //_context.SysProcess?.Dispose();
             if (SysProcess is null)
             {
-                LastScreenshot ??= RenderContext.CreateFullscreenTexture(staging: true);
-                RenderContext.CaptureFramebuffer(LastScreenshot);
+                //LastScreenshot ??= TakeScreenshot(MainProcess);
                 MainProcess.VmProcess.Suspend();
                 SysProcess = CreateProcess(VM, mainModule, _fontSettings);
                 _clearFramebuffer = false;
@@ -641,10 +637,6 @@ namespace NitroSharp
             {
                 switch (op.Kind)
                 {
-                    case DeferredOperationKind.CaptureFramebuffer:
-                        Debug.Assert(op.ScreenshotTexture is not null);
-                        RenderContext.CaptureFramebuffer(op.ScreenshotTexture);
-                        break;
                     case DeferredOperationKind.SaveGame:
                         Debug.Assert(op.SaveSlot is not null);
                         SaveManager.Save(this, op.SaveSlot.Value);
@@ -660,6 +652,27 @@ namespace NitroSharp
             {
                 ActiveProcess.VmProcess.Resume();
             }
+        }
+
+        internal PooledTexture RenderToTexture(GameProcess process)
+        {
+            return RenderContext.RenderToTexture(batch =>
+            {
+                ReadOnlySpan<RenderItem> activeItems = process.World.RenderItems.SortActive();
+                foreach (RenderItem renderItem in activeItems)
+                {
+                    renderItem.PerformLayout(this);
+                }
+
+                RenderContext.ResolveGlyphs();
+
+                foreach (RenderItem renderItem in activeItems)
+                {
+                    renderItem.Render(RenderContext, batch);
+                }
+
+                RenderContext.TextureCache.BeginFrame(_now);
+            });
         }
 
         internal void Defer(in DeferredOperation operation)

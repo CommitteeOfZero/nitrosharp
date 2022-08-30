@@ -56,7 +56,7 @@ namespace NitroSharp.Graphics
             ContentManager content = renderContext.Content;
             ResourceFactory rf = renderContext.ResourceFactory;
             Texture? texture = null;
-            CommandList cl = renderContext.RentCommandList();
+            CommandList cl = renderContext.CommandListPool.Rent();
             cl.Begin();
             uint layer = 0;
             foreach (string path in pathPattern.EnumeratePaths())
@@ -80,7 +80,7 @@ namespace NitroSharp.Graphics
             }
             cl.End();
             renderContext.GraphicsDevice.SubmitCommands(cl);
-            renderContext.ReturnCommandList(cl);
+            renderContext.CommandListPool.Return(cl);
 
             Debug.Assert(texture is not null);
             return new Icon(texture);

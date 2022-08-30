@@ -14,28 +14,33 @@ namespace NitroSharp.Graphics
     {
         SolidColor,
         Asset,
-        StandaloneTexture
+        Pooled,
+        Standalone
     }
 
     internal readonly struct SpriteTexture : IDisposable
     {
+        private readonly AssetRef<Texture>? _assetRef;
+        private readonly PooledTexture? _pooledTexture;
+        private readonly Texture? _standaloneTexture;
+
         public readonly SpriteTextureKind Kind;
-        public readonly AssetRef<Texture>? AssetRef;
         public readonly RectangleU? SourceRectangle;
-        public readonly Texture? Standalone;
         public readonly RgbaFloat Color;
 
         private SpriteTexture(
             SpriteTextureKind kind,
             AssetRef<Texture>? assetRef,
             RectangleU? sourceRectangle,
-            Texture? standalone,
+            PooledTexture? pooledTexture,
+            Texture? standaloneTexture,
             in RgbaFloat color)
         {
             Kind = kind;
-            AssetRef = assetRef;
+            _assetRef = assetRef;
             SourceRectangle = sourceRectangle;
-            Standalone = standalone;
+            _pooledTexture = pooledTexture;
+            _standaloneTexture = standaloneTexture;
             Color = color;
         }
 
@@ -48,7 +53,8 @@ namespace NitroSharp.Graphics
                         SpriteTextureKind.SolidColor,
                         assetRef: null,
                         saveData.SourceRectangle,
-                        standalone: null,
+                        pooledTexture: null,
+                        standaloneTexture: null,
                         new RgbaFloat(saveData.Color)
                     );
                 case SpriteTextureKind.Asset:
@@ -56,10 +62,10 @@ namespace NitroSharp.Graphics
                     // TODO: error handling?
                     AssetRef<Texture> assetRef = ctx.Content.RequestTexture(saveData.AssetPath)!.Value;
                     return FromAsset(assetRef, saveData.SourceRectangle);
-                case SpriteTextureKind.StandaloneTexture:
+                case SpriteTextureKind.Standalone:
                     Debug.Assert(saveData.StandaloneTextureId is not null);
                     int id = saveData.StandaloneTextureId.Value;
-                    return FromStandalone(ctx.StandaloneTextures[id]);
+                    return FromStandaloneTexture(ctx.StandaloneTextures[id]);
                 default:
                     return ThrowHelper.Unreachable<SpriteTexture>();
             }
@@ -67,57 +73,74 @@ namespace NitroSharp.Graphics
 
         public SpriteTextureSaveData ToSaveData(GameSavingContext ctx)
         {
-            int? standaloneTextureId = this is { Kind: SpriteTextureKind.StandaloneTexture, Standalone: { } standalone }
-                ? ctx.AddStandaloneTexture(standalone)
+            Texture? texture = this switch
+            {
+                { Kind: SpriteTextureKind.Pooled } => _pooledTexture!.Value.Get(),
+                { Kind: SpriteTextureKind.Standalone } => _standaloneTexture,
+                _ => null
+            };
+
+            int? standaloneTextureId = texture is not null
+                ? ctx.AddStandaloneTexture(texture)
                 : null;
 
             return new SpriteTextureSaveData
             {
                 Kind = Kind,
                 Color = Color.ToVector4(),
-                AssetPath = AssetRef?.Path,
+                AssetPath = _assetRef?.Path,
                 SourceRectangle = SourceRectangle,
                 StandaloneTextureId = standaloneTextureId
             };
         }
 
         public static SpriteTexture FromAsset(AssetRef<Texture> assetRef, RectangleU? srcRectangle = null)
-            => new(SpriteTextureKind.Asset, assetRef, srcRectangle, null, RgbaFloat.White);
+            => new(SpriteTextureKind.Asset, assetRef, srcRectangle, null, null, RgbaFloat.White);
 
         public static SpriteTexture SolidColor(in RgbaFloat color, Size size) => new(
             SpriteTextureKind.SolidColor,
             null,
             new RectangleU(0, 0, size.Width, size.Height),
-            null,
+            null, null,
             color
         );
 
-        public static SpriteTexture FromStandalone(Texture texture) => new(
-            SpriteTextureKind.StandaloneTexture,
+        public static SpriteTexture FromPooledTexture(PooledTexture texture) => new(
+            SpriteTextureKind.Pooled,
+            null,
+            new RectangleU(0, 0, texture.Get().Width, texture.Get().Height),
+            texture,
+            standaloneTexture: null,
+            RgbaFloat.White
+        );
+
+        public static SpriteTexture FromStandaloneTexture(Texture texture) => new(
+            SpriteTextureKind.Pooled,
             null,
             new RectangleU(0, 0, texture.Width, texture.Height),
+            pooledTexture: null,
             texture,
             RgbaFloat.White
         );
 
         public Texture Resolve(RenderContext ctx) => this switch
         {
-            { Kind: SpriteTextureKind.Asset, AssetRef: { } assetRef } => ctx.Content.Get(assetRef),
+            { Kind: SpriteTextureKind.Asset, _assetRef: { } assetRef } => ctx.Content.Get(assetRef),
             { Kind: SpriteTextureKind.SolidColor } => ctx.WhiteTexture,
-            { Kind: SpriteTextureKind.StandaloneTexture, Standalone: { } standalone } => standalone,
+            { Kind: SpriteTextureKind.Pooled, _pooledTexture: { } pooledTexture } => pooledTexture.Get(),
             _ => ThrowHelper.Unreachable<Texture>()
         };
 
         public Size GetSize(RenderContext ctx) => this switch
         {
             { SourceRectangle: { } srcRect } => srcRect.Size,
-            { AssetRef: { } assetRef } => ctx.Content.GetTextureSize(assetRef),
+            { _assetRef: { } assetRef } => ctx.Content.GetTextureSize(assetRef),
             _ => ThrowHelper.Unreachable<Size>()
         };
 
         public (Vector2, Vector2) GetTexCoords(RenderContext ctx)
         {
-            if (this is { AssetRef: { } assetRef, SourceRectangle: { } srcRect })
+            if (this is { _assetRef: { } assetRef, SourceRectangle: { } srcRect })
             {
                 var texSize = ctx.Content.GetTextureSize(assetRef).ToVector2();
                 var tl = new Vector2(srcRect.Left, srcRect.Top) / texSize;
@@ -130,27 +153,31 @@ namespace NitroSharp.Graphics
 
         public SpriteTexture WithSourceRectangle(RectangleU? sourceRect)
         {
-            return this is { Kind: SpriteTextureKind.Asset, AssetRef: { } assetRef }
+            return this is { Kind: SpriteTextureKind.Asset, _assetRef: { } assetRef }
                 ? FromAsset(assetRef.Clone(), sourceRect)
-                : new SpriteTexture(Kind, AssetRef, sourceRect ?? SourceRectangle, Standalone, Color);
+                : new SpriteTexture(Kind, _assetRef, sourceRect ?? SourceRectangle, _pooledTexture, _standaloneTexture, Color);
         }
 
         public SpriteTexture Clone()
         {
-            return this is { Kind: SpriteTextureKind.Asset, AssetRef: { } assetRef }
+            return this is { Kind: SpriteTextureKind.Asset, _assetRef: { } assetRef }
                 ? FromAsset(assetRef.Clone(), SourceRectangle)
                 : this;
         }
 
         public void Dispose()
         {
-            if (this is { Kind: SpriteTextureKind.Asset, AssetRef: { } assetRef })
+            switch (this)
             {
-                assetRef.Dispose();
-            }
-            if (this is { Kind: SpriteTextureKind.StandaloneTexture, Standalone: { } tex})
-            {
-                tex.Dispose();
+                case { Kind: SpriteTextureKind.Asset, _assetRef: { } assetRef }:
+                    assetRef.Dispose();
+                    break;
+                case { Kind: SpriteTextureKind.Pooled, _pooledTexture: { } pooledTexture}:
+                    pooledTexture.Dispose();
+                    break;
+                case { Kind: SpriteTextureKind.Standalone, _standaloneTexture: { } standaloneTexture }:
+                    standaloneTexture.Dispose();
+                    break;
             }
         }
     }
@@ -206,13 +233,15 @@ namespace NitroSharp.Graphics
         protected override (Vector2, Vector2) GetTexCoords(RenderContext ctx)
             => _texture.GetTexCoords(ctx);
 
-        public override void Render(RenderContext ctx, bool assetsReady)
+        public override void Render(RenderContext ctx, DrawBatch drawBatch)
         {
-            if (assetsReady && _transition is { } transition)
+            if (_transition is { } transition)
             {
+                Texture? mask = ctx.Content.TryGet(transition.Mask);
+                if (mask is null) { return; }
+
                 Texture src = RenderOffscreen(ctx);
-                Texture mask = ctx.Content.Get(transition.Mask);
-                RenderTransition(ctx, ctx.MainBatch, src, mask, transition.FadeAmount);
+                RenderTransition(ctx, drawBatch, src, mask, transition.FadeAmount);
                 if (_transition.HasCompleted)
                 {
                     _transition.Dispose();
@@ -221,11 +250,11 @@ namespace NitroSharp.Graphics
             }
             else
             {
-                base.Render(ctx, assetsReady);
+                base.Render(ctx, drawBatch);
             }
         }
 
-        protected override void Render(RenderContext ctx, DrawBatch drawBatch)
+        protected override void RenderCore(RenderContext ctx, DrawBatch drawBatch)
         {
             Texture alphaMaskTex = ctx.WhiteTexture;
             Vector2 alphaMaskPos = Vector2.Zero;
@@ -345,7 +374,7 @@ namespace NitroSharp.Graphics
                     Color = reader.ReadVector4();
                     SourceRectangle = new RectangleU(Point2DU.Zero, new Size(ref reader));
                     break;
-                case SpriteTextureKind.StandaloneTexture:
+                case SpriteTextureKind.Pooled:
                     StandaloneTextureId = reader.ReadNullableInt32();
                     break;
                 case SpriteTextureKind.Asset:
@@ -363,7 +392,7 @@ namespace NitroSharp.Graphics
             int fieldCount = Kind switch
             {
                 SpriteTextureKind.SolidColor => 3,
-                SpriteTextureKind.StandaloneTexture => 2,
+                SpriteTextureKind.Pooled => 2,
                 SpriteTextureKind.Asset => 3,
                 _ => ThrowHelper.Unreachable<int>()
             };
@@ -377,7 +406,7 @@ namespace NitroSharp.Graphics
                     writer.Write(Color);
                     SourceRectangle.Value.Size.Serialize(ref writer);
                     break;
-                case SpriteTextureKind.StandaloneTexture:
+                case SpriteTextureKind.Pooled:
                     writer.Write(StandaloneTextureId);
                     break;
                 case SpriteTextureKind.Asset:

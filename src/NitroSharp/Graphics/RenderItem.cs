@@ -115,18 +115,27 @@ namespace NitroSharp.Graphics
         {
             AdvanceAnimations(ctx.RenderContext, dt, assetsReady);
             Update(ctx);
-            LayoutPass(ctx);
+            PerformLayout(ctx);
         }
 
         protected virtual void Update(GameContext ctx)
         {
         }
 
-        protected virtual void LayoutPass(GameContext ctx)
+        public virtual void PerformLayout(GameContext ctx)
         {
         }
 
-        public virtual void Render(RenderContext ctx, bool assetsReady)
+        public void Render(RenderContext ctx)
+        {
+            Render(ctx, ctx.MainBatch);
+        }
+
+        public virtual void Render(RenderContext ctx, DrawBatch drawBatch)
+        {
+        }
+
+        protected virtual void RenderCore(RenderContext ctx, DrawBatch drawBatch)
         {
         }
 
@@ -284,18 +293,18 @@ namespace NitroSharp.Graphics
             AdvanceAnimation(ref _bezierMoveAnim, dt);
         }
 
-        protected override void LayoutPass(GameContext ctx)
+        public override void PerformLayout(GameContext ctx)
         {
-            base.LayoutPass(ctx);
+            base.PerformLayout(ctx);
             if (Parent is ConstraintBox || TryGetOwningChoice() is { Parent: ConstraintBox })
             {
                 return;
             }
 
-            Layout(ctx, constraintRect: null);
+            PerformLayout(ctx, constraintRect: null);
         }
 
-        private void Layout(GameContext ctx, RectangleF? constraintRect)
+        private void PerformLayout(GameContext ctx, RectangleF? constraintRect)
         {
             Size unconstrainedBounds = GetUnconstrainedBounds(ctx.RenderContext);
             WorldMatrix = Transform.GetMatrix(unconstrainedBounds);
@@ -319,23 +328,23 @@ namespace NitroSharp.Graphics
             {
                 if (child is RenderItem2D renderItem)
                 {
-                    renderItem.Layout(ctx, constraintRect);
+                    renderItem.PerformLayout(ctx, constraintRect);
                 }
                 else if (child.UiElement is Choice choice)
                 {
                     if (choice.TryGetMouseUsualVisual(world) is { } mouseUsual)
                     {
-                        mouseUsual.Layout(ctx, constraintRect);
+                        mouseUsual.PerformLayout(ctx, constraintRect);
                     }
 
                     foreach (RenderItem2D mouseOver in choice.QueryMouseOverVisuals(world))
                     {
-                        mouseOver.Layout(ctx, constraintRect);
+                        mouseOver.PerformLayout(ctx, constraintRect);
                     }
 
                     foreach (RenderItem2D mouseClick in choice.QueryMouseClickVisuals(world))
                     {
-                        mouseClick.Layout(ctx, constraintRect);
+                        mouseClick.PerformLayout(ctx, constraintRect);
                     }
                 }
             }
@@ -351,14 +360,14 @@ namespace NitroSharp.Graphics
         private bool PixelPerfectHitTest(RenderContext ctx, RenderTarget offscreenTarget, InputContext input)
         {
             _fence ??= ctx.ResourceFactory.CreateFence(signaled: false);
-            CommandList cl = ctx.RentCommandList();
+            CommandList cl = ctx.CommandListPool.Rent();
             cl.Begin();
             Texture tex = offscreenTarget.ReadBack(cl, ctx.ResourceFactory);
             cl.End();
             ctx.GraphicsDevice.SubmitCommands(cl, _fence);
             ctx.GraphicsDevice.WaitForFence(_fence);
             _fence.Reset();
-            ctx.ReturnCommandList(cl);
+            ctx.CommandListPool.Return(cl);
 
             MappedResourceView<RgbaByte> map = ctx.GraphicsDevice.Map<RgbaByte>(tex, MapMode.Read);
             Vector2 pos = input.MousePosition - _worldMatrix.Translation.XY();
@@ -372,35 +381,22 @@ namespace NitroSharp.Graphics
             return !pixel.Equals(default);
         }
 
-        public override void Render(RenderContext ctx, bool assetsReady)
+        public override void Render(RenderContext ctx, DrawBatch drawBatch)
         {
-            //if (Color.A > 0.0f)
+            SizeF actualSize = BoundingRect.Size;
+            if (actualSize.Width <= 0.0f || actualSize.Height <= 0.0f)
             {
-                if (!PreciseHitTest && !IsHidden)
-                {
-                    Render(ctx, ctx.MainBatch);
-                }
-                else
-                {
-                    SizeF actualSize = BoundingRect.Size;
-                    if (actualSize.Width <= 0.0f || actualSize.Height <= 0.0f)
-                    {
-                        return;
-                    }
+                return;
+            }
 
-                    if (RenderOffscreen(ctx) is not null && !IsHidden)
-                    {
-                        Render(ctx, ctx.MainBatch);
-                        //ctx.MainBatch.PushQuad(
-                        //    Quad,
-                        //    tex,
-                        //    alphaMask: ctx.WhiteTexture,
-                        //    Vector2.Zero,
-                        //    BlendMode,
-                        //    FilterMode
-                        //);
-                    }
-                }
+            if (PreciseHitTest && ReferenceEquals(drawBatch, ctx.MainBatch))
+            {
+                RenderOffscreen(ctx);
+            }
+
+            if (!IsHidden)
+            {
+                RenderCore(ctx, drawBatch);
             }
         }
 
@@ -413,7 +409,7 @@ namespace NitroSharp.Graphics
                 _offscreenTarget = new RenderTarget(ctx.GraphicsDevice, actualSize);
             }
 
-            using (DrawBatch batch = ctx.BeginBatch(_offscreenTarget, RgbaFloat.Clear))
+            using (DrawBatch batch = ctx.BeginOffscreenBatch(_offscreenTarget, RgbaFloat.Clear))
             {
                 Matrix4x4 world = _worldMatrix;
                 world.Translation = Vector3.Zero;
@@ -427,7 +423,7 @@ namespace NitroSharp.Graphics
                     color: Vector4.One
                 );
 
-                Render(ctx, batch);
+                RenderCore(ctx, batch);
                 Quad = originalQuad;
             }
 
@@ -440,10 +436,6 @@ namespace NitroSharp.Graphics
             //);
 
             return _offscreenTarget.ColorTarget;
-        }
-
-        protected virtual void Render(RenderContext ctx, DrawBatch batch)
-        {
         }
 
         public Vector3 Point(RenderContext ctx, NsCoordinate x, NsCoordinate y)

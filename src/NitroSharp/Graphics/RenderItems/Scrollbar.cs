@@ -94,9 +94,9 @@ namespace NitroSharp.Graphics
             return held;
         }
 
-        protected override void Render(RenderContext ctx, DrawBatch batch)
+        protected override void RenderCore(RenderContext ctx, DrawBatch drawBatch)
         {
-            batch.PushQuad(
+            drawBatch.PushQuad(
                 Quad,
                 _knob.Resolve(ctx),
                 ctx.WhiteTexture,

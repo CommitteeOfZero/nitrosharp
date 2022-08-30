@@ -186,7 +186,7 @@ internal static class MouseStateEntities
     public static readonly string[] All = { MouseUsual, MouseClick, MouseOver, MouseLeave };
 
     public static bool IsMouseStateEntity(this Entity? entity)
-        => entity is { Id.Name: MouseUsual or MouseClick  or MouseOver or MouseLeave };
+        => entity is { Id.Name: MouseUsual or MouseClick or MouseOver or MouseLeave };
 }
 
 internal interface EntityInternal

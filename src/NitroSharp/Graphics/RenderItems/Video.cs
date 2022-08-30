@@ -54,7 +54,7 @@ namespace NitroSharp.Graphics
             return res;
         }
 
-        protected override void Render(RenderContext ctx, DrawBatch batch)
+        protected override void RenderCore(RenderContext ctx, DrawBatch drawBatch)
         {
             if (!Stream.IsPlaying)
             {
@@ -67,12 +67,12 @@ namespace NitroSharp.Graphics
                 _playbackStarted = true;
                 using (frame)
                 {
-                    CommandList cl = ctx.RentCommandList();
+                    CommandList cl = ctx.CommandListPool.Rent();
                     cl.Begin();
                     frame.CopyToDeviceMemory(cl);
                     cl.End();
                     gd.SubmitCommands(cl);
-                    ctx.ReturnCommandList(cl);
+                    ctx.CommandListPool.Return(cl);
                 }
             }
 
@@ -80,11 +80,11 @@ namespace NitroSharp.Graphics
 
             (Texture luma, Texture chroma) = Stream.VideoFrames.GetDeviceTextures();
             VideoShaderResources shaderResources = ctx.ShaderResources.Video;
-            ViewProjection vp = batch.Target.OrthoProjection;
+            ViewProjection vp = drawBatch.Target.OrthoProjection;
 
             Vector4 enableAlpha = _enableAlpha ? Vector4.One : Vector4.Zero;
-            batch.UpdateBuffer(shaderResources.EnableAlphaBuffer, enableAlpha);
-            batch.PushQuad(Quad,
+            drawBatch.UpdateBuffer(shaderResources.EnableAlphaBuffer, enableAlpha);
+            drawBatch.PushQuad(Quad,
                 shaderResources.GetPipeline(BlendMode),
                 new ResourceBindings(
                     new ResourceSetKey(vp.ResourceLayout, vp.Buffer.VdBuffer),

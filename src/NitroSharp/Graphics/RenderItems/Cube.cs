@@ -153,9 +153,8 @@ namespace NitroSharp.Graphics
         {
         }
 
-        public override void Render(RenderContext ctx, bool assetsReady)
+        protected override void RenderCore(RenderContext ctx, DrawBatch drawBatch)
         {
-            DrawBatch batch = ctx.MainBatch;
             CubeShaderResources resources = ctx.ShaderResources.Cube;
             ViewProjection vp = ctx.PerspectiveViewProjection;
 
@@ -167,8 +166,8 @@ namespace NitroSharp.Graphics
             }
 
             Mesh<CubeVertex> mesh = ctx.Cubes.Append(vertices);
-            batch.UpdateBuffer(resources.TransformBuffer, Transform.GetMatrix());
-            batch.PushDraw(new Draw
+            drawBatch.UpdateBuffer(resources.TransformBuffer, Transform.GetMatrix());
+            drawBatch.PushDraw(new Draw
             {
                 Pipeline = resources.Pipeline,
                 ResourceBindings = new ResourceBindings(

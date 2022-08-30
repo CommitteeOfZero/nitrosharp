@@ -165,11 +165,11 @@ namespace NitroSharp.Graphics
             ctx.RenderContext.Text.RequestGlyphs(_layout);
         }
 
-        protected override void Render(RenderContext ctx, DrawBatch batch)
+        protected override void RenderCore(RenderContext ctx, DrawBatch drawBatch)
         {
             RectangleF br = BoundingRect;
             var rect = new RectangleU((uint)br.X, (uint)br.Y, (uint)br.Width, (uint)br.Height);
-            ctx.Text.Render(ctx, batch, _layout, WorldMatrix, _margin.XY(), rect, Color.A);
+            ctx.Text.Render(ctx, drawBatch, _layout, WorldMatrix, _margin.XY(), rect, Color.A);
 
             if (_animation is null && !_skipping)
             {

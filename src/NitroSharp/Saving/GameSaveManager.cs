@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using MessagePack;
 using NitroSharp.Graphics;
+using NitroSharp.Graphics.Core;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using Veldrid;
@@ -63,7 +64,7 @@ namespace NitroSharp.Saving
             var writer = new MessagePackWriter(buffer);
 
             RenderContext rc = ctx.RenderContext;
-            CommandList cl = rc.RentCommandList();
+            CommandList cl = rc.CommandListPool.Rent();
             cl.Begin();
             GameProcessSaveData process = ctx.MainProcess.Dump(savingCtx);
             Texture[] standaloneTextures = savingCtx.StandaloneTextures
@@ -73,7 +74,6 @@ namespace NitroSharp.Saving
             Fence fence = rc.ResourceFactory.CreateFence(signaled: false);
             rc.GraphicsDevice.SubmitCommands(cl, fence);
             rc.GraphicsDevice.WaitForFence(fence);
-            rc.ReturnCommandList(cl);
 
             var saveData = new GameSaveData
             {
@@ -91,7 +91,7 @@ namespace NitroSharp.Saving
 
             for (int i = 0; i < standaloneTextures.Length; i++)
             {
-                Texture texture = standaloneTextures[i];
+                using (Texture texture = standaloneTextures[i])
                 using (FileStream fileStream = File.Create(Path.Combine(saveDir, $"{i:D4}.png")))
                 {
                     SaveAsPng(rc, texture, fileStream, texture.Width, texture.Height);
@@ -100,14 +100,23 @@ namespace NitroSharp.Saving
 
             if (slot != AutosaveSlot)
             {
-                Debug.Assert(ctx.LastScreenshot is not null);
                 using FileStream thumbStream = File.Create(Path.Combine(saveDir, "thum.npf"));
-                SaveAsPng(ctx.RenderContext, ctx.LastScreenshot, thumbStream, 128, 72);
+                using PooledTexture gpuScreenshot = ctx.RenderToTexture(ctx.MainProcess);
+                cl.Begin();
+                using Texture screenshot = rc.ReadbackTexture(cl, gpuScreenshot.Get());
+                cl.End();
+                fence.Reset();
+                rc.GraphicsDevice.SubmitCommands(cl, fence);
+                rc.GraphicsDevice.WaitForFence(fence);
+                SaveAsPng(ctx.RenderContext, screenshot, thumbStream, 128, 72);
+
                 File.Create(Path.Combine(saveDir, "val.npf")).Close();
                 File.Create(Path.Combine(saveDir, "script.npf")).Close();
                 File.Create(Path.Combine(saveDir, "frames.npf")).Close();
                 File.Create(Path.Combine(saveDir, "bklg.npf")).Close();
             }
+
+            rc.CommandListPool.Return(cl);
         }
 
         public void Load(GameContext ctx, uint slot)
@@ -159,7 +168,7 @@ namespace NitroSharp.Saving
             File.Create(Path.Combine(_commonDir, "cqst.npf")).Close();
         }
 
-        public void ReadCommonSaveData(GameContext ctx)
+        private void ReadCommonSaveData(GameContext ctx)
         {
             string filePath = Path.Combine(_commonDir, "val.npf");
             if (!File.Exists(filePath)) { return; }

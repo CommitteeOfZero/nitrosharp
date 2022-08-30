@@ -162,6 +162,9 @@ namespace NitroSharp.NsScript.VM
                 case BuiltInFunction.WaitText:
                     WaitText(ref args);
                     break;
+                case BuiltInFunction.Draw:
+                    Draw();
+                    break;
 
                 case BuiltInFunction.CreateSound:
                     CreateSound(ref args);
@@ -309,6 +312,11 @@ namespace NitroSharp.NsScript.VM
             ConstantValue? result = _result;
             _result = null;
             return result;
+        }
+
+        private void Draw()
+        {
+            _impl.Draw();
         }
 
         private void Shake(ref ArgConsumer args)

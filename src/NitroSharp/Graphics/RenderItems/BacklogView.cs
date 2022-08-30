@@ -91,7 +91,7 @@ namespace NitroSharp.Graphics
             ctx.RenderContext.Text.RequestGlyphs(_textLayout, _glyphRun);
         }
 
-        protected override void Render(RenderContext ctx, DrawBatch batch)
+        protected override void RenderCore(RenderContext ctx, DrawBatch drawBatch)
         {
             var offset = new Vector2(0, - _range.start * _lineHeight);
 
@@ -104,7 +104,7 @@ namespace NitroSharp.Graphics
             );
             ctx.Text.Render(
                 ctx,
-                batch,
+                drawBatch,
                 _textLayout,
                 _glyphRun,
                 WorldMatrix,

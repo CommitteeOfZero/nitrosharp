@@ -2,11 +2,11 @@ using System;
 using System.Collections.Immutable;
 using System.Numerics;
 using NitroSharp.Graphics;
+using NitroSharp.Graphics.Core;
 using NitroSharp.NsScript;
 using NitroSharp.NsScript.Primitives;
 using NitroSharp.NsScript.VM;
 using NitroSharp.Text;
-using Veldrid;
 
 namespace NitroSharp
 {
@@ -225,10 +225,12 @@ namespace NitroSharp
         {
             if (src is "SCREEN" or "Screen" or "VIDEO" or "Video")
             {
-                Texture screenshotTexture = _renderCtx.CreateFullscreenTexture();
-                var result = SpriteTexture.FromStandalone(screenshotTexture);
-                _ctx.Defer(DeferredOperation.CaptureFramebuffer(screenshotTexture));
-                return result;
+                GameProcess process = src.Equals("SCREEN", StringComparison.OrdinalIgnoreCase)
+                    ? _ctx.ActiveProcess
+                    : _ctx.MainProcess;
+
+                PooledTexture texture = _ctx.RenderToTexture(process);
+                return SpriteTexture.FromPooledTexture(texture);
             }
 
             if (_ctx.Content.RequestTexture(src) is { } asset)
@@ -394,6 +396,11 @@ namespace NitroSharp
         public override void WaitText(EntityQuery query, TimeSpan timeout)
         {
             _ctx.Wait(CurrentThread, WaitCondition.EntityIdle, null, query);
+        }
+
+        public override void Draw()
+        {
+            Delay(TimeSpan.FromMicroseconds(1));
         }
 
         public override void CreateAlphaMask(

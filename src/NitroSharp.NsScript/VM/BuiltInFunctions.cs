@@ -171,5 +171,7 @@ namespace NitroSharp.NsScript.VM
 
         public virtual float X360_GetTriggerAxis(XboxTrigger trigger) => 0;
         public virtual void Reset() { }
+
+        public virtual void Draw() { }
     }
 }
