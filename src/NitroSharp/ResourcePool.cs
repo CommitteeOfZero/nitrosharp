@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace NitroSharp;
 
@@ -33,12 +34,14 @@ internal readonly struct ResourcePool<T> : IDisposable
             _allResources.Add(resource);
         }
 
+        Debug.Assert(_allResources.Count >= _pool.Count);
         return resource;
     }
 
     public void Return(T resource)
     {
         _pool.Enqueue(resource);
+        Debug.Assert(_allResources.Count >= _pool.Count);
     }
 
     public void Dispose()

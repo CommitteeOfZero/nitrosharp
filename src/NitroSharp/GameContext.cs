@@ -471,16 +471,15 @@ namespace NitroSharp
 
             while (true)
             {
-                GameProcess activeProcess = ActiveProcess;
                 RunResult runResult = VM.Run(
-                    activeProcess.VmProcess,
+                    ActiveProcess.VmProcess,
                     _builtInFunctions,
                     ShutdownSignal.Token
                 );
 
                 foreach (uint thread in runResult.TerminatedThreads)
                 {
-                    activeProcess.World.DestroyContext(thread);
+                    ActiveProcess.World.DestroyContext(thread);
                 }
 
                 ProcessSystemVariables(VM.SystemVariables);
@@ -745,8 +744,7 @@ namespace NitroSharp
         {
             SysProcess?.Dispose();
             SysProcess = null;
-            MainProcess.VmProcess.Terminate();
-            MainProcess.World.Reset();
+            MainProcess.Dispose();
             NsScriptProcess newVmProcess = CreateProcess(VM, Profile.SysScripts.Startup);
             MainProcess = new GameProcess(newVmProcess, MainProcess.World, _fontSettings);
         }

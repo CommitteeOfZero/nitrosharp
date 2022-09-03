@@ -30,15 +30,24 @@ namespace NitroSharp
 
         private sealed class EntityContext
         {
-            private ArrayBuilder<EntityId> _entities;
+            private readonly HashSet<EntityId> _entities;
 
             public EntityContext()
             {
-                _entities = new ArrayBuilder<EntityId>(16);
+                _entities = new HashSet<EntityId>(16);
             }
 
-            public ReadOnlySpan<EntityId> Entities => _entities.AsReadonlySpan();
-            public void Add(in EntityId entity) => _entities.Add(entity);
+            public IEnumerable<EntityId> Entities => _entities;
+
+            public void Add(in EntityId entity)
+            {
+                _entities.Add(entity);
+            }
+
+            public void Remove(in EntityId entity)
+            {
+                _entities.Remove(entity);
+            }
         }
 
         private readonly Dictionary<uint, EntityContext> _contextLookup;
@@ -80,7 +89,6 @@ namespace NitroSharp
         {
             if (_contextLookup.TryGetValue(id, out EntityContext? ctx))
             {
-                _contextLookup.Remove(id);
                 foreach (EntityId entityId in ctx.Entities)
                 {
                     if (Get(entityId) is { IsIdle: true, IsLocked: false } entity)
@@ -88,6 +96,8 @@ namespace NitroSharp
                         DestroyEntity(entity);
                     }
                 }
+
+                _contextLookup.Remove(id);
             }
         }
 
@@ -262,6 +272,7 @@ namespace NitroSharp
             }
 
             _entities.Remove(id);
+            _contextLookup[id.Context].Remove(id);
             entity.Dispose();
         }
 
@@ -528,7 +539,7 @@ namespace NitroSharp
         {
             foreach ((_, EntityRec rec) in _entities)
             {
-                rec.Entity.Dispose();
+                DestroyEntity(rec.Entity);
             }
         }
     }
