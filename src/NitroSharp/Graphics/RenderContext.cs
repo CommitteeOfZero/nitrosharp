@@ -32,7 +32,6 @@ namespace NitroSharp.Graphics
 
         private readonly Swapchain _mainSwapchain;
         private readonly RenderTarget _swapchainTarget;
-        private readonly RenderTarget _offscreenTarget;
         private readonly ResourcePool<Texture> _offscreenTexturePool;
         private readonly DrawBatch _offscreenBatch;
 
@@ -56,7 +55,7 @@ namespace NitroSharp.Graphics
             _shaderLibrary = new ShaderLibrary(graphicsDevice);
 
             _swapchainTarget = RenderTarget.Swapchain(graphicsDevice, swapchain.Framebuffer);
-            _offscreenTarget = new RenderTarget(graphicsDevice, _swapchainTarget.Size);
+            OffscreenTarget = new RenderTarget(graphicsDevice, _swapchainTarget.Size);
             _offscreenTexturePool = new ResourcePool<Texture>(
                 CreateOffscreenTexture,
                 x => x.Dispose(),
@@ -153,6 +152,9 @@ namespace NitroSharp.Graphics
 
         public DrawBatch MainBatch { get; }
 
+        public RenderTarget OffscreenTarget { get; }
+        public ref readonly ResourcePool<Texture> OffscreenTexturePool => ref _offscreenTexturePool;
+
         public AnimatedIcons Icons { get; }
 
         public SystemVariableLookup SystemVariables { get; }
@@ -206,9 +208,14 @@ namespace NitroSharp.Graphics
 
         public void BeginFrame(in FrameStamp frameStamp, bool clear)
         {
+            BeginFrame(frameStamp, _swapchainTarget, clear);
+        }
+
+        public void BeginFrame(in FrameStamp frameStamp, RenderTarget renderTarget, bool clear)
+        {
             _drawCommands.Begin();
             RgbaFloat? clearColor = clear ? RgbaFloat.Black : null;
-            MainBatch.Begin(_drawCommands, _swapchainTarget, clearColor);
+            MainBatch.Begin(_drawCommands, renderTarget, clearColor);
 
             _secondaryCommandList.Begin();
 
@@ -225,18 +232,6 @@ namespace NitroSharp.Graphics
         {
             _offscreenBatch.Begin(_secondaryCommandList, renderTarget, clearColor);
             return _offscreenBatch;
-        }
-
-        public PooledTexture RenderToTexture(Action<DrawBatch> renderFunc)
-        {
-            using (DrawBatch batch = BeginOffscreenBatch(_offscreenTarget, RgbaFloat.Black))
-            {
-                renderFunc(batch);
-            }
-
-            Texture destination = _offscreenTexturePool.Rent();
-            _secondaryCommandList.CopyTexture(source: _offscreenTarget.ColorTarget, destination);
-            return new PooledTexture(_offscreenTexturePool, destination);
         }
 
         public void ResolveGlyphs()
@@ -265,7 +260,10 @@ namespace NitroSharp.Graphics
             ResourceSetCache.EndFrame();
 
             Text.EndFrame(TransferCommands);
-            TextureCache.EndFrame(TransferCommands);
+            if (TextureCache.IsActive)
+            {
+                TextureCache.EndFrame(TransferCommands);
+            }
             Quads.End(TransferCommands);
             QuadsUV3.End(TransferCommands);
             Cubes.End(TransferCommands);
@@ -306,7 +304,7 @@ namespace NitroSharp.Graphics
             TextureCache.Dispose();
             ResourceSetCache.Dispose();
             _swapchainTarget.Dispose();
-            _offscreenTarget.Dispose();
+            OffscreenTarget.Dispose();
             _offscreenTexturePool.Dispose();
             _shaderLibrary.Dispose();
             _mainSwapchain.Dispose();

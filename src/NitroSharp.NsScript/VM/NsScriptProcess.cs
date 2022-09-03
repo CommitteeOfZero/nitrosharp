@@ -204,7 +204,7 @@ namespace NitroSharp.NsScript.VM
         {
             if (!IsRunning) { return; }
             thread.SuspensionTime = Ticks;
-            if (timeoutOpt is TimeSpan timeout)
+            if (timeoutOpt is { } timeout)
             {
                 thread.SleepTimeout = (long)Math.Round(timeout.TotalSeconds * Stopwatch.Frequency);
             }

@@ -7,6 +7,7 @@ using NitroSharp.NsScript;
 using NitroSharp.NsScript.Primitives;
 using NitroSharp.NsScript.VM;
 using NitroSharp.Text;
+using Veldrid;
 
 namespace NitroSharp
 {
@@ -229,7 +230,8 @@ namespace NitroSharp
                     ? _ctx.ActiveProcess
                     : _ctx.MainProcess;
 
-                PooledTexture texture = _ctx.RenderToTexture(process);
+                var texture = new PooledTexture(_renderCtx.OffscreenTexturePool, _renderCtx.OffscreenTexturePool.Rent());
+                _ctx.Defer(DeferredOperation.TakeScreenshot(process, texture));
                 return SpriteTexture.FromPooledTexture(texture);
             }
 

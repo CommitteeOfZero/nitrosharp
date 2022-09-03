@@ -102,25 +102,22 @@ namespace NitroSharp.Graphics.Core
             );
         }
 
+        public bool IsActive => _now.IsValid;
         public Texture UvRectTexture => _uvRectCache.Texture;
 
-        private FrameStamp DefaultEvictionPolicy => GetEvictionThreshold(
-            maxFrames: null, maxTimeMs: 5000
-        );
+        private FrameStamp DefaultEvictionPolicy
+            => GetEvictionThreshold(maxFrames: null, maxTimeMs: 5000);
 
-        private FrameStamp AgressiveEvictionPolicy => GetEvictionThreshold(
-            maxFrames: 1, maxTimeMs: null
-        );
+        private FrameStamp AggressiveEvictionPolicy
+            => GetEvictionThreshold(maxFrames: 1, maxTimeMs: null);
 
         private ArrayTexture SelectArrayTexture(PixelFormat pixelFormat)
-        {
-            return pixelFormat switch
+            => pixelFormat switch
             {
                 PixelFormat.R8_G8_B8_A8_UNorm => _rgbaTexture,
                 PixelFormat.R8_UNorm => _r8Texture,
                 _ => UnsupportedPixelFormat(pixelFormat)
             };
-        }
 
         public Texture GetCacheTexture(PixelFormat pixelFormat, out bool reallocatedThisFrame)
         {
@@ -244,7 +241,7 @@ namespace NitroSharp.Graphics.Core
 
             FrameStamp evictionThreshold = arrayTexture.LayerCount < _maxTextureLayers
                 ? DefaultEvictionPolicy
-                : AgressiveEvictionPolicy;
+                : AggressiveEvictionPolicy;
             EvictOldEntries(evictionThreshold);
 
             entryOpt = TryAllocateEntry(arrayTexture, textureSize);

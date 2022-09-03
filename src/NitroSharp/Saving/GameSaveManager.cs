@@ -1,12 +1,10 @@
 ﻿using System;
 using System.Buffers;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using MessagePack;
 using NitroSharp.Graphics;
-using NitroSharp.Graphics.Core;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using Veldrid;
@@ -71,7 +69,7 @@ namespace NitroSharp.Saving
                 .Select(x => rc.ReadbackTexture(cl, x))
                 .ToArray();
             cl.End();
-            Fence fence = rc.ResourceFactory.CreateFence(signaled: false);
+            using Fence fence = rc.ResourceFactory.CreateFence(signaled: false);
             rc.GraphicsDevice.SubmitCommands(cl, fence);
             rc.GraphicsDevice.WaitForFence(fence);
 
@@ -101,13 +99,17 @@ namespace NitroSharp.Saving
             if (slot != AutosaveSlot)
             {
                 using FileStream thumbStream = File.Create(Path.Combine(saveDir, "thum.npf"));
-                using PooledTexture gpuScreenshot = ctx.RenderToTexture(ctx.MainProcess);
+                Texture gpuScreenshot = rc.OffscreenTexturePool.Rent();
+                fence.Reset();
+                ctx.RenderToTexture(ctx.MainProcess, gpuScreenshot, fence);
+                rc.GraphicsDevice.WaitForFence(fence);
                 cl.Begin();
-                using Texture screenshot = rc.ReadbackTexture(cl, gpuScreenshot.Get());
+                using Texture screenshot = rc.ReadbackTexture(cl, gpuScreenshot);
                 cl.End();
                 fence.Reset();
                 rc.GraphicsDevice.SubmitCommands(cl, fence);
                 rc.GraphicsDevice.WaitForFence(fence);
+                rc.OffscreenTexturePool.Return(gpuScreenshot);
                 SaveAsPng(ctx.RenderContext, screenshot, thumbStream, 128, 72);
 
                 File.Create(Path.Combine(saveDir, "val.npf")).Close();

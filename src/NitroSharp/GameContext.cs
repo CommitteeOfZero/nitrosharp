@@ -32,6 +32,7 @@ namespace NitroSharp
 
     internal enum DeferredOperationKind
     {
+        TakeScreenshot,
         SaveGame,
         LoadGame
     }
@@ -40,6 +41,15 @@ namespace NitroSharp
     {
         public DeferredOperationKind Kind { get; private init; }
         public uint? SaveSlot { get; private init; }
+        public GameProcess? ScreenshotProcess { get; private init; }
+        public PooledTexture? ScreenshotTexture { get; private init; }
+
+        public static DeferredOperation TakeScreenshot(GameProcess process, PooledTexture texture) => new()
+        {
+            Kind = DeferredOperationKind.TakeScreenshot,
+            ScreenshotTexture = texture,
+            ScreenshotProcess = process
+        };
 
         public static DeferredOperation SaveGame(uint slot) => new()
         {
@@ -502,21 +512,17 @@ namespace NitroSharp
             bool assetsReady = Content.ResolveAssets();
             if (assetsReady)
             {
+                RunDeferredOperations();
                 world.BeginFrame();
             }
 
             ProcessSounds(world, dt);
-            RenderFrame(framestamp, world.RenderItems, dt, assetsReady);
+            RenderFrame(world.RenderItems, dt, assetsReady);
             HandleInput();
 
             if (assetsReady)
             {
                 ActiveProcess.ProcessWaitOperations(this);
-            }
-
-            if (assetsReady)
-            {
-                RunDeferredOperations();
             }
 
             RenderContext.EndFrame();
@@ -532,7 +538,6 @@ namespace NitroSharp
         }
 
         private void RenderFrame(
-            in FrameStamp frameStamp,
             SortableEntityGroupView<RenderItem> renderItems,
             float dt,
             bool assetsReady)
@@ -554,8 +559,6 @@ namespace NitroSharp
             {
                 ri.Render(RenderContext);
             }
-
-            RenderContext.TextureCache.BeginFrame(frameStamp);
         }
 
         private static void ProcessSounds(World world, float dt)
@@ -622,7 +625,6 @@ namespace NitroSharp
             //_context.SysProcess?.Dispose();
             if (SysProcess is null)
             {
-                //LastScreenshot ??= TakeScreenshot(MainProcess);
                 MainProcess.VmProcess.Suspend();
                 SysProcess = CreateProcess(VM, mainModule, _fontSettings);
                 _clearFramebuffer = false;
@@ -636,6 +638,11 @@ namespace NitroSharp
             {
                 switch (op.Kind)
                 {
+                    case DeferredOperationKind.TakeScreenshot:
+                        Debug.Assert(op.ScreenshotProcess is not null);
+                        Debug.Assert(op.ScreenshotTexture.HasValue);
+                        RenderToTexture(op.ScreenshotProcess, op.ScreenshotTexture.Value.Get(), fence: null);
+                        break;
                     case DeferredOperationKind.SaveGame:
                         Debug.Assert(op.SaveSlot is not null);
                         SaveManager.Save(this, op.SaveSlot.Value);
@@ -653,25 +660,42 @@ namespace NitroSharp
             }
         }
 
-        internal PooledTexture RenderToTexture(GameProcess process)
+        internal void RenderToTexture(GameProcess process, Texture texture, Fence? fence)
         {
-            return RenderContext.RenderToTexture(batch =>
+            RenderContext.EndFrame();
+
+            RenderContext.BeginFrame(_now, RenderContext.OffscreenTarget, clear: true);
+            ReadOnlySpan<RenderItem> activeItems = process.World.RenderItems.SortActive();
+            foreach (RenderItem renderItem in activeItems)
             {
-                ReadOnlySpan<RenderItem> activeItems = process.World.RenderItems.SortActive();
-                foreach (RenderItem renderItem in activeItems)
-                {
-                    renderItem.PerformLayout(this);
-                }
+                renderItem.PerformLayout(this);
+            }
 
-                RenderContext.ResolveGlyphs();
+            RenderContext.ResolveGlyphs();
 
-                foreach (RenderItem renderItem in activeItems)
-                {
-                    renderItem.Render(RenderContext, batch);
-                }
+            foreach (RenderItem renderItem in activeItems)
+            {
+                renderItem.Render(RenderContext);
+            }
 
-                RenderContext.TextureCache.BeginFrame(_now);
-            });
+            RenderContext.EndFrame();
+
+            CommandList cl = RenderContext.CommandListPool.Rent();
+            cl.Begin();
+            cl.CopyTexture(source: RenderContext.OffscreenTarget.ColorTarget, texture);
+            cl.End();
+
+            if (fence is not null)
+            {
+                RenderContext.GraphicsDevice.SubmitCommands(cl, fence);
+            }
+            else
+            {
+                RenderContext.GraphicsDevice.SubmitCommands(cl);
+            }
+
+            RenderContext.CommandListPool.Return(cl);
+            RenderContext.BeginFrame(_now, _clearFramebuffer);
         }
 
         internal void Defer(in DeferredOperation operation)

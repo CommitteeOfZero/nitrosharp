@@ -7,7 +7,6 @@ layout(set = 1, binding = 2) uniform sampler Sampler;
 layout(set = 2, binding = 0) uniform FadeAmount
 {
     float _FadeAmount;
-    vec3 _padding;
 };
 
 layout(location = 0) in vec4 fs_Color;
