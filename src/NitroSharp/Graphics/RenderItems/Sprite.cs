@@ -385,7 +385,7 @@ namespace NitroSharp.Graphics
                     Color = reader.ReadVector4();
                     SourceRectangle = new RectangleU(Point2DU.Zero, new Size(ref reader));
                     break;
-                case SpriteTextureKind.Pooled:
+                case SpriteTextureKind.Owned:
                     StandaloneTextureId = reader.ReadNullableInt32();
                     break;
                 case SpriteTextureKind.Asset:
@@ -395,6 +395,9 @@ namespace NitroSharp.Graphics
                         SourceRectangle = new RectangleU(ref reader);
                     }
                     break;
+                case SpriteTextureKind.Borrowed or SpriteTextureKind.Pooled:
+                    ThrowHelper.Unreachable();
+                    break;
             }
         }
 
@@ -403,7 +406,7 @@ namespace NitroSharp.Graphics
             int fieldCount = Kind switch
             {
                 SpriteTextureKind.SolidColor => 3,
-                SpriteTextureKind.Pooled => 2,
+                SpriteTextureKind.Owned => 2,
                 SpriteTextureKind.Asset => 3,
                 _ => ThrowHelper.Unreachable<int>()
             };
@@ -417,7 +420,7 @@ namespace NitroSharp.Graphics
                     writer.Write(Color);
                     SourceRectangle.Value.Size.Serialize(ref writer);
                     break;
-                case SpriteTextureKind.Pooled:
+                case SpriteTextureKind.Owned:
                     writer.Write(StandaloneTextureId);
                     break;
                 case SpriteTextureKind.Asset:
