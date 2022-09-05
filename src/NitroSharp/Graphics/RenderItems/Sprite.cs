@@ -77,7 +77,7 @@ namespace NitroSharp.Graphics
             Texture? texture = this switch
             {
                 { Kind: SpriteTextureKind.Pooled, _pooledTexture: not null } => _pooledTexture.Value.Get(),
-                { Kind: SpriteTextureKind.Owned or SpriteTextureKind.Pooled } => _texture,
+                { Kind: SpriteTextureKind.Owned or SpriteTextureKind.Borrowed } => _texture,
                 _ => null
             };
 
