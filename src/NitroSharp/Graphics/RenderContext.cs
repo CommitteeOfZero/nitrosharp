@@ -4,6 +4,7 @@ using NitroSharp.Content;
 using NitroSharp.Graphics.Core;
 using NitroSharp.NsScript.VM;
 using NitroSharp.Text;
+using NitroSharp.Utilities;
 using Veldrid;
 
 namespace NitroSharp.Graphics
@@ -28,12 +29,12 @@ namespace NitroSharp.Graphics
 
         private readonly CommandList _drawCommands;
         private readonly CommandList _secondaryCommandList;
-        private readonly ResourcePool<CommandList> _commandListPool;
 
         private readonly Swapchain _mainSwapchain;
         private readonly RenderTarget _swapchainTarget;
-        private readonly ResourcePool<Texture> _offscreenTexturePool;
         private readonly DrawBatch _offscreenBatch;
+
+        private readonly TextureCache _textureCache;
 
         public RenderContext(
             GameWindow window,
@@ -56,11 +57,7 @@ namespace NitroSharp.Graphics
 
             _swapchainTarget = RenderTarget.Swapchain(graphicsDevice, swapchain.Framebuffer);
             OffscreenTarget = new RenderTarget(graphicsDevice, _swapchainTarget.Size);
-            _offscreenTexturePool = new ResourcePool<Texture>(
-                CreateOffscreenTexture,
-                x => x.Dispose(),
-                initialSize: 4
-            );
+            OffscreenTexturePool = new ResourcePool<Texture>(CreateOffscreenTexture, initialSize: 4);
 
             TransferCommands = ResourceFactory.CreateCommandList();
             TransferCommands.Name = "Transfer commands";
@@ -68,11 +65,7 @@ namespace NitroSharp.Graphics
             _drawCommands.Name = "Draw commands (primary)";
             _secondaryCommandList = ResourceFactory.CreateCommandList();
             _secondaryCommandList.Name = "Secondary";
-            _commandListPool = new ResourcePool<CommandList>(
-                ResourceFactory.CreateCommandList,
-                static x => x.Dispose(),
-                initialSize: 2
-            );
+            CommandListPool = new ResourcePool<CommandList>(ResourceFactory.CreateCommandList, initialSize: 2);
 
             OrthoProjection = ViewProjection.CreateOrtho(
                 graphicsDevice,
@@ -95,7 +88,7 @@ namespace NitroSharp.Graphics
             );
 
             ResourceSetCache = new ResourceSetCache(ResourceFactory);
-            TextureCache = new TextureCache(GraphicsDevice);
+            _textureCache = new TextureCache(GraphicsDevice);
             WhiteTexture = CreateWhiteTexture();
 
             Quads = new MeshList<QuadVertex>(
@@ -117,7 +110,7 @@ namespace NitroSharp.Graphics
             Text = new TextRenderContext(
                 GraphicsDevice,
                 GlyphRasterizer,
-                TextureCache
+                _textureCache
             );
 
             MainBatch = new DrawBatch(this);
@@ -138,14 +131,13 @@ namespace NitroSharp.Graphics
         public ResourceFactory ResourceFactory { get; }
 
         public CommandList TransferCommands { get; }
-        public ref readonly ResourcePool<CommandList> CommandListPool => ref _commandListPool;
+        public ResourcePool<CommandList> CommandListPool { get; }
 
         public ContentManager Content { get; }
         public GlyphRasterizer GlyphRasterizer { get; }
         public ShaderResources ShaderResources { get; }
 
         public ResourceSetCache ResourceSetCache { get; }
-        public TextureCache TextureCache { get; }
         public Texture WhiteTexture { get; }
 
         public TextRenderContext Text { get; }
@@ -153,7 +145,7 @@ namespace NitroSharp.Graphics
         public DrawBatch MainBatch { get; }
 
         public RenderTarget OffscreenTarget { get; }
-        public ref readonly ResourcePool<Texture> OffscreenTexturePool => ref _offscreenTexturePool;
+        public ResourcePool<Texture> OffscreenTexturePool { get; }
 
         public AnimatedIcons Icons { get; }
 
@@ -197,12 +189,12 @@ namespace NitroSharp.Graphics
 
         private AnimatedIcons LoadIcons(GameProfile gameProfile)
         {
-            CommandList cl = _commandListPool.Rent();
+            CommandList cl = CommandListPool.Rent();
             cl.Begin();
             var waitLine = Icon.Load(this, gameProfile.IconPathPatterns.WaitLine);
             cl.End();
             GraphicsDevice.SubmitCommands(cl);
-            _commandListPool.Return(cl);
+            CommandListPool.Return(cl);
             return new AnimatedIcons(waitLine);
         }
 
@@ -222,7 +214,7 @@ namespace NitroSharp.Graphics
             Quads.Begin();
             QuadsUV3.Begin();
             Cubes.Begin();
-            TextureCache.BeginFrame(frameStamp);
+            _textureCache.BeginFrame(frameStamp);
             ResourceSetCache.BeginFrame(frameStamp);
             Text.BeginFrame();
             TransferCommands.Begin();
@@ -237,7 +229,7 @@ namespace NitroSharp.Graphics
         public void ResolveGlyphs()
         {
             Text.ResolveGlyphs();
-            TextureCache.EndFrame(TransferCommands);
+            _textureCache.EndFrame(TransferCommands);
         }
 
         public Texture ReadbackTexture(CommandList cl, Texture texture)
@@ -260,9 +252,9 @@ namespace NitroSharp.Graphics
             ResourceSetCache.EndFrame();
 
             Text.EndFrame(TransferCommands);
-            if (TextureCache.IsActive)
+            if (_textureCache.IsActive)
             {
-                TextureCache.EndFrame(TransferCommands);
+                _textureCache.EndFrame(TransferCommands);
             }
             Quads.End(TransferCommands);
             QuadsUV3.End(TransferCommands);
@@ -295,17 +287,17 @@ namespace NitroSharp.Graphics
             TransferCommands.Dispose();
             _drawCommands.Dispose();
             _secondaryCommandList.Dispose();
-            _commandListPool.Dispose();
+            CommandListPool.Dispose();
             ShaderResources.Dispose();
             WhiteTexture.Dispose();
             Text.Dispose();
             Quads.Dispose();
             Cubes.Dispose();
-            TextureCache.Dispose();
+            _textureCache.Dispose();
             ResourceSetCache.Dispose();
             _swapchainTarget.Dispose();
             OffscreenTarget.Dispose();
-            _offscreenTexturePool.Dispose();
+            OffscreenTexturePool.Dispose();
             _shaderLibrary.Dispose();
             _mainSwapchain.Dispose();
             GraphicsDevice.Dispose();

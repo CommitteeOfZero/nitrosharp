@@ -2,20 +2,18 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 
-namespace NitroSharp;
+namespace NitroSharp.Utilities;
 
-internal readonly struct ResourcePool<T> : IDisposable
-    where T : class
+internal sealed class ResourcePool<T> : IDisposable
+    where T : class, IDisposable
 {
     private readonly Func<T> _resourceFactory;
-    private readonly Action<T> _disposeFunc;
     private readonly List<T> _allResources;
     private readonly Queue<T> _pool;
 
-    public ResourcePool(Func<T> resourceFactory, Action<T> disposeFunc, int initialSize)
+    public ResourcePool(Func<T> resourceFactory, int initialSize)
     {
         _resourceFactory = resourceFactory;
-        _disposeFunc = disposeFunc;
         _allResources = new List<T>(initialSize);
         _pool = new Queue<T>(initialSize);
         for (int i = 0; i < initialSize; i++)
@@ -40,6 +38,14 @@ internal readonly struct ResourcePool<T> : IDisposable
 
     public void Return(T resource)
     {
+#if DEBUG
+        int hashCode = resource.GetHashCode();
+        foreach (T otherResource in _pool)
+        {
+            Debug.Assert(otherResource.GetHashCode() != hashCode);
+        }
+#endif
+
         _pool.Enqueue(resource);
         Debug.Assert(_allResources.Count >= _pool.Count);
     }
@@ -49,7 +55,7 @@ internal readonly struct ResourcePool<T> : IDisposable
         _pool.Clear();
         foreach (T resource in _allResources)
         {
-            _disposeFunc(resource);
+            resource.Dispose();
         }
         _allResources.Clear();
     }

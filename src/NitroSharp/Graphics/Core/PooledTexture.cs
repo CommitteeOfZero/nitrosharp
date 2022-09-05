@@ -1,4 +1,5 @@
 ﻿using System;
+using NitroSharp.Utilities;
 using Veldrid;
 
 namespace NitroSharp.Graphics.Core;

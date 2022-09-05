@@ -14,35 +14,20 @@ namespace NitroSharp.Graphics
     {
         SolidColor,
         Asset,
-        Pooled,
-        Standalone
+        Owned,
+        Borrowed,
+        Pooled
     }
 
     internal readonly struct SpriteTexture : IDisposable
     {
         private readonly AssetRef<Texture>? _assetRef;
+        private readonly Texture? _texture;
         private readonly PooledTexture? _pooledTexture;
-        private readonly Texture? _standaloneTexture;
 
         public readonly SpriteTextureKind Kind;
-        public readonly RectangleU? SourceRectangle;
         public readonly RgbaFloat Color;
-
-        private SpriteTexture(
-            SpriteTextureKind kind,
-            AssetRef<Texture>? assetRef,
-            RectangleU? sourceRectangle,
-            PooledTexture? pooledTexture,
-            Texture? standaloneTexture,
-            in RgbaFloat color)
-        {
-            Kind = kind;
-            _assetRef = assetRef;
-            SourceRectangle = sourceRectangle;
-            _pooledTexture = pooledTexture;
-            _standaloneTexture = standaloneTexture;
-            Color = color;
-        }
+        public RectangleU? SourceRectangle { get; private init; }
 
         public static SpriteTexture FromSaveData(in SpriteTextureSaveData saveData, GameLoadingContext ctx)
         {
@@ -52,31 +37,47 @@ namespace NitroSharp.Graphics
                     return new SpriteTexture(
                         SpriteTextureKind.SolidColor,
                         assetRef: null,
-                        saveData.SourceRectangle,
+                        sourceRectangle: saveData.SourceRectangle,
+                        texture: null,
                         pooledTexture: null,
-                        standaloneTexture: null,
-                        new RgbaFloat(saveData.Color)
+                        color: new RgbaFloat(saveData.Color)
                     );
                 case SpriteTextureKind.Asset:
                     Debug.Assert(saveData.AssetPath is not null);
                     // TODO: error handling?
                     AssetRef<Texture> assetRef = ctx.Content.RequestTexture(saveData.AssetPath)!.Value;
                     return FromAsset(assetRef, saveData.SourceRectangle);
-                case SpriteTextureKind.Standalone:
+                case SpriteTextureKind.Owned:
                     Debug.Assert(saveData.StandaloneTextureId is not null);
                     int id = saveData.StandaloneTextureId.Value;
-                    return FromStandaloneTexture(ctx.StandaloneTextures[id]);
+                    return FromOwnedTexture(ctx.StandaloneTextures[id]);
                 default:
                     return ThrowHelper.Unreachable<SpriteTexture>();
             }
+        }
+
+        private SpriteTexture(
+            SpriteTextureKind kind,
+            AssetRef<Texture>? assetRef,
+            RectangleU? sourceRectangle,
+            Texture? texture,
+            PooledTexture? pooledTexture,
+            in RgbaFloat color)
+        {
+            Kind = kind;
+            _assetRef = assetRef;
+            SourceRectangle = sourceRectangle;
+            _texture = texture;
+            _pooledTexture = pooledTexture;
+            Color = color;
         }
 
         public SpriteTextureSaveData ToSaveData(GameSavingContext ctx)
         {
             Texture? texture = this switch
             {
-                { Kind: SpriteTextureKind.Pooled } => _pooledTexture!.Value.Get(),
-                { Kind: SpriteTextureKind.Standalone } => _standaloneTexture,
+                { Kind: SpriteTextureKind.Pooled, _pooledTexture: not null } => _pooledTexture.Value.Get(),
+                { Kind: SpriteTextureKind.Owned or SpriteTextureKind.Pooled } => _texture,
                 _ => null
             };
 
@@ -84,9 +85,13 @@ namespace NitroSharp.Graphics
                 ? ctx.AddStandaloneTexture(texture)
                 : null;
 
+            SpriteTextureKind newKind = Kind is SpriteTextureKind.Pooled or SpriteTextureKind.Borrowed
+                ? SpriteTextureKind.Owned
+                : Kind;
+
             return new SpriteTextureSaveData
             {
-                Kind = Kind,
+                Kind = newKind,
                 Color = Color.ToVector4(),
                 AssetPath = _assetRef?.Path,
                 SourceRectangle = SourceRectangle,
@@ -100,8 +105,8 @@ namespace NitroSharp.Graphics
         public static SpriteTexture SolidColor(in RgbaFloat color, Size size) => new(
             SpriteTextureKind.SolidColor,
             null,
-            new RectangleU(0, 0, size.Width, size.Height),
-            null, null,
+            new RectangleU(0, 0, size.Width, size.Height), null,
+            null,
             color
         );
 
@@ -109,24 +114,31 @@ namespace NitroSharp.Graphics
             SpriteTextureKind.Pooled,
             null,
             new RectangleU(0, 0, texture.Get().Width, texture.Get().Height),
-            texture,
-            standaloneTexture: null,
-            RgbaFloat.White
+            texture: null,
+            pooledTexture: texture,
+            color: RgbaFloat.White
         );
 
-        public static SpriteTexture FromStandaloneTexture(Texture texture) => new(
-            SpriteTextureKind.Pooled,
+        public static SpriteTexture FromOwnedTexture(Texture texture)
+            => FromTexture(SpriteTextureKind.Owned, texture);
+
+        public static SpriteTexture FromBorrowedTexture(Texture texture)
+            => FromTexture(SpriteTextureKind.Borrowed, texture);
+
+        private static SpriteTexture FromTexture(SpriteTextureKind kind, Texture texture) => new(
+            kind,
             null,
             new RectangleU(0, 0, texture.Width, texture.Height),
-            pooledTexture: null,
             texture,
-            RgbaFloat.White
+            pooledTexture: null,
+            color: RgbaFloat.White
         );
 
         public Texture Resolve(RenderContext ctx) => this switch
         {
             { Kind: SpriteTextureKind.Asset, _assetRef: { } assetRef } => ctx.Content.Get(assetRef),
             { Kind: SpriteTextureKind.SolidColor } => ctx.WhiteTexture,
+            { Kind: SpriteTextureKind.Owned or SpriteTextureKind.Borrowed, _texture: not null } => _texture,
             { Kind: SpriteTextureKind.Pooled, _pooledTexture: { } pooledTexture } => pooledTexture.Get(),
             _ => ThrowHelper.Unreachable<Texture>()
         };
@@ -152,18 +164,15 @@ namespace NitroSharp.Graphics
         }
 
         public SpriteTexture WithSourceRectangle(RectangleU? sourceRect)
-        {
-            return this is { Kind: SpriteTextureKind.Asset, _assetRef: { } assetRef }
-                ? FromAsset(assetRef.Clone(), sourceRect)
-                : new SpriteTexture(Kind, _assetRef, sourceRect ?? SourceRectangle, _pooledTexture, _standaloneTexture, Color);
-        }
+            => Clone() with { SourceRectangle = sourceRect ?? Clone().SourceRectangle };
 
-        public SpriteTexture Clone()
-        {
-            return this is { Kind: SpriteTextureKind.Asset, _assetRef: { } assetRef }
-                ? FromAsset(assetRef.Clone(), SourceRectangle)
-                : this;
-        }
+        private SpriteTexture Clone()
+            => this switch
+            {
+                { _assetRef: { } assetRef } => FromAsset(assetRef.Clone(), SourceRectangle),
+                { _pooledTexture: { } pooledTexture } => FromBorrowedTexture(pooledTexture.Get()),
+                _ => this
+            };
 
         public void Dispose()
         {
@@ -175,8 +184,10 @@ namespace NitroSharp.Graphics
                 case { Kind: SpriteTextureKind.Pooled, _pooledTexture: { } pooledTexture}:
                     pooledTexture.Dispose();
                     break;
-                case { Kind: SpriteTextureKind.Standalone, _standaloneTexture: { } standaloneTexture }:
+                case { Kind: SpriteTextureKind.Owned, _texture: { } standaloneTexture }:
                     standaloneTexture.Dispose();
+                    break;
+                case { Kind: SpriteTextureKind.Borrowed }:
                     break;
             }
         }
