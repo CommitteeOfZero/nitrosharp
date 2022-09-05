@@ -520,21 +520,6 @@ namespace NitroSharp
             return world;
         }
 
-        public void Reset()
-        {
-            foreach ((_, EntityRec rec) in _entities)
-            {
-                if (!(rec.Entity.IsLocked && rec.Entity.Id.Context == 1))
-                {
-                    DestroyEntity(rec.Entity);
-                }
-                else if (rec.Entity is RenderItem renderItem)
-                {
-                    renderItem.Fade(0, TimeSpan.Zero);
-                }
-            }
-        }
-
         public void Dispose()
         {
             foreach ((_, EntityRec rec) in _entities)

@@ -7,7 +7,6 @@ using NitroSharp.NsScript;
 using NitroSharp.NsScript.Primitives;
 using NitroSharp.NsScript.VM;
 using NitroSharp.Text;
-using Veldrid;
 
 namespace NitroSharp
 {
