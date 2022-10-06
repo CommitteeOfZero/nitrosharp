@@ -17,7 +17,7 @@ namespace NitroSharp.NsScript.Compiler
         private BufferWriter _code;
         private int _textId;
         private ValueStack<BreakScope> _breakScopes;
-        private bool _supressConstantLookup;
+        private bool _suppressConstantLookup;
         private bool _clearPage;
 
         private Emitter(NsxModuleBuilder moduleBuilder, SubroutineSymbol subroutine)
@@ -29,10 +29,10 @@ namespace NitroSharp.NsScript.Compiler
             _breakScopes = new ValueStack<BreakScope>(initialCapacity: 4);
             _code = default;
             _textId = 0;
-            _supressConstantLookup = false;
+            _suppressConstantLookup = false;
             _clearPage = true;
 
-            if (subroutine is FunctionSymbol function && function.Parameters.Length > 0)
+            if (subroutine is FunctionSymbol { Parameters.Length: > 0 } function)
             {
                 foreach (ParameterSymbol p in function.Parameters)
                 {
@@ -46,7 +46,9 @@ namespace NitroSharp.NsScript.Compiler
             public readonly int InstructionPos;
 
             public JumpPlaceholder(int instrPos)
-                => InstructionPos = instrPos;
+            {
+                InstructionPos = instrPos;
+            }
 
             public int OffsetPos => InstructionPos + 1;
         }
@@ -60,7 +62,9 @@ namespace NitroSharp.NsScript.Compiler
         }
 
         private void EmitOpcode(Opcode opcode)
-            => _code.WriteByte((byte)opcode);
+        {
+            _code.WriteByte((byte)opcode);
+        }
 
         private ushort GetVariableToken(string name)
             => _compilation.GetVariableToken(name);
@@ -153,7 +157,7 @@ namespace NitroSharp.NsScript.Compiler
         private void EmitLiteral(LiteralExpression literal)
         {
             ConstantValue val = literal.Value;
-            if (val.IsString && !_supressConstantLookup)
+            if (val.IsString && !_suppressConstantLookup)
             {
                 string strVal = val.AsString()!;
                 if (WellKnownSymbols.LookupBuiltInConstant(strVal) is { } constant)
@@ -270,7 +274,7 @@ namespace NitroSharp.NsScript.Compiler
             if (lookupResult.IsEmpty) { return; }
             bool isBuiltIn = lookupResult.Variant == LookupResultVariant.BuiltInFunction;
             ImmutableArray<Expression> arguments = callExpression.Arguments;
-            bool supressConstantLookup = _supressConstantLookup;
+            bool suppressConstantLookup = _suppressConstantLookup;
 
             if (!isBuiltIn)
             {
@@ -279,10 +283,10 @@ namespace NitroSharp.NsScript.Compiler
                 int count = Math.Min(arguments.Length, target.Parameters.Length);
                 for (int i = 0; i < count; i++)
                 {
-                    _supressConstantLookup = true;
+                    _suppressConstantLookup = true;
                     EmitExpression(arguments[i]);
                     EmitStore(Opcode.StoreVar, GetVariableToken( target.Parameters[i].Name));
-                    _supressConstantLookup = supressConstantLookup;
+                    _suppressConstantLookup = suppressConstantLookup;
                 }
             }
             else
@@ -294,9 +298,9 @@ namespace NitroSharp.NsScript.Compiler
                 // Update: also make an exception for regular function calls (see code above).
                 for (int i = 0; i < arguments.Length; i++)
                 {
-                    _supressConstantLookup = i == 0;
+                    _suppressConstantLookup = i == 0;
                     EmitExpression(arguments[i]);
-                    _supressConstantLookup = supressConstantLookup;
+                    _suppressConstantLookup = suppressConstantLookup;
                 }
             }
 
@@ -546,7 +550,7 @@ namespace NitroSharp.NsScript.Compiler
             scope.BreakPlaceholders.Enqueue(EmitJump(Opcode.Jump));
         }
 
-        private void PatchBreaks(ref BreakScope scope, int destination)
+        private void PatchBreaks(scoped ref BreakScope scope, int destination)
         {
             while (scope.BreakPlaceholders.TryDequeue(out JumpPlaceholder jump))
             {
@@ -573,10 +577,7 @@ namespace NitroSharp.NsScript.Compiler
 
         private static void AssertJumpInstr(Opcode opcode)
         {
-            Debug.Assert(opcode == Opcode.Jump
-                || opcode == Opcode.JumpIfFalse
-                || opcode == Opcode.JumpIfTrue
-            );
+            Debug.Assert(opcode is Opcode.Jump or Opcode.JumpIfFalse or Opcode.JumpIfTrue);
         }
 
         private void PatchJump(JumpPlaceholder jumpPlaceholder, int dst)
@@ -593,7 +594,7 @@ namespace NitroSharp.NsScript.Compiler
             _code.WriteUInt16LE(tk);
         }
 
-        private void EmitLoadImm(in ConstantValue value)
+        private void EmitLoadImm(scoped in ConstantValue value)
         {
             switch (value.Type)
             {

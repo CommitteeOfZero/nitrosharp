@@ -39,8 +39,7 @@ dotnet($dotnetArgs)
 $dotnetArgs = @(
     "publish", "src/Game/Game.csproj",
     "-r", "$Runtime",
-    "-c", "Release",
-    "/p:Native=true"
+    "-c", "Release"
 )
 dotnet($dotnetArgs)
 
@@ -57,6 +56,7 @@ if ($linuxBuild) {
         & strip $stripArgs
     }
 }
+
 function dotnet($dotnetArgs) {
     if ($IsWindows -and $linuxBuild) {
         & bash --login -c "dotnet $dotnetArgs"

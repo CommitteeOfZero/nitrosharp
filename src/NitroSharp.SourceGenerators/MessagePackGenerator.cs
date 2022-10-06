@@ -95,20 +95,20 @@ namespace NitroSharp
 {
     internal static class MessagePackExtensions
     {
-        public static void Write(this ref MessagePackWriter writer, Vector2 v)
+        public static void Write(this scoped ref MessagePackWriter writer, Vector2 v)
         {
             writer.WriteArrayHeader(2);
             writer.Write(v.X);
             writer.Write(v.Y);
         }
 
-        public static Vector2 ReadVector2(this ref MessagePackReader reader)
+        public static Vector2 ReadVector2(this scoped ref MessagePackReader reader)
         {
             reader.ReadArrayHeader();
             return new Vector2(reader.ReadSingle(), reader.ReadSingle());
         }
 
-        public static void Write(this ref MessagePackWriter writer, in Vector3 v)
+        public static void Write(this ref MessagePackWriter writer, scoped in Vector3 v)
         {
             writer.WriteArrayHeader(3);
             writer.Write(v.X);
@@ -116,13 +116,13 @@ namespace NitroSharp
             writer.Write(v.Z);
         }
 
-        public static Vector3 ReadVector3(this ref MessagePackReader reader)
+        public static Vector3 ReadVector3(this scoped ref MessagePackReader reader)
         {
             reader.ReadArrayHeader();
             return new Vector3(reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle());
         }
 
-        public static void Write(this ref MessagePackWriter writer, in Vector4 v)
+        public static void Write(this scoped ref MessagePackWriter writer, scoped in Vector4 v)
         {
             writer.WriteArrayHeader(4);
             writer.Write(v.X);
@@ -131,7 +131,7 @@ namespace NitroSharp
             writer.Write(v.W);
         }
 
-        public static Vector4 ReadVector4(this ref MessagePackReader reader)
+        public static Vector4 ReadVector4(this scoped ref MessagePackReader reader)
         {
             reader.ReadArrayHeader();
             return new Vector4(
@@ -142,7 +142,7 @@ namespace NitroSharp
             );
         }
 
-        public static void Write(this ref MessagePackWriter writer, in Matrix4x4 m)
+        public static void Write(this scoped ref MessagePackWriter writer, in Matrix4x4 m)
         {
             writer.WriteArrayHeader(16);
             writer.Write(m.M11);
@@ -163,7 +163,7 @@ namespace NitroSharp
             writer.Write(m.M44);
         }
 
-        public static Matrix4x4 ReadMatrix4x4(this ref MessagePackReader reader)
+        public static Matrix4x4 ReadMatrix4x4(this scoped ref MessagePackReader reader)
         {
             reader.ReadArrayHeader();
             return new Matrix4x4(
