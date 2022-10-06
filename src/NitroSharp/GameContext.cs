@@ -144,7 +144,7 @@ namespace NitroSharp
             var startVM = Task.Run(() => LoadStartupScript(profile, fontConfig, logger));
 
             SwapchainSource swapchainSource = await createSurface.Task;
-            (GraphicsDevice gd, Swapchain swapchain) = InitGraphics(window, config);
+            (GraphicsDevice gd, Swapchain swapchain) = InitGraphics(window, config, profile);
             ContentManager contentMgr = CreateContentManager(gd, profile);
             AudioContext audioContext = await initAudio;
             (NsScriptVM vm, GameProcess mainProcess) = await startVM;
@@ -229,7 +229,8 @@ namespace NitroSharp
 
         private static (GraphicsDevice device, Swapchain swapchain) InitGraphics(
             GameWindow window,
-            Config configuration)
+            Config configuration,
+            GameProfile gameProfile)
         {
             var options = new GraphicsDeviceOptions(false, null, configuration.EnableVSync);
             options.PreferStandardClipSpaceYDirection = true;
@@ -238,7 +239,7 @@ namespace NitroSharp
 #endif
             GraphicsBackend backend = configuration.PreferredGraphicsBackend
                 ?? VeldridStartup.GetPlatformDefaultBackend();
-            Size renderResolution = configuration.RenderResolution;
+            Size renderResolution = gameProfile.DesignResolution;
             var swapchainDesc = new SwapchainDescription(
                 window.SwapchainSource,
                 renderResolution.Width, renderResolution.Height,
