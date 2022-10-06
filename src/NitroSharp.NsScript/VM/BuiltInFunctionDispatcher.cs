@@ -1147,7 +1147,7 @@ namespace NitroSharp.NsScript.VM
                     : throw new InvalidOperationException("Argument not provided.");
             }
 
-            public ConstantValue TakeOpt(in ConstantValue defaultValue)
+            public ConstantValue TakeOpt(scoped in ConstantValue defaultValue)
             {
                 return _pos < _args.Length
                     ? _args[_pos++]
