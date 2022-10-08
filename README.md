@@ -47,8 +47,8 @@ It should be theoretically possible to add support for the following platforms:
 
 ## Building
 ### Required Software
-- [.NET 5 SDK](https://dotnet.microsoft.com/download/dotnet/5.0)
-- [PowerShell 7](https://github.com/PowerShell/PowerShell) (for AOT-compiled builds)
+- [.NET 7 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/7.0)
+- [PowerShell 7](https://github.com/PowerShell/PowerShell) (only for AOT-compiled builds)
 - Windows SDK might be required for producing Windows builds
 
 Run
@@ -61,16 +61,10 @@ OR
 Run ``aot-build.ps1`` in PowerShell 7 to produce an [AOT-compiled](https://en.wikipedia.org/wiki/Ahead-of-time_compilation) build. Do not expect the build script to work in the old Windows PowerShell.
 
 ## How do I play the game?
-There is currently no support for AFS and NPA archives, which means you will have to extract the game files first.
-Before you start, make sure your game directory looks this way:
-
-![image](https://user-images.githubusercontent.com/6377116/113422461-6e227080-93d5-11eb-86fa-56cee4e6e434.png)
-
-1. Get the tools for extracting the archives [here](https://1drv.ms/u/s!Aryvcp_pUUGhjZ9t4-7CZMjrrg1Cxw?e=rgOiRX).
-2021-05-26: if you've ever used an older version of this, you might want to repeat the process using the latest one. To see if that's really necessary, you can check the ``nss`` folder. If you see any fullwidth lowercase letters (``ａ`` or ``ｂ``) in the filenames as opposed to uppercase letters ``Ａ`` and ``Ｂ``, that means you need to remove the existing ``nss`` folder and use the latest version of ``extract.ps1`` (or simply run ``./nipa.exe -xg nss.npa ChaosHead``).
-2. Place them in the same directory as the game assets and run ``./extract.ps1`` in PowerShell.
-The extracted files will be placed inside a folder named ``content``.
-3. Edit ``Game.json`` so that ``dev.contentRoot`` points to the ``content`` directory. Avoid unescaped backslashes in the path.
+1. Obtain the game files.
+2. Extract ``nss.npa`` using [nipa](https://github.com/Wilhansen/nipa/releases):
+``./nipa.exe -xg nss.npa ChaosHead``.
+3. Edit ``profiles.json`` so that ``dev.contentRoot`` points to the game's assets. Avoid unescaped backslashes in the path.
 4. Run ``Game.exe``.
 
 ## License
