@@ -38,16 +38,24 @@ namespace NitroSharp.NsScript.Compiler
         public readonly string? Global;
 
         public LookupResult(SubroutineSymbol subroutine) : this()
-            => (Variant, Subroutine) = (LookupResultVariant.Subroutine, subroutine);
+        {
+            (Variant, Subroutine) = (LookupResultVariant.Subroutine, subroutine);
+        }
 
         public LookupResult(BuiltInFunction builtInFunction) : this()
-            => (Variant, BuiltInFunction) = (LookupResultVariant.BuiltInFunction, builtInFunction);
+        {
+            (Variant, BuiltInFunction) = (LookupResultVariant.BuiltInFunction, builtInFunction);
+        }
 
         public LookupResult(BuiltInConstant builtInConstant) : this()
-            => (Variant, BuiltInConstant) = (LookupResultVariant.BuiltInConstant, builtInConstant);
+        {
+            (Variant, BuiltInConstant) = (LookupResultVariant.BuiltInConstant, builtInConstant);
+        }
 
         public LookupResult(LookupResultVariant variant, string name) : this()
-            => (Variant, Global) = (variant, name);
+        {
+            (Variant, Global) = (variant, name);
+        }
 
         public static LookupResult Empty;
 

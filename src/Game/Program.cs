@@ -55,19 +55,19 @@ namespace Game
 
             var window = new DesktopWindow(
                 gameProfile.ProductDisplayName,
-                gameProfile.DesignResolution
+                config.RenderResolution ?? gameProfile.DesignResolution.Convert(Scale<DesignPixel, ScreenPixel>.Identity)
             );
 
-            GameContext ctx = GameContext.Create(window, config, gameProfile).Result;
-            try
-            {
-                await ctx.Run();
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e.Message);
-                Console.WriteLine(e.StackTrace);
-            }
+            await NitroSharp.Game.Run(window, config, gameProfile);
+            // try
+            // {
+            //     await ctx.Run();
+            // }
+            // catch (Exception e)
+            // {
+            //     Console.WriteLine(e.Message);
+            //     Console.WriteLine(e.StackTrace);
+            // }
         }
 
         private static void LoadNativeDependencies()

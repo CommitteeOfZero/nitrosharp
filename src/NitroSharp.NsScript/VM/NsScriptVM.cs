@@ -4,785 +4,551 @@ using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Threading;
 using NitroSharp.NsScript.Primitives;
 using NitroSharp.NsScript.Utilities;
 
-namespace NitroSharp.NsScript.VM
+namespace NitroSharp.NsScript.VM;
+
+[Persistable]
+public readonly partial struct GlobalsDump
 {
-    public readonly ref struct RunResult
-    {
-        public readonly ReadOnlySpan<uint> NewThreads;
-        public readonly ReadOnlySpan<uint> TerminatedThreads;
+    internal (string, ConstantValue)[] Globals { get; init; }
+}
 
-        public RunResult(
-            ReadOnlySpan<uint> newThreads,
-            ReadOnlySpan<uint> terminatedThreads)
+public sealed class NsScriptVM
+{
+    private readonly NsxModuleLocator _moduleLocator;
+    private readonly Dictionary<string, NsxModule> _loadedModules;
+    private readonly BuiltInFunctionDispatcher _builtInCallDispatcher;
+    private readonly ConstantValue[] _variables;
+    private readonly ConstantValue[] _flags;
+    private readonly Stack<CubicBezierSegment> _bezierSegmentStack;
+
+    public NsScriptVM(NsxModuleLocator moduleLocator, Stream globalsLookupTableStream)
+    {
+        _loadedModules = new Dictionary<string, NsxModule>(16);
+        _moduleLocator = moduleLocator;
+        _variables = new ConstantValue[5000];
+        _flags = new ConstantValue[2000];
+        _builtInCallDispatcher = new BuiltInFunctionDispatcher(_variables);
+        GlobalsLookup = GlobalsLookupTable.Load(globalsLookupTableStream);
+        SystemVariables = new SystemVariableLookup(this);
+        _bezierSegmentStack = new Stack<CubicBezierSegment>();
+    }
+
+    internal GlobalsLookupTable GlobalsLookup { get; }
+
+    public SystemVariableLookup SystemVariables { get; }
+    // public NsScriptProcess? CurrentProcess { get; private set; }
+    //
+    // public NsScriptProcess RestoreProcess(in NsScriptProcessDump dump)
+    // {
+    //     NsScriptProcess process = new(this, dump);
+    //     _lastProcessId = Math.Max(_lastProcessId, process.Id);
+    //     _lastThreadId = Math.Max(_lastThreadId, dump.Threads.Max(x => x.Id));
+    //     return process;
+    // }
+
+    public GlobalsDump DumpVariables() => DumpGlobals(_variables, GlobalsLookup.Variables);
+    public GlobalsDump DumpFlags() => DumpGlobals(_flags, GlobalsLookup.Flags);
+
+    public void RestoreVariables(GlobalsDump dump)
+    {
+        RestoreGlobals(_variables, GlobalsLookup.Variables, dump);
+    }
+
+    public void RestoreFlags(GlobalsDump dump)
+    {
+        RestoreGlobals(_flags, GlobalsLookup.Flags, dump);
+    }
+
+    private static GlobalsDump DumpGlobals(
+        ConstantValue[] table,
+        ImmutableDictionary<string, int> lookup)
+    {
+        var globals = new (string, ConstantValue)[lookup.Count];
+        foreach ((string name, int i) in lookup)
         {
-            NewThreads = newThreads;
-            TerminatedThreads = terminatedThreads;
+            globals[i] = (name, table[i]);
+        }
+        return new GlobalsDump { Globals = globals };
+    }
+
+    private static void RestoreGlobals(
+        ConstantValue[] table,
+        ImmutableDictionary<string, int> lookup,
+        in GlobalsDump dump)
+    {
+        foreach ((string name, ConstantValue val) in dump.Globals)
+        {
+            if (lookup.TryGetValue(name, out int index))
+            {
+                table[index] = val;
+            }
         }
     }
 
-    [Persistable]
-    public readonly partial struct GlobalsDump
+    internal NsxModule GetModule(string name)
     {
-        internal (string, ConstantValue)[] Globals { get; init; }
+        if (!_loadedModules.TryGetValue(name, out NsxModule? module))
+        {
+            Stream stream = _moduleLocator.OpenModule(name);
+            module = NsxModule.LoadModule(stream, name);
+            _loadedModules.Add(name, module);
+        }
+
+        return module;
     }
 
-    public sealed class NsScriptVM
+    // public NsScriptProcess CreateProcess(string moduleName, string symbol)
+    // {
+    //     uint pid = ++_lastProcessId;
+    //     NsScriptThread? mainThread = CreateThread(moduleName, symbol);
+    //     if (mainThread is null)
+    //     {
+    //         throw new ArgumentException($"Symbol '{symbol}' not found in module '{moduleName}'");
+    //     }
+    //     return new NsScriptProcess(this, pid, mainThread);
+    // }
+    //
+    // public NsScriptProcessState? CreateProcess(string moduleName, string symbol)
+    // {
+    //     uint pid = ++_lastProcessId;
+    //     NsScriptThreadState? mainThread = CreateThread(moduleName, symbol);
+    //     if (mainThread is null)
+    //     {
+    //         throw new ArgumentException($"Symbol '{symbol}' not found in module '{moduleName}'");
+    //     }
+    //
+    //     return new NsScriptProcessState(pid);
+    // }
+
+    // public NsScriptThread? CreateThread(NsScriptProcess process, string symbol, bool start = false)
+    //     => CreateThread(process, process.CurrentThread!.CurrentFrame.Module.Name, symbol, start);
+
+    // private NsScriptThread? CreateThread(string moduleName, string symbol)
+    // {
+    //     NsxModule? module = GetModule(moduleName);
+    //     if (!module.TryLookupSubroutineIndex(symbol, out int index))
+    //     {
+    //         module = module.Imports
+    //             .Select(GetModule)
+    //             .FirstOrDefault(import => import.TryLookupSubroutineIndex(symbol, out index));
+    //     }
+    //
+    //     if (module is null) { return null; }
+    //     var frame = new CallFrame(module, (ushort)index, 0);
+    //     return new NsScriptThread(++_lastThreadId, ref frame);
+    // }
+
+    public NsScriptThreadState? CreateThread(string moduleName, string symbol)
     {
-        private readonly NsxModuleLocator _moduleLocator;
-        private readonly Dictionary<string, NsxModule> _loadedModules;
-        private readonly BuiltInFunctionDispatcher _builtInCallDispatcher;
-        private readonly ConstantValue[] _variables;
-        private readonly ConstantValue[] _flags;
-        private readonly Stack<CubicBezierSegment> _bezierSegmentStack;
-
-        private uint _lastProcessId;
-        private uint _lastThreadId;
-
-        public NsScriptVM(
-            NsxModuleLocator moduleLocator,
-            Stream globalsLookupTableStream)
+        NsxModule? module = GetModule(moduleName);
+        if (!module.TryLookupSubroutineIndex(symbol, out int index))
         {
-            _loadedModules = new Dictionary<string, NsxModule>(16);
-            _moduleLocator = moduleLocator;
-            _variables = new ConstantValue[5000];
-            _flags = new ConstantValue[2000];
-            _builtInCallDispatcher = new BuiltInFunctionDispatcher(_variables);
-            GlobalsLookup = GlobalsLookupTable.Load(globalsLookupTableStream);
-            SystemVariables = new SystemVariableLookup(this);
-            _bezierSegmentStack = new Stack<CubicBezierSegment>();
+            module = module.Imports
+                .Select(GetModule)
+                .FirstOrDefault(import => import.TryLookupSubroutineIndex(symbol, out index));
         }
 
-        internal GlobalsLookupTable GlobalsLookup { get; }
+        if (module is null) { return null; }
+        var frame = new CallFrame(module, (ushort)index, 0);
+        return new NsScriptThreadState(frame);
+    }
 
-        public SystemVariableLookup SystemVariables { get; }
-        public NsScriptProcess? CurrentProcess { get; private set; }
+    // public NsScriptThread ActivateDialogueBlock(in DialogueBlockToken blockToken)
+    //     => ActivateDialogueBlock(CurrentProcess!, blockToken);
+    //
+    // private NsScriptThread ActivateDialogueBlock(
+    //     NsScriptProcess process,
+    //     in DialogueBlockToken blockToken)
+    // {
+    //     var frame = new CallFrame(
+    //         blockToken.Module,
+    //         (ushort)blockToken.SubroutineIndex,
+    //         pc: blockToken.Offset
+    //     );
+    //     NsScriptThread thread = CreateThread(ref frame, declaredId: process.CurrentThread!.Id);
+    //     thread.DialoguePage = EntityPath.Parse("@" + blockToken.BlockName);
+    //     return thread;
+    // }
 
-        public NsScriptProcess RestoreProcess(in NsScriptProcessDump dump)
+    // public void Run(
+    //     NsScriptProcess process,
+    //     BuiltInFunctions builtins,
+    //     CancellationToken cancellationToken)
+    // {
+    //     builtins._vm = this;
+    //     CurrentProcess = process;
+    //     process.Tick();
+    //
+    //     while (process.IsRunning
+    //            && (!process.Threads.IsEmpty || process.PendingThreadActions.Count > 0))
+    //     {
+    //         process.ProcessPendingThreadActions();
+    //         uint nbActive = 0;
+    //         foreach (NsScriptThread thread in process.Threads)
+    //         {
+    //             if (!process.IsRunning) { break; }
+    //             if (thread is { IsActive: true, Yielded: false })
+    //             {
+    //                 process.CurrentThread = thread;
+    //                 nbActive++;
+    //                 TickResult tickResult = Tick(process, ref thread, builtins);
+    //                 if (!process.IsRunning) { break; }
+    //                 if (tickResult == TickResult.Yield)
+    //                 {
+    //                     thread.Yielded = true;
+    //                     nbActive--;
+    //                 }
+    //                 else if (thread.DoneExecuting)
+    //                 {
+    //                     if (thread.WaitingThread is { DoneExecuting: false } waitingThread)
+    //                     {
+    //                         ResumeThread(waitingThread);
+    //                         nbActive++;
+    //                     }
+    //                     TerminateThread(thread);
+    //                     nbActive--;
+    //                 }
+    //             }
+    //         }
+    //
+    //         if (nbActive == 0)
+    //         {
+    //             foreach (NsScriptThread thread in process.Threads)
+    //             {
+    //                 thread.Yielded = false;
+    //             }
+    //             break;
+    //         }
+    //     }
+    // }
+
+    internal ref ConstantValue GetVariable(int index)
+    {
+        ref ConstantValue val = ref _variables[index];
+        if (val.Type == BuiltInType.Uninitialized)
         {
-            NsScriptProcess process = new(this, dump);
-            _lastProcessId = Math.Max(_lastProcessId, process.Id);
-            _lastThreadId = Math.Max(_lastThreadId, dump.Threads.Max(x => x.Id));
-            return process;
+            val = ConstantValue.Number(0);
         }
 
-        public GlobalsDump DumpVariables() => DumpGlobals(_variables, GlobalsLookup.Variables);
-        public GlobalsDump DumpFlags() => DumpGlobals(_flags, GlobalsLookup.Flags);
+        return ref val;
+    }
 
-        public void RestoreVariables(GlobalsDump dump)
+    internal ref ConstantValue GetFlag(int index)
+    {
+        ref ConstantValue val = ref _flags[index];
+        if (val.Type == BuiltInType.Uninitialized)
         {
-            RestoreGlobals(_variables, GlobalsLookup.Variables, dump);
+            val = ConstantValue.Number(0);
         }
 
-        public void RestoreFlags(GlobalsDump dump)
+        return ref val;
+    }
+
+    public enum TickResult
+    {
+        Ok,
+        Yield
+    }
+
+    public TickResult Tick(ref NsScriptThreadState thread, BuiltInFunctions builtins)
+    {
+        if (thread.CallFrameStack.Count == 0)
         {
-            RestoreGlobals(_flags, GlobalsLookup.Flags, dump);
+            return TickResult.Ok;
         }
 
-        private static GlobalsDump DumpGlobals(
-            ConstantValue[] table,
-            ImmutableDictionary<string, int> lookup)
+        ref CallFrame frame = ref thread.CurrentFrame;
+        NsxModule thisModule = frame.Module;
+        builtins._vm = this;
+        builtins.CurrentModule = thisModule;
+        Subroutine subroutine = thisModule.GetSubroutine(frame.SubroutineIndex);
+        var program = new BytecodeStream(subroutine.Code, frame.ProgramCounter);
+        ref ValueStack<ConstantValue> stack = ref thread.EvalStack;
+        while (true)
         {
-            var globals = new (string, ConstantValue)[lookup.Count];
-            foreach ((string name, int i) in lookup)
+            Opcode opcode = program.NextOpcode();
+            ushort varToken = ushort.MaxValue;
+            ushort flagToken;
+            ConstantValue? imm = opcode switch
             {
-                globals[i] = (name, table[i]);
-            }
-            return new GlobalsDump { Globals = globals };
-        }
+                Opcode.LoadImm => readConst(ref program, thisModule),
+                Opcode.LoadImm0 => ConstantValue.Number(0),
+                Opcode.LoadImm1 => ConstantValue.Number(1),
+                Opcode.LoadImmTrue => ConstantValue.True,
+                Opcode.LoadImmFalse => ConstantValue.False,
+                Opcode.LoadImmNull => ConstantValue.Null,
+                Opcode.LoadImmEmptyStr => ConstantValue.EmptyString,
+                Opcode.LoadVar => GetVariable(varToken = program.DecodeToken())
+                    .WithSlot((short)varToken),
+                Opcode.LoadFlag => GetFlag(flagToken = program.DecodeToken())
+                    .WithSlot((short)flagToken),
+                _ => null
+            };
 
-        private static void RestoreGlobals(
-            ConstantValue[] table,
-            ImmutableDictionary<string, int> lookup,
-            in GlobalsDump dump)
-        {
-            foreach ((string name, ConstantValue val) in dump.Globals)
+            if (imm.HasValue)
             {
-                if (lookup.TryGetValue(name, out int index))
+                if (varToken != ushort.MaxValue && varToken == SystemVariables.PresentProcess)
                 {
-                    table[index] = val;
+                    string subName = thisModule.GetSubroutineName(frame.SubroutineIndex);
+                    imm = _variables[varToken] = ConstantValue.String(subName);
                 }
-            }
-        }
 
-        internal NsxModule GetModule(string name)
-        {
-            if (!_loadedModules.TryGetValue(name, out NsxModule? module))
-            {
-                Stream stream = _moduleLocator.OpenModule(name);
-                module = NsxModule.LoadModule(stream, name);
-                _loadedModules.Add(name, module);
+                ConstantValue value = imm.Value;
+                stack.Push(ref value);
+                continue;
             }
 
-            return module;
-        }
-
-        public NsScriptProcess CreateProcess(string moduleName, string symbol)
-        {
-            uint pid = ++_lastProcessId;
-            NsScriptThread? mainThread = CreateThread(moduleName, symbol);
-            if (mainThread is null)
+            switch (opcode)
             {
-                throw new ArgumentException($"Symbol '{symbol}' not found in module '{moduleName}'");
-            }
-            return new NsScriptProcess(this, pid, mainThread);
-        }
-
-        public NsScriptThread? CreateThread(NsScriptProcess process, string symbol, bool start = false)
-            => CreateThread(process, process.CurrentThread!.CurrentFrame.Module.Name, symbol, start);
-
-        public NsScriptThread? CreateThread(
-            NsScriptProcess process,
-            string moduleName,
-            string symbol,
-            bool start)
-        {
-            NsScriptThread? thread = CreateThread(moduleName, symbol);
-            if (thread is null) { return null; }
-            process.AttachThread(thread);
-            if (!start)
-            {
-                process.CommitSuspendThread(thread, null);
-            }
-            return thread;
-        }
-
-        private NsScriptThread CreateThread(
-            NsScriptProcess process,
-            ref CallFrame callFrame,
-            uint? declaredId = null)
-        {
-            var thread = new NsScriptThread(++_lastThreadId, ref callFrame, declaredId);
-            process.AttachThread(thread);
-            return thread;
-        }
-
-        private NsScriptThread? CreateThread(string moduleName, string symbol)
-        {
-            NsxModule? module = GetModule(moduleName);
-            if (!module.TryLookupSubroutineIndex(symbol, out int index))
-            {
-                IEnumerable<NsxModule> imports = module.Imports.Select(GetModule);
-                module = null;
-                foreach (NsxModule import in imports)
-                {
-                    if (import.TryLookupSubroutineIndex(symbol, out index))
+                case Opcode.StoreVar:
+                    int index = program.DecodeToken();
+                    GetVariable(index) = stack.Pop();
+                    break;
+                case Opcode.StoreFlag:
+                    index = program.DecodeToken();
+                    GetFlag(index) = stack.Pop();
+                    break;
+                case Opcode.Binary:
+                    var opKind = (BinaryOperatorKind)program.ReadByte();
+                    ConstantValue op1 = stack.Pop();
+                    ConstantValue op2 = stack.Pop();
+                    stack.Push(BinOp(op1, opKind, op2));
+                    break;
+                case Opcode.Equal:
+                    op1 = stack.Pop();
+                    op2 = stack.Pop();
+                    stack.Push(op1 == op2);
+                    break;
+                case Opcode.NotEqual:
+                    op1 = stack.Pop();
+                    op2 = stack.Pop();
+                    stack.Push(op1 != op2);
+                    break;
+                case Opcode.Neg:
+                    ref ConstantValue val = ref stack.Peek();
+                    val = val.Type switch
                     {
-                        module = import;
-                        break;
+                        BuiltInType.Numeric => ConstantValue.Number(-val.AsNumber()!.Value),
+                        _ => ThrowHelper.Unreachable<ConstantValue>()
+                    };
+                    break;
+                case Opcode.Inc:
+                    val = ref stack.Peek();
+                    Debug.Assert(val.Type == BuiltInType.Numeric); // TODO: runtime error
+                    val = ConstantValue.Number(val.AsNumber()!.Value + 1);
+                    break;
+                case Opcode.Dec:
+                    val = ref stack.Peek();
+                    Debug.Assert(val.Type == BuiltInType.Numeric); // TODO: runtime error
+                    val = ConstantValue.Number(val.AsNumber()!.Value - 1);
+                    break;
+                case Opcode.Delta:
+                    val = ref stack.Peek();
+                    if (val.AsNumber() is { } num)
+                    {
+                        val = ConstantValue.Delta(num);
                     }
-                }
-            }
-
-            if (module is null) { return null; }
-            var frame = new CallFrame(module, (ushort)index, 0);
-            return new NsScriptThread(++_lastThreadId, ref frame);
-        }
-
-        public void SuspendThread(NsScriptThread thread, TimeSpan? timeout = null)
-        {
-            thread.Process.PendingThreadActions
-                .Enqueue(ThreadAction.Suspend(thread, timeout));
-        }
-
-        private void Join(NsScriptThread callingThread, NsScriptThread targetThread)
-        {
-            callingThread.Process.PendingThreadActions
-                .Enqueue(ThreadAction.Join(callingThread, targetThread));
-        }
-
-        public void ResumeThread(NsScriptThread thread)
-        {
-            thread.Process.PendingThreadActions
-                .Enqueue(ThreadAction.Resume(thread));
-        }
-
-        public void TerminateThread(NsScriptThread thread)
-        {
-            thread.Process.PendingThreadActions
-                .Enqueue(ThreadAction.Terminate(thread));
-        }
-
-        public NsScriptThread ActivateDialogueBlock(in DialogueBlockToken blockToken)
-            => ActivateDialogueBlock(CurrentProcess!, blockToken);
-
-        private NsScriptThread ActivateDialogueBlock(
-            NsScriptProcess process,
-            in DialogueBlockToken blockToken)
-        {
-            var frame = new CallFrame(
-                blockToken.Module,
-                (ushort)blockToken.SubroutineIndex,
-                pc: blockToken.Offset
-            );
-            NsScriptThread thread = CreateThread(process, ref frame, declaredId: process.CurrentThread!.Id);
-            thread.DialoguePage = new EntityPath("@" + blockToken.BlockName);
-            return thread;
-        }
-
-        public RunResult Run(
-            NsScriptProcess process,
-            BuiltInFunctions builtins,
-            CancellationToken cancellationToken)
-        {
-            builtins._vm = this;
-            CurrentProcess = process;
-            process.Tick();
-
-            while (process.IsRunning
-                && (!process.Threads.IsEmpty || process.PendingThreadActions.Count > 0))
-            {
-                process.ProcessPendingThreadActions();
-                uint nbActive = 0;
-                foreach (NsScriptThread thread in process.Threads)
-                {
-                    if (!process.IsRunning) { break; }
-                    if (thread.IsActive && !thread.Yielded)
+                    else
                     {
-                        process.CurrentThread = thread;
-                        nbActive++;
-                        TickResult tickResult = Tick(process, thread, builtins);
-                        if (!process.IsRunning) { break; }
-                        if (tickResult == TickResult.Yield)
-                        {
-                            thread.Yielded = true;
-                            nbActive--;
-                        }
-                        else if (thread.DoneExecuting)
-                        {
-                            if (thread.WaitingThread is { DoneExecuting: false } waitingThread)
-                            {
-                                ResumeThread(waitingThread);
-                                nbActive++;
-                            }
-                            TerminateThread(thread);
-                            nbActive--;
-                        }
-                    }
-                }
-
-                if (nbActive == 0)
-                {
-                    foreach (NsScriptThread thread in process.Threads)
-                    {
-                        thread.Yielded = false;
+                        val = ConstantValue.String("@" + val.AsString()!);
                     }
                     break;
-                }
-            }
+                case Opcode.Invert:
+                    val = ref stack.Peek();
+                    Debug.Assert(val.AsBool() is not null);
+                    val = ConstantValue.Boolean(!val.AsBool()!.Value);
+                    break;
+                case Opcode.Call:
+                    ushort subroutineToken = program.DecodeToken();
+                    frame.ProgramCounter = program.Position;
+                    var newFrame = new CallFrame(frame.Module, subroutineToken, 0);
+                    thread.CallFrameStack.Push(newFrame);
+                    return TickResult.Ok;
+                case Opcode.CallFar:
+                    newFrame = externalCall(ref program);
+                    thread.CallFrameStack.Push(newFrame);
+                    frame.ProgramCounter = program.Position;
+                    return TickResult.Ok;
+                case Opcode.CallScene:
+                    newFrame = externalCall(ref program);
+                    var newThread = new NsScriptThreadState(newFrame);
 
-            return new RunResult(process.NewThreads, process.TerminatedThreads);
-        }
-
-        internal ref ConstantValue GetVariable(int index)
-        {
-            ref ConstantValue val = ref _variables[index];
-            if (val.Type == BuiltInType.Uninitialized)
-            {
-                val = ConstantValue.Number(0);
-            }
-
-            return ref val;
-        }
-
-        internal ref ConstantValue GetFlag(int index)
-        {
-            ref ConstantValue val = ref _flags[index];
-            if (val.Type == BuiltInType.Uninitialized)
-            {
-                val = ConstantValue.Number(0);
-            }
-
-            return ref val;
-        }
-
-        private enum TickResult
-        {
-            Ok,
-            Yield
-        }
-
-        private TickResult Tick(NsScriptProcess process, NsScriptThread thread, BuiltInFunctions builtins)
-        {
-            if (thread.CallFrameStack.Count == 0)
-            {
-                return TickResult.Ok;
-            }
-
-            ref CallFrame frame = ref thread.CurrentFrame;
-            NsxModule thisModule = frame.Module;
-            Subroutine subroutine = thisModule.GetSubroutine(frame.SubroutineIndex);
-            var program = new BytecodeStream(subroutine.Code, frame.ProgramCounter);
-            ref ValueStack<ConstantValue> stack = ref thread.EvalStack;
-            while (true)
-            {
-                Opcode opcode = program.NextOpcode();
-                ushort varToken = ushort.MaxValue;
-                ushort flagToken;
-                ConstantValue? imm = opcode switch
-                {
-                    Opcode.LoadImm => readConst(ref program, thisModule),
-                    Opcode.LoadImm0 => ConstantValue.Number(0),
-                    Opcode.LoadImm1 => ConstantValue.Number(1),
-                    Opcode.LoadImmTrue => ConstantValue.True,
-                    Opcode.LoadImmFalse => ConstantValue.False,
-                    Opcode.LoadImmNull => ConstantValue.Null,
-                    Opcode.LoadImmEmptyStr => ConstantValue.EmptyString,
-                    Opcode.LoadVar => GetVariable(varToken = program.DecodeToken())
-                        .WithSlot((short)varToken),
-                    Opcode.LoadFlag => GetFlag(flagToken = program.DecodeToken())
-                        .WithSlot((short)flagToken),
-                    _ => null
-                };
-
-                if (imm.HasValue)
-                {
-                    if (varToken != ushort.MaxValue && varToken == SystemVariables.PresentProcess)
+                    //Join(thread, newThread);
+                    //ResumeThread(newThread);
+                    frame.ProgramCounter = program.Position;
+                    return TickResult.Ok;
+                case Opcode.Jump:
+                    int @base = program.Position - 1;
+                    int offset = program.DecodeOffset();
+                    program.Position = @base + offset;
+                    break;
+                case Opcode.JumpIfTrue:
+                    @base = program.Position - 1;
+                    ConstantValue condition = stack.Pop();
+                    offset = program.DecodeOffset();
+                    Debug.Assert(condition.Type == BuiltInType.Boolean);
+                    if (condition.AsBool()!.Value)
                     {
-                        string subName = thisModule.GetSubroutineName(frame.SubroutineIndex);
-                        imm = _variables[varToken] = ConstantValue.String(subName);
+                        program.Position = @base + offset;
+                    }
+                    break;
+                case Opcode.JumpIfFalse:
+                    @base = program.Position - 1;
+                    condition = stack.Pop();
+                    offset = program.DecodeOffset();
+                    if (!condition.AsBool()!.Value)
+                    {
+                        program.Position = @base + offset;
+                    }
+                    break;
+                case Opcode.Return:
+                    if (thread.CallFrameStack.Count > 0)
+                    {
+                        thread.CallFrameStack.Pop();
+                    }
+                    return TickResult.Ok;
+                case Opcode.BezierStart:
+                    _bezierSegmentStack.Clear();
+                    break;
+                case Opcode.BezierEndSeg:
+                    static BezierControlPoint popPoint(ref ValueStack<ConstantValue> stack)
+                    {
+                        var x = NsCoordinate.FromValue(stack.Pop());
+                        var y = NsCoordinate.FromValue(stack.Pop());
+                        return new BezierControlPoint(x, y);
                     }
 
-                    ConstantValue value = imm.Value;
-                    stack.Push(ref value);
-                    continue;
-                }
-
-                switch (opcode)
-                {
-                    case Opcode.StoreVar:
-                        int index = program.DecodeToken();
-                        GetVariable(index) = stack.Pop();
-                        break;
-                    case Opcode.StoreFlag:
-                        index = program.DecodeToken();
-                        GetFlag(index) = stack.Pop();
-                        break;
-                    case Opcode.Binary:
-                        var opKind = (BinaryOperatorKind)program.ReadByte();
-                        ConstantValue op1 = stack.Pop();
-                        ConstantValue op2 = stack.Pop();
-                        stack.Push(BinOp(op1, opKind, op2));
-                        break;
-                    case Opcode.Equal:
-                        op1 = stack.Pop();
-                        op2 = stack.Pop();
-                        stack.Push(op1 == op2);
-                        break;
-                    case Opcode.NotEqual:
-                        op1 = stack.Pop();
-                        op2 = stack.Pop();
-                        stack.Push(op1 != op2);
-                        break;
-                    case Opcode.Neg:
-                        ref ConstantValue val = ref stack.Peek();
-                        val = val.Type switch
-                        {
-                            BuiltInType.Numeric => ConstantValue.Number(-val.AsNumber()!.Value),
-                            _ => ThrowHelper.Unreachable<ConstantValue>()
-                        };
-                        break;
-                    case Opcode.Inc:
-                        val = ref stack.Peek();
-                        Debug.Assert(val.Type == BuiltInType.Numeric); // TODO: runtime error
-                        val = ConstantValue.Number(val.AsNumber()!.Value + 1);
-                        break;
-                    case Opcode.Dec:
-                        val = ref stack.Peek();
-                        Debug.Assert(val.Type == BuiltInType.Numeric); // TODO: runtime error
-                        val = ConstantValue.Number(val.AsNumber()!.Value - 1);
-                        break;
-                    case Opcode.Delta:
-                        val = ref stack.Peek();
-                        if (val.AsNumber() is float num)
-                        {
-                            val = ConstantValue.Delta(num);
-                        }
-                        else
-                        {
-                            val = ConstantValue.String("@" + val.AsString()!);
-                        }
-                        break;
-                    case Opcode.Invert:
-                        val = ref stack.Peek();
-                        Debug.Assert(val.AsBool() is not null);
-                        val = ConstantValue.Boolean(!val.AsBool()!.Value);
-                        break;
-                    case Opcode.Call:
-                        ushort subroutineToken = program.DecodeToken();
-                        frame.ProgramCounter = program.Position;
-                        var newFrame = new CallFrame(frame.Module, subroutineToken, 0);
-                        thread.CallFrameStack.Push(newFrame);
-                        if (process.CurrentThread == process.MainThread)
-                        {
-                            //string name = thisModule.GetSubroutineRuntimeInfo(subroutineToken)
-                            //    .SubroutineName;
-                            //for (int i = 0; i < thread.CallFrameStack.Count; i++)
-                            //{
-                            //    Console.Write(" ");
-                            //}
-                            //Console.WriteLine("near: " + name);
-                        }
-                        return TickResult.Ok;
-                    case Opcode.CallFar:
-                        newFrame = externalCall(ref program);
-                        thread.CallFrameStack.Push(newFrame);
-                        frame.ProgramCounter = program.Position;
-                        if (process.CurrentThread == process.MainThread)
-                        {
-                            string name = newFrame.Module
-                                .GetSubroutineRuntimeInfo(newFrame.SubroutineIndex)
-                                .SubroutineName;
-                            for (int i = 0; i < thread.CallFrameStack.Count; i++)
+                    var seg = new CubicBezierSegment(
+                        popPoint(ref stack),
+                        popPoint(ref stack),
+                        popPoint(ref stack),
+                        popPoint(ref stack)
+                    );
+                    _bezierSegmentStack.Push(seg);
+                    break;
+                case Opcode.BezierEnd:
+                    var curve = new CompositeBezier(_bezierSegmentStack.ToImmutableArray());
+                    stack.Push(ConstantValue.BezierCurve(curve));
+                    break;
+                case Opcode.Dispatch:
+                    var func = (BuiltInFunction)program.ReadByte();
+                    int argCount = program.ReadByte();
+                    ReadOnlySpan<ConstantValue> args = stack.AsSpan(stack.Count - argCount, argCount);
+                    switch (func)
+                    {
+                        default:
+                            ConstantValue? result = _builtInCallDispatcher.Dispatch(builtins, func, args);
+                            stack.Pop(argCount);
+                            if (result is not null)
                             {
-                                Console.Write(" ");
+                                stack.Push(result.Value);
                             }
-                            Console.WriteLine("far: " + name);
-                        }
-                        return TickResult.Ok;
-                    case Opcode.CallScene:
-                        newFrame = externalCall(ref program);
-                        NsScriptThread newThread = CreateThread(process, ref newFrame);
-                        Join(thread, newThread);
-                        ResumeThread(newThread);
-                        frame.ProgramCounter = program.Position;
-                        return TickResult.Ok;
-                    case Opcode.Jump:
-                        int @base = program.Position - 1;
-                        int offset = program.DecodeOffset();
-                        program.Position = @base + offset;
-                        break;
-                    case Opcode.JumpIfTrue:
-                        @base = program.Position - 1;
-                        ConstantValue condition = stack.Pop();
-                        offset = program.DecodeOffset();
-                        Debug.Assert(condition.Type == BuiltInType.Boolean);
-                        if (condition.AsBool()!.Value)
-                        {
-                            program.Position = @base + offset;
-                        }
-                        break;
-                    case Opcode.JumpIfFalse:
-                        @base = program.Position - 1;
-                        condition = stack.Pop();
-                        offset = program.DecodeOffset();
-                        if (!condition.AsBool()!.Value)
-                        {
-                            program.Position = @base + offset;
-                        }
-                        break;
-                    case Opcode.Return:
-                        if (thread.CallFrameStack.Count > 0)
-                        {
-                            thread.CallFrameStack.Pop();
-                        }
-                        return TickResult.Ok;
-                    case Opcode.BezierStart:
-                        _bezierSegmentStack.Clear();
-                        break;
-                    case Opcode.BezierEndSeg:
-                        static BezierControlPoint popPoint(ref ValueStack<ConstantValue> stack)
-                        {
-                            var x = NsCoordinate.FromValue(stack.Pop());
-                            var y = NsCoordinate.FromValue(stack.Pop());
-                            return new BezierControlPoint(x, y);
-                        }
+                            break;
 
-                        var seg = new CubicBezierSegment(
-                            popPoint(ref stack),
-                            popPoint(ref stack),
-                            popPoint(ref stack),
-                            popPoint(ref stack)
-                        );
-                        _bezierSegmentStack.Push(seg);
-                        break;
-                    case Opcode.BezierEnd:
-                        var curve = new CompositeBezier(_bezierSegmentStack.ToImmutableArray());
-                        stack.Push(ConstantValue.BezierCurve(curve));
-                        break;
-                    case Opcode.Dispatch:
-                        var func = (BuiltInFunction)program.ReadByte();
-                        int argCount = program.ReadByte();
-                        ReadOnlySpan<ConstantValue> args = stack.AsSpan(stack.Count - argCount, argCount);
-                        switch (func)
-                        {
-                            default:
-                                if (process.CurrentThread == process.MainThread)
-                                {
-                                    //Console.Write($"Built-in: {func.ToString()}(");
-                                    //foreach (ref readonly ConstantValue cv in args)
-                                    //{
-                                    //    Console.Write(cv.ConvertToString() + ", ");
-                                    //}
-                                    //Console.Write(")\r\n");
-                                }
-                                ConstantValue? result = _builtInCallDispatcher.Dispatch(builtins, func, args);
-                                stack.Pop(argCount);
-                                if (result is not null)
-                                {
-                                    stack.Push(result.Value);
-                                }
-                                break;
+                        case BuiltInFunction.log:
+                            ConstantValue arg = stack.Pop();
+                            Console.WriteLine($"[VM]: {arg.ConvertToString()}");
+                            break;
+                        case BuiltInFunction.fail:
+                            string subName = thisModule
+                                .GetSubroutineRuntimeInfo(frame.SubroutineIndex).SubroutineName;
+                            Console.WriteLine($"{subName} + {program.Position - 1}: test failed.");
+                            break;
+                        case BuiltInFunction.fail_msg:
+                            ConstantValue message = stack.Pop();
+                            subName = thisModule.GetSubroutineRuntimeInfo(frame.SubroutineIndex)
+                                .SubroutineName;
+                            Console.WriteLine($"{subName} + {program.Position - 1}: {message.ToString()}.");
+                            break;
+                    }
+                    frame.ProgramCounter = program.Position;
+                    return TickResult.Ok;
 
-                            case BuiltInFunction.log:
-                                ConstantValue arg = stack.Pop();
-                                Console.WriteLine($"[VM]: {arg.ConvertToString()}");
-                                break;
-                            case BuiltInFunction.fail:
-                                string subName = thisModule
-                                    .GetSubroutineRuntimeInfo(frame.SubroutineIndex).SubroutineName;
-                                Console.WriteLine($"{subName} + {program.Position - 1}: test failed.");
-                                break;
-                            case BuiltInFunction.fail_msg:
-                                ConstantValue message = stack.Pop();
-                                subName = thisModule.GetSubroutineRuntimeInfo(frame.SubroutineIndex)
-                                    .SubroutineName;
-                                Console.WriteLine($"{subName} + {program.Position - 1}: {message.ToString()}.");
-                                break;
-                        }
-                        frame.ProgramCounter = program.Position;
-                        return TickResult.Ok;
-
-                    case Opcode.ActivateBlock:
-                        ushort blockId = program.DecodeToken();
-                        ref readonly var srti = ref thisModule.GetSubroutineRuntimeInfo(
-                            frame.SubroutineIndex
-                        );
-                        (string box, string textName) = srti.DialogueBlockInfos[blockId];
-                        SystemVariables.CurrentDialogueBox = ConstantValue.String(box);
-                        SystemVariables.CurrentDialogueBlock = ConstantValue.String("@" + textName);
-                        break;
-                    case Opcode.ClearPage:
-                        Debug.Assert(thread.DialoguePage.HasValue);
-                        builtins.ClearDialoguePage(thread.DialoguePage.Value);
-                        break;
-                    case Opcode.AppendDialogue:
-                        Debug.Assert(thread.DialoguePage.HasValue);
-                        string text = thisModule.GetString(program.DecodeToken());
-                        builtins.AppendDialogue(thread.DialoguePage.Value, text);
-                        break;
-                    case Opcode.LineEnd:
-                        Debug.Assert(thread.DialoguePage.HasValue);
-                        builtins.LineEnd(thread.DialoguePage.Value);
-                        frame.ProgramCounter = program.Position;
-                        return TickResult.Ok;
-
-                    case Opcode.SelectLoopStart:
-                        thread.SelectResult = false;
-                        break;
-                    case Opcode.IsPressed:
-                        string choice = thisModule.GetString(program.DecodeToken());
-                        bool pressed = builtins.HandleInputEvents(new EntityPath(choice));
-                        stack.Push(ConstantValue.Boolean(pressed));
-                        thread.SelectResult |= pressed;
-                        break;
-                    case Opcode.SelectLoopEnd:
-                        stack.Push(ConstantValue.Boolean(thread.SelectResult));
-                        frame.ProgramCounter = program.Position;
-                        return TickResult.Yield;
-                    case Opcode.SelectEnd:
-                        builtins.SelectEnd();
-                        break;
-                }
-            }
-
-            CallFrame externalCall(ref BytecodeStream program)
-            {
-                ushort importTableIndex = program.DecodeToken();
-                ushort subroutineToken = program.DecodeToken();
-                string externalModuleName = thisModule.Imports[importTableIndex];
-                NsxModule externalModule = GetModule(externalModuleName);
-                return new CallFrame(externalModule, subroutineToken, 0);
-            }
-
-            static ConstantValue readConst(ref BytecodeStream stream, NsxModule module)
-            {
-                Immediate imm = stream.DecodeImmediateValue();
-                return imm.Type switch
-                {
-                    BuiltInType.Numeric => ConstantValue.Number(imm.Numeric),
-                    BuiltInType.DeltaNumeric => ConstantValue.Delta(imm.Numeric),
-                    BuiltInType.BuiltInConstant => ConstantValue.BuiltInConstant(imm.Constant),
-                    BuiltInType.String => ConstantValue.String(module.GetString(imm.StringToken)),
-                    _ => ThrowHelper.Unreachable<ConstantValue>()
-                };
+                case Opcode.ActivateBlock:
+                    ushort blockId = program.DecodeToken();
+                    ref readonly var subroutineInfo = ref thisModule.GetSubroutineRuntimeInfo(frame.SubroutineIndex);
+                    (string box, string textName) = subroutineInfo.DialogueBlockInfos[blockId];
+                    SystemVariables.CurrentDialogueBox = ConstantValue.String(box);
+                    SystemVariables.CurrentDialogueBlock = ConstantValue.String("@" + textName);
+                    break;
+                case Opcode.ClearPage:
+                    Debug.Assert(thread.DialoguePage.HasValue);
+                    builtins.ClearDialoguePage(thread.DialoguePage.Value);
+                    break;
+                case Opcode.AppendDialogue:
+                    Debug.Assert(thread.DialoguePage.HasValue);
+                    string text = thisModule.GetString(program.DecodeToken());
+                    builtins.AppendDialogue(thread.DialoguePage.Value, text);
+                    break;
+                case Opcode.LineEnd:
+                    Debug.Assert(thread.DialoguePage.HasValue);
+                    builtins.LineEnd(thread.DialoguePage.Value);
+                    frame.ProgramCounter = program.Position;
+                    return TickResult.Ok;
+                case Opcode.SelectLoopStart:
+                    thread.SelectResult = false;
+                    break;
+                case Opcode.IsPressed:
+                    string choice = thisModule.GetString(program.DecodeToken());
+                    bool pressed = builtins.HandleInputEvents(EntityPath.Parse(choice));
+                    stack.Push(ConstantValue.Boolean(pressed));
+                    thread.SelectResult |= pressed;
+                    break;
+                case Opcode.SelectLoopEnd:
+                    stack.Push(ConstantValue.Boolean(thread.SelectResult));
+                    frame.ProgramCounter = program.Position;
+                    return TickResult.Yield;
+                case Opcode.SelectEnd:
+                    builtins.SelectEnd();
+                    break;
             }
         }
 
-        private static ConstantValue BinOp(
-            in ConstantValue left,
-            BinaryOperatorKind opKind,
-            in ConstantValue right)
+        CallFrame externalCall(ref BytecodeStream program)
         {
-            return opKind switch
+            ushort importTableIndex = program.DecodeToken();
+            ushort subroutineToken = program.DecodeToken();
+            string externalModuleName = thisModule.Imports[importTableIndex];
+            NsxModule externalModule = GetModule(externalModuleName);
+            return new CallFrame(externalModule, subroutineToken, 0);
+        }
+
+        static ConstantValue readConst(ref BytecodeStream stream, NsxModule module)
+        {
+            Immediate imm = stream.DecodeImmediateValue();
+            return imm.Type switch
             {
-                BinaryOperatorKind.Add => left + right,
-                BinaryOperatorKind.Subtract => left - right,
-                BinaryOperatorKind.Multiply => left * right,
-                BinaryOperatorKind.Divide => left / right,
-                BinaryOperatorKind.LessThan => left < right,
-                BinaryOperatorKind.LessThanOrEqual => left <= right,
-                BinaryOperatorKind.GreaterThan => left > right,
-                BinaryOperatorKind.GreaterThanOrEqual => left >= right,
-                BinaryOperatorKind.And => left && right,
-                BinaryOperatorKind.Or => left || right,
-                BinaryOperatorKind.Remainder => left % right,
+                BuiltInType.Numeric => ConstantValue.Number(imm.Numeric),
+                BuiltInType.DeltaNumeric => ConstantValue.Delta(imm.Numeric),
+                BuiltInType.BuiltInConstant => ConstantValue.BuiltInConstant(imm.Constant),
+                BuiltInType.String => ConstantValue.String(module.GetString(imm.StringToken)),
                 _ => ThrowHelper.Unreachable<ConstantValue>()
             };
         }
     }
 
-    public sealed class SystemVariableLookup
+    private static ConstantValue BinOp(
+        in ConstantValue left,
+        BinaryOperatorKind opKind,
+        in ConstantValue right)
     {
-        private readonly NsScriptVM _vm;
-        private readonly GlobalsLookupTable _nameLookup;
-
-        public readonly int PresentProcess;
-        private readonly int _presentPreprocess;
-        private readonly int _presentText;
-
-        private readonly int _rButtonDown;
-        private readonly int _x360ButtonStartDown;
-        private readonly int _x360ButtonADown;
-        private readonly int _x360ButtonBDown;
-        private readonly int _x360ButtonYDown;
-
-        private readonly int _x360ButtonLeftDown;
-        private readonly int _x360ButtonUpDown;
-        private readonly int _x360ButtonRightDown;
-        private readonly int _x360ButtonDownDown;
-
-        private readonly int _x360ButtonLbDown;
-        private readonly int _x360ButtonRbDown;
-        private readonly int _backlogEnable;
-        private readonly int _backlogRowMax;
-        private readonly int _backlogPositionX;
-        private readonly int _backlogPositionY;
-        private readonly int _backlogRowInterval;
-        private readonly int _backlogCharacterWidth;
-
-        private readonly int _positionXTextIcon;
-        private readonly int _positionYTextIcon;
-        private readonly int _savePath;
-
-        private readonly int _lastText;
-        private readonly int _skip;
-        private readonly int _textAuto;
-        private readonly int _textAutoLock;
-        private readonly int _menuLock;
-        private readonly int _skipLock;
-        private readonly int _backlogLock;
-
-        private ConstantValue _missingVariable = ConstantValue.Null;
-
-        public SystemVariableLookup(NsScriptVM vm)
+        return opKind switch
         {
-            _vm = vm;
-            _nameLookup = vm.GlobalsLookup;
-
-            _savePath = Lookup("SYSTEM_save_path");
-
-            _presentPreprocess = Lookup("SYSTEM_present_preprocess");
-            _presentText = Lookup("SYSTEM_present_text");
-            PresentProcess = Lookup("SYSTEM_present_process");
-            _rButtonDown = Lookup("SYSTEM_r_button_down");
-            _x360ButtonStartDown = Lookup("SYSTEM_XBOX360_button_start_down");
-            _x360ButtonADown = Lookup("SYSTEM_XBOX360_button_a_down");
-            _x360ButtonBDown = Lookup("SYSTEM_XBOX360_button_b_down");
-            _x360ButtonYDown = Lookup("SYSTEM_XBOX360_button_y_down");
-            _x360ButtonLeftDown = Lookup("SYSTEM_XBOX360_button_left_down");
-            _x360ButtonUpDown = Lookup("SYSTEM_XBOX360_button_up_down");
-            _x360ButtonRightDown = Lookup("SYSTEM_XBOX360_button_right_down");
-            _x360ButtonDownDown = Lookup("SYSTEM_XBOX360_button_down_down");
-            _x360ButtonLbDown = Lookup("SYSTEM_XBOX360_button_lb_down");
-            _x360ButtonRbDown = Lookup("SYSTEM_XBOX360_button_rb_down");
-
-            _backlogEnable = Lookup("SYSTEM_backlog_enable");
-            _backlogRowMax = Lookup("SYSTEM_backlog_row_max");
-            _backlogPositionX = Lookup("SYSTEM_backlog_position_x");
-            _backlogPositionY = Lookup("SYSTEM_backlog_position_y");
-            _backlogRowInterval = Lookup("SYSTEM_backlog_row_interval");
-            _backlogCharacterWidth = Lookup("SYSTEM_backlog_character_width");
-
-            _positionXTextIcon = Lookup("SYSTEM_position_x_text_icon");
-            _positionYTextIcon = Lookup("SYSTEM_position_y_text_icon");
-            _lastText = Lookup("SYSTEM_last_text");
-            _skip = Lookup("SYSTEM_skip");
-            _textAuto = Lookup("SYSTEM_text_auto");
-            _textAutoLock = Lookup("SYSTEM_text_auto_lock");
-
-            _menuLock = Lookup("SYSTEM_menu_lock");
-            _skipLock = Lookup("SYSTEM_skip_lock");
-            _backlogLock = Lookup("SYSTEM_backlog_lock");
-        }
-
-        private int Lookup(string name)
-        {
-            if (!_nameLookup.TryLookupSystemVariable(name, out int index))
-            {
-                if (!_nameLookup.TryLookupSystemFlag(name, out index))
-                {
-                    return -1;
-                }
-            }
-            return index;
-        }
-
-        public ref ConstantValue CurrentSubroutineName => ref Var(PresentProcess);
-        public ref ConstantValue CurrentDialogueBox => ref Var(_presentPreprocess);
-        public ref ConstantValue CurrentDialogueBlock => ref Var(_presentText);
-        public ref ConstantValue RightButtonDown => ref Var(_rButtonDown);
-
-        public ref ConstantValue X360StartButtonDown => ref Var(_x360ButtonStartDown);
-        public ref ConstantValue X360AButtonDown => ref Var(_x360ButtonADown);
-        public ref ConstantValue X360BButtonDown => ref Var(_x360ButtonBDown);
-        public ref ConstantValue X360YButtonDown => ref Var(_x360ButtonYDown);
-
-        public ref ConstantValue X360LeftButtonDown => ref Var(_x360ButtonLeftDown);
-        public ref ConstantValue X360UpButtonDown => ref Var(_x360ButtonUpDown);
-        public ref ConstantValue X360RightButtonDown => ref Var(_x360ButtonRightDown);
-        public ref ConstantValue X360DownButtonDown => ref Var(_x360ButtonDownDown);
-
-        public ref ConstantValue X360LbButtonDown => ref Var(_x360ButtonLbDown);
-        public ref ConstantValue X360RbButtonDown => ref Var(_x360ButtonRbDown);
-
-        private ref ConstantValue Var(int index)
-        {
-            return ref index >= 0
-                ? ref _vm.GetVariable(index)
-                : ref _missingVariable;
-        }
-
-        private ref ConstantValue Flag(int index)
-        {
-            return ref index >= 0
-               ? ref _vm.GetFlag(index)
-               : ref _missingVariable;
-        }
-
-        public ref ConstantValue BacklogEnable => ref _vm.GetVariable(_backlogEnable);
-        public ref ConstantValue BacklogRowMax => ref _vm.GetVariable(_backlogRowMax);
-        public ref ConstantValue BacklogRowInterval => ref _vm.GetVariable(_backlogRowInterval);
-        public ref ConstantValue BacklogPositionX => ref _vm.GetVariable(_backlogPositionX);
-        public ref ConstantValue BacklogPositionY => ref _vm.GetVariable(_backlogPositionY);
-        public ref ConstantValue BacklogCharacterWidth => ref _vm.GetVariable(_backlogCharacterWidth);
-
-        public ref ConstantValue PositionXTextIcon => ref _vm.GetVariable(_positionXTextIcon);
-        public ref ConstantValue PositionYTextIcon => ref _vm.GetVariable(_positionYTextIcon);
-
-        public ref ConstantValue SavePath => ref Flag(_savePath);
-
-        public ref ConstantValue LastText => ref Var(_lastText);
-
-        public ref ConstantValue Skip => ref Var(_skip);
-        public ref ConstantValue TextAuto => ref Var(_textAuto);
-        public ref ConstantValue TextAutoLock => ref Var(_textAutoLock);
-
-        public ref ConstantValue MenuLock => ref Var(_menuLock);
-        public ref ConstantValue SkipLock => ref Var(_skipLock);
-        public ref ConstantValue BacklogLock => ref Var(_backlogLock);
+            BinaryOperatorKind.Add => left + right,
+            BinaryOperatorKind.Subtract => left - right,
+            BinaryOperatorKind.Multiply => left * right,
+            BinaryOperatorKind.Divide => left / right,
+            BinaryOperatorKind.LessThan => left < right,
+            BinaryOperatorKind.LessThanOrEqual => left <= right,
+            BinaryOperatorKind.GreaterThan => left > right,
+            BinaryOperatorKind.GreaterThanOrEqual => left >= right,
+            BinaryOperatorKind.And => left && right,
+            BinaryOperatorKind.Or => left || right,
+            BinaryOperatorKind.Remainder => left % right,
+            _ => ThrowHelper.Unreachable<ConstantValue>()
+        };
     }
 }

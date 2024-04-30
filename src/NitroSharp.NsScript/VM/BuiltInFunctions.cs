@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 using NitroSharp.NsScript.Primitives;
 
@@ -7,16 +8,11 @@ namespace NitroSharp.NsScript.VM
     public abstract class BuiltInFunctions
     {
         internal NsScriptVM? _vm;
-        private readonly Random _randomGen;
+        private readonly Random _randomGen = new();
 
-        protected BuiltInFunctions()
-        {
-            _randomGen = new Random();
-        }
-
-        public NsScriptProcess CurrentProcess => VM.CurrentProcess!;
-        public NsScriptThread CurrentThread => CurrentProcess.CurrentThread!;
         protected NsScriptVM VM => _vm!;
+
+        [NotNull] public NsxModule? CurrentModule { get; internal set; }
 
         /// <summary>
         /// Original name: Random.
@@ -39,10 +35,10 @@ namespace NitroSharp.NsScript.VM
         public virtual ConstantValue FormatString(string format, object[] args) => throw new NotImplementedException();
 
         public virtual void CreateEntity(in EntityPath path) { }
-        public virtual void CreateThread(in EntityPath entityPath, string target) { }
-        public virtual void SetAlias(in EntityPath entityPath, in EntityPath alias) { }
-        public virtual void Request(EntityQuery query, NsEntityAction action) { }
-        public virtual void DestroyEntities(EntityQuery query) { }
+        public virtual void CreateThread(in EntityPath entityPath, string target, NsCoordinate x, NsCoordinate y) { }
+        public virtual void SetAlias(in EntityPath entityPath, in EntityAlias alias) { }
+        public virtual void Request(in EntityQuery query, NsEntityAction action) { }
+        public virtual void DestroyEntities(in EntityQuery query) { }
 
         /// <summary>
         /// Original name: Wait.

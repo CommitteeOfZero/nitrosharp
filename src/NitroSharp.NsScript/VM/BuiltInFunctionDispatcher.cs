@@ -508,7 +508,7 @@ namespace NitroSharp.NsScript.VM
         {
             EntityQuery query = args.TakeEntityQuery();
             TimeSpan ts = args.TakeTimeSpan();
-            TimeSpan? tsOpt = ts > TimeSpan.Zero ? ts : (TimeSpan?)null;
+            TimeSpan? tsOpt = ts > TimeSpan.Zero ? ts : null;
             _impl.WaitAction(query, tsOpt);
         }
 
@@ -621,27 +621,27 @@ namespace NitroSharp.NsScript.VM
 
         private void LoadText(ref ArgConsumer args)
         {
-            string subroutineName = args.TakeString();
-            string boxName = args.TakeString();
-            string blockName = args.TakeString();
-            uint maxWidth = args.TakeUInt();
-            uint maxHeight = args.TakeUInt();
-            int letterSpacing = args.TakeInt();
-            int lineSpacing = args.TakeInt();
-
-            if (blockName.StartsWith('@'))
-            {
-                blockName = blockName[1..];
-            }
-
-            NsxModule module = _impl.CurrentThread.CallFrameStack.Peek(1).Module;
-            int sub = module.LookupSubroutineIndex(subroutineName);
-            ref readonly SubroutineRuntimeInfo srti = ref module.GetSubroutineRuntimeInfo(sub);
-            int blockIndex = srti.LookupDialogueBlockIndex(blockName);
-            int codeOffset = module.GetSubroutine(sub).DialogueBlockOffsets[blockIndex];
-
-            var token = new DialogueBlockToken(boxName, blockName, module, sub, codeOffset);
-            _impl.LoadDialogueBlock(token, maxWidth, maxHeight, letterSpacing, lineSpacing);
+            // string subroutineName = args.TakeString();
+            // string boxName = args.TakeString();
+            // string blockName = args.TakeString();
+            // uint maxWidth = args.TakeUInt();
+            // uint maxHeight = args.TakeUInt();
+            // int letterSpacing = args.TakeInt();
+            // int lineSpacing = args.TakeInt();
+            //
+            // if (blockName.StartsWith('@'))
+            // {
+            //     blockName = blockName[1..];
+            // }
+            //
+            // NsxModule module = _impl.CurrentThread.CallFrameStack.Peek(1).Module;
+            // int sub = module.LookupSubroutineIndex(subroutineName);
+            // ref readonly SubroutineRuntimeInfo srti = ref module.GetSubroutineRuntimeInfo(sub);
+            // int blockIndex = srti.LookupDialogueBlockIndex(blockName);
+            // int codeOffset = module.GetSubroutine(sub).DialogueBlockOffsets[blockIndex];
+            //
+            // var token = new DialogueBlockToken(boxName, blockName, module, sub, codeOffset);
+            // _impl.LoadDialogueBlock(token, maxWidth, maxHeight, letterSpacing, lineSpacing);
         }
 
         private void WaitText(ref ArgConsumer args)
@@ -765,14 +765,13 @@ namespace NitroSharp.NsScript.VM
                     NsEaseFunction.Linear,
                     TimeSpan.Zero
                 );
-                return;
             }
             else
             {
                 TimeSpan duration = args.TakeTimeSpan();
                 NsRational dstOpacity = args.TakeRational();
                 NsEaseFunction easeFunction = NsEaseFunction.Linear;
-                TimeSpan animDelay = default;
+                TimeSpan animDelay;
                 if (args.Count == 4)
                 {
                     animDelay = args.TakeAnimDelay(duration);
@@ -823,7 +822,7 @@ namespace NitroSharp.NsScript.VM
         {
             _impl.SetAlias(
                 args.TakeEntityPath(),
-                alias: args.TakeEntityPath()
+                alias: args.TakeEntityAlias()
             );
         }
 
@@ -841,10 +840,10 @@ namespace NitroSharp.NsScript.VM
         {
             EntityPath entityPath = args.TakeEntityPath();
             args.Skip();
-            args.Skip();
-            args.Skip();
+            NsCoordinate x = args.TakeCoordinate();
+            NsCoordinate y = args.TakeCoordinate();
             string target = args.TakeString();
-            _impl.CreateThread(entityPath, target);
+            _impl.CreateThread(entityPath, target, x, y);
         }
 
         private void CreateChoice(ref ArgConsumer args)
@@ -1154,8 +1153,9 @@ namespace NitroSharp.NsScript.VM
                     : defaultValue;
             }
 
-            public EntityPath TakeEntityPath() => new(TakeString());
-            public EntityQuery TakeEntityQuery() => new(TakeString());
+            public EntityPath TakeEntityPath() => EntityPath.Parse(TakeString());
+            public EntityAlias TakeEntityAlias() => EntityAlias.Parse(TakeString());
+            public EntityQuery TakeEntityQuery() => EntityQuery.Parse(TakeString());
 
             public string TakeString()
             {

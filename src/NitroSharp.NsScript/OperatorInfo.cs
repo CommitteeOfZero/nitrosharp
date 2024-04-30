@@ -19,7 +19,6 @@
                 BinaryOperatorKind.GreaterThanOrEqual => ">=",
                 BinaryOperatorKind.And => "&&",
                 BinaryOperatorKind.Or => "||",
-
                 _ => throw ThrowHelper.UnexpectedValue(nameof(operatorKind)),
             };
         }
@@ -35,7 +34,6 @@
                 AssignmentOperatorKind.DivideAssign => "/=",
                 AssignmentOperatorKind.Increment => "++",
                 AssignmentOperatorKind.Decrement => "--",
-
                 _ => throw ThrowHelper.UnexpectedValue(nameof(operatorKind)),
             };
         }
@@ -47,7 +45,7 @@
                 UnaryOperatorKind.Not => "!",
                 UnaryOperatorKind.Plus => "+",
                 UnaryOperatorKind.Minus => "-",
-
+                UnaryOperatorKind.Delta => "@",
                 _ => throw ThrowHelper.UnexpectedValue(nameof(operatorKind)),
             };
         }

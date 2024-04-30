@@ -97,6 +97,7 @@ namespace NitroSharp.NsScript.VM
                     : new byte[length];
                 _stream.Read(bytes);
                 s = Encoding.UTF8.GetString(bytes);
+
             }
 
             return s;
@@ -148,7 +149,7 @@ namespace NitroSharp.NsScript.VM
                 stream.Read(bytes);
 
                 TableHeader header;
-                bytes.Slice(0, 4).CopyTo(new Span<byte>(header.Marker, 4));
+                bytes[..4].CopyTo(new Span<byte>(header.Marker, 4));
                 header.TableSize = BinaryPrimitives.ReadUInt16LittleEndian(bytes.Slice(4));
                 return header;
             }
@@ -238,12 +239,12 @@ namespace NitroSharp.NsScript.VM
         {
             _bytes = bytes;
             var reader = new BufferReader(bytes);
-            int dialogoueBlockCount = reader.ReadUInt16LE();
+            int dialogueBlockCount = reader.ReadUInt16LE();
             DialogueBlockOffsets = Array.Empty<int>();
-            if (dialogoueBlockCount > 0)
+            if (dialogueBlockCount > 0)
             {
-                DialogueBlockOffsets = new int[dialogoueBlockCount];
-                for (int i = 0; i < dialogoueBlockCount; i++)
+                DialogueBlockOffsets = new int[dialogueBlockCount];
+                for (int i = 0; i < dialogueBlockCount; i++)
                 {
                     DialogueBlockOffsets[i] = reader.ReadUInt16LE();
                 }

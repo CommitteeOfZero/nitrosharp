@@ -1,5 +1,6 @@
 {
   "graphics.vsync": true,
-  "graphics.backend": "Auto",
+  "graphics.backend": "D3D11",
+  "graphics.renderResolution" : "1920x1080",
   "audio.backend": "Auto"
 }

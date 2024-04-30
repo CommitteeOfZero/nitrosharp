@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Diagnostics;
 using System.IO;
 using NitroSharp.NsScript.Syntax;
 using NitroSharp.NsScript.Utilities;
@@ -221,9 +220,9 @@ namespace NitroSharp.NsScript.Compiler
                 offsetWriter.WriteUInt16LE((ushort)rtiWriter.Position);
                 byte kind = subroutine.Kind switch
                 {
-                    SymbolKind.Chapter => (byte)0x00,
-                    SymbolKind.Scene => (byte)0x01,
-                    SymbolKind.Function => (byte)0x02,
+                    SymbolKind.Chapter => 0x00,
+                    SymbolKind.Scene => 0x01,
+                    SymbolKind.Function => 0x02,
                     _ => ThrowHelper.Unreachable<byte>()
                 };
                 rtiWriter.WriteByte(kind);

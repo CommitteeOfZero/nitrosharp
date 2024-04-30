@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace NitroSharp.Utilities
+namespace NitroSharp.NsScript.Utilities
 {
     internal static class FnvHasher
     {

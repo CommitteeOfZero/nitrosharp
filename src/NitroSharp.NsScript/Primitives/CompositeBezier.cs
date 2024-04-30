@@ -9,7 +9,9 @@ namespace NitroSharp.NsScript.Primitives
         public readonly ImmutableArray<CubicBezierSegment> Segments;
 
         public CompositeBezier(ImmutableArray<CubicBezierSegment> segments)
-            => Segments = segments;
+        {
+            Segments = segments;
+        }
 
         public override int GetHashCode()
         {

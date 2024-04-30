@@ -4,6 +4,7 @@ using System.Numerics;
 using NitroSharp.Graphics;
 using NitroSharp.Media;
 using NitroSharp.NsScript;
+using NitroSharp.NsScript.Primitives;
 using NitroSharp.NsScript.VM;
 using NitroSharp.Utilities;
 
@@ -171,7 +172,7 @@ namespace NitroSharp
             _ctx.Reset();
         }
 
-        public override void SetAlias(in EntityPath entityPath, in EntityPath alias)
+        public override void SetAlias(in EntityPath entityPath, in EntityAlias alias)
         {
             if (ResolvePath(entityPath, out ResolvedEntityPath resolvedPath))
             {
@@ -190,7 +191,7 @@ namespace NitroSharp
             }
         }
 
-        public override void CreateThread(in EntityPath entityPath, string target)
+        public override void CreateThread(in EntityPath entityPath, string target, NsCoordinate x, NsCoordinate y)
         {
             if (ResolvePath(entityPath, out ResolvedEntityPath resolvedPath))
             {

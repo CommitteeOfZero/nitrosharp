@@ -1,92 +1,184 @@
 ﻿using System;
+using System.Buffers;
 using System.Diagnostics;
+using System.Linq;
+using NitroSharp.NsScript.Utilities;
 using NitroSharp.Utilities;
 
 namespace NitroSharp.NsScript;
 
-[DebuggerDisplay("{Value}")]
 public readonly struct EntityQuery
 {
-    public EntityQuery(string query)
+    private readonly SmallList<EntityQueryPart> _parts;
+
+    private EntityQuery(SmallList<EntityQueryPart> parts)
     {
-        Value = query;
+        _parts = parts;
     }
 
-    public readonly string Value;
+    public ReadOnlySpan<EntityQueryPart> Parts => _parts.AsReadOnlySpan();
 
-    public EntityQueryPartEnumerable EnumerateParts() => new(Value.AsMemory());
-}
+    public static EntityQuery Parse(string query) => TryParse(query)
+        ?? throw new ArgumentException($"Malformed query: '{query}'", nameof(query));
 
-public readonly struct EntityQueryPart : IEquatable<EntityQueryPart>
-{
-    public readonly ReadOnlyMemory<char> Value;
-    public readonly int CharsConsumed;
-    public readonly bool IsLast;
-
-    public EntityQueryPart(ReadOnlyMemory<char> value, int nbConsumed, bool isLast)
+    public static EntityQuery? TryParse(string query)
     {
-        Debug.Assert(value.Length > 0);
-        Value = value;
-        CharsConsumed = nbConsumed;
-        IsLast = isLast;
-    }
-
-    public bool IsWildcardPattern => Value.Span[^1] == '*';
-    public bool SearchInAliases => Value.Span[0] == '@';
-
-    public bool Equals(EntityQueryPart other)
-        => Value.Equals(other.Value) && IsLast == other.IsLast;
-}
-
-public struct EntityQueryEnumerator
-{
-    private EntityQueryPart _current;
-    private ReadOnlyMemory<char> _remaining;
-    private readonly int _queryLength;
-
-    public EntityQueryEnumerator(ReadOnlyMemory<char> query)
-    {
-        _current = default;
-        _remaining = query;
-        _queryLength = query.Length;
-    }
-
-    public EntityQueryPart Current => _current;
-
-    public bool MoveNext()
-    {
-        ReadOnlySpan<char> remaining = _remaining.Span;
-        if (remaining.Length == 0) { return false; }
-        int nextSeparator = remaining.IndexOf('/');
-        (int curLen, int remStart, bool isLast) = nextSeparator >= 0
-            ? (nextSeparator, nextSeparator + 1, false)
-            : (remaining.Length, remaining.Length, true);
-        int consumed = _queryLength - (_remaining.Length - remStart);
-        _current = new EntityQueryPart(_remaining[..curLen], consumed, isLast);
-        _remaining = _remaining[remStart..];
-        return true;
-    }
-}
-
-public readonly struct EntityQueryPartEnumerable
-{
-    private readonly ReadOnlyMemory<char> _query;
-
-    public EntityQueryPartEnumerable(ReadOnlyMemory<char> query)
-    {
-        _query = query;
-    }
-
-    public SmallList<EntityQueryPart> ToSmallList()
-    {
-        var list = new SmallList<EntityQueryPart>();
-        EntityQueryEnumerator enumerator = GetEnumerator();
-        while (enumerator.MoveNext())
+        EntityQueryScope? prevScope = null;
+        bool forceEnd = false;
+        SmallList<EntityQueryPart> parts = new();
+        foreach (ReadOnlySpan<char> part in query.AsSpan().Split('/'))
         {
-            list.Add(enumerator.Current);
+            if (EntityQueryPart.TryParse(part) is not { } queryPart) { return null; }
+            if (forceEnd) { return null; }
+
+            switch (prevScope, queryPart.Scope)
+            {
+                // 'foo/<bar'
+                // '@foo/<bar'
+                // '<@foo/<bar'
+                case (not null, EntityQueryScope.MainThread):
+                // '<foo/@bar'
+                // '<foo/<bar'
+                // '<foo/<@bar'
+                case (EntityQueryScope.MainThread, not EntityQueryScope.Current):
+                    return null;
+                default:
+                    prevScope = queryPart.Scope;
+                    break;
+            }
+
+            forceEnd = queryPart.ForceEndsQuery;
+            parts.Add(queryPart);
         }
-        return list;
+
+        return parts.Count > 0
+            ? new EntityQuery(parts)
+            : null;
     }
 
-    public EntityQueryEnumerator GetEnumerator() => new(_query);
+    public static implicit operator EntityQuery?(string query) => TryParse(query);
+
+    public override string ToString()
+        => string.Join('/', Parts.ToArray().Select(x => x.ToString()));
+}
+
+public enum EntityQueryScope
+{
+    // No prefix
+    Current,
+    // '<' prefix
+    MainThread,
+    // '@' prefix
+    CurrentAliases,
+    // '<@' prefix
+    AllAliases
+}
+
+[DebuggerDisplay("{Value}")]
+public readonly struct EntityPattern
+{
+    public readonly string Value;
+    public readonly bool ContainsWildcard;
+
+    public EntityPattern(string value, bool containsWildcard)
+    {
+        Value = value;
+        ContainsWildcard = containsWildcard;
+    }
+
+    public bool Match(string s)
+    {
+        string patternText = Value;
+        int rowLength = patternText.Length + 1;
+        bool[] prevRow = ArrayPool<bool>.Shared.Rent(rowLength);
+        bool[] currRow = ArrayPool<bool>.Shared.Rent(rowLength);
+
+        prevRow.AsSpan(..rowLength).Clear();
+        prevRow[0] = true;
+        for (int j = 1; j <= patternText.Length; j++)
+        {
+            if (patternText[j - 1] == '*')
+            {
+                prevRow[j] = prevRow[j - 1];
+            }
+        }
+
+        for (int i = 1; i <= s.Length; i++)
+        {
+            currRow.AsSpan(..rowLength).Clear();
+            for (int j = 1; j <= patternText.Length; j++)
+            {
+                char c = patternText[j - 1];
+                bool match = false;
+                if (c == '*')
+                {
+                    match = prevRow[j] || currRow[j - 1];
+                }
+                else if (c == s[i - 1])
+                {
+                    match = prevRow[j - 1];
+                }
+
+                currRow[j] = match;
+            }
+
+            (prevRow, currRow) = (currRow, prevRow);
+        }
+
+        bool result = prevRow[patternText.Length];
+        ArrayPool<bool>.Shared.Return(prevRow);
+        ArrayPool<bool>.Shared.Return(currRow);
+        return result;
+    }
+
+    public static implicit operator EntityPattern(string value)
+        => new(value, value.Contains('*'));
+}
+
+public readonly record struct EntityQueryPart(EntityPattern Pattern, EntityQueryScope Scope, bool ForceEndsQuery)
+{
+    public static EntityQueryPart? TryParse(ReadOnlySpan<char> text)
+    {
+        if (text.Length == 0) { return null; }
+        (EntityQueryScope scope, int prefixLength) = text switch
+        {
+            ['<', '@', ..] => (EntityQueryScope.AllAliases, 2),
+            ['<', ..] => (EntityQueryScope.MainThread, 1),
+            ['@', ..] => (EntityQueryScope.CurrentAliases, 1),
+            _ => (EntityQueryScope.Current, 0)
+        };
+
+        ReadOnlySpan<char> patternText = text[prefixLength..];
+        bool forceEndsQuery = false;
+        if (text[^1] == '>')
+        {
+            forceEndsQuery = true;
+            patternText = patternText[..^1];
+        }
+
+        if (patternText.Length == 0) { return null; }
+
+        bool containsWildcard = false;
+        foreach (char c in patternText)
+        {
+            if (c is '<' or '>' or '@' or '/') { return null; }
+            containsWildcard |= c == '*';
+        }
+
+        var pattern = new EntityPattern(patternText.ToString(), containsWildcard);
+        return new EntityQueryPart(pattern, scope, forceEndsQuery);
+    }
+
+    public override string ToString()
+    {
+        string prefix = Scope switch
+        {
+            EntityQueryScope.AllAliases => "<@",
+            EntityQueryScope.MainThread => "<",
+            EntityQueryScope.CurrentAliases => "@",
+            _ => ""
+        };
+        string postfix = ForceEndsQuery ? ">" : "";
+        return $"{prefix}{Pattern.Value}{postfix}";
+    }
 }

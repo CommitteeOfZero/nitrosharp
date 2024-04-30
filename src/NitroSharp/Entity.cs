@@ -1,5 +1,8 @@
 using System;
+using System.Buffers;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using NitroSharp.Graphics;
 using NitroSharp.NsScript;
 using NitroSharp.Saving;
@@ -9,14 +12,96 @@ namespace NitroSharp;
 
 internal abstract class Entity : EntityInternal, IDisposable
 {
-    private ArrayBuilder<Entity> _children;
+    private struct ChildCollection
+    {
+        private SmallList<Entity> _children;
+        private Dictionary<string, Entity>? _childrenMap;
+
+        public Enumerator GetEnumerator() => new(ref this);
+
+        public ref struct Enumerator
+        {
+            private Dictionary<string, Entity>.ValueCollection.Enumerator _mapEnumerator;
+            private Span<Entity>.Enumerator _listEnumerator;
+            private readonly bool _usingMap;
+
+            public Enumerator(ref ChildCollection collection)
+            {
+                if (collection._childrenMap is { } map)
+                {
+                    _mapEnumerator = map.Values.GetEnumerator();
+                    _usingMap = true;
+                }
+                else
+                {
+                    _listEnumerator = collection._children.GetEnumerator();
+                    _usingMap = true;
+                }
+            }
+
+            public Entity Current => _usingMap ? _mapEnumerator.Current : _listEnumerator.Current;
+            public bool MoveNext() => _usingMap ? _mapEnumerator.MoveNext() : _listEnumerator.MoveNext();
+        }
+
+        public void Add(Entity child)
+        {
+            if (_children.Count == SmallList<Entity>.MaxFixed)
+            {
+                SwitchToDictionary();
+            }
+
+            if (_childrenMap is { } map)
+            {
+                map.Add(child.Id.Name.ToString(), child);
+            }
+            else
+            {
+                _children.Add(child);
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private void SwitchToDictionary()
+        {
+            _childrenMap = new Dictionary<string, Entity>(capacity: 16);
+            foreach (Entity entity in _children.AsSpan())
+            {
+                _childrenMap[entity.Id.Name.ToString()] = entity;
+            }
+
+            _children.Clear();
+        }
+
+        public void Remove(Entity child)
+        {
+            if (_childrenMap is { } map)
+            {
+                map.Remove(child.Id.Name.ToString());
+            }
+            else
+            {
+                _children.Remove(child);
+            }
+        }
+
+        public Entity? TryLookupFast(string name)
+        {
+            if (_childrenMap is { } map)
+            {
+                return map.TryGetValue(name, out Entity? entity) ? entity : null;
+            }
+
+            return null;
+        }
+    }
+
+    private ChildCollection _children;
     private Choice? _choice;
 
     protected Entity(in ResolvedEntityPath path)
     {
         Id = path.Id;
         Parent = path.Parent;
-        _children = new ArrayBuilder<Entity>(0);
         if (Parent is { } parent && this.IsMouseStateEntity())
         {
             parent.EnsureHasChoice();
@@ -36,6 +121,65 @@ internal abstract class Entity : EntityInternal, IDisposable
     public bool IsLocked { get; private set; }
     public abstract bool IsIdle { get; }
     public virtual UiElement? UiElement => _choice;
+
+    public void Query(EntityQueryPart queryPart, List<Entity> results)
+    {
+        string pattern = queryPart.Value.ToString();
+        if (_children.TryLookupFast(pattern) is { } singleEntity)
+        {
+            results.Add(singleEntity);
+            return;
+        }
+
+        int rowLength = pattern.Length + 1;
+        bool[] prevRow = ArrayPool<bool>.Shared.Rent(rowLength);
+        bool[] currRow = ArrayPool<bool>.Shared.Rent(rowLength);
+
+        foreach (Entity candidate in _children)
+        {
+            string name = candidate.Id.Name.ToString();
+
+            prevRow.AsSpan(..rowLength).Fill(false);
+            prevRow[0] = true;
+            for (int j = 1; j <= pattern.Length; j++)
+            {
+                if (pattern[j - 1] == '*')
+                {
+                    prevRow[j] = prevRow[j - 1];
+                }
+            }
+
+            for (int i = 1; i <= name.Length; i++)
+            {
+                currRow.AsSpan(..rowLength).Fill(false);
+                for (int j = 1; j <= pattern.Length; j++)
+                {
+                    char c = pattern[j - 1];
+                    bool match = false;
+                    if (c == '*')
+                    {
+                        match = prevRow[j] || currRow[j - 1];
+                    }
+                    else if (c == name[i - 1])
+                    {
+                        match = prevRow[j - 1];
+                    }
+
+                    currRow[j] = match;
+                }
+
+                (prevRow, currRow) = (currRow, prevRow);
+            }
+
+            if (prevRow[pattern.Length])
+            {
+                results.Add(candidate);
+            }
+        }
+
+        ArrayPool<bool>.Shared.Return(prevRow);
+        ArrayPool<bool>.Shared.Return(currRow);
+    }
 
     private void EnsureHasChoice()
     {
@@ -68,7 +212,9 @@ internal abstract class Entity : EntityInternal, IDisposable
 
     void EntityInternal.AddChild(Entity child)
     {
-        _children.Add(child);
+
+
+
     }
 
     void EntityInternal.RemoveChild(Entity child)
@@ -90,52 +236,6 @@ internal abstract class Entity : EntityInternal, IDisposable
         IsLocked = IsLocked,
         NextFocus = _choice?.FocusData ?? default
     };
-
-    internal readonly ref struct ChildEnumerable<T>
-        where T : Entity
-    {
-        private readonly ReadOnlySpan<Entity> _children;
-
-        public ChildEnumerable(ReadOnlySpan<Entity> children)
-        {
-            _children = children;
-        }
-
-        public ChildEnumerator<T> GetEnumerator() => new(_children);
-
-        public T? SingleItem()
-        {
-            ChildEnumerator<T> enumerator = GetEnumerator();
-            return enumerator.MoveNext() ? enumerator.Current : null;
-        }
-    }
-
-    internal ref struct ChildEnumerator<T>
-        where T : Entity
-    {
-        private readonly ReadOnlySpan<Entity> _children;
-        private int _pos;
-        private T? _current;
-
-        public ChildEnumerator(ReadOnlySpan<Entity> children)
-        {
-            _children = children;
-            _pos = 0;
-            _current = null;
-        }
-
-        public T Current => _current!;
-
-        public bool MoveNext()
-        {
-            _current = null;
-            while (_pos < _children.Length && _current is null)
-            {
-                _current = _children[_pos++] as T;
-            }
-            return _current is not null;
-        }
-    }
 }
 
 internal sealed class BasicEntity : Entity

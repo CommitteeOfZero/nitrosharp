@@ -31,7 +31,10 @@ namespace NitroSharp.NsScript.Syntax
         /// Marks the current position as the start of a lexeme.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        protected void StartScanning() => _lexemeStart = _position;
+        protected void StartScanning()
+        {
+            _lexemeStart = _position;
+        }
 
         protected TextSpan CurrentLexemeSpan =>
             new(start: _lexemeStart, length: _position - _lexemeStart);
@@ -47,8 +50,15 @@ namespace NitroSharp.NsScript.Syntax
                 : EofCharacter;
         }
 
-        protected void AdvanceChar() => _position++;
-        protected void AdvanceChar(int n) => _position += n;
+        protected void AdvanceChar()
+        {
+            _position++;
+        }
+
+        protected void AdvanceChar(int n)
+        {
+            _position += n;
+        }
 
         protected void EatChar(char c)
         {

@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
 using System.Text;
-using System.Threading;
 using NitroSharp.NsScript.Utilities;
 
 namespace NitroSharp.NsScript.VM

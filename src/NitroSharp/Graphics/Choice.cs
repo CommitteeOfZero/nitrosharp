@@ -1,4 +1,5 @@
 ﻿using System;
+using FFmpeg.AutoGen;
 using NitroSharp.NsScript;
 
 namespace NitroSharp.Graphics;
@@ -29,6 +30,8 @@ internal sealed class Choice : UiElement
 
     private State _state;
     private UiElementFocusData _focusData;
+    private QueryResultsEnumerable<RenderItem2D>? _mouseClickResults;
+    private QueryResultsEnumerable<RenderItem2D>? _mouseOverResults;
 
     public Choice(EntityId entityId)
     {
@@ -48,12 +51,18 @@ internal sealed class Choice : UiElement
         => world.Get(_mouseUsualEntityId)?.GetSingleChild<RenderItem2D>();
 
     public QueryResultsEnumerable<RenderItem2D> QueryMouseClickVisuals(World world)
-        => world.Query<RenderItem2D>(_entityId.Context, _mouseClickQuery);
+    {
+        _mouseClickResults = world.Query<RenderItem2D>(_entityId.Context, _mouseClickQuery);
+        return _mouseClickResults.Value;
+    }
 
     public QueryResultsEnumerable<RenderItem2D> QueryMouseOverVisuals(World world)
-        => world.Query<RenderItem2D>(_entityId.Context, _mouseOverQuery);
+    {
+        _mouseOverResults = world.Query<RenderItem2D>(_entityId.Context, _mouseOverQuery);
+        return _mouseOverResults.Value;
+    }
 
-     public bool HandleEvents(GameContext ctx)
+    public bool HandleEvents(GameContext ctx)
      {
         World world = ctx.ActiveProcess.World;
         if (TryGetMouseUsualVisual(world) is not { } visual)

@@ -1,7 +1,6 @@
-﻿using NitroSharp.NsScript.Syntax;
-using NitroSharp.Utilities;
+﻿using NitroSharp.Utilities;
 
-namespace NitroSharp.NsScript
+namespace NitroSharp.NsScript.Syntax
 {
     public struct SyntaxTokenEnumerable
     {

@@ -169,6 +169,7 @@ public struct IconPathEnumerable
     public bool MoveNext()
     {
         if (_i == _pattern.IconCount) { return false; }
+
         Current = StringFormatter.PrintF(_pattern.FormatString, _i);
         _i++;
         return true;

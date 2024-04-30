@@ -9,7 +9,6 @@ using System.Threading.Channels;
 using System.Threading.Tasks;
 using FFmpeg.AutoGen;
 using Microsoft.VisualStudio.Threading;
-using NitroSharp.Utilities;
 using Veldrid;
 using static NitroSharp.Media.FFmpegUtil;
 
@@ -18,17 +17,7 @@ using static NitroSharp.Media.FFmpegUtil;
 
 namespace NitroSharp.Media
 {
-    internal sealed class LoopRegion
-    {
-        public TimeSpan Start { get; }
-        public TimeSpan End { get; }
-
-        public LoopRegion(TimeSpan start, TimeSpan end)
-        {
-            Start = start;
-            End = end;
-        }
-    }
+    internal sealed record LoopRegion(TimeSpan Start, TimeSpan End);
 
     internal sealed class MediaStream : IDisposable
     {
@@ -392,10 +381,14 @@ namespace NitroSharp.Media
         }
 
         public void ToggleLooping(bool enable)
-            => _loopingEnabled = enable;
+        {
+            _loopingEnabled = enable;
+        }
 
         public void SetLoopRegion(LoopRegion loopRegion)
-            => _loopRegion = loopRegion;
+        {
+            _loopRegion = loopRegion;
+        }
 
         public void Pause()
         {
@@ -703,7 +696,7 @@ namespace NitroSharp.Media
                         *ctx.Frame = default;
                     }
 
-                    if (ctx.SeekRequest is { } seekTarget && !ctx.DecoderDoneSeeking)
+                    if (ctx is { SeekRequest: { } seekTarget, DecoderDoneSeeking: false })
                     {
                         if (FrameIsClosestTo(ctx, frame.Value, seekTarget))
                         {

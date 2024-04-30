@@ -43,9 +43,9 @@ namespace NitroSharp.NsScript.Compiler
             if (syntaxTrees.Length > 1)
             {
                 var builder = ImmutableArray.CreateBuilder<SourceFileSymbol>(syntaxTrees.Length - 1);
-                for (int i = 1; i < syntaxTrees.Length; i++)
+                foreach (SyntaxTree syntaxTree in syntaxTrees.AsSpan()[1..])
                 {
-                    SourceFileSymbol sourceFile = MakeSourceFileSymbol(syntaxTrees[i]);
+                    SourceFileSymbol sourceFile = MakeSourceFileSymbol(syntaxTree);
                     builder.Add(sourceFile);
                 }
 

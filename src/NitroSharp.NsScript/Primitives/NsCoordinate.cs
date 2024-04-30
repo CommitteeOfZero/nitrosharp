@@ -36,13 +36,19 @@ namespace NitroSharp.NsScript.Primitives
         public readonly NsAlignment Alignment;
 
         private NsCoordinate(NsCoordinateKind kind) : this()
-            => Kind = kind;
+        {
+            Kind = kind;
+        }
 
         public NsCoordinate(float value, bool isRelative) : this()
-            => (Kind, Value) = (NsCoordinateKind.Value, (value, isRelative));
+        {
+            (Kind, Value) = (NsCoordinateKind.Value, (value, isRelative));
+        }
 
         public NsCoordinate(NsAlignment alignment, float anchorPoint) : this()
-            => (Kind, Alignment, AnchorPoint) = (NsCoordinateKind.Alignment, alignment, anchorPoint);
+        {
+            (Kind, Alignment, AnchorPoint) = (NsCoordinateKind.Alignment, alignment, anchorPoint);
+        }
 
         public NsCoordinate(ref MessagePackReader reader)
         {

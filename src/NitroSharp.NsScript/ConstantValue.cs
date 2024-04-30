@@ -188,20 +188,22 @@ namespace NitroSharp.NsScript
                 ? FloatValue
                 : null;
 
-        public float? AsNumber() => Type switch
-        {
-            BuiltInType.Numeric => FloatValue,
-            BuiltInType.Boolean or BuiltInType.BuiltInConstant => _numericValue,
-            BuiltInType.String => _stringValue == string.Empty ? 0 : null,
-            _ => null,
-        };
+        public float? AsNumber()
+            => Type switch
+            {
+                BuiltInType.Numeric => FloatValue,
+                BuiltInType.Boolean or BuiltInType.BuiltInConstant => _numericValue,
+                BuiltInType.String => _stringValue == string.Empty ? 0 : null,
+                _ => null,
+            };
 
-        public bool? AsBool() => Type switch
-        {
-            BuiltInType.Boolean => _numericValue > 0,
-            BuiltInType.Numeric => FloatValue > 0,
-            _ => null
-        };
+        public bool? AsBool()
+            => Type switch
+            {
+                BuiltInType.Boolean => _numericValue > 0,
+                BuiltInType.Numeric => FloatValue > 0,
+                _ => null
+            };
 
         public string? AsString()
             => Type == BuiltInType.String ? _stringValue : null;
@@ -403,8 +405,7 @@ namespace NitroSharp.NsScript
             => obj is ConstantValue other && Equals(this, other);
 
         public override int GetHashCode()
-        {
-            return Type switch
+            => Type switch
             {
                 BuiltInType.String => HashCode.Combine(_stringValue),
                 BuiltInType.Null => 0,
@@ -412,7 +413,6 @@ namespace NitroSharp.NsScript
                 BuiltInType.BezierCurve => _bezierCurve.GetHashCode(),
                 _ => HashCode.Combine(Type, _numericValue)
             };
-        }
 
         private static ConstantValue InvalidOp(string op, BuiltInType type)
             => throw new InvalidOperationException($"Operator '{op}' cannot be applied to operand of type '{type}'.");

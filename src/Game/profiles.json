@@ -1,9 +1,8 @@
 {
-  "activeProfile": "Noah",
+  "activeProfile": "Test",
   "product.name": "COWS;HEAD NOAH",
   "product.displayName": "COWS;HEAD NOAH",
-  "designWidth": 1280,
-  "designHeight": 720,
+  "designResolution": "1280x720",
   "icons.waitLine": "cg/sys/icon/line/%03d.png#21",
   "icons.waitPage": "cg/sys/icon/page/%03d.png#21",
   "icons.waitAuto": "cg/sys/icon/auto/%03d.png#21",
@@ -42,7 +41,7 @@
 
   "profiles": {
     "Noah": {
-      "startupScript": "boot.nss"
+      "startupScript": "extra_sound.nss"
     },
 
     "Menu": {
@@ -78,7 +77,7 @@
     },
 
     "Test": {
-      "startupScript": "tests/all.nss"
+      "startupScript": "tests/basic.nss"
     },
 
     "CH": {

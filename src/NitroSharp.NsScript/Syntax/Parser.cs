@@ -174,22 +174,22 @@ namespace NitroSharp.NsScript.Syntax
                 }
             }
 
-            var subrotuines = ImmutableArray.CreateBuilder<SubroutineDeclaration>();
+            var subroutines = ImmutableArray.CreateBuilder<SubroutineDeclaration>();
             while (CurrentToken.Kind != SyntaxTokenKind.EndOfFileToken)
             {
                 _dialogueBlocks.Clear();
                 switch (CurrentToken.Kind)
                 {
                     case SyntaxTokenKind.ChapterKeyword:
-                        subrotuines.Add(ParseChapterDeclaration());
+                        subroutines.Add(ParseChapterDeclaration());
                         subroutineCounts.chapterCount++;
                         break;
                     case SyntaxTokenKind.SceneKeyword:
-                        subrotuines.Add(ParseSceneDeclaration());
+                        subroutines.Add(ParseSceneDeclaration());
                         subroutineCounts.sceneCount++;
                         break;
                     case SyntaxTokenKind.FunctionKeyword:
-                        subrotuines.Add(ParseFunctionDeclaration());
+                        subroutines.Add(ParseFunctionDeclaration());
                         subroutineCounts.functionCount++;
                         break;
                     // Lines starting with a '.' are treated as comments.
@@ -207,7 +207,7 @@ namespace NitroSharp.NsScript.Syntax
 
             var span = new TextSpan(0, SourceText.Length);
             return new SourceFileRoot(
-                subrotuines.ToImmutable(),
+                subroutines.ToImmutable(),
                 fileReferences.ToImmutable(),
                 subroutineCounts,
                 span

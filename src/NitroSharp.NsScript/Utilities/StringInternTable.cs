@@ -5,6 +5,7 @@
 
 using System;
 using System.Threading;
+using NitroSharp.NsScript.Utilities;
 
 namespace NitroSharp.Utilities
 {

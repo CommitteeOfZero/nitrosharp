@@ -7,9 +7,9 @@ using NitroSharp.NsScript;
 using NitroSharp.Saving;
 using NitroSharp.Utilities;
 
-namespace NitroSharp
+namespace NitroSharp.Old
 {
-    internal sealed partial class World : IDisposable
+    internal sealed partial class OldWorld : IDisposable
     {
         internal readonly record struct EntityRec(
             Entity Entity,
@@ -28,29 +28,6 @@ namespace NitroSharp
                 => this with { Location = newLocation };
         }
 
-        private sealed class EntityContext
-        {
-            private readonly HashSet<EntityId> _entities;
-
-            public EntityContext()
-            {
-                _entities = new HashSet<EntityId>(16);
-            }
-
-            public IEnumerable<EntityId> Entities => _entities;
-
-            public void Add(in EntityId entity)
-            {
-                _entities.Add(entity);
-            }
-
-            public void Remove(in EntityId entity)
-            {
-                _entities.Remove(entity);
-            }
-        }
-
-        private readonly Dictionary<uint, EntityContext> _contextLookup;
         private readonly Dictionary<EntityPath, EntityId> _aliases;
 
         private readonly Dictionary<EntityId, EntityRec> _entities;
@@ -67,7 +44,6 @@ namespace NitroSharp
 
         public World()
         {
-            _contextLookup = new Dictionary<uint, EntityContext>();
             _aliases = new Dictionary<EntityPath, EntityId>();
 
             _entities = new Dictionary<EntityId, EntityRec>(512);
@@ -83,23 +59,7 @@ namespace NitroSharp
         }
 
         public SortableEntityGroupView<RenderItem> RenderItems => _renderItems;
-        public EntityGroup<Sound> Sounds => _sounds;
-
-        public void DestroyContext(uint id)
-        {
-            if (_contextLookup.TryGetValue(id, out EntityContext? ctx))
-            {
-                foreach (EntityId entityId in ctx.Entities)
-                {
-                    if (Get(entityId) is { IsIdle: true, IsLocked: false } entity)
-                    {
-                        DestroyEntity(entity);
-                    }
-                }
-
-                _contextLookup.Remove(id);
-            }
-        }
+        public EntityGroupView<Sound> Sounds => _sounds;
 
         public void BeginFrame()
         {
@@ -155,7 +115,7 @@ namespace NitroSharp
 
         public Entity? Get(uint contextId, in EntityPath entityPath)
         {
-            return CreateId(contextId, entityPath) is { IsValid: true } id
+            return CreateId(entityPath) is { IsValid: true } id
                 ? Get(id)
                 : null;
         }
@@ -170,17 +130,17 @@ namespace NitroSharp
         public bool ResolvePath(uint contextId, in EntityPath path, out ResolvedEntityPath resolvedPath)
         {
             resolvedPath = default;
-            if (CreateId(contextId, path) is not { IsValid: true } id)
+            if (CreateId(path) is not { IsValid: true } id)
             {
                 return false;
             }
 
             if (path.GetParent(out EntityPath parentPath)
-                && CreateId(contextId, parentPath) is { IsValid: true } parentId)
+                && CreateId(parentPath) is { IsValid: true } parentId)
             {
                 if (Get(parentId) is { } parent)
                 {
-                    resolvedPath = new ResolvedEntityPath(parentId.Context, id, parent);
+                    resolvedPath = new ResolvedEntityPath(id, parent);
                     return true;
                 }
 
@@ -188,7 +148,7 @@ namespace NitroSharp
                 return false;
             }
 
-            resolvedPath = new ResolvedEntityPath(contextId, id, Parent: null);
+            resolvedPath = new ResolvedEntityPath(id, Parent: null);
             return true;
         }
 
@@ -272,7 +232,6 @@ namespace NitroSharp
             }
 
             _entities.Remove(id);
-            _contextLookup[id.Context].Remove(id);
             entity.Dispose();
         }
 
@@ -284,7 +243,7 @@ namespace NitroSharp
         private bool GetRecord(in EntityId entityId, out EntityRec rec)
             => _entities.TryGetValue(entityId, out rec);
 
-        private EntityId CreateId(uint contextId, in EntityPath path)
+        private EntityId CreateId(in EntityPath path)
         {
             EntityId lookupSlow(in EntityPath path)
             {
@@ -295,21 +254,17 @@ namespace NitroSharp
                         : EntityId.Invalid;
                 }
 
-                if (CreateId(contextId, parentAlias) is { IsValid: true } parentId)
+                if (CreateId(parentAlias) is { IsValid: true } parentId)
                 {
                     string newPath = path.Value.Replace(parentAlias.Value, parentId.Path);
-                    return new EntityId(
-                        parentId.Context,
-                        newPath,
-                        parentId.Path.Length + 1
-                    );
+                    return new EntityId(newPath, parentId.Path.Length + 1);
                 }
 
                 return EntityId.Invalid;
             }
 
             return path.Value[0] != '@'
-                ? new EntityId(contextId, path.Value, path.NameStartIndex)
+                ? new EntityId(path.Value, path.NameStartIndex)
                 : lookupSlow(path);
         }
 
@@ -333,13 +288,6 @@ namespace NitroSharp
             {
                 _pendingBucketChanges.Add((id, EntityBucket.Active));
             }
-
-            if (!_contextLookup.TryGetValue(id.Context, out EntityContext? context))
-            {
-                context = new EntityContext();
-                _contextLookup.Add(id.Context, context);
-            }
-            context.Add(id);
         }
 
         private void SetEnabled(in EntityId entityId, bool enable)
@@ -461,7 +409,7 @@ namespace NitroSharp
                     parent = world.Get(saveDataLoc.ParentId);
                 }
 
-                var resolvedPath = new ResolvedEntityPath(id.Context, id, parent);
+                var resolvedPath = new ResolvedEntityPath(id, parent);
                 switch (saveDataLoc.EntityKind)
                 {
                     case EntityKind.Basic:
@@ -529,7 +477,7 @@ namespace NitroSharp
         }
     }
 
-    internal readonly record struct ResolvedEntityPath(uint ContextId, in EntityId Id, Entity? Parent);
+    internal readonly record struct ResolvedEntityPath(in EntityId Id, Entity? Parent);
 
     internal enum EntityBucket
     {
@@ -604,7 +552,7 @@ namespace NitroSharp
     {
         private readonly SortableEntityGroup<T> _group;
 
-        public SortableEntityGroupView(SortableEntityGroup<T> group)
+        private SortableEntityGroupView(SortableEntityGroup<T> group)
         {
             _group = group;
         }

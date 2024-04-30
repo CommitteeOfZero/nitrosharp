@@ -44,6 +44,7 @@
         Red,
         Green,
         Blue,
+        Yellow,
 
         // Timing functions
         Axl1,

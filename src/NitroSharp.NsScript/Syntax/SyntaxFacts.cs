@@ -3,6 +3,7 @@ using System;
 using System.Diagnostics;
 using System.Globalization;
 using System.Runtime.CompilerServices;
+using NitroSharp.NsScript.Utilities;
 
 namespace NitroSharp.NsScript.Syntax
 {
@@ -11,13 +12,13 @@ namespace NitroSharp.NsScript.Syntax
         private const char EofCharacter = char.MaxValue;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool IsDecDigit(char c) => c >= '0' && c <= '9';
+        public static bool IsDecDigit(char c) => c is >= '0' and <= '9';
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool IsHexDigit(char c)
         {
-            return (c >= '0' && c <= '9') ||
-                   (c >= 'A' && c <= 'F') ||
-                   (c >= 'a' && c <= 'f');
+            return c is >= '0' and <= '9' ||
+                   c is >= 'A' and <= 'F' ||
+                   c is >= 'a' and <= 'f';
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -47,7 +48,7 @@ namespace NitroSharp.NsScript.Syntax
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool IsSigil(char c)
         {
-            return c == '$' || c == '#' || c == '@';
+            return c is '$' or '#' or '@';
         }
 
         public static bool TryGetKeywordKind(ReadOnlySpan<char> text, out SyntaxTokenKind kind)

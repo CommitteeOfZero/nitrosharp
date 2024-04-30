@@ -17,7 +17,6 @@ namespace NitroSharp.NsScript.VM
             _rootDirectory = rootDirectory;
         }
 
-        /// <param name="name">Name without extension.</param>
         public override Stream OpenModule(string name)
         {
             string path = Path.Combine(_rootDirectory, name) + ".nsx";

@@ -206,14 +206,14 @@ namespace NitroSharp.Graphics
         {
             _texture = texture;
             Color = texture.Color;
-            PreciseHitTest = NeedPreciseHitTest();
+            PreciseHitTest = false;
         }
 
         public Sprite(in ResolvedEntityPath path, in SpriteSaveData saveData, GameLoadingContext ctx)
             : base(path, saveData.RenderItemData)
         {
             _texture = SpriteTexture.FromSaveData(saveData.Texture, ctx);
-            PreciseHitTest = NeedPreciseHitTest();
+            PreciseHitTest = false;
             if (saveData.TransitionData is { } transitionData)
             {
                 _transition = new TransitionAnimation(transitionData, ctx.Content);

@@ -2,10 +2,11 @@
   <PropertyGroup>
     <RepoRootDirectory>$(MSBuildThisFileDirectory)</RepoRootDirectory>
     <BaseIntermediateOutputPath>$(RepoRootDirectory)bin\obj\$(MSBuildProjectName)\</BaseIntermediateOutputPath>
-    <LangVersion>preview</LangVersion>
+    <LangVersion>12.0</LangVersion>
     <Authors>SomeAnonDev</Authors>
     <Company>Committee of Zero</Company>
     <PackageVersion>0.1</PackageVersion>
+    <Nullable>disable</Nullable>
   </PropertyGroup>
 
   <PropertyGroup Condition=" '$(Portable)' == 'true' ">

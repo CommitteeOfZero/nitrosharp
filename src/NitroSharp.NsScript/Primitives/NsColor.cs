@@ -40,6 +40,7 @@ namespace NitroSharp.NsScript
             BuiltInConstant.Red => Red,
             BuiltInConstant.Green => Green,
             BuiltInConstant.Blue => Blue,
+            BuiltInConstant.Yellow => new NsColor(255, 255, 0),
             _ => throw ThrowHelper.UnexpectedValue(nameof(constant)),
         };
 

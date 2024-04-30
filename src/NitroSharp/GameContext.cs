@@ -72,7 +72,7 @@ namespace NitroSharp
         private readonly FontSettings _fontSettings;
         private readonly Dictionary<string, MediaStream> _voices = new();
         private (string, MediaStream?) _activeVoice;
-        private readonly Queue<DeferredOperation> _deferredOperations = new();
+        private DeferredOperation? _deferredOperation;
         private bool _clearFramebuffer;
         private FrameStamp _now;
 
@@ -490,7 +490,7 @@ namespace NitroSharp
 
                 foreach (uint thread in runResult.TerminatedThreads)
                 {
-                    ActiveProcess.World.DestroyContext(thread);
+                    //ActiveProcess.World.DestroyContext(thread);
                 }
 
                 ProcessSystemVariables(VM.SystemVariables);
@@ -513,7 +513,7 @@ namespace NitroSharp
             bool assetsReady = Content.ResolveAssets();
             if (assetsReady)
             {
-                RunDeferredOperations();
+                RunDeferredOperation();
                 world.BeginFrame();
             }
 
@@ -632,10 +632,9 @@ namespace NitroSharp
             }
         }
 
-        private void RunDeferredOperations()
+        private void RunDeferredOperation()
         {
-            bool resumeProcess = _deferredOperations.Count > 0;
-            while (_deferredOperations.TryDequeue(out DeferredOperation op))
+            if (_deferredOperation is { } op)
             {
                 switch (op.Kind)
                 {
@@ -653,10 +652,7 @@ namespace NitroSharp
                         SaveManager.Load(this, op.SaveSlot.Value);
                         break;
                 }
-            }
 
-            if (resumeProcess)
-            {
                 ActiveProcess.VmProcess.Resume();
             }
         }
@@ -701,8 +697,8 @@ namespace NitroSharp
 
         internal void Defer(in DeferredOperation operation)
         {
+            Debug.Assert(_deferredOperation is null);
             ActiveProcess.VmProcess.Suspend();
-            _deferredOperations.Enqueue(operation);
         }
 
         internal void Wait(

@@ -1,19 +1,22 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 namespace NitroSharp.Utilities
 {
     public struct SmallList<T>
     {
-        private const int MaxFixed = 2;
+        public const int MaxFixed = 4;
 
         private struct FixedItems
         {
 #pragma warning disable CS0649
             public T Item0;
             public T Item1;
+            public T Item2;
+            public T Item3;
 #pragma warning restore CS0649
 
             public Span<T> AsSpan()
@@ -100,9 +103,9 @@ namespace NitroSharp.Utilities
         {
             get
             {
-                static void oob() => throw new IndexOutOfRangeException();
+                static void outOfRange() => throw new IndexOutOfRangeException();
 
-                if (index >= _count) { oob(); }
+                if (index >= _count) { outOfRange(); }
                 if (_count <= MaxFixed)
                 {
                     Span<T> fixedElements = _fixedItems.AsSpan();
@@ -118,6 +121,13 @@ namespace NitroSharp.Utilities
         {
             return _count <= MaxFixed
                 ? _fixedItems.AsSpan(_count)
+                : _array.AsSpan(0, _count);
+        }
+
+        public readonly ReadOnlySpan<T> AsReadOnlySpan()
+        {
+            return _count <= MaxFixed
+                ? MemoryMarshal.CreateReadOnlySpan(ref Unsafe.AsRef(in _fixedItems.Item0), _count)
                 : _array.AsSpan(0, _count);
         }
 
