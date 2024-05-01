@@ -54,10 +54,12 @@ internal sealed class GameContext
 
         bool surfaceDestroyed = false;
         bool needsResize = false;
+        bool closeRequested = false;
         Window.Mobile_SurfaceDestroyed += () => surfaceDestroyed = true;
         Window.Resized += () => needsResize = true;
+        Window.CloseRequested += () => closeRequested = true;
 
-        while (!ShutdownSignal.IsCancellationRequested && Window.Exists)
+        while (!ShutdownSignal.IsCancellationRequested && !closeRequested)
         {
             long currentFrameTicks = Clock.ElapsedTicks;
             float deltaMilliseconds = (float)(currentFrameTicks - prevFrameTicks)
