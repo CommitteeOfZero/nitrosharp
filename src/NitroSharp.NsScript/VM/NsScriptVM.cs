@@ -361,6 +361,9 @@ public sealed class NsScriptVM
                     Debug.Assert(val.AsBool() is not null);
                     val = ConstantValue.Boolean(!val.AsBool()!.Value);
                     break;
+                case Opcode.Pop:
+                    stack.Pop();
+                    break;
                 case Opcode.Call:
                     ushort subroutineToken = program.DecodeToken();
                     frame.ProgramCounter = program.Position;

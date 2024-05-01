@@ -26,6 +26,8 @@
         NotEqual = 0x21,        // <>
         Binary = 0x22,          // <byte operator>
 
+        Pop = 0x23,             // <>
+
         Jump = 0x30,            // <short offset>
         JumpIfTrue = 0x31,      // <short offset>
         JumpIfFalse = 0x32,     // <short offset>

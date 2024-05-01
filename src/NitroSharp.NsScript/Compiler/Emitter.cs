@@ -390,6 +390,7 @@ namespace NitroSharp.NsScript.Compiler
                     break;
                 case SyntaxNodeKind.ExpressionStatement:
                     EmitExpression(((ExpressionStatement)statement).Expression);
+                    EmitOpcode(Opcode.Pop);
                     break;
                 case SyntaxNodeKind.IfStatement:
                     EmitIfStatement((IfStatement)statement);
