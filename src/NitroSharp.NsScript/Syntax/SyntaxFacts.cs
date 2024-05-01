@@ -309,66 +309,37 @@ namespace NitroSharp.NsScript.Syntax
 
         private static class KeywordScanner
         {
-            private const int ChapterKeywordHash = 703916114;
-            private const int FunctionKeywordHash = -1630125495;
-            private const int SceneKeywordHash = 543410963;
-            private const int CallSceneKeywordHash = 731995282;
-            private const int CallChapterKeywordHash = 131528059;
-            private const int NullKeywordHash = 1996966820;
-            private const int PascalCaseNullKeywordHash = -147613756;
-            private const int CapitalizedNullKeywordHash = 963632676;
-            private const int TrueKeywordHash = 1303515621;
-            private const int PascalCaseTrueKeywordHash = -841064955;
-            private const int CapitalizedTrueKeywordHash = 1343949093;
-            private const int MisspelledTrueKeywordHash = -2008300465;
-            private const int FalseKeywordHash = 184981848;
-            private const int PascalCaseFalseKeywordHash = -1753917960;
-            private const int CapitalizedFalseKeywordHash = -296126344;
-            private const int WhileKeywordHash = 231090382;
-            private const int IfKeywordHash = 959999494;
-            private const int ElseKeywordHash = -1111532560;
-            private const int SelectKeywordHash = 297952813;
-            private const int CaseKeywordHash = -1692059471;
-            private const int BreakKeywordHash = -916160136;
-            private const int ReturnKeywordHash = -2047985729;
-
             public static bool TryRecognizeKeyword(ReadOnlySpan<char> text, out SyntaxTokenKind keywordKind)
                 => (keywordKind = RecognizeKeyword(text)) != SyntaxTokenKind.None;
 
             public static SyntaxTokenKind RecognizeKeyword(ReadOnlySpan<char> text)
             {
-                int hash = FnvHasher.HashString(text);
-                switch (hash)
+                return text switch
                 {
-                    case ChapterKeywordHash: return SyntaxTokenKind.ChapterKeyword;
-                    case FunctionKeywordHash: return SyntaxTokenKind.FunctionKeyword;
-                    case SceneKeywordHash: return SyntaxTokenKind.SceneKeyword;
-                    case CallSceneKeywordHash: return SyntaxTokenKind.CallSceneKeyword;
-                    case CallChapterKeywordHash: return SyntaxTokenKind.CallChapterKeyword;
-                    case NullKeywordHash:
-                    case PascalCaseNullKeywordHash:
-                    case CapitalizedNullKeywordHash:
-                        return SyntaxTokenKind.NullKeyword;
-                    case TrueKeywordHash:
-                    case PascalCaseTrueKeywordHash:
-                    case CapitalizedTrueKeywordHash:
-                    case MisspelledTrueKeywordHash:
-                        return SyntaxTokenKind.TrueKeyword;
-                    case FalseKeywordHash:
-                    case PascalCaseFalseKeywordHash:
-                    case CapitalizedFalseKeywordHash:
-                        return SyntaxTokenKind.FalseKeyword;
-                    case WhileKeywordHash: return SyntaxTokenKind.WhileKeyword;
-                    case IfKeywordHash: return SyntaxTokenKind.IfKeyword;
-                    case ElseKeywordHash: return SyntaxTokenKind.ElseKeyword;
-                    case SelectKeywordHash: return SyntaxTokenKind.SelectKeyword;
-                    case CaseKeywordHash: return SyntaxTokenKind.CaseKeyword;
-                    case BreakKeywordHash: return SyntaxTokenKind.BreakKeyword;
-                    case ReturnKeywordHash: return SyntaxTokenKind.ReturnKeyword;
+                    "chapter" => SyntaxTokenKind.ChapterKeyword,
+                    "function" => SyntaxTokenKind.FunctionKeyword,
+                    "scene" => SyntaxTokenKind.SceneKeyword,
+                    "call_scene" => SyntaxTokenKind.CallSceneKeyword,
+                    "call_chapter" => SyntaxTokenKind.CallChapterKeyword,
+                    "null" => SyntaxTokenKind.NullKeyword,
+                    "Null" => SyntaxTokenKind.NullKeyword,
+                    "NULL" => SyntaxTokenKind.NullKeyword,
+                    "true" => SyntaxTokenKind.TrueKeyword,
+                    "True" => SyntaxTokenKind.TrueKeyword,
+                    "TRUE" => SyntaxTokenKind.TrueKeyword,
+                    "false" => SyntaxTokenKind.FalseKeyword,
+                    "False" => SyntaxTokenKind.FalseKeyword,
+                    "FALSE" => SyntaxTokenKind.FalseKeyword,
+                    "while" => SyntaxTokenKind.WhileKeyword,
+                    "if" => SyntaxTokenKind.IfKeyword,
+                    "else" => SyntaxTokenKind.ElseKeyword,
+                    "select" => SyntaxTokenKind.SelectKeyword,
+                    "case" => SyntaxTokenKind.CaseKeyword,
+                    "break" => SyntaxTokenKind.BreakKeyword,
+                    "return" => SyntaxTokenKind.ReturnKeyword,
 
-                    default:
-                        return SyntaxTokenKind.None;
-                }
+                    _ => SyntaxTokenKind.None,
+                };
             }
         }
     }
