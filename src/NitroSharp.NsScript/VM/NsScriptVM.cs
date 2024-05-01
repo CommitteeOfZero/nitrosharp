@@ -437,15 +437,12 @@ public sealed class NsScriptVM
                     var func = (BuiltInFunction)program.ReadByte();
                     int argCount = program.ReadByte();
                     ReadOnlySpan<ConstantValue> args = stack.AsSpan(stack.Count - argCount, argCount);
+                    ConstantValue? result = null;
                     switch (func)
                     {
                         default:
-                            ConstantValue? result = _builtInCallDispatcher.Dispatch(builtins, func, args);
+                            result = _builtInCallDispatcher.Dispatch(builtins, func, args);
                             stack.Pop(argCount);
-                            if (result is not null)
-                            {
-                                stack.Push(result.Value);
-                            }
                             break;
 
                         case BuiltInFunction.log:
@@ -464,6 +461,7 @@ public sealed class NsScriptVM
                             Console.WriteLine($"{subName} + {program.Position - 1}: {message.ToString()}.");
                             break;
                     }
+                    stack.Push(result ?? ConstantValue.Null);
                     frame.ProgramCounter = program.Position;
                     return TickResult.Ok;
 

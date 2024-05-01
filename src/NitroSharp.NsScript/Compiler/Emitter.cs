@@ -271,7 +271,11 @@ namespace NitroSharp.NsScript.Compiler
         private void EmitFunctionCall(FunctionCallExpression callExpression)
         {
             LookupResult lookupResult = _checker.LookupFunction(callExpression.TargetName);
-            if (lookupResult.IsEmpty) { return; }
+            if (lookupResult.IsEmpty)
+            {
+                EmitLoadImm(ConstantValue.Null);
+                return;
+            }
             bool isBuiltIn = lookupResult.Variant == LookupResultVariant.BuiltInFunction;
             ImmutableArray<Expression> arguments = callExpression.Arguments;
             bool suppressConstantLookup = _suppressConstantLookup;
@@ -329,6 +333,7 @@ namespace NitroSharp.NsScript.Compiler
                     _code.WriteUInt16LE(externalNsxBuilder.GetSubroutineToken(function));
                     _code.WriteByte((byte)callExpression.Arguments.Length);
                 }
+                EmitLoadImm(ConstantValue.Null);
             }
         }
 
