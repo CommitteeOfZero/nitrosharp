@@ -211,7 +211,10 @@ namespace NitroSharp.NsScript.Compiler
         private void EmitAssignmentExpression(AssignmentExpression assignmentExpr)
         {
             LookupResult target = _checker.ResolveAssignmentTarget(assignmentExpr.Target);
-            if (target.IsEmpty) { return; }
+            if (target.IsEmpty) {
+                EmitLoadImm(ConstantValue.Null);
+                return;
+            }
 
             EmitExpression(assignmentExpr.Value);
 
@@ -266,6 +269,7 @@ namespace NitroSharp.NsScript.Compiler
                 ? Opcode.StoreVar
                 : Opcode.StoreFlag;
             EmitStore(storeOp, token);
+            EmitLoadImm(ConstantValue.Null);
         }
 
         private void EmitFunctionCall(FunctionCallExpression callExpression)
