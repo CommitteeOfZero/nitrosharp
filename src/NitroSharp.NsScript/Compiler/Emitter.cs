@@ -211,7 +211,8 @@ namespace NitroSharp.NsScript.Compiler
         private void EmitAssignmentExpression(AssignmentExpression assignmentExpr)
         {
             LookupResult target = _checker.ResolveAssignmentTarget(assignmentExpr.Target);
-            if (target.IsEmpty) {
+            if (target.IsEmpty)
+            {
                 EmitLoadImm(ConstantValue.Null);
                 return;
             }
