@@ -191,16 +191,11 @@ namespace NitroSharp.Graphics
 
         public RenderTarget Target { get; private set; }
 
-        public void Begin(CommandList commandList, RenderTarget target, RgbaFloat? clearColor)
+        public void Begin(CommandList commandList, RenderTarget target)
         {
             Debug.Assert(!_began);
             _commandList = commandList;
-            commandList.SetFramebuffer(target.Framebuffer);
             Target = target;
-            if (clearColor is { } clear)
-            {
-                commandList.ClearColorTarget(0, clear);
-            }
 
             _began = true;
         }
@@ -211,6 +206,15 @@ namespace NitroSharp.Graphics
             Debug.Assert(_commandList is not null);
             Flush();
             buffer.Update(_commandList, data);
+        }
+
+        public void Clear(RgbaFloat clearColor)
+        {
+            Debug.Assert(_commandList is not null);
+            Flush();
+            _commandList.SetFramebuffer(Target.Framebuffer);
+            _commandList.SetFullScissorRect(0);
+            _commandList.ClearColorTarget(0, clearColor);
         }
 
         public void PushQuad(
