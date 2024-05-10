@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Numerics;
 using Veldrid;
 
@@ -69,7 +69,7 @@ namespace NitroSharp.Graphics
         public QuadVertex BottomRight;
 
         public static (QuadGeometry, DesignRect) Create(
-            DesignSize localBounds,
+            DesignSize size,
             in Matrix4x4 transform,
             Vector2 uvTopLeft,
             Vector2 uvBottomRight,
@@ -86,7 +86,7 @@ namespace NitroSharp.Graphics
             topLeft.Color = color;
 
             ref QuadVertex topRight = ref quad.TopRight;
-            topRight.Position.X = localBounds.Width;
+            topRight.Position.X = size.Width;
             topRight.Position.Y = 0.0f;
             topRight.TexCoord.X = uvBottomRight.X;
             topRight.TexCoord.Y = uvTopLeft.Y;
@@ -95,15 +95,15 @@ namespace NitroSharp.Graphics
 
             ref QuadVertex bottomLeft = ref quad.BottomLeft;
             bottomLeft.Position.X = 0.0f;
-            bottomLeft.Position.Y = 0.0f + localBounds.Height;
+            bottomLeft.Position.Y = 0.0f + size.Height;
             bottomLeft.TexCoord.X = uvTopLeft.X;
             bottomLeft.TexCoord.Y = uvBottomRight.Y;
             bottomLeft.Position = Vector2.Transform(bottomLeft.Position, transform);
             bottomLeft.Color = color;
 
             ref QuadVertex bottomRight = ref quad.BottomRight;
-            bottomRight.Position.X = localBounds.Width;
-            bottomRight.Position.Y = localBounds.Height;
+            bottomRight.Position.X = size.Width;
+            bottomRight.Position.Y = size.Height;
             bottomRight.TexCoord.X = uvBottomRight.X;
             bottomRight.TexCoord.Y = uvBottomRight.Y;
             bottomRight.Position = Vector2.Transform(bottomRight.Position, transform);
