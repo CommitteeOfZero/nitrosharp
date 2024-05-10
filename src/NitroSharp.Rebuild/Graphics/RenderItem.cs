@@ -58,13 +58,12 @@ internal abstract class RenderItem : Entity
             WorldMatrix *= Matrix4x4.CreateScale((float)ctx.RenderContext.RenderResolution.Width / ctx.RenderContext.DesignResolution.Width);
         }
         (Vector2 uvTopLeft, Vector2 uvBottomRight) = GetTexCoords(ctx.RenderContext);
-        (Quad, BoundingRect) = QuadGeometry.Create(
+        Quad = QuadGeometry.Create(
             size,
             WorldMatrix,
             uvTopLeft,
             uvBottomRight,
-            Color.ToVector4(),
-            constraintRect
+            Color.ToVector4()
         );
 
         // if (Parent is RenderItem parent)

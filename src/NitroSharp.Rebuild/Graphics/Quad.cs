@@ -68,15 +68,15 @@ namespace NitroSharp.Graphics
         public QuadVertex BottomLeft;
         public QuadVertex BottomRight;
 
-        public static (QuadGeometry, DesignRect) Create(
+        public static QuadGeometry Create(
             DesignSize size,
             in Matrix4x4 transform,
             Vector2 uvTopLeft,
             Vector2 uvBottomRight,
-            in Vector4 color,
-            in DesignRect? constraintRect = null)
+            in Vector4 color)
         {
             QuadGeometry quad = default;
+
             ref QuadVertex topLeft = ref quad.TopLeft;
             topLeft.Position.X = 0.0f;
             topLeft.Position.Y = 0.0f;
@@ -109,44 +109,7 @@ namespace NitroSharp.Graphics
             bottomRight.Position = Vector2.Transform(bottomRight.Position, transform);
             bottomRight.Color = color;
 
-            DesignRect boundingRect = quad.GetBoundingRect();
-            if (constraintRect is { } constraint)
-            {
-                quad.Constrain(ref boundingRect, constraint);
-            }
-
-            return (quad, boundingRect);
-        }
-
-        private DesignRect GetBoundingRect()
-        {
-            float left = MathF.Min(TopLeft.Position.X, BottomLeft.Position.X);
-            float top = MathF.Min(TopLeft.Position.Y, TopRight.Position.Y);
-            float right = MathF.Max(TopRight.Position.X, BottomRight.Position.X);
-            float bottom = MathF.Max(BottomLeft.Position.Y, BottomRight.Position.Y);
-            return DesignRect.FromLTRB(left, top, right, bottom);
-        }
-
-        private void Constrain(ref DesignRect boundingRect, in DesignRect constraintRect)
-        {
-            var bounds = boundingRect.Size.ToVector2();
-            clamp(ref TopLeft, bounds, constraintRect);
-            clamp(ref TopRight, bounds, constraintRect);
-            clamp(ref BottomLeft, bounds, constraintRect);
-            clamp(ref BottomRight, bounds, constraintRect);
-            boundingRect = GetBoundingRect();
-            return;
-
-            static void clamp(ref QuadVertex vert, Vector2 bounds, in DesignRect constraint)
-            {
-                Vector2 oldPos = vert.Position;
-                vert.Position = Vector2.Clamp(
-                    vert.Position,
-                    min: constraint.TopLeft,
-                    max: constraint.BottomRight
-                );
-                vert.TexCoord += (vert.Position - oldPos) / bounds;
-            }
+            return quad;
         }
     }
 
