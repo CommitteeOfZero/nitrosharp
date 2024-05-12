@@ -25,6 +25,11 @@ namespace NitroSharp
                 (int)size.Width, (int)size.Height,
                 flags, threadedProcessing: false
             );
+            _window.SetCloseRequestedHandler(() =>
+            {
+                CloseRequested?.Invoke();
+                return true;
+            });
             SwapchainSource = VeldridStartup.GetSwapchainSource(_window);
 
             _arrow = Sdl2Native.SDL_CreateSystemCursor(SDL_SystemCursor.Arrow);
@@ -40,6 +45,7 @@ namespace NitroSharp
 
         public AutoResetEvent Mobile_HandledSurfaceDestroyed => throw new NotImplementedException();
 
+        public event Action? CloseRequested;
         public event Action? Resized;
 
         public event Action<SwapchainSource>? Mobile_SurfaceCreated

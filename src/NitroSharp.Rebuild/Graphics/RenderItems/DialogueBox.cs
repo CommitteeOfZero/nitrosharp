@@ -1,4 +1,4 @@
-﻿namespace NitroSharp.Graphics;
+namespace NitroSharp.Graphics;
 
 internal sealed class DialogueBox : ConstraintBox
 {
@@ -6,7 +6,7 @@ internal sealed class DialogueBox : ConstraintBox
     {
     }
 
-    public override DesignSize GetUnconstrainedBounds(RenderContext ctx)
+    public override DesignSize GetSize(RenderContext ctx)
     {
         throw new System.NotImplementedException();
     }

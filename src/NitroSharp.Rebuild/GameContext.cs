@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -54,10 +54,12 @@ internal sealed class GameContext
 
         bool surfaceDestroyed = false;
         bool needsResize = false;
+        bool closeRequested = false;
         Window.Mobile_SurfaceDestroyed += () => surfaceDestroyed = true;
         Window.Resized += () => needsResize = true;
+        Window.CloseRequested += () => closeRequested = true;
 
-        while (!ShutdownSignal.IsCancellationRequested && Window.Exists)
+        while (!ShutdownSignal.IsCancellationRequested && !closeRequested)
         {
             long currentFrameTicks = Clock.ElapsedTicks;
             float deltaMilliseconds = (float)(currentFrameTicks - prevFrameTicks)
@@ -79,14 +81,15 @@ internal sealed class GameContext
     private void Tick()
     {
         InputSnapshot inputSnapshot = Window.PumpEvents();
+        RenderContext.BeginFrame(FrameStamp);
         World.BeginFrame();
         World.Update(this);
         if (Content.ResolveAssets())
         {
-            RenderContext.BeginFrame(FrameStamp, clear: true);
+            RenderContext.MainBatch.Clear(RgbaFloat.Black);
             World.Render(this);
-            RenderContext.EndFrame();
         }
+        RenderContext.EndFrame();
         RenderContext.Present();
     }
 

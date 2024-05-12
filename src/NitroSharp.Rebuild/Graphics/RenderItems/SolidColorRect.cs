@@ -1,4 +1,4 @@
-﻿using Veldrid;
+using Veldrid;
 
 namespace NitroSharp.Graphics;
 
@@ -13,7 +13,7 @@ internal sealed class SolidColorRect : RenderItem
         Color = color;
     }
 
-    public override DesignSize GetUnconstrainedBounds(RenderContext ctx) => _size;
+    public override DesignSize GetSize(RenderContext ctx) => _size;
 
     public override void Render(GameContext ctx)
     {
