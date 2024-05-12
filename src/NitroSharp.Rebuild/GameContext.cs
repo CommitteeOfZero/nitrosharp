@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -302,7 +303,16 @@ internal sealed class GameContext
                 sysScripts.Load, sysScripts.Save
             };
 
-            SourceModuleSymbol[] modules = moduleNames
+            var nssFolderInfo = new DirectoryInfo(nssFolder);
+            string[] existingModules = moduleNames.Where(x => nssFolderInfo.EnumerateFiles(x).Any()).ToArray();
+            IEnumerable<string> nonExistingModules = moduleNames.Except(existingModules);
+
+            foreach (string nonExistingModule in nonExistingModules)
+            {
+                log.Warn($"System module '{nonExistingModule}' is missing");
+            }
+
+            SourceModuleSymbol[] modules = existingModules
                 .Select(x => compilation.GetSourceModule(x))
                 .ToArray();
 
@@ -319,7 +329,7 @@ internal sealed class GameContext
         return (vm, mainThread);
     }
 
-    private static Process CreateProcess(World world, NsScriptVM vm, string modulePath, GameProfile profile,FontSettings fontSettings)
+    private static Process CreateProcess(World world, NsScriptVM vm, string modulePath, GameProfile profile, FontSettings fontSettings)
     {
         string fullModulePath = Path.Combine(profile.ScriptRoot, modulePath);
         var processName = EntityName.Parse(Path.GetFileNameWithoutExtension(modulePath));
