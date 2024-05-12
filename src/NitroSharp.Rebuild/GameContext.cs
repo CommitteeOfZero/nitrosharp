@@ -81,7 +81,7 @@ internal sealed class GameContext
 
     private void Tick()
     {
-        InputSnapshot inputSnapshot = Window.PumpEvents();
+        InputContext.Update(VM.SystemVariables);
         RenderContext.BeginFrame(FrameStamp);
         World.BeginFrame();
         World.Update(this);

@@ -73,10 +73,14 @@ internal sealed class Process : Entity
 
     public override void Update(GameContext ctx)
     {
-        foreach (Thread thread in GetChildren<Thread>())
+        foreach (Entity node in GetDescendants())
         {
-            CurrentThread = thread;
-            thread.Update(ctx);
+            if (node is Thread thread)
+            {
+                CurrentThread = thread;
+            }
+
+            node.Update(ctx);
         }
     }
 }

@@ -11,6 +11,7 @@ chapter main
 function child_rect()
 {
     CreateColor("rect", 1000, center, middle, 200, 200, "BLUE");
+    WaitKey();
     CreateColor("rect/child", 1000, 0, 0, 50, 50, "RED");
     Fade("rect", 3000, 0, null, true);
     WaitKey();

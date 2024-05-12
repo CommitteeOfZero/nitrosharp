@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Numerics;
 using NitroSharp.Graphics;
 using NitroSharp.NsScript;
@@ -21,6 +22,7 @@ internal sealed class Builtins : BuiltInFunctions
     }
 
     private Thread CurrentThread => _world.CurrentProcess.CurrentThread;
+    private Stopwatch Clock => _ctx.Clock;
 
     private SmallList<Entity> Query(in EntityQuery query) => _world.Query(query);
 
@@ -161,6 +163,16 @@ internal sealed class Builtins : BuiltInFunctions
         {
 
         }
+    }
+
+    public override void WaitForInput()
+    {
+        CurrentThread.Wait(Thread.WaitOperation.UserInput(deadline: null));
+    }
+
+    public override void WaitForInput(TimeSpan timeout)
+    {
+        CurrentThread.Wait(Thread.WaitOperation.UserInput(deadline: Clock.Elapsed + timeout));
     }
 
     public override void DestroyEntities(in EntityQuery query)
