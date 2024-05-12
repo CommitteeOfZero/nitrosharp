@@ -122,7 +122,10 @@ internal sealed class Builtins : BuiltInFunctions
     {
         foreach (Entity entity in Query(query))
         {
-            entity.Fade(dstOpacity, duration, easeFunction);
+            foreach (Entity node in entity.DescendantsAndSelf())
+            {
+                node.Fade(dstOpacity, duration, easeFunction);
+            }
         }
     }
 
