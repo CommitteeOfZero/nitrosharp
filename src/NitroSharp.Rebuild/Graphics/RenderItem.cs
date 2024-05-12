@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Numerics;
 using NitroSharp.NsScript;
 using NitroSharp.NsScript.Primitives;
@@ -36,7 +36,7 @@ internal abstract class RenderItem : Entity
 
     public virtual bool EnableScaling => true;
 
-    public abstract DesignSize GetUnconstrainedBounds(RenderContext ctx);
+    public abstract DesignSize GetSize(RenderContext ctx);
 
     protected virtual (Vector2, Vector2) GetTexCoords(RenderContext ctx)
         => (Vector2.Zero, Vector2.One);
@@ -51,20 +51,19 @@ internal abstract class RenderItem : Entity
 
     private void PerformLayout(GameContext ctx, DesignRect? constraintRect)
     {
-        DesignSize unconstrainedBounds = GetUnconstrainedBounds(ctx.RenderContext);
-        WorldMatrix = Transform.GetMatrix(unconstrainedBounds);
+        DesignSize size = GetSize(ctx.RenderContext);
+        WorldMatrix = Transform.GetMatrix(size);
         if (EnableScaling)
         {
             WorldMatrix *= Matrix4x4.CreateScale((float)ctx.RenderContext.RenderResolution.Width / ctx.RenderContext.DesignResolution.Width);
         }
         (Vector2 uvTopLeft, Vector2 uvBottomRight) = GetTexCoords(ctx.RenderContext);
-        (Quad, BoundingRect) = QuadGeometry.Create(
-            unconstrainedBounds,
+        Quad = QuadGeometry.Create(
+            size,
             WorldMatrix,
             uvTopLeft,
             uvBottomRight,
-            Color.ToVector4(),
-            constraintRect
+            Color.ToVector4()
         );
 
         // if (Parent is RenderItem parent)
@@ -122,7 +121,7 @@ internal abstract class RenderItem : Entity
         Vector3 pos = Transform.Position;
         DesignSizeU designResolution = ctx.DesignResolution;
         DesignSize parentBounds = Parent is RenderItem parentVisual
-            ? parentVisual.GetUnconstrainedBounds(ctx)
+            ? parentVisual.GetSize(ctx)
             : designResolution.ToFloatSize();
         Vector3 origin = Parent switch
         {
@@ -159,14 +158,14 @@ internal abstract class RenderItem : Entity
             _ => 0.0f
         };
         var anchorPoint = new Vector2(x.AnchorPoint, y.AnchorPoint);
-        var bounds = GetUnconstrainedBounds(ctx).ToVector2();
-        // N2: actual bounds of a dialogue box are ignored when computing its final position.
+        var size = GetSize(ctx).ToVector2();
+        // N2: actual size of a dialogue box is ignored when computing its final position.
         if (this is DialogueBox)
         {
-            bounds = ctx.DesignResolution.ToVector2();
+            size = ctx.DesignResolution.ToVector2();
         }
 
-        pos -= new Vector3(anchorPoint * bounds, 0);
+        pos -= new Vector3(anchorPoint * size, 0);
         return pos;
     }
 }

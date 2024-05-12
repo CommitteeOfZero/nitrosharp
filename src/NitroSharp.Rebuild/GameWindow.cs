@@ -12,6 +12,7 @@ namespace NitroSharp
         ScreenSizeU Size { get; }
         bool Exists { get; }
 
+        event Action? CloseRequested;
         event Action Resized;
         event Action<SwapchainSource>? Mobile_SurfaceCreated;
         event Action? Mobile_SurfaceDestroyed;

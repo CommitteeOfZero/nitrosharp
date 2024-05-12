@@ -211,7 +211,11 @@ namespace NitroSharp.NsScript.Compiler
         private void EmitAssignmentExpression(AssignmentExpression assignmentExpr)
         {
             LookupResult target = _checker.ResolveAssignmentTarget(assignmentExpr.Target);
-            if (target.IsEmpty) { return; }
+            if (target.IsEmpty)
+            {
+                EmitLoadImm(ConstantValue.Null);
+                return;
+            }
 
             EmitExpression(assignmentExpr.Value);
 
@@ -266,12 +270,17 @@ namespace NitroSharp.NsScript.Compiler
                 ? Opcode.StoreVar
                 : Opcode.StoreFlag;
             EmitStore(storeOp, token);
+            EmitLoadImm(ConstantValue.Null);
         }
 
         private void EmitFunctionCall(FunctionCallExpression callExpression)
         {
             LookupResult lookupResult = _checker.LookupFunction(callExpression.TargetName);
-            if (lookupResult.IsEmpty) { return; }
+            if (lookupResult.IsEmpty)
+            {
+                EmitLoadImm(ConstantValue.Null);
+                return;
+            }
             bool isBuiltIn = lookupResult.Variant == LookupResultVariant.BuiltInFunction;
             ImmutableArray<Expression> arguments = callExpression.Arguments;
             bool suppressConstantLookup = _suppressConstantLookup;
@@ -329,6 +338,7 @@ namespace NitroSharp.NsScript.Compiler
                     _code.WriteUInt16LE(externalNsxBuilder.GetSubroutineToken(function));
                     _code.WriteByte((byte)callExpression.Arguments.Length);
                 }
+                EmitLoadImm(ConstantValue.Null);
             }
         }
 
@@ -385,6 +395,7 @@ namespace NitroSharp.NsScript.Compiler
                     break;
                 case SyntaxNodeKind.ExpressionStatement:
                     EmitExpression(((ExpressionStatement)statement).Expression);
+                    EmitOpcode(Opcode.Pop);
                     break;
                 case SyntaxNodeKind.IfStatement:
                     EmitIfStatement((IfStatement)statement);

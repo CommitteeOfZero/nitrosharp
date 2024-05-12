@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Numerics;
 using NitroSharp.Content;
 using NitroSharp.Graphics.Core;
@@ -17,7 +17,7 @@ internal class Sprite : RenderItem
 
     public SpriteTexture Texture => _texture;
 
-    public override DesignSize GetUnconstrainedBounds(RenderContext ctx)
+    public override DesignSize GetSize(RenderContext ctx)
         => _texture.GetSize(ctx);
 
     protected override (Vector2, Vector2) GetTexCoords(RenderContext ctx)

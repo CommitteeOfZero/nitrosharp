@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Numerics;
 using NitroSharp.Graphics;
 using NitroSharp.NsScript;
@@ -68,14 +68,14 @@ internal sealed class Builtins : BuiltInFunctions
     public override int GetWidth(in EntityPath entityPath)
     {
         return _world.Get(entityPath) is RenderItem renderItem
-            ? (int)renderItem.BoundingRect.Width
+            ? (int)renderItem.GetSize(_ctx.RenderContext).Width
             : 0;
     }
 
     public override int GetHeight(in EntityPath entityPath)
     {
         return _world.Get(entityPath) is RenderItem renderItem
-            ? (int)renderItem.BoundingRect.Height
+            ? (int)renderItem.GetSize(_ctx.RenderContext).Height
             : 0;
     }
 

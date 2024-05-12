@@ -216,16 +216,15 @@ namespace NitroSharp.Graphics
             return new AnimatedIcons(waitLine);
         }
 
-        public void BeginFrame(in FrameStamp frameStamp, bool clear)
+        public void BeginFrame(in FrameStamp frameStamp)
         {
-            BeginFrame(frameStamp, _swapchainTarget, clear);
+            BeginFrame(frameStamp, _swapchainTarget);
         }
 
-        public void BeginFrame(in FrameStamp frameStamp, RenderTarget renderTarget, bool clear)
+        public void BeginFrame(in FrameStamp frameStamp, RenderTarget renderTarget)
         {
             _drawCommands.Begin();
-            RgbaFloat? clearColor = clear ? RgbaFloat.Black : null;
-            MainBatch.Begin(_drawCommands, renderTarget, clearColor);
+            MainBatch.Begin(_drawCommands, renderTarget);
 
             _secondaryCommandList.Begin();
 
@@ -238,9 +237,9 @@ namespace NitroSharp.Graphics
             TransferCommands.Begin();
         }
 
-        public DrawBatch BeginOffscreenBatch(RenderTarget renderTarget, RgbaFloat? clearColor)
+        public DrawBatch BeginOffscreenBatch(RenderTarget renderTarget)
         {
-            _offscreenBatch.Begin(_secondaryCommandList, renderTarget, clearColor);
+            _offscreenBatch.Begin(_secondaryCommandList, renderTarget);
             return _offscreenBatch;
         }
 

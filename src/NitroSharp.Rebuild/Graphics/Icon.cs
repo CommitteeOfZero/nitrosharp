@@ -118,7 +118,7 @@ namespace NitroSharp.Graphics
             ViewProjection vp = context.OrthoProjection;
 
             var transform = Matrix4x4.CreateTranslation(new Vector3(position, 0));
-            (QuadGeometry quad, _) = QuadGeometry.Create(
+            QuadGeometry quad = QuadGeometry.Create(
                 new DesignSize(_texture.Width, _texture.Height),
                 transform,
                 uvTopLeft: Vector2.Zero,
