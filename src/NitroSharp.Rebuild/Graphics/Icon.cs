@@ -2,25 +2,25 @@
 using NitroSharp.Content;
 using NitroSharp.Graphics.Core;
 using System.Diagnostics;
+using System.IO;
 using System.Numerics;
 using System.Runtime.InteropServices;
-using NitroSharp.NsScript;
 using Veldrid;
 
 namespace NitroSharp.Graphics
 {
     internal sealed class AnimatedIcons : IDisposable
     {
-        public AnimatedIcons(Icon waitLine)
+        public AnimatedIcons(Icon? waitLine)
         {
             WaitLine = waitLine;
         }
 
-        public Icon WaitLine { get; }
+        public Icon? WaitLine { get; }
 
         public void Dispose()
         {
-            WaitLine.Dispose();
+            WaitLine?.Dispose();
         }
     }
 
@@ -50,6 +50,20 @@ namespace NitroSharp.Graphics
             var duration = TimeSpan.FromMilliseconds(frameCount * 120);
             //_animation = new IconAnimation(this, 0, frameCount - 1, duration);
             _animation = new();
+        }
+
+        public static bool Exists(ContentManager content, IconPathPattern pathPattern)
+        {
+            foreach (string path in pathPattern.EnumeratePaths())
+            {
+                using Stream? stream = content.TryOpenStream(path);
+                if (stream is null)
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         public static Icon Load(RenderContext renderContext, IconPathPattern pathPattern)

@@ -205,7 +205,11 @@ namespace NitroSharp.Graphics
         {
             CommandList cl = CommandListPool.Rent();
             cl.Begin();
-            var waitLine = Icon.Load(this, gameProfile.IconPathPatterns.WaitLine);
+            Icon? waitLine = null;
+            if (Icon.Exists(Content, gameProfile.IconPathPatterns.WaitLine))
+            {
+                waitLine = Icon.Load(this, gameProfile.IconPathPatterns.WaitLine);
+            }
             cl.End();
             GraphicsDevice.SubmitCommands(cl);
             CommandListPool.Return(cl);
