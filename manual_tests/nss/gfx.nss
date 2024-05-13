@@ -1,30 +1,33 @@
 
-chapter main
+function test_gfx()
 {
-    child_rect();
-    //move_aliased_child();
-    Exit();
+    test_gfx_child_rect();
+    test_gfx_move_aliased_child();
 }
 
 // expect: both objects fade away
 // OK
-function child_rect()
+function test_gfx_child_rect()
 {
-    CreateColor("rect", 1000, center, middle, 200, 200, "BLUE");
+	CreateName("test");
+    CreateColor("test/rect", 1000, center, middle, 200, 200, "BLUE");
     WaitKey();
-    CreateColor("rect/child", 1000, 0, 0, 50, 50, "RED");
-    Fade("rect", 3000, 0, null, true);
+    CreateColor("test/rect/child", 1000, 0, 0, 50, 50, "RED");
+    Fade("test/rect", 3000, 0, null, true);
     WaitKey();
+    Delete("test");
 }
 
 // expect: 'a' gets Move'd twice
 // OK
-function move_aliased_child()
+function test_gfx_move_aliased_child()
 {
-    CreateColor("a", 1, 0, 0, 256, 256, "blue");
-    CreateColor("a/b", 2, 0, 0, 128, 128, "red");
-    SetAlias("a", "a");
-    SetAlias("a/b", "b");
+	CreateName("test");
+    CreateColor("test/a", 1, 0, 0, 256, 256, "blue");
+    CreateColor("test/a/b", 2, 0, 0, 128, 128, "red");
+    SetAlias("test/a", "a");
+    SetAlias("test/a/b", "b");
     Move("@*", 0, @32, @32, null, true);
     WaitKey();
+    Delete("test");
 }
