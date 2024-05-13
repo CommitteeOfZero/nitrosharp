@@ -34,7 +34,7 @@ namespace NitroSharp.NsScript.VM
 
         public virtual ConstantValue FormatString(string format, object[] args) => throw new NotImplementedException();
 
-        public virtual void CreateEntity(in EntityPath path) { }
+        public virtual void CreateEntity(in EntityPath entityPath) { }
         public virtual void CreateThread(in EntityPath entityPath, string target, NsCoordinate x, NsCoordinate y) { }
         public virtual void SetAlias(in EntityPath entityPath, in EntityAlias alias) { }
         public virtual void Request(in EntityQuery query, NsEntityAction action) { }

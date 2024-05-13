@@ -26,6 +26,14 @@ internal sealed class Builtins : BuiltInFunctions
 
     private SmallList<Entity> Query(in EntityQuery query) => _world.Query(query);
 
+    public override void CreateEntity(in EntityPath entityPath)
+    {
+        if (_world.TryResolvePath(entityPath, out EntityName name, out Entity? parent))
+        {
+            _world.AddEntity(new BlankEntity(name, parent));
+        }
+    }
+
     public override void LoadImage(in EntityPath entityPath, string source)
     {
         if (_world.TryResolvePath(entityPath, out EntityName name, out Entity? parent))
