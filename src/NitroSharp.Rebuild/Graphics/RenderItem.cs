@@ -10,8 +10,6 @@ internal abstract class RenderItem : Entity
 {
     private Transform _transform = Transform.Default;
     private RgbaFloat _color = RgbaFloat.White;
-    private QuadGeometry _quad;
-    private Matrix4x4 _worldMatrix;
 
     private OpacityAnimation? _fadeAnimation;
     private MoveAnimation? _moveAnimation;
@@ -28,18 +26,11 @@ internal abstract class RenderItem : Entity
 
     public ref RgbaFloat Color => ref _color;
     public ref Transform Transform => ref _transform;
-    protected ref QuadGeometry Quad => ref _quad;
-    protected ref Matrix4x4 WorldMatrix => ref _worldMatrix;
 
     public BlendMode BlendMode { get; set; } = BlendMode.Alpha;
     public FilterMode FilterMode { get; set; } = FilterMode.Linear;
 
-    public virtual bool EnableScaling => true;
-
     public abstract DesignSize GetSize(RenderContext ctx);
-
-    protected virtual (Vector2, Vector2) GetTexCoords(RenderContext ctx)
-        => (Vector2.Zero, Vector2.One);
 
     public override void Update(GameContext ctx)
     {

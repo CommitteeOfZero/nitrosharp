@@ -20,9 +20,6 @@ internal class Sprite : RenderItem
     public override DesignSize GetSize(RenderContext ctx)
         => _texture.GetSize(ctx);
 
-    protected override (Vector2, Vector2) GetTexCoords(RenderContext ctx)
-        => _texture.GetTexCoords(ctx);
-
     public override void Render(GameContext ctx)
     {
         RenderCore(ctx.RenderContext, ctx.RenderContext.MainBatch);
@@ -42,7 +39,7 @@ internal class Sprite : RenderItem
         Matrix4x4 worldMatrix = Transform.GetMatrix(size);
         worldMatrix *= Matrix4x4.CreateScale((float)ctx.RenderScale);
         worldMatrix *= Matrix4x4.CreateTranslation((float)ctx.ViewportLeft, (float)ctx.ViewportTop, 0);
-        (Vector2 uvTopLeft, Vector2 uvBottomRight) = GetTexCoords(ctx);
+        (Vector2 uvTopLeft, Vector2 uvBottomRight) = _texture.GetTexCoords(ctx);
         QuadGeometry quad = QuadGeometry.Create(
             size,
             worldMatrix,

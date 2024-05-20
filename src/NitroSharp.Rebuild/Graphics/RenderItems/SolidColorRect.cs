@@ -24,12 +24,11 @@ internal sealed class SolidColorRect : RenderItem
         Matrix4x4 worldMatrix = Transform.GetMatrix(size);
         worldMatrix *= Matrix4x4.CreateScale((float)renderContext.RenderScale);
         worldMatrix *= Matrix4x4.CreateTranslation((float)renderContext.ViewportLeft, (float)renderContext.ViewportTop, 0);
-        (Vector2 uvTopLeft, Vector2 uvBottomRight) = GetTexCoords(renderContext);
         QuadGeometry quad = QuadGeometry.Create(
             size,
             worldMatrix,
-            uvTopLeft,
-            uvBottomRight,
+            Vector2.Zero,
+            Vector2.One,
             Color.ToVector4()
         );
 
