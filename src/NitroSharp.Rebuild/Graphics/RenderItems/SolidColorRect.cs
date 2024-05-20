@@ -24,7 +24,8 @@ internal sealed class SolidColorRect : RenderItem
             renderContext.WhiteTexture,
             default,
             BlendMode,
-            FilterMode
+            FilterMode,
+            null
         );
     }
 }

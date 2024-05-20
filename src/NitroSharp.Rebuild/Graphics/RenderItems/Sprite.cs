@@ -44,7 +44,8 @@ internal class Sprite : RenderItem
             alphaMaskTex,
             alphaMaskPos,
             BlendMode,
-            FilterMode
+            FilterMode,
+            null
         );
     }
 }
