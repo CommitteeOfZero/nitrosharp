@@ -36,10 +36,10 @@ internal class Sprite : RenderItem
         // }
 
         DesignSize size = GetSize(ctx);
+        ScreenPoint viewportPosition = new ScreenPoint((float)ctx.ViewportLeft, (float)ctx.ViewportTop);
         Scale<DesignPixel, ScreenPixel> renderScale = new Scale<DesignPixel, ScreenPixel>((float)ctx.RenderScale);
         Matrix4x4 worldMatrix = Matrix4x4.CreateScale(renderScale.Factor);
-        worldMatrix *= Transform.GetMatrix(renderScale, size);
-        worldMatrix *= Matrix4x4.CreateTranslation((float)ctx.ViewportLeft, (float)ctx.ViewportTop, 0);
+        worldMatrix *= Transform.GetMatrix(viewportPosition, renderScale, size);
         (Vector2 uvTopLeft, Vector2 uvBottomRight) = _texture.GetTexCoords(ctx);
         QuadGeometry quad = QuadGeometry.Create(
             size,

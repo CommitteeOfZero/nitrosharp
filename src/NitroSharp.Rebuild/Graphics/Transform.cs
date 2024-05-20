@@ -14,7 +14,7 @@ namespace NitroSharp.Graphics
 
         public static Transform Default => new() { Scale = Vector3.One };
 
-        public Matrix4x4 GetMatrix(Scale<DesignPixel, ScreenPixel> renderScale, DesignSize? size = null)
+        public Matrix4x4 GetMatrix(ScreenPoint viewportPosition, Scale<DesignPixel, ScreenPixel> renderScale, DesignSize? size = null)
         {
             static float rad(float deg) => deg / 180.0f * MathF.PI;
 
@@ -24,7 +24,8 @@ namespace NitroSharp.Graphics
             Matrix4x4 rot = Matrix4x4.CreateRotationZ(rad(Rotation.Z), center)
                 * Matrix4x4.CreateRotationY(rad(Rotation.Y), center)
                 * Matrix4x4.CreateRotationX(rad(Rotation.X), center);
-            var translation = Matrix4x4.CreateTranslation(Position * renderScale.Factor);
+            Vector3 finalPosition = new Vector3(viewportPosition.ToVector2(), 0) + Position * renderScale.Factor;
+            var translation = Matrix4x4.CreateTranslation(finalPosition);
             return scale * rot * translation;
         }
     }
