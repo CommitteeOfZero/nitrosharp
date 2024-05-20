@@ -1,8 +1,31 @@
 
 function test_gfx()
 {
+    test_gfx_letterboxing_clip();
+    test_gfx_letterboxing_fit();
     test_gfx_child_rect();
     test_gfx_move_aliased_child();
+}
+
+// expect: red rectangle is not visible at any resolutions
+// FAIL
+function test_gfx_letterboxing_clip()
+{
+	CreateName("test");
+    CreateColor("test/bg", 500, center, middle, 2560, 1440, "RED");
+    CreateColor("test/fg", 1000, center, middle, 1280, 720, "BLUE");
+    WaitKey();
+    Delete("test");
+}
+
+// expect: blue rectangle is centered and scaled to fit the window
+// FAIL
+function test_gfx_letterboxing_fit()
+{
+	CreateName("test");
+    CreateColor("test/fg", 1000, center, middle, 1280, 720, "BLUE");
+    WaitKey();
+    Delete("test");
 }
 
 // expect: both objects fade away
