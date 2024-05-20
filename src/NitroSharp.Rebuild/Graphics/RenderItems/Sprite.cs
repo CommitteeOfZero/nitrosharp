@@ -38,8 +38,21 @@ internal class Sprite : RenderItem
         //     alphaMaskPos = alphaMask.Transform.Position.XY();
         // }
 
+        DesignSize size = GetSize(ctx);
+        Matrix4x4 worldMatrix = Transform.GetMatrix(size);
+        worldMatrix *= Matrix4x4.CreateScale((float)ctx.RenderScale);
+        worldMatrix *= Matrix4x4.CreateTranslation((float)ctx.ViewportLeft, (float)ctx.ViewportTop, 0);
+        (Vector2 uvTopLeft, Vector2 uvBottomRight) = GetTexCoords(ctx);
+        QuadGeometry quad = QuadGeometry.Create(
+            size,
+            worldMatrix,
+            uvTopLeft,
+            uvBottomRight,
+            Color.ToVector4()
+        );
+
         drawBatch.PushQuad(
-            Quad,
+            quad,
             _texture.Resolve(ctx),
             alphaMaskTex,
             alphaMaskPos,

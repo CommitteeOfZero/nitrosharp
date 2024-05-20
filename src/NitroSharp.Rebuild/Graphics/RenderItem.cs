@@ -51,22 +51,6 @@ internal abstract class RenderItem : Entity
 
     private void PerformLayout(GameContext ctx, DesignRect? constraintRect)
     {
-        DesignSize size = GetSize(ctx.RenderContext);
-        WorldMatrix = Transform.GetMatrix(size);
-        if (EnableScaling)
-        {
-            WorldMatrix *= Matrix4x4.CreateScale((float)ctx.RenderContext.RenderScale);
-            WorldMatrix *= Matrix4x4.CreateTranslation((float)ctx.RenderContext.ViewportLeft, (float)ctx.RenderContext.ViewportTop, 0);
-        }
-        (Vector2 uvTopLeft, Vector2 uvBottomRight) = GetTexCoords(ctx.RenderContext);
-        Quad = QuadGeometry.Create(
-            size,
-            WorldMatrix,
-            uvTopLeft,
-            uvBottomRight,
-            Color.ToVector4()
-        );
-
         // if (Parent is RenderItem parent)
         // {
         //     _color.SetAlpha(parent._color.A);

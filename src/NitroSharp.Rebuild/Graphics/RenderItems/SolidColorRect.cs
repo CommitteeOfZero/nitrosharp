@@ -1,3 +1,4 @@
+using System.Numerics;
 using Veldrid;
 
 namespace NitroSharp.Graphics;
@@ -18,8 +19,22 @@ internal sealed class SolidColorRect : RenderItem
     public override void Render(GameContext ctx)
     {
         RenderContext renderContext = ctx.RenderContext;
+
+        DesignSize size = GetSize(renderContext);
+        Matrix4x4 worldMatrix = Transform.GetMatrix(size);
+        worldMatrix *= Matrix4x4.CreateScale((float)renderContext.RenderScale);
+        worldMatrix *= Matrix4x4.CreateTranslation((float)renderContext.ViewportLeft, (float)renderContext.ViewportTop, 0);
+        (Vector2 uvTopLeft, Vector2 uvBottomRight) = GetTexCoords(renderContext);
+        QuadGeometry quad = QuadGeometry.Create(
+            size,
+            worldMatrix,
+            uvTopLeft,
+            uvBottomRight,
+            Color.ToVector4()
+        );
+
         renderContext.MainBatch.PushQuad(
-            Quad,
+            quad,
             renderContext.WhiteTexture,
             renderContext.WhiteTexture,
             default,
