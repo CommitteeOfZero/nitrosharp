@@ -20,14 +20,14 @@ namespace NitroSharp.Graphics.Core
     {
         public const uint SizeInGpuBlocks = 2;
 
-        private readonly TexturePoint _origin;
-        private readonly TextureSize _size;
+        private readonly TexturePointU _origin;
+        private readonly TextureSizeU _size;
         private readonly uint _layer;
         private readonly Vector3 _userData;
 
         public TextureLocation(
-            TexturePoint origin,
-            TextureSize size,
+            TexturePointU origin,
+            TextureSizeU size,
             uint layer,
             Vector3 userData)
         {
@@ -61,7 +61,7 @@ namespace NitroSharp.Graphics.Core
         private struct CacheEntry
         {
             public PixelFormat PixelFormat;
-            public TextureSize Size;
+            public TextureSizeU Size;
             public ArrayTextureAllocation Allocation;
             public FrameStamp LastAccess;
             public GpuCacheHandle UvRectHandle;
@@ -167,7 +167,7 @@ namespace NitroSharp.Graphics.Core
         public void Update<TPix>(
             ref TextureCacheHandle handle,
             PixelFormat pixelFormat,
-            TextureSize textureSize,
+            TextureSizeU textureSize,
             ReadOnlySpan<TPix> pixels,
             Vector3 userData = default)
             where TPix : unmanaged
@@ -216,7 +216,7 @@ namespace NitroSharp.Graphics.Core
             }
         }
 
-        private void Allocate(ref TextureCacheHandle handle, PixelFormat pixelFormat, TextureSize textureSize)
+        private void Allocate(ref TextureCacheHandle handle, PixelFormat pixelFormat, TextureSizeU textureSize)
         {
             CacheEntry entry = DoAllocateEntry(pixelFormat, textureSize);
             (FreeListHandle? newHandleOpt, CacheEntry? oldValue) = _entries.Upsert(
@@ -233,7 +233,7 @@ namespace NitroSharp.Graphics.Core
             }
         }
 
-        private CacheEntry DoAllocateEntry(PixelFormat pixelFormat, TextureSize textureSize)
+        private CacheEntry DoAllocateEntry(PixelFormat pixelFormat, TextureSizeU textureSize)
         {
             ArrayTexture arrayTexture = SelectArrayTexture(pixelFormat);
             CacheEntry? entryOpt = TryAllocateEntry(arrayTexture, textureSize);
@@ -257,7 +257,7 @@ namespace NitroSharp.Graphics.Core
             throw new Exception("BUG: texture cache is full. This was thought to be impossible.");
         }
 
-        private CacheEntry? TryAllocateEntry(ArrayTexture arrayTexture, TextureSize textureSize)
+        private CacheEntry? TryAllocateEntry(ArrayTexture arrayTexture, TextureSizeU textureSize)
         {
             ArrayTextureAllocation? allocOpt = arrayTexture.AllocateSpace(textureSize);
             if (allocOpt is { } alloc)
@@ -331,7 +331,7 @@ namespace NitroSharp.Graphics.Core
     }
 
     [StructLayout(LayoutKind.Auto)]
-    internal readonly record struct ArrayTextureAllocation(uint Layer, TexturePoint Location);
+    internal readonly record struct ArrayTextureAllocation(uint Layer, TexturePointU Location);
 
     internal sealed class ArrayTexture : IDisposable
     {
@@ -355,12 +355,12 @@ namespace NitroSharp.Graphics.Core
             }
 
             public uint Index { get; }
-            public TextureSize SlabSize { get; private set; }
-            public TextureRect DirtyRect { get; private set; }
-            public TextureRect UsedRect { get; private set; }
+            public TextureSizeU SlabSize { get; private set; }
+            public TextureRectU DirtyRect { get; private set; }
+            public TextureRectU UsedRect { get; private set; }
             public bool IsEmpty => SlabSize.Equals(default);
 
-            public void Initialize(TextureSize slabSize)
+            public void Initialize(TextureSizeU slabSize)
             {
                 SlabSize = slabSize;
                 uint slotsPerX = Dimensions / slabSize.Width;
@@ -375,23 +375,23 @@ namespace NitroSharp.Graphics.Core
                 _slotCount = (uint)_freeSlots.Count;
             }
 
-            public TexturePoint? AllocateBlock()
+            public TexturePointU? AllocateBlock()
             {
                 if (_freeSlots.Count == 0) { return null; }
                 (byte x, byte y) = _freeSlots.Dequeue();
                 (uint w, uint h) = (SlabSize.Width, SlabSize.Height);
-                var rect = new TextureRect(x * w, y * h, w, h);
+                var rect = new TextureRectU(x * w, y * h, w, h);
                 DirtyRect = DirtyRect.Width > 0
-                    ? TextureRect.Union(DirtyRect, rect)
+                    ? TextureRectU.Union(DirtyRect, rect)
                     : rect;
-                UsedRect = TextureRect.Union(UsedRect, DirtyRect);
-                return new TexturePoint(rect.X, rect.Y);
+                UsedRect = TextureRectU.Union(UsedRect, DirtyRect);
+                return new TexturePointU(rect.X, rect.Y);
             }
 
             public void ResetDirtyRect() => DirtyRect = default;
             public void OnRealloc() => DirtyRect = UsedRect;
 
-            public void Free(TexturePoint point)
+            public void Free(TexturePointU point)
             {
                 uint x = point.X / SlabSize.Width;
                 uint y = point.Y / SlabSize.Height;
@@ -468,7 +468,7 @@ namespace NitroSharp.Graphics.Core
                 {
                     MappedResource src = layer.Map;
                     MappedResource dst = _gd.Map(newStaging, MapMode.Write, layer.Index);
-                    TextureRect rect = layer.UsedRect;
+                    TextureRectU rect = layer.UsedRect;
                     if (rect.Width > 0)
                     {
                         GraphicsUtils.CopyTextureRegion(
@@ -533,7 +533,7 @@ namespace NitroSharp.Graphics.Core
             {
                 _gd.Unmap(_stagingTexture, layer.Index);
                 layer.Map = default;
-                TextureRect dirtyRect = layer.DirtyRect;
+                TextureRectU dirtyRect = layer.DirtyRect;
                 if (dirtyRect.Width > 0)
                 {
                     commandList.CopyTexture(
@@ -556,9 +556,9 @@ namespace NitroSharp.Graphics.Core
             AllocateTexture(_layers.Count + 1);
         }
 
-        public ArrayTextureAllocation? AllocateSpace(TextureSize textureSize)
+        public ArrayTextureAllocation? AllocateSpace(TextureSizeU textureSize)
         {
-            TextureSize slabSize = GetSlabSize(textureSize);
+            TextureSizeU slabSize = GetSlabSize(textureSize);
             uint emptyLayer = uint.MaxValue;
             for (int i = (int)_layers.Count - 1; i >= 0; i--)
             {
@@ -566,7 +566,7 @@ namespace NitroSharp.Graphics.Core
                 if (layer.IsEmpty) { emptyLayer = (uint)i; }
                 else if (layer.SlabSize == slabSize)
                 {
-                    TexturePoint? point = layer.AllocateBlock();
+                    TexturePointU? point = layer.AllocateBlock();
                     if (point is not null)
                     {
                         return new ArrayTextureAllocation((uint)i, point.Value);
@@ -578,7 +578,7 @@ namespace NitroSharp.Graphics.Core
             {
                 ref Layer layer = ref _layers[emptyLayer];
                 layer.Initialize(slabSize);
-                TexturePoint? point = layer.AllocateBlock();
+                TexturePointU? point = layer.AllocateBlock();
                 if (point is not null)
                 {
                     return new ArrayTextureAllocation(emptyLayer, point.Value);
@@ -594,7 +594,7 @@ namespace NitroSharp.Graphics.Core
             layer.Free(allocation.Location);
         }
 
-        private static TextureSize GetSlabSize(TextureSize textureSize)
+        private static TextureSizeU GetSlabSize(TextureSizeU textureSize)
         {
             static uint quantizeDimension(uint dim) => dim switch
             {
@@ -606,12 +606,12 @@ namespace NitroSharp.Graphics.Core
             uint width = quantizeDimension(textureSize.Width + 4);
             uint height = quantizeDimension(textureSize.Height + 4);
             uint max = Math.Max(width, height);
-            return new TextureSize(max, max);
+            return new TextureSizeU(max, max);
         }
 
         public unsafe void UploadData<TPix>(
             in ArrayTextureAllocation allocation,
-            TextureSize size,
+            TextureSizeU size,
             ReadOnlySpan<TPix> data)
             where TPix : unmanaged
         {
@@ -621,7 +621,7 @@ namespace NitroSharp.Graphics.Core
             uint srcRowPitch = size.Width * bpp;
             uint srcDepthPitch = srcRowPitch * size.Height;
             MappedResource dst = layer.Map;
-            TexturePoint location = allocation.Location;
+            TexturePointU location = allocation.Location;
             fixed (TPix* src = &data[0])
             {
                 GraphicsUtils.CopyTextureRegion(
