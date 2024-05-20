@@ -69,6 +69,19 @@ namespace NitroSharp.Graphics
             _secondaryCommandList.Name = "Secondary";
             CommandListPool = new ResourcePool<CommandList>(ResourceFactory.CreateCommandList, initialSize: 2);
 
+            double scaledDesignArea = Math.Min(
+                (double)RenderResolution.Width * DesignResolution.Height,
+                (double)RenderResolution.Height * DesignResolution.Width
+            );
+            double designArea = (double)DesignResolution.Width * DesignResolution.Height;
+            double viewportWidth = scaledDesignArea / DesignResolution.Height;
+            double viewportHeight = scaledDesignArea / DesignResolution.Width;
+            RenderScale = scaledDesignArea / designArea;
+            ViewportLeft = (RenderResolution.Width - viewportWidth) / 2;
+            ViewportTop = (RenderResolution.Height - viewportHeight) / 2;
+            ViewportRight = (RenderResolution.Width + viewportWidth) / 2;
+            ViewportBottom = (RenderResolution.Height + viewportHeight) / 2;
+
             OrthoProjection = ViewProjection.CreateOrtho(
                 graphicsDevice,
                 new ScreenRectU(PointU<ScreenPixel>.Zero, RenderResolution)
@@ -140,6 +153,12 @@ namespace NitroSharp.Graphics
         public MeshList<QuadVertex> Quads { get; }
         public MeshList<QuadVertexUV3> QuadsUV3 { get; }
         public MeshList<CubeVertex> Cubes { get; }
+
+        public double RenderScale { get; }
+        public double ViewportLeft { get; }
+        public double ViewportTop { get; }
+        public double ViewportRight { get; }
+        public double ViewportBottom { get; }
 
         public GraphicsDevice GraphicsDevice { get; }
         public ResourceFactory ResourceFactory { get; }

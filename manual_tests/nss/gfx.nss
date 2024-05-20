@@ -19,7 +19,7 @@ function test_gfx_letterboxing_clip()
 }
 
 // expect: blue rectangle is centered and scaled to fit the window
-// FAIL
+// OK
 function test_gfx_letterboxing_fit()
 {
 	CreateName("test");
