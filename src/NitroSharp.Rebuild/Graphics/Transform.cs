@@ -14,17 +14,17 @@ namespace NitroSharp.Graphics
 
         public static Transform Default => new() { Scale = Vector3.One };
 
-        public Matrix4x4 GetMatrix(DesignSize? size = null)
+        public Matrix4x4 GetMatrix(Scale<DesignPixel, ScreenPixel> renderScale, DesignSize? size = null)
         {
             static float rad(float deg) => deg / 180.0f * MathF.PI;
 
-            var bounds = size?.ToVector2() ?? Vector2.Zero;
+            var bounds = size?.Convert(renderScale).ToVector2() ?? Vector2.Zero;
             var center = new Vector3(new Vector2(0.5f) * bounds, 0);
             var scale = Matrix4x4.CreateScale(Scale, center);
             Matrix4x4 rot = Matrix4x4.CreateRotationZ(rad(Rotation.Z), center)
                 * Matrix4x4.CreateRotationY(rad(Rotation.Y), center)
                 * Matrix4x4.CreateRotationX(rad(Rotation.X), center);
-            var translation = Matrix4x4.CreateTranslation(Position);
+            var translation = Matrix4x4.CreateTranslation(Position * renderScale.Factor);
             return scale * rot * translation;
         }
     }

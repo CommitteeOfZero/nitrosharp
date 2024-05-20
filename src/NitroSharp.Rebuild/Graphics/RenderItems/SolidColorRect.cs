@@ -21,8 +21,9 @@ internal sealed class SolidColorRect : RenderItem
         RenderContext renderContext = ctx.RenderContext;
 
         DesignSize size = GetSize(renderContext);
-        Matrix4x4 worldMatrix = Transform.GetMatrix(size);
-        worldMatrix *= Matrix4x4.CreateScale((float)renderContext.RenderScale);
+        Scale<DesignPixel, ScreenPixel> renderScale = new Scale<DesignPixel, ScreenPixel>((float)renderContext.RenderScale);
+        Matrix4x4 worldMatrix = Matrix4x4.CreateScale(renderScale.Factor);
+        worldMatrix *= Transform.GetMatrix(renderScale, size);
         worldMatrix *= Matrix4x4.CreateTranslation((float)renderContext.ViewportLeft, (float)renderContext.ViewportTop, 0);
         QuadGeometry quad = QuadGeometry.Create(
             size,
