@@ -42,6 +42,7 @@ internal sealed class GameContext
     internal required NsScriptVM VM { get; init; }
     internal Builtins Builtins { get; private set; }
     internal required World World { get; init; }
+    internal FontSettings FontSettings { get; private set; }
     internal Stopwatch Clock { get; } = Stopwatch.StartNew();
     internal CancellationTokenSource ShutdownSignal { get; } = new();
 
@@ -85,6 +86,7 @@ internal sealed class GameContext
         RenderContext.BeginFrame(FrameStamp);
         World.BeginFrame();
         World.Update(this);
+        RenderContext.ResolveGlyphs();
         if (Content.ResolveAssets())
         {
             RenderContext.MainBatch.Clear(RgbaFloat.Black);
@@ -140,7 +142,7 @@ internal sealed class GameContext
         );
 
         var world = new World();
-        Process mainProcess = CreateProcess(world, vm, profile.SysScripts.Startup, profile, fontSettings);
+        Process mainProcess = CreateProcess(world, vm, profile.SysScripts.Startup, profile);
         world.RegisterProcess(mainProcess, isMain: true, activate: true);
         var ctx =  new GameContext
         {
@@ -152,7 +154,8 @@ internal sealed class GameContext
             RenderContext = renderContext,
             InputContext = inputContext,
             VM = vm,
-            World = world
+            World = world,
+            FontSettings = fontSettings
         };
         ctx.Builtins = new Builtins(ctx);
         return ctx;
@@ -332,12 +335,12 @@ internal sealed class GameContext
         return (vm, mainThread);
     }
 
-    private static Process CreateProcess(World world, NsScriptVM vm, string modulePath, GameProfile profile, FontSettings fontSettings)
+    private static Process CreateProcess(World world, NsScriptVM vm, string modulePath, GameProfile profile)
     {
         string fullModulePath = Path.Combine(profile.ScriptRoot, modulePath);
         var processName = EntityName.Parse(Path.GetFileNameWithoutExtension(modulePath));
         NsScriptThreadState threadState = CreateThread(vm, modulePath);
-        var process = new Process(processName, parent: null, fontSettings);
+        var process = new Process(processName, parent: null);
         var mainThread = new Thread(EntityName.Parse("main"), parent: process, threadState, isMain: true);
         world.AddEntity(process);
         world.AddEntity(mainThread);

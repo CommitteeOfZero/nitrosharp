@@ -24,13 +24,11 @@ internal sealed class RenderItemComparer : IComparer<RenderItem>
 
 internal sealed class Process : Entity
 {
-    private readonly FontSettings _fontSettings;
     private readonly List<RenderItem> _renderList = new();
 
-    public Process(EntityName name, Entity? parent, FontSettings fontSettings)
+    public Process(EntityName name, Entity? parent)
         : base(name, parent)
     {
-        _fontSettings = fontSettings;
         Aliases = new AliasMap(this);
     }
 

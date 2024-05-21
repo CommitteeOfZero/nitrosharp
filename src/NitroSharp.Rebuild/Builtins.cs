@@ -117,6 +117,34 @@ internal sealed class Builtins : BuiltInFunctions
         }
     }
 
+    public override void CreateTextBlock(
+        in EntityPath entityPath,
+        int priority,
+        NsCoordinate x, NsCoordinate y,
+        NsTextDimension width, NsTextDimension height,
+        string markup)
+    {
+        if (_world.TryResolvePath(entityPath, out EntityName entityName, out Entity? parent))
+        {
+            var margin = new Vector4(0, 15, 34, 28);
+            uint w = width is { Variant: NsTextDimensionVariant.Value, Value: { } sWidth }
+                ? (uint)sWidth : uint.MaxValue;
+            uint h = height  is { Variant: NsTextDimensionVariant.Value, Value: { } sHeight }
+                ? (uint)sHeight : uint.MaxValue;
+
+            _world.AddEntity(new TextBlock(
+                entityName,
+                parent,
+                _ctx.RenderContext.Text,
+                priority,
+                markup,
+                new DesignSizeU(w, h),
+                _ctx.FontSettings,
+                margin
+            )).WithPosition(_ctx.RenderContext, x, y);
+        }
+    }
+
     public override void Move(EntityQuery query, TimeSpan duration, NsCoordinate dstX, NsCoordinate dstY, NsEaseFunction easeFunction, TimeSpan delay)
     {
         foreach (Entity entity in Query(query))

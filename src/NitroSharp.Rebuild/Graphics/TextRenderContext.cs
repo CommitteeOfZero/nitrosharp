@@ -106,10 +106,10 @@ namespace NitroSharp.Graphics
             TextLayout layout,
             in Matrix4x4 transform,
             Vector2 offset,
-            in ScreenRectU rect,
+            ScreenRectU? scissor,
             float opacity)
         {
-            Render(ctx, drawBatch, layout, layout.GlyphRuns, transform, offset, rect, opacity);
+            Render(ctx, drawBatch, layout, layout.GlyphRuns, transform, offset, scissor, opacity);
         }
 
         public void Render(
@@ -119,11 +119,11 @@ namespace NitroSharp.Graphics
            GlyphRun glyphRun,
            in Matrix4x4 transform,
            Vector2 offset,
-           in ScreenRectU rect,
+           ScreenRectU? scissor,
            float opacity)
         {
             var span = MemoryMarshal.CreateReadOnlySpan(ref glyphRun, 1);
-            Render(ctx, drawBatch, layout, span, transform, offset, rect, opacity);
+            Render(ctx, drawBatch, layout, span, transform, offset, scissor, opacity);
         }
 
         private void Render(
@@ -133,7 +133,7 @@ namespace NitroSharp.Graphics
             ReadOnlySpan<GlyphRun> glyphRuns,
             in Matrix4x4 transform,
             Vector2 offset,
-            in ScreenRectU rect,
+            ScreenRectU? scissor,
             float opacity)
         {
             Matrix4x4 finalTransform = Matrix4x4.CreateTranslation(new Vector3(offset, 0)) * transform;
@@ -169,7 +169,7 @@ namespace NitroSharp.Graphics
                             gpuGlyphSlice.InstanceBase,
                             gpuGlyphSlice.InstanceCount
                         ),
-                        ScissorRect = rect
+                        ScissorRect = scissor
                     }, i);
                 }
             }
