@@ -76,11 +76,11 @@ namespace NitroSharp.Graphics
             double designArea = (double)DesignResolution.Width * DesignResolution.Height;
             double viewportWidth = scaledDesignArea / DesignResolution.Height;
             double viewportHeight = scaledDesignArea / DesignResolution.Width;
-            RenderScale = scaledDesignArea / designArea;
-            ViewportLeft = (RenderResolution.Width - viewportWidth) / 2;
-            ViewportTop = (RenderResolution.Height - viewportHeight) / 2;
-            ViewportRight = (RenderResolution.Width + viewportWidth) / 2;
-            ViewportBottom = (RenderResolution.Height + viewportHeight) / 2;
+            RenderScale = (float)(scaledDesignArea / designArea);
+            ViewportLeft = (float)((RenderResolution.Width - viewportWidth) / 2);
+            ViewportTop = (float)((RenderResolution.Height - viewportHeight) / 2);
+            ViewportRight = (float)((RenderResolution.Width + viewportWidth) / 2);
+            ViewportBottom = (float)((RenderResolution.Height + viewportHeight) / 2);
 
             OrthoProjection = ViewProjection.CreateOrtho(
                 graphicsDevice,
@@ -154,11 +154,11 @@ namespace NitroSharp.Graphics
         public MeshList<QuadVertexUV3> QuadsUV3 { get; }
         public MeshList<CubeVertex> Cubes { get; }
 
-        public double RenderScale { get; }
-        public double ViewportLeft { get; }
-        public double ViewportTop { get; }
-        public double ViewportRight { get; }
-        public double ViewportBottom { get; }
+        public float RenderScale { get; }
+        public float ViewportLeft { get; }
+        public float ViewportTop { get; }
+        public float ViewportRight { get; }
+        public float ViewportBottom { get; }
 
         public GraphicsDevice GraphicsDevice { get; }
         public ResourceFactory ResourceFactory { get; }
@@ -315,6 +315,34 @@ namespace NitroSharp.Graphics
                 FilterMode.Point => GraphicsDevice.PointSampler,
                 _ => ThrowHelper.Unreachable<Sampler>()
             };
+        }
+
+        public Matrix4x4 GetTransformMatrix(Transform transform, DesignSize size, bool useScaling, bool aligned)
+        {
+            static float rad(float deg) => deg / 180.0f * MathF.PI;
+
+            var bounds = size.ToVector2() * RenderScale;
+            var center = new Vector3(new Vector2(0.5f) * bounds, 0);
+            var scale = Matrix4x4.CreateScale(transform.Scale, center);
+            Matrix4x4 rot = Matrix4x4.CreateRotationZ(rad(transform.Rotation.Z), center)
+                * Matrix4x4.CreateRotationY(rad(transform.Rotation.Y), center)
+                * Matrix4x4.CreateRotationX(rad(transform.Rotation.X), center);
+            Vector3 finalPosition = new Vector3(ViewportLeft, ViewportTop, 0) + transform.Position * RenderScale;
+            if (aligned)
+            {
+                finalPosition = new Vector3(
+                    (float)Math.Floor(finalPosition.X),
+                    (float)Math.Floor(finalPosition.Y),
+                    (float)Math.Floor(finalPosition.Z)
+                );
+            }
+            var translation = Matrix4x4.CreateTranslation(finalPosition);
+            Matrix4x4 matrix = scale * rot * translation;
+            if (useScaling)
+            {
+                matrix = Matrix4x4.CreateScale(RenderScale) * matrix;
+            }
+            return matrix;
         }
 
         public void Dispose()
