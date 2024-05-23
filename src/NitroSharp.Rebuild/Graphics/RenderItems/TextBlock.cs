@@ -54,6 +54,7 @@ internal sealed class TextBlock : RenderItem
 
     public override void Update(GameContext ctx)
     {
+        base.Update(ctx);
         ctx.RenderContext.Text.RequestGlyphs(_layout);
     }
 
