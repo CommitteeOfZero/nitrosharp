@@ -1,16 +1,17 @@
 ﻿global using DesignDimension = NitroSharp.Dimension<NitroSharp.DesignPixel>;
 global using ScreenDimension = NitroSharp.Dimension<NitroSharp.ScreenPixel>;
+global using ScreenPoint = NitroSharp.Point<NitroSharp.ScreenPixel>;
+global using TexturePointU = NitroSharp.PointU<NitroSharp.TexturePixel>;
 global using DesignSize = NitroSharp.Size<NitroSharp.DesignPixel>;
 global using ScreenSize = NitroSharp.Size<NitroSharp.ScreenPixel>;
 global using DesignSizeU = NitroSharp.SizeU<NitroSharp.DesignPixel>;
 global using ScreenSizeU = NitroSharp.SizeU<NitroSharp.ScreenPixel>;
+global using TextureSizeU = NitroSharp.SizeU<NitroSharp.TexturePixel>;
 global using DesignRect = NitroSharp.Rectangle<NitroSharp.DesignPixel>;
 global using ScreenRect = NitroSharp.Rectangle<NitroSharp.ScreenPixel>;
 global using DesignRectU = NitroSharp.RectangleU<NitroSharp.DesignPixel>;
 global using ScreenRectU = NitroSharp.RectangleU<NitroSharp.ScreenPixel>;
-global using TexturePoint = NitroSharp.PointU<NitroSharp.TexturePixel>;
-global using TextureSize = NitroSharp.SizeU<NitroSharp.TexturePixel>;
-global using TextureRect = NitroSharp.RectangleU<NitroSharp.TexturePixel>;
+global using TextureRectU = NitroSharp.RectangleU<NitroSharp.TexturePixel>;
 
 using System;
 using System.Numerics;

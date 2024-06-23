@@ -20,9 +20,6 @@ internal class Sprite : RenderItem
     public override DesignSize GetSize(RenderContext ctx)
         => _texture.GetSize(ctx);
 
-    protected override (Vector2, Vector2) GetTexCoords(RenderContext ctx)
-        => _texture.GetTexCoords(ctx);
-
     public override void Render(GameContext ctx)
     {
         RenderCore(ctx.RenderContext, ctx.RenderContext.MainBatch);
@@ -38,13 +35,24 @@ internal class Sprite : RenderItem
         //     alphaMaskPos = alphaMask.Transform.Position.XY();
         // }
 
+        DesignSize size = GetSize(ctx);
+        (Vector2 uvTopLeft, Vector2 uvBottomRight) = _texture.GetTexCoords(ctx);
+        QuadGeometry quad = QuadGeometry.Create(
+            size,
+            ctx.GetTransformMatrix(Transform, size, useScaling: true, aligned: false),
+            uvTopLeft,
+            uvBottomRight,
+            Color.ToVector4()
+        );
+
         drawBatch.PushQuad(
-            Quad,
+            quad,
             _texture.Resolve(ctx),
             alphaMaskTex,
             alphaMaskPos,
             BlendMode,
-            FilterMode
+            FilterMode,
+            null
         );
     }
 }

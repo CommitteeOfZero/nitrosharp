@@ -62,7 +62,7 @@ namespace NitroSharp.Content
         private struct CacheEntry
         {
             public uint RefCount;
-            public TextureSize TextureSize;
+            public TextureSizeU TextureSize;
             public IDisposable? Asset;
         }
 
@@ -133,13 +133,13 @@ namespace NitroSharp.Content
             }
         }
 
-        public TextureSize GetTextureSize(AssetRef<Texture> textureRef)
+        public TextureSizeU GetTextureSize(AssetRef<Texture> textureRef)
             => _cache.Get(textureRef.Handle).TextureSize;
 
         public AssetRef<Texture>? RequestTexture(string path, bool staging = false)
             => RequestTexture(path, out _, staging);
 
-        private AssetRef<Texture>? RequestTexture(string path, out TextureSize size, bool staging = false)
+        private AssetRef<Texture>? RequestTexture(string path, out TextureSizeU size, bool staging = false)
         {
             if (_strongHandles.TryGetValue(path, out FreeListHandle existing))
             {
@@ -164,7 +164,7 @@ namespace NitroSharp.Content
             }
             catch
             {
-                size = TextureSize.Zero;
+                size = TextureSizeU.Zero;
                 return null;
             }
             Interlocked.Increment(ref _nbPending);

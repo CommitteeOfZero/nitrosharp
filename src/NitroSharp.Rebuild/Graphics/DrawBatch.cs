@@ -223,7 +223,8 @@ namespace NitroSharp.Graphics
             Texture alphaMask,
             Vector2 alphaMaskPosition,
             BlendMode blendMode,
-            FilterMode filterMode)
+            FilterMode filterMode,
+            ScreenRectU? scissor)
         {
             Debug.Assert(_commandList is not null);
             ViewProjection vp = Target.OrthoProjection;
@@ -246,11 +247,12 @@ namespace NitroSharp.Graphics
                         _ctx.GetSampler(filterMode),
                         resources.AlphaMaskPositionBuffer.VdBuffer
                     )
-                )
+                ),
+                scissor
             );
         }
 
-        public void PushQuad(QuadGeometry quad, Pipeline pipeline, in ResourceBindings resources)
+        public void PushQuad(QuadGeometry quad, Pipeline pipeline, in ResourceBindings resources, ScreenRectU? scissor)
         {
             Debug.Assert(_commandList is not null);
             Span<QuadVertex> vertices = MemoryMarshal.CreateSpan(ref quad.TopLeft, 4);
@@ -260,11 +262,12 @@ namespace NitroSharp.Graphics
                 Pipeline = pipeline,
                 ResourceBindings = resources,
                 BufferBindings = new BufferBindings(mesh.Vertices.Buffer, mesh.Indices.Buffer),
-                Params = DrawParams.Indexed(vertexBase: 0, mesh.IndexBase, indexCount: 6)
+                Params = DrawParams.Indexed(vertexBase: 0, mesh.IndexBase, indexCount: 6),
+                ScissorRect = scissor
             });
         }
 
-        public void PushQuadUV3(QuadGeometryUV3 quad, Pipeline pipeline, in ResourceBindings resources)
+        public void PushQuadUV3(QuadGeometryUV3 quad, Pipeline pipeline, in ResourceBindings resources, ScreenRectU? scissor)
         {
             Debug.Assert(_commandList is not null);
             Span<QuadVertexUV3> vertices = MemoryMarshal.CreateSpan(ref quad.TopLeft, 4);
@@ -274,7 +277,8 @@ namespace NitroSharp.Graphics
                 Pipeline = pipeline,
                 ResourceBindings = resources,
                 BufferBindings = new BufferBindings(mesh.Vertices.Buffer, mesh.Indices.Buffer),
-                Params = DrawParams.Indexed(0, mesh.IndexBase, 6)
+                Params = DrawParams.Indexed(0, mesh.IndexBase, 6),
+                ScissorRect = scissor
             });
         }
 

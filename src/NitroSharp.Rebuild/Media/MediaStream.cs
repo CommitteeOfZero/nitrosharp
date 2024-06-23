@@ -37,7 +37,7 @@ namespace NitroSharp.Media
         private readonly AudioSource? _audioSource;
         private readonly AudioParameters _outAudioParams;
         private readonly YCbCrBuffer? _videoBuffer;
-        private readonly TextureSize? _videoResolution;
+        private readonly TextureSizeU? _videoResolution;
         private readonly double _videoFrameDuration;
         private readonly double _maxFrameDuration;
 
@@ -270,7 +270,7 @@ namespace NitroSharp.Media
                 {
                     AVStream* s = ctx->streams[videoStreamId];
                     duration = Math.Max(duration, s->duration * s->time_base.ToDouble());
-                    _videoResolution = new TextureSize((uint)s->codecpar->width, (uint)s->codecpar->height);
+                    _videoResolution = new TextureSizeU((uint)s->codecpar->width, (uint)s->codecpar->height);
                     AVRational framerate = ffmpeg.av_guess_frame_rate(ctx, s, null);
                     _videoFrameDuration = framerate.den > 0
                         ? new AVRational { num = framerate.den, den = framerate.num }.ToDouble()
@@ -311,7 +311,7 @@ namespace NitroSharp.Media
 
         public AudioSource AudioSource => _audioSource!;
 
-        public TextureSize VideoResolution
+        public TextureSizeU VideoResolution
         {
             get
             {
