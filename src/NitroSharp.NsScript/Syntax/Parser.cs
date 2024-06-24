@@ -302,8 +302,7 @@ namespace NitroSharp.NsScript.Syntax
         {
             var statements = ImmutableArray.CreateBuilder<Statement>();
             SyntaxTokenKind tk;
-            while ((tk = CurrentToken.Kind) != SyntaxTokenKind.CloseBrace
-                   && tk != SyntaxTokenKind.EndOfFileToken)
+            while ((tk = CurrentToken.Kind) != SyntaxTokenKind.CloseBrace && tk != SyntaxTokenKind.EndOfFileToken)
             {
                 Statement? statement = ParseStatement();
                 if (statement is not null)
@@ -327,7 +326,7 @@ namespace NitroSharp.NsScript.Syntax
                 statement = ParseStatementCore();
                 if (statement is not null) { break; }
                 SyntaxTokenKind tk = CurrentToken.Kind;
-                if (tk == SyntaxTokenKind.EndOfFileToken || tk == SyntaxTokenKind.CloseBrace)
+                if (tk is SyntaxTokenKind.EndOfFileToken or SyntaxTokenKind.CloseBrace)
                 {
                     return null;
                 }
@@ -933,28 +932,13 @@ namespace NitroSharp.NsScript.Syntax
 
         private DialogueBlock ParseDialogueBlock()
         {
-            string extractBoxName(in SyntaxToken tag)
-            {
-                ReadOnlySpan<char> span = SourceText.GetCharacterSpan(tag.TextSpan);
-                span = span[5..^1];
-                Debug.Assert(span.Length > 0);
-                return span.ToString();
-            }
-
-            string extractBlockName(in SyntaxToken identifierToken)
-            {
-                ReadOnlySpan<char> span = SourceText.GetCharacterSpan(identifierToken.TextSpan);
-                return span.Length > 2 ? span[1..^1].ToString() : "";
-            }
-
             SyntaxToken startTag = EatToken(SyntaxTokenKind.DialogueBlockStartTag);
             string associatedBox = extractBoxName(startTag);
             SyntaxToken blockIdentifier = EatToken(SyntaxTokenKind.DialogueBlockIdentifier);
             string name = extractBlockName(blockIdentifier);
 
             var statements = ImmutableArray.CreateBuilder<Statement>();
-            while (CurrentToken.Kind is not
-                (SyntaxTokenKind.DialogueBlockEndTag or SyntaxTokenKind.EndOfFileToken))
+            while (CurrentToken.Kind is not (SyntaxTokenKind.DialogueBlockEndTag or SyntaxTokenKind.EndOfFileToken))
             {
                 Statement? statement = ParseStatement();
                 if (statement is not null)
@@ -964,8 +948,21 @@ namespace NitroSharp.NsScript.Syntax
             }
 
             EatToken(SyntaxTokenKind.DialogueBlockEndTag);
-            return new DialogueBlock(
-                name, associatedBox, statements.ToImmutable(), SpanFrom(startTag));
+            return new DialogueBlock(name, associatedBox, statements.ToImmutable(), SpanFrom(startTag));
+
+            string extractBoxName(in SyntaxToken tag)
+            {
+                ReadOnlySpan<char> span = SourceText.GetCharacterSpan(tag.TextSpan);
+                span = span["<pre ".Length..^1].Trim();
+                Debug.Assert(span.Length > 0);
+                return span.ToString();
+            }
+
+            string extractBlockName(in SyntaxToken identifierToken)
+            {
+                ReadOnlySpan<char> span = SourceText.GetCharacterSpan(identifierToken.TextSpan);
+                return span.Length > 2 ? span[1..^1].ToString() : "";
+            }
         }
 
         private int GetLineNumber()

@@ -8,10 +8,10 @@ function test_gfx()
 }
 
 // expect: red rectangle is not visible at any resolutions
-// FAIL
+// fails at 16:10 (e.g. 1280x800)
 function test_gfx_letterboxing_clip()
 {
-	CreateName("test");
+    CreateName("test");
     CreateColor("test/bg", 500, center, middle, 2560, 1440, "RED");
     CreateColor("test/fg", 1000, center, middle, 1280, 720, "BLUE");
     WaitKey();
@@ -22,7 +22,7 @@ function test_gfx_letterboxing_clip()
 // OK
 function test_gfx_letterboxing_fit()
 {
-	CreateName("test");
+    CreateName("test");
     CreateColor("test/fg", 1000, center, middle, 1280, 720, "BLUE");
     WaitKey();
     Delete("test");
@@ -32,7 +32,7 @@ function test_gfx_letterboxing_fit()
 // OK
 function test_gfx_child_rect()
 {
-	CreateName("test");
+    CreateName("test");
     CreateColor("test/rect", 1000, center, middle, 200, 200, "BLUE");
     WaitKey();
     CreateColor("test/rect/child", 1000, 0, 0, 50, 50, "RED");
@@ -45,7 +45,7 @@ function test_gfx_child_rect()
 // OK
 function test_gfx_move_aliased_child()
 {
-	CreateName("test");
+    CreateName("test");
     CreateColor("test/a", 1, 0, 0, 256, 256, "blue");
     CreateColor("test/a/b", 2, 0, 0, 128, 128, "red");
     SetAlias("test/a", "a");
