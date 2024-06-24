@@ -509,7 +509,7 @@ namespace NitroSharp.NsScript.Syntax
             }
             else
             {
-                leftOperand = ParseTerm(minPrecedence);
+                leftOperand = ParseTerm();
                 if (leftOperand is null)
                 {
                     return null;
@@ -565,7 +565,7 @@ namespace NitroSharp.NsScript.Syntax
             return leftOperand;
         }
 
-        private Expression? ParseTerm(Precedence precedence)
+        private Expression? ParseTerm()
         {
             switch (CurrentToken.Kind)
             {
@@ -837,8 +837,9 @@ namespace NitroSharp.NsScript.Syntax
             if (condition is null) { return null; }
             EatToken(SyntaxTokenKind.CloseParen);
             Statement? body = ParseStatement();
-            if (body is null) { return null; }
-            return new WhileStatement(condition, body, SpanFrom(keyword));
+            return body is null
+                ? null
+                : new WhileStatement(condition, body, SpanFrom(keyword));
         }
 
         private ReturnStatement ParseReturnStatement()
@@ -859,7 +860,7 @@ namespace NitroSharp.NsScript.Syntax
         {
             SyntaxToken keyword = EatToken(SyntaxTokenKind.CaseKeyword);
             Spanned<string> labelName = ConsumeTextUntil(
-                tk => tk == SyntaxTokenKind.OpenBrace || tk == SyntaxTokenKind.Colon
+                tk => tk is SyntaxTokenKind.OpenBrace or SyntaxTokenKind.Colon
             );
             if (CurrentToken.Kind == SyntaxTokenKind.Colon)
             {
@@ -899,7 +900,7 @@ namespace NitroSharp.NsScript.Syntax
             Spanned<string>? filePath = null;
             Spanned<string> symbolName;
             Spanned<string> part = ConsumeTextUntil(
-                tk => tk == SyntaxTokenKind.Semicolon || tk == SyntaxTokenKind.Arrow
+                tk => tk is SyntaxTokenKind.Semicolon or SyntaxTokenKind.Arrow
             );
             if (CurrentToken.Kind == SyntaxTokenKind.Arrow)
             {

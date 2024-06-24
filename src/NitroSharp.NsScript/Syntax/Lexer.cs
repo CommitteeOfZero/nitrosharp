@@ -93,7 +93,7 @@ namespace NitroSharp.NsScript.Syntax
 
             if (!keepWhitespace)
             {
-                SkipSyntaxTrivia(isTrailing: true);
+                SkipSyntaxTrivia();
             }
             else
             {
@@ -104,7 +104,7 @@ namespace NitroSharp.NsScript.Syntax
         private void LexSyntaxToken(ref MutableToken token)
         {
             token = default;
-            SkipSyntaxTrivia(isTrailing: false);
+            SkipSyntaxTrivia();
             StartScanning();
             char character = PeekChar();
             switch (character)
@@ -447,7 +447,7 @@ namespace NitroSharp.NsScript.Syntax
             token.TextSpan = CurrentLexemeSpan;
             if (token.Kind == SyntaxTokenKind.DialogueBlockIdentifier)
             {
-                SkipSyntaxTrivia(isTrailing: true);
+                ScanWhitespace();
             }
             return true;
         }
@@ -717,7 +717,7 @@ namespace NitroSharp.NsScript.Syntax
             token.Kind = SyntaxTokenKind.BadToken;
         }
 
-        private void SkipSyntaxTrivia(bool isTrailing)
+        private void SkipSyntaxTrivia()
         {
             StartScanning();
             bool trivia = true;
@@ -727,13 +727,6 @@ namespace NitroSharp.NsScript.Syntax
                 if (SyntaxFacts.IsWhitespace(character))
                 {
                     ScanWhitespace();
-                    continue;
-                }
-
-                if (SyntaxFacts.IsNewLine(character))
-                {
-                    ScanEndOfLine();
-                    if (isTrailing) { break; }
                     continue;
                 }
 

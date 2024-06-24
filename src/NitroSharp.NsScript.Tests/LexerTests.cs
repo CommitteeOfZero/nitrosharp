@@ -208,13 +208,13 @@ namespace NitroSharp.NsScript.Tests
                 }
                 else if (token.Kind != SyntaxTokenKind.EndOfFileToken)
                 {
-                    Assert.True(false, "More than one token was lexed.");
+                    Assert.Fail("More than one token was lexed.");
                 }
             }
 
             if (tk.Kind == SyntaxTokenKind.None)
             {
-                Assert.True(false, "No tokens were lexed.");
+                Assert.Fail("No tokens were lexed.");
             }
 
             return (tk, ctx);
@@ -313,9 +313,7 @@ namespace NitroSharp.NsScript.Tests
                 && SyntaxFacts.IsIdentifierStopCharacter(SyntaxFacts.GetText(kind)[0], char.MaxValue);
 
             static bool isSigil(SyntaxTokenKind kind)
-                => kind == SyntaxTokenKind.Dollar
-                || kind == SyntaxTokenKind.Hash
-                || kind == SyntaxTokenKind.At;
+                => kind is SyntaxTokenKind.Dollar or SyntaxTokenKind.Hash or SyntaxTokenKind.At;
 
             bool canFormCompountPunctuation(SyntaxTokenKind kind)
             {
