@@ -103,12 +103,12 @@ public sealed class Compilation
             List<string> systemGlobals,
             ref BufferWriter nameWriter)
         {
-            uint offsetTableSize = globals.Count * 4 + 2;
+            int offsetTableSize = globals.Count * 4 + 2;
             var offsetTableBuffer = PooledBuffer<byte>.Allocate(offsetTableSize);
             var offsetWriter = new BufferWriter(offsetTableBuffer);
             offsetWriter.WriteUInt16LE((ushort)globals.Count);
 
-            uint sysListSize = (uint)(systemGlobals.Count * 2 + 4);
+            int sysListSize = systemGlobals.Count * 2 + 4;
             var sysListBuffer = PooledBuffer<byte>.Allocate(sysListSize);
             var sysListWriter = new BufferWriter(sysListBuffer);
             sysListWriter.WriteUInt16LE((ushort)systemGlobals.Count);
@@ -125,8 +125,8 @@ public sealed class Compilation
                 nameWriter.WriteLengthPrefixedUtf8String(name);
             }
 
-            var offsets = new BufferSlice<byte>(offsetTableBuffer, (uint)offsetWriter.Position);
-            var sysList = new BufferSlice<byte>(sysListBuffer, (uint)sysListWriter.Position);
+            var offsets = new BufferSlice<byte>(offsetTableBuffer, offsetWriter.Position);
+            var sysList = new BufferSlice<byte>(sysListBuffer, sysListWriter.Position);
             return (offsets, sysList);
         }
     }

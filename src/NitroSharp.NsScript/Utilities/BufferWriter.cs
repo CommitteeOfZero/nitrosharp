@@ -35,7 +35,7 @@ namespace NitroSharp.NsScript.Utilities
             {
                 while (value > _span.Length)
                 {
-                    Resize((uint)value);
+                    Resize(value);
                 }
                 _position = value;
             }
@@ -55,7 +55,7 @@ namespace NitroSharp.NsScript.Utilities
         {
             if (Free.Length < bytes.Length)
             {
-                Resize((uint)(_span.Length + bytes.Length));
+                Resize(_span.Length + bytes.Length);
             }
 
             bytes.CopyTo(Free);
@@ -114,7 +114,7 @@ namespace NitroSharp.NsScript.Utilities
             WriteUInt16LE((ushort)sz);
             if (sz > Free.Length)
             {
-                Resize((uint)(_span.Length + sz));
+                Resize(_span.Length + sz);
             }
 
             Encoding.UTF8.GetBytes(text, Free);
@@ -127,7 +127,7 @@ namespace NitroSharp.NsScript.Utilities
             int sz = Encoding.UTF8.GetByteCount(text);
             if (sz > Free.Length)
             {
-                Resize((uint)(_span.Length + sz));
+                Resize(_span.Length + sz);
             }
 
             Encoding.UTF8.GetBytes(text, Free);
@@ -137,11 +137,11 @@ namespace NitroSharp.NsScript.Utilities
         public void Clear() => _position = 0;
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        private void Resize(uint desiredSize = 0)
+        private void Resize(int desiredSize = 0)
         {
             if (_resizableBuffer is not null)
             {
-                uint newSize = Math.Max(desiredSize, _resizableBuffer.Length * 2);
+                int newSize = Math.Max(desiredSize, _resizableBuffer.Length * 2);
                 _resizableBuffer.Resize(newSize);
                 _span = _resizableBuffer.AsSpan();
             }

@@ -10,7 +10,7 @@ internal class TokenMap<T>(uint initialCapacity = 8)
     private readonly Dictionary<T, ushort> _itemToToken = new((int)initialCapacity);
     private ArrayBuilder<T> _items = new(initialCapacity);
 
-    public uint Count => _items.Count;
+    public int Count => (int)_items.Count;
     public ReadOnlySpan<T> AsSpan() => _items.AsReadonlySpan();
 
     public ushort GetOrAddToken(T item)

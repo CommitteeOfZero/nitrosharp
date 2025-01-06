@@ -1,32 +1,41 @@
 ﻿using NitroSharp.NsScript.Syntax;
 
-namespace NitroSharp.NsScript
+namespace NitroSharp.NsScript;
+
+public sealed class SyntaxTree
 {
-    public sealed class SyntaxTree
+    private readonly DiagnosticBuilder _diagnosticBuilder;
+    private DiagnosticBag? _diagnostics;
+
+    internal SyntaxTree(SourceText sourceText, SyntaxNode root, DiagnosticBuilder diagnosticBuilder)
     {
-        private readonly DiagnosticBuilder _diagnosticBuilder;
-        private DiagnosticBag? _diagnostics;
+        SourceText = sourceText;
+        Root = root;
+        _diagnosticBuilder = diagnosticBuilder;
+        BindNode(root);
+    }
 
-        internal SyntaxTree(SourceText sourceText, SyntaxNode root, DiagnosticBuilder diagnosticBuilder)
+    private void BindNode(SyntaxNode node)
+    {
+        node.Bind(this);
+        foreach (SyntaxNode child in node.GetChildren())
         {
-            SourceText = sourceText;
-            Root = root;
-            _diagnosticBuilder = diagnosticBuilder;
+            BindNode(child);
         }
+    }
 
-        public SyntaxNode Root { get; }
-        public SourceText SourceText { get; }
-        public DiagnosticBag Diagnostics
+    public SyntaxNode Root { get; }
+    public SourceText SourceText { get; }
+    public DiagnosticBag Diagnostics
+    {
+        get
         {
-            get
+            if (_diagnostics is null || _diagnostics.All.Length != _diagnosticBuilder.Count)
             {
-                if (_diagnostics is null || _diagnostics.All.Length != _diagnosticBuilder.Count)
-                {
-                    _diagnostics = _diagnosticBuilder.ToImmutableBag();
-                }
-
-                return _diagnostics;
+                _diagnostics = _diagnosticBuilder.ToImmutableBag();
             }
+
+            return _diagnostics;
         }
     }
 }

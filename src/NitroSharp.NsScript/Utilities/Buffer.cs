@@ -3,19 +3,19 @@ using System.Buffers;
 
 namespace NitroSharp.NsScript.Utilities;
 
-internal readonly struct BufferSlice<T>(IBuffer<T> buffer, uint length)
+internal readonly struct BufferSlice<T>(IBuffer<T> buffer, int length)
 {
+    private readonly int _length = length;
     public IBuffer<T> Buffer { get; } = buffer;
-    public uint Length { get; } = length;
 
-    public Span<T> AsSpan() => Buffer.AsSpan().Slice(0, (int)Length);
+    public Span<T> AsSpan() => Buffer.AsSpan()[.._length];
 }
 
 internal interface IBuffer<T> : IDisposable
 {
-    uint Length { get; }
+    int Length { get; }
     Span<T> AsSpan();
-    void Resize(uint newSize);
+    void Resize(int newSize);
 }
 
 internal sealed class HeapAllocBuffer<T> : IBuffer<T>
@@ -27,13 +27,13 @@ internal sealed class HeapAllocBuffer<T> : IBuffer<T>
         _array = array;
     }
 
-    public uint Length => (uint)_array.Length;
+    public int Length => _array.Length;
 
-    public static HeapAllocBuffer<T> Allocate(uint minimumSize) => new(new T[minimumSize]);
+    public static HeapAllocBuffer<T> Allocate(int minimumSize) => new(new T[minimumSize]);
 
-    public void Resize(uint newSize)
+    public void Resize(int newSize)
     {
-        Array.Resize(ref _array, (int)newSize);
+        Array.Resize(ref _array, newSize);
     }
 
     public Span<T> AsSpan() => _array.AsSpan();
@@ -46,23 +46,23 @@ internal sealed class HeapAllocBuffer<T> : IBuffer<T>
 internal sealed class PooledBuffer<T> : IBuffer<T>
 {
     private T[] _pooledArray;
-    private uint _size;
+    private int _size;
 
-    private PooledBuffer(T[] pooledArray, uint size)
+    private PooledBuffer(T[] pooledArray, int size)
     {
         _pooledArray = pooledArray;
         _size = size;
     }
 
-    public uint Length => (uint)_pooledArray.Length;
+    public int Length => _pooledArray.Length;
 
-    public static PooledBuffer<T> Allocate(uint minimumSize)
-        => new(ArrayPool<T>.Shared.Rent((int)minimumSize), minimumSize);
+    public static PooledBuffer<T> Allocate(int minimumSize)
+        => new(ArrayPool<T>.Shared.Rent(minimumSize), minimumSize);
 
-    public void Resize(uint newSize)
+    public void Resize(int newSize)
     {
         T[] newArray = ArrayPool<T>.Shared.Rent((int)newSize);
-        Array.Copy(_pooledArray, newArray, (int)_size);
+        Array.Copy(_pooledArray, newArray, _size);
         ArrayPool<T>.Shared.Return(_pooledArray);
         _pooledArray = newArray;
         _size = newSize;

@@ -12,5 +12,6 @@ internal static class NsxConstants
     public static ReadOnlySpan<byte> RtiTableMarker => "RTI\0"u8;
     public static ReadOnlySpan<byte> ImportTableMarker => "IMP\0"u8;
     public static ReadOnlySpan<byte> StringTableMarker => "STR\0"u8;
+    public static ReadOnlySpan<byte> DebugTableMarker => "DBG\0"u8;
     public static ReadOnlySpan<byte> TableEndMarker => [0xFF, 0xFF, 0xFF, 0xFF];
 }

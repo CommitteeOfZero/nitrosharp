@@ -25,12 +25,13 @@ namespace NitroSharp.NsScript.VM
 
         private readonly int[] _subroutineOffsets;
         private readonly Subroutine[] _subroutines;
+        private readonly SourceMapping[] _sourceMappings;
         private readonly SubroutineRuntimeInfo[] _srti;
         private readonly Dictionary<string, int> _subroutineMap;
 
         private NsxModule(
             Stream stream, string name, DateTimeOffset sourceModificationTime,
-            int[] subroutineOffsets, byte[] rtiTable, string[] imports, int[] stringOffsets)
+            int[] subroutineOffsets, byte[] rtiTable, string[] imports, int[] stringOffsets, SourceMapping[] sourceMappings)
         {
             _stream = stream;
             Name = name;
@@ -40,6 +41,7 @@ namespace NitroSharp.NsScript.VM
             _stringOffsets = stringOffsets;
             _stringHeap = new string?[stringOffsets.Length];
             _subroutines = new Subroutine[_subroutineOffsets.Length];
+            _sourceMappings = sourceMappings;
 
             int subroutineCount = _subroutines.Length;
             var rtiReader = new BufferReader(rtiTable);
@@ -107,6 +109,34 @@ namespace NitroSharp.NsScript.VM
         public int LookupSubroutineIndex(string name)
             => _subroutineMap[name];
 
+        public SourceLocation? GetSourceLocation(int codeOffset)
+        {
+            int lower = 0;
+            int upper = _sourceMappings.Length - 1;
+
+            while (lower <= upper)
+            {
+                int index = lower + ((upper - lower) / 2);
+                ref readonly SourceMapping mapping = ref _sourceMappings[index];
+
+                if (codeOffset >= mapping.BytecodeLocation.Start && codeOffset < mapping.BytecodeLocation.End)
+                {
+                    return mapping.SourceLocation;
+                }
+
+                if (codeOffset < mapping.BytecodeLocation.Start)
+                {
+                    upper = index - 1;
+                }
+                else
+                {
+                    lower = index + 1;
+                }
+            }
+
+            return null;
+        }
+
         private void LoadSubroutine(int index)
         {
             _stream.Position = _subroutineOffsets[index];
@@ -148,7 +178,7 @@ namespace NitroSharp.NsScript.VM
 
                 TableHeader header;
                 bytes[..4].CopyTo(new Span<byte>(header.Marker, 4));
-                header.TableSize = BinaryPrimitives.ReadUInt16LittleEndian(bytes.Slice(4));
+                header.TableSize = BinaryPrimitives.ReadUInt16LittleEndian(bytes[4..]);
                 return header;
             }
 
@@ -217,6 +247,26 @@ namespace NitroSharp.NsScript.VM
                 stringOffsets[i] = reader.ReadInt32LE();
             }
 
+            TableHeader dbgHeader = readTableHeader(stream);
+            assertMarker(ref dbgHeader, NsxConstants.DebugTableMarker);
+            var dbgBytes = new byte[dbgHeader.TableSize];
+            stream.ReadExactly(dbgBytes);
+            reader = new BufferReader(dbgBytes);
+            int dbgEntryCount = reader.ReadUInt16LE();
+            var sourceMappings = new SourceMapping[dbgEntryCount];
+            for (int i = 0; i < dbgEntryCount; i++)
+            {
+                int line = reader.ReadInt32LE();
+                int column = reader.ReadUInt16LE();
+                int textLength = reader.ReadUInt16LE();
+                int codeOffset = reader.ReadUInt16LE();
+                int codeLength = reader.ReadUInt16LE();
+                sourceMappings[i] = new SourceMapping(
+                    new BytecodeLocation(codeOffset, codeLength),
+                    new SourceLocation(line, column, textLength)
+                );
+            }
+
             return new NsxModule(
                 stream,
                 name,
@@ -224,7 +274,8 @@ namespace NitroSharp.NsScript.VM
                 subroutineOffsets,
                 rtiBytes,
                 imports,
-                stringOffsets
+                stringOffsets,
+                sourceMappings
             );
         }
     }

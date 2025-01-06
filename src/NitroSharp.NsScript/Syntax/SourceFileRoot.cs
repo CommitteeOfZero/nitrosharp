@@ -24,6 +24,11 @@ namespace NitroSharp.NsScript.Syntax
 
         public override SyntaxNodeKind Kind => SyntaxNodeKind.SourceFileRoot;
 
+        protected override SyntaxNode? GetNodeSlot(int index)
+        {
+            return index < SubroutineDeclarations.Length ? SubroutineDeclarations[index] : null;
+        }
+
         public override void Accept(SyntaxVisitor visitor)
         {
             throw new System.NotImplementedException();

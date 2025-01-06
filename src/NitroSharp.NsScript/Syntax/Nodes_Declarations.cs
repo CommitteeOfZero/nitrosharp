@@ -87,9 +87,12 @@ public sealed class FunctionDeclaration : SubroutineDeclaration
 
     protected override SyntaxNode? GetNodeSlot(int index)
     {
-        if (base.GetNodeSlot(index) is { } child) return child;
-
-        return index < Parameters.Length ? Parameters[index] : null;
+        return index switch
+        {
+            0 => Body,
+            _ when index <= Parameters.Length => Parameters[index - 1],
+            _ => base.GetNodeSlot(index)
+        };
     }
 
     public override void Accept(SyntaxVisitor visitor)

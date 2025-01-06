@@ -1,4 +1,5 @@
 ﻿using System;
+using NitroSharp.Utilities;
 
 namespace NitroSharp.NsScript.Compiler
 {
@@ -7,6 +8,7 @@ namespace NitroSharp.NsScript.Compiler
         private readonly TokenMap<SubroutineSymbol> _subroutines;
         private readonly TokenMap<SourceFileSymbol> _externalSourceFiles;
         private readonly TokenMap<string> _stringHeap;
+        private ArrayBuilder<SourceMapping> _sourceMappings = new(initialCapacity: 1024);
 
         public NsxModuleBuilder(Compilation compilation, SourceFileSymbol sourceFile)
         {
@@ -26,6 +28,7 @@ namespace NitroSharp.NsScript.Compiler
         public ReadOnlySpan<SubroutineSymbol> Subroutines => _subroutines.AsSpan();
         public ReadOnlySpan<SourceFileSymbol> Imports => _externalSourceFiles.AsSpan();
         public ReadOnlySpan<string> StringHeap => _stringHeap.AsSpan();
+        public Span<SourceMapping> SourceMappings => _sourceMappings.AsSpan();
 
         private void ConstructSubroutineMap(SourceFileSymbol sourceFile)
         {
@@ -56,6 +59,11 @@ namespace NitroSharp.NsScript.Compiler
         public ushort GetStringToken(string s)
         {
             return _stringHeap.GetOrAddToken(s);
+        }
+
+        public void AddSourceMapping(SourceMapping range)
+        {
+            _sourceMappings.Add(range);
         }
     }
 }

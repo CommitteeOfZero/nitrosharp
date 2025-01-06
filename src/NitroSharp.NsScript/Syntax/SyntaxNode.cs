@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using NitroSharp.Common;
 
 namespace NitroSharp.NsScript.Syntax;
 
@@ -39,8 +40,19 @@ public enum SyntaxNodeKind
 
 public abstract class SyntaxNode(TextSpan span)
 {
+    private SyntaxTree? _syntaxTree;
+
     public abstract SyntaxNodeKind Kind { get; }
     public TextSpan Span { get; } = span;
+
+    internal void Bind(SyntaxTree syntaxTree)
+    {
+        _syntaxTree = syntaxTree;
+    }
+
+    public SyntaxTree SyntaxTree => _syntaxTree.NotNull();
+
+    public SourceLocation GetLocation() => SyntaxTree.SourceText.GetLocation(Span);
 
     public abstract void Accept(SyntaxVisitor visitor);
     public abstract TResult Accept<TResult>(SyntaxVisitor<TResult> visitor);

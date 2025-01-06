@@ -49,7 +49,7 @@ namespace NitroSharp.NsScript.Compiler
             using var rtiBuffer = PooledBuffer<byte>.Allocate(8 * 1024);
             var rtiWriter = new BufferWriter(rtiBuffer);
             uint rtiOffsetBlockSize = sourceFile.SubroutineCount * sizeof(ushort);
-            using var rtiEntryOffsets = PooledBuffer<byte>.Allocate(rtiOffsetBlockSize);
+            using var rtiEntryOffsets = PooledBuffer<byte>.Allocate((int)rtiOffsetBlockSize);
             var rtiOffsetWriter = new BufferWriter(rtiEntryOffsets);
             WriteRuntimeInformation(
                 sourceFile.Chapters.As<SubroutineSymbol>(),
@@ -76,7 +76,7 @@ namespace NitroSharp.NsScript.Compiler
 
             int impTableOffset = rtiTableOffset + rtiSize;
 
-            // Build the import table
+            // Build the import table (IMP)
             ReadOnlySpan<SourceFileSymbol> imports = builder.Imports;
             using var importTable = PooledBuffer<byte>.Allocate(2048);
             var impTableWriter = new BufferWriter(importTable);
@@ -88,16 +88,17 @@ namespace NitroSharp.NsScript.Compiler
             impTableWriter.WriteBytes(NsxConstants.TableEndMarker);
 
             Span<byte> impHeader = stackalloc byte[NsxConstants.TableHeaderSize];
-            var impHeaderWriter = new BufferWriter(impHeader);
-            impHeaderWriter.WriteBytes(NsxConstants.ImportTableMarker);
-            impHeaderWriter.WriteUInt16LE((ushort)impTableWriter.Position);
+            fillTableHeader(impHeader, NsxConstants.ImportTableMarker, impTableWriter.Position);
 
-            int impTableSize = impHeaderWriter.Position + impTableWriter.Position;
+            int impTableSize = NsxConstants.TableHeaderSize + impTableWriter.Position;
             int stringTableOffset = impTableOffset + impTableSize;
-            int codeStart = stringTableOffset  + stringTableSize;
+            int dbgTableOffset = stringTableOffset  + stringTableSize;
+            const int dbgEntrySize = sizeof(int) + sizeof(ushort) * 4;
+            int dbgTableSize = NsxConstants.TableHeaderSize + builder.SourceMappings.Length * dbgEntrySize + 6;
+            int codeStart = dbgTableOffset + dbgTableSize;
 
             // Build the subroutine offset table (SUB)
-            using var subTable = PooledBuffer<byte>.Allocate((uint)subTableSize);
+            using var subTable = PooledBuffer<byte>.Allocate(subTableSize);
             var subWriter = new BufferWriter(subTable);
             subWriter.WriteUInt16LE((ushort)subroutines.Length);
             for (int i = 0; i < subroutines.Length; i++)
@@ -107,14 +108,12 @@ namespace NitroSharp.NsScript.Compiler
             subWriter.WriteBytes(NsxConstants.TableEndMarker);
 
             Span<byte> subHeader = stackalloc byte[NsxConstants.TableHeaderSize];
-            var subHeaderWriter = new BufferWriter(subHeader);
-            subHeaderWriter.WriteBytes(NsxConstants.SubTableMarker);
-            subHeaderWriter.WriteUInt16LE((ushort)subWriter.Position);
+            fillTableHeader(subHeader, NsxConstants.SubTableMarker, subWriter.Position);
 
             // Encode the strings and build the offset table (STR)
             int stringHeapStart = codeStart + codeWriter.Position;
             using var stringHeapBuffer = PooledBuffer<byte>.Allocate(64 * 1024);
-            using var stringOffsetTable = PooledBuffer<byte>.Allocate((uint)stringTableSize);
+            using var stringOffsetTable = PooledBuffer<byte>.Allocate(stringTableSize);
             var strTableWriter = new BufferWriter(stringOffsetTable);
             strTableWriter.WriteUInt16LE((ushort)stringHeap.Length);
 
@@ -127,15 +126,30 @@ namespace NitroSharp.NsScript.Compiler
             strTableWriter.WriteBytes(NsxConstants.TableEndMarker);
 
             Span<byte> strTableHeader = stackalloc byte[NsxConstants.TableHeaderSize];
-            var strTableHeaderWriter = new BufferWriter(strTableHeader);
-            strTableHeaderWriter.WriteBytes(NsxConstants.StringTableMarker);
-            strTableHeaderWriter.WriteUInt16LE((ushort)stringTableSize);
+            fillTableHeader(strTableHeader, NsxConstants.StringTableMarker, strTableWriter.Position);
+
+            using var dbgTable = PooledBuffer<byte>.Allocate(dbgTableSize);
+            var dbgWriter = new BufferWriter(dbgTable);
+
+            dbgWriter.WriteUInt16LE((ushort)builder.SourceMappings.Length);
+            foreach (SourceMapping sourceMapping in builder.SourceMappings)
+            {
+                dbgWriter.WriteInt32LE(sourceMapping.SourceLocation.Line);
+                dbgWriter.WriteUInt16LE((ushort)sourceMapping.SourceLocation.Column);
+                dbgWriter.WriteUInt16LE((ushort)sourceMapping.SourceLocation.Length);
+                dbgWriter.WriteUInt16LE((ushort)sourceMapping.BytecodeLocation.Start);
+                dbgWriter.WriteUInt16LE((ushort)sourceMapping.BytecodeLocation.Length);
+            }
+
+            dbgWriter.WriteBytes(NsxConstants.TableEndMarker);
+
+            Span<byte> dbgHeader = stackalloc byte[NsxConstants.TableHeaderSize];
+            fillTableHeader(dbgHeader, NsxConstants.DebugTableMarker, dbgWriter.Position);
 
             // Build the NSX header
             using var headerBuffer = PooledBuffer<byte>.Allocate(NsxConstants.NsxHeaderSize);
             var headerWriter = new BufferWriter(headerBuffer);
-            long modificationTime = compilation.SourceReferenceResolver
-                .GetModificationTimestamp(sourceFile.FilePath);
+            long modificationTime = compilation.SourceReferenceResolver.GetModificationTimestamp(sourceFile.FilePath);
             headerWriter.WriteBytes(NsxConstants.NsxMagic);
             headerWriter.WriteInt64LE(modificationTime);
             headerWriter.WriteInt32LE(subTableOffset);
@@ -157,21 +171,32 @@ namespace NitroSharp.NsScript.Compiler
             using FileStream fileStream = File.Create(path);
             fileStream.Write(headerWriter.Written);
 
-            fileStream.Write(subHeaderWriter.Written);
+            fileStream.Write(subHeader);
             fileStream.Write(subWriter.Written);
 
             fileStream.Write(rtiHeader);
             fileStream.Write(rtiOffsetWriter.Written);
             fileStream.Write(rtiWriter.Written);
 
-            fileStream.Write(impHeaderWriter.Written);
+            fileStream.Write(impHeader);
             fileStream.Write(impTableWriter.Written);
 
-            fileStream.Write(strTableHeaderWriter.Written);
+            fileStream.Write(strTableHeader);
             fileStream.Write(strTableWriter.Written);
+
+            fileStream.Write(dbgHeader);
+            fileStream.Write(dbgWriter.Written);
 
             fileStream.Write(codeWriter.Written);
             fileStream.Write(stringWriter.Written);
+            return;
+
+            static void fillTableHeader(Span<byte> buffer, ReadOnlySpan<byte> tableMarker, int tableSize)
+            {
+                var headerWriter = new BufferWriter(buffer);
+                headerWriter.WriteBytes(tableMarker);
+                headerWriter.WriteUInt16LE((ushort)tableSize);
+            }
         }
 
         private static void CompileSubroutines(
