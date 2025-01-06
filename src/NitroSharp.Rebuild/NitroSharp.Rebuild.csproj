@@ -1,32 +1,36 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+<!--    <AssemblyName>libnitrosharp</AssemblyName>-->
+    <TargetFramework>net9.0</TargetFramework>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <NoWarn>1701;1702;CA1063;IDE1006;IDE0063;VSTHRD002;VSTHRD003;VSTHRD103;VSTHRD105;VSTHRD200</NoWarn>
-    <VeldridVersion>4.9.0-beta2</VeldridVersion>
     <Nullable>enable</Nullable>
     <RootNamespace>NitroSharp</RootNamespace>
+<!--    <PublishAot>true</PublishAot>-->
+<!--    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>-->
+<!--    <IlcTrimMetadata>true</IlcTrimMetadata>-->
+<!--    <IlcFoldIdenticalMethodBodies>true</IlcFoldIdenticalMethodBodies>-->
+<!--    <IlcGenerateCompleteTypeMetadata>true</IlcGenerateCompleteTypeMetadata>-->
+<!--    <IlcGenerateStackTraceData>true</IlcGenerateStackTraceData>-->
+<!--    <IlcOptimizationPreference>speed</IlcOptimizationPreference>-->
+<!--    <IlcDisableReflection>false</IlcDisableReflection>-->
+<!--    <InvariantGlobalization>true</InvariantGlobalization>-->
   </PropertyGroup>
 
   <Import Project="..\..\OutputPath.props" />
 
   <ItemGroup>
-
-    <PackageReference Include="NLog" Version="5.3.2" />
-
-    <PackageReference Include="ZeroLog" Version="2.1.1" />
-
     <ProjectReference Include="..\..\third_party\FFmpeg.AutoGen\FFmpeg.AutoGen.csproj" />
     <ProjectReference Include="..\..\third_party\OpenAL-CS\OpenAL-CS.csproj" />
     <ProjectReference Include="..\FreeTypeBindings\FreeTypeBindings.csproj" />
     <ProjectReference Include="..\NitroSharp.NsScript\NitroSharp.NsScript.csproj" />
 
-    <PackageReference Include="FreeType.Binaries" Version="0.42.0" />
-    <PackageReference Include="OpenALSoft.Binaries" Version="0.42.0" />
-    <PackageReference Include="FFmpeg.Binaries" Version="0.42.0" />
-    <PackageReference Include="Serilog" Version="3.1.1" />
-    <PackageReference Include="Serilog.Sinks.Console" Version="5.0.1" />
+    <PackageReference Include="JetBrains.Annotations" Version="2024.3.0" PrivateAssets="All" />
+    <PackageReference Include="ZeroLog" Version="2.2.0" />
+    <PackageReference Include="System.IO.Pipelines" Version="9.0.0" />
+    <PackageReference Include="Microsoft.VisualStudio.Threading" Version="17.12.19" />
+    <PackageReference Include="Sprintf.NET" Version="2.0.0" />
 
     <PackageReference Include="Veldrid" Version="4.9.0" />
     <PackageReference Include="Veldrid.SDL2" Version="4.9.0" />
@@ -35,12 +39,12 @@
     <PackageReference Include="Veldrid.ImageSharp" Version="4.9.0" />
 
     <PackageReference Include="SharpDX.XAudio2" Version="4.2.0" />
-
-    <PackageReference Include="Sprintf.NET" Version="2.0.0" />
-    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.4" />
-    <PackageReference Include="System.IO.Pipelines" Version="8.0.0" />
-    <PackageReference Include="Microsoft.VisualStudio.Threading" Version="17.9.28" />
     <PackageReference Include="SharpDX.Direct2D1" Version="4.2.0" />
+    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.6" />
+
+    <PackageReference Include="FreeType.Binaries" Version="0.42.0" />
+    <PackageReference Include="OpenALSoft.Binaries" Version="0.42.0" />
+    <PackageReference Include="FFmpeg.Binaries" Version="0.42.0" />
   </ItemGroup>
 
   <ItemGroup>
@@ -55,6 +59,10 @@
 
   <ItemGroup>
     <AdditionalFiles Include="Graphics/Shaders/**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="Runner.cs" />
   </ItemGroup>
 
   <Target Name="EmbedGeneratedShaderContent" AfterTargets="AssignTargetPaths">

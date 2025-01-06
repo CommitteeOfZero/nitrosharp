@@ -470,25 +470,10 @@ public sealed class NsScriptVM
 
                 case Opcode.ActivateBlock:
                     ushort blockId = program.DecodeToken();
-                    ref readonly var subroutineInfo = ref thisModule.GetSubroutineRuntimeInfo(frame.SubroutineIndex);
-                    (string box, string textName) = subroutineInfo.DialogueBlockInfos[blockId];
+                    (string box, string textName) = frame.SubroutineRuntimeInfo.DialogueBlockInfos[blockId];
                     SystemVariables.CurrentDialogueBox = ConstantValue.String(box);
-                    SystemVariables.CurrentDialogueBlock = ConstantValue.String("@" + textName);
+                    SystemVariables.CurrentDialogueBlock = ConstantValue.String($"@{textName}");
                     break;
-                case Opcode.ClearPage:
-                    Debug.Assert(thread.DialoguePage.HasValue);
-                    builtins.ClearDialoguePage(thread.DialoguePage.Value);
-                    break;
-                case Opcode.AppendDialogue:
-                    Debug.Assert(thread.DialoguePage.HasValue);
-                    string text = thisModule.GetString(program.DecodeToken());
-                    builtins.AppendDialogue(thread.DialoguePage.Value, text);
-                    break;
-                case Opcode.LineEnd:
-                    Debug.Assert(thread.DialoguePage.HasValue);
-                    builtins.LineEnd(thread.DialoguePage.Value);
-                    frame.ProgramCounter = program.Position;
-                    return TickResult.Ok;
                 case Opcode.SelectLoopStart:
                     thread.SelectResult = false;
                     break;

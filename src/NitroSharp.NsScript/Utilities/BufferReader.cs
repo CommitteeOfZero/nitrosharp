@@ -5,17 +5,11 @@ using System.Text;
 
 namespace NitroSharp.NsScript.Utilities
 {
-    internal ref struct BufferReader
+    internal ref struct BufferReader(ReadOnlySpan<byte> buffer)
     {
-        private readonly ReadOnlySpan<byte> _buffer;
+        private readonly ReadOnlySpan<byte> _buffer = buffer;
 
-        public BufferReader(ReadOnlySpan<byte> buffer)
-        {
-            _buffer = buffer;
-            Position = 0;
-        }
-
-        public int Position { get; set; }
+        public int Position { get; set; } = 0;
 
         public ReadOnlySpan<byte> Consumed => _buffer[..Position];
         public ReadOnlySpan<byte> Unconsumed => _buffer[Position..];

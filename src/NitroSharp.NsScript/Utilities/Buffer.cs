@@ -1,83 +1,77 @@
 ﻿using System;
 using System.Buffers;
 
-namespace NitroSharp.NsScript.Utilities
+namespace NitroSharp.NsScript.Utilities;
+
+internal readonly struct BufferSlice<T>(IBuffer<T> buffer, uint length)
 {
-    internal readonly struct BufferSlice<T>
+    public IBuffer<T> Buffer { get; } = buffer;
+    public uint Length { get; } = length;
+
+    public Span<T> AsSpan() => Buffer.AsSpan().Slice(0, (int)Length);
+}
+
+internal interface IBuffer<T> : IDisposable
+{
+    uint Length { get; }
+    Span<T> AsSpan();
+    void Resize(uint newSize);
+}
+
+internal sealed class HeapAllocBuffer<T> : IBuffer<T>
+{
+    private T[] _array;
+
+    private HeapAllocBuffer(T[] array)
     {
-        public BufferSlice(IBuffer<T> buffer, uint length)
-        {
-            Buffer = buffer;
-            Length = length;
-        }
-
-        public IBuffer<T> Buffer { get; }
-        public uint Length { get; }
-
-        public Span<T> AsSpan() => Buffer.AsSpan().Slice(0, (int)Length);
+        _array = array;
     }
 
-    internal interface IBuffer<T> : IDisposable
+    public uint Length => (uint)_array.Length;
+
+    public static HeapAllocBuffer<T> Allocate(uint minimumSize) => new(new T[minimumSize]);
+
+    public void Resize(uint newSize)
     {
-        uint Length { get; }
-        Span<T> AsSpan();
-        void Resize(uint newSize);
+        Array.Resize(ref _array, (int)newSize);
     }
 
-    internal sealed class HeapAllocBuffer<T> : IBuffer<T>
+    public Span<T> AsSpan() => _array.AsSpan();
+
+    public void Dispose()
     {
-        private T[] _array;
+    }
+}
 
-        private HeapAllocBuffer(T[] array)
-        {
-            _array = array;
-        }
+internal sealed class PooledBuffer<T> : IBuffer<T>
+{
+    private T[] _pooledArray;
+    private uint _size;
 
-        public uint Length => (uint)_array.Length;
-
-        public static HeapAllocBuffer<T> Allocate(uint minimumSize)
-            => new(new T[minimumSize]);
-
-        public void Resize(uint newSize)
-            => Array.Resize(ref _array, (int)newSize);
-
-        public Span<T> AsSpan()
-            => _array.AsSpan();
-
-        public void Dispose()
-        {
-        }
+    private PooledBuffer(T[] pooledArray, uint size)
+    {
+        _pooledArray = pooledArray;
+        _size = size;
     }
 
-    internal sealed class PooledBuffer<T> : IBuffer<T>
+    public uint Length => (uint)_pooledArray.Length;
+
+    public static PooledBuffer<T> Allocate(uint minimumSize)
+        => new(ArrayPool<T>.Shared.Rent((int)minimumSize), minimumSize);
+
+    public void Resize(uint newSize)
     {
-        private T[] _pooledArray;
-        private uint _size;
+        T[] newArray = ArrayPool<T>.Shared.Rent((int)newSize);
+        Array.Copy(_pooledArray, newArray, (int)_size);
+        ArrayPool<T>.Shared.Return(_pooledArray);
+        _pooledArray = newArray;
+        _size = newSize;
+    }
 
-        private PooledBuffer(T[] pooledArray, uint size)
-        {
-            _pooledArray = pooledArray;
-            _size = size;
-        }
+    public Span<T> AsSpan() => _pooledArray.AsSpan(0, (int)_size);
 
-        public uint Length => (uint)_pooledArray.Length;
-
-        public static PooledBuffer<T> Allocate(uint minimumSize)
-            => new(ArrayPool<T>.Shared.Rent((int)minimumSize), minimumSize);
-
-        public void Resize(uint newSize)
-        {
-            T[] newArray = ArrayPool<T>.Shared.Rent((int)newSize);
-            Array.Copy(_pooledArray, newArray, (int)_size);
-            ArrayPool<T>.Shared.Return(_pooledArray);
-            _pooledArray = newArray;
-            _size = newSize;
-        }
-
-        public Span<T> AsSpan()
-            => _pooledArray.AsSpan(0, (int)_size);
-
-        public void Dispose()
-            => ArrayPool<T>.Shared.Return(_pooledArray);
+    public void Dispose()
+    {
+        ArrayPool<T>.Shared.Return(_pooledArray);
     }
 }

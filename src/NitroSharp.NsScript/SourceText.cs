@@ -67,8 +67,7 @@ namespace NitroSharp.NsScript
             while (lower <= upper)
             {
                 int index = lower + ((upper - lower) / 2);
-                TextSpan currentLine = Lines[index];
-                int start = currentLine.Start;
+                int start = Lines[index].Start;
                 if (start == position)
                 {
                     return index;

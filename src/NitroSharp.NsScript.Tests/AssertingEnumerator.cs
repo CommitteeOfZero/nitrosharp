@@ -34,9 +34,12 @@ namespace NitroSharp.NsScript.Tests
                 SyntaxNode n = stack.Pop();
                 yield return n;
 
-                foreach (SyntaxNode child in n.GetChildren().ToArray().Reverse())
+                foreach (SyntaxNode? child in n.GetChildren().ToArray().Reverse())
                 {
-                    stack.Push(child);
+                    if (child is not null)
+                    {
+                        stack.Push(child);
+                    }
                 }
             }
         }

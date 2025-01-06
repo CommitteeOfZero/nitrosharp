@@ -1,126 +1,102 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 
-namespace NitroSharp.NsScript.Syntax
+namespace NitroSharp.NsScript.Syntax;
+
+public enum SyntaxNodeKind
 {
-    public enum SyntaxNodeKind
+    None,
+    SourceFileRoot,
+
+    ChapterDeclaration,
+    SceneDeclaration,
+    FunctionDeclaration,
+    Parameter,
+
+    Block,
+    IfStatement,
+    WhileStatement,
+    ExpressionStatement,
+    ReturnStatement,
+    SelectStatement,
+    SelectSection,
+    CallSceneStatement,
+    CallChapterStatement,
+    BreakStatement,
+
+    NameExpression,
+    LiteralExpression,
+    UnaryExpression,
+    BinaryExpression,
+    AssignmentExpression,
+    FunctionCallExpression,
+    BezierExpression,
+
+    DialogueBlock,
+    MarkupCodeBlock,
+    Markup,
+    MarkupBlankLine
+}
+
+public abstract class SyntaxNode(TextSpan span)
+{
+    public abstract SyntaxNodeKind Kind { get; }
+    public TextSpan Span { get; } = span;
+
+    public abstract void Accept(SyntaxVisitor visitor);
+    public abstract TResult Accept<TResult>(SyntaxVisitor<TResult> visitor);
+
+    protected virtual SyntaxNode? GetNodeSlot(int index)
     {
-        None,
-        SourceFileRoot,
-
-        ChapterDeclaration,
-        SceneDeclaration,
-        FunctionDeclaration,
-        Parameter,
-
-        Block,
-        IfStatement,
-        WhileStatement,
-        ExpressionStatement,
-        ReturnStatement,
-        SelectStatement,
-        SelectSection,
-        CallSceneStatement,
-        CallChapterStatement,
-        BreakStatement,
-
-        NameExpression,
-        LiteralExpression,
-        UnaryExpression,
-        BinaryExpression,
-        AssignmentExpression,
-        FunctionCallExpression,
-        BezierExpression,
-
-        DialogueBlock,
-        Markup,
-        MarkupBlankLine
+        return null;
     }
 
-    public abstract class SyntaxNode
+    public Children GetChildren() => new(this);
+
+    //public override string ToString()
+    //{
+    //    var sw = new StringWriter();
+    //    var codeWriter = new DefaultCodeWriter(sw);
+    //    codeWriter.WriteNode(this);
+
+    //    return sw.ToString();
+    //}
+
+    public struct Children(SyntaxNode node)
     {
-        protected SyntaxNode(TextSpan span)
+        private int _index = 0;
+
+        public SyntaxNode Current { get; private set; } = null!;
+
+        public Children GetEnumerator() => this;
+
+        public bool MoveNext()
         {
-            Span = span;
+            SyntaxNode? current = node.GetNodeSlot(_index);
+            if (current is not null)
+            {
+                Current = current;
+                _index++;
+                return true;
+            }
+
+            Current = null!;
+            return false;
         }
 
-        public abstract SyntaxNodeKind Kind { get; }
-        public TextSpan Span { get; }
-
-        public abstract void Accept(SyntaxVisitor visitor);
-        public abstract TResult Accept<TResult>(SyntaxVisitor<TResult> visitor);
-
-        public virtual SyntaxNode? GetNodeSlot(int index)
+        public SyntaxNode?[] ToArray()
         {
-            return null;
-        }
-
-        public Children GetChildren() => new(this);
-
-        //public override string ToString()
-        //{
-        //    var sw = new StringWriter();
-        //    var codeWriter = new DefaultCodeWriter(sw);
-        //    codeWriter.WriteNode(this);
-
-        //    return sw.ToString();
-        //}
-
-        public readonly struct Children
-        {
-            private readonly SyntaxNode _node;
-
-            public Children(SyntaxNode node)
+            if (node.GetNodeSlot(0) is null)
             {
-                _node = node;
+                return [];
             }
 
-            public ChildrenEnumerator GetEnumerator()
-                => new(_node);
-
-            public SyntaxNode?[] ToArray()
+            var list = new List<SyntaxNode?>();
+            foreach (SyntaxNode? child in this)
             {
-                if (_node.GetNodeSlot(0) is null)
-                {
-                    return Array.Empty<SyntaxNode>();
-                }
-
-                var list = new List<SyntaxNode?>();
-                foreach (SyntaxNode? child in this)
-                {
-                    list.Add(child);
-                }
-
-                return list.ToArray();
-            }
-        }
-
-        public struct ChildrenEnumerator
-        {
-            private readonly SyntaxNode _node;
-            private SyntaxNode? _current;
-            private int _index;
-
-            public ChildrenEnumerator(SyntaxNode node)
-            {
-                _node = node;
-                _index = 0;
-                _current = null;
+                list.Add(child);
             }
 
-            public SyntaxNode? Current => _current;
-
-            public bool MoveNext()
-            {
-                _current = _node.GetNodeSlot(_index);
-                if (_current is not null)
-                {
-                    _index++;
-                    return true;
-                }
-
-                return false;
-            }
+            return list.ToArray();
         }
     }
 }

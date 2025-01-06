@@ -236,8 +236,7 @@ namespace NitroSharp.NsScript.Compiler
                 return true;
             }
 
-            ReadOnlySpan<BezierControlPoint> remainingPoints = bezierExpr
-                .ControlPoints.AsSpan();
+            ReadOnlySpan<BezierControlPoint> remainingPoints = bezierExpr.ControlPoints.AsSpan();
             var mutSegments = ImmutableArray.CreateBuilder<CompileTimeBezierSegment>();
             CompileTimeBezierSegment seg = default;
             while (consumePoint(ref remainingPoints, out BezierControlPoint pt))

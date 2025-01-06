@@ -1,129 +1,125 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
 
-namespace NitroSharp.NsScript.Utilities
+namespace NitroSharp.NsScript.Utilities;
+
+internal struct ValueStack<T>(int initialCapacity = 4)
+    where T : struct
 {
-    internal struct ValueStack<T> where T : struct
+    private T[] _array = new T[initialCapacity];
+    private int _size = 0;
+
+    public int Count => _size;
+
+    public ref T this[int index] => ref _array[index];
+
+    public ReadOnlySpan<T> AsSpan() => _array.AsSpan(0, _size);
+
+    public ReadOnlySpan<T> AsSpan(int start, int length)
+        => _array.AsSpan(start, length);
+
+    public void Push(T value)
     {
-        private T[] _array;
-        private int _size;
+        T local = value;
+        Push(ref local);
+    }
 
-        public ValueStack(int initialCapacity = 4)
+    public void Push(ref T value)
+    {
+        int size = _size;
+        T[] array = _array;
+
+        if ((uint)size < (uint)array.Length)
         {
-            _array = new T[initialCapacity];
-            _size = 0;
+            array[size] = value;
+            _size = size + 1;
+        }
+        else
+        {
+            PushWithResize(ref value);
+        }
+    }
+
+    public ref T Peek()
+    {
+        int size = _size;
+        if (size == 0)
+        {
+            ThrowStackEmpty();
         }
 
-        public int Count => _size;
+        return ref _array[size - 1];
+    }
 
-        public ref T this[int index] => ref _array[index];
-
-        public ReadOnlySpan<T> AsSpan() => _array.AsSpan(0, _size);
-
-        public ReadOnlySpan<T> AsSpan(int start, int length)
-            => _array.AsSpan(start, length);
-
-        public void Push(T value)
+    public ref T Peek(int offset)
+    {
+        int size = _size;
+        if (size == 0)
         {
-            T local = value;
-            Push(ref local);
+            ThrowStackEmpty();
         }
 
-        public void Push(ref T value)
-        {
-            int size = _size;
-            T[] array = _array;
+        return ref _array[size - offset - 1];
+    }
 
-            if ((uint)size < (uint)array.Length)
-            {
-                array[size] = value;
-                _size = size + 1;
-            }
-            else
-            {
-                PushWithResize(ref value);
-            }
+    public T Pop()
+    {
+        int size = _size - 1;
+        T[] array = _array;
+
+        // if size == -1
+        if ((uint)size >= (uint)array.Length)
+        {
+            ThrowStackEmpty();
         }
 
-        public ref T Peek()
-        {
-            int size = _size;
-            if (size == 0)
-            {
-                ThrowStackEmpty();
-            }
+        _size = size;
+        return array[size];
+    }
 
-            return ref _array[size - 1];
-        }
-
-        public ref T Peek(int offset)
-        {
-            int size = _size;
-            if (size == 0)
-            {
-                ThrowStackEmpty();
-            }
-
-            return ref _array[size - offset - 1];
-        }
-
-        public T Pop()
-        {
-            int size = _size - 1;
-            T[] array = _array;
-
-            // if size == -1
-            if ((uint)size >= (uint)array.Length)
-            {
-                ThrowStackEmpty();
-            }
-
-            _size = size;
-            return array[size];
-        }
-
-        public void Pop(int count)
-        {
-            int newSize = _size - count;
-            if (newSize < 0)
-            {
-                _size = 0;
-                ThrowStackEmpty();
-            }
-
-            _size = newSize;
-        }
-
-        public bool TryPop(out T value)
-        {
-            int size = _size - 1;
-            T[] array = _array;
-
-            // if size == -1
-            if ((uint)size >= (uint)array.Length)
-            {
-                value = default;
-                return false;
-            }
-
-            _size = size;
-            value = array[size];
-            return true;
-        }
-
-        public void Clear()
+    public void Pop(int count)
+    {
+        int newSize = _size - count;
+        if (newSize < 0)
         {
             _size = 0;
+            ThrowStackEmpty();
         }
 
-        [MethodImpl(MethodImplOptions.NoInlining)]
-        private void PushWithResize(ref T value)
+        _size = newSize;
+    }
+
+    public bool TryPop(out T value)
+    {
+        int size = _size - 1;
+        T[] array = _array;
+
+        // if size == -1
+        if ((uint)size >= (uint)array.Length)
         {
-            Array.Resize(ref _array, _array.Length * 2);
-            _array[_size++] = value;
+            value = default;
+            return false;
         }
 
-        private void ThrowStackEmpty()
-            => throw new InvalidOperationException("Stack is empty.");
+        _size = size;
+        value = array[size];
+        return true;
+    }
+
+    public void Clear()
+    {
+        _size = 0;
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private void PushWithResize(ref T value)
+    {
+        Array.Resize(ref _array, _array.Length * 2);
+        _array[_size++] = value;
+    }
+
+    private static void ThrowStackEmpty()
+    {
+        throw new InvalidOperationException("Stack is empty.");
     }
 }

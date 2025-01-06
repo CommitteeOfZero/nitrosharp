@@ -14,12 +14,8 @@ namespace NitroSharp.NsScript.VM
     {
         internal ValueStack<CallFrame> CallFrameStack;
         internal ValueStack<ConstantValue> EvalStack;
-        internal long? SuspensionTime;
-        internal long? SleepTimeout;
         internal bool Yielded;
-        internal EntityPath? DialoguePage;
         internal bool SelectResult;
-        internal uint? WaitingThread;
 
         internal NsScriptThreadState(CallFrame callFrame)
         {
@@ -29,7 +25,6 @@ namespace NitroSharp.NsScript.VM
         }
 
         public bool DoneExecuting => CallFrameStack.Count == 0;
-        public bool IsActive => SuspensionTime is null;
 
         internal ref CallFrame CurrentFrame => ref CallFrameStack.Peek();
     }
@@ -139,6 +134,9 @@ namespace NitroSharp.NsScript.VM
         public readonly ushort SubroutineIndex;
 
         public int ProgramCounter;
+
+        public ref readonly SubroutineRuntimeInfo SubroutineRuntimeInfo =>
+            ref Module.GetSubroutineRuntimeInfo(SubroutineIndex);
 
         public CallFrame(NsxModule module, ushort subroutineIndex, int pc)
         {

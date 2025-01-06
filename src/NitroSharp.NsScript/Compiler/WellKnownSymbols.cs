@@ -28,14 +28,14 @@ namespace NitroSharp.NsScript.Compiler
         {
             name = FixKnownTypos(name);
             return s_builtInFunctions.TryGetValue(name, out BuiltInFunction function)
-                ? function : (BuiltInFunction?)null;
+                ? function : null;
         }
 
         public static BuiltInConstant? LookupBuiltInConstant(string name)
         {
             name = FixKnownTypos(name);
             return s_builtInConstants.TryGetValue(name, out BuiltInConstant value)
-                ? value : (BuiltInConstant?)null;
+                ? value : null;
         }
 
         private static string FixKnownTypos(string s)

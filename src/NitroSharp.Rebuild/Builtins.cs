@@ -75,6 +75,22 @@ internal sealed class Builtins : BuiltInFunctions
         return SpriteTexture.SolidColor(RgbaFloat.CornflowerBlue, new DesignSizeU(50, 50));
     }
 
+    public override void CreateTextBlock(
+        in EntityPath entityPath,
+        int priority,
+        NsCoordinate x,
+        NsCoordinate y,
+        NsTextDimension width,
+        NsTextDimension height,
+        string markup)
+    {
+        if (_world.TryResolvePath(entityPath, out EntityName name, out Entity? parent))
+        {
+            _world.AddEntity(new TextBlock(name, parent, priority, markup, _ctx.RenderContext.Text))
+                .WithPosition(_ctx.RenderContext, x, y);
+        }
+    }
+
     public override int GetWidth(in EntityPath entityPath)
     {
         return _world.Get(entityPath) is RenderItem renderItem

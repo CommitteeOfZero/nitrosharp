@@ -119,19 +119,9 @@ namespace NitroSharp.NsScript.Syntax
         //    return DefaultVisitNode(callChapterStatement);
         //}
 
-        public virtual TResult VisitMarkupNode(MarkupNode node)
-        {
-            return DefaultVisitNode(node);
-        }
-
         public virtual TResult VisitDialogueBlock(DialogueBlock dialogueBlock)
         {
             return DefaultVisitNode(dialogueBlock);
-        }
-
-        public virtual TResult VisitMarkupBlankLine(MarkupBlankLine blankLine)
-        {
-            return DefaultVisitNode(blankLine);
         }
     }
 }

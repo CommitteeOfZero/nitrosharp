@@ -46,9 +46,6 @@
         BezierEndSeg = 0x45,    // <>
         BezierEnd = 0x46,       // <>
 
-        ActivateBlock = 0x50,   // <ushort id>
-        ClearPage = 0x51,
-        AppendDialogue = 0x52,  // <ushort token>
-        LineEnd = 0x53,         // <>
+        ActivateBlock = 0x50,   // <>
     }
 }

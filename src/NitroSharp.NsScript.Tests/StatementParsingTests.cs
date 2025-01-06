@@ -109,35 +109,35 @@ namespace NitroSharp.NsScript.Tests
             var func = (FunctionDeclaration)Parsing.ParseSubroutineDeclaration(text).Root;
             var stmts = func.Body.Statements;
             Assert.Equal(2, stmts.Length);
-            var markup = Assert.IsType<MarkupNode>(Assert.IsType<DialogueBlock>(stmts[0]).Parts[0]);
+            var markup = Assert.IsType<DialogueBlockPart.Markup>(Assert.IsType<DialogueBlock>(stmts[0]).Parts[0]);
             Assert.Equal("<pre>https://sonome.dareno.me</pre>", markup.Text);
             Assert.Equal(SyntaxNodeKind.ExpressionStatement, stmts[1].Kind);
         }
 
         public static IEnumerable<object[]> GetDialogueBlockTestData()
         {
-            yield return new object[]
-            {
+            yield return
+            [
                 @"<PRE @box01>
                 [text001]
                 </PRE>",
                 "text001",
                 "@box01",
                 0
-            };
+            ];
 
-            yield return new object[]
-            {
+            yield return
+            [
                 @"<PRE box01>
                 [text001]
                 </PRE>",
                 "text001",
                 "box01",
                 0
-            };
+            ];
 
-            yield return new object[]
-            {
+            yield return
+            [
                 @"<PRE @box01>
                 [text001]
                 {}
@@ -145,7 +145,7 @@ namespace NitroSharp.NsScript.Tests
                 "text001",
                 "@box01",
                 1
-            };
+            ];
         }
 
         private static T AssertStatement<T>(string text, SyntaxNodeKind expectedKind) where T : Statement

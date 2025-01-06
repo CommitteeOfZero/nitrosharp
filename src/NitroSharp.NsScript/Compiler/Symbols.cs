@@ -22,14 +22,9 @@ namespace NitroSharp.NsScript.Compiler
         Parameter
     }
 
-    public abstract class NamedSymbol : Symbol
+    public abstract class NamedSymbol(string name) : Symbol
     {
-        protected NamedSymbol(string name)
-        {
-            Name = name;
-        }
-
-        public string Name { get; }
+        public string Name { get; } = name;
     }
 
     public sealed class SourceModuleSymbol : Symbol
@@ -213,7 +208,7 @@ namespace NitroSharp.NsScript.Compiler
         private static T? LookupSubroutine<T>(Dictionary<string, T> map, string name)
             where T : SubroutineSymbol
         {
-            return map.TryGetValue(name, out T? symbol) ? symbol : null;
+            return map.GetValueOrDefault(name);
         }
 
         public override string ToString() => $"SourceFile '{Name}'";
@@ -281,8 +276,7 @@ namespace NitroSharp.NsScript.Compiler
 
         public override ParameterSymbol? LookupParameter(string name)
         {
-            if (_parameterMap is null) { return null; }
-            return _parameterMap.TryGetValue(name, out ParameterSymbol? symbol) ? symbol : null;
+            return _parameterMap?.GetValueOrDefault(name);
         }
 
         public bool Equals(FunctionSymbol? other) => ReferenceEquals(Declaration, other?.Declaration);

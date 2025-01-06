@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Linq;
 using NitroSharp.NsScript.Syntax;
 using NitroSharp.NsScript.Utilities;
+using NitroSharp.NsScript.VM;
 
 namespace NitroSharp.NsScript.Compiler
 {
@@ -18,7 +19,6 @@ namespace NitroSharp.NsScript.Compiler
         private int _textId;
         private ValueStack<BreakScope> _breakScopes;
         private bool _suppressConstantLookup;
-        private bool _clearPage;
 
         private Emitter(NsxModuleBuilder moduleBuilder, SubroutineSymbol subroutine)
         {
@@ -30,7 +30,6 @@ namespace NitroSharp.NsScript.Compiler
             _code = default;
             _textId = 0;
             _suppressConstantLookup = false;
-            _clearPage = true;
 
             if (subroutine is FunctionSymbol { Parameters.Length: > 0 } function)
             {
@@ -41,14 +40,9 @@ namespace NitroSharp.NsScript.Compiler
             }
         }
 
-        private readonly struct JumpPlaceholder
+        private readonly struct JumpPlaceholder(int instrPos)
         {
-            public readonly int InstructionPos;
-
-            public JumpPlaceholder(int instrPos)
-            {
-                InstructionPos = instrPos;
-            }
+            public readonly int InstructionPos = instrPos;
 
             public int OffsetPos => InstructionPos + 1;
         }
@@ -327,7 +321,6 @@ namespace NitroSharp.NsScript.Compiler
                 {
                     EmitOpcode(Opcode.Call);
                     _code.WriteUInt16LE(_module.GetSubroutineToken(function));
-                    _code.WriteByte((byte)callExpression.Arguments.Length);
                 }
                 else
                 {
@@ -336,8 +329,9 @@ namespace NitroSharp.NsScript.Compiler
                     NsxModuleBuilder externalNsxBuilder = _compilation.GetNsxModuleBuilder(externalSourceFile);
                     _code.WriteUInt16LE(_module.GetExternalModuleToken(externalSourceFile));
                     _code.WriteUInt16LE(externalNsxBuilder.GetSubroutineToken(function));
-                    _code.WriteByte((byte)callExpression.Arguments.Length);
                 }
+
+                _code.WriteByte((byte)callExpression.Arguments.Length);
                 EmitLoadImm(ConstantValue.Null);
             }
         }
@@ -424,20 +418,6 @@ namespace NitroSharp.NsScript.Compiler
                 case SyntaxNodeKind.DialogueBlock:
                     EmitOpcode(Opcode.ActivateBlock);
                     _code.WriteUInt16LE((ushort)_textId++);
-                    break;
-                case SyntaxNodeKind.Markup:
-                    var text = (MarkupNode)statement;
-                    if (_clearPage)
-                    {
-                        EmitOpcode(Opcode.ClearPage);
-                        _clearPage = false;
-                    }
-                    EmitOpcode(Opcode.AppendDialogue);
-                    _code.WriteUInt16LE(_module.GetStringToken(text.Text));
-                    break;
-                case SyntaxNodeKind.MarkupBlankLine:
-                    EmitOpcode(Opcode.LineEnd);
-                    _clearPage = true;
                     break;
             }
         }
@@ -664,11 +644,49 @@ namespace NitroSharp.NsScript.Compiler
 
         private void EmitDialogueBlock(DialogueBlock dialogueBlock)
         {
-            foreach (Statement statement in dialogueBlock.Parts)
+            _code.WriteByte((byte)dialogueBlock.Parts.Length);
+            foreach (DialogueBlockPart part in dialogueBlock.Parts)
             {
-                EmitStatement(statement);
+                EmitDialogueBlockPart(part);
             }
             EmitOpcode(Opcode.Return);
+        }
+
+        private void EmitDialogueBlockPart(DialogueBlockPart part)
+        {
+            switch (part)
+            {
+                case DialogueBlockPart.Markup { Text: var text }:
+                {
+                    _code.WriteByte((byte)CompiledDialogueBlockPart.Kind.Markup);
+                    ushort token = _module.GetStringToken(text);
+                    _code.WriteUInt16LE(token);
+                    break;
+                }
+                case DialogueBlockPart.BlankLine:
+                {
+                    _code.WriteByte((byte)CompiledDialogueBlockPart.Kind.BlankLine);
+                    break;
+                }
+                case DialogueBlockPart.Block { Statements: var statements }:
+                {
+                    _code.WriteByte((byte)CompiledDialogueBlockPart.Kind.CodeBlock);
+                    int lengthOffset = _code.Position;
+                    _code.WriteUInt16LE(0);
+                    foreach (Statement statement in statements)
+                    {
+                        EmitStatement(statement);
+                    }
+
+                    int newPosition = _code.Position;
+                    _code.Position = lengthOffset;
+                    _code.WriteUInt16LE((ushort)(newPosition - lengthOffset));
+                    _code.Position = newPosition;
+                    break;
+                }
+                default:
+                    throw ThrowHelper.UnexpectedValue(nameof(part));
+            }
         }
     }
 }

@@ -18,10 +18,10 @@ namespace NitroSharp.Text
         private Rectangle<TUnit> _boundingBox;
         private Line _lastLine;
 
-        private readonly List<Line> _lines = new();
-        private readonly List<GlyphRun> _glyphRuns = new();
-        private readonly List<PositionedGlyph> _glyphs = new();
-        private readonly List<float> _opacityValues = new();
+        private readonly List<Line> _lines = [];
+        private readonly List<GlyphRun> _glyphRuns = [];
+        private readonly List<PositionedGlyph> _glyphs = [];
+        private readonly List<float> _opacityValues = [];
 
         public TextLayout(
             uint? maxWidth = null,

@@ -1,9 +1,7 @@
-﻿using NitroSharp.Utilities;
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.Globalization;
 using System.Runtime.CompilerServices;
-using NitroSharp.NsScript.Utilities;
 
 namespace NitroSharp.NsScript.Syntax
 {
@@ -42,7 +40,7 @@ namespace NitroSharp.NsScript.Syntax
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool IsNewLine(char c)
         {
-            return c == '\r' || c == '\n';
+            return c is '\r' or '\n';
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

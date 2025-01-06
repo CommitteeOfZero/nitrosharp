@@ -117,9 +117,9 @@ internal sealed class BadGameProfileException : Exception
     }
 }
 
-public sealed class SystemScripts
+public sealed class SystemScripts(string startupScript)
 {
-    public string Startup { get; }
+    public string Startup { get; } = startupScript;
     public string Menu { get; set; } = "sys_menu.nss";
     public string Save { get; set; } = "sys_save.nss";
     public string Load { get; set; } = "sys_load.nss";
@@ -127,11 +127,6 @@ public sealed class SystemScripts
     public string Backlog { get; set; } = "sys_backlog.nss";
     public string ExitConfirmation { get; set; } = "sys_close.nss";
     public string ReturnToMenu { get; set; } = "sys_reset.nss";
-
-    public SystemScripts(string startupScript)
-    {
-        Startup = startupScript;
-    }
 }
 
 public readonly struct IconPathPattern
@@ -149,27 +144,19 @@ public readonly struct IconPathPattern
     public IconPathEnumerable EnumeratePaths() => new(this);
 }
 
-public struct IconPathEnumerable
+public struct IconPathEnumerable(IconPathPattern pattern)
 {
-    private readonly IconPathPattern _pattern;
-    private int _index;
-
-    public IconPathEnumerable(IconPathPattern pattern)
-    {
-        _pattern = pattern;
-        _index = 1;
-        Current = string.Empty;
-    }
+    private int _index = 1;
 
     public IconPathEnumerable GetEnumerator() => this;
 
-    public string Current { get; private set; }
+    public string Current { get; private set; } = string.Empty;
 
     public bool MoveNext()
     {
-        if (_index == _pattern.IconCount) { return false; }
+        if (_index == pattern.IconCount) { return false; }
 
-        Current = StringFormatter.PrintF(_pattern.FormatString, _index);
+        Current = StringFormatter.PrintF(pattern.FormatString, _index);
         _index++;
         return true;
     }

@@ -359,12 +359,6 @@ namespace NitroSharp.NsScript.Syntax
                     return ParseCallSceneStatement();
                 case SyntaxTokenKind.DialogueBlockStartTag:
                     return ParseDialogueBlock();
-                case SyntaxTokenKind.Markup:
-                    SyntaxToken token = EatToken();
-                    return new MarkupNode(GetText(token), token.TextSpan);
-                case SyntaxTokenKind.MarkupBlankLine:
-                    token = EatToken();
-                    return new MarkupBlankLine(token.TextSpan);
                 case SyntaxTokenKind.LessThan:
                     if (SkipStrayMarkupNodeIfApplicable())
                     {
@@ -938,18 +932,18 @@ namespace NitroSharp.NsScript.Syntax
             SyntaxToken blockIdentifier = EatToken(SyntaxTokenKind.DialogueBlockIdentifier);
             string name = extractBlockName(blockIdentifier);
 
-            var statements = ImmutableArray.CreateBuilder<Statement>();
+            var parts = ImmutableArray.CreateBuilder<DialogueBlockPart>();
             while (CurrentToken.Kind is not (SyntaxTokenKind.DialogueBlockEndTag or SyntaxTokenKind.EndOfFileToken))
             {
-                Statement? statement = ParseStatement();
-                if (statement is not null)
+                DialogueBlockPart? part = ParseDialogueBlockPart();
+                if (part is not null)
                 {
-                    statements.Add(statement);
+                    parts.Add(part);
                 }
             }
 
             EatToken(SyntaxTokenKind.DialogueBlockEndTag);
-            return new DialogueBlock(name, associatedBox, statements.ToImmutable(), SpanFrom(startTag));
+            return new DialogueBlock(name, associatedBox, parts.ToImmutable(), SpanFrom(startTag));
 
             string extractBoxName(in SyntaxToken tag)
             {
@@ -963,6 +957,50 @@ namespace NitroSharp.NsScript.Syntax
             {
                 ReadOnlySpan<char> span = SourceText.GetCharacterSpan(identifierToken.TextSpan);
                 return span.Length > 2 ? span[1..^1].ToString() : "";
+            }
+        }
+
+        private DialogueBlockPart? ParseDialogueBlockPart()
+        {
+            DialogueBlockPart? dialogueBlockPart;
+            do
+            {
+                dialogueBlockPart = ParseDialogueBlockPartCore();
+                if (dialogueBlockPart is not null) { break; }
+                SyntaxTokenKind tk = CurrentToken.Kind;
+                if (tk is SyntaxTokenKind.EndOfFileToken)
+                {
+                    return null;
+                }
+            } while (true);
+
+            return dialogueBlockPart;
+        }
+
+        private DialogueBlockPart? ParseDialogueBlockPartCore()
+        {
+            switch (CurrentToken.Kind)
+            {
+                case SyntaxTokenKind.Markup:
+                {
+                    SyntaxToken token = EatToken();
+                    return new DialogueBlockPart.Markup(GetText(token), token.TextSpan);
+                }
+                case SyntaxTokenKind.MarkupBlankLine:
+                {
+                    return new DialogueBlockPart.BlankLine(EatToken().TextSpan);
+                }
+                case SyntaxTokenKind.OpenBrace:
+                {
+                    SyntaxToken openBrace = EatToken(SyntaxTokenKind.OpenBrace);
+                    ImmutableArray<Statement> statements = ParseStatements();
+                    EatToken(SyntaxTokenKind.CloseBrace);
+                    return new DialogueBlockPart.Block(statements, SpanFrom(openBrace));
+                }
+                default:
+                {
+                    return null;
+                }
             }
         }
 

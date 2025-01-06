@@ -6,12 +6,8 @@ using System.Text;
 
 namespace NitroSharp.NsScript.Syntax.Markup
 {
-    internal sealed class MarkupParser : TextScanner
+    internal sealed class MarkupParser(string sourceText) : TextScanner(sourceText)
     {
-        public MarkupParser(string sourceText) : base(sourceText)
-        {
-        }
-
         public MarkupContent Parse()
         {
             return ParseContent(rootElementName: null);
@@ -36,7 +32,7 @@ namespace NitroSharp.NsScript.Syntax.Markup
                 if (node is null) { continue; }
                 if (children.Length == 0)
                 {
-                    children = ImmutableArray.Create(node);
+                    children = [node];
                 }
                 else
                 {
@@ -171,14 +167,13 @@ namespace NitroSharp.NsScript.Syntax.Markup
             StartScanning();
             var sb = new StringBuilder();
             char c;
-            while ((c = PeekChar()) != EofCharacter
-                && !Match("</pre>") && !Match("</PRE>"))
+            while ((c = PeekChar()) != EofCharacter && !Match("</pre>") && !Match("</PRE>"))
             {
                 AdvanceChar();
                 sb.Append(c);
             }
 
-            AdvanceChar(6);
+            AdvanceChar("</pre>".Length);
             return new MarkupText(sb.ToString());
         }
 
@@ -292,16 +287,10 @@ namespace NitroSharp.NsScript.Syntax.Markup
             return (key, value);
         }
 
-        private readonly ref struct MarkupTag
+        private readonly ref struct MarkupTag(string name, AttributeList attributes)
         {
-            public MarkupTag(string name, AttributeList attributes)
-            {
-                Name = name;
-                Attributes = attributes;
-            }
-
-            public string Name { get; }
-            public AttributeList Attributes { get; }
+            public string Name { get; } = name;
+            public AttributeList Attributes { get; } = attributes;
         }
 
         private struct AttributeListBuilder
@@ -327,16 +316,9 @@ namespace NitroSharp.NsScript.Syntax.Markup
             private string? Get(string key) => AttributeList.Get(_attributes, key);
         }
 
-        private readonly ref struct AttributeList
+        private readonly ref struct AttributeList(SmallList<(string, string)> attributes)
         {
-            private readonly SmallList<(string, string)> _attributes;
-
-            public AttributeList(SmallList<(string, string)> attributes)
-            {
-                _attributes = attributes;
-            }
-
-            public string? Get(string key) => Get(_attributes, key);
+            public string? Get(string key) => Get(attributes, key);
 
             public static string? Get(SmallList<(string, string)> list, string key)
             {

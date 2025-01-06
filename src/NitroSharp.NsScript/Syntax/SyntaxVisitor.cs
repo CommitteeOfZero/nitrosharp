@@ -141,19 +141,9 @@ namespace NitroSharp.NsScript.Syntax
         //    DefaultVisitNode(callSceneStatement);
         //}
 
-        public virtual void VisitMarkupNode(MarkupNode node)
-        {
-            DefaultVisitNode(node);
-        }
-
         public virtual void VisitDialogueBlock(DialogueBlock dialogueBlock)
         {
             DefaultVisitNode(dialogueBlock);
-        }
-
-        public virtual void VisitMarkupBlankLine(MarkupBlankLine blankLine)
-        {
-            DefaultVisitNode(blankLine);
         }
     }
 }

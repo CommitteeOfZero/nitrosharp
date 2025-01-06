@@ -81,9 +81,9 @@ namespace NitroSharp.NsScript.Compiler
             using var importTable = PooledBuffer<byte>.Allocate(2048);
             var impTableWriter = new BufferWriter(importTable);
             impTableWriter.WriteUInt16LE((ushort)imports.Length);
-            for (int i = 0; i < imports.Length; i++)
+            foreach (SourceFileSymbol importedFile in imports)
             {
-                impTableWriter.WriteLengthPrefixedUtf8String(imports[i].Name);
+                impTableWriter.WriteLengthPrefixedUtf8String(importedFile.Name);
             }
             impTableWriter.WriteBytes(NsxConstants.TableEndMarker);
 

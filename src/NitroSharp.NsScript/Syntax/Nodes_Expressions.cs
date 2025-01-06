@@ -3,12 +3,7 @@ using System.Collections.Immutable;
 
 namespace NitroSharp.NsScript.Syntax
 {
-    public abstract class Expression : SyntaxNode
-    {
-        protected Expression(TextSpan span) : base(span)
-        {
-        }
-    }
+    public abstract class Expression(TextSpan span) : SyntaxNode(span);
 
     public sealed class LiteralExpression : Expression
     {
@@ -71,13 +66,13 @@ namespace NitroSharp.NsScript.Syntax
 
         public override SyntaxNodeKind Kind => SyntaxNodeKind.UnaryExpression;
 
-        public override SyntaxNode? GetNodeSlot(int index)
+        protected override SyntaxNode? GetNodeSlot(int index)
         {
-            switch (index)
+            return index switch
             {
-                case 0: return Operand;
-                default: return null;
-            }
+                0 => Operand,
+                _ => null
+            };
         }
 
         public override void Accept(SyntaxVisitor visitor)
@@ -110,14 +105,14 @@ namespace NitroSharp.NsScript.Syntax
 
         public override SyntaxNodeKind Kind => SyntaxNodeKind.BinaryExpression;
 
-        public override SyntaxNode? GetNodeSlot(int index)
+        protected override SyntaxNode? GetNodeSlot(int index)
         {
-            switch (index)
+            return index switch
             {
-                case 0: return Left;
-                case 1: return Right;
-                default: return null;
-            }
+                0 => Left,
+                1 => Right,
+                _ => null
+            };
         }
 
         public override void Accept(SyntaxVisitor visitor)
@@ -150,14 +145,14 @@ namespace NitroSharp.NsScript.Syntax
 
         public override SyntaxNodeKind Kind => SyntaxNodeKind.AssignmentExpression;
 
-        public override SyntaxNode? GetNodeSlot(int index)
+        protected override SyntaxNode? GetNodeSlot(int index)
         {
-            switch (index)
+            return index switch
             {
-                case 0: return Target;
-                case 1: return Value;
-                default: return null;
-            }
+                0 => Target,
+                1 => Value,
+                _ => null
+            };
         }
 
         public override void Accept(SyntaxVisitor visitor)
@@ -186,6 +181,11 @@ namespace NitroSharp.NsScript.Syntax
         public ImmutableArray<Expression> Arguments { get; }
 
         public override SyntaxNodeKind Kind => SyntaxNodeKind.FunctionCallExpression;
+
+        protected override SyntaxNode? GetNodeSlot(int index)
+        {
+            return index < Arguments.Length ? Arguments[index] : null;
+        }
 
         public override void Accept(SyntaxVisitor visitor)
         {
@@ -221,14 +221,11 @@ namespace NitroSharp.NsScript.Syntax
         }
     }
 
-    public readonly struct BezierControlPoint
+    public readonly struct BezierControlPoint(Expression x, Expression y, bool starting)
     {
-        public readonly Expression X;
-        public readonly Expression Y;
-        public readonly bool IsStartingPoint;
-
-        public BezierControlPoint(Expression x, Expression y, bool starting)
-            => (X, Y, IsStartingPoint) = (x, y, starting);
+        public readonly Expression X = x;
+        public readonly Expression Y = y;
+        public readonly bool IsStartingPoint = starting;
 
         public void Deconstruct(out Expression x, out Expression y)
         {

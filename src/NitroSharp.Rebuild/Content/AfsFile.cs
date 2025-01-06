@@ -119,6 +119,8 @@ namespace NitroSharp.Content
                 _iniFileNames[fileName.ToString()] = index;
             }
 
+            return;
+
             [DoesNotReturn]
             static void malformed()
             {

@@ -2,26 +2,18 @@
 
 namespace NitroSharp.NsScript.Utilities;
 
-public ref struct SpanSplitEnumerator
+public ref struct SpanSplitEnumerator(ReadOnlySpan<char> text, char separator)
 {
-    private ReadOnlySpan<char> _remaining;
-    private readonly char _separator;
+    private ReadOnlySpan<char> _remaining = text;
 
-    public SpanSplitEnumerator(ReadOnlySpan<char> text, char separator)
-    {
-        Current = default;
-        _remaining = text;
-        _separator = separator;
-    }
-
-    public ReadOnlySpan<char> Current { get; private set; }
+    public ReadOnlySpan<char> Current { get; private set; } = default;
 
     public bool MoveNext()
     {
         ReadOnlySpan<char> remaining = _remaining;
-        if (remaining == default) { return false; }
+        if (remaining.IsEmpty) { return false; }
 
-        int nextSeparator = remaining.IndexOf(_separator);
+        int nextSeparator = remaining.IndexOf(separator);
         (int currentLength, int remainingStart) = nextSeparator >= 0
             ? (nextSeparator, nextSeparator + 1)
             : (remaining.Length, remaining.Length);

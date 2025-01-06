@@ -1,12 +1,13 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net9.0</TargetFramework>
     <OutputType>Exe</OutputType>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Veldrid.SPIRV" Version="1.0.15" />
+    <!-- <PackageReference Include="Veldrid" Version="4.9" /> -->
   </ItemGroup>
 
 </Project>

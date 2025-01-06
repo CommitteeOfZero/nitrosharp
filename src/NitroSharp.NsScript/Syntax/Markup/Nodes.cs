@@ -100,14 +100,14 @@ namespace NitroSharp.NsScript.Syntax.Markup
 
     public sealed class SpanElement : MarkupNode
     {
-        public uint Size { get; }
-        public MarkupContent Content { get; }
-
         public SpanElement(uint size, MarkupContent content)
         {
             Size = size;
             Content = content;
         }
+
+        public uint Size { get; }
+        public MarkupContent Content { get; }
 
         public override MarkupNodeKind Kind => MarkupNodeKind.SpanElement;
 
