@@ -47,7 +47,6 @@ namespace NitroSharp.NsScript.Tests
             untestedTokens.ExceptWith(GetDynamicTokens());
             untestedTokens.Remove(SyntaxTokenKind.None);
             untestedTokens.Remove(SyntaxTokenKind.BadToken);
-            untestedTokens.Remove(SyntaxTokenKind.MissingToken);
             untestedTokens.Remove(SyntaxTokenKind.EndOfFileToken);
 
             var testedTokens = GetStaticTokens().Select(x => x.kind);

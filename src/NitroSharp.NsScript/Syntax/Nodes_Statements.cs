@@ -288,3 +288,18 @@ public sealed class CallSceneStatement : Statement
         throw new NotImplementedException();
     }
 }
+
+public sealed class ErrorStatement(TextSpan span) : Statement(span)
+{
+    public override SyntaxNodeKind Kind => SyntaxNodeKind.ErrorStatement;
+
+    public override void Accept(SyntaxVisitor visitor)
+    {
+        throw new NotImplementedException();
+    }
+
+    public override TResult Accept<TResult>(SyntaxVisitor<TResult> visitor)
+    {
+        throw new NotImplementedException();
+    }
+}

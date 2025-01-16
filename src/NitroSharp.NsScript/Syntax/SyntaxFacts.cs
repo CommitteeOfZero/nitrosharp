@@ -308,7 +308,7 @@ namespace NitroSharp.NsScript.Syntax
         private static class KeywordScanner
         {
             public static bool TryRecognizeKeyword(ReadOnlySpan<char> text, out SyntaxTokenKind keywordKind)
-                => (keywordKind = RecognizeKeyword(text)) != SyntaxTokenKind.None;
+                => (keywordKind = RecognizeKeyword(text)) != SyntaxTokenKind.EndOfFileToken;
 
             public static SyntaxTokenKind RecognizeKeyword(ReadOnlySpan<char> text)
             {
@@ -336,7 +336,7 @@ namespace NitroSharp.NsScript.Syntax
                     "break" => SyntaxTokenKind.BreakKeyword,
                     "return" => SyntaxTokenKind.ReturnKeyword,
 
-                    _ => SyntaxTokenKind.None,
+                    _ => SyntaxTokenKind.EndOfFileToken,
                 };
             }
         }

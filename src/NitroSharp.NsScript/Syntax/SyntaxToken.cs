@@ -4,9 +4,8 @@ namespace NitroSharp.NsScript.Syntax
 {
     public enum SyntaxTokenKind : byte
     {
-        None,
+        None = 0,
         BadToken,
-        MissingToken,
 
         IncludeDirective,
 
@@ -75,8 +74,7 @@ namespace NitroSharp.NsScript.Syntax
         DialogueBlockIdentifier,
         Markup,
         MarkupBlankLine,
-
-        EndOfFileToken
+        EndOfFileToken,
     }
 
     public enum SigilKind

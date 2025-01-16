@@ -3,10 +3,12 @@ using NitroSharp.Common;
 
 namespace NitroSharp.NsScript.Syntax;
 
-public enum SyntaxNodeKind
+public enum SyntaxNodeKind : byte
 {
     None,
     SourceFileRoot,
+    ErrorStatement,
+    ErrorExpression,
 
     ChapterDeclaration,
     SceneDeclaration,
