@@ -243,7 +243,7 @@ namespace NitroSharp.NsScript.Compiler
             {
                 if (pt.IsStartingPoint)
                 {
-                    if (seg.PointCount == 0 || seg.PointCount == 3)
+                    if (seg.PointCount is 0 or 3)
                     {
                         seg.AddPoint(pt);
                         if (seg.IsComplete)
@@ -266,7 +266,7 @@ namespace NitroSharp.NsScript.Compiler
                     seg.AddPoint(pt);
                 }
             }
-            if (mutSegments.Count == 0 || (seg.PointCount > 0 && !seg.IsComplete))
+            if (mutSegments.Count == 0 || seg is { PointCount: > 0, IsComplete: false })
             {
                 goto error;
             }

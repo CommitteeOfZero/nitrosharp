@@ -5,10 +5,9 @@ namespace NitroSharp.NsScript.Utilities;
 
 internal readonly struct BufferSlice<T>(IBuffer<T> buffer, int length)
 {
-    private readonly int _length = length;
     public IBuffer<T> Buffer { get; } = buffer;
 
-    public Span<T> AsSpan() => Buffer.AsSpan()[.._length];
+    public Span<T> AsSpan() => Buffer.AsSpan()[..length];
 }
 
 internal interface IBuffer<T> : IDisposable
@@ -61,14 +60,14 @@ internal sealed class PooledBuffer<T> : IBuffer<T>
 
     public void Resize(int newSize)
     {
-        T[] newArray = ArrayPool<T>.Shared.Rent((int)newSize);
+        T[] newArray = ArrayPool<T>.Shared.Rent(newSize);
         Array.Copy(_pooledArray, newArray, _size);
         ArrayPool<T>.Shared.Return(_pooledArray);
         _pooledArray = newArray;
         _size = newSize;
     }
 
-    public Span<T> AsSpan() => _pooledArray.AsSpan(0, (int)_size);
+    public Span<T> AsSpan() => _pooledArray.AsSpan(0, _size);
 
     public void Dispose()
     {

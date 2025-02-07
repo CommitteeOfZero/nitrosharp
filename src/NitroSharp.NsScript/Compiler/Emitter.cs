@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using NitroSharp.NsScript.Syntax;
 using NitroSharp.NsScript.Utilities;
@@ -11,14 +12,18 @@ namespace NitroSharp.NsScript.Compiler
 {
     internal ref struct Emitter
     {
-        private readonly ref struct EmitRangeCookie(SyntaxNode syntaxNode, int startOffset)
+        private readonly ref struct EmitRangeCookie(SyntaxNode syntaxNode, ref Emitter emitter)
         {
-            public void Emit(ref readonly Emitter emitter)
+            private readonly ref readonly int _currentOffset = ref emitter._code.PositionRef;
+            private readonly int _startOffset = emitter._code.Position;
+            private readonly NsxModuleBuilder _moduleBuilder = emitter._module;
+
+            public void Dispose()
             {
-                int endOffset = emitter._code.Position;
-                int length = endOffset - startOffset;
-                var bytecodeLocation = new BytecodeLocation(startOffset, length);
-                emitter._module.AddSourceMapping(new SourceMapping(bytecodeLocation, syntaxNode.GetLocation()));
+                int endOffset = _currentOffset;
+                int length = endOffset - _startOffset;
+                var bytecodeLocation = new BytecodeLocation(_startOffset, length);
+                _moduleBuilder.AddSourceMapping(new SourceMapping(bytecodeLocation, syntaxNode.GetLocation()));
             }
         }
 
@@ -77,8 +82,9 @@ namespace NitroSharp.NsScript.Compiler
         private ushort GetFlagToken(string name)
             => _compilation.GetFlagToken(name);
 
+        [UnscopedRef]
         private EmitRangeCookie StartRange(SyntaxNode syntaxNode)
-            => new(syntaxNode, _code.Position);
+            => new(syntaxNode, ref this);
 
         public static void CompileSubroutine(
             NsxModuleBuilder moduleBuilder, SubroutineSymbol subroutine,
@@ -211,16 +217,15 @@ namespace NitroSharp.NsScript.Compiler
 
         private void EmitBinaryExpression(BinaryExpression expression)
         {
-            EmitRangeCookie rangeCookie = StartRange(expression);
+            using EmitRangeCookie rangeCookie = StartRange(expression);
             EmitExpression(expression.Right);
             EmitExpression(expression.Left);
             EmitBinary(expression.OperatorKind.Value);
-            rangeCookie.Emit(ref this);
         }
 
         private void EmitAssignmentExpression(AssignmentExpression assignmentExpr)
         {
-            EmitRangeCookie rangeCookie = StartRange(assignmentExpr);
+            using EmitRangeCookie rangeCookie = StartRange(assignmentExpr);
             LookupResult target = _checker.ResolveAssignmentTarget(assignmentExpr.Target);
             if (target.IsEmpty)
             {
@@ -282,13 +287,11 @@ namespace NitroSharp.NsScript.Compiler
                 : Opcode.StoreFlag;
             EmitStore(storeOp, token);
             EmitLoadImm(ConstantValue.Null);
-
-            rangeCookie.Emit(ref this);
         }
 
         private void EmitFunctionCall(FunctionCallExpression callExpression)
         {
-            EmitRangeCookie rangeCookie = StartRange(callExpression);
+            using EmitRangeCookie rangeCookie = StartRange(callExpression);
             LookupResult lookupResult = _checker.LookupFunction(callExpression.TargetName);
             if (lookupResult.IsEmpty)
             {
@@ -354,8 +357,6 @@ namespace NitroSharp.NsScript.Compiler
                 _code.WriteByte((byte)callExpression.Arguments.Length);
                 EmitLoadImm(ConstantValue.Null);
             }
-
-            rangeCookie.Emit(ref this);
         }
 
         private void EmitBezierExpression(BezierExpression expr)
@@ -404,7 +405,7 @@ namespace NitroSharp.NsScript.Compiler
 
         private void EmitStatement(Statement statement)
         {
-            EmitRangeCookie rangeCookie = StartRange(statement);
+            using EmitRangeCookie rangeCookie = StartRange(statement);
             switch (statement.Kind)
             {
                 case SyntaxNodeKind.Block:
@@ -443,7 +444,6 @@ namespace NitroSharp.NsScript.Compiler
                     _code.WriteUInt16LE((ushort)_textId++);
                     break;
             }
-            rangeCookie.Emit(ref this);
         }
 
         private void EmitBlock(Block block)
@@ -456,9 +456,11 @@ namespace NitroSharp.NsScript.Compiler
 
         private void EmitIfStatement(IfStatement ifStmt)
         {
-            EmitRangeCookie conditionRangeCookie = StartRange(ifStmt.Condition);
-            EmitExpression(ifStmt.Condition);
-            conditionRangeCookie.Emit(ref this);
+            using (StartRange(ifStmt.Condition))
+            {
+                EmitExpression(ifStmt.Condition);
+            }
+
             if (ifStmt.IfFalseStatement is null)
             {
                 // if (<condition>)
@@ -515,9 +517,10 @@ namespace NitroSharp.NsScript.Compiler
             // exit:
 
             int loopStart = _code.Position;
-            EmitRangeCookie conditionRangeCookie = StartRange(whileStmt.Condition);
-            EmitExpression(whileStmt.Condition);
-            conditionRangeCookie.Emit(ref this);
+            using (StartRange(whileStmt.Condition))
+            {
+                EmitExpression(whileStmt.Condition);
+            }
 
             JumpPlaceholder exitJump = EmitJump(Opcode.JumpIfFalse);
             BreakScope bodyScope = EmitLoopBody(whileStmt.Body);
