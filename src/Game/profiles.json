@@ -78,7 +78,7 @@
 
     "Test": {
       "dev.contentRoot": "C:/src/nitrosharp/manual_tests",
-      "startupScript": "gfx.nss"
+      "startupScript": "boot.nss"
     },
 
     "CH": {
