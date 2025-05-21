@@ -73,7 +73,6 @@ namespace NitroSharp.NsScript.Syntax
         DialogueBlockEndTag,
         DialogueBlockIdentifier,
         Markup,
-        MarkupBlankLine,
         EndOfFileToken,
     }
 

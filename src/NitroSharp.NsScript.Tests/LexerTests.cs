@@ -222,7 +222,6 @@ namespace NitroSharp.NsScript.Tests
         public static IEnumerable<object[]> GetStaticTokenData()
         {
             return from token in GetStaticTokens()
-                   where token.kind != SyntaxTokenKind.MarkupBlankLine
                    select new object[] { token.kind, token.text };
         }
 
@@ -265,9 +264,7 @@ namespace NitroSharp.NsScript.Tests
         private static IEnumerable<(SyntaxTokenKind t1Kind, string t1Text, SyntaxTokenKind t2Kind, string t2Text)> GetStaticTokenPairs()
         {
             return from tk1 in GetStaticTokens()
-                   where tk1.kind != SyntaxTokenKind.MarkupBlankLine
                    from tk2 in GetStaticTokens()
-                   where tk2.kind != SyntaxTokenKind.MarkupBlankLine
                    where !RequireSeparator(tk1.kind, tk2.kind)
                    select (tk1.kind, tk1.text, tk2.kind, tk2.text);
         }
@@ -277,9 +274,7 @@ namespace NitroSharp.NsScript.Tests
                                     SyntaxTokenKind t2Kind, string t2Text)> GetStaticTokenPairsWithSeparator()
         {
             return from tk1 in GetStaticTokens()
-                   where tk1.kind != SyntaxTokenKind.MarkupBlankLine
                    from tk2 in GetStaticTokens()
-                   where tk2.kind != SyntaxTokenKind.MarkupBlankLine
                    where RequireSeparator(tk1.kind, tk2.kind)
                    from separator in GetSeparators()
                    select (tk1.kind, tk1.text, separator, tk2.kind, tk2.text);

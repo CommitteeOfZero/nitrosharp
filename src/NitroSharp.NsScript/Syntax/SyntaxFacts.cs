@@ -298,7 +298,6 @@ namespace NitroSharp.NsScript.Syntax
 
                 SyntaxTokenKind.IncludeDirective => "#include",
 
-                SyntaxTokenKind.MarkupBlankLine => "\r\n",
                 SyntaxTokenKind.DialogueBlockEndTag => "</PRE>",
 
                 _ => string.Empty,

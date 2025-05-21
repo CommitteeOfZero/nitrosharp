@@ -37,7 +37,6 @@ public enum SyntaxNodeKind : byte
     DialogueBlock,
     MarkupCodeBlock,
     Markup,
-    MarkupBlankLine
 }
 
 public abstract class SyntaxNode(TextSpan span)

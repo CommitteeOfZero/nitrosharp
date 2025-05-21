@@ -337,8 +337,7 @@ namespace NitroSharp.NsScript.VM
         internal enum Kind : byte
         {
             Markup = 0,
-            BlankLine = 1,
-            CodeBlock = 2
+            CodeBlock = 1,
         }
 
         internal static CompiledDialogueBlockPart Deserialize(ref BufferReader reader)
@@ -347,7 +346,6 @@ namespace NitroSharp.NsScript.VM
             return kind switch
             {
                 Kind.Markup => new Markup(ref reader),
-                Kind.BlankLine => BlankLine.Instance,
                 Kind.CodeBlock => new CodeBlock(ref reader),
                 _ => ThrowHelper.Unreachable<CompiledDialogueBlockPart>()
             };
@@ -363,15 +361,6 @@ namespace NitroSharp.NsScript.VM
             }
 
             public string GetText(NsxModule module) => module.GetString(_stringToken);
-        }
-
-        public sealed class BlankLine : CompiledDialogueBlockPart
-        {
-            internal static readonly BlankLine Instance = new();
-
-            private BlankLine()
-            {
-            }
         }
 
         public sealed class CodeBlock : CompiledDialogueBlockPart
