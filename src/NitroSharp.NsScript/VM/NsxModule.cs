@@ -283,7 +283,6 @@ namespace NitroSharp.NsScript.VM
     internal readonly struct Subroutine
     {
         private readonly byte[] _bytes;
-        private readonly int _codeStart;
 
         public bool IsEmpty => _bytes is null;
 
@@ -292,23 +291,28 @@ namespace NitroSharp.NsScript.VM
             _bytes = bytes;
             var reader = new BufferReader(bytes);
             int dialogueBlockCount = reader.ReadUInt16LE();
-            var dialogueBlocks = ImmutableArray.CreateBuilder<CompiledDialogueBlock>(dialogueBlockCount);
-            if (dialogueBlockCount > 0)
+            int[] dialogueBlockOffsets = new int[dialogueBlockCount];
+            for (int i = 0; i < dialogueBlockCount; i++)
             {
-                for (int i = 0; i < dialogueBlockCount; i++)
-                {
-                    dialogueBlocks.Add(new CompiledDialogueBlock(ref reader));
-                }
+                dialogueBlockOffsets[i] = reader.ReadUInt16LE();
+            }
+            int start = reader.Position;
+            var dialogueBlocks = ImmutableArray.CreateBuilder<CompiledDialogueBlock>(dialogueBlockCount);
+            for (int i = 0; i < dialogueBlockCount; i++)
+            {
+                reader.Position = start + dialogueBlockOffsets[i];
+                dialogueBlocks.Add(new CompiledDialogueBlock(ref reader));
             }
 
-            _codeStart = reader.Position;
+            EntryPoint = start;
             DialogueBlocks = dialogueBlocks.ToImmutable();
         }
 
+        public int EntryPoint { get; }
+
         public ImmutableArray<CompiledDialogueBlock> DialogueBlocks { get; }
 
-        public ReadOnlySpan<byte> Code
-            => new(_bytes, _codeStart, _bytes.Length - _codeStart);
+        public ReadOnlySpan<byte> Code => _bytes;
     }
 
     public readonly struct CompiledDialogueBlock
@@ -375,10 +379,11 @@ namespace NitroSharp.NsScript.VM
             internal CodeBlock(ref BufferReader reader)
             {
                 ushort length = reader.ReadUInt16LE();
-                Bytecode = reader.Consume(length).ToArray();
+                Position = reader.Position;
+                reader.Position += length;
             }
 
-            internal byte[] Bytecode { get; }
+            internal int Position { get; }
         }
     }
 

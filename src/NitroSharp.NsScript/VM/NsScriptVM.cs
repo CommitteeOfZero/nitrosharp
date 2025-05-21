@@ -152,7 +152,7 @@ public sealed class NsScriptVM
         }
 
         if (module is null) { return null; }
-        var frame = new CallFrame(module, (ushort)index, 0);
+        var frame = CreateEntryPointCallFrame(module, (ushort)index);
         return new NsScriptThreadState(frame);
     }
 
@@ -367,7 +367,7 @@ public sealed class NsScriptVM
                 case Opcode.Call:
                     ushort subroutineToken = program.DecodeToken();
                     frame.ProgramCounter = program.Position;
-                    var newFrame = new CallFrame(frame.Module, subroutineToken, 0);
+                    var newFrame = CreateEntryPointCallFrame(frame.Module, subroutineToken);
                     thread.CallFrameStack.Push(newFrame);
                     return TickResult.Ok;
                 case Opcode.CallFar:
@@ -499,7 +499,7 @@ public sealed class NsScriptVM
             ushort subroutineToken = program.DecodeToken();
             string externalModuleName = thisModule.Imports[importTableIndex];
             NsxModule externalModule = GetModule(externalModuleName);
-            return new CallFrame(externalModule, subroutineToken, 0);
+            return CreateEntryPointCallFrame(externalModule, subroutineToken);
         }
 
         static ConstantValue readConst(ref BytecodeStream stream, NsxModule module)
@@ -536,5 +536,11 @@ public sealed class NsScriptVM
             BinaryOperatorKind.Remainder => left % right,
             _ => ThrowHelper.Unreachable<ConstantValue>()
         };
+    }
+
+    private static CallFrame CreateEntryPointCallFrame(NsxModule module, ushort subroutineIndex)
+    {
+        Subroutine subroutine = module.GetSubroutine(subroutineIndex);
+        return new CallFrame(module, subroutineIndex, subroutine.EntryPoint);
     }
 }
