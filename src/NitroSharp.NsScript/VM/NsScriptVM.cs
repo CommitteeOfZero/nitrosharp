@@ -479,7 +479,7 @@ public sealed class NsScriptVM
                     break;
                 case Opcode.IsPressed:
                     string choice = thisModule.GetString(program.DecodeToken());
-                    bool pressed = builtins.HandleInputEvents(EntityPath.Parse(choice));
+                    bool pressed = builtins.HandleInputEvents(EntityQuery.Parse(choice));
                     stack.Push(ConstantValue.Boolean(pressed));
                     thread.SelectResult |= pressed;
                     break;

@@ -91,16 +91,16 @@ internal sealed class Builtins : BuiltInFunctions
         }
     }
 
-    public override int GetWidth(in EntityPath entityPath)
+    public override int GetWidth(in EntityQuery query)
     {
-        return _world.Get(entityPath) is RenderItem renderItem
+        return _world.Query(query) is [RenderItem renderItem, ..]
             ? (int)renderItem.GetSize(_ctx.RenderContext).Width
             : 0;
     }
 
-    public override int GetHeight(in EntityPath entityPath)
+    public override int GetHeight(in EntityQuery query)
     {
-        return _world.Get(entityPath) is RenderItem renderItem
+        return _world.Query(query) is [RenderItem renderItem, ..]
             ? (int)renderItem.GetSize(_ctx.RenderContext).Height
             : 0;
     }
@@ -133,7 +133,7 @@ internal sealed class Builtins : BuiltInFunctions
         }
     }
 
-    public override void Move(EntityQuery query, TimeSpan duration, NsCoordinate dstX, NsCoordinate dstY, NsEaseFunction easeFunction, TimeSpan delay)
+    public override void Move(in EntityQuery query, TimeSpan duration, NsCoordinate dstX, NsCoordinate dstY, NsEaseFunction easeFunction, TimeSpan delay)
     {
         foreach (Entity entity in Query(query))
         {
@@ -144,7 +144,7 @@ internal sealed class Builtins : BuiltInFunctions
         }
     }
 
-    public override void Fade(EntityQuery query, TimeSpan duration, NsRational dstOpacity, NsEaseFunction easeFunction, TimeSpan delay)
+    public override void Fade(in EntityQuery query, TimeSpan duration, NsRational dstOpacity, NsEaseFunction easeFunction, TimeSpan delay)
     {
         foreach (Entity entity in Query(query))
         {
@@ -155,7 +155,7 @@ internal sealed class Builtins : BuiltInFunctions
         }
     }
 
-    public override void Zoom(EntityQuery query, TimeSpan duration, NsRational dstScaleX, NsRational dstScaleY, NsEaseFunction easeFunction, TimeSpan delay)
+    public override void Zoom(in EntityQuery query, TimeSpan duration, NsRational dstScaleX, NsRational dstScaleY, NsEaseFunction easeFunction, TimeSpan delay)
     {
         duration = AdjustDuration(duration);
         delay = AdjustDuration(delay);
@@ -173,11 +173,14 @@ internal sealed class Builtins : BuiltInFunctions
             : duration;
     }
 
-    public override void SetAlias(in EntityPath entityPath, in EntityAlias alias)
+    public override void SetAlias(in EntityQuery query, in EntityAlias alias)
     {
-        if (_world.Get(entityPath) is { } entity && _world.IsValidAlias(alias))
+        if (_world.IsValidAlias(alias))
         {
-            entity.SetAlias(alias);
+            foreach (Entity entity in Query(query))
+            {
+                entity.SetAlias(alias);
+            }
         }
     }
 

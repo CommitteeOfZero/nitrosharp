@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 using NitroSharp.NsScript.Primitives;
@@ -26,17 +26,17 @@ namespace NitroSharp.NsScript.VM
 
         public virtual string GetCurrentModuleName() => throw new NotImplementedException();
         public virtual int GetSoundAmplitude(string characterName) => throw new NotImplementedException();
-        public virtual int GetHeight(in EntityPath entityPath) => throw new NotImplementedException();
-        public virtual int GetWidth(in EntityPath entityPath) => throw new NotImplementedException();
-        public virtual int GetMediaDuration(in EntityPath entityPath) => 0;
-        public virtual int GetTimeRemaining(EntityQuery query) => throw new NotImplementedException();
-        public virtual int GetTimeElapsed(in EntityPath entityPath) => throw new NotImplementedException();
+        public virtual int GetHeight(in EntityQuery query) => throw new NotImplementedException();
+        public virtual int GetWidth(in EntityQuery query) => throw new NotImplementedException();
+        public virtual int GetMediaDuration(in EntityQuery query) => 0;
+        public virtual int GetTimeRemaining(in EntityQuery query) => throw new NotImplementedException();
+        public virtual int GetTimeElapsed(in EntityQuery query) => throw new NotImplementedException();
 
         public virtual ConstantValue FormatString(string format, object[] args) => throw new NotImplementedException();
 
         public virtual void CreateEntity(in EntityPath entityPath) { }
         public virtual void CreateThread(in EntityPath entityPath, string target, NsCoordinate x, NsCoordinate y) { }
-        public virtual void SetAlias(in EntityPath entityPath, in EntityAlias alias) { }
+        public virtual void SetAlias(in EntityQuery query, in EntityAlias alias) { }
         public virtual void Request(in EntityQuery query, NsEntityAction action) { }
         public virtual void DestroyEntities(in EntityQuery query) { }
 
@@ -84,19 +84,19 @@ namespace NitroSharp.NsScript.VM
 
         public virtual void SetFont(string family, uint size, NsColor color, NsColor outlineColor, NsFontWeight weight, NsOutlineOffset outlineOffset) { }
         public virtual void LoadDialogueBlock(in DialogueBlockToken blockToken, uint maxWidth, uint maxHeight, int letterSpacing, int lineSpacing) { }
-        public virtual void WaitText(EntityQuery query, TimeSpan timeout) { }
+        public virtual void WaitText(in EntityQuery query, TimeSpan timeout) { }
 
-        public virtual void BoxBlur(EntityQuery query, uint nbPasses) { }
-        public virtual void Grayscale(EntityQuery query) { }
+        public virtual void BoxBlur(in EntityQuery query, uint nbPasses) { }
+        public virtual void Grayscale(in EntityQuery query) { }
 
         public virtual void CreateEffect(in EntityPath entityPath, int priority, NsCoordinate x, NsCoordinate y, uint width, uint height, string effectName) { }
 
         public virtual void CreateCube(in EntityPath entityPath, int priority, string front, string back, string right, string left, string top, string bottom) { }
         public virtual void SetFieldOfView(string unk1, double unk2) { }
-        public virtual void MoveCube(EntityQuery query, TimeSpan duration, NsNumeric dstX, NsNumeric dstY, NsNumeric dstZ, NsEaseFunction easeFunction, TimeSpan delay) { }
+        public virtual void MoveCube(in EntityQuery query, TimeSpan duration, NsNumeric dstX, NsNumeric dstY, NsNumeric dstZ, NsEaseFunction easeFunction, TimeSpan delay) { }
 
         public virtual void PlayVideo(in EntityPath entityPath, int priority, NsCoordinate x, NsCoordinate y, bool loop, bool alpha, string source) { }
-        public virtual void WaitPlay(in EntityPath entityPath) { }
+        public virtual void WaitPlay(in EntityQuery query) { }
 
         /// <summary>
         /// Original name: CreateSound.
@@ -106,29 +106,29 @@ namespace NitroSharp.NsScript.VM
         /// <summary>
         /// Original name: SetLoop.
         /// </summary>
-        public virtual void ToggleLooping(EntityQuery query, bool enable) { }
+        public virtual void ToggleLooping(in EntityQuery query, bool enable) { }
 
-        public virtual void SetLoopRegion(in EntityPath entityPath, TimeSpan loopStart, TimeSpan loopEnd) { }
-        public virtual void SetVolume(EntityQuery query, TimeSpan duration, NsRational volume) { }
+        public virtual void SetLoopRegion(in EntityQuery query, TimeSpan loopStart, TimeSpan loopEnd) { }
+        public virtual void SetVolume(in EntityQuery query, TimeSpan duration, NsRational volume) { }
 
-        public virtual void Fade(EntityQuery query, TimeSpan duration, NsRational dstOpacity, NsEaseFunction easeFunction, TimeSpan delay) { }
-        public virtual void Move(EntityQuery query, TimeSpan duration, NsCoordinate dstX, NsCoordinate dstY, NsEaseFunction easeFunction, TimeSpan delay) { }
-        public virtual void Zoom(EntityQuery query, TimeSpan duration, NsRational dstScaleX, NsRational dstScaleY, NsEaseFunction easeFunction, TimeSpan delay) { }
-        public virtual void Rotate(EntityQuery query, TimeSpan duration, NsNumeric dstRotationX, NsNumeric dstRotationY, NsNumeric dstRotationZ, NsEaseFunction easeFunction, TimeSpan delay) { }
-        public virtual void BezierMove(EntityQuery query, TimeSpan duration, CompositeBezier curve, NsEaseFunction easeFunction, bool wait) { }
-        public virtual void BeginTransition(EntityQuery query, TimeSpan duration, NsRational srcFadeAmount, NsRational dstFadeAmount, NsRational feather, NsEaseFunction easeFunction, string maskFileName, TimeSpan delay) { }
-        public virtual void Shake(EntityQuery query, TimeSpan duration, NsCoordinate startX, NsCoordinate startY, NsCoordinate endX, NsCoordinate endY, uint freq, NsEaseFunction easeFunction, TimeSpan delay) { }
+        public virtual void Fade(in EntityQuery query, TimeSpan duration, NsRational dstOpacity, NsEaseFunction easeFunction, TimeSpan delay) { }
+        public virtual void Move(in EntityQuery query, TimeSpan duration, NsCoordinate dstX, NsCoordinate dstY, NsEaseFunction easeFunction, TimeSpan delay) { }
+        public virtual void Zoom(in EntityQuery query, TimeSpan duration, NsRational dstScaleX, NsRational dstScaleY, NsEaseFunction easeFunction, TimeSpan delay) { }
+        public virtual void Rotate(in EntityQuery query, TimeSpan duration, NsNumeric dstRotationX, NsNumeric dstRotationY, NsNumeric dstRotationZ, NsEaseFunction easeFunction, TimeSpan delay) { }
+        public virtual void BezierMove(in EntityQuery query, TimeSpan duration, CompositeBezier curve, NsEaseFunction easeFunction, bool wait) { }
+        public virtual void BeginTransition(in EntityQuery query, TimeSpan duration, NsRational srcFadeAmount, NsRational dstFadeAmount, NsRational feather, NsEaseFunction easeFunction, string maskFileName, TimeSpan delay) { }
+        public virtual void Shake(in EntityQuery query, TimeSpan duration, NsCoordinate startX, NsCoordinate startY, NsCoordinate endX, NsCoordinate endY, uint freq, NsEaseFunction easeFunction, TimeSpan delay) { }
 
-        public virtual void WaitAction(EntityQuery query, TimeSpan? timeout) { }
-        public virtual void WaitMove(EntityQuery query) { }
+        public virtual void WaitAction(in EntityQuery query, TimeSpan? timeout) { }
+        public virtual void WaitMove(in EntityQuery query) { }
 
         public virtual void CreateChoice(in EntityPath entityPath) { }
-        public virtual void SetNextFocus(in EntityPath first, in EntityPath second, NsFocusDirection focusDirection) { }
+        public virtual void SetNextFocus(in EntityQuery first, in EntityQuery second, NsFocusDirection focusDirection) { }
         public virtual void SelectEnd() { }
 
         public virtual void CreateScrollbar(in EntityPath path, int priority, int x1, int y1, int x2, int y2, NsRational initialValue, NsScrollDirection scrollDirection, string knobImage) { }
-        public virtual void SetScrollbar(in EntityPath scrollbar, in EntityPath parent) { }
-        public virtual float GetScrollbarValue(in EntityPath scrollbarEntity) => 0;
+        public virtual void SetScrollbar(in EntityQuery scrollbar, in EntityQuery parent) { }
+        public virtual float GetScrollbarValue(in EntityQuery scrollbarEntity) => 0;
 
         public virtual void Exit() { }
 
@@ -139,12 +139,12 @@ namespace NitroSharp.NsScript.VM
         public virtual void SetBacklog(string text) { }
         public virtual void ClearBacklog() { }
 
-        public virtual Vector2 GetPosition(in EntityPath entityPath) => Vector2.Zero;
+        public virtual Vector2 GetPosition(in EntityQuery query) => Vector2.Zero;
 
         // --- NitroSharp only ---
         public virtual void ClearDialoguePage(in EntityPath dialoguePage) { }
         public virtual void AppendDialogue(in EntityPath dialoguePage, string markup) { }
-        public virtual bool HandleInputEvents(in EntityPath uiElementPath) => false;
+        public virtual bool HandleInputEvents(in EntityQuery uiElementPath) => false;
         public virtual void AssertTrue(bool value) { }
 
         public virtual void LineEnd(in EntityPath dialoguePage) { }

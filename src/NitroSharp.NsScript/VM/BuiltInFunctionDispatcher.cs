@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Numerics;
@@ -356,7 +356,7 @@ namespace NitroSharp.NsScript.VM
 
         private void WaitPlay(ref ArgConsumer args)
         {
-            _impl.WaitPlay(args.TakeEntityPath());
+            _impl.WaitPlay(args.TakeEntityQuery());
         }
 
         private void Load(ref ArgConsumer args)
@@ -414,17 +414,17 @@ namespace NitroSharp.NsScript.VM
 
         private void Position(ref ArgConsumer args)
         {
-            EntityPath path = args.TakeEntityPath();
+            EntityQuery query = args.TakeEntityQuery();
             short xSlot = args.TakeRef();
             short ySlot = args.TakeRef();
-            Vector2 position = _impl.GetPosition(path);
+            Vector2 position = _impl.GetPosition(query);
             _variables[xSlot] = ConstantValue.Number((int)position.X);
             _variables[ySlot] = ConstantValue.Number((int)position.Y);
         }
 
         private void SetScrollbar(ref ArgConsumer args)
         {
-            _impl.SetScrollbar(scrollbar: args.TakeEntityPath(), parent: args.TakeEntityPath());
+            _impl.SetScrollbar(scrollbar: args.TakeEntityQuery(), parent: args.TakeEntityQuery());
         }
 
         private void CreateBacklog(ref ArgConsumer args)
@@ -495,7 +495,7 @@ namespace NitroSharp.NsScript.VM
 
         private void ScrollbarValue(ref ArgConsumer args)
         {
-            EntityPath scrollbarEntity = args.TakeEntityPath();
+            EntityQuery scrollbarEntity = args.TakeEntityQuery();
             SetResult(ConstantValue.Number(_impl.GetScrollbarValue(scrollbarEntity)));
         }
 
@@ -688,7 +688,7 @@ namespace NitroSharp.NsScript.VM
         private void SetLoopPoint(ref ArgConsumer args)
         {
             _impl.SetLoopRegion(
-                args.TakeEntityPath(),
+                args.TakeEntityQuery(),
                 loopStart: args.TakeTimeSpan(),
                 loopEnd: args.TakeTimeSpan()
             );
@@ -821,7 +821,7 @@ namespace NitroSharp.NsScript.VM
         private void SetAlias(ref ArgConsumer args)
         {
             _impl.SetAlias(
-                args.TakeEntityPath(),
+                args.TakeEntityQuery(),
                 alias: args.TakeEntityAlias()
             );
         }
@@ -854,8 +854,8 @@ namespace NitroSharp.NsScript.VM
         private void SetNextFocus(ref ArgConsumer args)
         {
             _impl.SetNextFocus(
-                first: args.TakeEntityPath(),
-                second: args.TakeEntityPath(),
+                first: args.TakeEntityQuery(),
+                second: args.TakeEntityQuery(),
                 args.TakeFocusDirection()
             );
         }
@@ -1004,14 +1004,14 @@ namespace NitroSharp.NsScript.VM
 
         private void ImageHorizon(ref ArgConsumer args)
         {
-            EntityPath entityPath = args.TakeEntityPath();
-            SetResult(ConstantValue.Number(_impl.GetWidth(entityPath)));
+            EntityQuery query = args.TakeEntityQuery();
+            SetResult(ConstantValue.Number(_impl.GetWidth(query)));
         }
 
         private void ImageVertical(ref ArgConsumer args)
         {
-            EntityPath entityPath = args.TakeEntityPath();
-            SetResult(ConstantValue.Number(_impl.GetHeight(entityPath)));
+            EntityQuery query = args.TakeEntityQuery();
+            SetResult(ConstantValue.Number(_impl.GetHeight(query)));
         }
 
         private void RemainTime(ref ArgConsumer args)
@@ -1022,14 +1022,14 @@ namespace NitroSharp.NsScript.VM
 
         private void PassageTime(ref ArgConsumer args)
         {
-            EntityPath entityPath = args.TakeEntityPath();
-            SetResult(ConstantValue.Number(_impl.GetTimeElapsed(entityPath)));
+            EntityQuery query = args.TakeEntityQuery();
+            SetResult(ConstantValue.Number(_impl.GetTimeElapsed(query)));
         }
 
         private void DurationTime(ref ArgConsumer args)
         {
-            EntityPath entityPath = args.TakeEntityPath();
-            SetResult(ConstantValue.Number(_impl.GetMediaDuration(entityPath)));
+            EntityQuery query = args.TakeEntityQuery();
+            SetResult(ConstantValue.Number(_impl.GetMediaDuration(query)));
         }
 
         private void XBOX360_AwardGameIcon()
