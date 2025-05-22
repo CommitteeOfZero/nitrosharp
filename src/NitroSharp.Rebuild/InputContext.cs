@@ -32,6 +32,8 @@ namespace NitroSharp
         private readonly bool[] _vkeyState = new bool[8];
         private readonly bool[] _newVkeys = new bool[8];
 
+        private bool _advance = false;
+
         public InputContext(GameWindow window)
         {
             _rawInput = new RawInput(window);
@@ -56,6 +58,13 @@ namespace NitroSharp
                     : _rawInput.Gamepad.GetAxis(SDL_GameControllerAxis.TriggerRight),
                 _ => 0.0f
             };
+        }
+
+        public bool ConsumeAdvance()
+        {
+            bool result = _advance;
+            _advance = false;
+            return result;
         }
 
         public void Update(SystemVariableLookup systemVariables)
@@ -87,6 +96,8 @@ namespace NitroSharp
             set(ref sys.X360DownButtonDown, VKeyState(VirtualKey.Down));
             pollController(SDL_GameControllerButton.LeftShoulder, ref sys.X360LbButtonDown);
             pollController(SDL_GameControllerButton.RightShoulder, ref sys.X360RbButtonDown);
+
+            _advance = VKeyDown(VirtualKey.Advance);
 
             static void set(ref ConstantValue target, bool value)
             {

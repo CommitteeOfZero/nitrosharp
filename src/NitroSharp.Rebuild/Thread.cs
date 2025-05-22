@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using NitroSharp.NsScript;
 using NitroSharp.NsScript.VM;
@@ -66,7 +66,7 @@ internal sealed class Thread : Entity, IVmThread
             InputContext input = ctx.InputContext;
             return waitOperation switch
             {
-                { WaitCondition: WaitCondition.UserInput } => input.VKeyDown(VirtualKey.Advance),
+                { WaitCondition: WaitCondition.UserInput } => input.ConsumeAdvance(),
                 _ => true
             };
         }
