@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using NitroSharp.Graphics;
 using NitroSharp.Text;
@@ -25,6 +25,7 @@ internal sealed class RenderItemComparer : IComparer<RenderItem>
 internal sealed class Process : Entity
 {
     private readonly FontSettings _fontSettings;
+    private readonly List<Entity> _updateList = new();
     private readonly List<RenderItem> _renderList = new();
 
     public Process(EntityName name, Entity? parent, FontSettings fontSettings)
@@ -73,7 +74,14 @@ internal sealed class Process : Entity
 
     public override void Update(GameContext ctx)
     {
+        _updateList.Clear();
+
         foreach (Entity node in GetDescendants())
+        {
+            _updateList.Add(node);
+        }
+
+        foreach (Entity node in _updateList)
         {
             if (node is Thread thread)
             {
