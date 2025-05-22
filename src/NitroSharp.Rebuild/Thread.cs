@@ -42,10 +42,15 @@ internal sealed class Thread : Entity, IVmThread
 
     public override void Update(GameContext ctx)
     {
-        if (!HasWaitExpired(ctx)) { return; }
-
-        _waitOperation = null;
-        ctx.VM.Tick(ref _vmState, ctx.Builtins);
+        while (HasWaitExpired(ctx))
+        {
+            _waitOperation = null;
+            NsScriptVM.TickResult result = ctx.VM.Tick(ref _vmState, ctx.Builtins);
+            if (result == NsScriptVM.TickResult.Yield)
+            {
+                break;
+            }
+        }
     }
 
     public void Wait(WaitOperation waitOperation)

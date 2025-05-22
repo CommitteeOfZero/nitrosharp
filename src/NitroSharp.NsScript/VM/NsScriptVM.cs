@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
@@ -257,7 +257,7 @@ public sealed class NsScriptVM
     {
         if (thread.CallFrameStack.Count == 0)
         {
-            return TickResult.Ok;
+            return TickResult.Yield;
         }
 
         ref CallFrame frame = ref thread.CurrentFrame;
