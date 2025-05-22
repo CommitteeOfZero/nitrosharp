@@ -142,12 +142,8 @@ namespace NitroSharp.NsScript.VM
         public virtual Vector2 GetPosition(in EntityQuery query) => Vector2.Zero;
 
         // --- NitroSharp only ---
-        public virtual void ClearDialoguePage(in EntityPath dialoguePage) { }
-        public virtual void AppendDialogue(in EntityPath dialoguePage, string markup) { }
         public virtual bool HandleInputEvents(in EntityQuery uiElementPath) => false;
         public virtual void AssertTrue(bool value) { }
-
-        public virtual void LineEnd(in EntityPath dialoguePage) { }
 
         public virtual bool SaveExists(uint slot) => false;
         public virtual bool MountSaveData(uint slot) => false;
