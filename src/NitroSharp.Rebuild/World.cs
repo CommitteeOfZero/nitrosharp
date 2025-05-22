@@ -30,9 +30,13 @@ internal sealed class World : EntityScope
 
     public T AddEntity<T>(T entity) where T : Entity
     {
-        if (entity.Parent?.TryGetChild(entity.Name) is { } existingEntity)
+        if (entity.Parent is { } parent)
         {
-            DestroyEntity(existingEntity);
+            if (parent.TryGetChild(entity.Name) is { } existingEntity)
+            {
+                DestroyEntity(existingEntity);
+            }
+            ((EntityInternal)parent).AddChild(entity);
         }
 
         _newEntities.Add(entity);
@@ -50,16 +54,15 @@ internal sealed class World : EntityScope
     public void DestroyEntity(Entity entity)
     {
         entity.Disable();
+        if (entity.Parent is { } parent)
+        {
+            ((EntityInternal)parent).RemoveChild(entity);
+        }
         _deletedEntities.Add(entity);
     }
 
     private void CommitDestroyEntity(Entity entity)
     {
-        if (entity.Parent is { } parent)
-        {
-            ((EntityInternal)parent).RemoveChild(entity);
-        }
-
         foreach (Entity child in entity.Children)
         {
             CommitDestroyEntity(child);
@@ -82,10 +85,6 @@ internal sealed class World : EntityScope
         foreach (Entity entity in _newEntities)
         {
             entity.Enable();
-            if (entity.Parent is EntityInternal parent)
-            {
-                parent.AddChild(entity);
-            }
         }
 
         _deletedEntities.Clear();
