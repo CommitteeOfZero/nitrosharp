@@ -19,18 +19,13 @@ internal static class Program
             Description = "The root directory containing the script source files.",
         }.AcceptExistingOnly();
 
-        var rootScriptsOption = new Option<FileInfo[]>("--roots")
+        var rootScriptsOption = new Option<string[]>("--roots")
         {
             Description = "The list of script names to treat as roots.",
+            AllowMultipleArgumentsPerToken = true,
             Required = false,
-            CustomParser = result =>
-            {
-                DirectoryInfo srcDir = result.GetRequiredValue(sourceDirArg);
-                return result.Tokens
-                    .Select(t => new FileInfo(Path.Combine(srcDir.FullName, t.Value)))
-                    .ToArray();
-            },
-        }.AcceptLegalFilePathsOnly();
+            DefaultValueFactory = _ => ["boot.nss"]
+        };
 
         var checkCommand = new Command("check", "Check script files for errors.");
         checkCommand.Arguments.Add(sourceDirArg);
@@ -46,22 +41,40 @@ internal static class Program
         return rootCommand.Parse(args).Invoke();
     }
 
-    private static void RunCheck(DirectoryInfo sourceDir, FileInfo[] rootScripts)
+    private static void RunCheck(DirectoryInfo sourceDir, string[] rootScriptNames)
     {
+        using Stream outputStream = Console.OpenStandardOutput();
+        using var output = new StreamWriter(outputStream);
+
         var compilation = new Compilation(sourceDir.FullName);
 
-        SourceModuleSymbol[] rootModules = rootScripts
-            .Select(fileInfo => Path.GetRelativePath(sourceDir.FullName, fileInfo.FullName))
-            .Select(relativePath => compilation.GetSourceModule(relativePath)).ToArray();
+        SourceModuleSymbol?[] rootModules = rootScriptNames
+            .Select(rootName => compilation.TryGetSourceModule(rootName))
+            .ToArray();
 
-        compilation = compilation.EmitDiagnostics(rootModules);
+        string[] unresolvedRoots = rootScriptNames
+            .Zip(rootModules)
+            .Where(tuple => tuple.Second is null)
+            .Select(tuple => $"'{tuple.First}'")
+            .ToArray();
+
+        if (unresolvedRoots.Length > 0)
+        {
+            output.WriteLine(
+                $"The following root scripts were not found: " +
+                $"[{string.Join(", ", unresolvedRoots)}]"
+            );
+            return;
+        }
+
+        compilation = compilation.EmitDiagnostics(rootModules!);
 
         foreach (Diagnostic diagnostic in compilation.Diagnostics.All
                      .OrderBy(d => d.Location.SourceText.FilePath.Value)
                      .ThenBy(d => d.Span.Start))
         {
-            PrintDiagnostic(diagnostic, sourceDir);
-            Console.WriteLine();
+            PrintDiagnostic(diagnostic, sourceDir, output);
+            output.WriteLine();
         }
     }
 
@@ -70,7 +83,7 @@ internal static class Program
         return Path.GetRelativePath(sourceDir.FullName, scriptPath.Value);
     }
 
-    private static void PrintDiagnostic(Diagnostic diagnostic, DirectoryInfo sourceDir)
+    private static void PrintDiagnostic(Diagnostic diagnostic, DirectoryInfo sourceDir, TextWriter output)
     {
         SourceText sourceText = diagnostic.Location.SourceText;
         LinePositionSpan lineSpan = diagnostic.Location.GetLineSpan();
@@ -82,9 +95,9 @@ internal static class Program
         string severity = diagnostic.Severity.ToString();
         string message = diagnostic.Message;
 
-        Console.WriteLine($"{severity}: {message}");
-        Console.WriteLine($"  --> {scriptPath}:{startLine.Line + 1}:{startLine.Column + 1}");
-        Console.WriteLine("     |");
+        output.WriteLine($"{severity}: {message}");
+        output.WriteLine($"  --> {scriptPath}:{startLine.Line + 1}:{startLine.Column + 1}");
+        output.WriteLine("     |");
 
         const int tabSize = 4;
         const string underlineSeqStart = "\e[4;31m";
@@ -93,7 +106,7 @@ internal static class Program
         if (startLine.Line > 0)
         {
             string before = sourceText.GetLineText(startLine.Line - 1);
-            Console.WriteLine($"{startLine.Line,4} | {ExpandTabs(before, tabSize)}");
+            output.WriteLine($"{startLine.Line,4} | {ExpandTabs(before, tabSize)}");
         }
 
         var sb = new StringBuilder();
@@ -124,16 +137,17 @@ internal static class Program
             sb.Append(underlineSeqEnd);
             sb.Append(ExpandTabs(lineText[underlineEnd..], tabSize));
 
-            Console.WriteLine($"{line + 1,4} | {sb}");
+            output.WriteLine($"{line + 1,4} | {sb}");
+            sb.Clear();
         }
 
         if (endLine.Line < sourceText.LineCount - 1)
         {
             string after = sourceText.GetLineText(endLine.Line + 1);
-            Console.WriteLine($"{endLine.Line + 2,4} | {ExpandTabs(after, tabSize)}");
+            output.WriteLine($"{endLine.Line + 2,4} | {ExpandTabs(after, tabSize)}");
         }
 
-        Console.WriteLine("     |");
+        output.WriteLine("     |");
     }
 
     private static string ExpandTabs(string text, int tabSize)

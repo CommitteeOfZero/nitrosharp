@@ -8,8 +8,15 @@ public abstract class SourceReferenceResolver
 {
     public abstract string RootDirectory { get; }
 
+    public abstract ResolvedPath? TryResolvePath(string relativePath);
+
     /// <exception cref="FileNotFoundException" />
-    public abstract ResolvedPath ResolvePath(string relativePath);
+    public ResolvedPath ResolvePath(string relativePath)
+    {
+        return TryResolvePath(relativePath)
+            ?? throw new FileNotFoundException($"File not found: '{relativePath}'", relativePath);
+    }
+
     public abstract SourceText ReadText(ResolvedPath path, Encoding? encoding);
     public abstract long GetModificationTimestamp(ResolvedPath path);
 }
@@ -21,7 +28,7 @@ public sealed class DefaultSourceReferenceResolver(string rootDirectory) : Sourc
 
     public override string RootDirectory => _pathResolver.RootDirectory;
 
-    public override ResolvedPath ResolvePath(string relativePath)
+    public override ResolvedPath? TryResolvePath(string relativePath)
     {
         static ReadOnlySpan<char> getFirstPathSegment(string path)
         {
@@ -41,7 +48,7 @@ public sealed class DefaultSourceReferenceResolver(string rootDirectory) : Sourc
 
         return _pathResolver.ResolveAbsolute(relativePath, out ResolvedPath resolved)
             ? resolved
-            : throw new FileNotFoundException($"File not found: '{relativePath}'", relativePath);
+            : null;
     }
 
     public override SourceText ReadText(ResolvedPath resolvedPath, Encoding? encoding)

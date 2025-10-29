@@ -89,7 +89,7 @@ public class Compilation
         foreach (SourceModuleSymbol sourceModule in roots)
         {
             NsxModuleBuilder nsxBuilder = context.GetNsxModuleBuilder(sourceModule.RootSourceFile);
-            //emitCore(nsxBuilder);
+            emitCore(nsxBuilder);
         }
 
         int filesCompiledThisIter;
@@ -192,10 +192,15 @@ public class Compilation
         }
     }
 
-    /// <exception cref="FileNotFoundException" />
-    public virtual SyntaxTree GetSyntaxTree(string relativePath)
+    /// <exception cref="FileNotFoundException"></exception>
+    public SyntaxTree GetSyntaxTree(string relativePath)
     {
         ResolvedPath resolvedPath = SourceReferenceResolver.ResolvePath(relativePath);
+        return GetSyntaxTree(resolvedPath);
+    }
+
+    protected virtual SyntaxTree GetSyntaxTree(ResolvedPath resolvedPath)
+    {
         if (_syntaxTrees.TryGetValue(resolvedPath, out SyntaxTree? syntaxTree))
         {
             return syntaxTree;
@@ -211,6 +216,17 @@ public class Compilation
     public SourceModuleSymbol GetSourceModule(string relativePath)
     {
         SyntaxTree tree = GetSyntaxTree(relativePath);
+        return GetModuleSymbol(tree);
+    }
+
+    public SourceModuleSymbol? TryGetSourceModule(string relativePath)
+    {
+        if (SourceReferenceResolver.TryResolvePath(relativePath) is not { } resolvedPath)
+        {
+            return null;
+        }
+
+        SyntaxTree tree = GetSyntaxTree(resolvedPath);
         return GetModuleSymbol(tree);
     }
 
@@ -268,6 +284,9 @@ public sealed class EmittedCompilation : Compilation
 
     public override DiagnosticCollection Diagnostics { get; }
 
+    protected override SyntaxTree GetSyntaxTree(ResolvedPath resolvedPath)
+        => _syntaxTrees[resolvedPath];
+
     public override EmittedCompilation Emit(
         ReadOnlySpan<SourceModuleSymbol> roots, string outputDirectory, string globalsFileName)
     {
@@ -277,11 +296,5 @@ public sealed class EmittedCompilation : Compilation
     public override EmittedCompilation EmitDiagnostics(ReadOnlySpan<SourceModuleSymbol> roots)
     {
         throw new InvalidOperationException();
-    }
-
-    public override SyntaxTree GetSyntaxTree(string relativePath)
-    {
-        ResolvedPath resolvedPath = SourceReferenceResolver.ResolvePath(relativePath);
-        return _syntaxTrees[resolvedPath];
     }
 }
