@@ -52,8 +52,7 @@ public abstract class SyntaxNode(TextSpan span)
     }
 
     public SyntaxTree SyntaxTree => _syntaxTree.NotNull();
-
-    public SourceLocation GetLocation() => SyntaxTree.SourceText.GetLocation(Span);
+    public SourceLocation Location => new(SyntaxTree.SourceText, Span);
 
     public abstract void Accept(SyntaxVisitor visitor);
     public abstract TResult Accept<TResult>(SyntaxVisitor<TResult> visitor);

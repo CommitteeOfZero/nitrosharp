@@ -1,19 +1,5 @@
 ﻿<Directives>
   <Application>
-<!--    <Assembly Name="Vortice.Runtime.COM" Dynamic="Required All">-->
-<!--      <Type Name="SharpGen.Runtime.ComObject" Dynamic="Required All" />-->
-<!--      <Type Name="SharpGen.Runtime.ComObjectShadow" Dynamic="Required All" />-->
-<!--      <Type Name="SharpGen.Runtime.Win32.ComStream" Dynamic="Required All" />-->
-<!--      <Type Name="SharpGen.Runtime.Win32.ComStreamProxy" Dynamic="Required All" />-->
-<!--    </Assembly>-->
-
-<!--    <Assembly Name="SharpGen.Runtime">-->
-<!--      <Type Name="SharpGen.Runtime.CppObject" Dynamic="Required All" />-->
-<!--      <Type Name="SharpGen.Runtime.CppObjectShadow" Dynamic="Required All" />-->
-<!--      <Type Name="SharpGen.Runtime.ShadowAttribute" Dynamic="Required All" />-->
-<!--      <Type Name="SharpGen.Runtime.ShadowContainer" Dynamic="Required All" />-->
-<!--    </Assembly>-->
-
     <Assembly Name="Vortice.Direct3D11">
       <Type Name="Vortice.Direct3D11.ID3D11DeviceContext1" Dynamic="Required All" />
       <Type Name="Vortice.Direct3D11.ID3D11Texture2D" Dynamic="Required All" />

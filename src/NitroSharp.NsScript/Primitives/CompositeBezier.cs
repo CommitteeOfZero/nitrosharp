@@ -1,58 +1,63 @@
 ﻿using System;
 using System.Collections.Immutable;
+using System.Linq;
 using MessagePack;
 
-namespace NitroSharp.NsScript.Primitives
+namespace NitroSharp.NsScript.Primitives;
+
+public readonly struct CompositeBezier : IEquatable<CompositeBezier>
 {
-    public readonly struct CompositeBezier
+    public readonly ImmutableArray<CubicBezierSegment> Segments;
+
+    public CompositeBezier(ImmutableArray<CubicBezierSegment> segments)
     {
-        public readonly ImmutableArray<CubicBezierSegment> Segments;
+        Segments = segments;
+    }
 
-        public CompositeBezier(ImmutableArray<CubicBezierSegment> segments)
+    public override int GetHashCode()
+    {
+        int code = 0;
+        foreach (CubicBezierSegment segment in Segments)
         {
-            Segments = segments;
+            code = HashCode.Combine(code, segment);
+        }
+        return code;
+    }
+
+    public CompositeBezier(ref MessagePackReader reader)
+    {
+        int length = reader.ReadArrayHeader();
+        var segments = ImmutableArray.CreateBuilder<CubicBezierSegment>(length);
+        for (int i = 0; i < length; i++)
+        {
+            segments.Add(new CubicBezierSegment(ref reader));
         }
 
-        public override int GetHashCode()
-        {
-            int code = 0;
-            foreach (CubicBezierSegment segment in Segments)
-            {
-                code = HashCode.Combine(code, segment);
-            }
-            return code;
-        }
+        Segments = segments.ToImmutable();
+    }
 
-        public CompositeBezier(ref MessagePackReader reader)
+    public void Serialize(ref MessagePackWriter writer)
+    {
+        writer.WriteArrayHeader(Segments.Length);
+        foreach (CubicBezierSegment seg in Segments)
         {
-            int length = reader.ReadArrayHeader();
-            var segments = ImmutableArray.CreateBuilder<CubicBezierSegment>(length);
-            for (int i = 0; i < length; i++)
-            {
-                segments.Add(new CubicBezierSegment(ref reader));
-            }
-
-            Segments = segments.ToImmutable();
-        }
-
-        public void Serialize(ref MessagePackWriter writer)
-        {
-            writer.WriteArrayHeader(Segments.Length);
-            foreach (CubicBezierSegment seg in Segments)
-            {
-                seg.Serialize(ref writer);
-            }
+            seg.Serialize(ref writer);
         }
     }
 
-    [Persistable]
-    public readonly partial record struct CubicBezierSegment(
-        BezierControlPoint P0,
-        BezierControlPoint P1,
-        BezierControlPoint P2,
-        BezierControlPoint P3
-    );
-
-    [Persistable]
-    public readonly partial record struct BezierControlPoint(NsCoordinate X, NsCoordinate Y);
+    public bool Equals(CompositeBezier other)
+    {
+        return Segments.SequenceEqual(other.Segments);
+    }
 }
+
+[Persistable]
+public readonly partial record struct CubicBezierSegment(
+    BezierControlPoint P0,
+    BezierControlPoint P1,
+    BezierControlPoint P2,
+    BezierControlPoint P3
+);
+
+[Persistable]
+public readonly partial record struct BezierControlPoint(NsCoordinate X, NsCoordinate Y);

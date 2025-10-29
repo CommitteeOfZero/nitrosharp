@@ -22,15 +22,15 @@ namespace NitroSharp.NsScript.Compiler
             {
                 int endOffset = _currentOffset;
                 int length = endOffset - _startOffset;
-                var bytecodeLocation = new BytecodeLocation(_startOffset, length);
-                _moduleBuilder.AddSourceMapping(new SourceMapping(bytecodeLocation, syntaxNode.GetLocation()));
+                var bytecodeSpan = new BytecodeSpan(_startOffset, length);
+                _moduleBuilder.AddSourceMapping(new SourceMapping(bytecodeSpan, syntaxNode.Span));
             }
         }
 
         private readonly NsxModuleBuilder _module;
         private readonly SubroutineSymbol _subroutine;
         private readonly Checker _checker;
-        private readonly Compilation _compilation;
+        private readonly EmitContext _context;
         private BufferWriter _code;
         private int _textId;
         private ValueStack<BreakScope> _breakScopes;
@@ -40,8 +40,8 @@ namespace NitroSharp.NsScript.Compiler
         {
             _module = moduleBuilder;
             _subroutine = subroutine;
-            _checker = new Checker(subroutine, moduleBuilder.Diagnostics);
-            _compilation = moduleBuilder.Compilation;
+            _checker = new Checker(moduleBuilder.EmitContext, subroutine);
+            _context = moduleBuilder.EmitContext;
             _breakScopes = new ValueStack<BreakScope>(initialCapacity: 4);
             _code = default;
             _textId = 0;
@@ -77,10 +77,10 @@ namespace NitroSharp.NsScript.Compiler
         }
 
         private ushort GetVariableToken(string name)
-            => _compilation.GetVariableToken(name);
+            => _context.GetVariableToken(name);
 
         private ushort GetFlagToken(string name)
-            => _compilation.GetFlagToken(name);
+            => _context.GetFlagToken(name);
 
         [UnscopedRef]
         private EmitRangeCookie StartRange(SyntaxNode syntaxNode)
@@ -292,7 +292,7 @@ namespace NitroSharp.NsScript.Compiler
         private void EmitFunctionCall(FunctionCallExpression callExpression)
         {
             using EmitRangeCookie rangeCookie = StartRange(callExpression);
-            LookupResult lookupResult = _checker.LookupFunction(callExpression.TargetName);
+            LookupResult lookupResult = _checker.LookupFunction(callExpression, callExpression.TargetName);
             if (lookupResult.IsEmpty)
             {
                 EmitLoadImm(ConstantValue.Null);
@@ -349,7 +349,7 @@ namespace NitroSharp.NsScript.Compiler
                 {
                     EmitOpcode(Opcode.CallFar);
                     SourceFileSymbol externalSourceFile = function.DeclaringSourceFile;
-                    NsxModuleBuilder externalNsxBuilder = _compilation.GetNsxModuleBuilder(externalSourceFile);
+                    NsxModuleBuilder externalNsxBuilder = _context.GetNsxModuleBuilder(externalSourceFile);
                     _code.WriteUInt16LE(_module.GetExternalModuleToken(externalSourceFile));
                     _code.WriteUInt16LE(externalNsxBuilder.GetSubroutineToken(function));
                 }
@@ -398,7 +398,7 @@ namespace NitroSharp.NsScript.Compiler
         {
             EmitOpcode(opcode);
             SourceFileSymbol externalSourceFile = target.DeclaringSourceFile;
-            NsxModuleBuilder externalNsxBuilder = _compilation.GetNsxModuleBuilder(externalSourceFile);
+            NsxModuleBuilder externalNsxBuilder = _context.GetNsxModuleBuilder(externalSourceFile);
             _code.WriteUInt16LE(_module.GetExternalModuleToken(externalSourceFile));
             _code.WriteUInt16LE(externalNsxBuilder.GetSubroutineToken(target));
         }

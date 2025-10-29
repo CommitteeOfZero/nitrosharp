@@ -68,7 +68,7 @@ public sealed record Config
     {
         "XAUDIO" or "XAUDIO2" => AudioBackend.XAudio2,
         "OPENAL" or "OPENALSOFT" or "OPENAL SOFT" => AudioBackend.OpenAL,
-        "NULL" or "Null" or "null" => AudioBackend.Null,
+        "NULL" => AudioBackend.Null,
         _ => null,
     };
 
@@ -97,9 +97,7 @@ public sealed record Config
             case "GL ES":
                 return GraphicsBackend.OpenGLES;
 
-            case "Auto":
             case "AUTO":
-            case "auto":
             default:
                 return null;
         }

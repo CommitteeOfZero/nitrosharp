@@ -4,9 +4,9 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
-using SharpDX.D3DCompiler;
 using Veldrid;
 using Veldrid.SPIRV;
+using Vortice.D3DCompiler;
 
 namespace NitroSharp.ShaderCompiler
 {
@@ -105,32 +105,25 @@ namespace NitroSharp.ShaderCompiler
                         fsSpvReleaseOutput.SpirvBytes,
                         CrossCompileTarget.HLSL);
 
-                    byte[] vertBytes = Encoding.UTF8.GetBytes(hlslReleaseOutput.VertexShader);
-                    byte[] fragBytes = Encoding.UTF8.GetBytes(hlslReleaseOutput.FragmentShader);
-                    File.WriteAllBytes(outputBase + "-vertex.hlsl.bytes", CompileHlsl(ShaderStages.Vertex, vertBytes));
-                    File.WriteAllBytes(outputBase + "-fragment.hlsl.bytes", CompileHlsl(ShaderStages.Fragment, fragBytes));
+                    File.WriteAllBytes(outputBase + "-vertex.hlsl.bytes", CompileHlsl(ShaderStages.Vertex, hlslReleaseOutput.VertexShader));
+                    File.WriteAllBytes(outputBase + "-fragment.hlsl.bytes", CompileHlsl(ShaderStages.Fragment, hlslReleaseOutput.FragmentShader));
                 }
             }
         }
 
-        private static byte[] CompileHlsl(ShaderStages stage, byte[] sourceCode)
+        private static byte[] CompileHlsl(ShaderStages stage, string sourceCode)
         {
             string profile = stage == ShaderStages.Vertex ? "vs_4_0" : "ps_4_0";
 
             const ShaderFlags flags = ShaderFlags.OptimizationLevel3;
-            CompilationResult result = ShaderBytecode.Compile(
+            ReadOnlyMemory<byte> result = Vortice.D3DCompiler.Compiler.Compile(
                 sourceCode,
-                "main",
+                entryPoint: "main",
+                sourceName: "meow",
                 profile,
                 flags);
 
-            if (result.ResultCode.Failure || result.Bytecode is null)
-            {
-                Console.WriteLine($"Failed to compile HLSL code: {result.Message}");
-                return Array.Empty<byte>();
-            }
-
-            return result.Bytecode.Data;
+            return result.ToArray();
         }
     }
 }

@@ -1,21 +1,20 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
 <!--    <AssemblyName>libnitrosharp</AssemblyName>-->
     <TargetFramework>net9.0</TargetFramework>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <NoWarn>1701;1702;CA1063;IDE1006;IDE0063;VSTHRD002;VSTHRD003;VSTHRD103;VSTHRD105;VSTHRD200</NoWarn>
-    <Nullable>enable</Nullable>
     <RootNamespace>NitroSharp</RootNamespace>
-<!--    <PublishAot>true</PublishAot>-->
-<!--    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>-->
-<!--    <IlcTrimMetadata>true</IlcTrimMetadata>-->
-<!--    <IlcFoldIdenticalMethodBodies>true</IlcFoldIdenticalMethodBodies>-->
-<!--    <IlcGenerateCompleteTypeMetadata>true</IlcGenerateCompleteTypeMetadata>-->
-<!--    <IlcGenerateStackTraceData>true</IlcGenerateStackTraceData>-->
-<!--    <IlcOptimizationPreference>speed</IlcOptimizationPreference>-->
-<!--    <IlcDisableReflection>false</IlcDisableReflection>-->
-<!--    <InvariantGlobalization>true</InvariantGlobalization>-->
+    <PublishAot>true</PublishAot>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <IlcTrimMetadata>true</IlcTrimMetadata>
+    <IlcFoldIdenticalMethodBodies>true</IlcFoldIdenticalMethodBodies>
+    <IlcGenerateCompleteTypeMetadata>true</IlcGenerateCompleteTypeMetadata>
+    <IlcGenerateStackTraceData>true</IlcGenerateStackTraceData>
+    <IlcOptimizationPreference>speed</IlcOptimizationPreference>
+    <IlcDisableReflection>false</IlcDisableReflection>
+    <InvariantGlobalization>true</InvariantGlobalization>
   </PropertyGroup>
 
   <Import Project="..\..\OutputPath.props" />
@@ -26,10 +25,10 @@
     <ProjectReference Include="..\FreeTypeBindings\FreeTypeBindings.csproj" />
     <ProjectReference Include="..\NitroSharp.NsScript\NitroSharp.NsScript.csproj" />
 
-    <PackageReference Include="JetBrains.Annotations" Version="2024.3.0" PrivateAssets="All" />
-    <PackageReference Include="ZeroLog" Version="2.2.0" />
-    <PackageReference Include="System.IO.Pipelines" Version="9.0.0" />
-    <PackageReference Include="Microsoft.VisualStudio.Threading" Version="17.12.19" />
+    <PackageReference Include="JetBrains.Annotations" Version="2025.2.2" PrivateAssets="All" />
+    <PackageReference Include="ZeroLog" Version="2.3.0" />
+    <PackageReference Include="System.IO.Pipelines" Version="9.0.10" />
+    <PackageReference Include="Microsoft.VisualStudio.Threading" Version="17.14.15" />
     <PackageReference Include="Sprintf.NET" Version="2.0.0" />
 
     <PackageReference Include="Veldrid" Version="4.9.0" />
@@ -37,14 +36,20 @@
     <PackageReference Include="Veldrid.StartupUtilities" Version="4.9.0" />
     <PackageReference Include="Veldrid.ImGui" Version="5.72.0" />
     <PackageReference Include="Veldrid.ImageSharp" Version="4.9.0" />
+    <PackageReference Include="NativeLibraryLoader" Version="1.0.13" />
 
     <PackageReference Include="SharpDX.XAudio2" Version="4.2.0" />
     <PackageReference Include="SharpDX.Direct2D1" Version="4.2.0" />
-    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.6" />
+    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.11" />
 
     <PackageReference Include="FreeType.Binaries" Version="0.42.0" />
     <PackageReference Include="OpenALSoft.Binaries" Version="0.42.0" />
     <PackageReference Include="FFmpeg.Binaries" Version="0.42.0" />
+
+    <!--Transitive packages that aren't actually used: specify newer versions to avoid CVE warnings-->
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+    <PackageReference Include="System.Net.Http" Version="4.3.4" />
+    <PackageReference Include="System.Text.RegularExpressions" Version="4.3.1" />
   </ItemGroup>
 
   <ItemGroup>

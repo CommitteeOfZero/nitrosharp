@@ -9,7 +9,10 @@ namespace NitroSharp.NsScript;
 /// <summary>
 /// A canonical, normalized path to a file that is supposed to exist.
 /// </summary>
-public readonly record struct ResolvedPath(string Value);
+public readonly record struct ResolvedPath(string Value)
+{
+    public override string ToString() => Value;
+}
 
 /// <summary>
 /// A relative, normalized path to a file that is supposed to exist.

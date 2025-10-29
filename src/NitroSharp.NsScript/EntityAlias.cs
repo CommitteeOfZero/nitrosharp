@@ -2,7 +2,7 @@
 
 namespace NitroSharp.NsScript;
 
-public readonly struct EntityAlias
+public readonly record struct EntityAlias
 {
     private EntityAlias(string value)
     {

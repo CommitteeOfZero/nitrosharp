@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Text;
 using UtfUnknown;
 
@@ -16,18 +18,21 @@ public sealed class SourceText
         DefaultEncoding = Encoding.GetEncoding("shift-jis");
     }
 
+    private readonly List<TextSpan> _lineSpans;
+
     private SourceText(string text, ResolvedPath filePath)
     {
         Source = text;
         FilePath = filePath;
-        Lines = GetLines();
+        _lineSpans = GetLines();
     }
 
     public string Source { get; }
     public ResolvedPath FilePath { get; }
     public int Length => Source.Length;
 
-    internal List<TextSpan> Lines { get; }
+    public ReadOnlySpan<TextSpan> LineSpans => CollectionsMarshal.AsSpan(_lineSpans);
+    public int LineCount => _lineSpans.Count;
 
     public static SourceText From(string text) => new(text, new ResolvedPath(string.Empty));
     public static SourceText From(Stream stream, ResolvedPath filePath, Encoding? encoding = null)
@@ -43,38 +48,42 @@ public sealed class SourceText
         return new SourceText(text, filePath);
     }
 
-    public TextSpan GetLineSpanFromPosition(int position)
-    {
-        if (position < 0 || position > Length)
-        {
-            ThrowHelper.ThrowOutOfRange(nameof(position));
-        }
-
-        int lineNumber = GetLineNumberFromPosition(position);
-        return Lines[lineNumber];
-    }
-
-    public string GetText(TextSpan textSpan) => Source.Substring(textSpan.Start, textSpan.Length);
+    public string GetText(TextSpan textSpan)
+        => Source.Substring(textSpan.Start, textSpan.Length);
 
     public ReadOnlySpan<char> GetCharacterSpan(TextSpan textSpan)
         => Source.AsSpan().Slice(textSpan.Start, textSpan.Length);
 
-    public SourceLocation GetLocation(TextSpan textSpan)
+    public string GetLineText(int lineIndex)
     {
-        int line = GetLineNumberFromPosition(textSpan.Start);
-        TextSpan lineSpan = Lines[line];
-        int column = textSpan.Start - lineSpan.Start;
-        return new SourceLocation(line, column, textSpan.Length);
+        if (lineIndex < 0 || lineIndex >= _lineSpans.Count)
+        {
+            ThrowHelper.ThrowOutOfRange(nameof(lineIndex));
+        }
+        TextSpan lineSpan = LineSpans[lineIndex];
+        return Source.Substring(lineSpan.Start, lineSpan.Length);
     }
 
-    public int GetLineNumberFromPosition(int position)
+    public LinePosition GetLinePosition(int position)
     {
+        int line = GetLineNumberFromPosition(position);
+        TextSpan lineSpan = LineSpans[line];
+        int column = position - lineSpan.Start;
+        return new LinePosition(line, column);
+    }
+
+    public LinePositionSpan GetLinePositionSpan(TextSpan textSpan)
+        => new(GetLinePosition(textSpan.Start), GetLinePosition(textSpan.End));
+
+    internal int GetLineNumberFromPosition(int position)
+    {
+        Debug.Assert(position < Length);
         int lower = 0;
-        int upper = Lines.Count - 1;
+        int upper = _lineSpans.Count - 1;
         while (lower <= upper)
         {
             int index = lower + ((upper - lower) / 2);
-            int start = Lines[index].Start;
+            int start = _lineSpans[index].Start;
             if (start == position)
             {
                 return index;

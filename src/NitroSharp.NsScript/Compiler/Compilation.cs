@@ -1,104 +1,153 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
 using System.Text;
+using JetBrains.Annotations;
 using NitroSharp.NsScript.Syntax;
 using NitroSharp.NsScript.Utilities;
 
 namespace NitroSharp.NsScript.Compiler;
 
-public sealed class Compilation
+public class Compilation
 {
-    private readonly string _globalsFileName;
     private readonly Encoding? _sourceTextEncoding;
-    private readonly Dictionary<ResolvedPath, SyntaxTree> _syntaxTrees = new();
-    private readonly Dictionary<SyntaxTree, SourceModuleSymbol> _sourceModuleSymbols = new();
+    protected readonly Dictionary<ResolvedPath, SyntaxTree> _syntaxTrees;
+    private readonly Dictionary<SyntaxTree, SourceModuleSymbol> _sourceModuleSymbols;
+    private readonly DiagnosticBuilder _referenceResolveDiagnostics = new();
 
-    private readonly Dictionary<ResolvedPath, NsxModuleBuilder> _nsxModuleBuilders = new();
-    private readonly TokenMap<string> _variables = new(4096);
-    private readonly TokenMap<string> _flags = new(256);
-    private readonly List<string> _systemVariables = [];
-    private readonly List<string> _systemFlags = [];
-
-    public Compilation(string rootSourceDirectory,
-        string outputDirectory,
-        string globalsFileName,
-        Encoding? sourceTextEncoding = null)
-        : this(new DefaultSourceReferenceResolver(rootSourceDirectory),
-            outputDirectory,
-            globalsFileName,
-            sourceTextEncoding)
+    public Compilation(string rootSourceDirectory, Encoding? sourceTextEncoding = null)
+        : this(new DefaultSourceReferenceResolver(rootSourceDirectory), sourceTextEncoding)
     {
     }
 
-    public Compilation(SourceReferenceResolver sourceReferenceResolver,
-        string outputDirectory,
-        string globalsFileName,
-        Encoding? sourceTextEncoding = null)
+    public Compilation(SourceReferenceResolver sourceReferenceResolver, Encoding? sourceTextEncoding = null)
+        : this(sourceReferenceResolver, sourceTextEncoding, new(), new())
+    {
+    }
+
+    protected Compilation(Compilation source)
+        : this(source.SourceReferenceResolver, source._sourceTextEncoding,
+            source._syntaxTrees, source._sourceModuleSymbols)
+    {
+    }
+
+    private Compilation(
+        SourceReferenceResolver sourceReferenceResolver,
+        Encoding? sourceTextEncoding,
+        Dictionary<ResolvedPath, SyntaxTree> syntaxTrees,
+        Dictionary<SyntaxTree, SourceModuleSymbol> sourceModuleSymbols)
     {
         SourceReferenceResolver = sourceReferenceResolver;
-        OutputDirectory = outputDirectory;
-        _globalsFileName = globalsFileName;
         _sourceTextEncoding = sourceTextEncoding;
+        _syntaxTrees = syntaxTrees;
+        _sourceModuleSymbols = sourceModuleSymbols;
     }
 
     public SourceReferenceResolver SourceReferenceResolver { get; }
-    public string OutputDirectory { get; }
+    public virtual DiagnosticCollection Diagnostics => DiagnosticCollection.Empty;
 
-    public void Emit(ReadOnlySpan<SourceModuleSymbol> roots)
+    [MustUseReturnValue]
+    public virtual EmittedCompilation Emit(
+        ReadOnlySpan<SourceModuleSymbol> roots,
+        string outputDirectory,
+        string globalsFileName)
     {
-        var compiledSourceFiles = new HashSet<ResolvedPath>();
-        foreach (SourceModuleSymbol module in roots)
+        FileStream globalsStream = File.Create(Path.Combine(outputDirectory, globalsFileName));
+        return Emit(roots, createOutputStream, globalsStream);
+
+        Stream createOutputStream(NsxModuleBuilder nsxBuilder)
         {
-            EmitCore(module.RootSourceFile, compiledSourceFiles);
+            string? subDir = Path.GetDirectoryName(nsxBuilder.SourceFile.Name);
+            if (!string.IsNullOrEmpty(subDir))
+            {
+                subDir = Path.Combine(outputDirectory, subDir);
+                Directory.CreateDirectory(subDir);
+            }
+
+            string nameDotNsx = Path.ChangeExtension(nsxBuilder.SourceFile.Name, "nsx");
+            string path = Path.Combine(outputDirectory, nameDotNsx);
+            return File.Create(path);
+        }
+    }
+
+    [MustUseReturnValue]
+    public virtual EmittedCompilation EmitDiagnostics(ReadOnlySpan<SourceModuleSymbol> roots)
+    {
+        return Emit(roots, _ => Stream.Null, Stream.Null);
+    }
+
+    [MustUseReturnValue]
+    private EmittedCompilation Emit(
+        ReadOnlySpan<SourceModuleSymbol> roots,
+        Func<NsxModuleBuilder, Stream> outputStreamFactory,
+        Stream globalsOutputStream)
+    {
+        var context = new EmitContext(this);
+        var compiledSourceFiles = new HashSet<ResolvedPath>();
+        foreach (SourceModuleSymbol sourceModule in roots)
+        {
+            NsxModuleBuilder nsxBuilder = context.GetNsxModuleBuilder(sourceModule.RootSourceFile);
+            //emitCore(nsxBuilder);
         }
 
-        int filesCompiled;
+        int filesCompiledThisIter;
         do
         {
-            filesCompiled = 0;
-            KeyValuePair<ResolvedPath, NsxModuleBuilder>[] nsxBuilders = _nsxModuleBuilders.ToArray();
-            foreach ((ResolvedPath path, NsxModuleBuilder moduleBuilder) in nsxBuilders)
+            filesCompiledThisIter = 0;
+            KeyValuePair<ResolvedPath, NsxModuleBuilder>[] nsxBuilders = context.NsxModuleBuilders.ToArray();
+            foreach ((ResolvedPath path, NsxModuleBuilder nsxBuilder) in nsxBuilders)
             {
                 if (!compiledSourceFiles.Contains(path))
                 {
-                    NsxModuleAssembler.WriteModule(moduleBuilder);
-                    compiledSourceFiles.Add(path);
-                    filesCompiled++;
+                    emitCore(nsxBuilder);
+                    filesCompiledThisIter++;
                 }
             }
-        } while (filesCompiled > 0);
+        } while (filesCompiledThisIter > 0);
 
-        string globalsFileName = Path.Combine(OutputDirectory, _globalsFileName);
-        using FileStream file = File.Create(globalsFileName);
-        using var nameHeapBuffer = PooledBuffer<byte>.Allocate(32 * 1024);
-        var nameWriter = new BufferWriter(nameHeapBuffer);
-        (BufferSlice<byte> varOffsets, BufferSlice<byte> sysVarList) = writeGlobals(
-            _variables,
-            _systemVariables,
-            ref nameWriter
-        );
-        (BufferSlice<byte> flagOffsets, BufferSlice<byte> sysFlagList) = writeGlobals(
-            _flags,
-            _systemFlags,
-            ref nameWriter
-        );
+        emitGlobals();
+        return new EmittedCompilation(this, mergeDiagnostics());
 
+        void emitCore(NsxModuleBuilder nsxBuilder)
+        {
+            using Stream outputStream = outputStreamFactory(nsxBuilder);
+            nsxBuilder.Emit(outputStream);
+            compiledSourceFiles.Add(nsxBuilder.SourceFile.FilePath);
+        }
 
-        file.Write(varOffsets.AsSpan());
-        file.Write(sysVarList.AsSpan());
-        file.Write(flagOffsets.AsSpan());
-        file.Write(sysFlagList.AsSpan());
-        file.Write(nameWriter.Written);
-        varOffsets.Buffer.Dispose();
-        sysVarList.Buffer.Dispose();
-        flagOffsets.Buffer.Dispose();
-        sysFlagList.Buffer.Dispose();
-        return;
+        void emitGlobals()
+        {
+            using var nameHeapBuffer = PooledBuffer<byte>.Allocate(32 * 1024);
+            var nameWriter = new BufferWriter(nameHeapBuffer);
+            (BufferSlice<byte> varOffsets, BufferSlice<byte> sysVarList) = appendGlobals(
+                context.Variables,
+                context.SystemVariables,
+                ref nameWriter
+            );
+            (BufferSlice<byte> flagOffsets, BufferSlice<byte> sysFlagList) = appendGlobals(
+                context.Flags,
+                context.SystemFlags,
+                ref nameWriter
+            );
 
-        static (BufferSlice<byte> offsets, BufferSlice<byte> sysList) writeGlobals(
+            using (globalsOutputStream)
+            {
+                globalsOutputStream.Write(varOffsets.AsSpan());
+                globalsOutputStream.Write(sysVarList.AsSpan());
+                globalsOutputStream.Write(flagOffsets.AsSpan());
+                globalsOutputStream.Write(sysFlagList.AsSpan());
+                globalsOutputStream.Write(nameWriter.Written);
+            }
+
+            varOffsets.Buffer.Dispose();
+            sysVarList.Buffer.Dispose();
+            flagOffsets.Buffer.Dispose();
+            sysFlagList.Buffer.Dispose();
+        }
+
+        static (BufferSlice<byte> offsets, BufferSlice<byte> sysList) appendGlobals(
             TokenMap<string> globals,
             List<string> systemGlobals,
             ref BufferWriter nameWriter)
@@ -129,19 +178,24 @@ public sealed class Compilation
             var sysList = new BufferSlice<byte>(sysListBuffer, sysListWriter.Position);
             return (offsets, sysList);
         }
-    }
 
-    private void EmitCore(SourceFileSymbol sourceFile, HashSet<ResolvedPath> compiledFiles)
-    {
-        NsxModuleBuilder nsxBuilder = GetNsxModuleBuilder(sourceFile);
-        NsxModuleAssembler.WriteModule(nsxBuilder);
-        compiledFiles.Add(sourceFile.FilePath);
+        DiagnosticCollection mergeDiagnostics()
+        {
+            DiagnosticBuilder allDiagnostics = context.DiagnosticBuilder;
+            allDiagnostics.MergeFrom(_referenceResolveDiagnostics);
+            foreach (SyntaxTree syntaxTree in _syntaxTrees.Values)
+            {
+                allDiagnostics.MergeFrom(syntaxTree.DiagnosticBuilder);
+            }
+
+            return allDiagnostics.ToImmutable();
+        }
     }
 
     /// <exception cref="FileNotFoundException" />
-    public SyntaxTree GetSyntaxTree(string filePath)
+    public virtual SyntaxTree GetSyntaxTree(string relativePath)
     {
-        ResolvedPath resolvedPath = SourceReferenceResolver.ResolvePath(filePath);
+        ResolvedPath resolvedPath = SourceReferenceResolver.ResolvePath(relativePath);
         if (_syntaxTrees.TryGetValue(resolvedPath, out SyntaxTree? syntaxTree))
         {
             return syntaxTree;
@@ -154,21 +208,20 @@ public sealed class Compilation
     }
 
     /// <exception cref="FileNotFoundException" />
-    public SourceModuleSymbol GetSourceModule(string filePath)
+    public SourceModuleSymbol GetSourceModule(string relativePath)
     {
-        SyntaxTree tree = GetSyntaxTree(filePath);
+        SyntaxTree tree = GetSyntaxTree(relativePath);
         return GetModuleSymbol(tree);
     }
 
     private SourceModuleSymbol GetModuleSymbol(SyntaxTree syntaxTree)
     {
-        if (_sourceModuleSymbols.TryGetValue(syntaxTree, out SourceModuleSymbol? symbol))
+        if (!_sourceModuleSymbols.TryGetValue(syntaxTree, out SourceModuleSymbol? symbol))
         {
-            return symbol;
+            symbol = CreateModuleSymbol(syntaxTree);
+            _sourceModuleSymbols[syntaxTree] = symbol;
         }
 
-        symbol = CreateModuleSymbol(syntaxTree);
-        _sourceModuleSymbols[syntaxTree] = symbol;
         return symbol;
     }
 
@@ -179,13 +232,13 @@ public sealed class Compilation
             return new SourceModuleSymbol(this, [syntaxTree]);
         }
 
-        var builder = ImmutableArray.CreateBuilder<SyntaxTree>(4);
-        builder.Add(syntaxTree);
-        CollectReferences(syntaxTree, builder);
-        return new SourceModuleSymbol(this, builder.ToImmutable());
+        var trees = ImmutableArray.CreateBuilder<SyntaxTree>(4);
+        trees.Add(syntaxTree);
+        CollectReferences(syntaxTree, trees);
+        return new SourceModuleSymbol(this, trees.ToImmutable());
     }
 
-    private void CollectReferences(SyntaxTree syntaxTree, ImmutableArray<SyntaxTree>.Builder builder)
+    private void CollectReferences(SyntaxTree syntaxTree, ImmutableArray<SyntaxTree>.Builder results)
     {
         var root = (SourceFileRoot)syntaxTree.Root;
         foreach (Spanned<string> include in root.FileReferences)
@@ -193,55 +246,42 @@ public sealed class Compilation
             try
             {
                 SyntaxTree tree = GetSyntaxTree(include.Value);
-                builder.Add(tree);
-                CollectReferences(tree, builder);
+                results.Add(tree);
+                CollectReferences(tree, results);
             }
             catch (FileNotFoundException)
             {
-                // TODO: report error
+                var location = new SourceLocation(syntaxTree.SourceText, include.Span);
+                _referenceResolveDiagnostics
+                    .Add(Diagnostic.Create(location, DiagnosticId.ExternalModuleNotFound, include.Value));
             }
         }
     }
+}
 
-    internal NsxModuleBuilder GetNsxModuleBuilder(SourceFileSymbol sourceFile)
+public sealed class EmittedCompilation : Compilation
+{
+    public EmittedCompilation(Compilation source, DiagnosticCollection diagnostics) : base(source)
     {
-        if (!_nsxModuleBuilders.TryGetValue(sourceFile.FilePath, out NsxModuleBuilder? moduleBuilder))
-        {
-            moduleBuilder = new NsxModuleBuilder(this, sourceFile);
-            _nsxModuleBuilders.Add(sourceFile.FilePath, moduleBuilder);
-        }
-
-        return moduleBuilder;
+        Diagnostics = diagnostics;
     }
 
-    internal ushort GetVariableToken(string name)
-    {
-        if (!_variables.TryGetToken(name, out ushort token))
-        {
-            token = _variables.AddToken(name);
-            if (name.StartsWith("SYSTEM"))
-            {
-                _systemVariables.Add(name);
-            }
-        }
+    public override DiagnosticCollection Diagnostics { get; }
 
-        return token;
+    public override EmittedCompilation Emit(
+        ReadOnlySpan<SourceModuleSymbol> roots, string outputDirectory, string globalsFileName)
+    {
+        throw new InvalidOperationException();
     }
 
-    internal ushort GetFlagToken(string name)
+    public override EmittedCompilation EmitDiagnostics(ReadOnlySpan<SourceModuleSymbol> roots)
     {
-        if (!_flags.TryGetToken(name, out ushort token))
-        {
-            token = _flags.AddToken(name);
-            if (name.StartsWith("SYSTEM"))
-            {
-                _systemFlags.Add(name);
-            }
-        }
-
-        return token;
+        throw new InvalidOperationException();
     }
 
-    internal bool TryGetVariableToken(string variableName, out ushort token)
-        => _variables.TryGetToken(variableName, out token);
+    public override SyntaxTree GetSyntaxTree(string relativePath)
+    {
+        ResolvedPath resolvedPath = SourceReferenceResolver.ResolvePath(relativePath);
+        return _syntaxTrees[resolvedPath];
+    }
 }

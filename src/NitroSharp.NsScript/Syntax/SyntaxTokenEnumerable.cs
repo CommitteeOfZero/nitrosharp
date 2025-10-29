@@ -1,55 +1,54 @@
 ﻿using NitroSharp.Utilities;
 
-namespace NitroSharp.NsScript.Syntax
+namespace NitroSharp.NsScript.Syntax;
+
+public readonly struct SyntaxTokenEnumerable
 {
-    public struct SyntaxTokenEnumerable
+    private readonly Lexer _lexer;
+
+    internal SyntaxTokenEnumerable(Lexer lexer)
+    {
+        _lexer = lexer;
+    }
+
+    public Enumerator GetEnumerator() => new(_lexer);
+
+    public SyntaxToken[] ToArray()
+    {
+        var builder = new ArrayBuilder<SyntaxToken>(32);
+        foreach (SyntaxToken tk in this)
+        {
+            builder.Add() = tk;
+        }
+
+        return builder.ToArray();
+    }
+
+    public ref struct Enumerator
     {
         private readonly Lexer _lexer;
+        private SyntaxToken _current;
+        private bool _reachedEof;
 
-        internal SyntaxTokenEnumerable(Lexer lexer)
+        internal Enumerator(Lexer lexer)
         {
             _lexer = lexer;
+            _current = default;
+            _reachedEof = false;
         }
 
-        public Enumerator GetEnumerator() => new(_lexer);
+        public SyntaxToken Current => _current;
 
-        public SyntaxToken[] ToArray()
+        public bool MoveNext()
         {
-            var builder = new ArrayBuilder<SyntaxToken>(32);
-            foreach (SyntaxToken tk in this)
+            if (_reachedEof) { return false; }
+            _current = _lexer.Lex();
+            if (_current.Kind == SyntaxTokenKind.EndOfFileToken)
             {
-                builder.Add() = tk;
+                _reachedEof = true;
             }
 
-            return builder.ToArray();
-        }
-
-        public ref struct Enumerator
-        {
-            private readonly Lexer _lexer;
-            private SyntaxToken _current;
-            private bool _reachedEof;
-
-            internal Enumerator(Lexer lexer)
-            {
-                _lexer = lexer;
-                _current = default;
-                _reachedEof = false;
-            }
-
-            public SyntaxToken Current => _current;
-
-            public bool MoveNext()
-            {
-                if (_reachedEof) { return false; }
-                _current = _lexer.Lex();
-                if (_current.Kind == SyntaxTokenKind.EndOfFileToken)
-                {
-                    _reachedEof = true;
-                }
-
-                return true;
-            }
+            return true;
         }
     }
 }

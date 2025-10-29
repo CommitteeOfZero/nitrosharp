@@ -33,11 +33,12 @@ namespace NitroSharp.NsScript.Syntax
 
         private readonly ImmutableArray<Parameter>.Builder _parameters;
         private readonly ImmutableArray<DialogueBlock>.Builder _dialogueBlocks;
+        private readonly DiagnosticBuilder _diagnosticBuilder;
 
         public Parser(Lexer lexer)
         {
             _lexer = lexer;
-            DiagnosticBuilder = new DiagnosticBuilder();
+            _diagnosticBuilder = lexer.Diagnostics;
             _internTable = new StringInternTable();
             _tokens = Lex();
             _parameterMap = [];
@@ -48,8 +49,6 @@ namespace NitroSharp.NsScript.Syntax
                 _currentToken = _tokens[0];
             }
         }
-
-        internal DiagnosticBuilder DiagnosticBuilder { get; }
 
         private SyntaxToken PeekToken(int n) => _tokens[_tokenOffset + n];
 
@@ -144,7 +143,7 @@ namespace NitroSharp.NsScript.Syntax
 
             if (tokensConsumed == 0)
             {
-                DiagnosticBuilder.Report(DiagnosticId.MissingStatementTerminator, GetSpanForMissingToken());
+                Report(DiagnosticId.MissingStatementTerminator, GetSpanForMissingToken());
             }
         }
 
@@ -416,7 +415,7 @@ namespace NitroSharp.NsScript.Syntax
             // Check if the current line ends with the '>' character that we found
             if (GetLineNumber(PeekToken(n + 1)) != currentLine)
             {
-                Report(DiagnosticId.StrayMarkupBlock, SourceText.Lines[currentLine]);
+                Report(DiagnosticId.StrayMarkupBlock, SourceText.LineSpans[currentLine]);
                 EatTokens(n + 1); // skip to the next line
                 return CreateErrorStatement(startOffset);
             }
@@ -1000,17 +999,24 @@ namespace NitroSharp.NsScript.Syntax
 
         private void Report(DiagnosticId diagnosticId)
         {
-            DiagnosticBuilder.Report(diagnosticId, _currentToken.TextSpan);
+            Report(diagnosticId, _currentToken.TextSpan);
         }
 
         private void Report(DiagnosticId diagnosticId, TextSpan span)
         {
-            DiagnosticBuilder.Report(diagnosticId, span);
+            var location = new SourceLocation(SourceText, span);
+            _diagnosticBuilder.Add(Diagnostic.Create(location, diagnosticId));
         }
 
         private void Report(DiagnosticId diagnosticId, params object[] arguments)
         {
-            DiagnosticBuilder.Report(diagnosticId, _currentToken.TextSpan, arguments);
+            Report(diagnosticId, _currentToken.TextSpan, arguments);
+        }
+
+        private void Report(DiagnosticId diagnosticId, TextSpan span, params object[] arguments)
+        {
+            var location = new SourceLocation(SourceText, span);
+            _diagnosticBuilder.Add(Diagnostic.Create(location, diagnosticId, arguments));
         }
 
         private TextSpan GetSpanForMissingToken()

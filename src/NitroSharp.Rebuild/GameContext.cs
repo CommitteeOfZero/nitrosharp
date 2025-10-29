@@ -291,12 +291,6 @@ internal sealed class GameContext
                     ? Encoding.UTF8
                     : SourceText.DefaultEncoding;
             }
-            var compilation = new Compilation(
-                nssFolder,
-                bytecodeCacheDir,
-                globalsFileName,
-                sourceEncoding
-            );
 
             SystemScripts sysScripts = gameProfile.SysScripts;
             string[] moduleNames =
@@ -315,11 +309,13 @@ internal sealed class GameContext
                 log.Warn($"System module '{nonExistingModule}' is missing");
             }
 
+            var compilation = new Compilation(nssFolder, sourceEncoding);
             SourceModuleSymbol[] modules = existingModules
-                .Select(x => compilation.GetSourceModule(x))
+                .Select(compilation.GetSourceModule)
                 .ToArray();
 
-            compilation.Emit(modules);
+            // ReSharper disable once RedundantAssignment
+            compilation = compilation.Emit(modules, bytecodeCacheDir, globalsFileName);
         }
         else
         {

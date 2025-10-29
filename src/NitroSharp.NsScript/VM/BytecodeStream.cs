@@ -64,16 +64,19 @@ internal readonly struct Immediate
 
     internal Immediate(float value, bool isDelta) : this()
     {
-        (Type, Numeric) = (isDelta ? BuiltInType.DeltaNumeric : BuiltInType.Numeric, value);
+        Type = isDelta ? BuiltInType.DeltaNumeric : BuiltInType.Numeric;
+        Numeric = value;
     }
 
     internal Immediate(ushort stringToken) : this()
     {
-        (Type, StringToken) = (BuiltInType.String, stringToken);
+        Type = BuiltInType.String;
+        StringToken = stringToken;
     }
 
     internal Immediate(BuiltInConstant constant) : this()
     {
-        (Type, Constant) = (BuiltInType.BuiltInConstant, constant);
+        Type = BuiltInType.BuiltInConstant;
+        Constant = constant;
     }
 }

@@ -57,7 +57,7 @@ namespace NitroSharp.NsScript.Compiler
             (Variant, Global) = (variant, name);
         }
 
-        public static LookupResult Empty;
+        public static LookupResult Empty = default;
 
         public bool IsEmpty => Variant == LookupResultVariant.Empty;
     }
@@ -73,8 +73,8 @@ namespace NitroSharp.NsScript.Compiler
         public BezierControlPoint P3;
 #pragma warning restore CS0649
 
-        public int PointCount => _count;
-        public bool IsComplete => _count == 4;
+        public readonly int PointCount => _count;
+        public readonly bool IsComplete => _count == 4;
 
         public Span<BezierControlPoint> Points
             => MemoryMarshal.CreateSpan(ref P0, 4);
@@ -89,15 +89,15 @@ namespace NitroSharp.NsScript.Compiler
 
     internal readonly struct Checker
     {
+        private readonly EmitContext _context;
         private readonly SourceModuleSymbol _module;
-        private readonly Compilation _compilation;
         private readonly DiagnosticBuilder _diagnostics;
 
-        public Checker(SubroutineSymbol subroutine, DiagnosticBuilder diagnostics)
+        public Checker(EmitContext context, SubroutineSymbol subroutine)
         {
+            _context = context;
             _module = subroutine.DeclaringSourceFile.Module;
-            _compilation = _module.Compilation;
-            _diagnostics = diagnostics;
+            _diagnostics = context.DiagnosticBuilder;
         }
 
         public LookupResult ResolveAssignmentTarget(Expression expression)
@@ -116,11 +116,11 @@ namespace NitroSharp.NsScript.Compiler
             string modulePath = callChapterStmt.TargetModule.Value;
             try
             {
-                SourceModuleSymbol targetSourceModule = _compilation.GetSourceModule(modulePath);
+                SourceModuleSymbol targetSourceModule = _context.Compilation.GetSourceModule(modulePath);
                 ChapterSymbol? chapter = targetSourceModule.LookupChapter("main");
                 if (chapter is null)
                 {
-                    Report(callChapterStmt.TargetModule, DiagnosticId.ChapterMainNotFound);
+                    Report(callChapterStmt, callChapterStmt.TargetModule.Span, DiagnosticId.ChapterMainNotFound);
                 }
                 return chapter;
 
@@ -128,7 +128,7 @@ namespace NitroSharp.NsScript.Compiler
             catch (FileNotFoundException)
             {
                 string moduleName = callChapterStmt.TargetModule.Value;
-                Report(callChapterStmt.TargetModule, DiagnosticId.ExternalModuleNotFound, moduleName);
+                Report(callChapterStmt, callChapterStmt.TargetModule.Span, DiagnosticId.ExternalModuleNotFound, moduleName);
                 return null;
             }
         }
@@ -137,18 +137,18 @@ namespace NitroSharp.NsScript.Compiler
         {
             if (callSceneStmt.TargetModule is null)
             {
-                return LookupScene(callSceneStmt.TargetScene);
+                return LookupScene(callSceneStmt, callSceneStmt.TargetScene);
             }
 
             Spanned<string> targetModule = callSceneStmt.TargetModule.Value;
             string modulePath = targetModule.Value;
             try
             {
-                SourceModuleSymbol targetSourceModule = _compilation.GetSourceModule(modulePath);
+                SourceModuleSymbol targetSourceModule = _context.Compilation.GetSourceModule(modulePath);
                 SceneSymbol? scene = targetSourceModule.LookupScene(callSceneStmt.TargetScene.Value);
                 if (scene is null)
                 {
-                    ReportUnresolvedIdentifier(callSceneStmt.TargetScene);
+                    ReportUnresolvedIdentifier(callSceneStmt, callSceneStmt.TargetScene);
                 }
 
                 return scene;
@@ -156,14 +156,14 @@ namespace NitroSharp.NsScript.Compiler
             catch (FileNotFoundException)
             {
                 string moduleName = targetModule.Value;
-                Report(targetModule, DiagnosticId.ExternalModuleNotFound, moduleName);
+                Report(callSceneStmt, targetModule.Span, DiagnosticId.ExternalModuleNotFound, moduleName);
                 return null;
             }
         }
 
         public LookupResult LookupNonInvocableSymbol(NameExpression name)
         {
-            if (name.Sigil == SigilKind.Dollar || _compilation.TryGetVariableToken(name.Name, out _))
+            if (name.Sigil == SigilKind.Dollar || _context.TryGetVariableToken(name.Name, out _))
             {
                 return new LookupResult(LookupResultVariant.Variable, name.Name);
             }
@@ -181,7 +181,7 @@ namespace NitroSharp.NsScript.Compiler
             return LookupResult.Empty;
         }
 
-        public LookupResult LookupFunction(Spanned<string> identifier)
+        public LookupResult LookupFunction(SyntaxNode callExpression, Spanned<string> identifier)
         {
             string name = identifier.Value;
             BuiltInFunction? builtInFunction = WellKnownSymbols.LookupBuiltInFunction(name);
@@ -196,25 +196,25 @@ namespace NitroSharp.NsScript.Compiler
                 return new LookupResult(function);
             }
 
-            ReportUnresolvedIdentifier(identifier);
+            ReportUnresolvedIdentifier(callExpression, identifier);
             return LookupResult.Empty;
         }
 
-        public ChapterSymbol? LookupChapter(Spanned<string> identifier)
+        public ChapterSymbol? LookupChapter(SyntaxNode callExpression, Spanned<string> identifier)
         {
             ChapterSymbol? chapter = _module.LookupChapter(identifier.Value);
             if (chapter is not null) { return chapter; }
 
-            ReportUnresolvedIdentifier(identifier);
+            ReportUnresolvedIdentifier(callExpression, identifier);
             return null;
         }
 
-        public SceneSymbol? LookupScene(Spanned<string> identifier)
+        public SceneSymbol? LookupScene(SyntaxNode callExpression, Spanned<string> identifier)
         {
             SceneSymbol? scene = _module.LookupScene(identifier.Value);
             if (scene is not null) { return scene; }
 
-            ReportUnresolvedIdentifier(identifier);
+            ReportUnresolvedIdentifier(callExpression, identifier);
             return null;
         }
 
@@ -280,26 +280,30 @@ namespace NitroSharp.NsScript.Compiler
             return false;
         }
 
-        private void ReportUnresolvedIdentifier(Spanned<string> identifier)
+        private void ReportUnresolvedIdentifier(SyntaxNode node, Spanned<string> identifier)
         {
+            var location = new SourceLocation(node.SyntaxTree.SourceText, identifier.Span);
             _diagnostics.Add(
-                Diagnostic.Create(identifier.Span, DiagnosticId.UnresolvedIdentifier, identifier.Value)
+                Diagnostic.Create(location, DiagnosticId.UnresolvedIdentifier, identifier.Value)
             );
-        }
-
-        public void Report(Spanned<string> identifier, DiagnosticId diagnosticId)
-        {
-            _diagnostics.Add(Diagnostic.Create(identifier.Span, diagnosticId));
-        }
-
-        public void Report(Spanned<string> identifier, DiagnosticId diagnosticId, params object[] args)
-        {
-            _diagnostics.Add(Diagnostic.Create(identifier.Span, diagnosticId, args));
         }
 
         public void Report(SyntaxNode node, DiagnosticId diagnosticId)
         {
-            _diagnostics.Add(Diagnostic.Create(node.Span, diagnosticId));
+            var location = new SourceLocation(node.SyntaxTree.SourceText, node.Span);
+            _diagnostics.Add(Diagnostic.Create(location, diagnosticId));
+        }
+
+        public void Report(SyntaxNode node, TextSpan span, DiagnosticId diagnosticId)
+        {
+            var location = new SourceLocation(node.SyntaxTree.SourceText, span);
+            _diagnostics.Add(Diagnostic.Create(location, diagnosticId));
+        }
+
+        public void Report(SyntaxNode node, TextSpan span, DiagnosticId diagnosticId, params object[] args)
+        {
+            var location = new SourceLocation(node.SyntaxTree.SourceText, span);
+            _diagnostics.Add(Diagnostic.Create(location, diagnosticId, args));
         }
     }
 }

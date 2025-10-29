@@ -29,12 +29,14 @@ namespace NitroSharp.NsScript.Primitives
 
         public NsFontWeight(StandardFontWeight value) : this()
         {
-            (Variant, Standard) = (NsFontWeightVariant.Standard, value);
+            Variant = NsFontWeightVariant.Standard;
+            Standard = value;
         }
 
         public NsFontWeight(int value) : this()
         {
-            (Variant, Custom) = (NsFontWeightVariant.Custom, value);
+            Variant = NsFontWeightVariant.Custom;
+            Custom = value;
         }
 
         public static NsFontWeight From(in ConstantValue value)

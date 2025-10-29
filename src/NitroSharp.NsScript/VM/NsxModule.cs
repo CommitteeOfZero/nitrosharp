@@ -109,7 +109,7 @@ namespace NitroSharp.NsScript.VM
         public int LookupSubroutineIndex(string name)
             => _subroutineMap[name];
 
-        public SourceLocation? GetSourceLocation(int codeOffset)
+        public TextSpan? GetSourceSpan(int codeOffset)
         {
             int lower = 0;
             int upper = _sourceMappings.Length - 1;
@@ -119,12 +119,12 @@ namespace NitroSharp.NsScript.VM
                 int index = lower + ((upper - lower) / 2);
                 ref readonly SourceMapping mapping = ref _sourceMappings[index];
 
-                if (codeOffset >= mapping.BytecodeLocation.Start && codeOffset < mapping.BytecodeLocation.End)
+                if (codeOffset >= mapping.BytecodeSpan.Start && codeOffset < mapping.BytecodeSpan.End)
                 {
-                    return mapping.SourceLocation;
+                    return mapping.SourceSpan;
                 }
 
-                if (codeOffset < mapping.BytecodeLocation.Start)
+                if (codeOffset < mapping.BytecodeSpan.Start)
                 {
                     upper = index - 1;
                 }
@@ -256,14 +256,14 @@ namespace NitroSharp.NsScript.VM
             var sourceMappings = new SourceMapping[dbgEntryCount];
             for (int i = 0; i < dbgEntryCount; i++)
             {
-                int line = reader.ReadInt32LE();
-                int column = reader.ReadUInt16LE();
-                int textLength = reader.ReadUInt16LE();
+                int start = reader.ReadInt32LE();
+                int length = reader.ReadInt32LE();
                 int codeOffset = reader.ReadUInt16LE();
                 int codeLength = reader.ReadUInt16LE();
+
                 sourceMappings[i] = new SourceMapping(
-                    new BytecodeLocation(codeOffset, codeLength),
-                    new SourceLocation(line, column, textLength)
+                    new BytecodeSpan(codeOffset, codeLength),
+                    new TextSpan(start, length)
                 );
             }
 

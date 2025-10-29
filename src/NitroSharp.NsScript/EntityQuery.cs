@@ -75,16 +75,10 @@ public enum EntityQueryScope
 }
 
 [DebuggerDisplay("{Value}")]
-public readonly struct EntityPattern
+public readonly struct EntityPattern(string value, bool containsWildcard)
 {
-    public readonly string Value;
-    public readonly bool ContainsWildcard;
-
-    public EntityPattern(string value, bool containsWildcard)
-    {
-        Value = value;
-        ContainsWildcard = containsWildcard;
-    }
+    public readonly string Value = value;
+    public readonly bool ContainsWildcard = containsWildcard;
 
     public bool Match(string s)
     {

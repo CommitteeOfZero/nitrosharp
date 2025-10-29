@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net9.0</TargetFramework>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <NoWarn>1701;1702;CA1063;IDE1006;IDE0063;VSTHRD002;VSTHRD003;VSTHRD103;VSTHRD105;VSTHRD200</NoWarn>
     <Nullable>enable</Nullable>
@@ -24,6 +24,8 @@
     <ProjectReference Include="..\NitroSharp.NsScript\NitroSharp.NsScript.csproj" />
 
     <PackageReference Include="FreeType.Binaries" Version="0.42.0" />
+
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="OpenALSoft.Binaries" Version="0.42.0" />
     <PackageReference Include="FFmpeg.Binaries" Version="0.42.0" />
 
@@ -36,9 +38,9 @@
     <PackageReference Include="SharpDX.XAudio2" Version="4.2.0" />
 
     <PackageReference Include="Sprintf.NET" Version="2.0.0" />
-    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.5" />
-    <PackageReference Include="System.IO.Pipelines" Version="8.0.0" />
-    <PackageReference Include="Microsoft.VisualStudio.Threading" Version="17.10.48" />
+    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.11" />
+    <PackageReference Include="System.IO.Pipelines" Version="9.0.10" />
+    <PackageReference Include="Microsoft.VisualStudio.Threading" Version="17.14.15" />
     <PackageReference Include="SharpDX.Direct2D1" Version="4.2.0" />
   </ItemGroup>
 

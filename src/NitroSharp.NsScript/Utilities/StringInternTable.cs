@@ -56,11 +56,11 @@ namespace NitroSharp.Utilities
         public string Add(ReadOnlySpan<char> span)
         {
             int hashCode = FnvHasher.HashString(span);
-            Entry[] entires = _localTable;
+            Entry[] entries = _localTable;
             int idx = LocalIdxFromHash(hashCode);
 
-            string? text = entires[idx].Text;
-            if (text is not null && entires[idx].HashCode == hashCode)
+            string? text = entries[idx].Text;
+            if (text is not null && entries[idx].HashCode == hashCode)
             {
                 if (TextEquals(text, span))
                 {
@@ -74,8 +74,8 @@ namespace NitroSharp.Utilities
                 // PERF: the following code does element-wise assignment of a struct
                 //       because current JIT produces better code compared to
                 //       arr[idx] = new Entry(...)
-                entires[idx].HashCode = hashCode;
-                entires[idx].Text = shared;
+                entries[idx].HashCode = hashCode;
+                entries[idx].Text = shared;
 
                 return shared;
             }
@@ -183,7 +183,7 @@ namespace NitroSharp.Utilities
             return _localRandom++;
         }
 
-        internal static bool TextEquals(string array, ReadOnlySpan<char> text)
+        private static bool TextEquals(string array, ReadOnlySpan<char> text)
             => text.Equals(array.AsSpan(), StringComparison.Ordinal);
     }
 }

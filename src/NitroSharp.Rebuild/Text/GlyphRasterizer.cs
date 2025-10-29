@@ -293,7 +293,7 @@ namespace NitroSharp.Text
             {
                 NativeBitmapGlyph largest = strokes[^1];
                 var buffer = new byte[largest.Width * largest.Height * 4];
-                Span<RgbaPixel> pixels = MemoryMarshal.Cast<byte, RgbaPixel>(buffer);
+                Span<RgbaPixel> pixels = MemoryMarshal.Cast<byte, RgbaPixel>(buffer.AsSpan());
                 for (int i = 0; i < 4; i++)
                 {
                     NativeBitmapGlyph stroke = strokes[i];

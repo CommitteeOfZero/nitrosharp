@@ -1,29 +1,28 @@
 ﻿using System;
 
-namespace NitroSharp.NsScript.Syntax
+namespace NitroSharp.NsScript.Syntax;
+
+public readonly struct LexingContext
 {
-    public readonly struct LexingContext
+    private readonly Lexer _lexer;
+    private readonly SourceText _sourceText;
+
+    internal LexingContext(Lexer lexer)
     {
-        private readonly Lexer _lexer;
-        private readonly SourceText _sourceText;
+        _lexer = lexer;
+        _sourceText = lexer.SourceText;
+    }
 
-        internal LexingContext(Lexer lexer)
-        {
-            _lexer = lexer;
-            _sourceText = lexer.SourceText;
-        }
+    public SourceText SourceText => _sourceText;
+    // public DiagnosticBag Diagnostics => _lexer.Diagnostics;
 
-        public SourceText SourceText => _sourceText;
-        public DiagnosticBag Diagnostics => _lexer.Diagnostics;
+    public ReadOnlySpan<char> GetText(in SyntaxToken token)
+    {
+        return _sourceText.GetCharacterSpan(token.TextSpan);
+    }
 
-        public ReadOnlySpan<char> GetText(in SyntaxToken token)
-        {
-            return _sourceText.GetCharacterSpan(token.TextSpan);
-        }
-
-        public ReadOnlySpan<char> GetValueText(in SyntaxToken token)
-        {
-            return _sourceText.GetCharacterSpan(token.GetValueSpan());
-        }
+    public ReadOnlySpan<char> GetValueText(in SyntaxToken token)
+    {
+        return _sourceText.GetCharacterSpan(token.GetValueSpan());
     }
 }

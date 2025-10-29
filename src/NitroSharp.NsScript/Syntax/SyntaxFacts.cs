@@ -11,6 +11,7 @@ namespace NitroSharp.NsScript.Syntax
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool IsDecDigit(char c) => c is >= '0' and <= '9';
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool IsHexDigit(char c)
         {
@@ -38,16 +39,10 @@ namespace NitroSharp.NsScript.Syntax
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool IsNewLine(char c)
-        {
-            return c is '\r' or '\n';
-        }
+        public static bool IsNewLine(char c) => c is '\r' or '\n';
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool IsSigil(char c)
-        {
-            return c is '$' or '#' or '@';
-        }
+        public static bool IsSigil(char c) => c is '$' or '#' or '@';
 
         public static bool TryGetKeywordKind(ReadOnlySpan<char> text, out SyntaxTokenKind kind)
             => KeywordScanner.TryRecognizeKeyword(text, out kind);
@@ -104,7 +99,7 @@ namespace NitroSharp.NsScript.Syntax
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool IsStatementTerminator(SyntaxTokenKind tokenKind)
         {
-            return tokenKind == SyntaxTokenKind.Semicolon || tokenKind == SyntaxTokenKind.Colon;
+            return tokenKind is SyntaxTokenKind.Semicolon or SyntaxTokenKind.Colon;
         }
 
         public static bool CanStartDeclaration(SyntaxTokenKind tokenKind)
@@ -124,7 +119,7 @@ namespace NitroSharp.NsScript.Syntax
         public static bool IsStatementExpression(Expression expression)
         {
             SyntaxNodeKind kind = expression.Kind;
-            return kind == SyntaxNodeKind.AssignmentExpression || kind == SyntaxNodeKind.FunctionCallExpression;
+            return kind is SyntaxNodeKind.AssignmentExpression or SyntaxNodeKind.FunctionCallExpression;
         }
 
         public static bool TryGetUnaryOperatorKind(SyntaxTokenKind operatorTokenKind, out UnaryOperatorKind kind)

@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System;
@@ -27,18 +27,19 @@ namespace NitroSharp.NsScript.Syntax
 
         private readonly LexingMode _initialMode;
         private readonly Stack<LexingMode> _lexingModeStack = new();
-        private readonly DiagnosticBuilder _diagnostics = new();
+        private readonly DiagnosticBuilder _diagnostics;
 
-        public Lexer(SourceText sourceText, LexingMode lexingMode = LexingMode.Normal)
+        public Lexer(SourceText sourceText, DiagnosticBuilder diagnostics, LexingMode lexingMode = LexingMode.Normal)
             : base(sourceText.Source)
         {
             SourceText = sourceText;
+            _diagnostics = diagnostics;
             _initialMode = lexingMode;
             _lexingModeStack.Push(lexingMode);
         }
 
         public SourceText SourceText { get; }
-        public DiagnosticBag Diagnostics => _diagnostics.ToImmutableBag();
+        public DiagnosticBuilder Diagnostics => _diagnostics;
 
         private LexingMode CurrentMode
             => _lexingModeStack.Count > 0 ? _lexingModeStack.Peek() : _initialMode;
@@ -576,7 +577,7 @@ namespace NitroSharp.NsScript.Syntax
                 AdvanceChar();
             }
 
-            // If the next character can be part of an identifer, then what we're dealing with is not a hex triplet,
+            // If the next character can be part of an identifier, then what we're dealing with is not a hex triplet,
             // but rather an identifier prefixed with a '#', and it just so happens that its first 6 characters
             // are valid hex digits. '#ABCDEFghijklmno' would be an example of such an identifier.
             // NOTE: if the identifier is exactly 6 characters long, it will be treated as a hex triplet.
@@ -767,7 +768,8 @@ namespace NitroSharp.NsScript.Syntax
         private void Report(DiagnosticId diagnosticId) => Report(diagnosticId, CurrentLexemeSpan);
         private void Report(DiagnosticId diagnosticId, TextSpan textSpan)
         {
-            _diagnostics.Report(diagnosticId, textSpan);
+            var location = new SourceLocation(SourceText, textSpan);
+            _diagnostics.Add(Diagnostic.Create(location, diagnosticId));
         }
     }
 }

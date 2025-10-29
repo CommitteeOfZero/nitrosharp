@@ -32,15 +32,14 @@ namespace NitroSharp.NsScript.Compiler
         public SourceModuleSymbol(Compilation compilation, ImmutableArray<SyntaxTree> syntaxTrees)
         {
             Debug.Assert(syntaxTrees.Length > 0);
-            Compilation = compilation;
-            RootSourceFile = MakeSourceFileSymbol(syntaxTrees[0]);
+            RootSourceFile = MakeSourceFileSymbol(syntaxTrees[0], compilation);
 
             if (syntaxTrees.Length > 1)
             {
                 var builder = ImmutableArray.CreateBuilder<SourceFileSymbol>(syntaxTrees.Length - 1);
                 foreach (SyntaxTree syntaxTree in syntaxTrees.AsSpan()[1..])
                 {
-                    SourceFileSymbol sourceFile = MakeSourceFileSymbol(syntaxTree);
+                    SourceFileSymbol sourceFile = MakeSourceFileSymbol(syntaxTree, compilation);
                     builder.Add(sourceFile);
                 }
 
@@ -52,15 +51,14 @@ namespace NitroSharp.NsScript.Compiler
             }
         }
 
-        public Compilation Compilation { get; }
         public SourceFileSymbol RootSourceFile { get; }
         public ImmutableArray<SourceFileSymbol> ReferencedSourceFiles { get; }
 
-        private SourceFileSymbol MakeSourceFileSymbol(SyntaxTree syntaxTree)
+        private SourceFileSymbol MakeSourceFileSymbol(SyntaxTree syntaxTree, Compilation compilation)
         {
-            Debug.Assert(syntaxTree.Root is SourceFileRoot);
+            Debug.Assert(syntaxTree.Root is not null);
             ResolvedPath filePath = syntaxTree.SourceText.FilePath;
-            SourceReferenceResolver sourceRefResolver = Compilation.SourceReferenceResolver;
+            SourceReferenceResolver sourceRefResolver = compilation.SourceReferenceResolver;
             string rootDir = sourceRefResolver.RootDirectory;
             string relativePathNoExtension = Path.GetRelativePath(relativeTo: rootDir, filePath.Value);
             if (relativePathNoExtension.EndsWith(".nss", StringComparison.OrdinalIgnoreCase))
@@ -126,6 +124,7 @@ namespace NitroSharp.NsScript.Compiler
 
     public sealed class SourceFileSymbol : NamedSymbol
     {
+        private readonly SourceFileRoot _syntax;
         private readonly Dictionary<string, ChapterSymbol> _chapterMap;
         private readonly Dictionary<string, SceneSymbol> _sceneMap;
         private readonly Dictionary<string, FunctionSymbol> _functionMap;
@@ -137,6 +136,7 @@ namespace NitroSharp.NsScript.Compiler
             SourceFileRoot syntax)
             : base(relativePathNoExtension)
         {
+            _syntax = syntax;
             Module = module;
             FilePath = filePath;
 
@@ -189,6 +189,7 @@ namespace NitroSharp.NsScript.Compiler
 
         public SourceModuleSymbol Module { get; }
         public ResolvedPath FilePath { get; }
+        public SourceText SourceText => _syntax.SyntaxTree.SourceText;
 
         public ImmutableArray<ChapterSymbol> Chapters { get; }
         public ImmutableArray<FunctionSymbol> Functions { get; }

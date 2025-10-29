@@ -7,7 +7,7 @@
   "icons.waitPage": "cg/sys/icon/page/%03d.png#21",
   "icons.waitAuto": "cg/sys/icon/auto/%03d.png#21",
   "icons.backlogVoice": "cg/sys/backlog/スピーカ%03d.png#3",
-  "dev.contentRoot": "C:/src/C;HN",
+  "dev.contentRoot": "S:/C;HN",
   "dev.skipUpToDateCheck": true,
   "dev.platformId": 100,
   "dev.mounts": [
@@ -77,7 +77,7 @@
     },
 
     "Test": {
-      "dev.contentRoot": "C:/src/nitrosharp/manual_tests",
+      "dev.contentRoot": "S:/nitrosharp/manual_tests",
       "startupScript": "boot.nss"
     },
 

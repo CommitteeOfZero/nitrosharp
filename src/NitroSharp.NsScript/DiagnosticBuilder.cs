@@ -1,36 +1,31 @@
 ﻿using System.Collections.Immutable;
 
-namespace NitroSharp.NsScript
+namespace NitroSharp.NsScript;
+
+internal readonly struct DiagnosticBuilder
 {
-    public sealed class DiagnosticBuilder
+    private readonly ImmutableArray<Diagnostic>.Builder _diagnostics;
+
+    public DiagnosticBuilder()
     {
-        private readonly ImmutableArray<Diagnostic>.Builder _diagnostics;
+        _diagnostics = ImmutableArray.CreateBuilder<Diagnostic>();
+    }
 
-        public DiagnosticBuilder()
-        {
-            _diagnostics = ImmutableArray.CreateBuilder<Diagnostic>();
-        }
+    public void Add(Diagnostic diagnostic)
+    {
+        _diagnostics.Add(diagnostic);
+    }
 
-        public int Count => _diagnostics.Count;
-
-        public void Add(Diagnostic diagnostic)
+    public void MergeFrom(DiagnosticBuilder source)
+    {
+        foreach (Diagnostic diagnostic in source._diagnostics)
         {
             _diagnostics.Add(diagnostic);
         }
+    }
 
-        public void Report(DiagnosticId diagnosticId, TextSpan textSpan)
-        {
-            _diagnostics.Add(Diagnostic.Create(textSpan, diagnosticId));
-        }
-
-        public void Report(DiagnosticId diagnosticId, TextSpan textSpan, params object[] arguments)
-        {
-            _diagnostics.Add(Diagnostic.Create(textSpan, diagnosticId, arguments));
-        }
-
-        public DiagnosticBag ToImmutableBag()
-        {
-            return new(_diagnostics.ToImmutable());
-        }
+    public DiagnosticCollection ToImmutable()
+    {
+        return new DiagnosticCollection(_diagnostics.ToImmutable());
     }
 }

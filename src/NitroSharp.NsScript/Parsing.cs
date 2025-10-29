@@ -8,36 +8,15 @@ namespace NitroSharp.NsScript;
 
 public static class Parsing
 {
-    public static (SyntaxToken token, LexingContext context) LexToken(string text)
-    {
-        var lexer = new Lexer(SourceText.From(text));
-        return (lexer.Lex(), new LexingContext(lexer));
-    }
+    public static SyntaxTree ParseText(string text)
+        => ParseText(SourceText.From(text));
 
-    public static (SyntaxTokenEnumerable tokens, LexingContext context) LexTokens(
-        string text, LexingMode mode = LexingMode.Normal)
-    {
-        var lexer = new Lexer(SourceText.From(text), mode);
-        var context = new LexingContext(lexer);
-        var enumerable = new SyntaxTokenEnumerable(lexer);
-        return (enumerable, context);
-    }
-
-    public static (SyntaxTokenEnumerable tokens, LexingContext context) LexTokens(
-        SourceText sourceText, LexingMode mode = LexingMode.Normal)
-    {
-        var lexer = new Lexer(sourceText);
-        var context = new LexingContext(lexer);
-        var enumerable = new SyntaxTokenEnumerable(lexer);
-        return (enumerable, context);
-    }
-
-    public static SyntaxTree ParseText(string text) => ParseText(SourceText.From(text));
     public static SyntaxTree ParseText(SourceText sourceText)
     {
-        var parser = new Parser(new Lexer(sourceText));
+        var diagnostics = new DiagnosticBuilder();
+        var parser = new Parser(new Lexer(sourceText, diagnostics, LexingMode.Normal));
         SourceFileRoot root = parser.ParseSourceFile();
-        return new SyntaxTree(sourceText, root, parser.DiagnosticBuilder);
+        return new SyntaxTree(sourceText, root, diagnostics);
     }
 
     public static SyntaxTree ParseText(Stream stream, string filePath, Encoding? encoding = null)
@@ -57,10 +36,11 @@ public static class Parsing
 
     private static SyntaxTree ParseString(string text, Func<Parser, SyntaxNode> parseFunc)
     {
+        var diagnostics = new DiagnosticBuilder();
         var sourceText = SourceText.From(text);
-        var parser = new Parser(new Lexer(sourceText));
+        var parser = new Parser(new Lexer(sourceText, diagnostics));
         SyntaxNode root = parseFunc(parser);
-        return new SyntaxTree(sourceText, root, parser.DiagnosticBuilder);
+        return new SyntaxTree(sourceText, root, diagnostics);
     }
 
     public static MarkupContent ParseMarkup(string text)

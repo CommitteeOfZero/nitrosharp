@@ -4,15 +4,22 @@ using System.Runtime.InteropServices;
 
 namespace NitroSharp.NsScript;
 
-public readonly record struct SourceLocation(int Line, int Column, int Length);
+public readonly record struct LinePosition(int Line, int Column);
 
-internal readonly record struct BytecodeLocation(int Start, int Length)
+public readonly record struct LinePositionSpan(LinePosition Start, LinePosition End);
+
+public readonly record struct SourceLocation(SourceText SourceText, TextSpan Span)
+{
+    public LinePositionSpan GetLineSpan() => SourceText.GetLinePositionSpan(Span);
+}
+
+internal readonly record struct BytecodeSpan(int Start, int Length)
 {
     public int End => Start + Length;
 }
 
 [StructLayout(LayoutKind.Auto)]
-internal readonly record struct SourceMapping(BytecodeLocation BytecodeLocation, SourceLocation SourceLocation);
+internal readonly record struct SourceMapping(BytecodeSpan BytecodeSpan, TextSpan SourceSpan);
 
 public readonly record struct TextSpan : IComparable<TextSpan>
 {
@@ -46,5 +53,10 @@ public readonly record struct TextSpan : IComparable<TextSpan>
 
         return Length - other.Length;
     }
-}
 
+    public void Deconstruct(out int start, out int end)
+    {
+        start = Start;
+        end = End;
+    }
+}

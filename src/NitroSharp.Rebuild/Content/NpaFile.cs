@@ -8,7 +8,7 @@ namespace NitroSharp.Content
 {
     internal sealed class NpaFile : ArchiveFile
     {
-        private static ReadOnlySpan<byte> Magic => new byte[] { 0x4E, 0x50, 0x41, 0x01, 0x00, 0x00, 0x00 };
+        private static ReadOnlySpan<byte> Magic => [0x4E, 0x50, 0x41, 0x01, 0x00, 0x00, 0x00];
 
         private readonly uint _dataStart;
         private readonly Dictionary<string, (uint offset, uint size)> _entries;

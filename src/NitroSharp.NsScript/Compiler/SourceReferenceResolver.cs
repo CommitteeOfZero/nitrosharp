@@ -9,7 +9,7 @@ public abstract class SourceReferenceResolver
     public abstract string RootDirectory { get; }
 
     /// <exception cref="FileNotFoundException" />
-    public abstract ResolvedPath ResolvePath(string path);
+    public abstract ResolvedPath ResolvePath(string relativePath);
     public abstract SourceText ReadText(ResolvedPath path, Encoding? encoding);
     public abstract long GetModificationTimestamp(ResolvedPath path);
 }
@@ -21,7 +21,7 @@ public sealed class DefaultSourceReferenceResolver(string rootDirectory) : Sourc
 
     public override string RootDirectory => _pathResolver.RootDirectory;
 
-    public override ResolvedPath ResolvePath(string path)
+    public override ResolvedPath ResolvePath(string relativePath)
     {
         static ReadOnlySpan<char> getFirstPathSegment(string path)
         {
@@ -33,15 +33,15 @@ public sealed class DefaultSourceReferenceResolver(string rootDirectory) : Sourc
         }
 
         // "nss/boot.nss" and "boot.nss" should both resolve to the same path.
-        ReadOnlySpan<char> firstSeg = getFirstPathSegment(path);
+        ReadOnlySpan<char> firstSeg = getFirstPathSegment(relativePath);
         if (firstSeg.Equals(_rootDirectoryName, StringComparison.Ordinal))
         {
-            path = path[(firstSeg.Length + 1)..];
+            relativePath = relativePath[(firstSeg.Length + 1)..];
         }
 
-        return _pathResolver.ResolveAbsolute(path, out ResolvedPath resolved)
+        return _pathResolver.ResolveAbsolute(relativePath, out ResolvedPath resolved)
             ? resolved
-            : throw new FileNotFoundException("File not found", path);
+            : throw new FileNotFoundException($"File not found: '{relativePath}'", relativePath);
     }
 
     public override SourceText ReadText(ResolvedPath resolvedPath, Encoding? encoding)

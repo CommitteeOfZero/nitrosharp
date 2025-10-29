@@ -1,76 +1,72 @@
-﻿using System.Globalization;
+using System.Globalization;
 
-namespace NitroSharp.NsScript
+namespace NitroSharp.NsScript;
+
+public enum DiagnosticId
 {
-    public enum DiagnosticId
+    UnterminatedString,
+    UnterminatedQuotedIdentifier,
+    UnterminatedComment,
+    UnterminatedDialogueBlockStartTag,
+    UnterminatedDialogueBlockIdentifier,
+    NumberTooLarge,
+
+    TokenExpected,
+    StrayToken,
+    MisplacedSemicolon,
+    ExpectedSubroutineDeclaration,
+    MissingStatementTerminator,
+    InvalidExpressionTerm,
+    InvalidExpressionStatement,
+    StrayMarkupBlock,
+    MisplacedBreak,
+    OrphanedSelectSection,
+    InvalidBezierCurve,
+
+    UnresolvedIdentifier,
+    BadAssignmentTarget,
+    ExternalModuleNotFound,
+    ChapterMainNotFound
+}
+
+public enum DiagnosticSeverity
+{
+    Info,
+    Warning,
+    Error
+}
+
+public class Diagnostic
+{
+    public static Diagnostic Create(SourceLocation location, DiagnosticId id)
+        => new(location, id);
+
+    public static Diagnostic Create(SourceLocation location, DiagnosticId id, params object[] arguments)
+        => new DiagnosticWithArguments(location, id, arguments);
+
+    private Diagnostic(SourceLocation location, DiagnosticId id)
     {
-        UnterminatedString,
-        UnterminatedQuotedIdentifier,
-        UnterminatedComment,
-        UnterminatedDialogueBlockStartTag,
-        UnterminatedDialogueBlockIdentifier,
-        NumberTooLarge,
-
-        TokenExpected,
-        StrayToken,
-        MisplacedSemicolon,
-        ExpectedSubroutineDeclaration,
-        MissingStatementTerminator,
-        InvalidExpressionTerm,
-        InvalidExpressionStatement,
-        StrayMarkupBlock,
-        MisplacedBreak,
-        OrphanedSelectSection,
-        InvalidBezierCurve,
-
-        UnresolvedIdentifier,
-        BadAssignmentTarget,
-        ExternalModuleNotFound,
-        ChapterMainNotFound
+        Location = location;
+        Id = id;
     }
 
-    public enum DiagnosticSeverity
+    public DiagnosticId Id { get; }
+    public SourceLocation Location { get; }
+    public TextSpan Span => Location.Span; // Convenience property
+    public virtual string Message => DiagnosticInfo.GetMessage(Id);
+    public DiagnosticSeverity Severity => DiagnosticInfo.GetSeverity(Id);
+
+    private sealed class DiagnosticWithArguments(SourceLocation location, DiagnosticId id, params object[] arguments)
+        : Diagnostic(location, id)
     {
-        Info,
-        Warning,
-        Error
-    }
+        private string? _message;
 
-    public class Diagnostic
-    {
-        public static Diagnostic Create(TextSpan span, DiagnosticId id) => new(span, id);
-        public static Diagnostic Create(TextSpan span, DiagnosticId id, params object[] arguments)
-            => new DiagnosticWithArguments(span, id, arguments);
+        public override string Message => _message ??= FormatMessage();
 
-        private Diagnostic(TextSpan span, DiagnosticId id)
+        private string FormatMessage()
         {
-            Span = span;
-            Id = id;
-        }
-
-        public DiagnosticId Id { get; }
-        public TextSpan Span { get; }
-        public virtual string Message => DiagnosticInfo.GetMessage(Id);
-        public DiagnosticSeverity Severity => DiagnosticInfo.GetSeverity(Id);
-
-        private sealed class DiagnosticWithArguments : Diagnostic
-        {
-            private readonly object[] _arguments;
-            private string? _message;
-
-            public DiagnosticWithArguments(TextSpan span, DiagnosticId id, params object[] arguments)
-                : base(span, id)
-            {
-                _arguments = arguments;
-            }
-
-            public override string Message => _message ??= FormatMessage();
-
-            private string FormatMessage()
-            {
-                string formatString = DiagnosticInfo.GetMessage(Id);
-                return string.Format(CultureInfo.CurrentCulture, formatString, _arguments);
-            }
+            string formatString = DiagnosticInfo.GetMessage(Id);
+            return string.Format(CultureInfo.CurrentCulture, formatString, arguments);
         }
     }
 }
