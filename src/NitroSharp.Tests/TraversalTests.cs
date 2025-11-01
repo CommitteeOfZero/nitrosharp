@@ -28,6 +28,6 @@ public class TraversalTests
         }
 
         IEnumerable<string> nodeNames = visitedNodes.Select(x => x.Name.Value);
-        Assert.Equal(new [] { "C", "G", "I", "B", "F", "H", "E", "D" }, nodeNames);
+        Assert.Equal(["C", "G", "I", "B", "F", "H", "E", "D"], nodeNames);
     }
 }

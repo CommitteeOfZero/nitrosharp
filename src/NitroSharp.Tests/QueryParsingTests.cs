@@ -46,43 +46,43 @@ public sealed class EntityQueryTests
 
     private static IEnumerable<(string, Part[])> GetValidQueriesImpl()
     {
-        yield return ("foo", new[] { new Part("foo", Scope.Current, false) });
-        yield return ("*", new[] { new Part("*", Scope.Current, false) });
-        yield return ("foo/bar/baz", new[]
-        {
+        yield return ("foo", [new Part("foo", Scope.Current, false)]);
+        yield return ("*", [new Part("*", Scope.Current, false)]);
+        yield return ("foo/bar/baz",
+        [
             new Part("foo", Scope.Current, false),
             new Part("bar", Scope.Current, false),
             new Part("baz", Scope.Current, false)
-        });
-        yield return ("@foo/bar", new[]
-        {
+        ]);
+        yield return ("@foo/bar",
+        [
             new Part("foo", Scope.CurrentAliases, false),
             new Part("bar", Scope.Current, false)
-        });
-        yield return ("foo/@bar", new[]
-        {
+        ]);
+        yield return ("foo/@bar",
+        [
             new Part("foo", Scope.Current, false),
             new Part("bar", Scope.CurrentAliases, false)
-        });
-        yield return ("@fo*/@b*r", new[]
-        {
+        ]);
+        yield return ("@fo*/@b*r",
+        [
             new Part("fo*", Scope.CurrentAliases, false),
             new Part("b*r", Scope.CurrentAliases, false)
-        });
-        yield return ("<@foo/bar", new[]
-        {
+        ]);
+        yield return ("<@foo/bar",
+        [
             new Part("foo", Scope.AllAliases, false),
             new Part("bar", Scope.Current, false)
-        });
-        yield return ("<@foo/bar>", new[]
-        {
+        ]);
+        yield return ("<@foo/bar>",
+        [
             new Part("foo", Scope.AllAliases, false),
             new Part("bar", Scope.Current, true)
-        });
-        yield return ("<@foo/@bar", new[]
-        {
+        ]);
+        yield return ("<@foo/@bar",
+        [
             new Part("foo", Scope.AllAliases, false),
             new Part("bar", Scope.CurrentAliases, false)
-        });
+        ]);
     }
 }
