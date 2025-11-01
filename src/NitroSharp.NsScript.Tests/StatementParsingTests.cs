@@ -79,7 +79,7 @@ public class StatementParsingTests
     [InlineData("Scene", null, "Scene")]
     [InlineData("@->LocalScene", null, "LocalScene")]
     [InlineData("nss/foo.nss->Scene", "nss/foo.nss", "Scene")]
-    public void CallSceneStatement_Parses_Correctly(string path, string file, string scene)
+    public void CallSceneStatement_Parses_Correctly(string path, string? file, string scene)
     {
         string text = $"call_scene {path}";
         var callSceneStmt = AssertStatement<CallSceneStatement>(text, SyntaxNodeKind.CallSceneStatement);
@@ -106,7 +106,7 @@ public class StatementParsingTests
     public void Markup_RawString_WithDoubleSlash()
     {
         const string text = "function foo() { <PRE box01>[text001]<pre>https://sonome.dareno.me</pre></PRE>\r\nfoo(); }";
-        var func = (FunctionDeclaration)Parsing.ParseSubroutineDeclaration(text).Root;
+        var func = (FunctionDeclaration)SyntaxTree.ParseSubroutineDeclaration(text).Root;
         var stmts = func.Body.Statements;
         Assert.Equal(2, stmts.Length);
         var markup = Assert.IsType<DialogueBlockPart.Markup>(Assert.IsType<DialogueBlock>(stmts[0]).Parts[0]);
@@ -150,7 +150,7 @@ public class StatementParsingTests
 
     private static T AssertStatement<T>(string text, SyntaxNodeKind expectedKind) where T : Statement
     {
-        var result = Assert.IsType<T>(Parsing.ParseStatement(text)?.Root);
+        var result = Assert.IsType<T>(SyntaxTree.ParseStatement(text).Root);
         Assert.Equal(expectedKind, result.Kind);
         return result;
     }

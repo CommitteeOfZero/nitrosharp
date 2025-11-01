@@ -1,45 +1,43 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using NitroSharp.NsScript.Syntax;
 using Xunit;
 
-namespace NitroSharp.NsScript.Tests
+namespace NitroSharp.NsScript.Tests;
+
+internal class AssertingEnumerator
 {
-    internal class AssertingEnumerator
+    private readonly SyntaxNode _node;
+    private IEnumerator<SyntaxNode> _enumerator;
+
+    public AssertingEnumerator(SyntaxNode node)
     {
-        private readonly SyntaxNode _node;
-        private IEnumerator<SyntaxNode> _enumerator;
+        _node = node;
+        _enumerator = Flatten(node).GetEnumerator();
+    }
 
-        public AssertingEnumerator(SyntaxNode node)
+    public void AssertNode(SyntaxNodeKind kind)
+    {
+        Assert.True(_enumerator.MoveNext());
+        Assert.Equal(kind, _enumerator.Current.Kind);
+        _enumerator.MoveNext();
+    }
+
+    private static IEnumerable<SyntaxNode> Flatten(SyntaxNode node)
+    {
+        var stack = new Stack<SyntaxNode>();
+        stack.Push(node);
+
+        while (stack.Count > 0)
         {
-            _node = node;
-            _enumerator = Flatten(node).GetEnumerator();
-        }
+            SyntaxNode n = stack.Pop();
+            yield return n;
 
-        public void AssertNode(SyntaxNodeKind kind)
-        {
-            Assert.True(_enumerator.MoveNext());
-            Assert.Equal(kind, _enumerator.Current.Kind);
-            _enumerator.MoveNext();
-        }
-
-        private static IEnumerable<SyntaxNode> Flatten(SyntaxNode node)
-        {
-            var stack = new Stack<SyntaxNode>();
-            stack.Push(node);
-
-            while (stack.Count > 0)
+            foreach (SyntaxNode? child in n.GetChildren().ToArray().AsEnumerable().Reverse())
             {
-                SyntaxNode n = stack.Pop();
-                yield return n;
-
-                foreach (SyntaxNode? child in n.GetChildren().ToArray().Reverse())
+                if (child is not null)
                 {
-                    if (child is not null)
-                    {
-                        stack.Push(child);
-                    }
+                    stack.Push(child);
                 }
             }
         }

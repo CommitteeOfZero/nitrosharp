@@ -197,14 +197,14 @@ public class DialogueLexingTests
                 {text}</PRE>
                 """;
 
-        (SyntaxTokenEnumerable tokens, LexingContext context) = Parsing.LexTokens(text);
-        SyntaxToken[] actualTokens = tokens.ToArray().Skip(2).SkipLast(2).ToArray();
+        var lexResult = SyntaxToken.Lex(text);
+        SyntaxToken[] actualTokens = lexResult.RealizeTokens().Skip(2).SkipLast(2).ToArray();
         Assert.Equal(expectedTokens.Length, actualTokens.Length);
         var zipped = expectedTokens.Zip(actualTokens);
         foreach (((SyntaxTokenKind expectedKind, string expectedText), SyntaxToken token) in zipped)
         {
             Assert.Equal(expectedKind, token.Kind);
-            Assert.Equal(expectedText, context.GetText(token).ToString());
+            Assert.Equal(expectedText, lexResult.GetText(token).ToString());
         }
     }
 }

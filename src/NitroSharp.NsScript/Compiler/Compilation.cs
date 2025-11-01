@@ -207,7 +207,7 @@ public class Compilation
         }
 
         SourceText sourceText = SourceReferenceResolver.ReadText(resolvedPath, _sourceTextEncoding);
-        syntaxTree = Parsing.ParseText(sourceText);
+        syntaxTree = SyntaxTree.ParseText(sourceText);
         _syntaxTrees[resolvedPath] = syntaxTree;
         return syntaxTree;
     }

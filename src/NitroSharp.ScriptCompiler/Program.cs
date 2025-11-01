@@ -2,7 +2,6 @@ using System.CommandLine;
 using System.Text;
 using NitroSharp.NsScript;
 using NitroSharp.NsScript.Compiler;
-using Console = System.Console;
 
 namespace NitroSharp.ScriptCompiler;
 

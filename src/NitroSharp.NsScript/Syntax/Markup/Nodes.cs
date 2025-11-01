@@ -37,6 +37,12 @@ namespace NitroSharp.NsScript.Syntax.Markup
         {
             visitor.VisitContent(this);
         }
+
+        public static MarkupContent Parse(string text)
+        {
+            var parser = new MarkupParser(text);
+            return parser.Parse();
+        }
     }
 
     public sealed class MarkupText : MarkupNode
@@ -100,7 +106,7 @@ namespace NitroSharp.NsScript.Syntax.Markup
 
     public sealed class SpanElement : MarkupNode
     {
-        public SpanElement(uint size, MarkupContent content)
+        internal SpanElement(uint size, MarkupContent content)
         {
             Size = size;
             Content = content;

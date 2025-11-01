@@ -22,7 +22,7 @@ internal sealed class Dialogue
 
     public static Dialogue Parse(string markup, FontSettings fontConfig)
     {
-        MarkupContent root = Parsing.ParseMarkup(markup);
+        var root = MarkupContent.Parse(markup);
         return s_treeFlattener.FlattenContent(root, fontConfig);
     }
 
@@ -218,29 +218,18 @@ internal abstract class DialogueSegment
     public abstract DialogueSegmentKind SegmentKind { get; }
 }
 
-internal sealed class TextSegment : DialogueSegment
+internal sealed class TextSegment(ImmutableArray<TextRun> textRuns) : DialogueSegment
 {
-    public TextSegment(ImmutableArray<TextRun> textRuns)
-    {
-        TextRuns = textRuns;
-    }
-
-    public ImmutableArray<TextRun> TextRuns { get; }
+    public ImmutableArray<TextRun> TextRuns { get; } = textRuns;
     public override DialogueSegmentKind SegmentKind => DialogueSegmentKind.Text;
 }
 
-internal sealed class VoiceSegment : DialogueSegment
+internal sealed class VoiceSegment(string characterName, string fileName, NsVoiceAction action)
+    : DialogueSegment
 {
-    public VoiceSegment(string characterName, string fileName, NsVoiceAction action)
-    {
-        CharacterName = characterName;
-        FileName = fileName;
-        Action = action;
-    }
-
-    public string CharacterName { get; }
-    public string FileName { get; }
-    public NsVoiceAction Action { get; }
+    public string CharacterName { get; } = characterName;
+    public string FileName { get; } = fileName;
+    public NsVoiceAction Action { get; } = action;
 
     public override DialogueSegmentKind SegmentKind => DialogueSegmentKind.Voice;
 }
@@ -251,13 +240,8 @@ internal enum MarkerKind
     NoLinebreaks
 }
 
-internal sealed class MarkerSegment : DialogueSegment
+internal sealed class MarkerSegment(MarkerKind kind) : DialogueSegment
 {
-    public MarkerSegment(MarkerKind kind)
-    {
-        MarkerKind = kind;
-    }
-
-    public MarkerKind MarkerKind { get; }
+    public MarkerKind MarkerKind { get; } = kind;
     public override DialogueSegmentKind SegmentKind => DialogueSegmentKind.Marker;
 }

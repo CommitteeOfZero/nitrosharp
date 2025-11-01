@@ -66,7 +66,7 @@ public class ExpressionParsingTests
 
     private T AssertExpression<T>(string text, SyntaxNodeKind expectedKind) where T : Expression
     {
-        var result = Assert.IsType<T>(Parsing.ParseExpression(text).Root);
+        var result = Assert.IsType<T>(SyntaxTree.ParseExpression(text).Root);
         Assert.Equal(expectedKind, result.Kind);
         return result;
     }
@@ -75,7 +75,7 @@ public class ExpressionParsingTests
     public void ParseFunctionCall()
     {
         const string text = "WaitKey(10000)";
-        var call = Parsing.ParseExpression(text).Root as FunctionCallExpression;
+        var call = SyntaxTree.ParseExpression(text).Root as FunctionCallExpression;
         Assert.NotNull(call);
         Assert.Equal(SyntaxNodeKind.FunctionCallExpression, call.Kind);
         Assert.Equal("WaitKey", call.TargetName.Value);
@@ -88,7 +88,7 @@ public class ExpressionParsingTests
     public void ParseDeltaExpression()
     {
         const string text = "@100";
-        var deltaExpr = Parsing.ParseExpression(text).Root as UnaryExpression;
+        var deltaExpr = SyntaxTree.ParseExpression(text).Root as UnaryExpression;
         Assert.NotNull(deltaExpr);
         Assert.Equal(SyntaxNodeKind.UnaryExpression, deltaExpr.Kind);
         Assert.Equal(UnaryOperatorKind.Delta, deltaExpr.OperatorKind.Value);
@@ -138,7 +138,7 @@ public class ExpressionParsingTests
     public void ParseIncrement()
     {
         const string text = "$a++";
-        var expr = Parsing.ParseExpression(text).Root as AssignmentExpression;
+        var expr = SyntaxTree.ParseExpression(text).Root as AssignmentExpression;
         Assert.NotNull(expr);
         Assert.Equal(AssignmentOperatorKind.Increment, expr.OperatorKind.Value);
         Assert.Equal(expr.Target, expr.Value);
@@ -148,7 +148,7 @@ public class ExpressionParsingTests
     public void ParseDecrement()
     {
         const string text = "$a--";
-        var expr = Parsing.ParseExpression(text).Root as AssignmentExpression;
+        var expr = SyntaxTree.ParseExpression(text).Root as AssignmentExpression;
         Assert.NotNull(expr);
         Assert.Equal(AssignmentOperatorKind.Decrement, expr.OperatorKind.Value);
         Assert.Equal(expr.Target, expr.Value);
@@ -157,7 +157,7 @@ public class ExpressionParsingTests
     private static void TestUnary(UnaryOperatorKind kind)
     {
         string text = OperatorInfo.GetText(kind) + "$a";
-        var expr = Parsing.ParseExpression(text).Root as UnaryExpression;
+        var expr = SyntaxTree.ParseExpression(text).Root as UnaryExpression;
 
         Assert.NotNull(expr);
         Assert.Equal(SyntaxNodeKind.UnaryExpression, expr.Kind);
@@ -171,7 +171,7 @@ public class ExpressionParsingTests
     private static void TestBinary(BinaryOperatorKind kind)
     {
         string text = "$a " + OperatorInfo.GetText(kind) + " $b";
-        var expr = Parsing.ParseExpression(text).Root as BinaryExpression;
+        var expr = SyntaxTree.ParseExpression(text).Root as BinaryExpression;
 
         Assert.NotNull(expr);
         Assert.Equal(SyntaxNodeKind.BinaryExpression, expr.Kind);
@@ -189,7 +189,7 @@ public class ExpressionParsingTests
     private static void TestAssignment(AssignmentOperatorKind kind)
     {
         string text = "$a " + OperatorInfo.GetText(kind) + " 42";
-        var expr = Parsing.ParseExpression(text).Root as AssignmentExpression;
+        var expr = SyntaxTree.ParseExpression(text).Root as AssignmentExpression;
 
         Assert.NotNull(expr);
         Assert.Equal(SyntaxNodeKind.AssignmentExpression, expr.Kind);
