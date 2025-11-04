@@ -695,7 +695,7 @@ namespace NitroSharp.NsScript.Compiler
                     _code.WriteUInt16LE(token);
                     break;
                 }
-                case DialogueBlockPart.Block { Statements: var statements }:
+                case DialogueBlockPart.CodeBlock { Statements: var statements }:
                 {
                     _code.WriteByte((byte)CompiledDialogueBlockPart.Kind.CodeBlock);
                     int lengthOffset = _code.Position;

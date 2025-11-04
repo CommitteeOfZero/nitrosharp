@@ -1,7 +1,9 @@
 using System.CommandLine;
+using System.CommandLine.Parsing;
 using System.Text;
 using NitroSharp.NsScript;
 using NitroSharp.NsScript.Compiler;
+using NitroSharp.NsScript.Syntax;
 
 namespace NitroSharp.ScriptCompiler;
 
@@ -26,24 +28,98 @@ internal static class Program
             DefaultValueFactory = _ => ["boot.nss"]
         };
 
+        var outputOption = new Option<FileInfo>("--output")
+        {
+            Description = "The file name to direct output to.",
+            Required = false,
+            CustomParser = x => parseRelativePath(x, mustExist: false)
+        };
+
         var checkCommand = new Command("check", "Check script files for errors.");
         checkCommand.Arguments.Add(sourceDirArg);
         checkCommand.Options.Add(rootScriptsOption);
+        checkCommand.Options.Add(outputOption);
 
         checkCommand.SetAction(result =>
         {
-            RunCheck(result.GetRequiredValue(sourceDirArg), result.GetRequiredValue(rootScriptsOption));
+            RunCheck(
+                result.GetRequiredValue(sourceDirArg),
+                result.GetRequiredValue(rootScriptsOption),
+                result.GetValue(outputOption)
+            );
+        });
+
+        var dumpAstInputArg = new Argument<FileInfo>("input")
+        {
+            Description = "Relative path to a single script file to parse.",
+            CustomParser = x => parseRelativePath(x, mustExist: true),
+        };
+
+        var dumpAstFormatArg = new Option<SyntaxDumpFormat>("--format")
+        {
+            Description = "Output format: 'debug' or 'roundtrip'",
+            Required = false,
+            DefaultValueFactory = _ => SyntaxDumpFormat.Debug,
+            CustomParser = parse =>
+            {
+                return parse.Tokens.Single().Value switch
+                {
+                    "debug" => SyntaxDumpFormat.Debug,
+                    "roundtrip" => SyntaxDumpFormat.RoundtripText,
+                    _ => error()
+                };
+
+                SyntaxDumpFormat error()
+                {
+                    parse.AddError("Unrecognized value for '--format'.");
+                    return default;
+                }
+            }
+        };
+
+        var dumpAstCommand = new Command("dump-ast", "Parse a single script file and dump its AST.");
+        dumpAstCommand.Arguments.Add(sourceDirArg);
+        dumpAstCommand.Arguments.Add(dumpAstInputArg);
+        dumpAstCommand.Options.Add(dumpAstFormatArg);
+        dumpAstCommand.Options.Add(outputOption);
+
+        dumpAstCommand.SetAction(result =>
+        {
+            RunDumpAst(
+                result.GetRequiredValue(sourceDirArg),
+                result.GetRequiredValue(dumpAstInputArg),
+                result.GetRequiredValue(dumpAstFormatArg),
+                result.GetValue(outputOption)
+            );
         });
 
         rootCommand.Subcommands.Add(checkCommand);
+        rootCommand.Subcommands.Add(dumpAstCommand);
 
         return rootCommand.Parse(args).Invoke();
+
+        FileInfo parseRelativePath(ArgumentResult parse, bool mustExist)
+        {
+            DirectoryInfo root = parse.GetRequiredValue(sourceDirArg);
+            string relativePath = parse.Tokens.Single().Value;
+            string fullPath = Path.Combine(root.FullName, relativePath);
+            var fileInfo = new FileInfo(fullPath);
+            if (mustExist && !fileInfo.Exists)
+            {
+                parse.AddError($"Input file does not exist: '{relativePath}'");
+            }
+
+            return fileInfo;
+        }
     }
 
-    private static void RunCheck(DirectoryInfo sourceDir, string[] rootScriptNames)
+    private static void RunCheck(DirectoryInfo sourceDir, string[] rootScriptNames, FileInfo? outputFile)
     {
-        using Stream outputStream = Console.OpenStandardOutput();
-        using var output = new StreamWriter(outputStream);
+        string dumpPath = Path.Combine(sourceDir.Name, outputFile?.FullName ?? "out.txt");
+        using Stream outputStream = outputFile is null
+            ? Console.OpenStandardOutput()
+            : File.Create(dumpPath);
+        using TextWriter output = new StreamWriter(outputStream);
 
         var compilation = new Compilation(sourceDir.FullName);
 
@@ -70,104 +146,28 @@ internal static class Program
 
         foreach (Diagnostic diagnostic in compilation.Diagnostics.All
                      .OrderBy(d => d.Location.SourceText.FilePath.Value)
-                     .ThenBy(d => d.Span.Start))
+                     .ThenBy(d => d.Location.Span))
         {
-            PrintDiagnostic(diagnostic, sourceDir, output);
+            diagnostic.Dump(output, SquiggleStyle.Underline);
             output.WriteLine();
         }
     }
 
-    private static string RelativePath(DirectoryInfo sourceDir, ResolvedPath scriptPath)
+    private static void RunDumpAst(
+        DirectoryInfo sourceDir,
+        FileInfo inputFile,
+        SyntaxDumpFormat format,
+        FileInfo? outputFile)
     {
-        return Path.GetRelativePath(sourceDir.FullName, scriptPath.Value);
-    }
+        string dumpPath = Path.Combine(sourceDir.Name, outputFile?.FullName ?? "out.txt");
+        using Stream outputStream = outputFile is null
+            ? Console.OpenStandardOutput()
+            : File.Create(dumpPath);
+        using TextWriter output = new StreamWriter(outputStream);
 
-    private static void PrintDiagnostic(Diagnostic diagnostic, DirectoryInfo sourceDir, TextWriter output)
-    {
-        SourceText sourceText = diagnostic.Location.SourceText;
-        LinePositionSpan lineSpan = diagnostic.Location.GetLineSpan();
-
-        (LinePosition startLine, LinePosition endLine) = lineSpan;
-
-        string scriptPath = RelativePath(sourceDir, sourceText.FilePath);
-
-        string severity = diagnostic.Severity.ToString();
-        string message = diagnostic.Message;
-
-        output.WriteLine($"{severity}: {message}");
-        output.WriteLine($"  --> {scriptPath}:{startLine.Line + 1}:{startLine.Column + 1}");
-        output.WriteLine("     |");
-
-        const int tabSize = 4;
-        const string underlineSeqStart = "\e[4;31m";
-        const string underlineSeqEnd = "\e[0m";
-
-        if (startLine.Line > 0)
-        {
-            string before = sourceText.GetLineText(startLine.Line - 1);
-            output.WriteLine($"{startLine.Line,4} | {ExpandTabs(before, tabSize)}");
-        }
-
-        var sb = new StringBuilder();
-        for (int line = startLine.Line; line <= endLine.Line; line++)
-        {
-            string lineText = sourceText.GetLineText(line);
-
-            (int underlineStart, int underlineEnd) = (0, lineText.Length);
-            if (line == startLine.Line)
-            {
-                underlineStart = startLine.Column;
-                underlineEnd = startLine.Line == endLine.Line ? endLine.Column : lineText.Length;
-            }
-            else if (line == endLine.Line)
-            {
-                (underlineStart, underlineEnd) = (0, endLine.Column);
-            }
-
-            bool zeroLength = (startLine == endLine) && (underlineStart == underlineEnd);
-            if (zeroLength)
-            {
-                underlineEnd = Math.Min(underlineStart + 1, lineText.Length);
-            }
-
-            sb.Append(ExpandTabs(lineText[..underlineStart], tabSize));
-            sb.Append(underlineSeqStart);
-            sb.Append(ExpandTabs(lineText[underlineStart..underlineEnd], tabSize));
-            sb.Append(underlineSeqEnd);
-            sb.Append(ExpandTabs(lineText[underlineEnd..], tabSize));
-
-            output.WriteLine($"{line + 1,4} | {sb}");
-            sb.Clear();
-        }
-
-        if (endLine.Line < sourceText.LineCount - 1)
-        {
-            string after = sourceText.GetLineText(endLine.Line + 1);
-            output.WriteLine($"{endLine.Line + 2,4} | {ExpandTabs(after, tabSize)}");
-        }
-
-        output.WriteLine("     |");
-    }
-
-    private static string ExpandTabs(string text, int tabSize)
-    {
-        var result = new StringBuilder();
-        int column = 0;
-
-        foreach (char ch in text)
-        {
-            if (ch == '\t')
-            {
-                int spacesToAdd = tabSize - (column % tabSize);
-                result.Append(' ', spacesToAdd);
-                column += spacesToAdd;
-            }
-            else
-            {
-                result.Append(ch);
-                column++;
-            }
-        }
-        return result.ToString();
+        using FileStream fs = inputFile.OpenRead();
+        var sourceText = SourceText.From(fs, new ResolvedPath(inputFile.FullName));
+        var tree = SyntaxTree.ParseText(sourceText);
+        tree.Root.Dump(output, format);
     }
 }

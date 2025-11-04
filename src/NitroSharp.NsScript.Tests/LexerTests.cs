@@ -37,7 +37,7 @@ public class LexerTests
         _ = lexResult.RealizeTokens();
         var diagnostic = Assert.Single(lexResult.Diagnostics.All);
         Assert.Equal(diagnosticId, diagnostic.Id);
-        Assert.Equal(TextSpan.FromBounds(spanStart, spanEnd), diagnostic.Span);
+        Assert.Equal(TextSpan.FromBounds(spanStart, spanEnd), diagnostic.Location.Span);
     }
 
     [Fact]

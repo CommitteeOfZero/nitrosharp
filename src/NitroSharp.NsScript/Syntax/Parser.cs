@@ -448,19 +448,7 @@ namespace NitroSharp.NsScript.Syntax
             return ParseSubExpression(Precedence.Expression);
         }
 
-        private enum Precedence
-        {
-            Expression = 0,
-            Assignment,
-            Logical,
-            Equality,
-            Relational,
-            Additive,
-            Multiplicative,
-            Unary
-        }
-
-        private static Precedence GetPrecedence(BinaryOperatorKind operatorKind)
+        internal static Precedence GetPrecedence(BinaryOperatorKind operatorKind)
         {
             switch (operatorKind)
             {
@@ -976,7 +964,7 @@ namespace NitroSharp.NsScript.Syntax
                     SyntaxToken openBrace = EatToken(SyntaxTokenKind.OpenBrace);
                     ImmutableArray<Statement> statements = ParseStatements();
                     EatToken(SyntaxTokenKind.CloseBrace);
-                    return new DialogueBlockPart.Block(statements, SpanFrom(openBrace));
+                    return new DialogueBlockPart.CodeBlock(statements, SpanFrom(openBrace));
                 }
                 case SyntaxTokenKind.EndOfFileToken:
                 {
@@ -1084,5 +1072,17 @@ namespace NitroSharp.NsScript.Syntax
         }
 
         private bool IsAtEnd() => _currentToken.Kind == SyntaxTokenKind.EndOfFileToken;
+    }
+
+    internal enum Precedence
+    {
+        Expression = 0,
+        Assignment,
+        Logical,
+        Equality,
+        Relational,
+        Additive,
+        Multiplicative,
+        Unary
     }
 }

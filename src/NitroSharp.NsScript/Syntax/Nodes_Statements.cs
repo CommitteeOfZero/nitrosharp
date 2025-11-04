@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
 
 namespace NitroSharp.NsScript.Syntax;
 
@@ -15,7 +14,7 @@ public sealed class Block : Statement
     public ImmutableArray<Statement> Statements { get; }
     public override SyntaxNodeKind Kind => SyntaxNodeKind.Block;
 
-    protected override SyntaxNode? GetNodeSlot(int index)
+    protected override SyntaxNode? GetChild(int index)
     {
         return index < Statements.Length ? Statements[index] : null;
     }
@@ -23,11 +22,6 @@ public sealed class Block : Statement
     public override void Accept(SyntaxVisitor visitor)
     {
         visitor.VisitBlock(this);
-    }
-
-    public override TResult Accept<TResult>(SyntaxVisitor<TResult> visitor)
-    {
-        return visitor.VisitBlock(this);
     }
 }
 
@@ -41,7 +35,7 @@ public class ExpressionStatement : Statement
     public Expression Expression { get; }
     public override SyntaxNodeKind Kind => SyntaxNodeKind.ExpressionStatement;
 
-    protected override SyntaxNode? GetNodeSlot(int index)
+    protected override SyntaxNode? GetChild(int index)
     {
         return index switch
         {
@@ -53,11 +47,6 @@ public class ExpressionStatement : Statement
     public override void Accept(SyntaxVisitor visitor)
     {
         visitor.VisitExpressionStatement(this);
-    }
-
-    public override TResult Accept<TResult>(SyntaxVisitor<TResult> visitor)
-    {
-        return visitor.VisitExpressionStatement(this);
     }
 }
 
@@ -80,7 +69,7 @@ public sealed class IfStatement : Statement
 
     public override SyntaxNodeKind Kind => SyntaxNodeKind.IfStatement;
 
-    protected override SyntaxNode? GetNodeSlot(int index)
+    protected override SyntaxNode? GetChild(int index)
     {
         return index switch
         {
@@ -94,11 +83,6 @@ public sealed class IfStatement : Statement
     public override void Accept(SyntaxVisitor visitor)
     {
         visitor.VisitIfStatement(this);
-    }
-
-    public override TResult Accept<TResult>(SyntaxVisitor<TResult> visitor)
-    {
-        return visitor.VisitIfStatement(this);
     }
 }
 
@@ -114,11 +98,7 @@ public sealed class BreakStatement : Statement
     {
         visitor.VisitBreakStatement(this);
     }
-
-    public override TResult Accept<TResult>(SyntaxVisitor<TResult> visitor)
-    {
-        return visitor.VisitBreakStatement(this);
-    }
+    protected override SyntaxNode? GetChild(int index) => null;
 }
 
 public sealed class WhileStatement : Statement
@@ -135,7 +115,7 @@ public sealed class WhileStatement : Statement
 
     public override SyntaxNodeKind Kind => SyntaxNodeKind.WhileStatement;
 
-    protected override SyntaxNode? GetNodeSlot(int index)
+    protected override SyntaxNode? GetChild(int index)
     {
         return index switch
         {
@@ -148,11 +128,6 @@ public sealed class WhileStatement : Statement
     public override void Accept(SyntaxVisitor visitor)
     {
         visitor.VisitWhileStatement(this);
-    }
-
-    public override TResult Accept<TResult>(SyntaxVisitor<TResult> visitor)
-    {
-        return visitor.VisitWhileStatement(this);
     }
 }
 
@@ -169,10 +144,7 @@ public sealed class ReturnStatement : Statement
         visitor.VisitReturnStatement(this);
     }
 
-    public override TResult Accept<TResult>(SyntaxVisitor<TResult> visitor)
-    {
-        return visitor.VisitReturnStatement(this);
-    }
+    protected override SyntaxNode? GetChild(int index) => null;
 }
 
 public sealed class SelectStatement : Statement
@@ -186,7 +158,7 @@ public sealed class SelectStatement : Statement
     public Block Body { get; }
     public override SyntaxNodeKind Kind => SyntaxNodeKind.SelectStatement;
 
-    protected override SyntaxNode? GetNodeSlot(int index)
+    protected override SyntaxNode? GetChild(int index)
     {
         return index switch
         {
@@ -198,11 +170,6 @@ public sealed class SelectStatement : Statement
     public override void Accept(SyntaxVisitor visitor)
     {
         visitor.VisitSelectStatement(this);
-    }
-
-    public override TResult Accept<TResult>(SyntaxVisitor<TResult> visitor)
-    {
-        return visitor.VisitSelectStatement(this);
     }
 }
 
@@ -220,7 +187,7 @@ public sealed class SelectSection : Statement
 
     public override SyntaxNodeKind Kind => SyntaxNodeKind.SelectSection;
 
-    protected override SyntaxNode? GetNodeSlot(int index)
+    protected override SyntaxNode? GetChild(int index)
     {
         return index switch
         {
@@ -232,11 +199,6 @@ public sealed class SelectSection : Statement
     public override void Accept(SyntaxVisitor visitor)
     {
         visitor.VisitSelectSection(this);
-    }
-
-    public override TResult Accept<TResult>(SyntaxVisitor<TResult> visitor)
-    {
-        return visitor.VisitSelectSection(this);
     }
 }
 
@@ -253,14 +215,10 @@ public sealed class CallChapterStatement : Statement
 
     public override void Accept(SyntaxVisitor visitor)
     {
-        throw new NotImplementedException();
-        //visitor.VisitCallChapterStatement(this);
+        visitor.VisitCallChapterStatement(this);
     }
 
-    public override TResult Accept<TResult>(SyntaxVisitor<TResult> visitor)
-    {
-        throw new NotImplementedException();
-    }
+    protected override SyntaxNode? GetChild(int index) => null;
 }
 
 public sealed class CallSceneStatement : Statement
@@ -280,13 +238,10 @@ public sealed class CallSceneStatement : Statement
 
     public override void Accept(SyntaxVisitor visitor)
     {
-        throw new NotImplementedException();
+        visitor.VisitCallSceneStatement(this);
     }
 
-    public override TResult Accept<TResult>(SyntaxVisitor<TResult> visitor)
-    {
-        throw new NotImplementedException();
-    }
+    protected override SyntaxNode? GetChild(int index) => null;
 }
 
 public sealed class ErrorStatement(TextSpan span) : Statement(span)
@@ -295,11 +250,8 @@ public sealed class ErrorStatement(TextSpan span) : Statement(span)
 
     public override void Accept(SyntaxVisitor visitor)
     {
-        throw new NotImplementedException();
+        visitor.VisitErrorStatement(this);
     }
 
-    public override TResult Accept<TResult>(SyntaxVisitor<TResult> visitor)
-    {
-        throw new NotImplementedException();
-    }
+    protected override SyntaxNode? GetChild(int index) => null;
 }

@@ -11,6 +11,7 @@ namespace NitroSharp.NsScript;
 /// </summary>
 public readonly record struct ResolvedPath(string Value)
 {
+    public string FileName => Path.GetFileName(Value);
     public override string ToString() => Value;
 }
 

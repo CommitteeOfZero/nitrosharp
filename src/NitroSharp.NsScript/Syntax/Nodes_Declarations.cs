@@ -2,23 +2,18 @@
 
 namespace NitroSharp.NsScript.Syntax;
 
-public abstract class SubroutineDeclaration : SyntaxNode
+public abstract class SubroutineDeclaration(
+    Spanned<string> name,
+    Block body,
+    ImmutableArray<DialogueBlock> dialogueBlocks,
+    TextSpan span)
+    : SyntaxNode(span)
 {
-    protected SubroutineDeclaration(
-        Spanned<string> name, Block body,
-        ImmutableArray<DialogueBlock> dialogueBlocks, TextSpan span)
-        : base(span)
-    {
-        Name = name;
-        Body = body;
-        DialogueBlocks = dialogueBlocks;
-    }
+    public Spanned<string> Name { get; } = name;
+    public Block Body { get; } = body;
+    public ImmutableArray<DialogueBlock> DialogueBlocks { get; } = dialogueBlocks;
 
-    public Spanned<string> Name { get; }
-    public Block Body { get; }
-    public ImmutableArray<DialogueBlock> DialogueBlocks { get; }
-
-    protected override SyntaxNode? GetNodeSlot(int index)
+    protected override SyntaxNode? GetChild(int index)
     {
         return index switch
         {
@@ -26,14 +21,17 @@ public abstract class SubroutineDeclaration : SyntaxNode
             _ => index < DialogueBlocks.Length ? DialogueBlocks[index] : null,
         };
     }
+
+    public abstract override void Accept(SyntaxVisitor visitor);
 }
 
 public sealed class ChapterDeclaration : SubroutineDeclaration
 {
     internal ChapterDeclaration(
-        Spanned<string> name, Block body,
-        ImmutableArray<DialogueBlock> dialogueBlocks, TextSpan span)
-        : base(name, body, dialogueBlocks, span)
+        Spanned<string> name,
+        Block body,
+        ImmutableArray<DialogueBlock> dialogueBlocks,
+        TextSpan span) : base(name, body, dialogueBlocks, span)
     {
     }
 
@@ -43,19 +41,15 @@ public sealed class ChapterDeclaration : SubroutineDeclaration
     {
         visitor.VisitChapter(this);
     }
-
-    public override TResult Accept<TResult>(SyntaxVisitor<TResult> visitor)
-    {
-        return visitor.VisitChapter(this);
-    }
 }
 
 public sealed class SceneDeclaration : SubroutineDeclaration
 {
     internal SceneDeclaration(
-        Spanned<string> name, Block body,
-        ImmutableArray<DialogueBlock> dialogueBlocks, TextSpan span)
-        : base(name, body, dialogueBlocks, span)
+        Spanned<string> name,
+        Block body,
+        ImmutableArray<DialogueBlock> dialogueBlocks,
+        TextSpan span) : base(name, body, dialogueBlocks, span)
     {
     }
 
@@ -65,18 +59,15 @@ public sealed class SceneDeclaration : SubroutineDeclaration
     {
         visitor.VisitScene(this);
     }
-
-    public override TResult Accept<TResult>(SyntaxVisitor<TResult> visitor)
-    {
-        return visitor.VisitScene(this);
-    }
 }
 
 public sealed class FunctionDeclaration : SubroutineDeclaration
 {
     internal FunctionDeclaration(
-        Spanned<string> name, ImmutableArray<Parameter> parameters,
-        Block body, ImmutableArray<DialogueBlock> dialogueBlocks,
+        Spanned<string> name,
+        ImmutableArray<Parameter> parameters,
+        Block body,
+        ImmutableArray<DialogueBlock> dialogueBlocks,
         TextSpan span) : base(name, body, dialogueBlocks, span)
     {
         Parameters = parameters;
@@ -85,24 +76,19 @@ public sealed class FunctionDeclaration : SubroutineDeclaration
     public ImmutableArray<Parameter> Parameters { get; }
     public override SyntaxNodeKind Kind => SyntaxNodeKind.FunctionDeclaration;
 
-    protected override SyntaxNode? GetNodeSlot(int index)
+    protected override SyntaxNode? GetChild(int index)
     {
         return index switch
         {
             0 => Body,
             _ when index <= Parameters.Length => Parameters[index - 1],
-            _ => base.GetNodeSlot(index)
+            _ => base.GetChild(index)
         };
     }
 
     public override void Accept(SyntaxVisitor visitor)
     {
         visitor.VisitFunction(this);
-    }
-
-    public override TResult Accept<TResult>(SyntaxVisitor<TResult> visitor)
-    {
-        return visitor.VisitFunction(this);
     }
 }
 
@@ -121,8 +107,5 @@ public sealed class Parameter : SyntaxNode
         visitor.VisitParameter(this);
     }
 
-    public override TResult Accept<TResult>(SyntaxVisitor<TResult> visitor)
-    {
-        return visitor.VisitParameter(this);
-    }
+    protected override SyntaxNode? GetChild(int index) => null;
 }

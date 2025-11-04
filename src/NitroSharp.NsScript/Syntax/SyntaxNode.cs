@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.IO;
 using NitroSharp.Common;
 
 namespace NitroSharp.NsScript.Syntax;
@@ -39,6 +40,12 @@ public enum SyntaxNodeKind : byte
     Markup,
 }
 
+public enum SyntaxDumpFormat
+{
+    Debug,
+    RoundtripText
+}
+
 public abstract class SyntaxNode(TextSpan span)
 {
     private SyntaxTree? _syntaxTree;
@@ -54,24 +61,22 @@ public abstract class SyntaxNode(TextSpan span)
     public SyntaxTree SyntaxTree => _syntaxTree.NotNull();
     public SourceLocation Location => new(SyntaxTree.SourceText, Span);
 
-    public abstract void Accept(SyntaxVisitor visitor);
-    public abstract TResult Accept<TResult>(SyntaxVisitor<TResult> visitor);
-
-    protected virtual SyntaxNode? GetNodeSlot(int index)
+    public void Dump(TextWriter textWriter, SyntaxDumpFormat format)
     {
-        return null;
+        SyntaxWriter writer = format switch
+        {
+            SyntaxDumpFormat.Debug => new DebugSyntaxWriter(textWriter),
+            SyntaxDumpFormat.RoundtripText => new RoundtripSyntaxWriter(textWriter),
+            _ => ThrowHelper.Unreachable<SyntaxWriter>()
+        };
+        writer.Visit(this);
     }
 
+    public abstract void Accept(SyntaxVisitor visitor);
+
+    protected abstract SyntaxNode? GetChild(int index);
+
     public Children GetChildren() => new(this);
-
-    //public override string ToString()
-    //{
-    //    var sw = new StringWriter();
-    //    var codeWriter = new DefaultCodeWriter(sw);
-    //    codeWriter.WriteNode(this);
-
-    //    return sw.ToString();
-    //}
 
     public struct Children(SyntaxNode node)
     {
@@ -83,7 +88,7 @@ public abstract class SyntaxNode(TextSpan span)
 
         public bool MoveNext()
         {
-            SyntaxNode? current = node.GetNodeSlot(_index);
+            SyntaxNode? current = node.GetChild(_index);
             if (current is not null)
             {
                 Current = current;
@@ -95,15 +100,15 @@ public abstract class SyntaxNode(TextSpan span)
             return false;
         }
 
-        public SyntaxNode?[] ToArray()
+        public SyntaxNode[] ToArray()
         {
-            if (node.GetNodeSlot(0) is null)
+            if (node.GetChild(0) is null)
             {
                 return [];
             }
 
-            var list = new List<SyntaxNode?>();
-            foreach (SyntaxNode? child in this)
+            var list = new List<SyntaxNode>();
+            foreach (SyntaxNode child in this)
             {
                 list.Add(child);
             }

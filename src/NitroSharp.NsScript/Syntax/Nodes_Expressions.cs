@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
 
 namespace NitroSharp.NsScript.Syntax;
 
@@ -20,10 +19,7 @@ public sealed class LiteralExpression : Expression
         visitor.VisitLiteral(this);
     }
 
-    public override TResult Accept<TResult>(SyntaxVisitor<TResult> visitor)
-    {
-        return visitor.VisitLiteral(this);
-    }
+    protected override SyntaxNode? GetChild(int index) => null;
 }
 
 public sealed class NameExpression : Expression
@@ -40,14 +36,10 @@ public sealed class NameExpression : Expression
 
     public override void Accept(SyntaxVisitor visitor)
     {
-        //visitor.VisitIdentifier(this);
+        visitor.VisitNameExpression(this);
     }
 
-    public override TResult Accept<TResult>(SyntaxVisitor<TResult> visitor)
-    {
-        throw new NotImplementedException();
-        //return visitor.VisitIdentifier(this);
-    }
+    protected override SyntaxNode? GetChild(int index) => null;
 }
 
 public sealed class UnaryExpression : Expression
@@ -66,7 +58,7 @@ public sealed class UnaryExpression : Expression
 
     public override SyntaxNodeKind Kind => SyntaxNodeKind.UnaryExpression;
 
-    protected override SyntaxNode? GetNodeSlot(int index)
+    protected override SyntaxNode? GetChild(int index)
     {
         return index switch
         {
@@ -78,11 +70,6 @@ public sealed class UnaryExpression : Expression
     public override void Accept(SyntaxVisitor visitor)
     {
         visitor.VisitUnaryExpression(this);
-    }
-
-    public override TResult Accept<TResult>(SyntaxVisitor<TResult> visitor)
-    {
-        return visitor.VisitUnaryExpression(this);
     }
 }
 
@@ -105,7 +92,7 @@ public sealed class BinaryExpression : Expression
 
     public override SyntaxNodeKind Kind => SyntaxNodeKind.BinaryExpression;
 
-    protected override SyntaxNode? GetNodeSlot(int index)
+    protected override SyntaxNode? GetChild(int index)
     {
         return index switch
         {
@@ -118,11 +105,6 @@ public sealed class BinaryExpression : Expression
     public override void Accept(SyntaxVisitor visitor)
     {
         visitor.VisitBinaryExpression(this);
-    }
-
-    public override TResult Accept<TResult>(SyntaxVisitor<TResult> visitor)
-    {
-        return visitor.VisitBinaryExpression(this);
     }
 }
 
@@ -145,7 +127,7 @@ public sealed class AssignmentExpression : Expression
 
     public override SyntaxNodeKind Kind => SyntaxNodeKind.AssignmentExpression;
 
-    protected override SyntaxNode? GetNodeSlot(int index)
+    protected override SyntaxNode? GetChild(int index)
     {
         return index switch
         {
@@ -158,11 +140,6 @@ public sealed class AssignmentExpression : Expression
     public override void Accept(SyntaxVisitor visitor)
     {
         visitor.VisitAssignmentExpression(this);
-    }
-
-    public override TResult Accept<TResult>(SyntaxVisitor<TResult> visitor)
-    {
-        return visitor.VisitAssignmentExpression(this);
     }
 }
 
@@ -182,7 +159,7 @@ public sealed class FunctionCallExpression : Expression
 
     public override SyntaxNodeKind Kind => SyntaxNodeKind.FunctionCallExpression;
 
-    protected override SyntaxNode? GetNodeSlot(int index)
+    protected override SyntaxNode? GetChild(int index)
     {
         return index < Arguments.Length ? Arguments[index] : null;
     }
@@ -191,16 +168,11 @@ public sealed class FunctionCallExpression : Expression
     {
         visitor.VisitFunctionCall(this);
     }
-
-    public override TResult Accept<TResult>(SyntaxVisitor<TResult> visitor)
-    {
-        return visitor.VisitFunctionCall(this);
-    }
 }
 
 public sealed class BezierExpression : Expression
 {
-    public BezierExpression(ImmutableArray<BezierControlPoint> controlPoints, TextSpan span)
+    internal BezierExpression(ImmutableArray<BezierControlPoint> controlPoints, TextSpan span)
         : base(span)
     {
         ControlPoints = controlPoints;
@@ -209,14 +181,18 @@ public sealed class BezierExpression : Expression
     public ImmutableArray<BezierControlPoint> ControlPoints { get; }
     public override SyntaxNodeKind Kind => SyntaxNodeKind.BezierExpression;
 
-    public override void Accept(SyntaxVisitor visitor)
+    protected override SyntaxNode? GetChild(int index)
     {
-        throw new NotImplementedException();
+        int pointIndex = index / 2;
+        if (pointIndex >= ControlPoints.Length) { return  null; }
+
+        BezierControlPoint point = ControlPoints[index];
+        return index % 2 == 0 ? point.X : point.Y;
     }
 
-    public override TResult Accept<TResult>(SyntaxVisitor<TResult> visitor)
+    public override void Accept(SyntaxVisitor visitor)
     {
-        throw new NotImplementedException();
+        visitor.VisitBezierExpression(this);
     }
 }
 
@@ -239,11 +215,8 @@ public sealed class ErrorExpression(TextSpan span) : Expression(span)
 
     public override void Accept(SyntaxVisitor visitor)
     {
-        throw new NotImplementedException();
+        visitor.VisitErrorExpression(this);
     }
 
-    public override TResult Accept<TResult>(SyntaxVisitor<TResult> visitor)
-    {
-        throw new NotImplementedException();
-    }
+    protected override SyntaxNode? GetChild(int index) => null;
 }
