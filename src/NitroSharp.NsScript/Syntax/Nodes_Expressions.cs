@@ -184,9 +184,9 @@ public sealed class BezierExpression : Expression
     protected override SyntaxNode? GetChild(int index)
     {
         int pointIndex = index / 2;
-        if (pointIndex >= ControlPoints.Length) { return  null; }
+        if (pointIndex >= ControlPoints.Length) { return null; }
 
-        BezierControlPoint point = ControlPoints[index];
+        BezierControlPoint point = ControlPoints[pointIndex];
         return index % 2 == 0 ? point.X : point.Y;
     }
 

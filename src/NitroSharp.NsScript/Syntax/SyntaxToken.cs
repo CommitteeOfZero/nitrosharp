@@ -85,7 +85,7 @@ public enum SigilKind
 
 public readonly struct SyntaxToken
 {
-    public SyntaxToken(SyntaxTokenKind kind, TextSpan textSpan, SyntaxTokenFlags flags)
+    internal SyntaxToken(SyntaxTokenKind kind, TextSpan textSpan, SyntaxTokenFlags flags)
     {
         TextSpan = textSpan;
         Kind = kind;
@@ -128,16 +128,6 @@ public readonly struct SyntaxToken
         }
 
         return SigilKind.None;
-    }
-
-    public ReadOnlySpan<char> GetText(SourceText sourceText)
-    {
-        return sourceText.GetCharacterSpan(TextSpan);
-    }
-
-    public ReadOnlySpan<char> GetValueText(SourceText sourceText)
-    {
-        return sourceText.GetCharacterSpan(GetValueSpan());
     }
 
     public TextSpan GetValueSpan()

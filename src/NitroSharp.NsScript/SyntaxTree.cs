@@ -5,7 +5,7 @@ namespace NitroSharp.NsScript;
 
 public sealed class SyntaxTree
 {
-    internal SyntaxTree(SourceText sourceText, SyntaxNode root, DiagnosticBuilder diagnostics)
+    private SyntaxTree(SourceText sourceText, SyntaxNode root, DiagnosticBuilder diagnostics)
     {
         SourceText = sourceText;
         Root = root;

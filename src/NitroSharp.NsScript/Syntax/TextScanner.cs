@@ -28,8 +28,8 @@ internal abstract class TextScanner(string text)
         LexemeStart = Position;
     }
 
-    protected TextSpan CurrentLexemeSpan =>
-        new(start: LexemeStart, length: Position - LexemeStart);
+    protected TextSpan CurrentLexemeSpan
+        => new(start: LexemeStart, length: Position - LexemeStart);
 
     protected TextSpan CurrentSpanStart => new(CurrentLexemeSpan.Start, 0);
 
@@ -75,9 +75,6 @@ internal abstract class TextScanner(string text)
         return true;
     }
 
-    /// <summary>
-    /// Returns true if the lookahead characters compose the specified string.
-    /// </summary>
     protected bool Match(string s)
     {
         for (int i = 0; i < s.Length; i++)
@@ -106,7 +103,7 @@ internal abstract class TextScanner(string text)
     protected void ScanWhitespace()
     {
         char c;
-        while (SyntaxFacts.IsWhitespace((c = PeekChar())) && c != EofCharacter)
+        while (SyntaxFacts.IsWhitespace(c = PeekChar()) && c != EofCharacter)
         {
             AdvanceChar();
         }
@@ -115,7 +112,7 @@ internal abstract class TextScanner(string text)
     protected void ScanToEndOfLine()
     {
         char c;
-        while (!SyntaxFacts.IsNewLine((c = PeekChar())) && c != EofCharacter)
+        while (!SyntaxFacts.IsNewLine(c = PeekChar()) && c != EofCharacter)
         {
             AdvanceChar();
         }

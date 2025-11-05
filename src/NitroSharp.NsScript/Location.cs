@@ -10,6 +10,7 @@ public readonly record struct LinePositionSpan(LinePosition Start, LinePosition 
 
 public readonly record struct SourceLocation(SourceText SourceText, TextSpan Span)
 {
+    public ResolvedPath FilePath => SourceText.FilePath;
     public LinePositionSpan GetLineSpan() => SourceText.GetLinePositionSpan(Span);
 }
 

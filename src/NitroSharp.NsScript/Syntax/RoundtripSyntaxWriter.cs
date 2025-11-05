@@ -354,7 +354,7 @@ internal sealed class RoundtripSyntaxWriter(TextWriter textWriter)
     {
         const Precedence ownPrecedence = Precedence.Assignment;
         bool needsParens = ownPrecedence < parentPrecedence;
-        if (needsParens) Write("(");
+        if (needsParens) { Write("("); }
         WriteExpression(assign.Target, ownPrecedence);
         WriteSpace();
         Write(OperatorInfo.GetText(assign.OperatorKind.Value));
@@ -364,6 +364,6 @@ internal sealed class RoundtripSyntaxWriter(TextWriter textWriter)
             WriteExpression(assign.Value, ownPrecedence);
         }
 
-        if (needsParens) Write(")");
+        if (needsParens) { Write(")"); }
     }
 }

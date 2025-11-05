@@ -45,6 +45,7 @@ public class Compilation
         _sourceModuleSymbols = sourceModuleSymbols;
     }
 
+    public ResolvedPath SourceDirectory => SourceReferenceResolver.RootDirectory;
     public SourceReferenceResolver SourceReferenceResolver { get; }
     public virtual DiagnosticCollection Diagnostics => DiagnosticCollection.Empty;
 
@@ -277,7 +278,7 @@ public class Compilation
 
 public sealed class EmittedCompilation : Compilation
 {
-    public EmittedCompilation(Compilation source, DiagnosticCollection diagnostics) : base(source)
+    internal EmittedCompilation(Compilation source, DiagnosticCollection diagnostics) : base(source)
     {
         Diagnostics = diagnostics;
     }

@@ -22,22 +22,31 @@ internal static class Program
 
         var rootScriptsOption = new Option<string[]>("--roots")
         {
-            Description = "The list of script names to treat as roots.",
+            Description = "The list of script file names to treat as roots.",
             AllowMultipleArgumentsPerToken = true,
             Required = false,
             DefaultValueFactory = _ => ["boot.nss"]
+        };
+
+        var filesOption = new Option<FileInfo[]>("--files")
+        {
+            Description = "The list of script file names to inspect.",
+            AllowMultipleArgumentsPerToken = true,
+            Required = false,
+            CustomParser = x => parseRelativePaths(x, mustExist: true),
         };
 
         var outputOption = new Option<FileInfo>("--output")
         {
             Description = "The file name to direct output to.",
             Required = false,
-            CustomParser = x => parseRelativePath(x, mustExist: false)
+            CustomParser = x => parseSingleRelativePath(x, mustExist: false)
         };
 
         var checkCommand = new Command("check", "Check script files for errors.");
         checkCommand.Arguments.Add(sourceDirArg);
         checkCommand.Options.Add(rootScriptsOption);
+        checkCommand.Options.Add(filesOption);
         checkCommand.Options.Add(outputOption);
 
         checkCommand.SetAction(result =>
@@ -45,6 +54,7 @@ internal static class Program
             RunCheck(
                 result.GetRequiredValue(sourceDirArg),
                 result.GetRequiredValue(rootScriptsOption),
+                result.GetValue(filesOption) ?? [],
                 result.GetValue(outputOption)
             );
         });
@@ -52,7 +62,7 @@ internal static class Program
         var dumpAstInputArg = new Argument<FileInfo>("input")
         {
             Description = "Relative path to a single script file to parse.",
-            CustomParser = x => parseRelativePath(x, mustExist: true),
+            CustomParser = x => parseSingleRelativePath(x, mustExist: true),
         };
 
         var dumpAstFormatArg = new Option<SyntaxDumpFormat>("--format")
@@ -98,10 +108,16 @@ internal static class Program
 
         return rootCommand.Parse(args).Invoke();
 
-        FileInfo parseRelativePath(ArgumentResult parse, bool mustExist)
+        FileInfo parseSingleRelativePath(ArgumentResult parse, bool mustExist)
+            => parseRelativePath(parse, parse.Tokens.Single(), mustExist);
+
+        FileInfo[] parseRelativePaths(ArgumentResult parse, bool mustExist)
+            => parse.Tokens.Select(tk => parseRelativePath(parse, tk, mustExist)).ToArray();
+
+        FileInfo parseRelativePath(ArgumentResult parse, Token token, bool mustExist)
         {
             DirectoryInfo root = parse.GetRequiredValue(sourceDirArg);
-            string relativePath = parse.Tokens.Single().Value;
+            string relativePath = token.Value;
             string fullPath = Path.Combine(root.FullName, relativePath);
             var fileInfo = new FileInfo(fullPath);
             if (mustExist && !fileInfo.Exists)
@@ -113,7 +129,11 @@ internal static class Program
         }
     }
 
-    private static void RunCheck(DirectoryInfo sourceDir, string[] rootScriptNames, FileInfo? outputFile)
+    private static void RunCheck(
+        DirectoryInfo sourceDir,
+        string[] rootScriptNames,
+        FileInfo[] filesToInspect,
+        FileInfo? outputFile)
     {
         string dumpPath = Path.Combine(sourceDir.Name, outputFile?.FullName ?? "out.txt");
         using Stream outputStream = outputFile is null
@@ -144,8 +164,19 @@ internal static class Program
 
         compilation = compilation.EmitDiagnostics(rootModules!);
 
-        foreach (Diagnostic diagnostic in compilation.Diagnostics.All
-                     .OrderBy(d => d.Location.SourceText.FilePath.Value)
+        IEnumerable<Diagnostic> filteredDiagnostics = compilation.Diagnostics.All;
+        if (filesToInspect.Length > 0)
+        {
+            ResolvedPath[] filePathsToInspect = filesToInspect
+                .Select(ResolvedPath.FromExistingFile)
+                .ToArray();
+
+            filteredDiagnostics = filteredDiagnostics
+                .Where(x => filePathsToInspect.Any(y => x.Location.FilePath == y));
+        }
+
+        foreach (Diagnostic diagnostic in filteredDiagnostics
+                     .OrderBy(d => d.Location.FilePath.Value)
                      .ThenBy(d => d.Location.Span))
         {
             diagnostic.Dump(output, SquiggleStyle.Underline);
@@ -166,7 +197,7 @@ internal static class Program
         using TextWriter output = new StreamWriter(outputStream);
 
         using FileStream fs = inputFile.OpenRead();
-        var sourceText = SourceText.From(fs, new ResolvedPath(inputFile.FullName));
+        var sourceText = SourceText.From(fs, ResolvedPath.FromExistingFile(inputFile));
         var tree = SyntaxTree.ParseText(sourceText);
         tree.Root.Dump(output, format);
     }

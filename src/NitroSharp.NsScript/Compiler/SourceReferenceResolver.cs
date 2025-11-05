@@ -6,7 +6,7 @@ namespace NitroSharp.NsScript.Compiler;
 
 public abstract class SourceReferenceResolver
 {
-    public abstract string RootDirectory { get; }
+    public abstract ResolvedPath RootDirectory { get; }
 
     public abstract ResolvedPath? TryResolvePath(string relativePath);
 
@@ -26,7 +26,7 @@ public sealed class DefaultSourceReferenceResolver(string rootDirectory) : Sourc
     private readonly FilePathResolver _pathResolver = new(rootDirectory, "*.nss");
     private readonly string _rootDirectoryName = new DirectoryInfo(rootDirectory).Name;
 
-    public override string RootDirectory => _pathResolver.RootDirectory;
+    public override ResolvedPath RootDirectory => _pathResolver.RootDirectory;
 
     public override ResolvedPath? TryResolvePath(string relativePath)
     {

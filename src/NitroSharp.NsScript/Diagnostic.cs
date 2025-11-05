@@ -123,7 +123,7 @@ public class Diagnostic
                 squiggleEnd = Math.Min(squiggleStart + 1, lineText.Length);
             }
 
-            var (squiggleSeqStart, squiggleSeqEnd) = squiggleStyle switch
+            (string squiggleSeqStart, string squiggleSeqEnd) = squiggleStyle switch
             {
                 SquiggleStyle.Underline => (underlineSeqStart, underlineSeqEnd),
                 SquiggleStyle.VerticalBar => ("|", "|"),

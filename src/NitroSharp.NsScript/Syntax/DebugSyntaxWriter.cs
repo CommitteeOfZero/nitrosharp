@@ -57,33 +57,33 @@ internal sealed class DebugSyntaxWriter(TextWriter textWriter)
     {
         return node switch
         {
-            SourceFileRoot root =>
-                $"subroutines: C={root.ChapterCount}, S={root.SceneCount}, F={root.FunctionCount}, files={root.FileReferences.Length}",
-            ChapterDeclaration ch => $"name=\"{ch.Name.Value}\"",
-            SceneDeclaration sc => $"name=\"{sc.Name.Value}\"",
+            SourceFileRoot root => $"subroutines: C={root.ChapterCount}, S={root.SceneCount}," +
+                $"F={root.FunctionCount}, includes={root.FileReferences.Length}",
+            ChapterDeclaration chapter => $"name=\"{chapter.Name.Value}\"",
+            SceneDeclaration scene => $"name=\"{scene.Name.Value}\"",
             FunctionDeclaration fn => $"name=\"{fn.Name.Value}\" params={fn.Parameters.Length}",
-            Parameter p => $"name=\"{p.Name}\"",
-            Block b => $"statements={b.Statements.Length}",
-            SelectSection sec => $"label={sec.Label.Value}",
-            CallChapterStatement cc => $"targetModule=\"{cc.TargetModule.Value}\"",
-            CallSceneStatement cs => cs.TargetModule is { } target
-                ? $"targetModule=\"{target.Value}\" targetScene=\"{cs.TargetScene.Value}\""
-                : $"targetScene=\"{cs.TargetScene.Value}\"",
-            DialogueBlock db => $"name=\"{db.Name}\" box=\"{db.AssociatedBox}\" parts={db.Parts.Length}",
-            DialogueBlockPart.CodeBlock cb => $"statements={cb.Statements.Length}",
-            DialogueBlockPart.Markup mk => $"text={QuoteAndEscape(mk.Text)}",
-            LiteralExpression lit => $"value={QuoteAndEscape(lit.Value.ToString())}",
+            Parameter parameter => $"name=\"{parameter.Name}\"",
+            Block block => $"statements={block.Statements.Length}",
+            SelectSection section => $"label={section.Label.Value}",
+            CallChapterStatement callChapter => $"targetModule=\"{callChapter.TargetModule.Value}\"",
+            CallSceneStatement callScene => callScene.TargetModule is { } target
+                ? $"targetModule=\"{target.Value}\" targetScene=\"{callScene.TargetScene.Value}\""
+                : $"targetScene=\"{callScene.TargetScene.Value}\"",
+            DialogueBlock dlg => $"name=\"{dlg.Name}\" box=\"{dlg.AssociatedBox}\" parts={dlg.Parts.Length}",
+            DialogueBlockPart.CodeBlock codeBlock => $"statements={codeBlock.Statements.Length}",
+            DialogueBlockPart.Markup markup => $"text={QuoteAndEscape(markup.Text)}",
+            LiteralExpression literal => $"value={QuoteAndEscape(literal.Value.ToString())}",
             NameExpression name => name.Sigil switch
             {
                 SigilKind.Dollar => $"name=\"${name.Name}\"",
                 SigilKind.Hash => $"name=\"#{name.Name}\"",
                 _ => $"name=\"{name.Name}\""
             },
-            UnaryExpression un => $"op=\"{OperatorInfo.GetText(un.OperatorKind.Value)}\"",
+            UnaryExpression unary => $"op=\"{OperatorInfo.GetText(unary.OperatorKind.Value)}\"",
             BinaryExpression bin => $"op=\"{OperatorInfo.GetText(bin.OperatorKind.Value)}\"",
-            AssignmentExpression ass => $"op=\"{OperatorInfo.GetText(ass.OperatorKind.Value)}\"",
+            AssignmentExpression assignment => $"op=\"{OperatorInfo.GetText(assignment.OperatorKind.Value)}\"",
             FunctionCallExpression call => $"target=\"{call.TargetName.Value}\" args={call.Arguments.Length}",
-            BezierExpression bez => $"points={bez.ControlPoints.Length}",
+            BezierExpression bezier => $"points={bezier.ControlPoints.Length}",
             ErrorExpression => "<error expr>",
             ErrorStatement => "<error stmt>",
             _ => string.Empty

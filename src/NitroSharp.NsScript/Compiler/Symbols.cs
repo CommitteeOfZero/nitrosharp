@@ -59,13 +59,8 @@ namespace NitroSharp.NsScript.Compiler
             Debug.Assert(syntaxTree.Root is not null);
             ResolvedPath filePath = syntaxTree.SourceText.FilePath;
             SourceReferenceResolver sourceRefResolver = compilation.SourceReferenceResolver;
-            string rootDir = sourceRefResolver.RootDirectory;
-            string relativePathNoExtension = Path.GetRelativePath(relativeTo: rootDir, filePath.Value);
-            if (relativePathNoExtension.EndsWith(".nss", StringComparison.OrdinalIgnoreCase))
-            {
-                relativePathNoExtension = relativePathNoExtension
-                    .Remove(relativePathNoExtension.Length - 4);
-            }
+            ResolvedRelativePath relativePath = filePath.RelativeTo(sourceRefResolver.RootDirectory);
+            string relativePathNoExtension = Path.ChangeExtension(relativePath.Value, null);
 
             return new SourceFileSymbol(
                 this,
