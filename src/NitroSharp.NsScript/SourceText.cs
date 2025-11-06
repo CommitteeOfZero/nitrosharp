@@ -58,7 +58,7 @@ public sealed class SourceText
     {
         if (lineIndex < 0 || lineIndex >= _lineSpans.Count)
         {
-            ThrowHelper.ThrowOutOfRange(nameof(lineIndex));
+            ThrowHelper.ThrowArgumentOutOfRange(nameof(lineIndex));
         }
         TextSpan lineSpan = LineSpans[lineIndex];
         return Source.Substring(lineSpan.Start, lineSpan.Length);

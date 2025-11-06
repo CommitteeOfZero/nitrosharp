@@ -291,7 +291,7 @@ internal sealed class NsxModuleBuilder
                 SymbolKind.Chapter => 0x00,
                 SymbolKind.Scene => 0x01,
                 SymbolKind.Function => 0x02,
-                _ => ThrowHelper.Unreachable<byte>()
+                _ => throw ThrowHelper.UnexpectedValueOf<SymbolKind>()
             };
             rtiWriter.WriteByte(kind);
             rtiWriter.WriteLengthPrefixedUtf8String(subroutine.Name);

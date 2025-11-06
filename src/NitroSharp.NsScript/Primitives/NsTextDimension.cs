@@ -6,12 +6,12 @@ public enum NsTextDimensionVariant
     Value
 }
 
-public readonly struct NsTextDimension
+public readonly record struct NsTextDimension
 {
     public readonly NsTextDimensionVariant Variant;
     public readonly int? Value;
 
-    public NsTextDimension(NsTextDimensionVariant variant, int? value)
+    private NsTextDimension(NsTextDimensionVariant variant, int? value)
     {
         Variant = variant;
         Value = value;
@@ -25,10 +25,11 @@ public readonly struct NsTextDimension
 
     public static NsTextDimension FromConstant(BuiltInConstant constant)
     {
+        // TODO: Is Auto the only acceptable constant?
         return constant switch
         {
             BuiltInConstant.Auto => Auto,
-            _ => ThrowHelper.UnexpectedValue<NsTextDimension>(nameof(constant))
+            _ => throw ThrowHelper.ArgumentOutOfRange(nameof(constant))
         };
     }
 }

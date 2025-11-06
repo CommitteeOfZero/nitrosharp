@@ -332,7 +332,7 @@ public sealed class NsScriptVM
                     val = val.Type switch
                     {
                         BuiltInType.Numeric => ConstantValue.Number(-val.AsNumber()!.Value),
-                        _ => ThrowHelper.Unreachable<ConstantValue>()
+                        _ => throw ThrowHelper.Unreachable()
                     };
                     break;
                 case Opcode.Inc:
@@ -511,7 +511,7 @@ public sealed class NsScriptVM
                 BuiltInType.DeltaNumeric => ConstantValue.Delta(imm.Numeric),
                 BuiltInType.BuiltInConstant => ConstantValue.BuiltInConstant(imm.Constant),
                 BuiltInType.String => ConstantValue.String(module.GetString(imm.StringToken)),
-                _ => ThrowHelper.Unreachable<ConstantValue>()
+                _ => throw ThrowHelper.UnexpectedValueOf<BuiltInType>()
             };
         }
     }
@@ -534,7 +534,7 @@ public sealed class NsScriptVM
             BinaryOperatorKind.And => left && right,
             BinaryOperatorKind.Or => left || right,
             BinaryOperatorKind.Remainder => left % right,
-            _ => ThrowHelper.Unreachable<ConstantValue>()
+            _ => throw ThrowHelper.UnexpectedValueOf<BinaryOperatorKind>()
         };
     }
 

@@ -67,7 +67,7 @@ public abstract class SyntaxNode(TextSpan span)
         {
             SyntaxDumpFormat.Debug => new DebugSyntaxWriter(textWriter),
             SyntaxDumpFormat.RoundtripText => new RoundtripSyntaxWriter(textWriter),
-            _ => ThrowHelper.Unreachable<SyntaxWriter>()
+            _ => throw ThrowHelper.UnexpectedValueOf<SyntaxDumpFormat>()
         };
         writer.Visit(this);
     }

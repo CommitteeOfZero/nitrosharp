@@ -7,9 +7,9 @@ namespace NitroSharp;
 
 internal sealed class World : EntityScope
 {
-    private readonly List<Process> _processes = new();
-    private readonly List<Entity> _newEntities = new();
-    private readonly List<Entity> _deletedEntities = new();
+    private readonly List<Process> _processes = [];
+    private readonly List<Entity> _newEntities = [];
+    private readonly List<Entity> _deletedEntities = [];
 
     public Process CurrentProcess { get; private set; }
     public Process MainProcess { get; private set; }
@@ -155,7 +155,7 @@ internal sealed class World : EntityScope
                     EntityQueryScope.MainThread => CurrentProcess.MainThread,
                     EntityQueryScope.CurrentAliases => CurrentProcess.Aliases,
                     EntityQueryScope.AllAliases => this,
-                    _ => ThrowHelper.Unreachable<EntityScope>()
+                    _ => throw ThrowHelper.UnexpectedValueOf<EntityQueryScope>()
                 };
 
                 scope.Query(queryPart.Pattern, ref currentResults);

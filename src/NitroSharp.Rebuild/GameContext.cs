@@ -236,7 +236,7 @@ internal sealed class GameContext
         {
             GraphicsBackend.Direct3D11 => GraphicsDevice.CreateD3D11(options),
             GraphicsBackend.Vulkan => GraphicsDevice.CreateVulkan(options),
-            _ => ThrowHelper.Unreachable<GraphicsDevice>()
+            _ => throw new Exception($"Backend {backend} is not currently supported.")
         };
 
         Swapchain swapchain = device.ResourceFactory.CreateSwapchain(ref swapchainDesc);

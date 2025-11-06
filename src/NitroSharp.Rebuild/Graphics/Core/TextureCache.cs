@@ -16,43 +16,26 @@ namespace NitroSharp.Graphics.Core
     }
 
     [StructLayout(LayoutKind.Auto)]
-    internal readonly struct TextureLocation : GpuType
+    internal readonly struct TextureLocation(
+        TexturePointU origin,
+        TextureSizeU size,
+        uint layer,
+        Vector3 userData)
+        : GpuType
     {
         public const uint SizeInGpuBlocks = 2;
 
-        private readonly TexturePointU _origin;
-        private readonly TextureSizeU _size;
-        private readonly uint _layer;
-        private readonly Vector3 _userData;
-
-        public TextureLocation(
-            TexturePointU origin,
-            TextureSizeU size,
-            uint layer,
-            Vector3 userData)
-        {
-            _origin = origin;
-            _size = size;
-            _layer = layer;
-            _userData = userData;
-        }
-
         public void WriteGpuBlocks(Span<Vector4> blocks)
         {
-            blocks[0] = new Vector4(_layer, _origin.X, _origin.Y, _size.Width);
-            blocks[1] = new Vector4(_size.Height, _userData.X, _userData.Y, _userData.Z);
+            blocks[0] = new Vector4(layer, origin.X, origin.Y, size.Width);
+            blocks[1] = new Vector4(size.Height, userData.X, userData.Y, userData.Z);
         }
     }
 
-    internal readonly struct TextureCacheItem
+    internal readonly struct TextureCacheItem(int uvRectPosition, uint layer)
     {
-        public readonly int UvRectPosition;
-        public readonly uint Layer;
-
-        public TextureCacheItem(int uvRectPosition, uint layer)
-        {
-            (UvRectPosition, Layer) = (uvRectPosition, layer);
-        }
+        public readonly int UvRectPosition = uvRectPosition;
+        public readonly uint Layer = layer;
     }
 
     internal sealed class TextureCache : IDisposable
@@ -445,12 +428,13 @@ namespace NitroSharp.Graphics.Core
 
         public bool ReallocatedThisFrame { get; private set; }
 
-        private uint BytesPerPixel => PixelFormat switch
-        {
-            PixelFormat.R8_UNorm => 1u,
-            PixelFormat.R8_G8_B8_A8_UNorm => 4u,
-            _ => ThrowHelper.Unreachable<uint>()
-        };
+        private uint BytesPerPixel
+            => PixelFormat switch
+            {
+                PixelFormat.R8_UNorm => 1u,
+                PixelFormat.R8_G8_B8_A8_UNorm => 4u,
+                _ => throw ThrowHelper.Unreachable()
+            };
 
         private unsafe void AllocateTexture(uint layerCount)
         {

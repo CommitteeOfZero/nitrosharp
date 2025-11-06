@@ -1,59 +1,61 @@
 using System.Runtime.InteropServices;
 
-namespace NitroSharp.NsScript.Primitives
+namespace NitroSharp.NsScript.Primitives;
+
+public enum StandardFontWeight
 {
-    public enum StandardFontWeight
+    Normal,
+    Medium,
+    Bold
+}
+
+public enum NsFontWeightVariant
+{
+    Standard,
+    Custom
+}
+
+[StructLayout(LayoutKind.Explicit)]
+public readonly struct NsFontWeight
+{
+    [FieldOffset(0)]
+    public readonly NsFontWeightVariant Variant;
+
+    [FieldOffset(4)]
+    public readonly StandardFontWeight Standard;
+
+    [FieldOffset(4)]
+    public readonly int Custom;
+
+    private NsFontWeight(StandardFontWeight value) : this()
     {
-        Normal,
-        Medium,
-        Bold
+        Variant = NsFontWeightVariant.Standard;
+        Standard = value;
     }
 
-    public enum NsFontWeightVariant
+    private NsFontWeight(int value) : this()
     {
-        Standard,
-        Custom
+        Variant = NsFontWeightVariant.Custom;
+        Custom = value;
     }
 
-    [StructLayout(LayoutKind.Explicit)]
-    public readonly struct NsFontWeight
+    public static NsFontWeight From(in ConstantValue value)
     {
-        [FieldOffset(0)]
-        public readonly NsFontWeightVariant Variant;
-
-        [FieldOffset(4)]
-        public readonly StandardFontWeight Standard;
-
-        [FieldOffset(4)]
-        public readonly int Custom;
-
-        public NsFontWeight(StandardFontWeight value) : this()
+        return value.Type switch
         {
-            Variant = NsFontWeightVariant.Standard;
-            Standard = value;
-        }
+            BuiltInType.Numeric => new NsFontWeight((int)value.AsNumber()!.Value),
+            BuiltInType.BuiltInConstant => new NsFontWeight(mapConstant(value.AsBuiltInConstant()!.Value)),
+            _ => throw ThrowHelper.ArgumentInvalid(nameof(value))
+        };
 
-        public NsFontWeight(int value) : this()
+        static StandardFontWeight mapConstant(BuiltInConstant val)
         {
-            Variant = NsFontWeightVariant.Custom;
-            Custom = value;
-        }
-
-        public static NsFontWeight From(in ConstantValue value)
-        {
-            static StandardFontWeight mapConstant(BuiltInConstant val) => val switch
+            return val switch
             {
                 BuiltInConstant.Normal => StandardFontWeight.Normal,
                 BuiltInConstant.Medium => StandardFontWeight.Medium,
                 BuiltInConstant.Heavy => StandardFontWeight.Bold,
-                _ => ThrowHelper.UnexpectedValue<StandardFontWeight>()
-            };
-
-            return value.Type switch
-            {
-                BuiltInType.Numeric => new NsFontWeight((int)value.AsNumber()!.Value),
-                BuiltInType.BuiltInConstant => new NsFontWeight(mapConstant(value.AsBuiltInConstant()!.Value)),
-                _ => ThrowHelper.UnexpectedValue<NsFontWeight>()
+                _ => throw ThrowHelper.ArgumentOutOfRange(nameof(val))
             };
         }
     }

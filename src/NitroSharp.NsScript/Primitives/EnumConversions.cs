@@ -1,8 +1,10 @@
-﻿namespace NitroSharp.NsScript
+﻿namespace NitroSharp.NsScript;
+
+internal static class EnumConversions
 {
-    internal static class EnumConversions
+    public static NsEntityAction ToEntityAction(BuiltInConstant val)
     {
-        public static NsEntityAction ToEntityAction(BuiltInConstant val) => val switch
+        return val switch
         {
             BuiltInConstant.Lock => NsEntityAction.Lock,
             BuiltInConstant.Unlock => NsEntityAction.Unlock,
@@ -21,8 +23,11 @@
             BuiltInConstant.Resume => NsEntityAction.Resume,
             _ => NsEntityAction.Other,
         };
+    }
 
-        public static NsEaseFunction ToEaseFunction(BuiltInConstant val) => val switch
+    public static NsEaseFunction ToEaseFunction(BuiltInConstant val)
+    {
+        return val switch
         {
             BuiltInConstant._None => NsEaseFunction.Linear,
             BuiltInConstant.Axl1 => NsEaseFunction.QuadraticEaseIn,
@@ -35,18 +40,24 @@
             BuiltInConstant.DxlAuto => NsEaseFunction.SineEaseOut,
             BuiltInConstant.AxlDxl => NsEaseFunction.SineEaseInOut,
             BuiltInConstant.DxlAxl => NsEaseFunction.SineEaseOutIn,
-            _ => throw ThrowHelper.UnexpectedValue(nameof(val)),
+            _ => throw ThrowHelper.ArgumentOutOfRange(nameof(val))
         };
+    }
 
-        public static NsAudioKind ToAudioKind(BuiltInConstant val) => val switch
+    public static NsAudioKind ToAudioKind(BuiltInConstant val)
+    {
+        return val switch
         {
             BuiltInConstant.BGM => NsAudioKind.BackgroundMusic,
             BuiltInConstant.SE => NsAudioKind.SoundEffect,
             BuiltInConstant.Voice => NsAudioKind.Voice,
-            _ => throw ThrowHelper.UnexpectedValue(nameof(val)),
+            _ => throw ThrowHelper.ArgumentOutOfRange(nameof(val))
         };
+    }
 
-        public static NsOutlineOffset ToOutlineOffset(BuiltInConstant val) => val switch
+    public static NsOutlineOffset ToOutlineOffset(BuiltInConstant val)
+    {
+        return val switch
         {
             BuiltInConstant.LightDown => NsOutlineOffset.Unspecified,
             BuiltInConstant.Around => NsOutlineOffset.Center,
@@ -58,23 +69,29 @@
             BuiltInConstant.LeftDown => NsOutlineOffset.BottomLeft,
             BuiltInConstant.RightDown => NsOutlineOffset.BottomRight,
             BuiltInConstant.Down => NsOutlineOffset.Bottom,
-            _ => ThrowHelper.UnexpectedValue<NsOutlineOffset>()
+            _ => throw ThrowHelper.ArgumentOutOfRange(nameof(val))
         };
+    }
 
-        public static NsScrollDirection ToScrollDirection(BuiltInConstant val) => val switch
+    public static NsScrollDirection ToScrollDirection(BuiltInConstant val)
+    {
+        return val switch
         {
             BuiltInConstant.Vertical => NsScrollDirection.Vertical,
             BuiltInConstant.Horizon => NsScrollDirection.Horizontal,
-            _ => ThrowHelper.UnexpectedValue<NsScrollDirection>()
+            _ => throw ThrowHelper.ArgumentOutOfRange(nameof(val))
         };
+    }
 
-        public static NsFocusDirection ToFocusDirection(BuiltInConstant val) => val switch
+    public static NsFocusDirection ToFocusDirection(BuiltInConstant val)
+    {
+        return val switch
         {
             BuiltInConstant.Left => NsFocusDirection.Left,
             BuiltInConstant.Up => NsFocusDirection.Up,
             BuiltInConstant.Right => NsFocusDirection.Right,
             BuiltInConstant.Down => NsFocusDirection.Down,
-            _ => ThrowHelper.UnexpectedValue<NsFocusDirection>()
+            _ => throw ThrowHelper.ArgumentOutOfRange(nameof(val))
         };
     }
 }

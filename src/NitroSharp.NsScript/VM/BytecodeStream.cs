@@ -44,7 +44,7 @@ internal ref struct BytecodeStream
             BuiltInType.DeltaNumeric => new Immediate(_reader.ReadSingle(), true),
             BuiltInType.String => new Immediate(_reader.ReadUInt16LE()),
             BuiltInType.BuiltInConstant => new Immediate((BuiltInConstant)_reader.ReadByte()),
-            _ => ThrowHelper.InvalidData<Immediate>("Unexpected immediate value type.")
+            _ => ThrowHelper.ThrowInvalidData<Immediate>("Unexpected immediate value type.")
         };
     }
 }

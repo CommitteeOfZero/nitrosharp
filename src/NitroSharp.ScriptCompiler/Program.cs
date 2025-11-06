@@ -175,11 +175,15 @@ internal static class Program
                 .Where(x => filePathsToInspect.Any(y => x.Location.FilePath == y));
         }
 
+        SquiggleStyle squiggleStyle = outputFile is null
+            ? SquiggleStyle.Underline
+            : SquiggleStyle.VerticalBar;
+
         foreach (Diagnostic diagnostic in filteredDiagnostics
                      .OrderBy(d => d.Location.FilePath.Value)
                      .ThenBy(d => d.Location.Span))
         {
-            diagnostic.Dump(output, SquiggleStyle.Underline);
+            diagnostic.Dump(output, squiggleStyle);
             output.WriteLine();
         }
     }

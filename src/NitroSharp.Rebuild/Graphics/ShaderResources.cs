@@ -9,8 +9,8 @@ namespace NitroSharp.Graphics
     {
         public static BlendStateDescription PremultipliedAlpha => new()
         {
-            AttachmentStates = new[]
-            {
+            AttachmentStates =
+            [
                 new BlendAttachmentDescription
                 {
                     BlendEnabled = true,
@@ -21,7 +21,7 @@ namespace NitroSharp.Graphics
                     DestinationAlphaFactor = BlendFactor.DestinationAlpha,
                     AlphaFunction = BlendFunction.Add
                 }
-            }
+            ]
         };
 
         public ShaderResources(
@@ -101,8 +101,8 @@ namespace NitroSharp.Graphics
 
             (Shader vs, Shader fs) = shaderLibrary.LoadShaderSet("quad");
             var shaderSetDesc = new ShaderSetDescription(
-                new[] { QuadVertex.LayoutDescription },
-                new[] { vs, fs }
+                [QuadVertex.LayoutDescription],
+                [vs, fs]
             );
 
             var pipelineDesc = new GraphicsPipelineDescription(
@@ -111,15 +111,15 @@ namespace NitroSharp.Graphics
                 RasterizerStateDescription.CullNone,
                 PrimitiveTopology.TriangleList,
                 shaderSetDesc,
-                new[] { viewProjectionLayout, ResourceLayout },
+                [viewProjectionLayout, ResourceLayout],
                 outputDescription
             );
             _alphaBlend = factory.CreateGraphicsPipeline(ref pipelineDesc);
 
             pipelineDesc.BlendState = new BlendStateDescription
             {
-                AttachmentStates = new[]
-                {
+                AttachmentStates =
+                [
                     new BlendAttachmentDescription
                     {
                         BlendEnabled = true,
@@ -130,14 +130,14 @@ namespace NitroSharp.Graphics
                         DestinationAlphaFactor = BlendFactor.DestinationAlpha,
                         AlphaFunction = BlendFunction.Add
                     }
-                }
+                ]
             };
             _additiveBlend = factory.CreateGraphicsPipeline(ref pipelineDesc);
 
             pipelineDesc.BlendState = new BlendStateDescription
             {
-                AttachmentStates = new[]
-                {
+                AttachmentStates =
+                [
                     new BlendAttachmentDescription
                     {
                         BlendEnabled = true,
@@ -148,14 +148,14 @@ namespace NitroSharp.Graphics
                         DestinationAlphaFactor = BlendFactor.One,
                         AlphaFunction = BlendFunction.Subtract
                     }
-                }
+                ]
             };
             _reverseSubtractiveBlend = factory.CreateGraphicsPipeline(ref pipelineDesc);
 
             pipelineDesc.BlendState = new BlendStateDescription
             {
-                AttachmentStates = new[]
-                {
+                AttachmentStates =
+                [
                     new BlendAttachmentDescription
                     {
                         BlendEnabled = true,
@@ -166,7 +166,7 @@ namespace NitroSharp.Graphics
                         DestinationAlphaFactor = BlendFactor.DestinationAlpha,
                         AlphaFunction = BlendFunction.Add
                     }
-                }
+                ]
             };
             _multiplicativeBlend = factory.CreateGraphicsPipeline(ref pipelineDesc);
 
@@ -180,14 +180,17 @@ namespace NitroSharp.Graphics
         public ResourceLayout ResourceLayout { get; }
         public GpuBuffer<Vector4> AlphaMaskPositionBuffer { get; }
 
-        public Pipeline GetPipeline(BlendMode blendMode) => blendMode switch
+        public Pipeline GetPipeline(BlendMode blendMode)
         {
-            BlendMode.Alpha => _alphaBlend,
-            BlendMode.Additive => _additiveBlend,
-            BlendMode.ReverseSubtractive => _reverseSubtractiveBlend,
-            BlendMode.Multiplicative => _multiplicativeBlend,
-            _ => ThrowHelper.UnexpectedValue<Pipeline>()
-        };
+            return blendMode switch
+            {
+                BlendMode.Alpha => _alphaBlend,
+                BlendMode.Additive => _additiveBlend,
+                BlendMode.ReverseSubtractive => _reverseSubtractiveBlend,
+                BlendMode.Multiplicative => _multiplicativeBlend,
+                _ => throw ThrowHelper.UnexpectedValueOf<BlendMode>()
+            };
+        }
 
         public void Dispose()
         {
@@ -224,8 +227,8 @@ namespace NitroSharp.Graphics
 
             (Shader vs, Shader fs) = shaderLibrary.LoadShaderSet("icon");
             var shaderSetDesc = new ShaderSetDescription(
-                new[] { QuadVertexUV3.LayoutDescription },
-                new[] { vs, fs }
+                [QuadVertexUV3.LayoutDescription],
+                [vs, fs]
             );
 
             var pipelineDesc = new GraphicsPipelineDescription(
@@ -234,7 +237,7 @@ namespace NitroSharp.Graphics
                 RasterizerStateDescription.CullNone,
                 PrimitiveTopology.TriangleList,
                 shaderSetDesc,
-                new[] { viewProjectionLayout, ResourceLayout },
+                [viewProjectionLayout, ResourceLayout],
                 outputDescription
             );
             Pipeline = factory.CreateGraphicsPipeline(ref pipelineDesc);
@@ -291,8 +294,8 @@ namespace NitroSharp.Graphics
 
             (Shader vs, Shader fs) = shaderLibrary.LoadShaderSet("video");
             var shaderSetDesc = new ShaderSetDescription(
-                new[] { QuadVertex.LayoutDescription },
-                new[] { vs, fs }
+                [QuadVertex.LayoutDescription],
+                [vs, fs]
             );
 
             var pipelineDesc = new GraphicsPipelineDescription(
@@ -301,14 +304,14 @@ namespace NitroSharp.Graphics
                 RasterizerStateDescription.CullNone,
                 PrimitiveTopology.TriangleList,
                 shaderSetDesc,
-                new[] { viewProjectionLayout, InputLayout, ParamLayout },
+                [viewProjectionLayout, InputLayout, ParamLayout],
                 outputDescription
             );
             _alphaBlend = factory.CreateGraphicsPipeline(ref pipelineDesc);
             pipelineDesc.BlendState = new BlendStateDescription
             {
-                AttachmentStates = new[]
-                {
+                AttachmentStates =
+                [
                     new BlendAttachmentDescription
                     {
                         BlendEnabled = true,
@@ -319,13 +322,13 @@ namespace NitroSharp.Graphics
                         DestinationAlphaFactor = BlendFactor.DestinationAlpha,
                         AlphaFunction = BlendFunction.Add
                     }
-                }
+                ]
             };
             _additiveBlend = factory.CreateGraphicsPipeline(ref pipelineDesc);
             pipelineDesc.BlendState = new BlendStateDescription
             {
-                AttachmentStates = new[]
-                {
+                AttachmentStates =
+                [
                     new BlendAttachmentDescription
                     {
                         BlendEnabled = true,
@@ -336,7 +339,7 @@ namespace NitroSharp.Graphics
                         DestinationAlphaFactor = BlendFactor.DestinationAlpha,
                         AlphaFunction = BlendFunction.Add
                     }
-                }
+                ]
             };
             _multiplicativeBlend = factory.CreateGraphicsPipeline(ref pipelineDesc);
             EnableAlphaBuffer = new GpuBuffer<Vector4>(
@@ -350,13 +353,16 @@ namespace NitroSharp.Graphics
         public ResourceLayout ParamLayout { get; }
         public GpuBuffer<Vector4> EnableAlphaBuffer { get; }
 
-        public Pipeline GetPipeline(BlendMode blendMode) => blendMode switch
+        public Pipeline GetPipeline(BlendMode blendMode)
         {
-            BlendMode.Alpha => _alphaBlend,
-            BlendMode.Additive => _additiveBlend,
-            BlendMode.Multiplicative => _multiplicativeBlend,
-            _ => ThrowHelper.UnexpectedValue<Pipeline>()
-        };
+            return blendMode switch
+            {
+                BlendMode.Alpha => _alphaBlend,
+                BlendMode.Additive => _additiveBlend,
+                BlendMode.Multiplicative => _multiplicativeBlend,
+                _ => throw ThrowHelper.UnexpectedValueOf<BlendMode>()
+            };
+        }
 
         public void Dispose()
         {
@@ -404,8 +410,8 @@ namespace NitroSharp.Graphics
 
             (Shader vs, Shader fs) = shaderLibrary.LoadShaderSet("transition");
             var transitionShaderSet = new ShaderSetDescription(
-                new[] { QuadVertex.LayoutDescription },
-                new[] { vs, fs }
+                [QuadVertex.LayoutDescription],
+                [vs, fs]
             );
             var pipelineDesc = new GraphicsPipelineDescription(
                 ShaderResources.PremultipliedAlpha,
@@ -413,12 +419,11 @@ namespace NitroSharp.Graphics
                 RasterizerStateDescription.CullNone,
                 PrimitiveTopology.TriangleList,
                 transitionShaderSet,
-                new[]
-                {
+                [
                     viewProjectionLayout,
                     InputLayout,
                     ParamLayout
-                },
+                ],
                 outputDescription
             );
             Pipeline = factory.CreateGraphicsPipeline(ref pipelineDesc);
@@ -502,14 +507,14 @@ namespace NitroSharp.Graphics
                 ),
                 PrimitiveTopology.TriangleList,
                 new ShaderSetDescription(
-                    new[] { GpuGlyph.LayoutDescription },
-                    new[] { vs, fs }
+                    [GpuGlyph.LayoutDescription],
+                    [vs, fs]
                 ),
-                new[] { ResourceLayoutVS, ResourceLayoutFS },
+                [ResourceLayoutVS, ResourceLayoutFS],
                 outputDescription
             );
             Pipeline = factory.CreateGraphicsPipeline(ref pipelineDesc);
-            pipelineDesc.ShaderSet.Shaders = new[] { outlineVS, outlineFS };
+            pipelineDesc.ShaderSet.Shaders = [outlineVS, outlineFS];
             OutlinePipeline = factory.CreateGraphicsPipeline(ref pipelineDesc);
         }
 
@@ -560,8 +565,8 @@ namespace NitroSharp.Graphics
             {
                 (Shader vs, Shader fs) = shaderLibrary.LoadShaderSet(shaderSetName);
                 var shaderSetDesc = new ShaderSetDescription(
-                    Array.Empty<VertexLayoutDescription>(),
-                    new[] { vs, fs }
+                    [],
+                    [vs, fs]
                 );
                 var pipelineDesc = new GraphicsPipelineDescription(
                     ShaderResources.PremultipliedAlpha,
@@ -569,7 +574,7 @@ namespace NitroSharp.Graphics
                     RasterizerStateDescription.CullNone,
                     PrimitiveTopology.TriangleStrip,
                     shaderSetDesc,
-                    new[] { layout },
+                    [layout],
                     outputDescription
                 );
                 return factory.CreateGraphicsPipeline(ref pipelineDesc);
@@ -578,13 +583,16 @@ namespace NitroSharp.Graphics
 
         public ResourceLayout ResourceLayout { get; }
 
-        public Pipeline GetPipeline(EffectKind effect) => effect switch
+        public Pipeline GetPipeline(EffectKind effect)
         {
-            EffectKind.Blit => _blit,
-            EffectKind.Grayscale => _grayscale,
-            EffectKind.BoxBlur => _boxBlur,
-            _ => ThrowHelper.UnexpectedValue<Pipeline>()
-        };
+            return effect switch
+            {
+                EffectKind.Blit => _blit,
+                EffectKind.Grayscale => _grayscale,
+                EffectKind.BoxBlur => _boxBlur,
+                _ => throw ThrowHelper.UnexpectedValueOf<EffectKind>()
+            };
+        }
 
         public void Dispose()
         {
@@ -627,8 +635,8 @@ namespace NitroSharp.Graphics
 
             (Shader vs, Shader fs) = shaderLibrary.LoadShaderSet("lens");
             var lensShaderSet = new ShaderSetDescription(
-                new[] { QuadVertex.LayoutDescription },
-                new[] { vs, fs }
+                [QuadVertex.LayoutDescription],
+                [vs, fs]
             );
             var lensPipelineDesc = new GraphicsPipelineDescription(
                 ShaderResources.PremultipliedAlpha,
@@ -636,7 +644,7 @@ namespace NitroSharp.Graphics
                 RasterizerStateDescription.CullNone,
                 PrimitiveTopology.TriangleList,
                 lensShaderSet,
-                new[] { viewProjectionLayout, _resourceLayout },
+                [viewProjectionLayout, _resourceLayout],
                 outputDescription
             );
             _pipeline = factory.CreateGraphicsPipeline(ref lensPipelineDesc);
@@ -681,8 +689,9 @@ namespace NitroSharp.Graphics
 
             (Shader vs, Shader fs) = shaderLibrary.LoadShaderSet("cube");
             var shaderSetDesc = new ShaderSetDescription(
-                new[] { CubeVertex.LayoutDescription },
-                new[] { vs, fs });
+                [CubeVertex.LayoutDescription],
+                [vs, fs]
+            );
 
             Pipeline = factory.CreateGraphicsPipeline(
                 new GraphicsPipelineDescription(
@@ -691,7 +700,7 @@ namespace NitroSharp.Graphics
                     RasterizerStateDescription.CullNone,
                     PrimitiveTopology.TriangleList,
                     shaderSetDesc,
-                    new[] { viewProjectionLayout, TextureLayout, TransformLayout },
+                    [viewProjectionLayout, TextureLayout, TransformLayout],
                     outputDescription
                 )
             );

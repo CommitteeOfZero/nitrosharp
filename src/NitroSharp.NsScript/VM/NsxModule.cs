@@ -347,7 +347,7 @@ namespace NitroSharp.NsScript.VM
             {
                 Kind.Markup => new Markup(ref reader),
                 Kind.CodeBlock => new CodeBlock(ref reader),
-                _ => ThrowHelper.Unreachable<CompiledDialogueBlockPart>()
+                _ => throw ThrowHelper.UnexpectedValueOf<Kind>()
             };
         }
 

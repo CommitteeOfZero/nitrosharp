@@ -26,7 +26,7 @@ internal static class DiagnosticInfo
             DiagnosticId.BadAssignmentTarget => "The assignment target must be a variable.",
             DiagnosticId.ExternalModuleNotFound => "External module '{0}' is not found.",
             DiagnosticId.ChapterMainNotFound => "The target module of a call_chapter expression does not have chapter 'main'.",
-            _ => throw ThrowHelper.UnexpectedValue(nameof(id))
+            _ => throw ThrowHelper.UnexpectedValueOf<DiagnosticId>()
         };
     }
 
@@ -61,7 +61,7 @@ internal static class DiagnosticInfo
                 return DiagnosticSeverity.Info;
 
             default:
-                throw ThrowHelper.UnexpectedValue(nameof(diagnosticId));
+                throw ThrowHelper.UnexpectedValueOf<DiagnosticId>();
         }
     }
 }

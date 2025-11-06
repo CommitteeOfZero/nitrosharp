@@ -476,7 +476,7 @@ namespace NitroSharp.NsScript.Syntax
                     return Precedence.Logical;
 
                 default:
-                    throw ThrowHelper.IllegalValue(nameof(operatorKind));
+                    throw ThrowHelper.UnexpectedValueOf<BinaryOperatorKind>();
             }
         }
 
@@ -645,7 +645,7 @@ namespace NitroSharp.NsScript.Syntax
                     value = ConstantValue.False;
                     break;
                 default:
-                    ThrowHelper.Unreachable();
+                    ThrowHelper.ThrowUnreachable();
                     return null!;
             }
 

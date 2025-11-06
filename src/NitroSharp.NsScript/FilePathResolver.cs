@@ -19,16 +19,21 @@ public readonly record struct ResolvedPath
 
     public static ResolvedPath FromExistingFile(FileInfo fileInfo)
     {
-        if (!fileInfo.Exists)
-        {
-            throw new FileNotFoundException(fileInfo.FullName);
-        }
-
-        return new ResolvedPath(FilePathResolver.NormalizePath(fileInfo.FullName));
+        return fileInfo.Exists
+            ? new ResolvedPath(FilePathResolver.NormalizePath(fileInfo.FullName))
+            : throw new FileNotFoundException(fileInfo.FullName);
     }
 
     public ResolvedRelativePath RelativeTo(ResolvedPath directory)
-        => new(Path.GetRelativePath(directory.Value, Value));
+    {
+        string relativePath = Path.GetRelativePath(directory.Value, Value);
+        if (ReferenceEquals(relativePath, directory.Value))
+        {
+            ThrowHelper.ThrowArgumentInvalid(nameof(directory));
+        }
+
+        return new ResolvedRelativePath(FilePathResolver.NormalizePath(relativePath));
+    }
 
     public override string ToString() => Value;
 }

@@ -1,34 +1,36 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 
 namespace NitroSharp;
 
 public static class ThrowHelper
 {
-    public static T UnexpectedValue<T>()
-        => throw new InvalidOperationException($"Unexpected value of type {typeof(T).Name}.");
+    public static Exception UnexpectedValueOf<T>()
+        => new($"Unexpected value of type {typeof(T).Name}.");
 
-    public static void Unreachable()
-        => throw new InvalidOperationException("This program location is expected to be unreachable.");
+    [DoesNotReturn]
+    public static void ThrowUnreachable()
+        => throw Unreachable();
 
-    public static T Unreachable<T>()
-        => throw new InvalidOperationException("This program location is expected to be unreachable.");
+    public static Exception Unreachable()
+        => new InvalidOperationException("This program location is expected to be unreachable.");
 
-    public static void ThrowOutOfRange(string paramName)
+    public static Exception ArgumentInvalid(string paramName)
+        => new ArgumentException($"Argument for parameter '{paramName}' is invalid.", paramName);
+
+    [DoesNotReturn]
+    public static void ThrowArgumentInvalid(string paramName)
+        => throw ArgumentInvalid(paramName);
+
+    public static Exception ArgumentOutOfRange(string paramName)
+        => new ArgumentOutOfRangeException(paramName);
+
+    [DoesNotReturn]
+    public static void ThrowArgumentOutOfRange(string paramName)
         => throw new ArgumentOutOfRangeException(paramName);
 
-    public static Exception UnexpectedValue(string paramName)
-        => new ArgumentException("Unexpected value.", paramName);
-
-    public static T UnexpectedValue<T>(string paramName)
-        => throw new ArgumentException("Unexpected value.", paramName);
-
-    public static T InvalidData<T>(string message)
+    [DoesNotReturn]
+    public static T ThrowInvalidData<T>(string message)
         => throw new InvalidDataException(message);
-
-    public static Exception IllegalValue(string paramName)
-        => new ArgumentException("Illegal value.", paramName);
-
-    public static T IllegalValue<T>(string paramName)
-        => throw new ArgumentException("Illegal value.", paramName);
 }

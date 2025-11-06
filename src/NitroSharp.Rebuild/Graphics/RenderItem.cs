@@ -115,7 +115,7 @@ internal abstract class RenderItem : Entity
                     NsAlignment.Left => origin.X,
                     NsAlignment.Center => designResolution.Width / 2.0f,
                     NsAlignment.Right => origin.X + parentBounds.Width,
-                    _ => ThrowHelper.UnexpectedValue<float>()
+                    _ => throw ThrowHelper.ArgumentInvalid(nameof(x))
                 },
             _ => 0.0f
         };
@@ -129,7 +129,7 @@ internal abstract class RenderItem : Entity
                     NsAlignment.Top => origin.Y,
                     NsAlignment.Center => designResolution.Height / 2.0f,
                     NsAlignment.Bottom => origin.Y + parentBounds.Height,
-                    _ => ThrowHelper.UnexpectedValue<float>()
+                    _ => throw ThrowHelper.ArgumentInvalid(nameof(y))
                 },
             _ => 0.0f
         };

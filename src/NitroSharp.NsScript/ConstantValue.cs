@@ -239,7 +239,7 @@ namespace NitroSharp.NsScript
             BuiltInType.DeltaNumeric => "@" + FloatValue.ToString(),
             BuiltInType.BuiltInConstant => ((BuiltInConstant)_numericValue).ToString(),
             BuiltInType.Null => "null",
-            _ => ThrowHelper.Unreachable<string>()
+            _ => throw ThrowHelper.UnexpectedValueOf<BuiltInType>()
         };
 
         public static ConstantValue operator ==(in ConstantValue left, in ConstantValue right)
@@ -393,7 +393,7 @@ namespace NitroSharp.NsScript
         public static bool operator true(in ConstantValue value)
             => value.AsBool() ?? false;
 
-        public static bool operator false(ConstantValue value)
+        public static bool operator false(in ConstantValue value)
             => !(value.AsBool() ?? false);
 
         public override string ToString()

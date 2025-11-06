@@ -127,7 +127,7 @@ public class Diagnostic
             {
                 SquiggleStyle.Underline => (underlineSeqStart, underlineSeqEnd),
                 SquiggleStyle.VerticalBar => ("|", "|"),
-                _ => ThrowHelper.Unreachable<(string, string)>()
+                _ => throw ThrowHelper.UnexpectedValueOf<SquiggleStyle>()
             };
 
             sb.Append(lineText[..squiggleStart]);

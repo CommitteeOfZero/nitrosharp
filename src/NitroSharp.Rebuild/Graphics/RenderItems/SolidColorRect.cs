@@ -21,7 +21,7 @@ internal sealed class SolidColorRect : RenderItem
         RenderContext renderContext = ctx.RenderContext;
 
         DesignSize size = GetSize(renderContext);
-        QuadGeometry quad = QuadGeometry.Create(
+        var quad = QuadGeometry.Create(
             size,
             renderContext.GetTransformMatrix(Transform, size, useScaling: true, aligned: false),
             Vector2.Zero,

@@ -712,7 +712,7 @@ namespace NitroSharp.NsScript.Compiler
                     break;
                 }
                 default:
-                    throw ThrowHelper.UnexpectedValue(nameof(part));
+                    throw ThrowHelper.UnexpectedValueOf<DialogueBlockPart>();
             }
         }
     }
