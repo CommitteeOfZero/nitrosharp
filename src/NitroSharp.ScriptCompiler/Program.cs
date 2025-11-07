@@ -5,204 +5,190 @@ using NitroSharp.NsScript;
 using NitroSharp.NsScript.Compiler;
 using NitroSharp.NsScript.Syntax;
 
-namespace NitroSharp.ScriptCompiler;
+Console.OutputEncoding = Encoding.UTF8;
 
-internal static class Program
+var rootCommand = new RootCommand("NitroSharp NSS Script Compiler");
+
+var sourceDirArg = new Argument<DirectoryInfo>("source_directory")
 {
-    private static int Main(string[] args)
+    Description = "The root directory containing the script source files.",
+}.AcceptExistingOnly();
+
+var rootScriptsOption = new Option<FileInfo[]>("--roots")
+{
+    Description = "The list of script file names to treat as roots.",
+    AllowMultipleArgumentsPerToken = true,
+    Required = false,
+    CustomParser = x => parseRelativePaths(x, mustExist: true)
+}.AcceptExistingOnly();
+
+var filesOption = new Option<FileInfo[]>("--files")
+{
+    Description = "The list of script file names to inspect.",
+    AllowMultipleArgumentsPerToken = true,
+    Required = false,
+    CustomParser = x => parseRelativePaths(x, mustExist: true),
+};
+
+var outputOption = new Option<FileInfo>("--output")
+{
+    Description = "The file name to direct output to.",
+    Required = false,
+    CustomParser = x => parseSingleRelativePath(x, mustExist: false)
+};
+
+var checkCommand = new Command("check", "Check script files for errors.");
+checkCommand.Arguments.Add(sourceDirArg);
+checkCommand.Options.Add(rootScriptsOption);
+checkCommand.Options.Add(filesOption);
+checkCommand.Options.Add(outputOption);
+
+checkCommand.SetAction(result =>
+{
+    RunCheck(
+        result.GetRequiredValue(sourceDirArg),
+        result.GetValue(rootScriptsOption)!,
+        result.GetValue(filesOption) ?? [],
+        result.GetValue(outputOption)
+    );
+});
+
+var dumpAstInputArg = new Argument<FileInfo>("input")
+{
+    Description = "Relative path to a single script file to parse.",
+    CustomParser = x => parseSingleRelativePath(x, mustExist: true),
+};
+
+var dumpAstFormatArg = new Option<SyntaxDumpFormat>("--format")
+{
+    Description = "Output format: 'debug' or 'roundtrip'",
+    Required = false,
+    DefaultValueFactory = _ => SyntaxDumpFormat.Debug,
+    CustomParser = parse =>
     {
-        Console.OutputEncoding = Encoding.UTF8;
-
-        var rootCommand = new RootCommand("NitroSharp NSS Script Compiler");
-
-        var sourceDirArg = new Argument<DirectoryInfo>("source_directory")
+        return parse.Tokens.Single().Value switch
         {
-            Description = "The root directory containing the script source files.",
-        }.AcceptExistingOnly();
-
-        var rootScriptsOption = new Option<string[]>("--roots")
-        {
-            Description = "The list of script file names to treat as roots.",
-            AllowMultipleArgumentsPerToken = true,
-            Required = false,
-            DefaultValueFactory = _ => ["boot.nss"]
+            "debug" => SyntaxDumpFormat.Debug,
+            "roundtrip" => SyntaxDumpFormat.RoundtripText,
+            _ => error()
         };
 
-        var filesOption = new Option<FileInfo[]>("--files")
+        SyntaxDumpFormat error()
         {
-            Description = "The list of script file names to inspect.",
-            AllowMultipleArgumentsPerToken = true,
-            Required = false,
-            CustomParser = x => parseRelativePaths(x, mustExist: true),
-        };
-
-        var outputOption = new Option<FileInfo>("--output")
-        {
-            Description = "The file name to direct output to.",
-            Required = false,
-            CustomParser = x => parseSingleRelativePath(x, mustExist: false)
-        };
-
-        var checkCommand = new Command("check", "Check script files for errors.");
-        checkCommand.Arguments.Add(sourceDirArg);
-        checkCommand.Options.Add(rootScriptsOption);
-        checkCommand.Options.Add(filesOption);
-        checkCommand.Options.Add(outputOption);
-
-        checkCommand.SetAction(result =>
-        {
-            RunCheck(
-                result.GetRequiredValue(sourceDirArg),
-                result.GetRequiredValue(rootScriptsOption),
-                result.GetValue(filesOption) ?? [],
-                result.GetValue(outputOption)
-            );
-        });
-
-        var dumpAstInputArg = new Argument<FileInfo>("input")
-        {
-            Description = "Relative path to a single script file to parse.",
-            CustomParser = x => parseSingleRelativePath(x, mustExist: true),
-        };
-
-        var dumpAstFormatArg = new Option<SyntaxDumpFormat>("--format")
-        {
-            Description = "Output format: 'debug' or 'roundtrip'",
-            Required = false,
-            DefaultValueFactory = _ => SyntaxDumpFormat.Debug,
-            CustomParser = parse =>
-            {
-                return parse.Tokens.Single().Value switch
-                {
-                    "debug" => SyntaxDumpFormat.Debug,
-                    "roundtrip" => SyntaxDumpFormat.RoundtripText,
-                    _ => error()
-                };
-
-                SyntaxDumpFormat error()
-                {
-                    parse.AddError("Unrecognized value for '--format'.");
-                    return default;
-                }
-            }
-        };
-
-        var dumpAstCommand = new Command("dump-ast", "Parse a single script file and dump its AST.");
-        dumpAstCommand.Arguments.Add(sourceDirArg);
-        dumpAstCommand.Arguments.Add(dumpAstInputArg);
-        dumpAstCommand.Options.Add(dumpAstFormatArg);
-        dumpAstCommand.Options.Add(outputOption);
-
-        dumpAstCommand.SetAction(result =>
-        {
-            RunDumpAst(
-                result.GetRequiredValue(sourceDirArg),
-                result.GetRequiredValue(dumpAstInputArg),
-                result.GetRequiredValue(dumpAstFormatArg),
-                result.GetValue(outputOption)
-            );
-        });
-
-        rootCommand.Subcommands.Add(checkCommand);
-        rootCommand.Subcommands.Add(dumpAstCommand);
-
-        return rootCommand.Parse(args).Invoke();
-
-        FileInfo parseSingleRelativePath(ArgumentResult parse, bool mustExist)
-            => parseRelativePath(parse, parse.Tokens.Single(), mustExist);
-
-        FileInfo[] parseRelativePaths(ArgumentResult parse, bool mustExist)
-            => parse.Tokens.Select(tk => parseRelativePath(parse, tk, mustExist)).ToArray();
-
-        FileInfo parseRelativePath(ArgumentResult parse, Token token, bool mustExist)
-        {
-            DirectoryInfo root = parse.GetRequiredValue(sourceDirArg);
-            string relativePath = token.Value;
-            string fullPath = Path.Combine(root.FullName, relativePath);
-            var fileInfo = new FileInfo(fullPath);
-            if (mustExist && !fileInfo.Exists)
-            {
-                parse.AddError($"Input file does not exist: '{relativePath}'");
-            }
-
-            return fileInfo;
+            parse.AddError("Unrecognized value for '--format'.");
+            return default;
         }
     }
+};
 
-    private static void RunCheck(
-        DirectoryInfo sourceDir,
-        string[] rootScriptNames,
-        FileInfo[] filesToInspect,
-        FileInfo? outputFile)
+var dumpAstCommand = new Command("dump-ast", "Parse a single script file and dump its AST.");
+dumpAstCommand.Arguments.Add(sourceDirArg);
+dumpAstCommand.Arguments.Add(dumpAstInputArg);
+dumpAstCommand.Options.Add(dumpAstFormatArg);
+dumpAstCommand.Options.Add(outputOption);
+
+dumpAstCommand.SetAction(result =>
+{
+    RunDumpAst(
+        result.GetRequiredValue(sourceDirArg),
+        result.GetRequiredValue(dumpAstInputArg),
+        result.GetRequiredValue(dumpAstFormatArg),
+        result.GetValue(outputOption)
+    );
+});
+
+rootCommand.Subcommands.Add(checkCommand);
+rootCommand.Subcommands.Add(dumpAstCommand);
+
+return rootCommand.Parse(args).Invoke();
+
+FileInfo parseSingleRelativePath(ArgumentResult parse, bool mustExist)
+    => parseRelativePath(parse, parse.Tokens.Single(), mustExist);
+
+FileInfo[] parseRelativePaths(ArgumentResult parse, bool mustExist)
+    => parse.Tokens.Select(tk => parseRelativePath(parse, tk, mustExist)).ToArray();
+
+FileInfo parseRelativePath(ArgumentResult parse, Token token, bool mustExist)
+{
+    DirectoryInfo root = parse.GetRequiredValue(sourceDirArg);
+    string relativePath = token.Value;
+    string fullPath = Path.Combine(root.FullName, relativePath);
+    var fileInfo = new FileInfo(fullPath);
+    if (mustExist && !fileInfo.Exists)
     {
-        string dumpPath = Path.Combine(sourceDir.Name, outputFile?.FullName ?? "out.txt");
-        using Stream outputStream = outputFile is null
-            ? Console.OpenStandardOutput()
-            : File.Create(dumpPath);
-        using TextWriter output = new StreamWriter(outputStream);
+        parse.AddError($"Input file does not exist: '{relativePath}'");
+    }
 
-        var compilation = new Compilation(sourceDir.FullName);
+    return fileInfo;
+}
 
-        SourceModuleSymbol?[] rootModules = rootScriptNames
-            .Select(rootName => compilation.TryGetSourceModule(rootName))
+static void RunCheck(
+    DirectoryInfo sourceDir,
+    FileInfo[] rootFilePaths,
+    FileInfo[] filesToInspect,
+    FileInfo? outputFile)
+{
+    string dumpPath = Path.Combine(sourceDir.Name, outputFile?.FullName ?? "out.txt");
+    using Stream outputStream = outputFile is null
+        ? Console.OpenStandardOutput()
+        : File.Create(dumpPath);
+    using TextWriter output = new StreamWriter(outputStream);
+
+    var compilation = new Compilation(sourceDir.FullName);
+    rootFilePaths = DetermineRoots(rootFilePaths, filesToInspect, sourceDir);
+    SourceModuleSymbol?[] rootModules = rootFilePaths
+        .Select(ResolvedPath.FromFileSystemInfo)
+        .Select(root => compilation.GetSourceModule(root))
+        .ToArray();
+
+    compilation = compilation.EmitDiagnostics(rootModules!);
+
+    IEnumerable<Diagnostic> filteredDiagnostics = compilation.Diagnostics.All;
+    if (filesToInspect.Length > 0)
+    {
+        ResolvedPath[] filePathsToInspect = filesToInspect
+            .Select(ResolvedPath.FromFileSystemInfo)
             .ToArray();
 
-        string[] unresolvedRoots = rootScriptNames
-            .Zip(rootModules)
-            .Where(tuple => tuple.Second is null)
-            .Select(tuple => $"'{tuple.First}'")
-            .ToArray();
-
-        if (unresolvedRoots.Length > 0)
-        {
-            output.WriteLine(
-                $"The following root scripts were not found: " +
-                $"[{string.Join(", ", unresolvedRoots)}]"
-            );
-            return;
-        }
-
-        compilation = compilation.EmitDiagnostics(rootModules!);
-
-        IEnumerable<Diagnostic> filteredDiagnostics = compilation.Diagnostics.All;
-        if (filesToInspect.Length > 0)
-        {
-            ResolvedPath[] filePathsToInspect = filesToInspect
-                .Select(ResolvedPath.FromFileSystemInfo)
-                .ToArray();
-
-            filteredDiagnostics = filteredDiagnostics
-                .Where(x => filePathsToInspect.Any(y => x.Location.FilePath == y));
-        }
-
-        SquiggleStyle squiggleStyle = outputFile is null
-            ? SquiggleStyle.Underline
-            : SquiggleStyle.VerticalBar;
-
-        foreach (Diagnostic diagnostic in filteredDiagnostics
-                     .OrderBy(d => d.Location.FilePath.Value)
-                     .ThenBy(d => d.Location.Span))
-        {
-            diagnostic.Dump(output, squiggleStyle);
-            output.WriteLine();
-        }
+        filteredDiagnostics = filteredDiagnostics
+            .Where(x => filePathsToInspect.Any(y => x.Location.FilePath == y));
     }
 
-    private static void RunDumpAst(
-        DirectoryInfo sourceDir,
-        FileInfo inputFile,
-        SyntaxDumpFormat format,
-        FileInfo? outputFile)
+    SquiggleStyle squiggleStyle = outputFile is null
+        ? SquiggleStyle.Underline
+        : SquiggleStyle.VerticalBar;
+
+    foreach (Diagnostic diagnostic in filteredDiagnostics
+                 .OrderBy(d => d.Location.FilePath.Value)
+                 .ThenBy(d => d.Location.Span))
     {
-        string dumpPath = Path.Combine(sourceDir.Name, outputFile?.FullName ?? "out.txt");
-        using Stream outputStream = outputFile is null
-            ? Console.OpenStandardOutput()
-            : File.Create(dumpPath);
-        using TextWriter output = new StreamWriter(outputStream);
-
-        using FileStream inputStream = inputFile.OpenRead();
-        var sourceText = SourceText.From(inputStream, ResolvedPath.FromFileSystemInfo(inputFile));
-        var tree = SyntaxTree.ParseText(sourceText);
-        tree.Root.Dump(output, format);
+        diagnostic.Dump(output, squiggleStyle);
+        output.WriteLine();
     }
+}
+
+static void RunDumpAst(
+    DirectoryInfo sourceDir,
+    FileInfo inputFile,
+    SyntaxDumpFormat format,
+    FileInfo? outputFile)
+{
+    string dumpPath = Path.Combine(sourceDir.FullName, outputFile?.FullName ?? "out.txt");
+    using Stream outputStream = outputFile is null
+        ? Console.OpenStandardOutput()
+        : File.Create(dumpPath);
+    using TextWriter output = new StreamWriter(outputStream);
+
+    using FileStream inputStream = inputFile.OpenRead();
+    var sourceText = SourceText.From(inputStream, ResolvedPath.FromFileSystemInfo(inputFile));
+    var tree = SyntaxTree.ParseText(sourceText);
+    tree.Root.Dump(output, format);
+}
+
+static FileInfo[] DetermineRoots(FileInfo[] providedRoots, FileInfo[] filesToInspect, DirectoryInfo sourceDir)
+{
+    if (providedRoots.Length > 0) { return providedRoots; }
+
+    var bootScript = new FileInfo(Path.Combine(sourceDir.FullName, "boot.nss"));
+    return bootScript.Exists ? [bootScript] : filesToInspect;
 }

@@ -119,7 +119,6 @@ namespace NitroSharp.NsScript.Compiler
 
     public sealed class SourceFileSymbol : NamedSymbol
     {
-        private readonly SourceFileRoot _syntax;
         private readonly Dictionary<string, ChapterSymbol> _chapterMap;
         private readonly Dictionary<string, SceneSymbol> _sceneMap;
         private readonly Dictionary<string, FunctionSymbol> _functionMap;
@@ -131,7 +130,7 @@ namespace NitroSharp.NsScript.Compiler
             SourceFileRoot syntax)
             : base(relativePathNoExtension)
         {
-            _syntax = syntax;
+            Syntax = syntax;
             Module = module;
             FilePath = filePath;
 
@@ -184,12 +183,12 @@ namespace NitroSharp.NsScript.Compiler
 
         public SourceModuleSymbol Module { get; }
         public ResolvedPath FilePath { get; }
-        public SourceText SourceText => _syntax.SyntaxTree.SourceText;
+        public SourceText SourceText => Syntax.SyntaxTree.SourceText;
+        public SourceFileRoot Syntax { get; }
 
         public ImmutableArray<ChapterSymbol> Chapters { get; }
         public ImmutableArray<FunctionSymbol> Functions { get; }
         public ImmutableArray<SceneSymbol> Scenes { get; }
-
         public uint SubroutineCount { get; }
 
         public ChapterSymbol? LookupChapter(string name)

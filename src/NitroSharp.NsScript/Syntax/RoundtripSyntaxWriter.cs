@@ -227,7 +227,7 @@ internal sealed class RoundtripSyntaxWriter(TextWriter textWriter)
         {
             SigilKind.None => "",
             SigilKind.Dollar => "$",
-            SigilKind.Hash => "$",
+            SigilKind.Hash => "#",
             _ => throw ThrowHelper.UnexpectedValueOf<SigilKind>()
         };
         Write(sigil);

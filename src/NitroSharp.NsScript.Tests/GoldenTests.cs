@@ -86,6 +86,7 @@ public sealed class GoldenTests
             var nonCursedOptions = new EnumerationOptions { MatchType = MatchType.Simple };
             return testFile.Directory.NotNull()
                 .EnumerateFiles($"{testFile.Name}.*", nonCursedOptions)
+                .Where(x => x.Extension != ".temp")
                 .Select(ResolvedPath.FromFileSystemInfo);
         }
 

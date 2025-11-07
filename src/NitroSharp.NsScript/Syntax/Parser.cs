@@ -312,7 +312,7 @@ namespace NitroSharp.NsScript.Syntax
                 }
                 else if (statement.Kind == SyntaxNodeKind.ErrorStatement)
                 {
-                    //Synchronize(SynchronizationKind.Statement);
+                    Synchronize(SynchronizationKind.NextStatement);
                 }
             }
 

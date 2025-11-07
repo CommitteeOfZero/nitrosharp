@@ -214,6 +214,13 @@ public class Compilation
     }
 
     /// <exception cref="FileNotFoundException" />
+    public SourceModuleSymbol GetSourceModule(ResolvedPath resolvedPath)
+    {
+        SyntaxTree tree = GetSyntaxTree(resolvedPath);
+        return GetModuleSymbol(tree);
+    }
+
+    /// <exception cref="FileNotFoundException" />
     public SourceModuleSymbol GetSourceModule(string relativePath)
     {
         SyntaxTree tree = GetSyntaxTree(relativePath);

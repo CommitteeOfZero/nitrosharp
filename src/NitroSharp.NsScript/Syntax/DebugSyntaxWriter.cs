@@ -57,7 +57,7 @@ internal sealed class DebugSyntaxWriter(TextWriter textWriter)
     {
         return node switch
         {
-            SourceFileRoot root => $"subroutines: C={root.ChapterCount}, S={root.SceneCount}," +
+            SourceFileRoot root => $"subroutines: C={root.ChapterCount}, S={root.SceneCount}, " +
                 $"F={root.FunctionCount}, includes={root.FileReferences.Length}",
             ChapterDeclaration chapter => $"name=\"{chapter.Name.Value}\"",
             SceneDeclaration scene => $"name=\"{scene.Name.Value}\"",
@@ -84,7 +84,7 @@ internal sealed class DebugSyntaxWriter(TextWriter textWriter)
             AssignmentExpression assignment => $"op=\"{OperatorInfo.GetText(assignment.OperatorKind.Value)}\"",
             FunctionCallExpression call => $"target=\"{call.TargetName.Value}\" args={call.Arguments.Length}",
             BezierExpression bezier => $"points={bezier.ControlPoints.Length}",
-            ErrorExpression error => $"test: {QuoteAndEscape(error.Text.ToString())}",
+            ErrorExpression error => $"text: {QuoteAndEscape(error.Text.ToString())}",
             ErrorStatement error => $"text: {QuoteAndEscape(error.Text.ToString())}",
             _ => string.Empty
         };
@@ -92,7 +92,7 @@ internal sealed class DebugSyntaxWriter(TextWriter textWriter)
 
     private static string QuoteAndEscape(string value)
     {
-        var sb = new StringBuilder(value.Length);
+        var sb = new StringBuilder(value.Length + 2);
         sb.Append('"');
         foreach (char c in value)
         {
