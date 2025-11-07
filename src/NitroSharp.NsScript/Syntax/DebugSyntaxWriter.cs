@@ -84,8 +84,8 @@ internal sealed class DebugSyntaxWriter(TextWriter textWriter)
             AssignmentExpression assignment => $"op=\"{OperatorInfo.GetText(assignment.OperatorKind.Value)}\"",
             FunctionCallExpression call => $"target=\"{call.TargetName.Value}\" args={call.Arguments.Length}",
             BezierExpression bezier => $"points={bezier.ControlPoints.Length}",
-            ErrorExpression => "<error expr>",
-            ErrorStatement => "<error stmt>",
+            ErrorExpression error => $"test: {QuoteAndEscape(error.Text.ToString())}",
+            ErrorStatement error => $"text: {QuoteAndEscape(error.Text.ToString())}",
             _ => string.Empty
         };
     }

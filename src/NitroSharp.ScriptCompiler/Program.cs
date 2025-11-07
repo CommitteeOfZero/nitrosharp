@@ -168,7 +168,7 @@ internal static class Program
         if (filesToInspect.Length > 0)
         {
             ResolvedPath[] filePathsToInspect = filesToInspect
-                .Select(ResolvedPath.FromExistingFile)
+                .Select(ResolvedPath.FromFileSystemInfo)
                 .ToArray();
 
             filteredDiagnostics = filteredDiagnostics
@@ -200,8 +200,8 @@ internal static class Program
             : File.Create(dumpPath);
         using TextWriter output = new StreamWriter(outputStream);
 
-        using FileStream fs = inputFile.OpenRead();
-        var sourceText = SourceText.From(fs, ResolvedPath.FromExistingFile(inputFile));
+        using FileStream inputStream = inputFile.OpenRead();
+        var sourceText = SourceText.From(inputStream, ResolvedPath.FromFileSystemInfo(inputFile));
         var tree = SyntaxTree.ParseText(sourceText);
         tree.Root.Dump(output, format);
     }

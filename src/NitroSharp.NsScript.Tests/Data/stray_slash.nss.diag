@@ -1,0 +1,8 @@
+Warning: Stray token '/'.
+  --> stray_slash.nss:10:7
+     |
+   9 | 
+  10 | </PRE>|/|	WaitKey();
+  11 |     Wait(42);
+     |
+

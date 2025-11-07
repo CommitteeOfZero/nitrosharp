@@ -116,6 +116,45 @@ namespace NitroSharp.NsScript.Syntax
             }
         }
 
+        public static bool CanStartStatement(SyntaxTokenKind token)
+        {
+            switch (token)
+            {
+                case SyntaxTokenKind.OpenBrace:
+                case SyntaxTokenKind.IfKeyword:
+                case SyntaxTokenKind.BreakKeyword:
+                case SyntaxTokenKind.WhileKeyword:
+                case SyntaxTokenKind.ReturnKeyword:
+                case SyntaxTokenKind.SelectKeyword:
+                case SyntaxTokenKind.CaseKeyword:
+                case SyntaxTokenKind.CallChapterKeyword:
+                case SyntaxTokenKind.CallSceneKeyword:
+                case SyntaxTokenKind.DialogueBlockStartTag:
+                    return true;
+
+                default:
+                    return CanStartExpressionTerm(token);
+            }
+        }
+
+        public static bool CanStartExpressionTerm(SyntaxTokenKind tokenKind)
+        {
+            switch (tokenKind)
+            {
+                case SyntaxTokenKind.Identifier:
+                case SyntaxTokenKind.StringLiteralOrQuotedIdentifier:
+                case SyntaxTokenKind.NumericLiteral:
+                case SyntaxTokenKind.NullKeyword:
+                case SyntaxTokenKind.TrueKeyword:
+                case SyntaxTokenKind.FalseKeyword:
+                case SyntaxTokenKind.OpenParen:
+                    return true;
+
+                default:
+                    return false;
+            }
+        }
+
         public static bool IsStatementExpression(Expression expression)
         {
             SyntaxNodeKind kind = expression.Kind;

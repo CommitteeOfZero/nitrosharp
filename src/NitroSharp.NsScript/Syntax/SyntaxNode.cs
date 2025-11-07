@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using NitroSharp.Common;
 
@@ -50,16 +51,17 @@ public abstract class SyntaxNode(TextSpan span)
 {
     private SyntaxTree? _syntaxTree;
 
-    public abstract SyntaxNodeKind Kind { get; }
-    public TextSpan Span { get; } = span;
-
     internal void Bind(SyntaxTree syntaxTree)
     {
         _syntaxTree = syntaxTree;
     }
 
+    public abstract SyntaxNodeKind Kind { get; }
+    public TextSpan Span { get; } = span;
+
     public SyntaxTree SyntaxTree => _syntaxTree.NotNull();
     public SourceLocation Location => new(SyntaxTree.SourceText, Span);
+    public ReadOnlySpan<char> Text => SyntaxTree.SourceText.GetCharacterSpan(Span);
 
     public void Dump(TextWriter textWriter, SyntaxDumpFormat format)
     {

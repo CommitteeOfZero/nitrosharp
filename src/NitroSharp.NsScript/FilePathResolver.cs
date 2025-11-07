@@ -5,7 +5,7 @@ using System.IO;
 namespace NitroSharp.NsScript;
 
 /// <summary>
-/// A canonical, normalized path to a file that is supposed to exist.
+/// A canonical, normalized path to a file/directory that is supposed to exist.
 /// </summary>
 public readonly record struct ResolvedPath
 {
@@ -17,11 +17,11 @@ public readonly record struct ResolvedPath
     public string Value { get; }
     public string FileName => Path.GetFileName(Value);
 
-    public static ResolvedPath FromExistingFile(FileInfo fileInfo)
+    public static ResolvedPath FromFileSystemInfo(FileSystemInfo fileSystemEntry)
     {
-        return fileInfo.Exists
-            ? new ResolvedPath(FilePathResolver.NormalizePath(fileInfo.FullName))
-            : throw new FileNotFoundException(fileInfo.FullName);
+        return fileSystemEntry.Exists
+            ? new ResolvedPath(FilePathResolver.NormalizePath(fileSystemEntry.FullName))
+            : throw new FileNotFoundException(fileSystemEntry.FullName);
     }
 
     public ResolvedRelativePath RelativeTo(ResolvedPath directory)
@@ -39,7 +39,7 @@ public readonly record struct ResolvedPath
 }
 
 /// <summary>
-/// A relative, normalized path to a file that is supposed to exist.
+/// A relative, normalized path to a file/directory that is supposed to exist.
 /// </summary>
 public readonly record struct ResolvedRelativePath
 {
