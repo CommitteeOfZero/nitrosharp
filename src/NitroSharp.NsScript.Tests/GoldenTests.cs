@@ -54,7 +54,7 @@ public sealed class GoldenTests
 
         var compilation = new Compilation(testDataDir);
         SourceModuleSymbol module = compilation.GetSourceModule(test.SourcePath.Value);
-        compilation = compilation.EmitDiagnostics(new[] { module });
+        compilation = compilation.EmitDiagnostics([module]);
 
         using var outputWriter = new StringWriter();
         var context = new TestContext(module, compilation, test.Kind);
@@ -72,14 +72,12 @@ public sealed class GoldenTests
         var testDataPath = ResolvedPath.FromFileSystemInfo(testDataDir);
 
         var testFiles = testDataDir.EnumerateFiles("*.nss", SearchOption.AllDirectories);
-        var testsWithGold = testFiles
-            .Select(x => (source: relativePath(x), golds: goldFor(x).ToArray()));
-
-        var tests = testsWithGold
+        var testsWithGold = testFiles.Select(x => (source: relativePath(x), golds: goldFor(x)));
+        var testsToRun = testsWithGold
             .SelectMany(x => x.golds.Select(gold => new Test(x.source, gold, getTestKind(gold))))
             .ToArray();
 
-        return new TheoryData<Test>(tests);
+        return new TheoryData<Test>(testsToRun);
 
         IEnumerable<ResolvedPath> goldFor(FileInfo testFile)
         {

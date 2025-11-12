@@ -12,6 +12,7 @@ internal static class DiagnosticInfo
             DiagnosticId.UnterminatedDialogueBlockStartTag => "Dialogue block start tag is not properly terminated.",
             DiagnosticId.UnterminatedDialogueBlockIdentifier => "Dialogue block identifier is not properly terminated.",
             DiagnosticId.TokenExpected => "Expected '{0}', found '{1}'.",
+            DiagnosticId.IdentifierExpected => "Expected identifier, found '{0}'.",
             DiagnosticId.MissingStatementTerminator => "Statement is not properly terminated.",
             DiagnosticId.StrayToken => "Stray token '{0}'.",
             DiagnosticId.MisplacedSemicolon => "Unexpected ';'.",
@@ -40,6 +41,7 @@ internal static class DiagnosticInfo
             case DiagnosticId.UnterminatedDialogueBlockStartTag:
             case DiagnosticId.UnterminatedDialogueBlockIdentifier:
             case DiagnosticId.TokenExpected:
+            case DiagnosticId.IdentifierExpected:
             case DiagnosticId.InvalidExpressionStatement:
             case DiagnosticId.InvalidExpressionTerm:
             case DiagnosticId.ExpectedSubroutineDeclaration:

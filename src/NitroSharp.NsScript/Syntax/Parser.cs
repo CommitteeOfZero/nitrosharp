@@ -11,7 +11,7 @@ namespace NitroSharp.NsScript.Syntax
     internal sealed class Parser
     {
         private readonly Lexer _lexer;
-        private readonly SyntaxToken[] _tokens;
+        private readonly ArrayBuilder<SyntaxToken> _tokens;
         private SyntaxToken _currentToken;
         private int _tokenIndex;
 
@@ -44,19 +44,19 @@ namespace NitroSharp.NsScript.Syntax
             _parameterMap = [];
             _parameters = ImmutableArray.CreateBuilder<Parameter>();
             _dialogueBlocks = ImmutableArray.CreateBuilder<DialogueBlock>();
-            if (_tokens.Length > 0)
+            if (Tokens is [var firstToken, ..])
             {
-                _currentToken = _tokens[0];
+                _currentToken = firstToken;
             }
         }
 
+        private SourceText SourceText => _lexer.SourceText;
+        private Span<SyntaxToken> Tokens => _tokens.AsSpan();
         private int LexerPosition => _currentToken.TextSpan.Start;
 
-        private SyntaxToken PeekToken(int n) => _tokens[_tokenIndex + n];
+        private SyntaxToken PeekToken(int n) => Tokens[_tokenIndex + n];
 
-        private SourceText SourceText => _lexer.SourceText;
-
-        private SyntaxToken[] Lex()
+        private ArrayBuilder<SyntaxToken> Lex()
         {
             int capacity = Math.Max(32, SourceText.Source.Length / 6);
             var tokens = new ArrayBuilder<SyntaxToken>(capacity);
@@ -64,36 +64,37 @@ namespace NitroSharp.NsScript.Syntax
             do
             {
                 _lexer.Lex(ref token);
-                if (token.Kind == SyntaxTokenKind.EndOfFileToken)
+                if (token.Kind == SyntaxTokenKind.EndOfFile)
                 {
                     break;
                 }
 
                 token = ref tokens.Add();
+            } while (token.Kind != SyntaxTokenKind.EndOfFile);
 
-            } while (token.Kind != SyntaxTokenKind.EndOfFileToken);
-
-            return tokens.UnderlyingArray;
+            return tokens;
         }
 
         private SyntaxToken EatToken()
         {
-            SyntaxToken ct = _currentToken;
-            _currentToken = _tokens[++_tokenIndex];
-            return ct;
+            SyntaxToken tk = _currentToken;
+            if (tk.Kind != SyntaxTokenKind.EndOfFile)
+            {
+                _tokenIndex++;
+            }
+            _currentToken = Tokens[_tokenIndex];
+            return tk;
         }
 
         private SyntaxToken EatToken(SyntaxTokenKind expectedKind)
         {
-            SyntaxToken ct = _currentToken;
-            if (ct.Kind != expectedKind)
+            SyntaxToken tk = _currentToken;
+            if (tk.Kind != SyntaxTokenKind.EndOfFile)
             {
-                _currentToken = _tokens[++_tokenIndex];
-                return CreateMissingToken(expectedKind, ct.Kind);
+                _tokenIndex++;
             }
-
-            _currentToken = _tokens[++_tokenIndex];
-            return ct;
+            _currentToken = Tokens[_tokenIndex];
+            return tk.Kind == expectedKind ? tk : CreateMissingToken(expectedKind, tk.Kind);
         }
 
         private string GetText(in SyntaxToken token)
@@ -116,7 +117,7 @@ namespace NitroSharp.NsScript.Syntax
         private void EatTokens(int count)
         {
             _tokenIndex += count;
-            _currentToken = _tokens[_tokenIndex];
+            _currentToken = Tokens[_tokenIndex];
         }
 
         private TextSpan SpanFrom(SyntaxNode firstNode)
@@ -154,7 +155,7 @@ namespace NitroSharp.NsScript.Syntax
             var fileReferences = ImmutableArray.CreateBuilder<Spanned<string>>();
             (uint chapterCount, uint sceneCount, uint functionCount) subroutineCounts = default;
             SyntaxTokenKind tk;
-            while ((tk = _currentToken.Kind) != SyntaxTokenKind.EndOfFileToken
+            while ((tk = _currentToken.Kind) != SyntaxTokenKind.EndOfFile
                    && !SyntaxFacts.CanStartDeclaration(tk))
             {
                 switch (_currentToken.Kind)
@@ -175,7 +176,7 @@ namespace NitroSharp.NsScript.Syntax
             }
 
             var subroutines = ImmutableArray.CreateBuilder<SubroutineDeclaration>();
-            while (_currentToken.Kind != SyntaxTokenKind.EndOfFileToken)
+            while (_currentToken.Kind != SyntaxTokenKind.EndOfFile)
             {
                 _dialogueBlocks.Clear();
                 switch (_currentToken.Kind)
@@ -196,7 +197,7 @@ namespace NitroSharp.NsScript.Syntax
                     case SyntaxTokenKind.Dot:
                         Synchronize(SynchronizationKind.Line);
                         break;
-                    case SyntaxTokenKind.EndOfFileToken:
+                    case SyntaxTokenKind.EndOfFile:
                         break;
                     default:
                         Report(DiagnosticId.ExpectedSubroutineDeclaration, GetText(_currentToken));
@@ -266,7 +267,7 @@ namespace NitroSharp.NsScript.Syntax
 
             _parameters.Clear();
             while (_currentToken.Kind != SyntaxTokenKind.CloseParen
-                && _currentToken.Kind != SyntaxTokenKind.EndOfFileToken)
+                && _currentToken.Kind != SyntaxTokenKind.EndOfFile)
             {
                 switch (_currentToken.Kind)
                 {
@@ -302,7 +303,7 @@ namespace NitroSharp.NsScript.Syntax
         {
             var statements = ImmutableArray.CreateBuilder<Statement>();
             SyntaxTokenKind tk;
-            while ((tk = _currentToken.Kind) != SyntaxTokenKind.CloseBrace && tk != SyntaxTokenKind.EndOfFileToken)
+            while ((tk = _currentToken.Kind) != SyntaxTokenKind.CloseBrace && tk != SyntaxTokenKind.EndOfFile)
             {
                 Statement statement = ParseStatement();
                 statements.Add(statement);
@@ -331,7 +332,7 @@ namespace NitroSharp.NsScript.Syntax
                     break;
                 }
                 SyntaxTokenKind tk = _currentToken.Kind;
-                if (tk is SyntaxTokenKind.EndOfFileToken or SyntaxTokenKind.CloseBrace)
+                if (tk is SyntaxTokenKind.EndOfFile or SyntaxTokenKind.CloseBrace)
                 {
                     return CreateErrorStatement(startOffset);
                 }
@@ -414,7 +415,7 @@ namespace NitroSharp.NsScript.Syntax
             // Look for the closing '>'
             while ((token = PeekToken(n)).Kind != SyntaxTokenKind.GreaterThan)
             {
-                if (token.Kind == SyntaxTokenKind.EndOfFileToken)
+                if (token.Kind == SyntaxTokenKind.EndOfFile)
                 {
                     return null;
                 }
@@ -425,7 +426,7 @@ namespace NitroSharp.NsScript.Syntax
             // Check if the current line ends with the '>' character that we found
             if (GetLineNumber(PeekToken(n + 1)) != currentLine)
             {
-                Report(DiagnosticId.StrayMarkupBlock, SourceText.LineSpans[currentLine]);
+                Report(DiagnosticId.StrayMarkupBlock, SourceText.GetLine(currentLine));
                 EatTokens(n + 1); // skip to the next line
                 return CreateErrorStatement(startOffset);
             }
@@ -437,12 +438,16 @@ namespace NitroSharp.NsScript.Syntax
         {
             Expression expr = ParseExpression();
 
-            if (!SyntaxFacts.IsStatementExpression(expr))
+            if (SyntaxFacts.IsStatementExpression(expr))
             {
+                EatStatementTerminator();
+            }
+            else
+            {
+                Synchronize(SynchronizationKind.NextStatement);
                 Report(DiagnosticId.InvalidExpressionStatement, expr.Span);
             }
 
-            EatStatementTerminator();
             return new ExpressionStatement(expr, SpanFrom(expr));
         }
 
@@ -497,13 +502,17 @@ namespace NitroSharp.NsScript.Syntax
 
             SyntaxTokenKind tk = _currentToken.Kind;
             TextSpan tkSpan = _currentToken.TextSpan;
-            if (SyntaxFacts.TryGetUnaryOperatorKind(tk, out UnaryOperatorKind unaryOperator))
+            if (SyntaxFacts.TryGetUnaryOperatorKind(tk) is { } unaryOperator)
             {
                 EatToken();
                 newPrecedence = Precedence.Unary;
                 Expression operand = ParseSubExpression(newPrecedence);
                 var fullSpan = TextSpan.FromBounds(tkSpan.Start, operand.Span.End);
-                leftOperand = new UnaryExpression(operand, new Spanned<UnaryOperatorKind>(unaryOperator, tkSpan), fullSpan);
+                leftOperand = new UnaryExpression(
+                    operand,
+                    new Spanned<UnaryOperatorKind>(unaryOperator, tkSpan),
+                    fullSpan
+                );
             }
             else
             {
@@ -514,22 +523,18 @@ namespace NitroSharp.NsScript.Syntax
             {
                 tk = _currentToken.Kind;
                 tkSpan = _currentToken.TextSpan;
-                bool binary;
-                AssignmentOperatorKind assignOpKind = default;
-                if (SyntaxFacts.TryGetBinaryOperatorKind(tk, out BinaryOperatorKind binOpKind))
+                BinaryOperatorKind? binOpKind = SyntaxFacts.TryGetBinaryOperatorKind(tk);
+                AssignmentOperatorKind? assignOpKind = null;
+                if (!binOpKind.HasValue)
                 {
-                    binary = true;
+                    assignOpKind = SyntaxFacts.TryGetAssignmentOperatorKind(tk);
                 }
-                else if (SyntaxFacts.TryGetAssignmentOperatorKind(tk, out assignOpKind))
-                {
-                    binary = false;
-                }
-                else
+                if (!(assignOpKind.HasValue || binOpKind.HasValue))
                 {
                     break;
                 }
 
-                newPrecedence = binary ? GetPrecedence(binOpKind) : Precedence.Assignment;
+                newPrecedence = binOpKind.HasValue ? GetPrecedence(binOpKind.Value) : Precedence.Assignment;
                 if (newPrecedence < minPrecedence)
                 {
                     break;
@@ -544,11 +549,19 @@ namespace NitroSharp.NsScript.Syntax
                     : leftOperand;
 
                 var span = TextSpan.FromBounds(leftOperand.Span.Start, rightOperand.Span.End);
-                leftOperand = binary
+                leftOperand = binOpKind.HasValue
                     ? new BinaryExpression(
-                        leftOperand, new Spanned<BinaryOperatorKind>(binOpKind, tkSpan), rightOperand, span)
+                        leftOperand,
+                        new Spanned<BinaryOperatorKind>(binOpKind.Value, tkSpan),
+                        rightOperand,
+                        span
+                    )
                     : new AssignmentExpression(
-                        leftOperand, new Spanned<AssignmentOperatorKind>(assignOpKind, tkSpan), rightOperand, span);
+                        leftOperand,
+                        new Spanned<AssignmentOperatorKind>(assignOpKind!.Value, tkSpan),
+                        rightOperand,
+                        span
+                    );
             }
 
             return leftOperand;
@@ -582,7 +595,7 @@ namespace NitroSharp.NsScript.Syntax
                     EatToken(SyntaxTokenKind.CloseParen);
                     return expr;
 
-                case SyntaxTokenKind.EndOfFileToken:
+                case SyntaxTokenKind.EndOfFile:
                     return new ErrorExpression(SpanFrom(_currentToken));
                 default:
                     Report(DiagnosticId.InvalidExpressionTerm, GetText(_currentToken));
@@ -594,25 +607,12 @@ namespace NitroSharp.NsScript.Syntax
 
         private BezierExpression ParseBezierExpression(in SyntaxToken openParen, Expression x0)
         {
-            BezierControlPoint parseControlPoint(bool starting)
-            {
-                (SyntaxTokenKind startTk, SyntaxTokenKind endTk) = starting
-                    ? (SyntaxTokenKind.OpenParen, SyntaxTokenKind.CloseParen)
-                    : (SyntaxTokenKind.OpenBrace, SyntaxTokenKind.CloseBrace);
-                EatToken(startTk);
-                Expression x = ParseSubExpression(Precedence.Expression);
-                EatToken(SyntaxTokenKind.Comma);
-                Expression y = ParseSubExpression(Precedence.Expression);
-                EatToken(endTk);
-                return new BezierControlPoint(x, y, starting);
-            }
-
             var controlPoints = ImmutableArray.CreateBuilder<BezierControlPoint>();
             EatToken(SyntaxTokenKind.Comma);
             Expression y0 = ParseSubExpression(Precedence.Expression);
             controlPoints.Add(new BezierControlPoint(x0, y0, starting: true));
             EatToken(SyntaxTokenKind.CloseParen);
-            while (_currentToken.Kind != SyntaxTokenKind.EndOfFileToken)
+            while (_currentToken.Kind != SyntaxTokenKind.EndOfFile)
             {
                 bool? paren = _currentToken.Kind switch
                 {
@@ -626,6 +626,19 @@ namespace NitroSharp.NsScript.Syntax
             }
 
             return new BezierExpression(controlPoints.ToImmutable(), SpanFrom(openParen));
+
+            BezierControlPoint parseControlPoint(bool starting)
+            {
+                (SyntaxTokenKind startTk, SyntaxTokenKind endTk) = starting
+                    ? (SyntaxTokenKind.OpenParen, SyntaxTokenKind.CloseParen)
+                    : (SyntaxTokenKind.OpenBrace, SyntaxTokenKind.CloseBrace);
+                EatToken(startTk);
+                Expression x = ParseSubExpression(Precedence.Expression);
+                EatToken(SyntaxTokenKind.Comma);
+                Expression y = ParseSubExpression(Precedence.Expression);
+                EatToken(endTk);
+                return new BezierControlPoint(x, y, starting);
+            }
         }
 
         private LiteralExpression ParseLiteral()
@@ -664,7 +677,11 @@ namespace NitroSharp.NsScript.Syntax
 
         private Spanned<string> ParseIdentifier()
         {
-            SyntaxToken token = EatToken();
+            SyntaxToken token = _currentToken.Kind switch
+            {
+                SyntaxTokenKind.Identifier or SyntaxTokenKind.StringLiteralOrQuotedIdentifier => EatToken(),
+                _ => CreateMissingToken(SyntaxTokenKind.Identifier, _currentToken.Kind)
+            };
             return new Spanned<string>(InternValueText(token), token.TextSpan);
         }
 
@@ -687,7 +704,7 @@ namespace NitroSharp.NsScript.Syntax
         {
             SyntaxTokenKind peek;
             int n = 0;
-            while ((peek = PeekToken(n).Kind) != SyntaxTokenKind.EndOfFileToken)
+            while ((peek = PeekToken(n).Kind) != SyntaxTokenKind.EndOfFile)
             {
                 switch (peek)
                 {
@@ -752,7 +769,7 @@ namespace NitroSharp.NsScript.Syntax
             var arguments = ImmutableArray.CreateBuilder<Expression>();
             while ((tk = _currentToken.Kind) != SyntaxTokenKind.CloseParen
                    && tk != SyntaxTokenKind.Semicolon
-                   && tk != SyntaxTokenKind.EndOfFileToken)
+                   && tk != SyntaxTokenKind.EndOfFile)
             {
                 switch (tk)
                 {
@@ -899,7 +916,7 @@ namespace NitroSharp.NsScript.Syntax
             SyntaxTokenKind tk;
             int start = LexerPosition;
             int end = 0;
-            while ((tk = _currentToken.Kind) != SyntaxTokenKind.EndOfFileToken && !condition(tk))
+            while ((tk = _currentToken.Kind) != SyntaxTokenKind.EndOfFile && !condition(tk))
             {
                 end = EatToken().TextSpan.End;
             }
@@ -916,7 +933,7 @@ namespace NitroSharp.NsScript.Syntax
             string name = extractBlockName(blockIdentifier);
 
             var parts = ImmutableArray.CreateBuilder<DialogueBlockPart>();
-            while (_currentToken.Kind is not (SyntaxTokenKind.DialogueBlockEndTag or SyntaxTokenKind.EndOfFileToken))
+            while (_currentToken.Kind is not (SyntaxTokenKind.DialogueBlockEndTag or SyntaxTokenKind.EndOfFile))
             {
                 DialogueBlockPart? part = ParseDialogueBlockPart();
                 if (part is not null)
@@ -951,7 +968,7 @@ namespace NitroSharp.NsScript.Syntax
                 dialogueBlockPart = ParseDialogueBlockPartCore();
                 if (dialogueBlockPart is not null) { break; }
                 SyntaxTokenKind tk = _currentToken.Kind;
-                if (tk is SyntaxTokenKind.EndOfFileToken)
+                if (tk is SyntaxTokenKind.EndOfFile)
                 {
                     return null;
                 }
@@ -976,7 +993,7 @@ namespace NitroSharp.NsScript.Syntax
                     EatToken(SyntaxTokenKind.CloseBrace);
                     return new DialogueBlockPart.CodeBlock(statements, SpanFrom(openBrace));
                 }
-                case SyntaxTokenKind.EndOfFileToken:
+                case SyntaxTokenKind.EndOfFile:
                 {
                     return null;
                 }
@@ -1019,15 +1036,22 @@ namespace NitroSharp.NsScript.Syntax
 
         private TextSpan GetSpanForMissingToken()
         {
-            return new TextSpan(LexerPosition, 0);
+            int start = Math.Min(LexerPosition, SourceText.Length - 1);
+            return new TextSpan(start, 0);
         }
 
         private void ReportTokenExpected(SyntaxTokenKind expected, SyntaxTokenKind actual)
         {
-            string expectedText = SyntaxFacts.GetText(expected);
             string actualText = SyntaxFacts.GetText(actual);
-
-            Report(DiagnosticId.TokenExpected, expectedText, actualText);
+            if (expected == SyntaxTokenKind.Identifier)
+            {
+                Report(DiagnosticId.IdentifierExpected, actualText);
+            }
+            else
+            {
+                string expectedText = SyntaxFacts.GetText(expected);
+                Report(DiagnosticId.TokenExpected, expectedText, actualText);
+            }
         }
 
         private enum SynchronizationKind
@@ -1105,7 +1129,7 @@ namespace NitroSharp.NsScript.Syntax
             }
         }
 
-        private bool IsAtEnd() => _currentToken.Kind == SyntaxTokenKind.EndOfFileToken;
+        private bool IsAtEnd() => _currentToken.Kind == SyntaxTokenKind.EndOfFile;
     }
 
     internal enum Precedence

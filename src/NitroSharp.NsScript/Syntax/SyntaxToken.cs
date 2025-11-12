@@ -73,7 +73,7 @@ public enum SyntaxTokenKind : byte
     DialogueBlockEndTag,
     DialogueBlockIdentifier,
     Markup,
-    EndOfFileToken,
+    EndOfFile,
 }
 
 public enum SigilKind

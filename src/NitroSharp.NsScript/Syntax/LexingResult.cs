@@ -46,7 +46,7 @@ public readonly struct LexingResult
             {
                 tk = token;
             }
-            else if (token.Kind != SyntaxTokenKind.EndOfFileToken)
+            else if (token.Kind != SyntaxTokenKind.EndOfFile)
             {
                 throw new InvalidOperationException("Lexing result contains more than one token.");
             }
@@ -79,7 +79,7 @@ public readonly struct LexingResult
         {
             if (_reachedEof) { return false; }
             _current = _lexer.Lex();
-            if (_current.Kind == SyntaxTokenKind.EndOfFileToken)
+            if (_current.Kind == SyntaxTokenKind.EndOfFile)
             {
                 _reachedEof = true;
             }

@@ -30,11 +30,11 @@
   <Import Project="..\..\OutputPath.props" />
 
   <ItemGroup>
-    <ProjectReference Include="..\NitroSharp.NsScript\NitroSharp.NsScript.csproj"/>
+    <ProjectReference Include="..\NitroSharp.NsScript\NitroSharp.NsScript.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="System.CommandLine" Version="2.0.0-rc.2.25502.107"/>
+    <PackageReference Include="System.CommandLine" Version="2.0.0" />
   </ItemGroup>
 
 </Project>

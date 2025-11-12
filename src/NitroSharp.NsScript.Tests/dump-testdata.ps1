@@ -17,7 +17,7 @@ switch ($DataKind) {
     }
     'Diagnostics' {
         $outputName = "$TestFileName.diag.temp"
-        & dotnet run --project $compilerProject -- check $testDataDir --roots $TestFileName --output $outputName
+        & dotnet run --project $compilerProject -- check $testDataDir --files $TestFileName --output $outputName
     }
     default {
         throw "Unknown test data kind '$Kind'. Expected 'Syntax' or 'Diagnostics'."

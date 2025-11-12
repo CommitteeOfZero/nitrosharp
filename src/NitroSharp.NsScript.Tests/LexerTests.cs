@@ -49,7 +49,7 @@ public class LexerTests
         untestedTokens.ExceptWith(GetDynamicTokens());
         untestedTokens.Remove(SyntaxTokenKind.None);
         untestedTokens.Remove(SyntaxTokenKind.BadToken);
-        untestedTokens.Remove(SyntaxTokenKind.EndOfFileToken);
+        untestedTokens.Remove(SyntaxTokenKind.EndOfFile);
 
         var testedTokens = GetStaticTokens().Select(x => x.kind);
         untestedTokens.ExceptWith(testedTokens);
@@ -227,7 +227,7 @@ public class LexerTests
     {
         var fixedTokens = Enum.GetValues<SyntaxTokenKind>()
             .Select(k => (kind: k, text: SyntaxFacts.GetText(k)))
-            .Where(t => !string.IsNullOrEmpty(t.text));
+            .Where(t => t is { kind: not SyntaxTokenKind.EndOfFile, text.Length: > 0 });
 
         return fixedTokens;
     }

@@ -392,7 +392,7 @@ namespace NitroSharp.NsScript.Syntax
                     break;
 
                 case EofCharacter:
-                    token.Kind = SyntaxTokenKind.EndOfFileToken;
+                    token.Kind = SyntaxTokenKind.EndOfFile;
                     break;
 
                 default:
@@ -424,7 +424,7 @@ namespace NitroSharp.NsScript.Syntax
                     ScanDialogueBlockIdentifier(ref token);
                     break;
                 case EofCharacter:
-                    token.Kind = SyntaxTokenKind.EndOfFileToken;
+                    token.Kind = SyntaxTokenKind.EndOfFile;
                     break;
                 default:
                     ScanMarkup(ref token);

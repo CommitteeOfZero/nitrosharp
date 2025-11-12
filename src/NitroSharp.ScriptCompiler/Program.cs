@@ -9,7 +9,7 @@ Console.OutputEncoding = Encoding.UTF8;
 
 var rootCommand = new RootCommand("NitroSharp NSS Script Compiler");
 
-var sourceDirArg = new Argument<DirectoryInfo>("source_directory")
+var sourceDirArg = new Argument<DirectoryInfo>("src_dir")
 {
     Description = "The root directory containing the script source files.",
 }.AcceptExistingOnly();
@@ -20,7 +20,7 @@ var rootScriptsOption = new Option<FileInfo[]>("--roots")
     AllowMultipleArgumentsPerToken = true,
     Required = false,
     CustomParser = x => parseRelativePaths(x, mustExist: true)
-}.AcceptExistingOnly();
+};
 
 var filesOption = new Option<FileInfo[]>("--files")
 {
@@ -136,12 +136,12 @@ static void RunCheck(
 
     var compilation = new Compilation(sourceDir.FullName);
     rootFilePaths = DetermineRoots(rootFilePaths, filesToInspect, sourceDir);
-    SourceModuleSymbol?[] rootModules = rootFilePaths
+    SourceModuleSymbol[] rootModules = rootFilePaths
         .Select(ResolvedPath.FromFileSystemInfo)
         .Select(root => compilation.GetSourceModule(root))
         .ToArray();
 
-    compilation = compilation.EmitDiagnostics(rootModules!);
+    compilation = compilation.EmitDiagnostics(rootModules);
 
     IEnumerable<Diagnostic> filteredDiagnostics = compilation.Diagnostics.All;
     if (filesToInspect.Length > 0)

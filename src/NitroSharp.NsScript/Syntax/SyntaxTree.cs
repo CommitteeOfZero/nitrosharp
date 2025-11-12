@@ -1,7 +1,6 @@
 ﻿using System;
-using NitroSharp.NsScript.Syntax;
 
-namespace NitroSharp.NsScript;
+namespace NitroSharp.NsScript.Syntax;
 
 public sealed class SyntaxTree
 {

@@ -1,0 +1,21 @@
+Error: Expected identifier, found '<EOF>'.
+  --> decl_missing_identifier.nss:2:1
+     |
+   1 | chapter
+   2 | ||
+     |
+
+Error: Expected '{', found '<EOF>'.
+  --> decl_missing_identifier.nss:2:1
+     |
+   1 | chapter
+   2 | ||
+     |
+
+Error: Expected '}', found '<EOF>'.
+  --> decl_missing_identifier.nss:2:1
+     |
+   1 | chapter
+   2 | ||
+     |
+

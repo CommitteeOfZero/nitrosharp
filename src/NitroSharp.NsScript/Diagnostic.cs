@@ -15,6 +15,7 @@ public enum DiagnosticId
     NumberTooLarge,
 
     TokenExpected,
+    IdentifierExpected,
     StrayToken,
     MisplacedSemicolon,
     ExpectedSubroutineDeclaration,
@@ -97,24 +98,26 @@ public class Diagnostic
 
         if (startLine.Line > 0)
         {
-            string before = sourceText.GetLineText(startLine.Line - 1);
+            string before = sourceText.GetLine(startLine.Line - 1).ToString();
             output.WriteLine($"{startLine.Line,4} | {before}");
         }
 
         var sb = new StringBuilder();
         for (int line = startLine.Line; line <= endLine.Line; line++)
         {
-            string lineText = sourceText.GetLineText(line);
+            string lineText = sourceText.GetLine(line).ToString();
 
             (int squiggleStart, int squiggleEnd) = (0, lineText.Length);
             if (line == startLine.Line)
             {
-                squiggleStart = startLine.Column;
-                squiggleEnd = startLine.Line == endLine.Line ? endLine.Column : lineText.Length;
+                squiggleStart = Math.Min(startLine.Column, lineText.Length);
+                squiggleEnd = startLine.Line == endLine.Line
+                    ? Math.Min(endLine.Column, lineText.Length)
+                    : lineText.Length;
             }
             else if (line == endLine.Line)
             {
-                (squiggleStart, squiggleEnd) = (0, endLine.Column);
+                (squiggleStart, squiggleEnd) = (0, Math.Min(endLine.Column, lineText.Length));
             }
 
             bool zeroLength = (startLine == endLine) && (squiggleStart == squiggleEnd);
@@ -142,7 +145,7 @@ public class Diagnostic
 
         if (endLine.Line < sourceText.LineCount - 1)
         {
-            string after = sourceText.GetLineText(endLine.Line + 1);
+            string after = sourceText.GetLine(endLine.Line + 1).ToString();
             output.WriteLine($"{endLine.Line + 2,4} | {after}");
         }
 

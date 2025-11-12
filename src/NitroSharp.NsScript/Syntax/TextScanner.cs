@@ -42,11 +42,13 @@ internal abstract class TextScanner(string text)
             : EofCharacter;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     protected void AdvanceChar()
     {
         Position++;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     protected void AdvanceChar(int n)
     {
         Position += n;

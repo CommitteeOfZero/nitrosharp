@@ -27,7 +27,7 @@
 
     <PackageReference Include="JetBrains.Annotations" Version="2025.2.2" PrivateAssets="All" />
     <PackageReference Include="ZeroLog" Version="2.3.0" />
-    <PackageReference Include="System.IO.Pipelines" Version="9.0.10" />
+    <PackageReference Include="System.IO.Pipelines" Version="10.0.0" />
     <PackageReference Include="Microsoft.VisualStudio.Threading" Version="17.14.15" />
     <PackageReference Include="Sprintf.NET" Version="2.0.0" />
 
@@ -40,7 +40,7 @@
 
     <PackageReference Include="SharpDX.XAudio2" Version="4.2.0" />
     <PackageReference Include="SharpDX.Direct2D1" Version="4.2.0" />
-    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.11" />
+    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.12" />
 
     <PackageReference Include="FreeType.Binaries" Version="0.42.0" />
     <PackageReference Include="OpenALSoft.Binaries" Version="0.42.0" />

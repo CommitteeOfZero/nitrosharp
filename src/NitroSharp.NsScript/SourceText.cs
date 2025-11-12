@@ -18,21 +18,20 @@ public sealed class SourceText
         DefaultEncoding = Encoding.GetEncoding("shift-jis");
     }
 
-    private readonly List<TextSpan> _lineSpans;
+    private readonly List<int> _lineStarts;
 
     private SourceText(string text, ResolvedPath filePath)
     {
         Source = text;
         FilePath = filePath;
-        _lineSpans = GetLines();
+        _lineStarts = GetLineStarts();
     }
 
     public string Source { get; }
     public ResolvedPath FilePath { get; }
     public int Length => Source.Length;
 
-    public ReadOnlySpan<TextSpan> LineSpans => CollectionsMarshal.AsSpan(_lineSpans);
-    public int LineCount => _lineSpans.Count;
+    public int LineCount => _lineStarts.Count;
 
     public static SourceText From(string text) => new(text, new ResolvedPath(string.Empty));
     public static SourceText From(Stream stream, ResolvedPath filePath, Encoding? encoding = null)
@@ -42,7 +41,7 @@ public sealed class SourceText
             throw new ArgumentException("Stream must support read operation.", nameof(stream));
         }
 
-        encoding ??= CharsetDetector.DetectFromStream(stream).Detected.Encoding;
+        encoding ??= CharsetDetector.DetectFromStream(stream).Detected?.Encoding ?? Encoding.UTF8;
         stream.Seek(0, SeekOrigin.Begin);
         string text = ReadStream(stream, encoding);
         return new SourceText(text, filePath);
@@ -54,22 +53,23 @@ public sealed class SourceText
     public ReadOnlySpan<char> GetCharacterSpan(TextSpan textSpan)
         => Source.AsSpan().Slice(textSpan.Start, textSpan.Length);
 
-    public string GetLineText(int lineIndex)
+    public TextLine GetLine(int lineIndex)
     {
-        if (lineIndex < 0 || lineIndex >= _lineSpans.Count)
+        if (lineIndex < 0 || lineIndex >= _lineStarts.Count)
         {
             ThrowHelper.ThrowArgumentOutOfRange(nameof(lineIndex));
         }
-        TextSpan lineSpan = LineSpans[lineIndex];
-        return Source.Substring(lineSpan.Start, lineSpan.Length);
+
+        int start = _lineStarts[lineIndex];
+        int end = lineIndex == _lineStarts.Count - 1 ? Length : _lineStarts[lineIndex + 1];
+        return new TextLine(this, TextSpan.FromBounds(start, end));
     }
 
     public LinePosition GetLinePosition(int position)
     {
-        int line = GetLineNumberFromPosition(position);
-        TextSpan lineSpan = LineSpans[line];
-        int column = position - lineSpan.Start;
-        return new LinePosition(line, column);
+        int lineNumber = GetLineNumberFromPosition(position);
+        int column = position - GetLine(lineNumber).Start;
+        return new LinePosition(lineNumber, column);
     }
 
     public LinePositionSpan GetLinePositionSpan(TextSpan textSpan)
@@ -77,13 +77,13 @@ public sealed class SourceText
 
     internal int GetLineNumberFromPosition(int position)
     {
-        Debug.Assert(position < Length);
+        Debug.Assert(position <= Length);
         int lower = 0;
-        int upper = _lineSpans.Count - 1;
+        int upper = _lineStarts.Count - 1;
         while (lower <= upper)
         {
             int index = lower + ((upper - lower) / 2);
-            int start = _lineSpans[index].Start;
+            int start = _lineStarts[index];
             if (start == position)
             {
                 return index;
@@ -101,9 +101,9 @@ public sealed class SourceText
         return lower - 1;
     }
 
-    private List<TextSpan> GetLines()
+    private List<int> GetLineStarts()
     {
-        var lines = new List<TextSpan>(Source.Length / 80);
+        var lineStarts = new List<int>(Source.Length / 80);
         int position = 0;
         int lineStart = 0;
         while (position < Length)
@@ -115,7 +115,7 @@ public sealed class SourceText
             }
             else
             {
-                lines.Add(new TextSpan(lineStart, position - lineStart));
+                lineStarts.Add(lineStart);
                 position += lineBreakWidth;
                 lineStart = position;
             }
@@ -123,10 +123,10 @@ public sealed class SourceText
 
         if (lineStart <= position)
         {
-            lines.Add(new TextSpan(lineStart, Length - lineStart));
+            lineStarts.Add(lineStart);
         }
 
-        return lines;
+        return lineStarts;
     }
 
     private static int GetLineBreakWidth(string text, int position)
@@ -152,4 +152,39 @@ public sealed class SourceText
             return reader.ReadToEnd();
         }
     }
+}
+
+public readonly struct TextLine
+{
+    private readonly SourceText _sourceText;
+
+    internal TextLine(SourceText sourceText, TextSpan fullSpan)
+    {
+        _sourceText = sourceText;
+        Span = fullSpan;
+    }
+
+    public TextSpan Span =>
+        new(
+            field.Start,
+            field.Length - GetLineBreakWidth(_sourceText.GetCharacterSpan(field))
+        );
+
+    public int Start => Span.Start;
+    public int End => Span.End;
+
+    private static int GetLineBreakWidth(ReadOnlySpan<char> text)
+    {
+        if (text.Length == 0) { return 0; }
+
+        int pos = text.Length - 1;
+        while (pos >= 0 && text[pos] is '\r' or '\n')
+        {
+            pos--;
+        }
+
+        return text.Length - pos - 1;
+    }
+
+    public override string ToString() => _sourceText.GetText(Span);
 }
