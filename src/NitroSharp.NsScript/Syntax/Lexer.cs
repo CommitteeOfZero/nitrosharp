@@ -550,11 +550,12 @@ namespace NitroSharp.NsScript.Syntax
             // If the next character is a valid identifier character,
             // then what we're scanning is actually an identifier that starts with a number
             // e.g "215_ＡＡルートグッドエンド".
-            if (SyntaxFacts.IsIdentifierPartCharacter(PeekChar(), PeekChar(1)))
-            {
-                SetPosition(LexemeStart);
-                return false;
-            }
+            // TODO: broken hack, was this necessary for C;H PC?
+            // if (SyntaxFacts.IsIdentifierPartCharacter(PeekChar(), PeekChar(1)))
+            // {
+            //     SetPosition(LexemeStart);
+            //     return false;
+            // }
 
             token.Kind = SyntaxTokenKind.NumericLiteral;
             return true;

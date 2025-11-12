@@ -146,7 +146,27 @@ namespace NitroSharp.NsScript.Syntax
 
             if (tokensConsumed == 0)
             {
-                Report(DiagnosticId.MissingStatementTerminator, GetSpanForMissingToken());
+                reportMissing();
+            }
+
+            return;
+
+            [MethodImpl(MethodImplOptions.NoInlining)]
+            void reportMissing()
+            {
+                TextSpan span = GetSpanForMissingToken();
+                if (_tokenIndex > 0)
+                {
+                    SyntaxToken prevToken = PeekToken(-1);
+                    int prevLine = GetLineNumber(prevToken);
+                    int currentLine = GetLineNumber();
+                    if (prevLine != currentLine)
+                    {
+                        span = new TextSpan(prevToken.TextSpan.End, length: 0);
+                    }
+                }
+
+                Report(DiagnosticId.MissingStatementTerminator, span);
             }
         }
 
@@ -602,8 +622,17 @@ namespace NitroSharp.NsScript.Syntax
                 default:
                     Report(DiagnosticId.InvalidExpressionTerm, GetText(_currentToken));
                     var result = new ErrorExpression(SpanFrom(_currentToken));
-                    EatToken();
-                    return result;
+                    switch (_currentToken.Kind)
+                    {
+                        // Avoid eating tokens that are likely to be handled elsewhere
+                        case SyntaxTokenKind.CloseParen:
+                        case SyntaxTokenKind.CloseBrace:
+                        case SyntaxTokenKind.Comma:
+                            return result;
+                        default:
+                            EatToken();
+                            return result;
+                    }
             }
         }
 
@@ -1100,6 +1129,7 @@ namespace NitroSharp.NsScript.Syntax
                         {
                             return;
                         }
+
                         braceCount--;
                         break;
 

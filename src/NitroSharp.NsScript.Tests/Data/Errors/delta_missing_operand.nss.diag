@@ -1,0 +1,8 @@
+Error: Invalid expression term ')'.
+  --> delta_missing_operand.nss:3:19
+     |
+   2 | {
+   3 |     Move("meow", @|)|;
+   4 | }
+     |
+
