@@ -195,13 +195,13 @@ namespace NitroSharp.NsScript.Syntax
                         break;
                     // Lines starting with a '.' are treated as comments.
                     case SyntaxTokenKind.Dot:
-                        Synchronize(SynchronizationKind.Line);
+                        Synchronize(SynchronizationKind.NextLine);
                         break;
                     case SyntaxTokenKind.EndOfFile:
                         break;
                     default:
                         Report(DiagnosticId.ExpectedSubroutineDeclaration, GetText(_currentToken));
-                        Synchronize(SynchronizationKind.Line);
+                        Synchronize(SynchronizationKind.NextLine);
                         break;
                 }
             }
@@ -380,7 +380,7 @@ namespace NitroSharp.NsScript.Syntax
                     goto default;
                 case SyntaxTokenKind.Dot:
                     int startOffset = LexerPosition;
-                    Synchronize(SynchronizationKind.Line);
+                    Synchronize(SynchronizationKind.NextLine);
                     return CreateErrorStatement(startOffset);
 
                 case SyntaxTokenKind.Identifier:
@@ -410,24 +410,26 @@ namespace NitroSharp.NsScript.Syntax
             int startOffset = LexerPosition;
             int currentLine = GetLineNumber();
 
-            int n = 0;
+            int tokenOffset = 0;
             SyntaxToken token;
             // Look for the closing '>'
-            while ((token = PeekToken(n)).Kind != SyntaxTokenKind.GreaterThan)
+            while ((token = PeekToken(tokenOffset)).Kind != SyntaxTokenKind.GreaterThan)
             {
                 if (token.Kind == SyntaxTokenKind.EndOfFile)
                 {
                     return null;
                 }
 
-                n++;
+                tokenOffset++;
             }
 
             // Check if the current line ends with the '>' character that we found
-            if (GetLineNumber(PeekToken(n + 1)) != currentLine)
+            if (GetLineNumber(PeekToken(tokenOffset + 1)) != currentLine)
             {
-                Report(DiagnosticId.StrayMarkupBlock, SourceText.GetLine(currentLine));
-                EatTokens(n + 1); // skip to the next line
+                TextLine line = SourceText.GetLine(currentLine);
+                Report(DiagnosticId.StrayMarkupBlock, TextSpan.FromBounds(startOffset, line.End));
+                EatTokens(tokenOffset);
+                EatToken(SyntaxTokenKind.GreaterThan);
                 return CreateErrorStatement(startOffset);
             }
 
@@ -1071,11 +1073,11 @@ namespace NitroSharp.NsScript.Syntax
             /// <summary>
             /// Advance to the next subroutine declaration
             /// </summary>
-            Declaration,
+            NextDeclaration,
             /// <summary>
             /// Advance to the next line
             /// </summary>
-            Line
+            NextLine
         }
 
         private void Synchronize(SynchronizationKind kind)
@@ -1092,8 +1094,9 @@ namespace NitroSharp.NsScript.Syntax
                         break;
 
                     case SyntaxTokenKind.CloseBrace:
-                        if (kind is SynchronizationKind.Block or SynchronizationKind.StatementEnd
-                            && braceCount <= 0)
+                        if (braceCount <= 0 && kind is SynchronizationKind.Block
+                                or SynchronizationKind.StatementEnd
+                                or SynchronizationKind.NextStatement)
                         {
                             return;
                         }
@@ -1107,7 +1110,7 @@ namespace NitroSharp.NsScript.Syntax
                     case SyntaxTokenKind.ChapterKeyword:
                     case SyntaxTokenKind.SceneKeyword:
                     case SyntaxTokenKind.FunctionKeyword:
-                        if (kind == SynchronizationKind.Declaration && braceCount == 0) { return; }
+                        if (kind == SynchronizationKind.NextDeclaration && braceCount == 0) { return; }
                         break;
 
                     default:
@@ -1118,7 +1121,7 @@ namespace NitroSharp.NsScript.Syntax
                         break;
                 }
 
-                if (kind == SynchronizationKind.Line)
+                if (kind == SynchronizationKind.NextLine)
                 {
                     int currentLine = GetLineNumber();
                     if (currentLine > lastLineNumber) { return; }

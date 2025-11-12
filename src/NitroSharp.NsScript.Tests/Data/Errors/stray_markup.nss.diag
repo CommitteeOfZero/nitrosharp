@@ -1,0 +1,8 @@
+Warning: Stray markup block.
+  --> stray_markup.nss:4:5
+     |
+   3 |     Wait(42);
+   4 |     |<voice name="name" class="class" src="ch69/420">|
+   5 |     Wait(42);
+     |
+
