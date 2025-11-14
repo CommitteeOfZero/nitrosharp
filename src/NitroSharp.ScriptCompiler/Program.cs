@@ -37,11 +37,19 @@ var outputOption = new Option<FileInfo>("--output")
     CustomParser = x => parseSingleRelativePath(x, mustExist: false)
 };
 
+var minSeverityOption = new Option<DiagnosticSeverity>("--min-severity")
+{
+    Description = "The minimum severity level to report.",
+    Required = false,
+    DefaultValueFactory = _ => DiagnosticSeverity.Info
+};
+
 var checkCommand = new Command("check", "Check script files for errors.");
 checkCommand.Arguments.Add(sourceDirArg);
 checkCommand.Options.Add(rootScriptsOption);
 checkCommand.Options.Add(filesOption);
 checkCommand.Options.Add(outputOption);
+checkCommand.Options.Add(minSeverityOption);
 
 checkCommand.SetAction(result =>
 {
@@ -49,7 +57,8 @@ checkCommand.SetAction(result =>
         result.GetRequiredValue(sourceDirArg),
         result.GetValue(rootScriptsOption)!,
         result.GetValue(filesOption) ?? [],
-        result.GetValue(outputOption)
+        result.GetValue(outputOption),
+        result.GetRequiredValue(minSeverityOption)
     );
 });
 
@@ -126,7 +135,8 @@ static void RunCheck(
     DirectoryInfo sourceDir,
     FileInfo[] rootFilePaths,
     FileInfo[] filesToInspect,
-    FileInfo? outputFile)
+    FileInfo? outputFile,
+    DiagnosticSeverity minSeverity)
 {
     string dumpPath = Path.Combine(sourceDir.Name, outputFile?.FullName ?? "out.txt");
     using Stream outputStream = outputFile is null
@@ -152,6 +162,11 @@ static void RunCheck(
 
         filteredDiagnostics = filteredDiagnostics
             .Where(x => filePathsToInspect.Any(y => x.Location.FilePath == y));
+    }
+
+    if (minSeverity != DiagnosticSeverity.Info)
+    {
+        filteredDiagnostics = filteredDiagnostics.Where(x => x.Severity >= minSeverity);
     }
 
     SquiggleStyle squiggleStyle = outputFile is null

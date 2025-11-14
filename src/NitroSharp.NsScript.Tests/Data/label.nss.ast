@@ -1,0 +1,5 @@
+└─ SourceFileRoot subroutines: C=1, S=0, F=0, includes=0 [0..48)
+   └─ ChapterDeclaration name="main" [0..48)
+      └─ Block statements=1 [14..48)
+         └─ ExpressionStatement [33..45)
+            └─ FunctionCallExpression target="WaitKey" args=0 [33..42)

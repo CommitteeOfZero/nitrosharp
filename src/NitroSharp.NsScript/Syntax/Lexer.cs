@@ -14,7 +14,7 @@ namespace NitroSharp.NsScript.Syntax
 
     internal sealed class Lexer : TextScanner
     {
-        [StructLayout(LayoutKind.Sequential)]
+        [StructLayout(LayoutKind.Auto)]
         private struct MutableToken
         {
             public TextSpan TextSpan;

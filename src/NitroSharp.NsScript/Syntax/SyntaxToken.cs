@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.InteropServices;
 
 namespace NitroSharp.NsScript.Syntax;
 
@@ -73,7 +74,7 @@ public enum SyntaxTokenKind : byte
     DialogueBlockEndTag,
     DialogueBlockIdentifier,
     Markup,
-    EndOfFile,
+    EndOfFile
 }
 
 public enum SigilKind
@@ -83,6 +84,7 @@ public enum SigilKind
     Hash
 }
 
+[StructLayout(LayoutKind.Auto)]
 public readonly struct SyntaxToken
 {
     internal SyntaxToken(SyntaxTokenKind kind, TextSpan textSpan, SyntaxTokenFlags flags)

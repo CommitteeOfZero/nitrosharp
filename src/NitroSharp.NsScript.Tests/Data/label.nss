@@ -1,0 +1,5 @@
+﻿chapter main
+{
+    begin:
+    WaitKey();
+}

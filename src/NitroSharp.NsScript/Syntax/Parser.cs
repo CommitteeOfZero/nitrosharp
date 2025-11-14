@@ -5,6 +5,7 @@ using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Globalization;
 using System.Runtime.CompilerServices;
+using NitroSharp.NsScript.Utilities;
 
 namespace NitroSharp.NsScript.Syntax
 {
@@ -403,6 +404,9 @@ namespace NitroSharp.NsScript.Syntax
                     Synchronize(SynchronizationKind.NextLine);
                     return CreateErrorStatement(startOffset);
 
+                case SyntaxTokenKind.Identifier when PeekToken(1).Kind == SyntaxTokenKind.Colon:
+                    return ParseLabeledStatement();
+
                 case SyntaxTokenKind.Identifier:
                 case SyntaxTokenKind.StringLiteralOrQuotedIdentifier:
                     if (IsArgumentListOrSemicolon())
@@ -422,6 +426,13 @@ namespace NitroSharp.NsScript.Syntax
                     Synchronize(SynchronizationKind.NextStatement);
                     return CreateErrorStatement(errorStart);
             }
+        }
+
+        private Statement ParseLabeledStatement()
+        {
+            Spanned<string> _ = ParseIdentifier();
+            EatToken(SyntaxTokenKind.Colon);
+            return ParseStatement();
         }
 
         private ErrorStatement? TryCreateStrayMarkupNode()
@@ -777,9 +788,9 @@ namespace NitroSharp.NsScript.Syntax
         private FunctionCallExpression ParseFunctionCall()
         {
             Spanned<string> targetName = ParseIdentifier();
-            ImmutableArray<Expression>? args = ParseArgumentList();
+            ImmutableArray<Expression> args = ParseArgumentList();
             var span = TextSpan.FromBounds(targetName.Span.Start, LexerPosition);
-            return new FunctionCallExpression(targetName, args.Value, span);
+            return new FunctionCallExpression(targetName, args, span);
         }
 
         private ImmutableArray<Expression> ParseArgumentList()
