@@ -17,15 +17,14 @@ public enum DiagnosticId
     TokenExpected,
     IdentifierExpected,
     StrayToken,
-    MisplacedSemicolon,
-    ExpectedSubroutineDeclaration,
-    MissingStatementTerminator,
     InvalidExpressionTerm,
-    InvalidExpressionStatement,
-    StrayMarkupBlock,
+    SkippedBadSyntax,
+    ExpectedSubroutineDeclaration,
     MisplacedBreak,
-    OrphanedSelectSection,
     InvalidBezierCurve,
+    OrphanedSelectSection,
+    StrayMarkupBlock,
+    MissingStatementTerminator,
 
     UnresolvedIdentifier,
     BadAssignmentTarget,
@@ -82,9 +81,7 @@ public class Diagnostic
     public void Dump(TextWriter output, SquiggleStyle squiggleStyle)
     {
         SourceText sourceText = Location.SourceText;
-        LinePositionSpan lineSpan = Location.GetLineSpan();
-
-        (LinePosition startLine, LinePosition endLine) = lineSpan;
+        (LinePosition startLine, LinePosition endLine) = Location.GetLineSpan();
 
         string severity = Severity.ToString();
         string message = Message;
@@ -120,7 +117,7 @@ public class Diagnostic
                 (squiggleStart, squiggleEnd) = (0, Math.Min(endLine.Column, lineText.Length));
             }
 
-            bool zeroLength = (startLine == endLine) && (squiggleStart == squiggleEnd);
+            bool zeroLength = startLine == endLine && squiggleStart == squiggleEnd;
             if (zeroLength)
             {
                 squiggleEnd = Math.Min(squiggleStart + 1, lineText.Length);
@@ -134,9 +131,15 @@ public class Diagnostic
             };
 
             sb.Append(lineText[..squiggleStart]);
-            sb.Append(squiggleSeqStart);
+            if (line == startLine.Line || squiggleStyle == SquiggleStyle.Underline)
+            {
+                sb.Append(squiggleSeqStart);
+            }
             sb.Append(lineText[squiggleStart..squiggleEnd]);
-            sb.Append(squiggleSeqEnd);
+            if (line == endLine.Line || squiggleStyle == SquiggleStyle.Underline)
+            {
+                sb.Append(squiggleSeqEnd);
+            }
             sb.Append(lineText[squiggleEnd..]);
 
             output.WriteLine($"{line + 1,4} | {sb}");

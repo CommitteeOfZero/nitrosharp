@@ -11,6 +11,8 @@ internal readonly struct DiagnosticBuilder
         _diagnostics = ImmutableArray.CreateBuilder<Diagnostic>();
     }
 
+    public int Count => _diagnostics.Count;
+
     public void Add(Diagnostic diagnostic)
     {
         _diagnostics.Add(diagnostic);
@@ -24,8 +26,8 @@ internal readonly struct DiagnosticBuilder
         }
     }
 
-    public DiagnosticCollection ToImmutable()
+    public ImmutableArray<Diagnostic> ToImmutable()
     {
-        return new DiagnosticCollection(_diagnostics.ToImmutable());
+        return _diagnostics.ToImmutable();
     }
 }

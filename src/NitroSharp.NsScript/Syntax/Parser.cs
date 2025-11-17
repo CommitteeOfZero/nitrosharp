@@ -57,6 +57,19 @@ namespace NitroSharp.NsScript.Syntax
 
         private SyntaxToken PeekToken(int n) => Tokens[_tokenIndex + n];
 
+        private bool IsAtEnd() => _currentToken.Kind == SyntaxTokenKind.EndOfFile;
+
+        private bool IsAtLineStart() => LexerPosition == GetCurrentLine().Start;
+
+        private TextLine GetCurrentLine()
+            => SourceText.GetLine(GetLineNumber());
+
+        private int GetLineNumber()
+            => SourceText.GetLineNumberFromPosition(LexerPosition);
+
+        private int GetLineNumber(SyntaxToken token)
+            => SourceText.GetLineNumberFromPosition(token.TextSpan.Start);
+
         private ArrayBuilder<SyntaxToken> Lex()
         {
             int capacity = Math.Max(32, SourceText.Source.Length / 6);
@@ -90,7 +103,7 @@ namespace NitroSharp.NsScript.Syntax
         private SyntaxToken EatToken(SyntaxTokenKind expectedKind)
         {
             SyntaxToken tk = _currentToken;
-            if (tk.Kind != SyntaxTokenKind.EndOfFile)
+            if (tk.Kind == expectedKind)
             {
                 _tokenIndex++;
             }
@@ -127,50 +140,6 @@ namespace NitroSharp.NsScript.Syntax
         private TextSpan SpanFrom(in SyntaxToken firstToken)
             => TextSpan.FromBounds(firstToken.TextSpan.Start, LexerPosition);
 
-        private void EatStrayToken()
-        {
-            SyntaxToken token = PeekToken(0);
-            Report(DiagnosticId.StrayToken, GetText(token));
-            EatToken();
-        }
-
-        // Statement terminator characters used in NSS: ';', ':'.
-        // There may be more than one terminator character in a row.
-        private void EatStatementTerminator()
-        {
-            int tokensConsumed = 0;
-            while (SyntaxFacts.IsStatementTerminator(_currentToken.Kind))
-            {
-                EatToken();
-                tokensConsumed++;
-            }
-
-            if (tokensConsumed == 0)
-            {
-                reportMissing();
-            }
-
-            return;
-
-            [MethodImpl(MethodImplOptions.NoInlining)]
-            void reportMissing()
-            {
-                TextSpan span = GetSpanForMissingToken();
-                if (_tokenIndex > 0)
-                {
-                    SyntaxToken prevToken = PeekToken(-1);
-                    int prevLine = GetLineNumber(prevToken);
-                    int currentLine = GetLineNumber();
-                    if (prevLine != currentLine)
-                    {
-                        span = new TextSpan(prevToken.TextSpan.End, length: 0);
-                    }
-                }
-
-                Report(DiagnosticId.MissingStatementTerminator, span);
-            }
-        }
-
         public SourceFileRoot ParseSourceFile()
         {
             var fileReferences = ImmutableArray.CreateBuilder<Spanned<string>>();
@@ -185,10 +154,6 @@ namespace NitroSharp.NsScript.Syntax
                         EatToken();
                         SyntaxToken filePath = EatToken(SyntaxTokenKind.StringLiteralOrQuotedIdentifier);
                         fileReferences.Add(new Spanned<string>(GetValueText(filePath), filePath.TextSpan));
-                        break;
-                    case SyntaxTokenKind.Semicolon:
-                        Report(DiagnosticId.MisplacedSemicolon);
-                        EatToken();
                         break;
                     default:
                         EatStrayToken();
@@ -323,19 +288,28 @@ namespace NitroSharp.NsScript.Syntax
         private ImmutableArray<Statement> ParseStatements()
         {
             var statements = ImmutableArray.CreateBuilder<Statement>();
-            SyntaxTokenKind tk;
-            while ((tk = _currentToken.Kind) != SyntaxTokenKind.CloseBrace && tk != SyntaxTokenKind.EndOfFile)
+            while (_currentToken.Kind is not (SyntaxTokenKind.CloseBrace or SyntaxTokenKind.EndOfFile))
             {
+                int prevDiagnosticCount = _diagnosticBuilder.Count;
                 Statement statement = ParseStatement();
-                statements.Add(statement);
+                bool producedDiagnostics = _diagnosticBuilder.Count > prevDiagnosticCount;
+
                 if (statement.Kind == SyntaxNodeKind.DialogueBlock)
                 {
                     _dialogueBlocks.Add((DialogueBlock)statement);
                 }
                 else if (statement.Kind == SyntaxNodeKind.ErrorStatement)
                 {
-                    Synchronize(SynchronizationKind.NextStatement);
+                    int errorStart = statement.Span.Start;
+                    Synchronize(SynchronizationKind.NextStatementOrLine);
+                    statement = new ErrorStatement(TextSpan.FromBounds(errorStart, LexerPosition));
+                    if (!producedDiagnostics)
+                    {
+                        Report(DiagnosticId.SkippedBadSyntax, statement.Span);
+                    }
                 }
+
+                statements.Add(statement);
             }
 
             return statements.ToImmutable();
@@ -360,13 +334,6 @@ namespace NitroSharp.NsScript.Syntax
             } while (true);
 
             return statement;
-        }
-
-        private ErrorStatement CreateErrorStatement(int startOffset)
-        {
-            int endOffset = LexerPosition;
-            var span = TextSpan.FromBounds(startOffset, endOffset);
-            return new ErrorStatement(span);
         }
 
         private Statement ParseStatementCore()
@@ -400,9 +367,7 @@ namespace NitroSharp.NsScript.Syntax
                     }
                     goto default;
                 case SyntaxTokenKind.Dot:
-                    int startOffset = LexerPosition;
-                    Synchronize(SynchronizationKind.NextLine);
-                    return CreateErrorStatement(startOffset);
+                    return CreateErrorStatement(LexerPosition);
 
                 case SyntaxTokenKind.Identifier when PeekToken(1).Kind == SyntaxTokenKind.Colon:
                     return ParseLabeledStatement();
@@ -416,15 +381,9 @@ namespace NitroSharp.NsScript.Syntax
                     goto default;
 
                 default:
-                    if (SyntaxFacts.CanStartExpressionTerm(_currentToken.Kind))
-                    {
-                        return ParseExpressionStatement();
-                    }
-
-                    int errorStart = LexerPosition;
-                    EatStrayToken();
-                    Synchronize(SynchronizationKind.NextStatement);
-                    return CreateErrorStatement(errorStart);
+                    return SyntaxFacts.CanStartExpressionTerm(_currentToken.Kind)
+                        ? ParseExpressionStatement()
+                        : CreateErrorStatement(LexerPosition);
             }
         }
 
@@ -435,53 +394,55 @@ namespace NitroSharp.NsScript.Syntax
             return ParseStatement();
         }
 
-        private ErrorStatement? TryCreateStrayMarkupNode()
-        {
-            Debug.Assert(_currentToken.Kind == SyntaxTokenKind.LessThan);
-            int startOffset = LexerPosition;
-            int currentLine = GetLineNumber();
-
-            int tokenOffset = 0;
-            SyntaxToken token;
-            // Look for the closing '>'
-            while ((token = PeekToken(tokenOffset)).Kind != SyntaxTokenKind.GreaterThan)
-            {
-                if (token.Kind == SyntaxTokenKind.EndOfFile)
-                {
-                    return null;
-                }
-
-                tokenOffset++;
-            }
-
-            // Check if the current line ends with the '>' character that we found
-            if (GetLineNumber(PeekToken(tokenOffset + 1)) != currentLine)
-            {
-                TextLine line = SourceText.GetLine(currentLine);
-                Report(DiagnosticId.StrayMarkupBlock, TextSpan.FromBounds(startOffset, line.End));
-                EatTokens(tokenOffset);
-                EatToken(SyntaxTokenKind.GreaterThan);
-                return CreateErrorStatement(startOffset);
-            }
-
-            return null;
-        }
-
-        private ExpressionStatement ParseExpressionStatement()
+        private Statement ParseExpressionStatement()
         {
             Expression expr = ParseExpression();
 
-            if (SyntaxFacts.IsStatementExpression(expr))
+            bool isValid = SyntaxFacts.IsStatementExpression(expr);
+            if (isValid)
             {
                 EatStatementTerminator();
             }
-            else
+
+            var span = TextSpan.FromBounds(expr.Span.Start, LexerPosition);
+            return isValid ? new ExpressionStatement(expr, span) : new ErrorStatement(span);
+        }
+
+        // Statement terminator characters used in NSS: ';', ':'.
+        // There may be more than one terminator character in a row.
+        private void EatStatementTerminator()
+        {
+            int tokensConsumed = 0;
+            while (SyntaxFacts.IsStatementTerminator(_currentToken.Kind))
             {
-                Synchronize(SynchronizationKind.NextStatement);
-                Report(DiagnosticId.InvalidExpressionStatement, expr.Span);
+                EatToken();
+                tokensConsumed++;
             }
 
-            return new ExpressionStatement(expr, SpanFrom(expr));
+            if (tokensConsumed == 0)
+            {
+                doReportMissing();
+            }
+
+            return;
+
+            [MethodImpl(MethodImplOptions.NoInlining)]
+            void doReportMissing()
+            {
+                TextSpan span = GetSpanForMissingToken();
+                if (_tokenIndex > 0)
+                {
+                    SyntaxToken prevToken = PeekToken(-1);
+                    int prevLine = GetLineNumber(prevToken);
+                    int currentLine = GetLineNumber();
+                    if (prevLine != currentLine)
+                    {
+                        span = new TextSpan(prevToken.TextSpan.End, length: 0);
+                    }
+                }
+
+                Report(DiagnosticId.MissingStatementTerminator, span);
+            }
         }
 
         private ExpressionStatement ParseFunctionCallWithOmittedParentheses()
@@ -683,7 +644,7 @@ namespace NitroSharp.NsScript.Syntax
             }
         }
 
-        private LiteralExpression ParseLiteral()
+        private Expression ParseLiteral()
         {
             SyntaxToken token = EatToken();
             ConstantValue value;
@@ -714,7 +675,9 @@ namespace NitroSharp.NsScript.Syntax
                     return null!;
             }
 
-            return new LiteralExpression(value, token.TextSpan);
+            return !token.HasDiagnostics
+                ? new LiteralExpression(value, token.TextSpan)
+                : new ErrorExpression(token.TextSpan);
         }
 
         private Spanned<string> ParseIdentifier()
@@ -809,9 +772,9 @@ namespace NitroSharp.NsScript.Syntax
             }
 
             var arguments = ImmutableArray.CreateBuilder<Expression>();
-            while ((tk = _currentToken.Kind) != SyntaxTokenKind.CloseParen
-                   && tk != SyntaxTokenKind.Semicolon
-                   && tk != SyntaxTokenKind.EndOfFile)
+            while ((tk = _currentToken.Kind) is not (SyntaxTokenKind.CloseParen
+                   or SyntaxTokenKind.Semicolon
+                   or SyntaxTokenKind.EndOfFile))
             {
                 switch (tk)
                 {
@@ -836,6 +799,12 @@ namespace NitroSharp.NsScript.Syntax
                         Expression expr = ParseExpression();
                         arguments.Add(expr);
                         break;
+                }
+
+                // Bail if the current line ends with an error node - assume it ends the whole statement
+                if (arguments is [.., { Kind: SyntaxNodeKind.ErrorExpression }] && IsAtLineStart())
+                {
+                    break;
                 }
             }
 
@@ -1048,11 +1017,127 @@ namespace NitroSharp.NsScript.Syntax
             }
         }
 
-        private int GetLineNumber()
-            => SourceText.GetLineNumberFromPosition(LexerPosition);
+        private ErrorStatement CreateErrorStatement(int startOffset)
+        {
+            int endOffset = LexerPosition;
+            var span = TextSpan.FromBounds(startOffset, endOffset);
+            return new ErrorStatement(span);
+        }
 
-        private int GetLineNumber(SyntaxToken token)
-            => SourceText.GetLineNumberFromPosition(token.TextSpan.Start);
+        private ErrorStatement? TryCreateStrayMarkupNode()
+        {
+            Debug.Assert(_currentToken.Kind == SyntaxTokenKind.LessThan);
+            int startOffset = LexerPosition;
+            TextLine currentLine = GetCurrentLine();
+
+            int tokenOffset = 0;
+            SyntaxToken token;
+            // Look for the closing '>'
+            while ((token = PeekToken(tokenOffset)).Kind != SyntaxTokenKind.GreaterThan)
+            {
+                if (token.Kind == SyntaxTokenKind.EndOfFile)
+                {
+                    return null;
+                }
+
+                tokenOffset++;
+            }
+
+            // Check if the current line ends with the '>' character that we found
+            if (PeekToken(tokenOffset + 1).TextSpan.Start >= currentLine.End)
+            {
+                Report(DiagnosticId.StrayMarkupBlock, TextSpan.FromBounds(startOffset, currentLine.End));
+                EatTokens(tokenOffset);
+                EatToken(SyntaxTokenKind.GreaterThan);
+                return CreateErrorStatement(startOffset);
+            }
+
+            return null;
+        }
+
+        private enum SynchronizationKind
+        {
+            NextStatement,
+            NextLine,
+            NextStatementOrLine,
+            BlockEnd,
+        }
+
+        private void Synchronize(SynchronizationKind kind)
+        {
+            int braceCount = 0;
+            TextLine lastLine = default;
+            if (kind is SynchronizationKind.NextLine or SynchronizationKind.NextStatementOrLine)
+            {
+                lastLine = GetCurrentLine();
+            }
+
+            while (!IsAtEnd())
+            {
+                switch (_currentToken.Kind)
+                {
+                    case SyntaxTokenKind.OpenBrace:
+                        braceCount++;
+                        break;
+
+                    case SyntaxTokenKind.CloseBrace:
+                        if (kind is SynchronizationKind.BlockEnd or SynchronizationKind.NextStatement
+                            && braceCount <= 0)
+                        {
+                            return;
+                        }
+
+                        braceCount--;
+                        break;
+
+                    default:
+                        if (kind is SynchronizationKind.NextStatement or SynchronizationKind.NextStatementOrLine
+                            && braceCount == 0)
+                        {
+                            if (IsLikelyStatementStart()) { return; }
+                        }
+                        break;
+                }
+
+                if (kind is SynchronizationKind.NextLine or SynchronizationKind.NextStatementOrLine
+                    && LexerPosition >= lastLine.End)
+                {
+                    return;
+                }
+
+                EatToken();
+            }
+        }
+
+        private bool IsLikelyStatementStart()
+        {
+            SyntaxTokenKind tk = _currentToken.Kind;
+            if (SyntaxFacts.IsDefiniteStatementStart(tk)) { return true; }
+
+            if (tk is SyntaxTokenKind.Identifier or SyntaxTokenKind.StringLiteralOrQuotedIdentifier)
+            {
+                SyntaxToken lookahead = PeekToken(1);
+                // function call
+                if (lookahead.Kind is SyntaxTokenKind.OpenParen or SyntaxTokenKind.Semicolon)
+                {
+                    return true;
+                }
+
+                // assignment
+                if (SyntaxFacts.TryGetAssignmentOperatorKind(lookahead.Kind) is not null)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private void EatStrayToken()
+        {
+            Report(DiagnosticId.StrayToken, GetText(_currentToken));
+            EatToken();
+        }
 
         private void Report(DiagnosticId diagnosticId)
         {
@@ -1095,85 +1180,6 @@ namespace NitroSharp.NsScript.Syntax
                 Report(DiagnosticId.TokenExpected, expectedText, actualText);
             }
         }
-
-        private enum SynchronizationKind
-        {
-            /// <summary>
-            /// Advance to the current statement terminator (';') at this depth
-            /// </summary>
-            StatementEnd,
-            /// <summary>
-            /// Advance to the next token that can start a statement at this depth
-            /// </summary>
-            NextStatement,
-            /// <summary>
-            /// Advance to the closing '}' of the current block
-            /// </summary>
-            Block,
-            /// <summary>
-            /// Advance to the next subroutine declaration
-            /// </summary>
-            NextDeclaration,
-            /// <summary>
-            /// Advance to the next line
-            /// </summary>
-            NextLine
-        }
-
-        private void Synchronize(SynchronizationKind kind)
-        {
-            int braceCount = 0;
-            int lastLineNumber = GetLineNumber();
-
-            while (!IsAtEnd())
-            {
-                switch (_currentToken.Kind)
-                {
-                    case SyntaxTokenKind.OpenBrace:
-                        braceCount++;
-                        break;
-
-                    case SyntaxTokenKind.CloseBrace:
-                        if (braceCount <= 0 && kind is SynchronizationKind.Block
-                                or SynchronizationKind.StatementEnd
-                                or SynchronizationKind.NextStatement)
-                        {
-                            return;
-                        }
-
-                        braceCount--;
-                        break;
-
-                    case SyntaxTokenKind.Semicolon:
-                        if (kind == SynchronizationKind.StatementEnd && braceCount == 0) { return; }
-                        break;
-
-                    case SyntaxTokenKind.ChapterKeyword:
-                    case SyntaxTokenKind.SceneKeyword:
-                    case SyntaxTokenKind.FunctionKeyword:
-                        if (kind == SynchronizationKind.NextDeclaration && braceCount == 0) { return; }
-                        break;
-
-                    default:
-                        if (kind == SynchronizationKind.NextStatement && braceCount == 0)
-                        {
-                            if (SyntaxFacts.CanStartStatement(_currentToken.Kind)) { return; }
-                        }
-                        break;
-                }
-
-                if (kind == SynchronizationKind.NextLine)
-                {
-                    int currentLine = GetLineNumber();
-                    if (currentLine > lastLineNumber) { return; }
-                    lastLineNumber = currentLine;
-                }
-
-                EatToken();
-            }
-        }
-
-        private bool IsAtEnd() => _currentToken.Kind == SyntaxTokenKind.EndOfFile;
     }
 
     internal enum Precedence

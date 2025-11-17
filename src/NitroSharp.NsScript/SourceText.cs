@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Runtime.InteropServices;
 using System.Text;
 using UtfUnknown;
 
@@ -65,6 +64,9 @@ public sealed class SourceText
         return new TextLine(this, TextSpan.FromBounds(start, end));
     }
 
+    public TextLine GetLineFromPosition(int position)
+        => GetLine(GetLineNumberFromPosition(position));
+
     public LinePosition GetLinePosition(int position)
     {
         int lineNumber = GetLineNumberFromPosition(position);
@@ -83,12 +85,12 @@ public sealed class SourceText
         while (lower <= upper)
         {
             int index = lower + ((upper - lower) / 2);
-            int start = _lineStarts[index];
-            if (start == position)
+            int lineStart = _lineStarts[index];
+            if (lineStart == position)
             {
                 return index;
             }
-            if (start > position)
+            if (lineStart > position)
             {
                 upper = index - 1;
             }
@@ -161,13 +163,15 @@ public readonly struct TextLine
     internal TextLine(SourceText sourceText, TextSpan fullSpan)
     {
         _sourceText = sourceText;
-        Span = fullSpan;
+        SpanWithLinebreak = fullSpan;
     }
+
+    public TextSpan SpanWithLinebreak { get; }
 
     public TextSpan Span =>
         new(
-            field.Start,
-            field.Length - GetLineBreakWidth(_sourceText.GetCharacterSpan(field))
+            SpanWithLinebreak.Start,
+            SpanWithLinebreak.Length - GetLineBreakWidth(_sourceText.GetCharacterSpan(SpanWithLinebreak))
         );
 
     public int Start => Span.Start;
@@ -186,5 +190,6 @@ public readonly struct TextLine
         return text.Length - pos - 1;
     }
 
+    public ReadOnlySpan<char> AsSpan() => _sourceText.GetCharacterSpan(Span);
     public override string ToString() => _sourceText.GetText(Span);
 }

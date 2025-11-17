@@ -24,9 +24,9 @@ public class LexerTests
     }
 
     [Theory]
-    [InlineData("\"foo", DiagnosticId.UnterminatedString, 0, 0)]
+    [InlineData("\"foo", DiagnosticId.UnterminatedString, 0, 4)]
     [InlineData("<PRE box00", DiagnosticId.UnterminatedDialogueBlockStartTag, 0, 0)]
-    [InlineData("/* multiline comment", DiagnosticId.UnterminatedComment, 0, 0)]
+    [InlineData("/* multiline comment", DiagnosticId.UnterminatedComment, 0, 2)]
     [InlineData("[text001", DiagnosticId.UnterminatedDialogueBlockIdentifier, 0, 0, LexingMode.DialogueBlock)]
     [InlineData("2147483648", DiagnosticId.NumberTooLarge, 0, 10)]
     public void Lexer_Emits_Diagnostics(
@@ -35,7 +35,7 @@ public class LexerTests
     {
         var lexResult = SyntaxToken.Lex(text, lexingMode);
         _ = lexResult.RealizeTokens();
-        var diagnostic = Assert.Single(lexResult.Diagnostics.All);
+        var diagnostic = Assert.Single(lexResult.Diagnostics);
         Assert.Equal(diagnosticId, diagnostic.Id);
         Assert.Equal(TextSpan.FromBounds(spanStart, spanEnd), diagnostic.Location.Span);
     }

@@ -114,7 +114,8 @@ public sealed class GoldenTests
             }
             case TestKind.Diagnostics:
             {
-                foreach (Diagnostic diagnostic in context.Compilation.Diagnostics.All)
+                foreach (Diagnostic diagnostic in context.Compilation.Diagnostics
+                             .OrderBy(x => x.Location.Span.Start))
                 {
                     diagnostic.Dump(outputWriter, SquiggleStyle.VerticalBar);
                     outputWriter.WriteLine();

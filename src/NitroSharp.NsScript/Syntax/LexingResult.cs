@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Immutable;
 using NitroSharp.Utilities;
 
 namespace NitroSharp.NsScript.Syntax;
@@ -12,7 +13,8 @@ public readonly struct LexingResult
         _lexer = lexer;
     }
 
-    public DiagnosticCollection Diagnostics => _lexer.Diagnostics.ToImmutable();
+    public ImmutableArray<Diagnostic> Diagnostics
+        => _lexer.Diagnostics.ToImmutable();
 
     public ReadOnlySpan<char> GetText(in SyntaxToken token)
     {

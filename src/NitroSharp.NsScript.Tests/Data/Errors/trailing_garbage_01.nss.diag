@@ -1,0 +1,18 @@
+Warning: String of tokens was skipped due to syntax errors.
+  --> trailing_garbage_01.nss:3:40
+     |
+   2 | {
+   3 |     SoundPlay("sound", 0, 1000, false);|080kh", ナイトハルト);
+   4 |     // comment
+   5 |     |WaitKey();
+   6 | }
+     |
+
+Error: String is not properly terminated.
+  --> trailing_garbage_01.nss:3:45
+     |
+   2 | {
+   3 |     SoundPlay("sound", 0, 1000, false);080kh|", ナイトハルト);|
+   4 |     // comment
+     |
+

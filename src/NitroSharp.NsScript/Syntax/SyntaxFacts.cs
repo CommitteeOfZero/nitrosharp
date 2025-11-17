@@ -116,9 +116,9 @@ public static class SyntaxFacts
         }
     }
 
-    public static bool CanStartStatement(SyntaxTokenKind token)
+    public static bool IsDefiniteStatementStart(SyntaxTokenKind tokenKind)
     {
-        switch (token)
+        switch (tokenKind)
         {
             case SyntaxTokenKind.OpenBrace:
             case SyntaxTokenKind.IfKeyword:
@@ -133,8 +133,13 @@ public static class SyntaxFacts
                 return true;
 
             default:
-                return CanStartExpressionTerm(token);
+                return false;
         }
+    }
+
+    public static bool CanStartStatement(SyntaxTokenKind tokenKind)
+    {
+        return IsDefiniteStatementStart(tokenKind) || CanStartExpressionTerm(tokenKind);
     }
 
     public static bool CanStartExpressionTerm(SyntaxTokenKind tokenKind)

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Immutable;
 
 namespace NitroSharp.NsScript.Syntax;
 
@@ -16,7 +17,7 @@ public sealed class SyntaxTree
     public SyntaxNode Root { get; }
 
     internal DiagnosticBuilder DiagnosticBuilder { get; }
-    public DiagnosticCollection Diagnostics => DiagnosticBuilder.ToImmutable();
+    public ImmutableArray<Diagnostic> Diagnostics => DiagnosticBuilder.ToImmutable();
 
     public static SyntaxTree ParseText(SourceText sourceText)
     {

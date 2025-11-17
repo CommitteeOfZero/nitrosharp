@@ -47,7 +47,7 @@ public class Compilation
 
     public ResolvedPath SourceDirectory => SourceReferenceResolver.RootDirectory;
     public SourceReferenceResolver SourceReferenceResolver { get; }
-    public virtual DiagnosticCollection Diagnostics => DiagnosticCollection.Empty;
+    public virtual ImmutableArray<Diagnostic> Diagnostics => [];
 
     [MustUseReturnValue]
     public virtual EmittedCompilation Emit(
@@ -180,7 +180,7 @@ public class Compilation
             return (offsets, sysList);
         }
 
-        DiagnosticCollection mergeDiagnostics()
+        ImmutableArray<Diagnostic> mergeDiagnostics()
         {
             DiagnosticBuilder allDiagnostics = context.DiagnosticBuilder;
             allDiagnostics.MergeFrom(_referenceResolveDiagnostics);
@@ -285,12 +285,13 @@ public class Compilation
 
 public sealed class EmittedCompilation : Compilation
 {
-    internal EmittedCompilation(Compilation source, DiagnosticCollection diagnostics) : base(source)
+    internal EmittedCompilation(Compilation source, ImmutableArray<Diagnostic> diagnostics)
+        : base(source)
     {
         Diagnostics = diagnostics;
     }
 
-    public override DiagnosticCollection Diagnostics { get; }
+    public override ImmutableArray<Diagnostic> Diagnostics { get; }
 
     protected override SyntaxTree GetSyntaxTree(ResolvedPath resolvedPath)
         => _syntaxTrees[resolvedPath];

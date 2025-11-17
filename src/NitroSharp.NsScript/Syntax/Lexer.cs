@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 
 namespace NitroSharp.NsScript.Syntax
@@ -20,6 +21,8 @@ namespace NitroSharp.NsScript.Syntax
             public TextSpan TextSpan;
             public SyntaxTokenKind Kind;
             public SyntaxTokenFlags Flags;
+
+            public override string ToString() => TextSpan.ToString();
         }
 
         private const string PRE_StartTag = "<pre>";
@@ -56,7 +59,7 @@ namespace NitroSharp.NsScript.Syntax
             ref MutableToken mutableTk = ref Unsafe.As<SyntaxToken, MutableToken>(ref syntaxToken);
             if (CurrentMode == LexingMode.DialogueBlock)
             {
-                if (PeekChar() != '{' && !Match(PRE_EndTag))
+                if (PeekChar() != '{' && !MatchInsensitive(PRE_EndTag))
                 {
                     LexMarkupToken(ref mutableTk);
                     return;
@@ -159,7 +162,7 @@ namespace NitroSharp.NsScript.Syntax
                     break;
 
                 case '#':
-                    if (AdvanceIfMatches("#include"))
+                    if (AdvanceIfMatchesInsensitive("#include"))
                     {
                         token.Kind = SyntaxTokenKind.IncludeDirective;
                     }
@@ -201,7 +204,7 @@ namespace NitroSharp.NsScript.Syntax
                             break;
 
                         case '/':
-                            if (AdvanceIfMatches(PRE_EndTag))
+                            if (AdvanceIfMatchesInsensitive(PRE_EndTag))
                             {
                                 token.Kind = SyntaxTokenKind.DialogueBlockEndTag;
                             }
@@ -494,7 +497,7 @@ namespace NitroSharp.NsScript.Syntax
             }
 
             char c;
-            while ((c = PeekChar()) != '"' && c != EofCharacter)
+            while ((c = PeekChar()) is not ('"' or EofCharacter) && !SyntaxFacts.IsNewLine(c))
             {
                 AdvanceChar();
             }
@@ -502,13 +505,15 @@ namespace NitroSharp.NsScript.Syntax
             int valueEnd = Position;
             if (!TryEatChar('"'))
             {
-                Report(DiagnosticId.UnterminatedString, new TextSpan(start, 0));
+                token.Flags |= SyntaxTokenFlags.HasDiagnostics;
+                TextLine line = SourceText.GetLineFromPosition(LexemeStart);
+                Report(DiagnosticId.UnterminatedString, TextSpan.FromBounds(start, line.End));
             }
 
             token.Flags |= SyntaxTokenFlags.IsQuoted;
             token.Kind = SyntaxTokenKind.StringLiteralOrQuotedIdentifier;
             int valueStart = start + 1;
-            valueSpan = new TextSpan(valueStart, valueEnd - valueStart);
+            valueSpan = TextSpan.FromBounds(valueStart, valueEnd);
         }
 
         private bool ScanDecNumericLiteral(ref MutableToken token)
@@ -601,16 +606,16 @@ namespace NitroSharp.NsScript.Syntax
             {
                 if (c == '<')
                 {
-                    if (AdvanceIfMatches(PRE_StartTag))
+                    if (AdvanceIfMatchesInsensitive(PRE_StartTag))
                     {
-                        while (!AdvanceIfMatches(PRE_EndTag) && PeekChar() != EofCharacter)
+                        while (!AdvanceIfMatchesInsensitive(PRE_EndTag) && PeekChar() != EofCharacter)
                         {
                             AdvanceChar();
                         }
                         continue;
                     }
 
-                    if (Match(PRE_EndTag))
+                    if (MatchInsensitive(PRE_EndTag))
                     {
                         break;
                     }
@@ -625,7 +630,7 @@ namespace NitroSharp.NsScript.Syntax
         private bool ScanDialogueBlockStartTag(ref MutableToken token)
         {
             int start = Position;
-            if (!AdvanceIfMatches("<pre "))
+            if (!AdvanceIfMatchesInsensitive("<pre "))
             {
                 return false;
             }
@@ -676,10 +681,10 @@ namespace NitroSharp.NsScript.Syntax
 
         private void SkipSyntaxTrivia()
         {
-            StartScanning();
             bool trivia = true;
             do
             {
+                StartScanning();
                 char character = PeekChar();
                 if (SyntaxFacts.IsWhitespace(character))
                 {
@@ -743,11 +748,16 @@ namespace NitroSharp.NsScript.Syntax
         {
             char c;
             bool isInsideQuotes = false;
-            while (!((c = PeekChar()) == '*' && PeekChar(1) == '/') || isInsideQuotes)
+            while (!((c = PeekChar()) == '*' && PeekChar(1) == '/'))
             {
+                if (SourceText.GetLineNumberFromPosition(Position) == SourceText.LineCount - 1)
+                {
+                    Debugger.Break();
+                }
+
                 if (c == EofCharacter)
                 {
-                    Report(DiagnosticId.UnterminatedComment, CurrentSpanStart);
+                    Report(DiagnosticId.UnterminatedComment, new TextSpan(LexemeStart, length: 2));
                     return;
                 }
                 if (c == '"')

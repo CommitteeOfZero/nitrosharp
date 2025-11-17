@@ -13,11 +13,10 @@ internal static class DiagnosticInfo
             DiagnosticId.UnterminatedDialogueBlockIdentifier => "Dialogue block identifier is not properly terminated.",
             DiagnosticId.TokenExpected => "Expected '{0}', found '{1}'.",
             DiagnosticId.IdentifierExpected => "Expected identifier, found '{0}'.",
+            DiagnosticId.SkippedBadSyntax => "String of tokens was skipped due to syntax errors.",
             DiagnosticId.MissingStatementTerminator => "Statement is not properly terminated.",
             DiagnosticId.StrayToken => "Stray token '{0}'.",
-            DiagnosticId.MisplacedSemicolon => "Unexpected ';'.",
             DiagnosticId.ExpectedSubroutineDeclaration => "Expected a subroutine declaration.",
-            DiagnosticId.InvalidExpressionStatement => "Only assignment, call, increment and decrement expressions can be used as a statement.",
             DiagnosticId.InvalidExpressionTerm => "Invalid expression term '{0}'.",
             DiagnosticId.StrayMarkupBlock => "Stray markup block.",
             DiagnosticId.MisplacedBreak => "Break statement cannot be used outside of a looping construct.",
@@ -42,7 +41,6 @@ internal static class DiagnosticInfo
             case DiagnosticId.UnterminatedDialogueBlockIdentifier:
             case DiagnosticId.TokenExpected:
             case DiagnosticId.IdentifierExpected:
-            case DiagnosticId.InvalidExpressionStatement:
             case DiagnosticId.InvalidExpressionTerm:
             case DiagnosticId.ExpectedSubroutineDeclaration:
             case DiagnosticId.UnresolvedIdentifier:
@@ -51,9 +49,9 @@ internal static class DiagnosticInfo
             case DiagnosticId.ChapterMainNotFound:
                 return DiagnosticSeverity.Error;
 
-            case DiagnosticId.MisplacedSemicolon:
             case DiagnosticId.StrayMarkupBlock:
             case DiagnosticId.StrayToken:
+            case DiagnosticId.SkippedBadSyntax:
             case DiagnosticId.MisplacedBreak:
             case DiagnosticId.OrphanedSelectSection:
             case DiagnosticId.InvalidBezierCurve:

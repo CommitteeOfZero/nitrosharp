@@ -153,7 +153,7 @@ static void RunCheck(
 
     compilation = compilation.EmitDiagnostics(rootModules);
 
-    IEnumerable<Diagnostic> filteredDiagnostics = compilation.Diagnostics.All;
+    IEnumerable<Diagnostic> filteredDiagnostics = compilation.Diagnostics;
     if (filesToInspect.Length > 0)
     {
         ResolvedPath[] filePathsToInspect = filesToInspect

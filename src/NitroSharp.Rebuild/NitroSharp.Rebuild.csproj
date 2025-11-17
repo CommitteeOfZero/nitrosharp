@@ -2,19 +2,10 @@
 
   <PropertyGroup>
 <!--    <AssemblyName>libnitrosharp</AssemblyName>-->
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <NoWarn>1701;1702;CA1063;IDE1006;IDE0063;VSTHRD002;VSTHRD003;VSTHRD103;VSTHRD105;VSTHRD200</NoWarn>
     <RootNamespace>NitroSharp</RootNamespace>
-    <PublishAot>true</PublishAot>
-    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
-    <IlcTrimMetadata>true</IlcTrimMetadata>
-    <IlcFoldIdenticalMethodBodies>true</IlcFoldIdenticalMethodBodies>
-    <IlcGenerateCompleteTypeMetadata>true</IlcGenerateCompleteTypeMetadata>
-    <IlcGenerateStackTraceData>true</IlcGenerateStackTraceData>
-    <IlcOptimizationPreference>speed</IlcOptimizationPreference>
-    <IlcDisableReflection>false</IlcDisableReflection>
-    <InvariantGlobalization>true</InvariantGlobalization>
   </PropertyGroup>
 
   <Import Project="..\..\OutputPath.props" />

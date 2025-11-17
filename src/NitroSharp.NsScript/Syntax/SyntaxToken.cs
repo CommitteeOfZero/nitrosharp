@@ -104,6 +104,9 @@ public readonly struct SyntaxToken
     public bool IsHexTriplet =>
         (Flags & SyntaxTokenFlags.IsHexTriplet) == SyntaxTokenFlags.IsHexTriplet;
 
+    public bool HasDiagnostics
+        => (Flags & SyntaxTokenFlags.HasDiagnostics) == SyntaxTokenFlags.HasDiagnostics;
+
     public bool HasSigil =>
         (Flags & SyntaxTokenFlags.HasDollarPrefix) == SyntaxTokenFlags.HasDollarPrefix ||
         (Flags & SyntaxTokenFlags.HasHashPrefix) == SyntaxTokenFlags.HasHashPrefix;

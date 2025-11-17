@@ -1,0 +1,16 @@
+Error: String is not properly terminated.
+  --> unterminated_arg_list.nss:3:64
+     |
+   2 | {
+   3 | 	SetBacklog("“<i>Nishijou Takumi.</i>”, "voice/chn04/00000310ri|", 梨深);|
+   4 | 	//         ^                        ^                         ^^^^^^^^
+     |
+
+Error: Expected ')', found ';'.
+  --> unterminated_arg_list.nss:6:11
+     |
+   5 | 	//     unmatched                unmatched                    unterminated
+   6 | 	WaitKey()|;|
+   7 | }
+     |
+

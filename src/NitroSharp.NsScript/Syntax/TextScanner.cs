@@ -77,7 +77,7 @@ internal abstract class TextScanner(string text)
         return true;
     }
 
-    protected bool Match(string s)
+    protected bool MatchInsensitive(string s)
     {
         for (int i = 0; i < s.Length; i++)
         {
@@ -91,9 +91,9 @@ internal abstract class TextScanner(string text)
         return true;
     }
 
-    protected bool AdvanceIfMatches(string s)
+    protected bool AdvanceIfMatchesInsensitive(string s)
     {
-        if (Match(s))
+        if (MatchInsensitive(s))
         {
             AdvanceChar(s.Length);
             return true;
