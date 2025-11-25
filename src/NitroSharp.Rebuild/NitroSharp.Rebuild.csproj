@@ -29,8 +29,9 @@
     <PackageReference Include="Veldrid.ImageSharp" Version="4.9.0" />
     <PackageReference Include="NativeLibraryLoader" Version="1.0.13" />
 
-    <PackageReference Include="SharpDX.XAudio2" Version="4.2.0" />
-    <PackageReference Include="SharpDX.Direct2D1" Version="4.2.0" />
+    <PackageReference Include="Vortice.XAudio2" Version="3.2.0" />
+    <PackageReference Include="Vortice.Direct2D1" Version="3.2.0" />
+    <PackageReference Include="Vortice.Mathematics" Version="1.7.3" />
     <PackageReference Include="SixLabors.ImageSharp" Version="3.1.12" />
 
     <PackageReference Include="FreeType.Binaries" Version="0.42.0" />

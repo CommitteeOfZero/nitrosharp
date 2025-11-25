@@ -3,33 +3,28 @@ using System.Threading.Tasks;
 using NitroSharp.Media.NullAudio;
 using NitroSharp.Media.XAudio2;
 
-namespace NitroSharp.Media
+namespace NitroSharp.Media;
+
+internal abstract class AudioDevice(in AudioParameters audioParameters) : IAsyncDisposable
 {
-    internal abstract class AudioDevice : IAsyncDisposable
+    public const int BitDepth = 16;
+
+    public AudioParameters AudioParameters { get; } = audioParameters;
+    public abstract AudioBackend Backend { get; }
+
+    public abstract AudioSource CreateAudioSource(
+        int bufferSize = 16 * 1024,
+        int bufferCount = 16
+    );
+
+    public abstract ValueTask DisposeAsync();
+
+    public static AudioBackend GetPlatformDefaultBackend()
     {
-        public const int BitDepth = 16;
-
-        protected AudioDevice(in AudioParameters audioParameters)
-        {
-            AudioParameters = audioParameters;
-        }
-
-        public AudioParameters AudioParameters { get; }
-        public abstract AudioBackend Backend { get; }
-
-        public abstract AudioSource CreateAudioSource(
-            int bufferSize = 16 * 1024,
-            int bufferCount = 16
-        );
-
-        public abstract ValueTask DisposeAsync();
-
-        public static AudioBackend GetPlatformDefaultBackend()
-        {
-            return OperatingSystem.IsWindows()
-                ? AudioBackend.XAudio2
-                : AudioBackend.Null;
-        }
+        return OperatingSystem.IsWindows()
+            ? AudioBackend.XAudio2
+            : AudioBackend.Null;
+    }
 
         public static bool IsBackendAvailable(AudioBackend backend)
         {
@@ -41,32 +36,31 @@ namespace NitroSharp.Media
             return true;
         }
 
-        public static AudioDevice Create(AudioBackend backend, in AudioParameters audioParameters)
-            => backend switch
-            {
-                AudioBackend.Null => new NullAudioDevice(audioParameters),
-                AudioBackend.XAudio2 => new XAudio2AudioDevice(audioParameters),
-                _ => throw new NotImplementedException($"Backend '{backend}' is not implemented")
-            };
-    }
+    public static AudioDevice Create(AudioBackend backend, in AudioParameters audioParameters)
+        => backend switch
+        {
+            AudioBackend.Null => new NullAudioDevice(audioParameters),
+            AudioBackend.XAudio2 => new XAudio2AudioDevice(audioParameters),
+            _ => throw new NotImplementedException($"Backend '{backend}' is not implemented")
+        };
+}
 
-    public enum AudioBackend
-    {
-        Null,
-        XAudio2,
-        OpenAL
-    }
+public enum AudioBackend
+{
+    Null,
+    XAudio2,
+    OpenAL
+}
 
-    public readonly record struct AudioParameters(ChannelLayout ChannelLayout, uint SampleRate)
-    {
-        public static readonly AudioParameters Default = new(ChannelLayout.Stereo, 44100);
+public readonly record struct AudioParameters(ChannelLayout ChannelLayout, uint SampleRate)
+{
+    public static readonly AudioParameters Default = new(ChannelLayout.Stereo, 44100);
 
-        public int ChannelCount => ChannelLayout == ChannelLayout.Mono ? 1 : 2;
-    }
+    public int ChannelCount => ChannelLayout == ChannelLayout.Mono ? 1 : 2;
+}
 
-    public enum ChannelLayout
-    {
-        Mono,
-        Stereo
-    }
+public enum ChannelLayout
+{
+    Mono,
+    Stereo
 }
