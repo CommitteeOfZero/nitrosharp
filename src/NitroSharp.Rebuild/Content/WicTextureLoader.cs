@@ -16,7 +16,7 @@ internal sealed unsafe class WicTextureLoader(GraphicsDevice graphicsDevice)
     {
         using IWICStream wicStream = _wicFactory.CreateStream(stream);
         using IWICBitmapDecoder decoder = _wicFactory.CreateDecoderFromStream(wicStream);
-        using IWICFormatConverter? formatConv = _wicFactory.CreateFormatConverter();
+        using IWICFormatConverter formatConv = _wicFactory.CreateFormatConverter();
         // Do NOT dispose the frame as it might lead to a crash.
         // Seems like it's owned by the decoder, so hopefully there should be no leaks.
         IWICBitmapFrameDecode frame = decoder.GetFrame(0);
@@ -33,7 +33,6 @@ internal sealed unsafe class WicTextureLoader(GraphicsDevice graphicsDevice)
         uint rowWidth = width * 4;
         if (rowWidth == map.RowPitch)
         {
-
             formatConv.CopyPixels((int)map.RowPitch, (int)map.SizeInBytes, map.Data);
         }
         else

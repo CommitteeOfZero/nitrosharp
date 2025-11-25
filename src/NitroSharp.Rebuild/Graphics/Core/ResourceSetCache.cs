@@ -113,8 +113,8 @@ internal readonly struct ResourceSetKey : IEquatable<ResourceSetKey>
         return (_resource1, _resource2, _resource3) switch
         {
             (null, _, _) => 1u,
-            ({ }, null, _) => 2u,
-            ({ }, { }, null) => 3u,
+            (not null, null, _) => 2u,
+            (not null, not null, null) => 3u,
             _ => 4u
         };
     }
@@ -141,7 +141,7 @@ internal sealed class ResourceSetCache : IDisposable
     {
         _factory = resourceFactory;
         _cache = new Dictionary<ResourceSetKey, CacheEntry>(512);
-        _entriesToEvict = new List<ResourceSetKey>();
+        _entriesToEvict = [];
         _array1 = new BindableResource[1];
         _array2 = new BindableResource[2];
         _array3 = new BindableResource[3];
@@ -155,6 +155,8 @@ internal sealed class ResourceSetCache : IDisposable
         {
             gc();
         }
+
+        return;
 
         void gc()
         {

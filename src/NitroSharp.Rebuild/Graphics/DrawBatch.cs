@@ -147,24 +147,17 @@ namespace NitroSharp.Graphics
         }
     }
 
-    internal readonly struct ResourceBindings : IEquatable<ResourceBindings>
+    internal readonly struct ResourceBindings(
+        ResourceSetKey rs0,
+        ResourceSetKey? rs1 = null,
+        ResourceSetKey? rs2 = null,
+        ResourceSetKey? rs3 = null)
+        : IEquatable<ResourceBindings>
     {
-        public readonly ResourceSetKey? ResourceSet0;
-        public readonly ResourceSetKey? ResourceSet1;
-        public readonly ResourceSetKey? ResourceSet2;
-        public readonly ResourceSetKey? ResourceSet3;
-
-        public ResourceBindings(
-            ResourceSetKey rs0,
-            ResourceSetKey? rs1 = null,
-            ResourceSetKey? rs2 = null,
-            ResourceSetKey? rs3 = null)
-        {
-            ResourceSet0 = rs0;
-            ResourceSet1 = rs1;
-            ResourceSet2 = rs2;
-            ResourceSet3 = rs3;
-        }
+        public readonly ResourceSetKey? ResourceSet0 = rs0;
+        public readonly ResourceSetKey? ResourceSet1 = rs1;
+        public readonly ResourceSetKey? ResourceSet2 = rs2;
+        public readonly ResourceSetKey? ResourceSet3 = rs3;
 
         public bool Equals(ResourceBindings other)
         {
@@ -182,6 +175,7 @@ namespace NitroSharp.Graphics
         private bool _began;
         private Draw _lastDraw;
         private Vector2 _lastAlphaMaskPosition = new(float.NaN);
+        private Viewport _viewport;
 
         public DrawBatch(RenderContext context)
         {
@@ -191,10 +185,11 @@ namespace NitroSharp.Graphics
 
         public RenderTarget Target { get; private set; }
 
-        public void Begin(CommandList commandList, RenderTarget target)
+        public void Begin(CommandList commandList, RenderTarget target, in Viewport viewport)
         {
             Debug.Assert(!_began);
             _commandList = commandList;
+            _viewport = viewport;
             Target = target;
 
             _began = true;
@@ -313,13 +308,15 @@ namespace NitroSharp.Graphics
             CommandList cl = _commandList;
             cl.SetFramebuffer(Target.Framebuffer);
             cl.SetPipeline(lastDraw.Pipeline);
+            cl.SetViewport(0, _viewport);
             if (lastDraw.ScissorRect is { } sr)
             {
                 cl.SetScissorRect(0, sr.Left, sr.Top, sr.Width, sr.Height);
             }
             else
             {
-                cl.SetFullScissorRect(0);
+                cl.SetScissorRect(0, (uint)(_viewport.X), (uint)(_viewport.Y), (uint)(_viewport.Width), (uint)(_viewport.Height));
+                // cl.SetFullScissorRect(0);
             }
             ref BufferBindings buffers = ref lastDraw.BufferBindings;
             if (buffers.Vertices is { } vertices)

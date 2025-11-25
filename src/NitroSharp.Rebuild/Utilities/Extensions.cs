@@ -7,10 +7,18 @@ namespace NitroSharp;
 
 internal static class RgbaFloatExtensions
 {
-    public static RgbaFloat Multiply(this RgbaFloat source, float value)
+    extension(in RgbaFloat value)
     {
-        Vector4 v = source.ToVector4() * value;
-        return new RgbaFloat(v.X, v.Y, v.Z, v.W);
+        public Vector4 AsVector4()
+        {
+            return new Vector4(value.R, value.G, value.B, value.A);
+        }
+
+        public RgbaFloat Multiply(float value1)
+        {
+            Vector4 v = value.AsVector4() * value1;
+            return new RgbaFloat(v.X, v.Y, v.Z, v.W);
+        }
     }
 
     public static void SetAlpha(ref this RgbaFloat color, float alpha)

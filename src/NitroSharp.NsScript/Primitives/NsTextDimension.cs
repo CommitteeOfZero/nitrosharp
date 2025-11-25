@@ -1,4 +1,4 @@
-﻿namespace NitroSharp.NsScript.Primitives;
+﻿namespace NitroSharp.NsScript;
 
 public enum NsTextDimensionVariant
 {
@@ -6,7 +6,7 @@ public enum NsTextDimensionVariant
     Value
 }
 
-public readonly record struct NsTextDimension
+public readonly struct NsTextDimension
 {
     public readonly NsTextDimensionVariant Variant;
     public readonly int? Value;

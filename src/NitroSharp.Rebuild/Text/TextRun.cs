@@ -2,74 +2,73 @@
 using System.Runtime.InteropServices;
 using Veldrid;
 
-namespace NitroSharp.Text
+namespace NitroSharp.Text;
+
+[Flags]
+internal enum TextRunFlags
 {
-    [Flags]
-    internal enum TextRunFlags
+    None,
+    RubyText,
+    Outline
+}
+
+[StructLayout(LayoutKind.Auto)]
+internal readonly struct TextRun
+{
+    public readonly ReadOnlyMemory<char> Text;
+    public readonly ReadOnlyMemory<char> RubyText;
+    public readonly FontFaceKey Font;
+    public readonly PtFontSize FontSize;
+    public readonly RgbaFloat Color;
+    public readonly RgbaFloat OutlineColor;
+    private readonly TextRunFlags Flags;
+
+    public bool DrawOutline => (Flags & TextRunFlags.Outline) == TextRunFlags.Outline;
+    public bool HasRubyText => (Flags & TextRunFlags.RubyText) == TextRunFlags.RubyText;
+
+    public static TextRun Regular(
+        ReadOnlyMemory<char> text,
+        FontFaceKey font, PtFontSize ptFontSize,
+        RgbaFloat color, RgbaFloat? outlineColor)
     {
-        None,
-        RubyText,
-        Outline
+        return new TextRun(
+            font, ptFontSize,
+            color, outlineColor,
+            text, rubyText: default
+        );
     }
 
-    [StructLayout(LayoutKind.Auto)]
-    internal readonly struct TextRun
+    public static TextRun WithRubyText(
+        ReadOnlyMemory<char> rubyBase, ReadOnlyMemory<char> rubyText,
+        FontFaceKey font, PtFontSize ptFontSize,
+        RgbaFloat color, RgbaFloat? outlineColor)
     {
-        public readonly ReadOnlyMemory<char> Text;
-        public readonly ReadOnlyMemory<char> RubyText;
-        public readonly FontFaceKey Font;
-        public readonly PtFontSize FontSize;
-        public readonly RgbaFloat Color;
-        public readonly RgbaFloat OutlineColor;
-        private readonly TextRunFlags Flags;
+        return new TextRun(
+            font, ptFontSize,
+            color, outlineColor,
+            rubyBase, rubyText
+        );
+    }
 
-        public bool DrawOutline => (Flags & TextRunFlags.Outline) == TextRunFlags.Outline;
-        public bool HasRubyText => (Flags & TextRunFlags.RubyText) == TextRunFlags.RubyText;
-
-        public static TextRun Regular(
-            ReadOnlyMemory<char> text,
-            FontFaceKey font, PtFontSize ptFontSize,
-            RgbaFloat color, RgbaFloat? outlineColor)
+    private TextRun(
+        FontFaceKey font, PtFontSize fontSize,
+        RgbaFloat color, RgbaFloat? outlineColor,
+        ReadOnlyMemory<char> text, ReadOnlyMemory<char> rubyText)
+    {
+        Font = font;
+        FontSize = fontSize;
+        Color = color;
+        OutlineColor = outlineColor ?? default;
+        Text = text;
+        RubyText = rubyText;
+        Flags = TextRunFlags.None;
+        if (rubyText.Length > 0)
         {
-            return new(
-                font, ptFontSize,
-                color, outlineColor,
-                text, rubyText: default
-            );
+            Flags |= TextRunFlags.RubyText;
         }
-
-        public static TextRun WithRubyText(
-            ReadOnlyMemory<char> rubyBase, ReadOnlyMemory<char> rubyText,
-            FontFaceKey font, PtFontSize ptFontSize,
-            RgbaFloat color, RgbaFloat? outlineColor)
+        if (outlineColor is not null)
         {
-            return new TextRun(
-                font, ptFontSize,
-                color, outlineColor,
-                rubyBase, rubyText
-            );
-        }
-
-        private TextRun(
-            FontFaceKey font, PtFontSize fontSize,
-            RgbaFloat color, RgbaFloat? outlineColor,
-            ReadOnlyMemory<char> text, ReadOnlyMemory<char> rubyText)
-        {
-            Font = font;
-            FontSize = fontSize;
-            Color = color;
-            OutlineColor = outlineColor ?? default;
-            Text = text;
-            RubyText = rubyText;
-            Flags = TextRunFlags.None;
-            if (rubyText.Length > 0)
-            {
-                Flags |= TextRunFlags.RubyText;
-            }
-            if (outlineColor is { })
-            {
-                Flags |= TextRunFlags.Outline;
-            }
+            Flags |= TextRunFlags.Outline;
         }
     }
 }

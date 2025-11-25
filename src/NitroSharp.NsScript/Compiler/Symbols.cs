@@ -5,329 +5,328 @@ using System.Diagnostics;
 using System.IO;
 using NitroSharp.NsScript.Syntax;
 
-namespace NitroSharp.NsScript.Compiler
+namespace NitroSharp.NsScript.Compiler;
+
+public abstract class Symbol
 {
-    public abstract class Symbol
+    public abstract SymbolKind Kind { get; }
+}
+
+public enum SymbolKind
+{
+    Module,
+    SourceFile,
+    Chapter,
+    Scene,
+    Function,
+    Parameter
+}
+
+public abstract class NamedSymbol(string name) : Symbol
+{
+    public string Name { get; } = name;
+}
+
+public sealed class SourceModuleSymbol : Symbol
+{
+    public SourceModuleSymbol(Compilation compilation, ImmutableArray<SyntaxTree> syntaxTrees)
     {
-        public abstract SymbolKind Kind { get; }
+        Debug.Assert(syntaxTrees.Length > 0);
+        RootSourceFile = MakeSourceFileSymbol(syntaxTrees[0], compilation);
+
+        if (syntaxTrees.Length > 1)
+        {
+            var builder = ImmutableArray.CreateBuilder<SourceFileSymbol>(syntaxTrees.Length - 1);
+            foreach (SyntaxTree syntaxTree in syntaxTrees.AsSpan()[1..])
+            {
+                SourceFileSymbol sourceFile = MakeSourceFileSymbol(syntaxTree, compilation);
+                builder.Add(sourceFile);
+            }
+
+            ReferencedSourceFiles = builder.ToImmutable();
+        }
+        else
+        {
+            ReferencedSourceFiles = ImmutableArray<SourceFileSymbol>.Empty;
+        }
     }
 
-    public enum SymbolKind
+    public SourceFileSymbol RootSourceFile { get; }
+    public ImmutableArray<SourceFileSymbol> ReferencedSourceFiles { get; }
+
+    private SourceFileSymbol MakeSourceFileSymbol(SyntaxTree syntaxTree, Compilation compilation)
     {
-        Module,
-        SourceFile,
-        Chapter,
-        Scene,
-        Function,
-        Parameter
+        Debug.Assert(syntaxTree.Root is not null);
+        ResolvedPath filePath = syntaxTree.SourceText.FilePath;
+        SourceReferenceResolver sourceRefResolver = compilation.SourceReferenceResolver;
+        ResolvedRelativePath relativePath = filePath.RelativeTo(sourceRefResolver.RootDirectory);
+        string name = Path.ChangeExtension(relativePath.Value, null);
+
+        return new SourceFileSymbol(
+            this,
+            name,
+            filePath,
+            (SourceFileRoot)syntaxTree.Root
+        );
     }
 
-    public abstract class NamedSymbol(string name) : Symbol
+    public override SymbolKind Kind => SymbolKind.Module;
+
+    public ChapterSymbol? LookupChapter(string name)
     {
-        public string Name { get; } = name;
+        ChapterSymbol? chapter = RootSourceFile.LookupChapter(name);
+        if (chapter is not null) { return chapter; }
+
+        foreach (SourceFileSymbol file in ReferencedSourceFiles)
+        {
+            chapter = file.LookupChapter(name);
+            if (chapter is not null) { break; }
+        }
+
+        return chapter;
     }
 
-    public sealed class SourceModuleSymbol : Symbol
+    public SceneSymbol? LookupScene(string name)
     {
-        public SourceModuleSymbol(Compilation compilation, ImmutableArray<SyntaxTree> syntaxTrees)
+        SceneSymbol? scene = RootSourceFile.LookupScene(name);
+        if (scene is not null) { return scene; }
+
+        foreach (SourceFileSymbol file in ReferencedSourceFiles)
         {
-            Debug.Assert(syntaxTrees.Length > 0);
-            RootSourceFile = MakeSourceFileSymbol(syntaxTrees[0], compilation);
-
-            if (syntaxTrees.Length > 1)
-            {
-                var builder = ImmutableArray.CreateBuilder<SourceFileSymbol>(syntaxTrees.Length - 1);
-                foreach (SyntaxTree syntaxTree in syntaxTrees.AsSpan()[1..])
-                {
-                    SourceFileSymbol sourceFile = MakeSourceFileSymbol(syntaxTree, compilation);
-                    builder.Add(sourceFile);
-                }
-
-                ReferencedSourceFiles = builder.ToImmutable();
-            }
-            else
-            {
-                ReferencedSourceFiles = ImmutableArray<SourceFileSymbol>.Empty;
-            }
+            scene = file.LookupScene(name);
+            if (scene is not null) { break; }
         }
 
-        public SourceFileSymbol RootSourceFile { get; }
-        public ImmutableArray<SourceFileSymbol> ReferencedSourceFiles { get; }
-
-        private SourceFileSymbol MakeSourceFileSymbol(SyntaxTree syntaxTree, Compilation compilation)
-        {
-            Debug.Assert(syntaxTree.Root is not null);
-            ResolvedPath filePath = syntaxTree.SourceText.FilePath;
-            SourceReferenceResolver sourceRefResolver = compilation.SourceReferenceResolver;
-            ResolvedRelativePath relativePath = filePath.RelativeTo(sourceRefResolver.RootDirectory);
-            string relativePathNoExtension = Path.ChangeExtension(relativePath.Value, null);
-
-            return new SourceFileSymbol(
-                this,
-                filePath,
-                relativePathNoExtension,
-                (SourceFileRoot)syntaxTree.Root
-            );
-        }
-
-        public override SymbolKind Kind => SymbolKind.Module;
-
-        public ChapterSymbol? LookupChapter(string name)
-        {
-            ChapterSymbol? chapter = RootSourceFile.LookupChapter(name);
-            if (chapter is not null) { return chapter; }
-
-            foreach (SourceFileSymbol file in ReferencedSourceFiles)
-            {
-                chapter = file.LookupChapter(name);
-                if (chapter is not null) { break; }
-            }
-
-            return chapter;
-        }
-
-        public SceneSymbol? LookupScene(string name)
-        {
-            SceneSymbol? scene = RootSourceFile.LookupScene(name);
-            if (scene is not null) { return scene; }
-
-            foreach (SourceFileSymbol file in ReferencedSourceFiles)
-            {
-                scene = file.LookupScene(name);
-                if (scene is not null) { break; }
-            }
-
-            return scene;
-        }
-
-        public FunctionSymbol? LookupFunction(string name)
-        {
-            FunctionSymbol? function = RootSourceFile.LookupFunction(name);
-            if (function is not null) { return function; }
-
-            foreach (SourceFileSymbol file in ReferencedSourceFiles)
-            {
-                function = file.LookupFunction(name);
-                if (function is not null) { break; }
-            }
-
-            return function;
-        }
-
-        public override string ToString() => $"Module '{RootSourceFile.Name}'";
+        return scene;
     }
 
-    public sealed class SourceFileSymbol : NamedSymbol
+    public FunctionSymbol? LookupFunction(string name)
     {
-        private readonly Dictionary<string, ChapterSymbol> _chapterMap;
-        private readonly Dictionary<string, SceneSymbol> _sceneMap;
-        private readonly Dictionary<string, FunctionSymbol> _functionMap;
+        FunctionSymbol? function = RootSourceFile.LookupFunction(name);
+        if (function is not null) { return function; }
 
-        internal SourceFileSymbol(
-            SourceModuleSymbol module,
-            ResolvedPath filePath,
-            string relativePathNoExtension,
-            SourceFileRoot syntax)
-            : base(relativePathNoExtension)
+        foreach (SourceFileSymbol file in ReferencedSourceFiles)
         {
-            Syntax = syntax;
-            Module = module;
-            FilePath = filePath;
+            function = file.LookupFunction(name);
+            if (function is not null) { break; }
+        }
 
-            (int chapterCount, int sceneCount, int functionCount) =
-                ((int)syntax.ChapterCount,
+        return function;
+    }
+
+    public override string ToString() => $"Module '{RootSourceFile.Name}'";
+}
+
+public sealed class SourceFileSymbol : NamedSymbol
+{
+    private readonly Dictionary<string, ChapterSymbol> _chapterMap;
+    private readonly Dictionary<string, SceneSymbol> _sceneMap;
+    private readonly Dictionary<string, FunctionSymbol> _functionMap;
+
+    internal SourceFileSymbol(
+        SourceModuleSymbol module,
+        string name,
+        ResolvedPath filePath,
+        SourceFileRoot syntax)
+        : base(name)
+    {
+        Syntax = syntax;
+        Module = module;
+        FilePath = filePath;
+
+        (int chapterCount, int sceneCount, int functionCount) =
+            ((int)syntax.ChapterCount,
                 (int)syntax.SceneCount,
                 (int)syntax.FunctionCount);
 
-            _chapterMap = new Dictionary<string, ChapterSymbol>(chapterCount);
-            _sceneMap = new Dictionary<string, SceneSymbol>(sceneCount);
-            _functionMap = new Dictionary<string, FunctionSymbol>(functionCount);
+        _chapterMap = new Dictionary<string, ChapterSymbol>(chapterCount);
+        _sceneMap = new Dictionary<string, SceneSymbol>(sceneCount);
+        _functionMap = new Dictionary<string, FunctionSymbol>(functionCount);
 
-            var chapters = ImmutableArray.CreateBuilder<ChapterSymbol>(chapterCount);
-            var scenes = ImmutableArray.CreateBuilder<SceneSymbol>(sceneCount);
-            var functions = ImmutableArray.CreateBuilder<FunctionSymbol>(functionCount);
+        var chapters = ImmutableArray.CreateBuilder<ChapterSymbol>(chapterCount);
+        var scenes = ImmutableArray.CreateBuilder<SceneSymbol>(sceneCount);
+        var functions = ImmutableArray.CreateBuilder<FunctionSymbol>(functionCount);
 
-            foreach (SubroutineDeclaration decl in syntax.SubroutineDeclarations)
+        foreach (SubroutineDeclaration decl in syntax.SubroutineDeclarations)
+        {
+            string declName = decl.Name.Value;
+            switch (decl.Kind)
             {
-                string declName = decl.Name.Value;
-                switch (decl.Kind)
-                {
-                    case SyntaxNodeKind.ChapterDeclaration:
-                        var chapterDecl = (ChapterDeclaration)decl;
-                        var chapter = new ChapterSymbol(this, declName, chapterDecl);
-                        _chapterMap.Add(declName, chapter);
-                        chapters.Add(chapter);
-                        break;
-                    case SyntaxNodeKind.FunctionDeclaration:
-                        var functionDecl = (FunctionDeclaration)decl;
-                        var function = new FunctionSymbol(this, declName, functionDecl);
-                        _functionMap[declName] = function;
-                        functions.Add(function);
-                        break;
-                    case SyntaxNodeKind.SceneDeclaration:
-                        var sceneDecl = (SceneDeclaration)decl;
-                        var scene = new SceneSymbol(this, declName, sceneDecl);
-                        _sceneMap.Add(declName, scene);
-                        scenes.Add(scene);
-                        break;
-                }
+                case SyntaxNodeKind.ChapterDeclaration:
+                    var chapterDecl = (ChapterDeclaration)decl;
+                    var chapter = new ChapterSymbol(this, declName, chapterDecl);
+                    _chapterMap.Add(declName, chapter);
+                    chapters.Add(chapter);
+                    break;
+                case SyntaxNodeKind.FunctionDeclaration:
+                    var functionDecl = (FunctionDeclaration)decl;
+                    var function = new FunctionSymbol(this, declName, functionDecl);
+                    _functionMap[declName] = function;
+                    functions.Add(function);
+                    break;
+                case SyntaxNodeKind.SceneDeclaration:
+                    var sceneDecl = (SceneDeclaration)decl;
+                    var scene = new SceneSymbol(this, declName, sceneDecl);
+                    _sceneMap.Add(declName, scene);
+                    scenes.Add(scene);
+                    break;
+            }
+        }
+
+        Chapters = chapters.ToImmutable();
+        Functions = functions.ToImmutable();
+        Scenes = scenes.ToImmutable();
+        SubroutineCount = (uint)(chapters.Count + functions.Count + scenes.Count);
+    }
+
+    public override SymbolKind Kind => SymbolKind.SourceFile;
+
+    public SourceModuleSymbol Module { get; }
+    public ResolvedPath FilePath { get; }
+    public SourceText SourceText => Syntax.SyntaxTree.SourceText;
+    public SourceFileRoot Syntax { get; }
+
+    public ImmutableArray<ChapterSymbol> Chapters { get; }
+    public ImmutableArray<FunctionSymbol> Functions { get; }
+    public ImmutableArray<SceneSymbol> Scenes { get; }
+    public uint SubroutineCount { get; }
+
+    public ChapterSymbol? LookupChapter(string name)
+        => LookupSubroutine(_chapterMap, name);
+
+    public SceneSymbol? LookupScene(string name)
+        => LookupSubroutine(_sceneMap, name);
+
+    public FunctionSymbol? LookupFunction(string name)
+        => LookupSubroutine(_functionMap, name);
+
+    private static T? LookupSubroutine<T>(Dictionary<string, T> map, string name)
+        where T : SubroutineSymbol
+    {
+        return map.GetValueOrDefault(name);
+    }
+
+    public override string ToString() => $"SourceFile '{Name}'";
+}
+
+public abstract class SubroutineSymbol : NamedSymbol, IEquatable<SubroutineSymbol>
+{
+    protected SubroutineSymbol(
+        SourceFileSymbol declaringSourceFile,
+        string name,
+        SubroutineDeclaration declaration) : base(name)
+    {
+        DeclaringSourceFile = declaringSourceFile;
+        Declaration = declaration;
+    }
+
+    public SourceFileSymbol DeclaringSourceFile { get; }
+    public SubroutineDeclaration Declaration { get; }
+
+    public virtual ParameterSymbol? LookupParameter(string name) => null;
+
+    public bool Equals(SubroutineSymbol? other)
+        => ReferenceEquals(Declaration, other?.Declaration);
+
+    public override bool Equals(object? obj)
+        => obj is SubroutineSymbol other && ReferenceEquals(Declaration, other.Declaration);
+
+    public override int GetHashCode() => Declaration.GetHashCode();
+}
+
+public sealed class FunctionSymbol : SubroutineSymbol, IEquatable<FunctionSymbol>
+{
+    private readonly Dictionary<string, ParameterSymbol>? _parameterMap;
+
+    internal FunctionSymbol(
+        SourceFileSymbol declaringSourceFile,
+        string name,
+        FunctionDeclaration declaration)
+        : base(declaringSourceFile, name, declaration)
+    {
+        var parameters = ImmutableArray<ParameterSymbol>.Empty;
+        int paramCount = declaration.Parameters.Length;
+        if (paramCount > 0)
+        {
+            var builder = ImmutableArray.CreateBuilder<ParameterSymbol>(paramCount);
+            _parameterMap = new Dictionary<string, ParameterSymbol>();
+            foreach (Parameter paramSyntax in declaration.Parameters)
+            {
+                var parameter = new ParameterSymbol(this, paramSyntax.Name);
+                builder.Add(parameter);
+                _parameterMap.Add(parameter.Name, parameter);
             }
 
-            Chapters = chapters.ToImmutable();
-            Functions = functions.ToImmutable();
-            Scenes = scenes.ToImmutable();
-            SubroutineCount = (uint)(chapters.Count + functions.Count + scenes.Count);
+            parameters = builder.ToImmutable();
         }
 
-        public override SymbolKind Kind => SymbolKind.SourceFile;
-
-        public SourceModuleSymbol Module { get; }
-        public ResolvedPath FilePath { get; }
-        public SourceText SourceText => Syntax.SyntaxTree.SourceText;
-        public SourceFileRoot Syntax { get; }
-
-        public ImmutableArray<ChapterSymbol> Chapters { get; }
-        public ImmutableArray<FunctionSymbol> Functions { get; }
-        public ImmutableArray<SceneSymbol> Scenes { get; }
-        public uint SubroutineCount { get; }
-
-        public ChapterSymbol? LookupChapter(string name)
-            => LookupSubroutine(_chapterMap, name);
-
-        public SceneSymbol? LookupScene(string name)
-            => LookupSubroutine(_sceneMap, name);
-
-        public FunctionSymbol? LookupFunction(string name)
-            => LookupSubroutine(_functionMap, name);
-
-        private static T? LookupSubroutine<T>(Dictionary<string, T> map, string name)
-            where T : SubroutineSymbol
-        {
-            return map.GetValueOrDefault(name);
-        }
-
-        public override string ToString() => $"SourceFile '{Name}'";
+        Parameters = parameters;
+        Declaration = declaration;
     }
 
-    public abstract class SubroutineSymbol : NamedSymbol, IEquatable<SubroutineSymbol>
+    public override SymbolKind Kind => SymbolKind.Function;
+
+    public new FunctionDeclaration Declaration { get; }
+    public ImmutableArray<ParameterSymbol> Parameters { get; }
+
+    public override ParameterSymbol? LookupParameter(string name)
     {
-        protected SubroutineSymbol(
-            SourceFileSymbol declaringSourceFile,
-            string name,
-            SubroutineDeclaration declaration) : base(name)
-        {
-            DeclaringSourceFile = declaringSourceFile;
-            Declaration = declaration;
-        }
-
-        public SourceFileSymbol DeclaringSourceFile { get; }
-        public SubroutineDeclaration Declaration { get; }
-
-        public virtual ParameterSymbol? LookupParameter(string name) => null;
-
-        public bool Equals(SubroutineSymbol? other)
-            => ReferenceEquals(Declaration, other?.Declaration);
-
-        public override bool Equals(object? obj)
-            => obj is SubroutineSymbol other && ReferenceEquals(Declaration, other.Declaration);
-
-        public override int GetHashCode() => Declaration.GetHashCode();
+        return _parameterMap?.GetValueOrDefault(name);
     }
 
-    public sealed class FunctionSymbol : SubroutineSymbol, IEquatable<FunctionSymbol>
+    public bool Equals(FunctionSymbol? other) => ReferenceEquals(Declaration, other?.Declaration);
+    public override int GetHashCode() => Declaration.GetHashCode();
+    public override string ToString() => $"Function '{Name}'";
+}
+
+public sealed class ParameterSymbol : NamedSymbol
+{
+    internal ParameterSymbol(FunctionSymbol containingFunction, string name)
+        : base(name)
     {
-        private readonly Dictionary<string, ParameterSymbol>? _parameterMap;
-
-        internal FunctionSymbol(
-            SourceFileSymbol declaringSourceFile,
-            string name,
-            FunctionDeclaration declaration)
-            : base(declaringSourceFile, name, declaration)
-        {
-            var parameters = ImmutableArray<ParameterSymbol>.Empty;
-            int paramCount = declaration.Parameters.Length;
-            if (paramCount > 0)
-            {
-                var builder = ImmutableArray.CreateBuilder<ParameterSymbol>(paramCount);
-                _parameterMap = new Dictionary<string, ParameterSymbol>();
-                foreach (Parameter paramSyntax in declaration.Parameters)
-                {
-                    var parameter = new ParameterSymbol(this, paramSyntax.Name);
-                    builder.Add(parameter);
-                    _parameterMap.Add(parameter.Name, parameter);
-                }
-
-                parameters = builder.ToImmutable();
-            }
-
-            Parameters = parameters;
-            Declaration = declaration;
-        }
-
-        public override SymbolKind Kind => SymbolKind.Function;
-
-        public new FunctionDeclaration Declaration { get; }
-        public ImmutableArray<ParameterSymbol> Parameters { get; }
-
-        public override ParameterSymbol? LookupParameter(string name)
-        {
-            return _parameterMap?.GetValueOrDefault(name);
-        }
-
-        public bool Equals(FunctionSymbol? other) => ReferenceEquals(Declaration, other?.Declaration);
-        public override int GetHashCode() => Declaration.GetHashCode();
-        public override string ToString() => $"Function '{Name}'";
+        ContainingFunction = containingFunction;
     }
 
-    public sealed class ParameterSymbol : NamedSymbol
+    public FunctionSymbol ContainingFunction { get; }
+    public override SymbolKind Kind => SymbolKind.Parameter;
+
+    public override string ToString() => $"Parameter '{Name}'";
+}
+
+public sealed class ChapterSymbol : SubroutineSymbol, IEquatable<ChapterSymbol>
+{
+    internal ChapterSymbol(
+        SourceFileSymbol declaringSourceFile,
+        string name,
+        ChapterDeclaration declaration)
+        : base(declaringSourceFile, name, declaration)
     {
-        internal ParameterSymbol(FunctionSymbol containingFunction, string name)
-            : base(name)
-        {
-            ContainingFunction = containingFunction;
-        }
-
-        public FunctionSymbol ContainingFunction { get; }
-        public override SymbolKind Kind => SymbolKind.Parameter;
-
-        public override string ToString() => $"Parameter '{Name}'";
+        Declaration = declaration;
     }
 
-    public sealed class ChapterSymbol : SubroutineSymbol, IEquatable<ChapterSymbol>
+    public override SymbolKind Kind => SymbolKind.Chapter;
+    public new ChapterDeclaration Declaration { get; }
+
+    public bool Equals(ChapterSymbol? other) => ReferenceEquals(Declaration, other?.Declaration);
+    public override int GetHashCode() => Declaration.GetHashCode();
+    public override string ToString() => $"Chapter '{Name}'";
+}
+
+public sealed class SceneSymbol : SubroutineSymbol, IEquatable<SceneSymbol>
+{
+    internal SceneSymbol(
+        SourceFileSymbol declaringSourceFile,
+        string name,
+        SceneDeclaration declaration)
+        : base(declaringSourceFile, name, declaration)
     {
-        internal ChapterSymbol(
-            SourceFileSymbol declaringSourceFile,
-            string name,
-            ChapterDeclaration declaration)
-            : base(declaringSourceFile, name, declaration)
-        {
-            Declaration = declaration;
-        }
-
-        public override SymbolKind Kind => SymbolKind.Chapter;
-        public new ChapterDeclaration Declaration { get; }
-
-        public bool Equals(ChapterSymbol? other) => ReferenceEquals(Declaration, other?.Declaration);
-        public override int GetHashCode() => Declaration.GetHashCode();
-        public override string ToString() => $"Chapter '{Name}'";
+        Declaration = declaration;
     }
 
-    public sealed class SceneSymbol : SubroutineSymbol, IEquatable<SceneSymbol>
-    {
-        internal SceneSymbol(
-            SourceFileSymbol declaringSourceFile,
-            string name,
-            SceneDeclaration declaration)
-            : base(declaringSourceFile, name, declaration)
-        {
-            Declaration = declaration;
-        }
+    public override SymbolKind Kind => SymbolKind.Scene;
+    public new SceneDeclaration Declaration { get; }
 
-        public override SymbolKind Kind => SymbolKind.Scene;
-        public new SceneDeclaration Declaration { get; }
-
-        public bool Equals(SceneSymbol? other) => ReferenceEquals(Declaration, other?.Declaration);
-        public override int GetHashCode() => Declaration.GetHashCode();
-        public override string ToString() => $"Scene '{Name}'";
-    }
+    public bool Equals(SceneSymbol? other) => ReferenceEquals(Declaration, other?.Declaration);
+    public override int GetHashCode() => Declaration.GetHashCode();
+    public override string ToString() => $"Scene '{Name}'";
 }

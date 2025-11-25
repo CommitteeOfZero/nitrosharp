@@ -4,74 +4,63 @@ using System.IO;
 using System.Reflection;
 using Veldrid;
 
-namespace NitroSharp.Graphics.Core
+namespace NitroSharp.Graphics.Core;
+
+internal sealed class ShaderLibrary(GraphicsDevice graphicsDevice) : IDisposable
 {
-    internal sealed class ShaderLibrary : IDisposable
+    private static readonly Assembly s_assembly = typeof(ShaderLibrary).Assembly;
+
+    private readonly List<(Shader, Shader)> _shaderSets = [];
+
+    public (Shader vs, Shader fs) LoadShaderSet(string name)
     {
-        private static readonly Assembly s_assembly = typeof(ShaderLibrary).Assembly;
+        Shader vs = LoadShader(name, ShaderStages.Vertex, "main");
+        Shader fs = LoadShader(name, ShaderStages.Fragment, "main");
+        _shaderSets.Add((vs, fs));
+        return (vs, fs);
+    }
 
-        private readonly GraphicsDevice _graphicsDevice;
-        private readonly List<(Shader, Shader)> _shaderSets;
+    private Shader LoadShader(string set, ShaderStages stage, string entryPoint)
+    {
+        ResourceFactory factory = graphicsDevice.ResourceFactory;
+        string name = "NitroSharp.Graphics.Shaders." + set +
+            $"-{stage.ToString().ToLower()}{GetExtension(factory.BackendType)}";
 
-        public ShaderLibrary(GraphicsDevice graphicsDevice)
+        Stream? stream = s_assembly.GetManifestResourceStream(name);
+        if (stream is null)
         {
-            _graphicsDevice = graphicsDevice;
-            _shaderSets = new List<(Shader, Shader)>();
+            throw new InvalidOperationException(
+                $"Couldn't find shader set '{set}'. " +
+                "Did you forget to run the shader compiler?"
+            );
         }
-
-        public (Shader vs, Shader fs) LoadShaderSet(string name)
+        using (var reader = new BinaryReader(stream))
         {
-            Shader vs = LoadShader(name, ShaderStages.Vertex, "main");
-            Shader fs = LoadShader(name, ShaderStages.Fragment, "main");
-            _shaderSets.Add((vs, fs));
-            return (vs, fs);
+            byte[] bytes = reader.ReadBytes((int)stream.Length);
+            return factory.CreateShader(new ShaderDescription(stage, bytes, entryPoint));
         }
+    }
 
-        private Shader LoadShader(string set, ShaderStages stage, string entryPoint)
+    private static string GetExtension(GraphicsBackend backend)
+    {
+        return backend switch
         {
-            ResourceFactory factory = _graphicsDevice.ResourceFactory;
-            string name = "NitroSharp.Graphics.Shaders." + set +
-                $"-{stage.ToString().ToLower()}{GetExtension(factory.BackendType)}";
+            GraphicsBackend.Direct3D11 => ".hlsl.bytes",
+            GraphicsBackend.Vulkan => ".450.glsl.spv",
+            GraphicsBackend.OpenGL => ".330.glsl",
+            GraphicsBackend.OpenGLES => ".300.glsles",
+            GraphicsBackend.Metal => ".metallib",
+            _ => throw ThrowHelper.UnexpectedValueOf<GraphicsBackend>()
+        };
+    }
 
-            Stream? stream = s_assembly.GetManifestResourceStream(name);
-            if (stream is null)
-            {
-                throw new InvalidOperationException(
-                    $"Couldn't find shader set '{set}'. " +
-                    "Did you forget to run the shader compiler?"
-                );
-            }
-            using (var reader = new BinaryReader(stream))
-            {
-                byte[] bytes = reader.ReadBytes((int)stream.Length);
-                return factory.CreateShader(new ShaderDescription(stage, bytes, entryPoint));
-            }
-        }
-
-        private static string GetExtension(GraphicsBackend backend)
+    public void Dispose()
+    {
+        foreach ((Shader vs, Shader fs) in _shaderSets)
         {
-            return backend switch
-            {
-                GraphicsBackend.Direct3D11 => ".hlsl.bytes",
-                GraphicsBackend.Vulkan => ".450.glsl.spv",
-                GraphicsBackend.OpenGL => ".330.glsl",
-                GraphicsBackend.OpenGLES => ".300.glsles",
-                GraphicsBackend.Metal => ".metallib",
-                _ => ThrowIllegalValue(nameof(backend))
-            };
+            vs.Dispose();
+            fs.Dispose();
         }
-
-        public void Dispose()
-        {
-            foreach ((Shader vs, Shader fs) in _shaderSets)
-            {
-                vs.Dispose();
-                fs.Dispose();
-            }
-            _shaderSets.Clear();
-        }
-
-        private static string ThrowIllegalValue(string paramName)
-            => throw new ArgumentException("Illegal value.", paramName);
+        _shaderSets.Clear();
     }
 }

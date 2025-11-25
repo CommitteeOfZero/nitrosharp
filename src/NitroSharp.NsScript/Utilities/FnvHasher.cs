@@ -1,22 +1,21 @@
 ﻿using System;
 
-namespace NitroSharp.NsScript.Utilities
+namespace NitroSharp.NsScript.Utilities;
+
+internal static class FnvHasher
 {
-    internal static class FnvHasher
+    private const int FnvOffsetBias = unchecked((int)2166136261);
+    private const int FnvPrime = 16777619;
+
+    public static int HashString(ReadOnlySpan<char> text)
     {
-        private const int FnvOffsetBias = unchecked((int)2166136261);
-        private const int FnvPrime = 16777619;
-
-        public static int HashString(ReadOnlySpan<char> text)
+        int hashCode = FnvOffsetBias;
+        int length = text.Length;
+        for (int i = 0; i < length; i++)
         {
-            int hashCode = FnvOffsetBias;
-            int length = text.Length;
-            for (int i = 0; i < length; i++)
-            {
-                hashCode = unchecked((hashCode ^ text[i]) * FnvPrime);
-            }
-
-            return hashCode;
+            hashCode = unchecked((hashCode ^ text[i]) * FnvPrime);
         }
+
+        return hashCode;
     }
 }

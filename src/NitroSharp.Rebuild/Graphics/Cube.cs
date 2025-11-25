@@ -1,19 +1,15 @@
 ﻿using System;
 using System.Numerics;
+using JetBrains.Annotations;
 using Veldrid;
 
 namespace NitroSharp.Graphics;
 
-internal struct CubeVertex
+[UsedImplicitly(ImplicitUseTargetFlags.Members)]
+internal struct CubeVertex(float x, float y, float z)
 {
-    public readonly Vector3 Position;
-    public float Opacity;
-
-    public CubeVertex(float x, float y, float z)
-    {
-        Position = new Vector3(x, y, z);
-        Opacity = 1.0f;
-    }
+    public readonly Vector3 Position = new(x, y, z);
+    public float Opacity = 1.0f;
 
     public static readonly VertexLayoutDescription LayoutDescription = new(
         new VertexElementDescription(
@@ -65,13 +61,13 @@ internal static class CubeGeometry
         new CubeVertex(-0.5f,-0.5f,0.5f)
     };
 
-    public static ushort[] Indices => new ushort[]
-    {
+    public static ushort[] Indices =>
+    [
         0,1,2, 0,2,3,
         4,5,6, 4,6,7,
         8,9,10, 8,10,11,
         12,13,14, 12,14,15,
         16,17,18, 16,18,19,
         20,21,22, 20,22,23
-    };
+    ];
 }

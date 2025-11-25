@@ -1,28 +1,18 @@
-﻿namespace NitroSharp.NsScript
+﻿namespace NitroSharp.NsScript;
+
+public readonly struct NsRational(float numerator, float denominator)
 {
-    public readonly struct NsRational
+    public float Numerator { get; } = numerator;
+    public float Denominator { get; } = denominator;
+
+    public NsRational Rebase(float newBase)
     {
-        public NsRational(float numerator, float denominator)
-        {
-            Numerator = numerator;
-            Denominator = denominator;
-        }
-
-        public float Numerator { get; }
-        public float Denominator { get; }
-
-        public NsRational Rebase(float newBase)
-        {
-            float newNumerator = Numerator * newBase / Denominator;
-            return new NsRational(newNumerator, newBase);
-        }
-
-        public static implicit operator float(NsRational rational)
-            => rational.Numerator / rational.Denominator;
-
-        public override string ToString()
-        {
-            return $"{Numerator} / {Denominator}";
-        }
+        float newNumerator = Numerator * newBase / Denominator;
+        return new NsRational(newNumerator, newBase);
     }
+
+    public static implicit operator float(NsRational rational)
+        => rational.Numerator / rational.Denominator;
+
+    public override string ToString() => $"{Numerator} / {Denominator}";
 }
