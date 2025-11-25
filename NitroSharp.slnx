@@ -1,0 +1,29 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="ARM" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Folder Name="/Bindings/">
+    <Project Path="src/FreeTypeBindings/FreeTypeBindings.csproj" />
+    <Project Path="third_party/FFmpeg.AutoGen/FFmpeg.AutoGen.csproj" />
+    <Project Path="third_party/OpenAL-CS/OpenAL-CS.csproj" />
+  </Folder>
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+  </Folder>
+  <Project Path="src/Game/Game.csproj" />
+  <Project Path="src/NitroSharp.Common/NitroSharp.Common.csproj" />
+  <Project Path="src/NitroSharp.NsScript.Tests/NitroSharp.NsScript.Tests.csproj" />
+  <Project Path="src/NitroSharp.NsScript/NitroSharp.NsScript.csproj" />
+  <Project Path="src/NitroSharp.Rebuild/NitroSharp.Rebuild.csproj" />
+  <Project Path="src/NitroSharp.ScriptCompiler/NitroSharp.ScriptCompiler.csproj" />
+  <Project Path="src/NitroSharp.ShaderCompiler/NitroSharp.ShaderCompiler.csproj" />
+  <Project Path="src/NitroSharp.SourceGenerators/NitroSharp.SourceGenerators.csproj" />
+  <Project Path="src/NitroSharp.Tests/NitroSharp.Tests.csproj" />
+  <Project Path="src/NitroSharp/NitroSharp.csproj" />
+  <Properties Name="Performance">
+    <Property Name="HasPerformanceSessions" Value="true" />
+  </Properties>
+</Solution>
