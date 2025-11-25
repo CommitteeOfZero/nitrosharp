@@ -1,75 +1,73 @@
-﻿using System.IO;
-using SharpDX.Mathematics.Interop;
-using SharpDX.WIC;
+﻿using System;
+using System.IO;
 using Veldrid;
+using Vortice.WIC;
 using PixelFormat = Veldrid.PixelFormat;
+using Rectangle = System.Drawing.Rectangle;
 
-namespace NitroSharp.Content
+namespace NitroSharp.Content;
+
+internal sealed unsafe class WicTextureLoader(GraphicsDevice graphicsDevice)
+    : TextureLoader(graphicsDevice)
 {
-    internal sealed unsafe class WicTextureLoader : TextureLoader
+    private readonly IWICImagingFactory _wicFactory = new();
+
+    protected override Texture LoadStaging(Stream stream)
     {
-        private readonly ImagingFactory _wicFactory;
+        using IWICStream wicStream = _wicFactory.CreateStream(stream);
+        using IWICBitmapDecoder decoder = _wicFactory.CreateDecoderFromStream(wicStream);
+        using IWICFormatConverter? formatConv = _wicFactory.CreateFormatConverter();
+        // Do NOT dispose the frame as it might lead to a crash.
+        // Seems like it's owned by the decoder, so hopefully there should be no leaks.
+        IWICBitmapFrameDecode frame = decoder.GetFrame(0);
+        formatConv.Initialize(frame, Vortice.WIC.PixelFormat.Format32bppRGBA);
 
-        public WicTextureLoader(GraphicsDevice graphicsDevice) : base(graphicsDevice)
+        uint width = (uint)frame.Size.Width;
+        uint height = (uint)frame.Size.Height;
+        Texture stagingTexture = _rf.CreateTexture(TextureDescription.Texture2D(
+            width, height, mipLevels: 1, arrayLayers: 1,
+            PixelFormat.R8_G8_B8_A8_UNorm, TextureUsage.Staging
+        ));
+
+        MappedResource map = _gd.Map(stagingTexture, MapMode.Write);
+        uint rowWidth = width * 4;
+        if (rowWidth == map.RowPitch)
         {
-            _wicFactory = new ImagingFactory();
+
+            formatConv.CopyPixels((int)map.RowPitch, (int)map.SizeInBytes, map.Data);
         }
-
-        protected override Texture LoadStaging(Stream stream)
+        else
         {
-            using var wicStream = new WICStream(_wicFactory, stream);
-            using var decoder = new BitmapDecoder(_wicFactory, wicStream, DecodeOptions.CacheOnDemand);
-            using var formatConv = new FormatConverter(_wicFactory);
-            // Do NOT dispose the frame as it might lead to a crash.
-            // Seems like it's owned by the decoder, so hopefully there should be no leaks.
-            BitmapFrameDecode frame = decoder.GetFrame(0);
-            formatConv.Initialize(frame, SharpDX.WIC.PixelFormat.Format32bppRGBA);
-
-            uint width = (uint)frame.Size.Width;
-            uint height = (uint)frame.Size.Height;
-            Texture stagingTexture = _rf.CreateTexture(TextureDescription.Texture2D(
-                width, height, mipLevels: 1, arrayLayers: 1,
-                PixelFormat.R8_G8_B8_A8_UNorm, TextureUsage.Staging
-            ));
-
-            MappedResource map = _gd.Map(stagingTexture, MapMode.Write);
-            uint rowWidth = width * 4;
-            if (rowWidth == map.RowPitch)
+            for (uint y = 0; y < height; y++)
             {
-                formatConv.CopyPixels((int)map.RowPitch, map.Data, (int)map.SizeInBytes);
+                byte* dstStart = (byte*)map.Data + y * map.RowPitch;
+                formatConv.CopyPixels(
+                    new Rectangle(x: 0, (int)y, (int)width, height: 1),
+                    stride: (int)map.RowPitch,
+                    size: (int)map.RowPitch,
+                    (IntPtr)dstStart
+                );
             }
-            else
-            {
-                for (uint y = 0; y < height; y++)
-                {
-                    byte* dstStart = (byte*)map.Data + y * map.RowPitch;
-                    formatConv.CopyPixels(
-                        new RawBox(x: 0, (int)y, (int)width, height: 1),
-                        (int)map.RowPitch,
-                        new SharpDX.DataPointer(dstStart, (int)map.RowPitch)
-                    );
-                }
-            }
-
-            _gd.Unmap(stagingTexture);
-            return stagingTexture;
         }
 
-        public override void Dispose()
-        {
-            base.Dispose();
-            _wicFactory.Dispose();
-        }
+        _gd.Unmap(stagingTexture);
+        return stagingTexture;
+    }
 
-        public override TextureSizeU GetTextureSize(Stream stream)
-        {
-            using var wicStream = new WICStream(_wicFactory, stream);
-            using var decoder = new BitmapDecoder(_wicFactory, wicStream, DecodeOptions.CacheOnDemand);
-            // Do NOT dispose the frame as it might lead to a crash.
-            // Seems like it's owned by the decoder, so hopefully there should be no leaks.
-            BitmapFrameDecode frame = decoder.GetFrame(0);
-            stream.Seek(0, SeekOrigin.Begin);
-            return new TextureSizeU((uint)frame.Size.Width, (uint)frame.Size.Height);
-        }
+    public override void Dispose()
+    {
+        base.Dispose();
+        _wicFactory.Dispose();
+    }
+
+    public override TextureSizeU GetTextureSize(Stream stream)
+    {
+        using IWICStream wicStream = _wicFactory.CreateStream(stream);
+        using IWICBitmapDecoder decoder = _wicFactory.CreateDecoderFromStream(wicStream);
+        // Do NOT dispose the frame as it might lead to a crash.
+        // Seems like it's owned by the decoder, so hopefully there should be no leaks.
+        IWICBitmapFrameDecode frame = decoder.GetFrame(0);
+        stream.Seek(0, SeekOrigin.Begin);
+        return new TextureSizeU((uint)frame.Size.Width, (uint)frame.Size.Height);
     }
 }
