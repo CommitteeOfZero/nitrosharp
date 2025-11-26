@@ -5,14 +5,14 @@ using Veldrid;
 
 namespace NitroSharp.Graphics.Core;
 
-internal readonly struct ResourceSetKey : IEquatable<ResourceSetKey>
+internal readonly record struct ResourceSetKey
 {
     public readonly ResourceLayout ResourceLayout;
 
     private readonly BindableResource _resource0;
-    private readonly BindableResource _resource1;
-    private readonly BindableResource _resource2;
-    private readonly BindableResource _resource3;
+    private readonly BindableResource? _resource1;
+    private readonly BindableResource? _resource2;
+    private readonly BindableResource? _resource3;
 
     public ResourceSetKey(ResourceLayout layout, BindableResource res) : this()
     {
@@ -75,35 +75,15 @@ internal readonly struct ResourceSetKey : IEquatable<ResourceSetKey>
         }
     }
 
-    public override int GetHashCode()
-    {
-        return HashCode.Combine(
-            ResourceLayout,
-            _resource0,
-            _resource1,
-            _resource2,
-            _resource3
-        );
-    }
-
-    public bool Equals(ResourceSetKey other)
-    {
-        return ReferenceEquals(ResourceLayout, other.ResourceLayout)
-            && _resource0.Equals(other._resource0)
-            && _resource1.Equals(other._resource1)
-            && _resource2.Equals(other._resource2)
-            && _resource3.Equals(other._resource3);
-    }
-
     public BindableResource GetResource(int index)
     {
         Debug.Assert(index < GetResourceCount());
         return index switch
         {
             0 => _resource0,
-            1 => _resource1,
-            2 => _resource2,
-            3 => _resource3,
+            1 => _resource1!.Value,
+            2 => _resource2!.Value,
+            3 => _resource3!.Value,
             _ => throw ThrowHelper.ArgumentOutOfRange(nameof(index))
         };
     }
@@ -112,9 +92,9 @@ internal readonly struct ResourceSetKey : IEquatable<ResourceSetKey>
     {
         return (_resource1, _resource2, _resource3) switch
         {
-            ({ Resource: null }, _, _) => 1u,
-            ({ Resource: not null }, { Resource: null }, _) => 2u,
-            ({ Resource: not null }, { Resource: not null }, { Resource: null }) => 3u,
+            (null, _, _) => 1u,
+            (not null, null, _) => 2u,
+            (not null, not null, null) => 3u,
             _ => 4u
         };
     }

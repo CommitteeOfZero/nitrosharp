@@ -174,8 +174,8 @@ internal sealed class GameContext
             DefaultFont = defaultFont,
             ItalicFont = null,
             DefaultFontSize = gameProfile.FontSize,
-            DefaultTextColor = RgbaFloat.White.AsVector4(),
-            DefaultOutlineColor = RgbaFloat.Black.AsVector4(),
+            DefaultTextColor = RgbaFloat.White.ToVector4(),
+            DefaultOutlineColor = RgbaFloat.Black.ToVector4(),
             RubyFontSizeMultiplier = 0.4f
         };
 

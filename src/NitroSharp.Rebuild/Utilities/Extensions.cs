@@ -9,14 +9,9 @@ internal static class RgbaFloatExtensions
 {
     extension(in RgbaFloat value)
     {
-        public Vector4 AsVector4()
-        {
-            return new Vector4(value.R, value.G, value.B, value.A);
-        }
-
         public RgbaFloat Multiply(float value1)
         {
-            Vector4 v = value.AsVector4() * value1;
+            Vector4 v = value.ToVector4() * value1;
             return new RgbaFloat(v.X, v.Y, v.Z, v.W);
         }
     }

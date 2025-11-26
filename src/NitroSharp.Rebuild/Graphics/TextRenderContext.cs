@@ -24,8 +24,8 @@ internal sealed class TextRenderContext : IDisposable
 
         public void WriteGpuBlocks(Span<Vector4> blocks)
         {
-            blocks[0] = _color.AsVector4();
-            blocks[1] = _outlineColor.AsVector4();
+            blocks[0] = _color.ToVector4();
+            blocks[1] = _outlineColor.ToVector4();
         }
     }
 
