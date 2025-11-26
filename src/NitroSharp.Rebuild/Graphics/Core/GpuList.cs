@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using NitroSharp.Common;
 using NitroSharp.Utilities;
 using Veldrid;
 
@@ -41,7 +42,7 @@ internal sealed unsafe class GpuList<T> : IDisposable
         _mapMode = retainBetweenFrames
             ? MapMode.ReadWrite
             : MapMode.Write;
-        _oldBuffers = new List<(DeviceBuffer, DeviceBuffer)>();
+        _oldBuffers = [];
         Grow(initialCapacity);
     }
 
@@ -66,6 +67,12 @@ internal sealed unsafe class GpuList<T> : IDisposable
 
     private ref T Get(uint index)
     {
+        if (_map.Data == IntPtr.Zero) { notMapped(); }
+        if (index >= _cursor) { outOfBounds(); }
+
+        var ptr = (T*)Unsafe.Add<T>((void*)_map.Data, (int)index);
+        return ref Unsafe.AsRef<T>(ptr);
+
         static void notMapped()
         {
             throw new InvalidOperationException(
@@ -74,12 +81,6 @@ internal sealed unsafe class GpuList<T> : IDisposable
         }
 
         static void outOfBounds() => throw new IndexOutOfRangeException();
-
-        if (_map.Data == IntPtr.Zero) { notMapped(); }
-        if (index >= _cursor) { outOfBounds(); }
-
-        var ptr = (T*)Unsafe.Add<T>((void*)_map.Data, (int)index);
-        return ref Unsafe.AsRef<T>(ptr);
     }
 
     public void Begin(bool resetPosition = true)
@@ -90,7 +91,7 @@ internal sealed unsafe class GpuList<T> : IDisposable
             gpuBuf.Dispose();
         }
         _oldBuffers.Clear();
-        _map = _gd.Map(_stagingBuffer, _mapMode);
+        _map = _gd.Map(_stagingBuffer.NotNull(), _mapMode);
         if (resetPosition)
         {
             _cursor = 0;
@@ -129,7 +130,7 @@ internal sealed unsafe class GpuList<T> : IDisposable
 
     public void End(CommandList commandList)
     {
-        _gd.Unmap(_stagingBuffer);
+        _gd.Unmap(_stagingBuffer.NotNull());
         _map = default;
         foreach ((DeviceBuffer src, DeviceBuffer dst) in _oldBuffers)
         {
@@ -139,7 +140,7 @@ internal sealed unsafe class GpuList<T> : IDisposable
         if (totalVertices > 0)
         {
             uint size = _vertexSize * totalVertices;
-            commandList.CopyBuffer(_stagingBuffer, 0, _buffer, 0, size);
+            commandList.CopyBuffer(_stagingBuffer, 0, _buffer.NotNull(), 0, size);
         }
     }
 
@@ -157,7 +158,7 @@ internal sealed unsafe class GpuList<T> : IDisposable
         Debug.Assert(newCapacity > _capacity);
         uint size = MathUtil.RoundUp((uint)newCapacity * _vertexSize, 16);
         DeviceBuffer newStagingBuffer = _gd.ResourceFactory.CreateBuffer(
-            new BufferDescription(size, BufferUsage.Staging)
+            new BufferDescription(size, BufferUsage.StagingWrite)
         );
         DeviceBuffer newDeviceBuffer = _gd.ResourceFactory.CreateBuffer(
             new BufferDescription(size, _usage)

@@ -22,26 +22,18 @@
     <PackageReference Include="Microsoft.VisualStudio.Threading" Version="17.14.15" />
     <PackageReference Include="Sprintf.NET" Version="2.0.0" />
 
-    <PackageReference Include="Veldrid" Version="4.9.0" />
-    <PackageReference Include="Veldrid.SDL2" Version="4.9.0" />
-    <PackageReference Include="Veldrid.StartupUtilities" Version="4.9.0" />
-    <PackageReference Include="Veldrid.ImGui" Version="5.72.0" />
-    <PackageReference Include="Veldrid.ImageSharp" Version="4.9.0" />
-    <PackageReference Include="NativeLibraryLoader" Version="1.0.13" />
+    <PackageReference Include="Veldrid" Version="1.0.0" />
+    <PackageReference Include="Veldrid.SDL2" Version="1.0.0" />
+    <PackageReference Include="Veldrid.StartupUtilities" Version="1.0.0" />
+    <PackageReference Include="Veldrid.ImageSharp" Version="1.0.0" />
 
-    <PackageReference Include="Vortice.XAudio2" Version="3.2.0" />
-    <PackageReference Include="Vortice.Direct2D1" Version="3.2.0" />
-    <PackageReference Include="Vortice.Mathematics" Version="1.7.3" />
+    <PackageReference Include="Vortice.XAudio2" Version="3.5.0" />
+    <PackageReference Include="Vortice.Direct2D1" Version="3.5.0" />
     <PackageReference Include="SixLabors.ImageSharp" Version="3.1.12" />
 
     <PackageReference Include="FreeType.Binaries" Version="0.42.0" />
     <PackageReference Include="OpenALSoft.Binaries" Version="0.42.0" />
     <PackageReference Include="FFmpeg.Binaries" Version="0.42.0" />
-
-    <!--Transitive packages that aren't actually used: specify newer versions to avoid CVE warnings-->
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
-    <PackageReference Include="System.Net.Http" Version="4.3.4" />
-    <PackageReference Include="System.Text.RegularExpressions" Version="4.3.1" />
   </ItemGroup>
 
   <ItemGroup>

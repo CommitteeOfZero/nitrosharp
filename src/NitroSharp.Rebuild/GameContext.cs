@@ -174,8 +174,8 @@ internal sealed class GameContext
             DefaultFont = defaultFont,
             ItalicFont = null,
             DefaultFontSize = gameProfile.FontSize,
-            DefaultTextColor = RgbaFloat.White.ToVector4(),
-            DefaultOutlineColor = RgbaFloat.Black.ToVector4(),
+            DefaultTextColor = RgbaFloat.White.AsVector4(),
+            DefaultOutlineColor = RgbaFloat.Black.AsVector4(),
             RubyFontSizeMultiplier = 0.4f
         };
 
@@ -294,11 +294,13 @@ internal sealed class GameContext
 
             SystemScripts sysScripts = gameProfile.SysScripts;
             string[] moduleNames =
-            {
+            [
                 sysScripts.Startup,
-                sysScripts.Backlog, sysScripts.Menu,
-                sysScripts.Load, sysScripts.Save
-            };
+                sysScripts.Backlog,
+                sysScripts.Menu,
+                sysScripts.Load,
+                sysScripts.Save
+            ];
 
             var nssFolderInfo = new DirectoryInfo(nssFolder);
             string[] existingModules = moduleNames.Where(x => nssFolderInfo.EnumerateFiles(x).Any()).ToArray();

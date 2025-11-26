@@ -1,9 +1,9 @@
 ﻿using System;
 using System.IO;
 using Veldrid;
+using Vortice.Mathematics;
 using Vortice.WIC;
 using PixelFormat = Veldrid.PixelFormat;
-using Rectangle = System.Drawing.Rectangle;
 
 namespace NitroSharp.Content;
 
@@ -41,7 +41,7 @@ internal sealed unsafe class WicTextureLoader(GraphicsDevice graphicsDevice)
             {
                 byte* dstStart = (byte*)map.Data + y * map.RowPitch;
                 formatConv.CopyPixels(
-                    new Rectangle(x: 0, (int)y, (int)width, height: 1),
+                    new RectI(x: 0, (int)y, (int)width, height: 1),
                     stride: (int)map.RowPitch,
                     size: (int)map.RowPitch,
                     (IntPtr)dstStart

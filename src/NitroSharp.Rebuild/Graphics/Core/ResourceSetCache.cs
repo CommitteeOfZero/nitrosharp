@@ -10,9 +10,9 @@ internal readonly struct ResourceSetKey : IEquatable<ResourceSetKey>
     public readonly ResourceLayout ResourceLayout;
 
     private readonly BindableResource _resource0;
-    private readonly BindableResource? _resource1;
-    private readonly BindableResource? _resource2;
-    private readonly BindableResource? _resource3;
+    private readonly BindableResource _resource1;
+    private readonly BindableResource _resource2;
+    private readonly BindableResource _resource3;
 
     public ResourceSetKey(ResourceLayout layout, BindableResource res) : this()
     {
@@ -39,9 +39,9 @@ internal readonly struct ResourceSetKey : IEquatable<ResourceSetKey>
     public ResourceSetKey(
         ResourceLayout layout,
         BindableResource res0,
-        BindableResource? res1,
-        BindableResource? res2,
-        BindableResource? res3)
+        BindableResource res1,
+        BindableResource res2,
+        BindableResource res3)
     {
         ResourceLayout = layout;
         _resource0 = res0;
@@ -89,10 +89,10 @@ internal readonly struct ResourceSetKey : IEquatable<ResourceSetKey>
     public bool Equals(ResourceSetKey other)
     {
         return ReferenceEquals(ResourceLayout, other.ResourceLayout)
-            && ReferenceEquals(_resource0, other._resource0)
-            && ReferenceEquals(_resource1, other._resource1)
-            && ReferenceEquals(_resource2, other._resource2)
-            && ReferenceEquals(_resource3, other._resource3);
+            && _resource0.Equals(other._resource0)
+            && _resource1.Equals(other._resource1)
+            && _resource2.Equals(other._resource2)
+            && _resource3.Equals(other._resource3);
     }
 
     public BindableResource GetResource(int index)
@@ -101,9 +101,9 @@ internal readonly struct ResourceSetKey : IEquatable<ResourceSetKey>
         return index switch
         {
             0 => _resource0,
-            1 => _resource1!,
-            2 => _resource2!,
-            3 => _resource3!,
+            1 => _resource1,
+            2 => _resource2,
+            3 => _resource3,
             _ => throw ThrowHelper.ArgumentOutOfRange(nameof(index))
         };
     }
@@ -112,9 +112,9 @@ internal readonly struct ResourceSetKey : IEquatable<ResourceSetKey>
     {
         return (_resource1, _resource2, _resource3) switch
         {
-            (null, _, _) => 1u,
-            (not null, null, _) => 2u,
-            (not null, not null, null) => 3u,
+            ({ Resource: null }, _, _) => 1u,
+            ({ Resource: not null }, { Resource: null }, _) => 2u,
+            ({ Resource: not null }, { Resource: not null }, { Resource: null }) => 3u,
             _ => 4u
         };
     }
@@ -122,11 +122,7 @@ internal readonly struct ResourceSetKey : IEquatable<ResourceSetKey>
 
 internal sealed class ResourceSetCache : IDisposable
 {
-    private readonly struct CacheEntry(ResourceSet resourceSet, FrameStamp lastAccess)
-    {
-        public readonly ResourceSet ResourceSet = resourceSet;
-        public readonly FrameStamp LastAccess = lastAccess;
-    }
+    private readonly record struct CacheEntry(ResourceSet ResourceSet, FrameStamp LastAccess);
 
     private readonly Dictionary<ResourceSetKey, CacheEntry> _cache;
     private readonly List<ResourceSetKey> _entriesToEvict;
@@ -202,7 +198,7 @@ internal sealed class ResourceSetCache : IDisposable
 
             _desc.Layout = key.ResourceLayout;
             _desc.BoundResources = resources;
-            ResourceSet rs = _factory.CreateResourceSet(ref _desc);
+            ResourceSet rs = _factory.CreateResourceSet(in _desc);
             _cache[key] = cacheEntry = new CacheEntry(rs, _now);
         }
 

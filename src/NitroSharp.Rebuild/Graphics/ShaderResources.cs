@@ -168,11 +168,11 @@ internal sealed class QuadShaderResources : IDisposable
                 }
             ]
         };
-        _multiplicativeBlend = factory.CreateGraphicsPipeline(ref pipelineDesc);
+        _multiplicativeBlend = factory.CreateGraphicsPipeline(in pipelineDesc);
 
         AlphaMaskPositionBuffer = new GpuBuffer<Vector4>(
             graphicsDevice,
-            BufferUsage.UniformBuffer | BufferUsage.Dynamic,
+            BufferUsage.UniformBuffer,
             Vector4.Zero
         );
     }
@@ -426,10 +426,10 @@ internal sealed class TransitionShaderResources : IDisposable
             ],
             outputDescription
         );
-        Pipeline = factory.CreateGraphicsPipeline(ref pipelineDesc);
+        Pipeline = factory.CreateGraphicsPipeline(in pipelineDesc);
         ProgressBuffer = new GpuBuffer<Vector4>(
             graphicsDevice,
-            BufferUsage.UniformBuffer | BufferUsage.Dynamic,
+            BufferUsage.UniformBuffer,
             data: Vector4.Zero
         );
     }
