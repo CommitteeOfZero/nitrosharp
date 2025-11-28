@@ -2,7 +2,6 @@ using System.Globalization;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System;
-using System.Diagnostics;
 using System.Runtime.InteropServices;
 
 namespace NitroSharp.NsScript.Syntax
@@ -61,8 +60,10 @@ namespace NitroSharp.NsScript.Syntax
             {
                 if (PeekChar() != '{' && !MatchInsensitive(PRE_EndTag))
                 {
-                    LexMarkupToken(ref mutableTk);
-                    return;
+                    if (LexMarkupToken(ref mutableTk))
+                    {
+                        return;
+                    }
                 }
             }
 
@@ -418,7 +419,7 @@ namespace NitroSharp.NsScript.Syntax
             token.TextSpan = CurrentLexemeSpan;
         }
 
-        private void LexMarkupToken(ref MutableToken token)
+        private bool LexMarkupToken(ref MutableToken token)
         {
             StartScanning();
             switch (PeekChar())
@@ -426,11 +427,24 @@ namespace NitroSharp.NsScript.Syntax
                 case '[':
                     ScanDialogueBlockIdentifier(ref token);
                     break;
+                case '\r':
+                case '\n':
+                    int newlineSequenceLength = ScanEndOfLineSequence();
+                    if (newlineSequenceLength == 2)
+                    {
+                        token.TextSpan = CurrentLexemeSpan;
+                        token.Kind = SyntaxTokenKind.MarkupBlankLine;
+                        return true;
+                    }
+                    break;
                 case EofCharacter:
                     token.Kind = SyntaxTokenKind.EndOfFile;
                     break;
                 default:
-                    ScanMarkup(ref token);
+                    if (!ScanMarkup(ref token))
+                    {
+                        return false;
+                    }
                     break;
             }
             token.TextSpan = CurrentLexemeSpan;
@@ -438,6 +452,7 @@ namespace NitroSharp.NsScript.Syntax
             {
                 ScanWhitespace();
             }
+            return true;
         }
 
         private bool ScanIdentifier(ref MutableToken token)
@@ -599,8 +614,10 @@ namespace NitroSharp.NsScript.Syntax
             return true;
         }
 
-        private void ScanMarkup(ref MutableToken token)
+        private bool ScanMarkup(ref MutableToken token)
         {
+            int preNestingLevel = 0;
+            int nbNonWhitespace = 0;
             char c;
             while ((c = PeekChar()) != '{' && c != EofCharacter)
             {
@@ -608,23 +625,50 @@ namespace NitroSharp.NsScript.Syntax
                 {
                     if (AdvanceIfMatchesInsensitive(PRE_StartTag))
                     {
-                        while (!AdvanceIfMatchesInsensitive(PRE_EndTag) && PeekChar() != EofCharacter)
-                        {
-                            AdvanceChar();
-                        }
+                        preNestingLevel++;
                         continue;
                     }
-
                     if (MatchInsensitive(PRE_EndTag))
                     {
-                        break;
+                        if (preNestingLevel == 0)
+                        {
+                            break;
+                        }
+
+                        AdvanceChar(PRE_EndTag.Length);
+                        preNestingLevel--;
+                        continue;
                     }
                 }
 
-                AdvanceChar();
+                if (preNestingLevel == 0 && c == '/' && PeekChar(1) == '/')
+                {
+                    AdvanceChar(2);
+                    ScanToEndOfLine();
+                    ScanEndOfLine();
+                    continue;
+                }
+
+                int pos = Position;
+                int newlineSequenceLength = ScanEndOfLineSequence();
+                if (newlineSequenceLength == 2)
+                {
+                    SetPosition(pos);
+                    goto exit;
+                }
+                if (newlineSequenceLength == 0)
+                {
+                    AdvanceChar();
+                    if (!SyntaxFacts.IsWhitespace(c))
+                    {
+                        nbNonWhitespace++;
+                    }
+                }
             }
 
+        exit:
             token.Kind = SyntaxTokenKind.Markup;
+            return nbNonWhitespace > 0;
         }
 
         private bool ScanDialogueBlockStartTag(ref MutableToken token)
@@ -750,11 +794,6 @@ namespace NitroSharp.NsScript.Syntax
             bool isInsideQuotes = false;
             while (!((c = PeekChar()) == '*' && PeekChar(1) == '/'))
             {
-                if (SourceText.GetLineNumberFromPosition(Position) == SourceText.LineCount - 1)
-                {
-                    Debugger.Break();
-                }
-
                 if (c == EofCharacter)
                 {
                     Report(DiagnosticId.UnterminatedComment, new TextSpan(LexemeStart, length: 2));

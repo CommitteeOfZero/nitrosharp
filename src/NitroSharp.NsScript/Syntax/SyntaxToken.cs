@@ -74,6 +74,7 @@ public enum SyntaxTokenKind : byte
     DialogueBlockEndTag,
     DialogueBlockIdentifier,
     Markup,
+    MarkupBlankLine,
     EndOfFile
 }
 

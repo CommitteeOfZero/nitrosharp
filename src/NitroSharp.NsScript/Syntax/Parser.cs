@@ -997,6 +997,10 @@ namespace NitroSharp.NsScript.Syntax
                     SyntaxToken token = EatToken();
                     return new DialogueBlockPart.Markup(GetText(token), token.TextSpan);
                 }
+                case SyntaxTokenKind.MarkupBlankLine:
+                {
+                    return new DialogueBlockPart.BlankLine(EatToken().TextSpan);
+                }
                 case SyntaxTokenKind.OpenBrace:
                 {
                     SyntaxToken openBrace = EatToken(SyntaxTokenKind.OpenBrace);

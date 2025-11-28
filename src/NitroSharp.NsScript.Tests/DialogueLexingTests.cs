@@ -26,7 +26,9 @@ public class DialogueLexingTests
             "Line 1\r\n\r\nLine 2",
             new[]
             {
-                (SyntaxTokenKind.Markup, "Line 1\r\n\r\nLine 2")
+                (SyntaxTokenKind.Markup, "Line 1"),
+                (SyntaxTokenKind.MarkupBlankLine, "\r\n\r\n"),
+                (SyntaxTokenKind.Markup, "Line 2")
             }
         ];
         yield return
@@ -139,14 +141,30 @@ public class DialogueLexingTests
             """,
             new[]
             {
+                (SyntaxTokenKind.Markup, "Line 1"),
+                (SyntaxTokenKind.MarkupBlankLine, "\r\n\r\n"),
                 (SyntaxTokenKind.Markup, """
-                                         Line 1
-
                                          // This is
                                          // a comment
                                          Line2
-                                         """),
+                                         """)
             }
+        ];
+
+        yield return
+        [
+            """
+            {}// this is a comment {
+            Sample Text
+            """,
+            new[]
+            {
+                (SyntaxTokenKind.OpenBrace, "{"),
+                (SyntaxTokenKind.CloseBrace, "}"),
+                (SyntaxTokenKind.Markup, """
+                                         // this is a comment {
+                                         Sample Text
+                                         """) }
         ];
 
         yield return

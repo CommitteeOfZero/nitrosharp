@@ -144,7 +144,7 @@ public class StatementParsingTests
                 </PRE>",
             "text001",
             "@box01",
-            2
+            1
         ];
     }
 

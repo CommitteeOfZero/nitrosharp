@@ -695,6 +695,11 @@ namespace NitroSharp.NsScript.Compiler
                     _code.WriteUInt16LE(token);
                     break;
                 }
+                case DialogueBlockPart.BlankLine:
+                {
+                    _code.WriteByte((byte)CompiledDialogueBlockPart.Kind.BlankLine);
+                    break;
+                }
                 case DialogueBlockPart.CodeBlock { Statements: var statements }:
                 {
                     _code.WriteByte((byte)CompiledDialogueBlockPart.Kind.CodeBlock);

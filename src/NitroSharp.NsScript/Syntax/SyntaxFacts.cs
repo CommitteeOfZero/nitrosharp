@@ -273,6 +273,7 @@ public static class SyntaxFacts
             SyntaxTokenKind.ReturnKeyword => "return",
 
             SyntaxTokenKind.IncludeDirective => "#include",
+            SyntaxTokenKind.MarkupBlankLine => "\r\n",
             SyntaxTokenKind.DialogueBlockEndTag => "</PRE>",
             SyntaxTokenKind.EndOfFile => "<EOF>",
             _ => string.Empty,

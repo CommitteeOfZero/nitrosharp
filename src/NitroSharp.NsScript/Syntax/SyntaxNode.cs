@@ -39,6 +39,7 @@ public enum SyntaxNodeKind : byte
     DialogueBlock,
     MarkupCodeBlock,
     Markup,
+    MarkupBlankLine
 }
 
 public enum SyntaxDumpFormat

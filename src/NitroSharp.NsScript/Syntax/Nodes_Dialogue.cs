@@ -63,4 +63,16 @@ public abstract class DialogueBlockPart(TextSpan span) : SyntaxNode(span)
 
         protected override SyntaxNode? GetChild(int index) => null;
     }
+
+    public sealed class BlankLine(TextSpan span) : DialogueBlockPart(span)
+    {
+        public override SyntaxNodeKind Kind => SyntaxNodeKind.MarkupBlankLine;
+
+        public override void Accept(SyntaxVisitor visitor)
+        {
+            throw new System.NotImplementedException();
+        }
+
+        protected override SyntaxNode? GetChild(int index) => null;
+    }
 }
