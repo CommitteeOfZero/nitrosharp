@@ -1,4 +1,4 @@
-Warning: String of tokens was skipped due to syntax errors.
+Warning: Token '", ナイトハルト);' was skipped as unexpected.
   --> trailing_garbage_01.nss:3:40
      |
    2 | {

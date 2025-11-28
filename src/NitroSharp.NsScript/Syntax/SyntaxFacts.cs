@@ -45,13 +45,13 @@ public static class SyntaxFacts
     public static bool IsSigil(char c) => c is '$' or '#' or '@';
 
     public static bool TryGetKeywordKind(ReadOnlySpan<char> text, out SyntaxTokenKind kind)
-        => KeywordScanner.TryRecognizeKeyword(text, out kind);
+        => TryRecognizeKeyword(text, out kind);
 
     public static SyntaxTokenKind GetKeywordKind(ReadOnlySpan<char> text)
-        => KeywordScanner.RecognizeKeyword(text);
+        => RecognizeKeyword(text);
 
     public static bool IsIdentifierStartCharacter(char c, char next)
-        => IsIdentifierPartCharacter(c, next) && !IsDecDigit(c);
+        => IsIdentifierPartCharacter(c, next) && c != '.';
 
     public static bool IsIdentifierStopCharacter(char c, char next)
         => !IsIdentifierPartCharacter(c, next);
@@ -82,7 +82,6 @@ public static class SyntaxFacts
             case '!':
             case '|':
             case '&':
-            case '.':
             case '$':
             case '#':
             case '@':
@@ -90,7 +89,7 @@ public static class SyntaxFacts
                 return false;
             // Hack: O-FRONT is a valid identifier, but O-42 is not.
             case '-':
-                return char.IsLetter(next);
+                return false;
             default:
                 return true;
         }
@@ -122,6 +121,7 @@ public static class SyntaxFacts
         {
             case SyntaxTokenKind.OpenBrace:
             case SyntaxTokenKind.IfKeyword:
+            //case SyntaxTokenKind.ElseKeyword:
             case SyntaxTokenKind.BreakKeyword:
             case SyntaxTokenKind.WhileKeyword:
             case SyntaxTokenKind.ReturnKeyword:
@@ -135,11 +135,6 @@ public static class SyntaxFacts
             default:
                 return false;
         }
-    }
-
-    public static bool CanStartStatement(SyntaxTokenKind tokenKind)
-    {
-        return IsDefiniteStatementStart(tokenKind) || CanStartExpressionTerm(tokenKind);
     }
 
     public static bool CanStartExpressionTerm(SyntaxTokenKind tokenKind)
@@ -162,8 +157,8 @@ public static class SyntaxFacts
 
     public static bool IsStatementExpression(Expression expression)
     {
-        SyntaxNodeKind kind = expression.Kind;
-        return kind is SyntaxNodeKind.AssignmentExpression or SyntaxNodeKind.FunctionCallExpression;
+        return expression.Kind is SyntaxNodeKind.AssignmentExpression
+            or SyntaxNodeKind.FunctionCallExpression;
     }
 
     public static UnaryOperatorKind? TryGetUnaryOperatorKind(SyntaxTokenKind operatorTokenKind)
@@ -280,32 +275,29 @@ public static class SyntaxFacts
         };
     }
 
-    private static class KeywordScanner
-    {
-        public static bool TryRecognizeKeyword(ReadOnlySpan<char> text, out SyntaxTokenKind keywordKind)
-            => (keywordKind = RecognizeKeyword(text)) != SyntaxTokenKind.EndOfFile;
+    private static bool TryRecognizeKeyword(ReadOnlySpan<char> text, out SyntaxTokenKind keywordKind)
+        => (keywordKind = RecognizeKeyword(text)) != SyntaxTokenKind.EndOfFile;
 
-        public static SyntaxTokenKind RecognizeKeyword(ReadOnlySpan<char> text)
+    private static SyntaxTokenKind RecognizeKeyword(ReadOnlySpan<char> text)
+    {
+        return text switch
         {
-            return text switch
-            {
-                "chapter" => SyntaxTokenKind.ChapterKeyword,
-                "function" => SyntaxTokenKind.FunctionKeyword,
-                "scene" => SyntaxTokenKind.SceneKeyword,
-                "call_scene" => SyntaxTokenKind.CallSceneKeyword,
-                "call_chapter" => SyntaxTokenKind.CallChapterKeyword,
-                "null" or "Null" or "NULL" => SyntaxTokenKind.NullKeyword,
-                "true" or "True" or "TRUE" => SyntaxTokenKind.TrueKeyword,
-                "false" or "False" or "FALSE" => SyntaxTokenKind.FalseKeyword,
-                "while" => SyntaxTokenKind.WhileKeyword,
-                "if" => SyntaxTokenKind.IfKeyword,
-                "else" => SyntaxTokenKind.ElseKeyword,
-                "select" => SyntaxTokenKind.SelectKeyword,
-                "case" => SyntaxTokenKind.CaseKeyword,
-                "break" => SyntaxTokenKind.BreakKeyword,
-                "return" => SyntaxTokenKind.ReturnKeyword,
-                _ => SyntaxTokenKind.EndOfFile,
-            };
-        }
+            "chapter" => SyntaxTokenKind.ChapterKeyword,
+            "function" => SyntaxTokenKind.FunctionKeyword,
+            "scene" => SyntaxTokenKind.SceneKeyword,
+            "call_scene" => SyntaxTokenKind.CallSceneKeyword,
+            "call_chapter" => SyntaxTokenKind.CallChapterKeyword,
+            "null" or "Null" or "NULL" => SyntaxTokenKind.NullKeyword,
+            "true" or "True" or "TRUE" => SyntaxTokenKind.TrueKeyword,
+            "false" or "False" or "FALSE" => SyntaxTokenKind.FalseKeyword,
+            "while" => SyntaxTokenKind.WhileKeyword,
+            "if" => SyntaxTokenKind.IfKeyword,
+            "else" => SyntaxTokenKind.ElseKeyword,
+            "select" => SyntaxTokenKind.SelectKeyword,
+            "case" => SyntaxTokenKind.CaseKeyword,
+            "break" => SyntaxTokenKind.BreakKeyword,
+            "return" => SyntaxTokenKind.ReturnKeyword,
+            _ => SyntaxTokenKind.EndOfFile,
+        };
     }
 }

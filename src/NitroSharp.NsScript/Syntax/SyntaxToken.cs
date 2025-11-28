@@ -85,7 +85,7 @@ public enum SigilKind
     Hash
 }
 
-[StructLayout(LayoutKind.Auto)]
+[StructLayout(LayoutKind.Sequential)]
 public readonly struct SyntaxToken
 {
     internal SyntaxToken(SyntaxTokenKind kind, TextSpan textSpan, SyntaxTokenFlags flags)

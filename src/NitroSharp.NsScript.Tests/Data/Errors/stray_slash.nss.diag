@@ -1,4 +1,4 @@
-Warning: String of tokens was skipped due to syntax errors.
+Info: Character '/' was skipped as unexpected.
   --> stray_slash.nss:10:7
      |
    9 | 

@@ -1,0 +1,5 @@
+└─ SourceFileRoot subroutines: C=1, S=0, F=1, includes=1 [0..92)
+   ├─ ChapterDeclaration name="main" [42..58)
+   │  └─ Block statements=0 [55..58)
+   └─ FunctionDeclaration name="test" params=0 [72..92)
+      └─ Block statements=0 [88..92)

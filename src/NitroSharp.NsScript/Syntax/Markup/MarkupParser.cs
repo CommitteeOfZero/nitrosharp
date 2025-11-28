@@ -167,7 +167,7 @@ namespace NitroSharp.NsScript.Syntax.Markup
             StartScanning();
             var sb = new StringBuilder();
             char c;
-            while ((c = PeekChar()) != EofCharacter && !MatchInsensitive("</pre>") && !MatchInsensitive("</PRE>"))
+            while ((c = PeekChar()) != EofCharacter && !Match("</PRE>", ignoreCase: true))
             {
                 AdvanceChar();
                 sb.Append(c);

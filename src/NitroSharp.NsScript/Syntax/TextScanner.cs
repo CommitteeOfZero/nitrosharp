@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
 namespace NitroSharp.NsScript.Syntax;
@@ -30,8 +31,6 @@ internal abstract class TextScanner(string text)
 
     protected TextSpan CurrentLexemeSpan
         => new(start: LexemeStart, length: Position - LexemeStart);
-
-    protected TextSpan CurrentSpanStart => new(CurrentLexemeSpan.Start, 0);
 
     protected char PeekChar() => PeekChar(0);
 
@@ -77,23 +76,18 @@ internal abstract class TextScanner(string text)
         return true;
     }
 
-    protected bool MatchInsensitive(string s)
+    protected bool Match(string s, bool ignoreCase = false)
     {
-        for (int i = 0; i < s.Length; i++)
-        {
-            char c;
-            if ((c = PeekChar(i)) != s[i] && c != char.ToUpperInvariant(s[i]))
-            {
-                return false;
-            }
-        }
+        if (Position + s.Length > Text.Length) { return false; }
 
-        return true;
+        ReadOnlySpan<char> actual = Text.AsSpan(Position, s.Length);
+        var comparison = ignoreCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+        return actual.Equals(s, comparison);
     }
 
-    protected bool AdvanceIfMatchesInsensitive(string s)
+    protected bool MatchAdvance(string s, bool ignoreCase = false)
     {
-        if (MatchInsensitive(s))
+        if (Match(s, ignoreCase))
         {
             AdvanceChar(s.Length);
             return true;

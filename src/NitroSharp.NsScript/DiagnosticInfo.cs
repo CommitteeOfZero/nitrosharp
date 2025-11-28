@@ -13,9 +13,11 @@ internal static class DiagnosticInfo
             DiagnosticId.UnterminatedDialogueBlockIdentifier => "Dialogue block identifier is not properly terminated.",
             DiagnosticId.TokenExpected => "Expected '{0}', found '{1}'.",
             DiagnosticId.IdentifierExpected => "Expected identifier, found '{0}'.",
+            DiagnosticId.SkippedStrayToken => "Token '{0}' was skipped as unexpected.",
+            DiagnosticId.SkippedStrayCharacter => "Character '{0}' was skipped as unexpected.",
             DiagnosticId.SkippedBadSyntax => "String of tokens was skipped due to syntax errors.",
+            DiagnosticId.MismatchedBrace => "Mismatched '{0}'.",
             DiagnosticId.MissingStatementTerminator => "Statement is not properly terminated.",
-            DiagnosticId.StrayToken => "Stray token '{0}'.",
             DiagnosticId.ExpectedSubroutineDeclaration => "Expected a subroutine declaration.",
             DiagnosticId.InvalidExpressionTerm => "Invalid expression term '{0}'.",
             DiagnosticId.StrayMarkupBlock => "Stray markup block.",
@@ -45,19 +47,21 @@ internal static class DiagnosticInfo
             case DiagnosticId.ExpectedSubroutineDeclaration:
             case DiagnosticId.UnresolvedIdentifier:
             case DiagnosticId.BadAssignmentTarget:
-            case DiagnosticId.ExternalModuleNotFound:
             case DiagnosticId.ChapterMainNotFound:
                 return DiagnosticSeverity.Error;
 
             case DiagnosticId.StrayMarkupBlock:
-            case DiagnosticId.StrayToken:
+            case DiagnosticId.SkippedStrayToken:
             case DiagnosticId.SkippedBadSyntax:
+            case DiagnosticId.MismatchedBrace:
             case DiagnosticId.MisplacedBreak:
             case DiagnosticId.OrphanedSelectSection:
             case DiagnosticId.InvalidBezierCurve:
+            case DiagnosticId.ExternalModuleNotFound:
                 return DiagnosticSeverity.Warning;
 
             case DiagnosticId.MissingStatementTerminator:
+            case DiagnosticId.SkippedStrayCharacter:
                 return DiagnosticSeverity.Info;
 
             default:

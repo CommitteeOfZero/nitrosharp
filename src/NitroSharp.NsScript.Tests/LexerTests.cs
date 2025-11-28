@@ -8,38 +8,6 @@ namespace NitroSharp.NsScript.Tests;
 
 public class LexerTests
 {
-    [Theory]
-    [InlineData(SyntaxTokenKind.At, "@")]
-    [InlineData(SyntaxTokenKind.Dollar, "$")]
-    [InlineData(SyntaxTokenKind.Hash, "#")]
-    // TODO: what regression?
-    public void Regression_Is_Fixed(SyntaxTokenKind kind, string text)
-    {
-        var lexResult = SyntaxToken.Lex(text);
-        SyntaxToken token = lexResult.SingleToken();
-        Assert.Equal(kind, token.Kind);
-        Assert.Equal(text, SyntaxFacts.GetText(kind));
-        Assert.Equal(text, lexResult.GetText(token).ToString(), ignoreCase: true);
-        Assert.Equal(SyntaxTokenFlags.Empty, token.Flags);
-    }
-
-    [Theory]
-    [InlineData("\"foo", DiagnosticId.UnterminatedString, 0, 4)]
-    [InlineData("<PRE box00", DiagnosticId.UnterminatedDialogueBlockStartTag, 0, 0)]
-    [InlineData("/* multiline comment", DiagnosticId.UnterminatedComment, 0, 2)]
-    [InlineData("[text001", DiagnosticId.UnterminatedDialogueBlockIdentifier, 0, 0, LexingMode.DialogueBlock)]
-    [InlineData("2147483648", DiagnosticId.NumberTooLarge, 0, 10)]
-    public void Lexer_Emits_Diagnostics(
-        string text, DiagnosticId diagnosticId,
-        int spanStart, int spanEnd, LexingMode lexingMode = LexingMode.Normal)
-    {
-        var lexResult = SyntaxToken.Lex(text, lexingMode);
-        _ = lexResult.RealizeTokens();
-        var diagnostic = Assert.Single(lexResult.Diagnostics);
-        Assert.Equal(diagnosticId, diagnostic.Id);
-        Assert.Equal(TextSpan.FromBounds(spanStart, spanEnd), diagnostic.Location.Span);
-    }
-
     [Fact]
     public void All_Static_Tokens_Are_Tested()
     {
@@ -106,6 +74,9 @@ public class LexerTests
     [InlineData("#FFFFFF", SyntaxTokenKind.NumericLiteral, "FFFFFF", SyntaxTokenFlags.IsHexTriplet)]
     [InlineData("\"foo\"", SyntaxTokenKind.StringLiteralOrQuotedIdentifier, "foo", SyntaxTokenFlags.IsQuoted)]
     [InlineData("\"@\"", SyntaxTokenKind.StringLiteralOrQuotedIdentifier, "@", SyntaxTokenFlags.IsQuoted)]
+    [InlineData("true", SyntaxTokenKind.TrueKeyword, "true")]
+    [InlineData("false", SyntaxTokenKind.FalseKeyword, "false")]
+    [InlineData("null", SyntaxTokenKind.NullKeyword, "null")]
     public void Literal(string text, SyntaxTokenKind tokenKind, string valueText,
         SyntaxTokenFlags flags = SyntaxTokenFlags.Empty)
     {
@@ -121,7 +92,7 @@ public class LexerTests
     [InlineData("foo", "foo", SyntaxTokenFlags.Empty, SigilKind.None)]
     [InlineData("$foo", "foo", SyntaxTokenFlags.HasDollarPrefix, SigilKind.Dollar)]
     [InlineData("#foo", "foo", SyntaxTokenFlags.HasHashPrefix, SigilKind.Hash)]
-    public void Identifier(string text, string valueText, SyntaxTokenFlags flags, SigilKind expectedSigilKind)
+    public void IdentifierWithSigil(string text, string valueText, SyntaxTokenFlags flags, SigilKind expectedSigilKind)
     {
         var lexResult = SyntaxToken.Lex(text);
         SyntaxToken token = lexResult.SingleToken();
@@ -130,6 +101,49 @@ public class LexerTests
         Assert.Equal(valueText, lexResult.GetValueText(token).ToString());
         Assert.Equal(flags, token.Flags);
         Assert.Equal(expectedSigilKind, token.GetSigil());
+    }
+
+    [Theory]
+    [InlineData("foo")]
+    [InlineData("foo_bar")]
+    [InlineData("foo.bar")]
+    // special cases
+    [InlineData("bg165_03_3_O-FRONT見上げ_a")]
+    [InlineData("215_ＡＡルートグッドエンド")]
+    [InlineData("$215_ＡＡルートグッドエンド")]
+    [InlineData("#215_ＡＡルートグッドエンド")]
+    public void ValidIdentifier(string text)
+    {
+        var lexResult = SyntaxToken.Lex(text);
+        SyntaxToken token = lexResult.SingleToken();
+        Assert.Equal(SyntaxTokenKind.Identifier, token.Kind);
+        Assert.Equal(text, lexResult.GetText(token).ToString());
+    }
+
+    [Theory]
+    [InlineData("cat-meow", new[] { "cat", "-", "meow" })]
+    [InlineData("cat+meow", new[] { "cat", "+", "meow" })]
+    [InlineData("cat,meow", new[] { "cat", ",", "meow" })]
+    [InlineData("cat/meow", new[] { "cat", "/", "meow" })]
+    [InlineData("$215", new[] { "$", "215" })]
+    [InlineData("#215", new[] { "#", "215" })]
+    public void InvalidIdentifier(string text, string[] tokens)
+    {
+        var lexResult = SyntaxToken.Lex(text);
+        foreach ((SyntaxToken actual, string expected) in lexResult.RealizeTokens().Zip(tokens))
+        {
+            Assert.Equal(expected, lexResult.GetText(actual));
+        }
+    }
+
+    [Fact]
+    public void Identifier_Cannot_Start_With_Dot()
+    {
+        var lexResult = SyntaxToken.Lex("$.");
+        var tokens = lexResult.RealizeTokens();
+        Assert.Equal(3, tokens.Length);
+        Assert.Equal(SyntaxTokenKind.Dollar, tokens[0].Kind);
+        Assert.Equal(SyntaxTokenKind.Dot, tokens[1].Kind);
     }
 
     [Theory]
@@ -181,16 +195,6 @@ public class LexerTests
         Assert.Equal(keyword, token.Kind);
     }
 
-    [Fact]
-    public void Identifier_Cannot_Start_With_Dot()
-    {
-        var lexResult = SyntaxToken.Lex("$.");
-        var tokens = lexResult.RealizeTokens();
-        Assert.Equal(3, tokens.Length);
-        Assert.Equal(SyntaxTokenKind.Dollar, tokens[0].Kind);
-        Assert.Equal(SyntaxTokenKind.Dot, tokens[1].Kind);
-    }
-
     [Theory]
     [InlineData("<PRE box00>", SyntaxTokenKind.DialogueBlockStartTag)]
     [InlineData("<pre box00>", SyntaxTokenKind.DialogueBlockStartTag)]
@@ -202,6 +206,38 @@ public class LexerTests
         SyntaxToken token = lexResult.SingleToken();
         Assert.Equal(kind, token.Kind);
         Assert.Equal(text, lexResult.GetText(token).ToString());
+        Assert.Equal(SyntaxTokenFlags.Empty, token.Flags);
+    }
+
+    [Theory]
+    [InlineData("\"foo", DiagnosticId.UnterminatedString, 0, 4)]
+    [InlineData("<PRE box00", DiagnosticId.UnterminatedDialogueBlockStartTag, 0, 0)]
+    [InlineData("/* multiline comment", DiagnosticId.UnterminatedComment, 0, 2)]
+    [InlineData("[text001", DiagnosticId.UnterminatedDialogueBlockIdentifier, 0, 0, LexingMode.DialogueBlock)]
+    [InlineData("2147483648", DiagnosticId.NumberTooLarge, 0, 10)]
+    public void Lexer_Emits_Diagnostics(
+        string text, DiagnosticId diagnosticId,
+        int spanStart, int spanEnd, LexingMode lexingMode = LexingMode.Normal)
+    {
+        var lexResult = SyntaxToken.Lex(text, lexingMode);
+        _ = lexResult.RealizeTokens();
+        var diagnostic = Assert.Single(lexResult.Diagnostics);
+        Assert.Equal(diagnosticId, diagnostic.Id);
+        Assert.Equal(TextSpan.FromBounds(spanStart, spanEnd), diagnostic.Location.Span);
+    }
+
+    [Theory]
+    [InlineData(SyntaxTokenKind.At, "@")]
+    [InlineData(SyntaxTokenKind.Dollar, "$")]
+    [InlineData(SyntaxTokenKind.Hash, "#")]
+    // TODO: what regression?
+    public void Regression_Is_Fixed(SyntaxTokenKind kind, string text)
+    {
+        var lexResult = SyntaxToken.Lex(text);
+        SyntaxToken token = lexResult.SingleToken();
+        Assert.Equal(kind, token.Kind);
+        Assert.Equal(text, SyntaxFacts.GetText(kind));
+        Assert.Equal(text, lexResult.GetText(token).ToString(), ignoreCase: true);
         Assert.Equal(SyntaxTokenFlags.Empty, token.Flags);
     }
 
@@ -247,7 +283,8 @@ public class LexerTests
         ];
     }
 
-    private static IEnumerable<(SyntaxTokenKind t1Kind, string t1Text, SyntaxTokenKind t2Kind, string t2Text)> GetStaticTokenPairs()
+    private static IEnumerable<(SyntaxTokenKind t1Kind, string t1Text, SyntaxTokenKind t2Kind, string t2Text)>
+        GetStaticTokenPairs()
     {
         return from tk1 in GetStaticTokens()
             where tk1.kind != SyntaxTokenKind.MarkupBlankLine

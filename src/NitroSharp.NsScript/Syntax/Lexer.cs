@@ -14,7 +14,7 @@ namespace NitroSharp.NsScript.Syntax
 
     internal sealed class Lexer : TextScanner
     {
-        [StructLayout(LayoutKind.Auto)]
+        [StructLayout(LayoutKind.Sequential)]
         private struct MutableToken
         {
             public TextSpan TextSpan;
@@ -58,7 +58,7 @@ namespace NitroSharp.NsScript.Syntax
             ref MutableToken mutableTk = ref Unsafe.As<SyntaxToken, MutableToken>(ref syntaxToken);
             if (CurrentMode == LexingMode.DialogueBlock)
             {
-                if (PeekChar() != '{' && !MatchInsensitive(PRE_EndTag))
+                if (PeekChar() != '{' && !Match(PRE_EndTag, ignoreCase: true))
                 {
                     if (LexMarkupToken(ref mutableTk))
                     {
@@ -163,7 +163,7 @@ namespace NitroSharp.NsScript.Syntax
                     break;
 
                 case '#':
-                    if (AdvanceIfMatchesInsensitive("#include"))
+                    if (MatchAdvance("#include"))
                     {
                         token.Kind = SyntaxTokenKind.IncludeDirective;
                     }
@@ -205,7 +205,7 @@ namespace NitroSharp.NsScript.Syntax
                             break;
 
                         case '/':
-                            if (AdvanceIfMatchesInsensitive(PRE_EndTag))
+                            if (MatchAdvance(PRE_EndTag, ignoreCase: true))
                             {
                                 token.Kind = SyntaxTokenKind.DialogueBlockEndTag;
                             }
@@ -472,11 +472,30 @@ namespace NitroSharp.NsScript.Syntax
             {
                 AdvanceChar();
             }
-            int valueEnd = Position;
 
-            var valueSpan = new TextSpan(valueStart, valueEnd - valueStart);
-            bool empty = valueSpan.Length == 0;
-            if (empty)
+            var valueSpan = TextSpan.FromBounds(valueStart, Position);
+
+            // Identifiers are allowed to start with a number to support '215_ＡＡルートグッドエンド'
+            // (the only example seen so far)
+            // Just '215' however needs to be treated as a literal.
+            if (char.IsNumber(Text[valueStart]))
+            {
+                if (int.TryParse(SourceText.GetCharacterSpan(valueSpan), out _))
+                {
+                    // '$42' | '#42': lex as ["$", "42"]
+                    if (token.Flags != SyntaxTokenFlags.Empty)
+                    {
+                        SetPosition(start);
+                        return false;
+                    }
+
+                    // no sigil, so this is straight up a numeric literal
+                    SetPosition(start);
+                    return ScanDecNumericLiteral(ref token);
+                }
+            }
+
+            if (valueSpan.Length == 0)
             {
                 token.Flags = SyntaxTokenFlags.Empty;
                 SetPosition(start);
@@ -535,7 +554,7 @@ namespace NitroSharp.NsScript.Syntax
         {
             bool isFloat = false;
             char c;
-            while ((SyntaxFacts.IsDecDigit((c = PeekChar())) || c == '.'))
+            while (SyntaxFacts.IsDecDigit(c = PeekChar()) || c == '.')
             {
                 AdvanceChar();
                 if (c == '.')
@@ -543,6 +562,14 @@ namespace NitroSharp.NsScript.Syntax
                     token.Flags |= SyntaxTokenFlags.HasDecimalPoint;
                     isFloat = true;
                 }
+            }
+
+            c = PeekChar();
+            if (char.IsLetter(c) || c == '_')
+            {
+                // normally a number is never followed by a letter or a '_'
+                // treat it as an identifier instead (think '215_ＡＡルートグッドエンド')
+                return false;
             }
 
             TextSpan valueSpan = CurrentLexemeSpan;
@@ -564,18 +591,9 @@ namespace NitroSharp.NsScript.Syntax
 
             if (!valid)
             {
+                token.Flags |= SyntaxTokenFlags.HasDiagnostics;
                 Report(DiagnosticId.NumberTooLarge);
             }
-
-            // If the next character is a valid identifier character,
-            // then what we're scanning is actually an identifier that starts with a number
-            // e.g "215_ＡＡルートグッドエンド".
-            // TODO: broken hack, was this necessary for C;H PC?
-            // if (SyntaxFacts.IsIdentifierPartCharacter(PeekChar(), PeekChar(1)))
-            // {
-            //     SetPosition(LexemeStart);
-            //     return false;
-            // }
 
             token.Kind = SyntaxTokenKind.NumericLiteral;
             return true;
@@ -623,12 +641,12 @@ namespace NitroSharp.NsScript.Syntax
             {
                 if (c == '<')
                 {
-                    if (AdvanceIfMatchesInsensitive(PRE_StartTag))
+                    if (MatchAdvance(PRE_StartTag, ignoreCase: true))
                     {
                         preNestingLevel++;
                         continue;
                     }
-                    if (MatchInsensitive(PRE_EndTag))
+                    if (Match(PRE_EndTag, ignoreCase: true))
                     {
                         if (preNestingLevel == 0)
                         {
@@ -674,7 +692,7 @@ namespace NitroSharp.NsScript.Syntax
         private bool ScanDialogueBlockStartTag(ref MutableToken token)
         {
             int start = Position;
-            if (!AdvanceIfMatchesInsensitive("<pre "))
+            if (!MatchAdvance("<pre ", ignoreCase: true))
             {
                 return false;
             }
@@ -792,21 +810,31 @@ namespace NitroSharp.NsScript.Syntax
         {
             char c;
             bool isInsideQuotes = false;
-            while (!((c = PeekChar()) == '*' && PeekChar(1) == '/'))
+            while ((c = PeekChar()) != EofCharacter)
             {
-                if (c == EofCharacter)
-                {
-                    Report(DiagnosticId.UnterminatedComment, new TextSpan(LexemeStart, length: 2));
-                    return;
-                }
-                if (c == '"')
-                {
-                    isInsideQuotes = !isInsideQuotes;
-                }
-                AdvanceChar();
+                 if (SyntaxFacts.IsNewLine(c))
+                 {
+                     isInsideQuotes = false;
+                 }
+
+                 switch (c)
+                 {
+                     case '*' when PeekChar(1) == '/' && !isInsideQuotes:
+                         AdvanceChar(2);
+                         return;
+                     case '"':
+                         isInsideQuotes = !isInsideQuotes;
+                         goto default;
+                     default:
+                         AdvanceChar();
+                         break;
+                 }
             }
 
-            AdvanceChar(2); // "*/"
+            if (PeekChar() == EofCharacter)
+            {
+                Report(DiagnosticId.UnterminatedComment, new TextSpan(LexemeStart, length: 2));
+            }
         }
 
         private static bool IsEofOrNewLine(char c) => c switch

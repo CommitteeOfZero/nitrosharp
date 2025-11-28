@@ -1,5 +1,5 @@
 Error: Comment is not properly terminated.
-  --> unterminated_comment.nss:2:1
+  --> unterminated_comment_01.nss:2:1
      |
    1 | // sample text
    2 | |/*|

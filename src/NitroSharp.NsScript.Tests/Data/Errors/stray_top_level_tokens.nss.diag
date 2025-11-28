@@ -1,0 +1,16 @@
+Warning: String of tokens was skipped due to syntax errors.
+  --> stray_top_level_tokens.nss:2:1
+     |
+   1 | #include "function.nss";
+   2 | |$Revision: 10 $|
+   3 | 
+     |
+
+Error: Expected a subroutine declaration.
+  --> stray_top_level_tokens.nss:5:1
+     |
+   4 | chapter main {}
+   5 | |★meowmeowmeow|
+   6 | function test() { }
+     |
+

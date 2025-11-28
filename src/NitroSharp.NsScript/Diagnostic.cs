@@ -16,9 +16,11 @@ public enum DiagnosticId
 
     TokenExpected,
     IdentifierExpected,
-    StrayToken,
-    InvalidExpressionTerm,
+    SkippedStrayToken,
+    SkippedStrayCharacter,
     SkippedBadSyntax,
+    InvalidExpressionTerm,
+    MismatchedBrace,
     ExpectedSubroutineDeclaration,
     MisplacedBreak,
     InvalidBezierCurve,

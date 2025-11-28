@@ -1,5 +1,5 @@
 Error: String is not properly terminated.
-  --> unterminated_string.nss:3:12
+  --> unterminated_string_01.nss:3:12
      |
    2 | {
    3 |     $var = |"meow|
@@ -7,7 +7,7 @@ Error: String is not properly terminated.
      |
 
 Info: Statement is not properly terminated.
-  --> unterminated_string.nss:3:17
+  --> unterminated_string_01.nss:3:17
      |
    2 | {
    3 |     $var = "meow||
