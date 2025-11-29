@@ -286,23 +286,10 @@ namespace NitroSharp.NsScript.Syntax
             var statements = ImmutableArray.CreateBuilder<Statement>();
             while (_currentToken.Kind is not (SyntaxTokenKind.CloseBrace or SyntaxTokenKind.EndOfFile))
             {
-                int prevDiagnosticCount = _diagnosticBuilder.Count;
-                Statement statement = ParseStatement();
-                bool producedDiagnostics = _diagnosticBuilder.Count > prevDiagnosticCount;
-
+                Statement statement = ParseStatement(skipErrorStatements: false);
                 if (statement.Kind == SyntaxNodeKind.DialogueBlock)
                 {
                     _dialogueBlocks.Add((DialogueBlock)statement);
-                }
-                else if (statement.Kind == SyntaxNodeKind.ErrorStatement)
-                {
-                    int errorStart = statement.Span.Start;
-                    SkipToNextStatementOrLine(out int tokensSkipped);
-                    statement = new ErrorStatement(TextSpan.FromBounds(errorStart, LexerPosition));
-                    if (!producedDiagnostics)
-                    {
-                        ReportSkippedBadSyntax(statement.Span, tokensSkipped);
-                    }
                 }
 
                 statements.Add(statement);
@@ -311,25 +298,47 @@ namespace NitroSharp.NsScript.Syntax
             return statements.ToImmutable();
         }
 
-        internal Statement ParseStatement(bool skipErrorStatements = false)
+        internal Statement ParseStatement(bool skipErrorStatements = true)
         {
             int startOffset = LexerPosition;
             Statement? statement;
             do
             {
+                int prevDiagnosticCount = _diagnosticBuilder.Count;
                 statement = ParseStatementCore();
-                if (!skipErrorStatements || statement.Kind != SyntaxNodeKind.ErrorStatement)
+                bool producedDiagnostics = _diagnosticBuilder.Count > prevDiagnosticCount;
+
+                if (statement.Kind == SyntaxNodeKind.ErrorStatement)
+                {
+                    statement = reportError(producedDiagnostics);
+                }
+                if (statement.Kind != SyntaxNodeKind.ErrorStatement || !skipErrorStatements)
                 {
                     break;
                 }
+
                 SyntaxTokenKind tk = _currentToken.Kind;
                 if (tk is SyntaxTokenKind.EndOfFile or SyntaxTokenKind.CloseBrace)
                 {
                     return CreateErrorStatement(startOffset);
                 }
-            } while (true);
+            } while (!IsAtEnd());
 
             return statement;
+
+            [MethodImpl(MethodImplOptions.NoInlining)]
+            Statement reportError(bool producedDiagnostics)
+            {
+                int errorStart = statement.Span.Start;
+                SkipToNextStatementOrLine(out int tokensSkipped);
+                statement = new ErrorStatement(TextSpan.FromBounds(errorStart, LexerPosition));
+                if (!producedDiagnostics)
+                {
+                    ReportSkippedBadSyntax(statement.Span, tokensSkipped);
+                }
+
+                return statement;
+            }
         }
 
         private Statement ParseStatementCore()
@@ -1000,8 +1009,7 @@ namespace NitroSharp.NsScript.Syntax
             {
                 case SyntaxTokenKind.Markup:
                 {
-                    SyntaxToken token = EatToken();
-                    return new DialogueBlockPart.Markup(token.TextSpan);
+                    return new DialogueBlockPart.Markup(EatToken().TextSpan);
                 }
                 case SyntaxTokenKind.MarkupBlankLine:
                 {
@@ -1029,8 +1037,7 @@ namespace NitroSharp.NsScript.Syntax
 
         private ErrorStatement CreateErrorStatement(int startOffset)
         {
-            int endOffset = LexerPosition;
-            var span = TextSpan.FromBounds(startOffset, endOffset);
+            var span = TextSpan.FromBounds(startOffset, LexerPosition);
             return new ErrorStatement(span);
         }
 

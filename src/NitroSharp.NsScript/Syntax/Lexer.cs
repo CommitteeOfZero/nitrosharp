@@ -837,11 +837,14 @@ namespace NitroSharp.NsScript.Syntax
             }
         }
 
-        private static bool IsEofOrNewLine(char c) => c switch
+        private static bool IsEofOrNewLine(char c)
         {
-            EofCharacter or '\r' or '\n' => true,
-            _ => false,
-        };
+            return c switch
+            {
+                EofCharacter or '\r' or '\n' => true,
+                _ => false,
+            };
+        }
 
         private void Report(DiagnosticId diagnosticId) => Report(diagnosticId, CurrentLexemeSpan);
         private void Report(DiagnosticId diagnosticId, TextSpan textSpan)

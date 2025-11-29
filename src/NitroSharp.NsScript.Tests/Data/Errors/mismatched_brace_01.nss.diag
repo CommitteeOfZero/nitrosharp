@@ -1,0 +1,8 @@
+Warning: Mismatched ')'.
+  --> mismatched_brace_01.nss:5:54
+     |
+   4 |     {
+   5 |         if(!EnableBacklog()||!$SYSTEM_backlog_enable)|)|{
+   6 |             break;
+     |
+
