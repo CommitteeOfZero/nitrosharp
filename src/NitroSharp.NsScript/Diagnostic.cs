@@ -10,6 +10,7 @@ public enum DiagnosticId
     UnterminatedString,
     UnterminatedQuotedIdentifier,
     UnterminatedComment,
+    CommentInsideVerbatimBlock,
     UnterminatedDialogueBlockStartTag,
     UnterminatedDialogueBlockIdentifier,
     NumberTooLarge,

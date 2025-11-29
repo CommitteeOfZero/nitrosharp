@@ -1,0 +1,16 @@
+Error: Comments are not allowed inside verbatim <pre> blocks.
+  --> dialogue_01.nss:12:5
+     |
+  11 |     　
+  12 |     |//comment 1|
+  13 |     N00d Gen No. 1 = Group Dive　ﾉﾉﾉ---(ollllll´▽｀)oﾉ
+     |
+
+Error: Comments are not allowed inside verbatim <pre> blocks.
+  --> dialogue_01.nss:18:5
+     |
+  17 |     N00d Gen No. 4 = Vampbuyer  ξ--（;￣ξ￣;)---ξ
+  18 |     |// comment 2|
+  19 |     N00d Gen No. 5 = Numbskull　ヘ（´ρ｀）ノ~
+     |
+

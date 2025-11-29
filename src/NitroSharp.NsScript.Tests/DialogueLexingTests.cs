@@ -138,7 +138,7 @@ public class DialogueLexingTests
             // This is
             // a comment
             Line2
-            """.ReplaceLineEndings(),
+            """,
             new[]
             {
                 (SyntaxTokenKind.Markup, "Line 1"),
@@ -207,6 +207,42 @@ public class DialogueLexingTests
         [
             "//\n    foo",
             new[] { (SyntaxTokenKind.Markup, "//\n    foo") }
+        ];
+        yield return
+        [
+            "<pre> { } </pre>",
+            new[] { (SyntaxTokenKind.Markup, "<pre> { } </pre>") }
+        ];
+        yield return
+        [
+            "<pre>{}</pre>",
+            new[] { (SyntaxTokenKind.Markup, "<pre>{}</pre>") }
+        ];
+        yield return
+        [
+            "<pre>https://sonome.dareno.me</pre>",
+            new[] { (SyntaxTokenKind.Markup, "<pre>https://sonome.dareno.me</pre>") }
+        ];
+        yield return
+        [
+            "<pre>//not a comment</pre>",
+            new[] { (SyntaxTokenKind.Markup, "<pre>//not a comment</pre>") }
+        ];
+        yield return
+        [
+            """
+            <pre>
+                // illegal comment
+            </pre>
+            """,
+            new[]
+            {
+                (SyntaxTokenKind.Markup, """
+                                         <pre>
+                                             // illegal comment
+                                         </pre>
+                                         """)
+            }
         ];
     }
 

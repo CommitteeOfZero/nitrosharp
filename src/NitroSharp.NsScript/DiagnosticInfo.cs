@@ -11,6 +11,7 @@ internal static class DiagnosticInfo
             DiagnosticId.UnterminatedComment => "Comment is not properly terminated.",
             DiagnosticId.UnterminatedDialogueBlockStartTag => "Dialogue block start tag is not properly terminated.",
             DiagnosticId.UnterminatedDialogueBlockIdentifier => "Dialogue block identifier is not properly terminated.",
+            DiagnosticId.CommentInsideVerbatimBlock => "Comments are not allowed inside verbatim <pre> blocks.",
             DiagnosticId.TokenExpected => "Expected '{0}', found '{1}'.",
             DiagnosticId.IdentifierExpected => "Expected identifier, found '{0}'.",
             DiagnosticId.SkippedStrayToken => "Token '{0}' was skipped as unexpected.",
@@ -41,6 +42,7 @@ internal static class DiagnosticInfo
             case DiagnosticId.UnterminatedComment:
             case DiagnosticId.UnterminatedDialogueBlockStartTag:
             case DiagnosticId.UnterminatedDialogueBlockIdentifier:
+            case DiagnosticId.CommentInsideVerbatimBlock:
             case DiagnosticId.TokenExpected:
             case DiagnosticId.IdentifierExpected:
             case DiagnosticId.InvalidExpressionTerm:

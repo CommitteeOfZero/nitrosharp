@@ -635,10 +635,12 @@ namespace NitroSharp.NsScript.Syntax
         private bool ScanMarkup(ref MutableToken token)
         {
             int preNestingLevel = 0;
-            int nbNonWhitespace = 0;
+            int nbNonWhitespace = 0, nbNonWhitespaceOnLine = 0;
             char c;
-            while ((c = PeekChar()) != '{' && c != EofCharacter)
+            while ((c = PeekChar()) != EofCharacter)
             {
+                if (c == '{' && preNestingLevel == 0) { break; }
+
                 if (c == '<')
                 {
                     if (MatchAdvance(PRE_StartTag, ignoreCase: true))
@@ -659,34 +661,62 @@ namespace NitroSharp.NsScript.Syntax
                     }
                 }
 
-                if (preNestingLevel == 0 && c == '/' && PeekChar(1) == '/')
+                if (c == '/' && PeekChar(1) == '/')
                 {
-                    AdvanceChar(2);
-                    ScanToEndOfLine();
-                    ScanEndOfLine();
-                    continue;
+                    if (preNestingLevel == 0 || isVerbatimBlockLineStart())
+                    {
+                        int commentStart = Position;
+                        AdvanceChar(2);
+                        ScanToEndOfLine();
+                        if (isVerbatimBlockLineStart())
+                        {
+                            // Special case: we've encountered something that looks like a comment
+                            // inside a 'verbatim' <pre> block, specifically *at the start of a line*,
+                            // which is the only way we can tell it's supposed to be a comment.
+                            // Verbatim blocks don't allow comments, so we must warn the user.
+                            var span = TextSpan.FromBounds(commentStart, Position);
+                            Report(DiagnosticId.CommentInsideVerbatimBlock, span);
+                            token.Flags |= SyntaxTokenFlags.HasDiagnostics;
+                            // Not actually a comment, so we've seen at least 2 non-whitespace characters
+                            nbNonWhitespace += 2;
+                        }
+                        ScanEndOfLine();
+                        continue;
+                    }
                 }
 
                 int pos = Position;
                 int newlineSequenceLength = ScanEndOfLineSequence();
-                if (newlineSequenceLength == 2)
+                switch (newlineSequenceLength)
                 {
-                    SetPosition(pos);
-                    goto exit;
-                }
-                if (newlineSequenceLength == 0)
-                {
-                    AdvanceChar();
-                    if (!SyntaxFacts.IsWhitespace(c))
+                    case 2:
+                        SetPosition(pos);
+                        goto exit;
+                    case 0:
                     {
-                        nbNonWhitespace++;
+                        AdvanceChar();
+                        if (!SyntaxFacts.IsWhitespace(c))
+                        {
+                            nbNonWhitespace++;
+                            nbNonWhitespaceOnLine++;
+                        }
+
+                        break;
                     }
+                    default:
+                        nbNonWhitespaceOnLine = 0;
+                        break;
                 }
             }
 
         exit:
             token.Kind = SyntaxTokenKind.Markup;
             return nbNonWhitespace > 0;
+
+            bool isVerbatimBlockLineStart()
+            {
+                return preNestingLevel > 0 && nbNonWhitespaceOnLine == 0;
+            }
         }
 
         private bool ScanDialogueBlockStartTag(ref MutableToken token)
@@ -698,7 +728,7 @@ namespace NitroSharp.NsScript.Syntax
             }
 
             char c;
-            while ((c = PeekChar()) != '>' && !IsEofOrNewLine(c))
+            while ((c = PeekChar()) != '>' && !IsNewLineOrEof(c))
             {
                 AdvanceChar();
             }
@@ -718,7 +748,7 @@ namespace NitroSharp.NsScript.Syntax
             EatChar('[');
 
             char c;
-            while ((c = PeekChar()) != ']' && !IsEofOrNewLine(c))
+            while ((c = PeekChar()) != ']' && !IsNewLineOrEof(c))
             {
                 AdvanceChar();
             }
@@ -733,7 +763,7 @@ namespace NitroSharp.NsScript.Syntax
 
         private void ScanBadToken(ref MutableToken token)
         {
-            while (!IsEofOrNewLine(PeekChar()))
+            while (!IsNewLineOrEof(PeekChar()))
             {
                 AdvanceChar();
             }
@@ -837,14 +867,8 @@ namespace NitroSharp.NsScript.Syntax
             }
         }
 
-        private static bool IsEofOrNewLine(char c)
-        {
-            return c switch
-            {
-                EofCharacter or '\r' or '\n' => true,
-                _ => false,
-            };
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool IsNewLineOrEof(char c) => c is '\r' or '\n' or EofCharacter;
 
         private void Report(DiagnosticId diagnosticId) => Report(diagnosticId, CurrentLexemeSpan);
         private void Report(DiagnosticId diagnosticId, TextSpan textSpan)
