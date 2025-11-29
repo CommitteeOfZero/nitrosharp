@@ -278,7 +278,7 @@ internal sealed class RoundtripSyntaxWriter(TextWriter textWriter)
 
     public override void VisitDialogueMarkup(DialogueBlockPart.Markup markup)
     {
-        WriteLine(markup.Text);
+        WriteLine(markup.Text.ToString());
     }
 
     public override void VisitBezierExpression(BezierExpression bezierExpression)

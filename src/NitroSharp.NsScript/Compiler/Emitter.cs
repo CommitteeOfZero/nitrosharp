@@ -691,7 +691,7 @@ namespace NitroSharp.NsScript.Compiler
                 case DialogueBlockPart.Markup { Text: var text }:
                 {
                     _code.WriteByte((byte)CompiledDialogueBlockPart.Kind.Markup);
-                    ushort token = _module.GetStringToken(text);
+                    ushort token = _module.GetStringToken(text.ToString());
                     _code.WriteUInt16LE(token);
                     break;
                 }

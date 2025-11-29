@@ -1001,7 +1001,7 @@ namespace NitroSharp.NsScript.Syntax
                 case SyntaxTokenKind.Markup:
                 {
                     SyntaxToken token = EatToken();
-                    return new DialogueBlockPart.Markup(GetText(token), token.TextSpan);
+                    return new DialogueBlockPart.Markup(token.TextSpan);
                 }
                 case SyntaxTokenKind.MarkupBlankLine:
                 {

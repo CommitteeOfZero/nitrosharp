@@ -51,9 +51,8 @@ public abstract class DialogueBlockPart(TextSpan span) : SyntaxNode(span)
         }
     }
 
-    public sealed class Markup(string text, TextSpan span) : DialogueBlockPart(span)
+    public sealed class Markup(TextSpan span) : DialogueBlockPart(span)
     {
-        public string Text { get; } = text;
         public override SyntaxNodeKind Kind => SyntaxNodeKind.Markup;
 
         public override void Accept(SyntaxVisitor visitor)

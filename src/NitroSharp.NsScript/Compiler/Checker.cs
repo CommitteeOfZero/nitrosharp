@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Immutable;
-using System.IO;
 using System.Runtime.InteropServices;
+using JetBrains.Annotations;
 using NitroSharp.NsScript.Syntax;
 
 namespace NitroSharp.NsScript.Compiler
@@ -39,22 +39,26 @@ namespace NitroSharp.NsScript.Compiler
 
         public LookupResult(SubroutineSymbol subroutine) : this()
         {
-            (Variant, Subroutine) = (LookupResultVariant.Subroutine, subroutine);
+            Variant = LookupResultVariant.Subroutine;
+            Subroutine = subroutine;
         }
 
         public LookupResult(BuiltInFunction builtInFunction) : this()
         {
-            (Variant, BuiltInFunction) = (LookupResultVariant.BuiltInFunction, builtInFunction);
+            Variant = LookupResultVariant.BuiltInFunction;
+            BuiltInFunction = builtInFunction;
         }
 
         public LookupResult(BuiltInConstant builtInConstant) : this()
         {
-            (Variant, BuiltInConstant) = (LookupResultVariant.BuiltInConstant, builtInConstant);
+            Variant = LookupResultVariant.BuiltInConstant;
+            BuiltInConstant = builtInConstant;
         }
 
         public LookupResult(LookupResultVariant variant, string name) : this()
         {
-            (Variant, Global) = (variant, name);
+            Variant = variant;
+            Global = name;
         }
 
         public static LookupResult Empty = default;
@@ -62,10 +66,9 @@ namespace NitroSharp.NsScript.Compiler
         public bool IsEmpty => Variant == LookupResultVariant.Empty;
     }
 
+    [UsedImplicitly(ImplicitUseTargetFlags.Members)]
     internal struct CompileTimeBezierSegment
     {
-        private int _count;
-
 #pragma warning disable CS0649
         public BezierControlPoint P0;
         public BezierControlPoint P1;
@@ -73,32 +76,25 @@ namespace NitroSharp.NsScript.Compiler
         public BezierControlPoint P3;
 #pragma warning restore CS0649
 
-        public readonly int PointCount => _count;
-        public readonly bool IsComplete => _count == 4;
+        public int PointCount { get; private set; }
+
+        public readonly bool IsComplete => PointCount == 4;
 
         public Span<BezierControlPoint> Points
             => MemoryMarshal.CreateSpan(ref P0, 4);
 
         public bool AddPoint(BezierControlPoint pt)
         {
-            if (_count == 4) { return false; }
-            Points[_count++] = pt;
+            if (PointCount == 4) { return false; }
+            Points[PointCount++] = pt;
             return true;
         }
     }
 
-    internal readonly struct Checker
+    internal readonly struct Checker(EmitContext context, SubroutineSymbol subroutine)
     {
-        private readonly EmitContext _context;
-        private readonly SourceModuleSymbol _module;
-        private readonly DiagnosticBuilder _diagnostics;
-
-        public Checker(EmitContext context, SubroutineSymbol subroutine)
-        {
-            _context = context;
-            _module = subroutine.DeclaringSourceFile.Module;
-            _diagnostics = context.DiagnosticBuilder;
-        }
+        private readonly SourceModuleSymbol _module = subroutine.DeclaringSourceFile.Module;
+        private readonly DiagnosticBuilder _diagnostics = context.DiagnosticBuilder;
 
         public LookupResult ResolveAssignmentTarget(Expression expression)
         {
@@ -113,24 +109,20 @@ namespace NitroSharp.NsScript.Compiler
 
         public ChapterSymbol? ResolveCallChapterTarget(CallChapterStatement callChapterStmt)
         {
-            string modulePath = callChapterStmt.TargetModule.Value;
-            try
+            Spanned<string> targetName = callChapterStmt.TargetModule;
+            SourceModuleSymbol? targetModule = context.Compilation.TryGetSourceModule(targetName.Value);
+            if (targetModule is null)
             {
-                SourceModuleSymbol targetSourceModule = _context.Compilation.GetSourceModule(modulePath);
-                ChapterSymbol? chapter = targetSourceModule.LookupChapter("main");
-                if (chapter is null)
-                {
-                    Report(callChapterStmt, callChapterStmt.TargetModule.Span, DiagnosticId.ChapterMainNotFound);
-                }
-                return chapter;
-
-            }
-            catch (FileNotFoundException)
-            {
-                string moduleName = callChapterStmt.TargetModule.Value;
-                Report(callChapterStmt, callChapterStmt.TargetModule.Span, DiagnosticId.ExternalModuleNotFound, moduleName);
+                Report(callChapterStmt, targetName.Span, DiagnosticId.ExternalModuleNotFound, targetName.Value);
                 return null;
             }
+
+            ChapterSymbol? chapter = targetModule.LookupChapter("main");
+            if (chapter is null)
+            {
+                Report(callChapterStmt, targetName.Span, DiagnosticId.ChapterMainNotFound);
+            }
+            return chapter;
         }
 
         public SceneSymbol? ResolveCallSceneTarget(CallSceneStatement callSceneStmt)
@@ -140,30 +132,26 @@ namespace NitroSharp.NsScript.Compiler
                 return LookupScene(callSceneStmt, callSceneStmt.TargetScene);
             }
 
-            Spanned<string> targetModule = callSceneStmt.TargetModule.Value;
-            string modulePath = targetModule.Value;
-            try
+            Spanned<string> targetModuleName = callSceneStmt.TargetModule.Value;
+            SourceModuleSymbol? targetModule = context.Compilation.TryGetSourceModule(targetModuleName.Value);
+            if (targetModule is null)
             {
-                SourceModuleSymbol targetSourceModule = _context.Compilation.GetSourceModule(modulePath);
-                SceneSymbol? scene = targetSourceModule.LookupScene(callSceneStmt.TargetScene.Value);
-                if (scene is null)
-                {
-                    ReportUnresolvedIdentifier(callSceneStmt, callSceneStmt.TargetScene);
-                }
-
-                return scene;
-            }
-            catch (FileNotFoundException)
-            {
-                string moduleName = targetModule.Value;
-                Report(callSceneStmt, targetModule.Span, DiagnosticId.ExternalModuleNotFound, moduleName);
+                Report(callSceneStmt, targetModuleName.Span, DiagnosticId.ExternalModuleNotFound, targetModuleName.Value);
                 return null;
             }
+
+            SceneSymbol? scene = targetModule.LookupScene(callSceneStmt.TargetScene.Value);
+            if (scene is null)
+            {
+                ReportUnresolvedIdentifier(callSceneStmt, callSceneStmt.TargetScene);
+            }
+
+            return scene;
         }
 
         public LookupResult LookupNonInvocableSymbol(NameExpression name)
         {
-            if (name.Sigil == SigilKind.Dollar || _context.TryGetVariableToken(name.Name, out _))
+            if (name.Sigil == SigilKind.Dollar || context.TryGetVariableToken(name.Name, out _))
             {
                 return new LookupResult(LookupResultVariant.Variable, name.Name);
             }
@@ -222,20 +210,6 @@ namespace NitroSharp.NsScript.Compiler
             BezierExpression bezierExpr,
             out ImmutableArray<CompileTimeBezierSegment> segments)
         {
-            static bool consumePoint(
-                ref ReadOnlySpan<BezierControlPoint> points,
-                out BezierControlPoint pt)
-            {
-                if (points.Length == 0)
-                {
-                    pt = default;
-                    return false;
-                }
-                pt = points[0];
-                points = points[1..];
-                return true;
-            }
-
             ReadOnlySpan<BezierControlPoint> remainingPoints = bezierExpr.ControlPoints.AsSpan();
             var mutSegments = ImmutableArray.CreateBuilder<CompileTimeBezierSegment>();
             CompileTimeBezierSegment seg = default;
@@ -278,6 +252,20 @@ namespace NitroSharp.NsScript.Compiler
             Report(bezierExpr, DiagnosticId.InvalidBezierCurve);
             segments = default;
             return false;
+
+            static bool consumePoint(
+                ref ReadOnlySpan<BezierControlPoint> points,
+                out BezierControlPoint pt)
+            {
+                if (points.Length == 0)
+                {
+                    pt = default;
+                    return false;
+                }
+                pt = points[0];
+                points = points[1..];
+                return true;
+            }
         }
 
         private void ReportUnresolvedIdentifier(SyntaxNode node, Spanned<string> identifier)
@@ -294,13 +282,13 @@ namespace NitroSharp.NsScript.Compiler
             _diagnostics.Add(Diagnostic.Create(location, diagnosticId));
         }
 
-        public void Report(SyntaxNode node, TextSpan span, DiagnosticId diagnosticId)
+        private void Report(SyntaxNode node, TextSpan span, DiagnosticId diagnosticId)
         {
             var location = new SourceLocation(node.SyntaxTree.SourceText, span);
             _diagnostics.Add(Diagnostic.Create(location, diagnosticId));
         }
 
-        public void Report(SyntaxNode node, TextSpan span, DiagnosticId diagnosticId, params object[] args)
+        private void Report(SyntaxNode node, TextSpan span, DiagnosticId diagnosticId, params object[] args)
         {
             var location = new SourceLocation(node.SyntaxTree.SourceText, span);
             _diagnostics.Add(Diagnostic.Create(location, diagnosticId, args));

@@ -71,7 +71,7 @@ internal sealed class DebugSyntaxWriter(TextWriter textWriter)
                 : $"targetScene=\"{callScene.TargetScene.Value}\"",
             DialogueBlock dlg => $"name=\"{dlg.Name}\" box=\"{dlg.AssociatedBox}\" parts={dlg.Parts.Length}",
             DialogueBlockPart.CodeBlock codeBlock => $"statements={codeBlock.Statements.Length}",
-            DialogueBlockPart.Markup markup => $"text={QuoteAndEscape(markup.Text)}",
+            DialogueBlockPart.Markup markup => $"text={QuoteAndEscape(markup.Text.ToString())}",
             LiteralExpression literal => $"value={QuoteAndEscape(literal.Value.ToString())}",
             NameExpression name => name.Sigil switch
             {
