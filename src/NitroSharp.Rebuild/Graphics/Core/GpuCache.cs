@@ -59,9 +59,9 @@ internal sealed class GpuCache<T> : IDisposable
             PixelFormat.R32_G32_B32_A32_Float, TextureUsage.Staging
         );
         ResourceFactory rf = _gd.ResourceFactory;
-        _stagingTexture = rf.CreateTexture(ref desc);
+        _stagingTexture = rf.CreateTexture(in desc);
         desc.Usage = TextureUsage.Sampled;
-        _sampledTexture = rf.CreateTexture(ref desc);
+        _sampledTexture = rf.CreateTexture(in desc);
         if (_usingGL)
         {
             int dataSize = (int)(dimension * dimension * GpuBlockSize);

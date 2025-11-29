@@ -10,99 +10,71 @@ namespace NitroSharp.Media;
 
 public readonly record struct VideoFrameInfo(int Serial, double Timestamp, double Duration);
 
-internal readonly ref struct YCbCrFrame
+internal readonly ref struct YCbCrFrame(
+    YCbCrBufferInternal buffer,
+    uint index,
+    int serial,
+    uint width,
+    uint height,
+    double timestamp,
+    double duration)
 {
-    private readonly YCbCrBufferInternal _buffer;
-    private readonly uint _index;
-    private readonly uint _width;
-    private readonly uint _height;
-    private readonly double _duration;
+    public readonly int Serial = serial;
+    public readonly double Timestamp = timestamp;
 
-    public readonly int Serial;
-    public readonly double Timestamp;
-
-    public YCbCrFrame(
-        YCbCrBufferInternal buffer,
-        uint index, int serial,
-        uint width, uint height,
-        double timestamp, double duration)
-    {
-        _buffer = buffer;
-        _index = index;
-        _width = width;
-        _height = height;
-        Serial = serial;
-        Timestamp = timestamp;
-        _duration = duration;
-    }
-
-    public VideoFrameInfo GetInfo() => new(Serial, Timestamp, _duration);
+    public VideoFrameInfo GetInfo() => new(Serial, Timestamp, duration);
 
     public void CopyToDeviceMemory(CommandList commandList)
     {
-        YCbCrTextures textures  = _buffer.GetTextures();
+        YCbCrTextures textures  = buffer.GetTextures();
         commandList.CopyTexture(
             source: textures.LumaStaging,
             srcX: 0, srcY: 0, srcZ: 0,
             srcMipLevel: 0,
-            srcBaseArrayLayer: _index,
+            srcBaseArrayLayer: index,
             destination: textures.Luma,
             dstX: 0, dstY: 0, dstZ: 0,
             dstMipLevel: 0, dstBaseArrayLayer: 0,
-            _width, _height,
+            width, height,
             depth: 1, layerCount: 1
         );
         commandList.CopyTexture(
             source: textures.ChromaStaging,
             srcX: 0, srcY: 0, srcZ: 0,
             srcMipLevel: 0,
-            srcBaseArrayLayer: _index * 2,
+            srcBaseArrayLayer: index * 2,
             destination: textures.Chroma,
             dstX: 0, dstY: 0, dstZ: 0,
             dstMipLevel: 0, dstBaseArrayLayer: 0,
-            _width / 2, _height / 2,
+            width / 2, height / 2,
             depth: 1, layerCount: 2
         );
     }
 
     public void Dispose()
     {
-        _buffer.TakeFrame();
+        buffer.TakeFrame();
     }
 }
 
-internal readonly struct YCbCrBufferWriter
+internal readonly struct YCbCrBufferWriter(YCbCrBufferInternal buffer)
 {
-    private readonly YCbCrBufferInternal _buffer;
-
-    public YCbCrBufferWriter(YCbCrBufferInternal buffer)
-    {
-        _buffer = buffer;
-    }
-
     public ValueTask WriteFrameAsync(AVFrame frame, int serial, double timestamp, double duration)
-        => _buffer.WriteFrameAsync(frame, serial, timestamp, duration);
+        => buffer.WriteFrameAsync(frame, serial, timestamp, duration);
 
     public void Clear()
     {
-        _buffer.Clear();
+        buffer.Clear();
     }
 }
 
-internal readonly struct YCbCrBufferReader
+internal readonly struct YCbCrBufferReader(YCbCrBufferInternal buffer)
 {
-    private readonly YCbCrBufferInternal _buffer;
-
-    public YCbCrBufferReader(YCbCrBufferInternal buffer)
-    {
-        _buffer = buffer;
-    }
-
-    public bool PeekFrame(out YCbCrFrame frame) => _buffer.PeekFrame(out frame);
+    public bool PeekFrame(out YCbCrFrame frame) => buffer.PeekFrame(out frame);
 
     public (Texture luma, Texture chroma) GetDeviceTextures()
     {
-        YCbCrTextures textures = _buffer.GetTextures();
+        YCbCrTextures textures = buffer.GetTextures();
         return (textures.Luma, textures.Chroma);
     }
 }
@@ -126,6 +98,16 @@ internal readonly struct YCbCrTextures : IDisposable
 
     public YCbCrTextures(ResourceFactory resourceFactory, uint width, uint height, uint bufferSize)
     {
+        (LumaStaging, Luma) = create(resourceFactory,
+            width, height,
+            cpuLayerCount: bufferSize, gpuLayerCount: 1
+        );
+        (ChromaStaging, Chroma) = create(resourceFactory,
+            width / 2, height / 2,
+            cpuLayerCount: bufferSize * 2, gpuLayerCount: 2
+        );
+        return;
+
         static (Texture, Texture) create(
             ResourceFactory rf,
             uint w, uint h,
@@ -135,21 +117,12 @@ internal readonly struct YCbCrTextures : IDisposable
                 w, h, mipLevels: 1, cpuLayerCount,
                 PixelFormat.R8_UNorm, TextureUsage.Staging
             );
-            Texture staging = rf.CreateTexture(ref desc);
+            Texture staging = rf.CreateTexture(in desc);
             desc.Usage = TextureUsage.Sampled;
             desc.ArrayLayers = gpuLayerCount;
-            Texture sampled = rf.CreateTexture(ref desc);
+            Texture sampled = rf.CreateTexture(in desc);
             return (staging, sampled);
         }
-
-        (LumaStaging, Luma) = create(resourceFactory,
-            width, height,
-            cpuLayerCount: bufferSize, gpuLayerCount: 1
-        );
-        (ChromaStaging, Chroma) = create(resourceFactory,
-            width / 2, height / 2,
-            cpuLayerCount: bufferSize * 2, gpuLayerCount: 2
-        );
     }
 
     public void Dispose()

@@ -7,6 +7,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using NitroSharp.Common;
 using NitroSharp.Content;
 using NitroSharp.Graphics;
 using NitroSharp.Media;
@@ -229,7 +230,7 @@ internal sealed class GameContext
             GraphicsDevice glDevice = backend == GraphicsBackend.OpenGL
                 ? VeldridStartup.CreateDefaultOpenGLGraphicsDevice(options, wnd!.SdlWindow, backend)
                 : GraphicsDevice.CreateOpenGLES(options, swapchainDesc);
-            return (glDevice, glDevice.MainSwapchain);
+            return (glDevice, glDevice.MainSwapchain.NotNull());
         }
 
         GraphicsDevice device = backend switch

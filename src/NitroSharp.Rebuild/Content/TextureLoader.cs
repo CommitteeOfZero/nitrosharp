@@ -38,15 +38,7 @@ internal abstract class TextureLoader : IDisposable
             cl.CopyTexture(source: stagingTex, destination: sampledTex);
             cl.End();
             _gd.SubmitCommands(cl);
-            // TODO: report the GL backend's quirk upstream
-            if (_gd.BackendType == GraphicsBackend.OpenGL)
-            {
-                _gd.DisposeWhenIdle(stagingTex);
-            }
-            else
-            {
-                stagingTex.Dispose();
-            }
+            stagingTex.Dispose();
             return sampledTex;
         }
     }

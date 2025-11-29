@@ -38,7 +38,7 @@ internal readonly struct SinglePassEffect : IDisposable
         _fb = framebuffer ?? resourceFactory.CreateFramebuffer(
             new FramebufferDescription(
                 depthTarget: null,
-                colorTargets: resourceFactory.CreateTexture(ref textureDesc)
+                colorTargets: resourceFactory.CreateTexture(in textureDesc)
             )
         );
         _rs = resourceFactory.CreateResourceSet(new ResourceSetDescription(
@@ -118,7 +118,7 @@ internal readonly struct MultipassEffect : IDisposable
             );
             Framebuffer fb = resourceFactory.CreateFramebuffer(new FramebufferDescription(
                 depthTarget: null,
-                colorTargets: resourceFactory.CreateTexture(ref textureDesc)
+                colorTargets: resourceFactory.CreateTexture(in textureDesc)
             ));
             ResourceSet rs = resourceFactory.CreateResourceSet(new ResourceSetDescription(
                 shaderResources.Effects.ResourceLayout,

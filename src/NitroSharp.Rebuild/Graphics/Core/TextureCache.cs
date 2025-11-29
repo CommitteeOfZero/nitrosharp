@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.InteropServices;
+using NitroSharp.Common;
 using NitroSharp.Utilities;
 using Veldrid;
 
@@ -443,9 +444,9 @@ namespace NitroSharp.Graphics.Core
                PixelFormat, TextureUsage.Staging
             );
             ResourceFactory rf = _gd.ResourceFactory;
-            Texture newStaging = rf.CreateTexture(ref desc);
+            Texture newStaging = rf.CreateTexture(in desc);
             desc.Usage = TextureUsage.Sampled;
-            Texture newSampled = rf.CreateTexture(ref desc);
+            Texture newSampled = rf.CreateTexture(in desc);
             if (_stagingTexture is not null)
             {
                 foreach (ref Layer layer in _layers.AsSpan())
@@ -483,7 +484,7 @@ namespace NitroSharp.Graphics.Core
                 }
 
                 _gd.DisposeWhenIdle(_stagingTexture);
-                _gd.DisposeWhenIdle(_sampledTexture);
+                _gd.DisposeWhenIdle(_sampledTexture.NotNull());
             }
             else
             {
@@ -504,7 +505,7 @@ namespace NitroSharp.Graphics.Core
         {
             foreach (ref Layer layer in _layers.AsSpan())
             {
-                layer.Map = _gd.Map(_stagingTexture, MapMode.Write, layer.Index);
+                layer.Map = _gd.Map(_stagingTexture.NotNull(), MapMode.Write, layer.Index);
                 layer.ResetDirtyRect();
             }
             _mapped = true;
@@ -515,7 +516,7 @@ namespace NitroSharp.Graphics.Core
         {
             foreach (ref Layer layer in _layers.AsSpan())
             {
-                _gd.Unmap(_stagingTexture, layer.Index);
+                _gd.Unmap(_stagingTexture.NotNull(), layer.Index);
                 layer.Map = default;
                 TextureRectU dirtyRect = layer.DirtyRect;
                 if (dirtyRect.Width > 0)
@@ -524,7 +525,7 @@ namespace NitroSharp.Graphics.Core
                         source: _stagingTexture,
                         dirtyRect.X, dirtyRect.Y, srcZ: 0,
                         srcMipLevel: 0, srcBaseArrayLayer: layer.Index,
-                        destination: _sampledTexture,
+                        destination: _sampledTexture.NotNull(),
                         dirtyRect.X, dirtyRect.Y, dstZ: 0,
                         dstMipLevel: 0, dstBaseArrayLayer: layer.Index,
                         dirtyRect.Width, dirtyRect.Height,
@@ -580,17 +581,17 @@ namespace NitroSharp.Graphics.Core
 
         private static TextureSizeU GetSlabSize(TextureSizeU textureSize)
         {
+            uint width = quantizeDimension(textureSize.Width + 4);
+            uint height = quantizeDimension(textureSize.Height + 4);
+            uint max = Math.Max(width, height);
+            return new TextureSizeU(max, max);
+
             static uint quantizeDimension(uint dim) => dim switch
             {
                 <= 16 => 16,
                 <= 256 => MathUtil.NearestPowerOfTwo(dim),
                 _ => throw new InvalidOperationException("Texture is too large for the cache.")
             };
-
-            uint width = quantizeDimension(textureSize.Width + 4);
-            uint height = quantizeDimension(textureSize.Height + 4);
-            uint max = Math.Max(width, height);
-            return new TextureSizeU(max, max);
         }
 
         public unsafe void UploadData<TPix>(

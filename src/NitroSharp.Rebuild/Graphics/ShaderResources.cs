@@ -114,7 +114,7 @@ internal sealed class QuadShaderResources : IDisposable
             [viewProjectionLayout, ResourceLayout],
             outputDescription
         );
-        _alphaBlend = factory.CreateGraphicsPipeline(ref pipelineDesc);
+        _alphaBlend = factory.CreateGraphicsPipeline(in pipelineDesc);
 
         pipelineDesc.BlendState = new BlendStateDescription
         {
@@ -132,7 +132,7 @@ internal sealed class QuadShaderResources : IDisposable
                 }
             ]
         };
-        _additiveBlend = factory.CreateGraphicsPipeline(ref pipelineDesc);
+        _additiveBlend = factory.CreateGraphicsPipeline(in pipelineDesc);
 
         pipelineDesc.BlendState = new BlendStateDescription
         {
@@ -150,7 +150,7 @@ internal sealed class QuadShaderResources : IDisposable
                 }
             ]
         };
-        _reverseSubtractiveBlend = factory.CreateGraphicsPipeline(ref pipelineDesc);
+        _reverseSubtractiveBlend = factory.CreateGraphicsPipeline(in pipelineDesc);
 
         pipelineDesc.BlendState = new BlendStateDescription
         {
@@ -240,7 +240,7 @@ internal sealed class IconShaderResources : IDisposable
             [viewProjectionLayout, ResourceLayout],
             outputDescription
         );
-        Pipeline = factory.CreateGraphicsPipeline(ref pipelineDesc);
+        Pipeline = factory.CreateGraphicsPipeline(in pipelineDesc);
     }
 
     public ResourceLayout ResourceLayout { get; }
@@ -307,7 +307,7 @@ internal sealed class VideoShaderResources : IDisposable
             [viewProjectionLayout, InputLayout, ParamLayout],
             outputDescription
         );
-        _alphaBlend = factory.CreateGraphicsPipeline(ref pipelineDesc);
+        _alphaBlend = factory.CreateGraphicsPipeline(in pipelineDesc);
         pipelineDesc.BlendState = new BlendStateDescription
         {
             AttachmentStates =
@@ -324,7 +324,7 @@ internal sealed class VideoShaderResources : IDisposable
                 }
             ]
         };
-        _additiveBlend = factory.CreateGraphicsPipeline(ref pipelineDesc);
+        _additiveBlend = factory.CreateGraphicsPipeline(in pipelineDesc);
         pipelineDesc.BlendState = new BlendStateDescription
         {
             AttachmentStates =
@@ -341,7 +341,7 @@ internal sealed class VideoShaderResources : IDisposable
                 }
             ]
         };
-        _multiplicativeBlend = factory.CreateGraphicsPipeline(ref pipelineDesc);
+        _multiplicativeBlend = factory.CreateGraphicsPipeline(in pipelineDesc);
         EnableAlphaBuffer = new GpuBuffer<Vector4>(
             graphicsDevice,
             BufferUsage.UniformBuffer,
@@ -513,9 +513,9 @@ internal sealed class TextShaderResources : IDisposable
             [ResourceLayoutVS, ResourceLayoutFS],
             outputDescription
         );
-        Pipeline = factory.CreateGraphicsPipeline(ref pipelineDesc);
+        Pipeline = factory.CreateGraphicsPipeline(in pipelineDesc);
         pipelineDesc.ShaderSet.Shaders = [outlineVS, outlineFS];
-        OutlinePipeline = factory.CreateGraphicsPipeline(ref pipelineDesc);
+        OutlinePipeline = factory.CreateGraphicsPipeline(in pipelineDesc);
     }
 
     public ResourceLayout ResourceLayoutVS { get; }
@@ -577,7 +577,7 @@ internal sealed class EffectShaderResources : IDisposable
                 [layout],
                 outputDescription
             );
-            return factory.CreateGraphicsPipeline(ref pipelineDesc);
+            return factory.CreateGraphicsPipeline(in pipelineDesc);
         }
     }
 
@@ -647,7 +647,7 @@ internal sealed class BarrelDistortionShaderResources : IDisposable
             [viewProjectionLayout, _resourceLayout],
             outputDescription
         );
-        _pipeline = factory.CreateGraphicsPipeline(ref lensPipelineDesc);
+        _pipeline = factory.CreateGraphicsPipeline(in lensPipelineDesc);
     }
 
     public void Dispose()

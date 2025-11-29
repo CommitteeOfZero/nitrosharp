@@ -23,9 +23,9 @@ internal sealed class RenderTarget : IDisposable
             TextureUsage.Sampled | TextureUsage.RenderTarget
         );
         ResourceFactory factory = graphicsDevice.ResourceFactory;
-        ColorTarget = factory.CreateTexture(ref textureDesc);
+        ColorTarget = factory.CreateTexture(in textureDesc);
         var desc = new FramebufferDescription(depthTarget: null, ColorTarget);
-        Framebuffer = factory.CreateFramebuffer(ref desc);
+        Framebuffer = factory.CreateFramebuffer(in desc);
         _ownsFramebuffer = true;
         Size = size;
         OutputDescription = Framebuffer.OutputDescription;
