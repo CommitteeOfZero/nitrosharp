@@ -72,7 +72,7 @@ public class DialogueLexingTests
             """
             {}
                 Sample Text
-            """.ReplaceLineEndings(),
+            """,
             new[]
             {
                 (SyntaxTokenKind.OpenBrace, "{"),
@@ -118,7 +118,7 @@ public class DialogueLexingTests
             // This is
             // a comment
             Text
-            """.ReplaceLineEndings(),
+            """,
             new[]
             {
                 (SyntaxTokenKind.Markup, """
@@ -126,7 +126,7 @@ public class DialogueLexingTests
                                          // This is
                                          // a comment
                                          Text
-                                         """.ReplaceLineEndings()),
+                                         """)
             }
         ];
 
@@ -147,7 +147,7 @@ public class DialogueLexingTests
                                          // This is
                                          // a comment
                                          Line2
-                                         """.ReplaceLineEndings())
+                                         """)
             }
         ];
 
@@ -156,7 +156,7 @@ public class DialogueLexingTests
             """
             {}// this is a comment {
             Sample Text
-            """.ReplaceLineEndings(),
+            """,
             new[]
             {
                 (SyntaxTokenKind.OpenBrace, "{"),
@@ -164,7 +164,8 @@ public class DialogueLexingTests
                 (SyntaxTokenKind.Markup, """
                                          // this is a comment {
                                          Sample Text
-                                         """.ReplaceLineEndings()) }
+                                         """)
+            }
         ];
 
         yield return
@@ -185,14 +186,17 @@ public class DialogueLexingTests
             // a comment
 
 
-            """.ReplaceLineEndings(),
-            new[] { (SyntaxTokenKind.Markup, """
+            """,
+            new[]
+            {
+                (SyntaxTokenKind.Markup, """
                                              // this is
                                              Line 1
                                              // a comment
 
 
-                                             """.ReplaceLineEndings()) }
+                                             """)
+            }
         ];
         yield return
         [
@@ -221,8 +225,11 @@ public class DialogueLexingTests
         var zipped = expectedTokens.Zip(actualTokens);
         foreach (((SyntaxTokenKind expectedKind, string expectedText), SyntaxToken token) in zipped)
         {
+            const string crlf = "\r\n";
+            string expected = expectedText.ReplaceLineEndings(crlf);
+            string actual = lexResult.GetText(token).ToString().ReplaceLineEndings(crlf);
             Assert.Equal(expectedKind, token.Kind);
-            Assert.Equal(expectedText, lexResult.GetText(token).ToString());
+            Assert.Equal(expected, actual);
         }
     }
 }
