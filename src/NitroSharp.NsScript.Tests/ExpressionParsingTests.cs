@@ -6,6 +6,13 @@ namespace NitroSharp.NsScript.Tests;
 
 public class ExpressionParsingTests
 {
+    [Fact]
+    public void Empty()
+    {
+        var expression = Assert.IsType<ErrorExpression>(SyntaxTree.ParseExpression("").Root);
+        Assert.Equal(0, expression.Span.Length);
+    }
+
     [Theory]
     [MemberData(nameof(GetLiteralParsingTestData))]
     public void Literals_Parse_Correctly(string text, ConstantValue expectedValue)
@@ -62,13 +69,6 @@ public class ExpressionParsingTests
     {
         var invocation = AssertExpression<FunctionCallExpression>(text, SyntaxNodeKind.FunctionCallExpression);
         Common.AssertSpannedText(text, functionName, invocation.TargetName);
-    }
-
-    private T AssertExpression<T>(string text, SyntaxNodeKind expectedKind) where T : Expression
-    {
-        var result = Assert.IsType<T>(SyntaxTree.ParseExpression(text).Root);
-        Assert.Equal(expectedKind, result.Kind);
-        return result;
     }
 
     [Fact]
@@ -202,5 +202,12 @@ public class ExpressionParsingTests
         var value = expr.Value as LiteralExpression;
         Assert.NotNull(value);
         //Assert.Equal(42.0d, value.Value.DoubleValue);
+    }
+
+    private static T AssertExpression<T>(string text, SyntaxNodeKind expectedKind) where T : Expression
+    {
+        var result = Assert.IsType<T>(SyntaxTree.ParseExpression(text).Root);
+        Assert.Equal(expectedKind, result.Kind);
+        return result;
     }
 }

@@ -58,7 +58,8 @@ namespace NitroSharp.NsScript.Syntax
             ref MutableToken mutableTk = ref Unsafe.As<SyntaxToken, MutableToken>(ref syntaxToken);
             if (CurrentMode == LexingMode.DialogueBlock)
             {
-                if (PeekChar() != '{' && !Match(PRE_EndTag, ignoreCase: true))
+                char c;
+                if ((c = PeekChar()) != '{' && !(c == '<' && Match(PRE_EndTag, ignoreCase: true)))
                 {
                     if (LexMarkupToken(ref mutableTk))
                     {
@@ -106,7 +107,6 @@ namespace NitroSharp.NsScript.Syntax
 
         private void LexSyntaxToken(ref MutableToken token)
         {
-            token = default;
             SkipSyntaxTrivia();
             StartScanning();
             char character = PeekChar();
@@ -646,6 +646,8 @@ namespace NitroSharp.NsScript.Syntax
                     if (MatchAdvance(PRE_StartTag, ignoreCase: true))
                     {
                         preNestingLevel++;
+                        nbNonWhitespace += PRE_StartTag.Length;
+                        nbNonWhitespaceOnLine += PRE_StartTag.Length;
                         continue;
                     }
                     if (Match(PRE_EndTag, ignoreCase: true))
@@ -657,6 +659,8 @@ namespace NitroSharp.NsScript.Syntax
 
                         AdvanceChar(PRE_EndTag.Length);
                         preNestingLevel--;
+                        nbNonWhitespace += PRE_EndTag.Length;
+                        nbNonWhitespaceOnLine += PRE_EndTag.Length;
                         continue;
                     }
                 }
@@ -679,6 +683,7 @@ namespace NitroSharp.NsScript.Syntax
                             token.Flags |= SyntaxTokenFlags.HasDiagnostics;
                             // Not actually a comment, so we've seen at least 2 non-whitespace characters
                             nbNonWhitespace += 2;
+                            nbNonWhitespaceOnLine += 2;
                         }
                         ScanEndOfLine();
                         continue;

@@ -68,6 +68,13 @@ public class LexerTests
         Assert.Equal(lexResult.GetText(tokens[1]).ToString(), t2Text, ignoreCase: true);
     }
 
+    [Fact]
+    public void EmptyString()
+    {
+        var lexResult = SyntaxToken.Lex("");
+        Assert.True( lexResult.RealizeTokens() is [{ Kind: SyntaxTokenKind.EndOfFile }]);
+    }
+
     [Theory]
     [InlineData("42", SyntaxTokenKind.NumericLiteral, "42")]
     [InlineData("42.2", SyntaxTokenKind.NumericLiteral, "42.2", SyntaxTokenFlags.HasDecimalPoint)]

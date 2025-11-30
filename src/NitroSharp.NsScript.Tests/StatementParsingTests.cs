@@ -7,6 +7,20 @@ namespace NitroSharp.NsScript.Tests;
 public class StatementParsingTests
 {
     [Fact]
+    public void Empty()
+    {
+        var root = AssertStatement<ErrorStatement>("", SyntaxNodeKind.ErrorStatement);
+        Assert.Equal(0, root.Span.Length);
+    }
+
+    [Fact]
+    public void EmptySourceFile()
+    {
+        var root = Assert.IsType<SourceFileRoot>(SyntaxTree.ParseText(SourceText.From("")).Root);
+        Assert.Equal(0, root.Span.Length);
+    }
+
+    [Fact]
     public void Block()
     {
         var block = AssertStatement<Block>("{}", SyntaxNodeKind.Block);
@@ -50,11 +64,12 @@ public class StatementParsingTests
     [Fact]
     public void Select()
     {
-        const string text = @"
-                select
-                {
-                    case foo: {}
-                }";
+        const string text = """
+                            select
+                            {
+                                case foo: {}
+                            }
+                            """;
 
         var selectStmt = AssertStatement<SelectStatement>(text, SyntaxNodeKind.SelectStatement);
         var selectSection = Assert.IsType<SelectSection>(
@@ -79,7 +94,7 @@ public class StatementParsingTests
     [InlineData("Scene", null, "Scene")]
     [InlineData("@->LocalScene", null, "LocalScene")]
     [InlineData("nss/foo.nss->Scene", "nss/foo.nss", "Scene")]
-    public void CallSceneStatement_Parses_Correctly(string path, string? file, string scene)
+    public void CallScene(string path, string? file, string scene)
     {
         string text = $"call_scene {path}";
         var callSceneStmt = AssertStatement<CallSceneStatement>(text, SyntaxNodeKind.CallSceneStatement);
@@ -118,9 +133,11 @@ public class StatementParsingTests
     {
         yield return
         [
-            @"<PRE @box01>
-                [text001]
-                </PRE>",
+            """
+            <PRE @box01>
+            [text001]
+            </PRE>
+            """,
             "text001",
             "@box01",
             0
@@ -128,9 +145,11 @@ public class StatementParsingTests
 
         yield return
         [
-            @"<PRE box01>
-                [text001]
-                </PRE>",
+            """
+            <PRE box01>
+            [text001]
+            </PRE>
+            """,
             "text001",
             "box01",
             0
@@ -138,10 +157,12 @@ public class StatementParsingTests
 
         yield return
         [
-            @"<PRE @box01>
-                [text001]
-                {}
-                </PRE>",
+            """
+            <PRE @box01>
+            [text001]
+            {}
+            </PRE>
+            """,
             "text001",
             "@box01",
             1

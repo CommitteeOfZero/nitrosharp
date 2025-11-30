@@ -244,12 +244,16 @@ public class DialogueLexingTests
                                          """)
             }
         ];
+        yield return
+        [
+            "<pre></pre>",
+            new[] { (SyntaxTokenKind.Markup, "<pre></pre>") }
+        ];
     }
 
     private static void AssertTokens(string text, (SyntaxTokenKind, string)[] expectedTokens)
     {
         text = $"""
-
                 <PRE box00>
                 [text001]
                 {text}</PRE>
