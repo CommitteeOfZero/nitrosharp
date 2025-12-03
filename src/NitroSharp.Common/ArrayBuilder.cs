@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
-namespace NitroSharp.Utilities
+namespace NitroSharp.Common
 {
     public struct ArrayBuilder<T>
     {

@@ -1,8 +1,8 @@
-﻿using NitroSharp.Utilities;
-using System;
+﻿using System;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Text;
+using NitroSharp.Common;
 
 namespace NitroSharp.NsScript.Syntax.Markup
 {

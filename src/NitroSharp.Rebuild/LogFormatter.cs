@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Globalization;
-using NitroSharp.NsScript.Utilities;
+using NitroSharp.Common;
 using ZeroLog;
 using ZeroLog.Formatting;
 

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using NitroSharp.Common;
 
 namespace NitroSharp.Utilities;
 

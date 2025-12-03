@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
-using NitroSharp.Utilities;
+using NitroSharp.Common;
 using Veldrid;
 
 namespace NitroSharp.Graphics;

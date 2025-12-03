@@ -1,11 +1,11 @@
 using System;
 using System.Diagnostics;
 using System.Numerics;
+using NitroSharp.Common;
 using NitroSharp.Graphics;
 using NitroSharp.NsScript;
 using NitroSharp.NsScript.Primitives;
 using NitroSharp.NsScript.VM;
-using NitroSharp.Utilities;
 using Veldrid;
 
 namespace NitroSharp;

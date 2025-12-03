@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using NitroSharp.Common;
 
 namespace NitroSharp.Utilities;
 
@@ -87,7 +88,7 @@ internal struct SmallLookupList<TKey, TValue>
     {
         if (_map is { } map)
         {
-            return map.TryGetValue(key, out TValue? value) ? value : default;
+            return map.GetValueOrDefault(key);
         }
 
         foreach (TValue entry in _entries)

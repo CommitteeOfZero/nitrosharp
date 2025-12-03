@@ -4,9 +4,9 @@ using System.Numerics;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using NitroSharp.Common;
 using NitroSharp.Graphics.Core;
 using NitroSharp.Text;
-using NitroSharp.Utilities;
 using Veldrid;
 
 namespace NitroSharp.Graphics;

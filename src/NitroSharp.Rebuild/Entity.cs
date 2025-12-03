@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Numerics;
 using System.Text;
 using System.Threading;
+using NitroSharp.Common;
 using NitroSharp.Graphics;
 using NitroSharp.NsScript;
 using NitroSharp.NsScript.Primitives;

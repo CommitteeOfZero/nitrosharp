@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using NitroSharp.Utilities;
+using NitroSharp.Common;
 
 namespace NitroSharp.Content;
 
@@ -33,15 +33,5 @@ internal sealed class VfsNode : IDisposable
     }
 }
 
-internal sealed class ArchiveException : Exception
-{
-    public ArchiveException()
-        : base("Unable to open the archive")
-    {
-    }
-
-    public ArchiveException(string format, string message)
-        : base($"{format} : {message}")
-    {
-    }
-}
+internal sealed class ArchiveException(string format, string message)
+    : Exception($"{format} : {message}");

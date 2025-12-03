@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using NitroSharp.Utilities;
+using NitroSharp.Common;
 
 namespace NitroSharp.NsScript.Compiler;
 

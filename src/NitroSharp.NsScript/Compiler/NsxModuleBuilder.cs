@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
+using NitroSharp.Common;
 using NitroSharp.NsScript.Syntax;
 using NitroSharp.NsScript.Utilities;
-using NitroSharp.Utilities;
 
 namespace NitroSharp.NsScript.Compiler;
 

@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace NitroSharp.NsScript.Utilities;
+namespace NitroSharp.Common;
 
 public ref struct SpanSplitEnumerator(ReadOnlySpan<char> text, char separator)
 {

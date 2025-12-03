@@ -1,8 +1,8 @@
 using System;
 using System.IO;
 using System.Text.Json;
+using NitroSharp.Common;
 using NitroSharp.Media;
-using NitroSharp.NsScript.Utilities;
 using Veldrid;
 
 namespace NitroSharp;

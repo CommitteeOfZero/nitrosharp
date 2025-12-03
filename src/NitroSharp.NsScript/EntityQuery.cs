@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Buffers;
-using System.Diagnostics;
 using System.Linq;
-using NitroSharp.NsScript.Utilities;
-using NitroSharp.Utilities;
+using NitroSharp.Common;
 
 namespace NitroSharp.NsScript;
 
@@ -74,7 +72,6 @@ public enum EntityQueryScope
     AllAliases
 }
 
-[DebuggerDisplay("{Value}")]
 public readonly struct EntityPattern(string value, bool containsWildcard)
 {
     public readonly string Value = value;
@@ -127,6 +124,8 @@ public readonly struct EntityPattern(string value, bool containsWildcard)
 
     public static implicit operator EntityPattern(string value)
         => new(value, value.Contains('*'));
+
+    public override string ToString() => Value;
 }
 
 public readonly record struct EntityQueryPart(EntityPattern Pattern, EntityQueryScope Scope, bool ForceEndsQuery)

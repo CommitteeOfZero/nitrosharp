@@ -1,5 +1,5 @@
 ﻿using System;
-using NitroSharp.Utilities;
+using NitroSharp.Common;
 
 namespace NitroSharp.NsScript;
 
