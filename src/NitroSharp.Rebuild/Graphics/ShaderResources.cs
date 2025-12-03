@@ -560,14 +560,12 @@ internal sealed class EffectShaderResources : IDisposable
         _blit = createPipeline("blit", ResourceLayout);
         _grayscale = createPipeline("grayscale", ResourceLayout);
         _boxBlur = createPipeline("boxblur", ResourceLayout);
+        return;
 
         Pipeline createPipeline(string shaderSetName, ResourceLayout layout)
         {
             (Shader vs, Shader fs) = shaderLibrary.LoadShaderSet(shaderSetName);
-            var shaderSetDesc = new ShaderSetDescription(
-                [],
-                [vs, fs]
-            );
+            var shaderSetDesc = new ShaderSetDescription([], [vs, fs]);
             var pipelineDesc = new GraphicsPipelineDescription(
                 ShaderResources.PremultipliedAlpha,
                 DepthStencilStateDescription.Disabled,

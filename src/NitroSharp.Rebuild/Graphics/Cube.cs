@@ -25,8 +25,10 @@ internal struct CubeVertex(float x, float y, float z)
     );
 }
 
-internal static class CubeGeometry
+internal static class CubePrimitive
 {
+    public const uint VertexCount = 24;
+
     private static ReadOnlySpan<CubeVertex> Vertices => new[]
     {
         // Top
@@ -61,7 +63,7 @@ internal static class CubeGeometry
         new CubeVertex(-0.5f,-0.5f,0.5f)
     };
 
-    public static ushort[] Indices =>
+    public static ushort[] IndexPattern =>
     [
         0,1,2, 0,2,3,
         4,5,6, 4,6,7,

@@ -1,4 +1,6 @@
+using System;
 using System.Numerics;
+using System.Runtime.InteropServices;
 using JetBrains.Annotations;
 using Veldrid;
 
@@ -57,23 +59,25 @@ internal struct QuadVertexUV3
     );
 }
 
-internal struct QuadGeometry
+internal struct QuadPrimitive
 {
-    public static ushort[] Indices => [0, 1, 2, 2, 1, 3];
+    public const int VertexCount = 4;
+
+    public static ushort[] IndexPattern => [0, 1, 2, 2, 1, 3];
 
     public QuadVertex TopLeft;
     public QuadVertex TopRight;
     public QuadVertex BottomLeft;
     public QuadVertex BottomRight;
 
-    public static QuadGeometry Create(
+    public static QuadPrimitive Create(
         DesignSize size,
         in Matrix4x4 transform,
         Vector2 uvTopLeft,
         Vector2 uvBottomRight,
         in Vector4 color)
     {
-        QuadGeometry quad = default;
+        QuadPrimitive quad = default;
 
         ref QuadVertex topLeft = ref quad.TopLeft;
         topLeft.Position.X = 0.0f;
@@ -109,18 +113,26 @@ internal struct QuadGeometry
 
         return quad;
     }
+
+    public readonly ReadOnlySpan<QuadVertex> AsSpan()
+        => MemoryMarshal.CreateReadOnlySpan(in TopLeft, 4);
 }
 
-internal struct QuadGeometryUV3
+[UsedImplicitly(ImplicitUseTargetFlags.Members)]
+internal struct QuadPrimitiveUV3
 {
+    public const uint VertexCount = 4;
+
+    public static ushort[] IndexPattern => [0, 1, 2, 2, 1, 3];
+
     public QuadVertexUV3 TopLeft;
     public QuadVertexUV3 TopRight;
     public QuadVertexUV3 BottomLeft;
     public QuadVertexUV3 BottomRight;
 
-    public static QuadGeometryUV3 FromQuad(in QuadGeometry quad, uint layer)
+    public static QuadPrimitiveUV3 FromQuad(in QuadPrimitive quad, uint layer)
     {
-        return new QuadGeometryUV3
+        return new QuadPrimitiveUV3
         {
             TopLeft = vertex(quad.TopLeft, layer),
             TopRight = vertex(quad.TopRight, layer),
@@ -134,4 +146,7 @@ internal struct QuadGeometryUV3
             TexCoord = new Vector3(v.TexCoord, layer),
         };
     }
+
+    public readonly ReadOnlySpan<QuadVertexUV3> AsSpan()
+        => MemoryMarshal.CreateReadOnlySpan(in TopLeft, 4);
 }

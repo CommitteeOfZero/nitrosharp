@@ -240,7 +240,7 @@ internal sealed class GameContext
             _ => throw new Exception($"Backend {backend} is not currently supported.")
         };
 
-        Swapchain swapchain = device.ResourceFactory.CreateSwapchain(ref swapchainDesc);
+        Swapchain swapchain = device.ResourceFactory.CreateSwapchain(in swapchainDesc);
         return (device, swapchain);
     }
 

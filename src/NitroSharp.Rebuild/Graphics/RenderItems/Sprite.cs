@@ -38,7 +38,7 @@ internal class Sprite : RenderItem
 
         DesignSize size = GetSize(ctx);
         (Vector2 uvTopLeft, Vector2 uvBottomRight) = _texture.GetTexCoords(ctx);
-        var quad = QuadGeometry.Create(
+        var quad = QuadPrimitive.Create(
             size,
             ctx.GetTransformMatrix(Transform, size, useScaling: true, aligned: false),
             uvTopLeft,

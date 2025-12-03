@@ -3,15 +3,15 @@ using Veldrid;
 
 namespace NitroSharp.Graphics.Core;
 
-internal readonly struct MeshDescription(ushort[] indices, uint verticesPerMesh)
+internal readonly struct PrimitiveTemplate(ushort[] indices, uint verticesPerInstance)
 {
     public readonly ushort[] Indices = indices;
-    public readonly uint VerticesPerMesh = verticesPerMesh;
+    public readonly uint VerticesPerInstance = verticesPerInstance;
 
-    public uint IndicesPerMesh => (uint)Indices.Length;
+    public uint IndicesPerInstance => (uint)Indices.Length;
 }
 
-internal readonly ref struct Mesh<TVertex>(
+internal readonly ref struct PrimitiveSlice<TVertex>(
     GpuListSlice<TVertex> vertices,
     GpuListSlice<ushort> indices,
     uint indexBase)
@@ -22,32 +22,32 @@ internal readonly ref struct Mesh<TVertex>(
     public readonly uint IndexBase = indexBase;
 }
 
-internal sealed class MeshList<TVertex> : IDisposable
+internal sealed class PrimitiveBatch<TVertex> : IDisposable
     where TVertex : unmanaged
 {
-    private readonly MeshDescription _meshDesc;
+    private readonly PrimitiveTemplate _template;
     private readonly GpuList<TVertex> _vertices;
     private readonly GpuList<ushort> _indices;
 
-    public MeshList(
+    public PrimitiveBatch(
         GraphicsDevice graphicsDevice,
-        in MeshDescription meshDescription,
+        in PrimitiveTemplate primitiveTemplate,
         uint initialCapacity)
     {
-        _meshDesc = meshDescription;
+        _template = primitiveTemplate;
         _vertices = new GpuList<TVertex>(
             graphicsDevice,
             BufferUsage.VertexBuffer,
-            initialCapacity * meshDescription.VerticesPerMesh
+            initialCapacity * primitiveTemplate.VerticesPerInstance
         );
         _indices = new GpuList<ushort>(
             graphicsDevice,
             BufferUsage.IndexBuffer,
-            initialCapacity * meshDescription.IndicesPerMesh
+            initialCapacity * primitiveTemplate.IndicesPerInstance
         );
     }
 
-    private uint Count => _vertices.Count / _meshDesc.VerticesPerMesh;
+    private uint Count => _vertices.Count / _template.VerticesPerInstance;
 
     public void Begin()
     {
@@ -55,9 +55,9 @@ internal sealed class MeshList<TVertex> : IDisposable
         _indices.Begin();
     }
 
-    public Mesh<TVertex> Append(ReadOnlySpan<TVertex> vertices)
+    public PrimitiveSlice<TVertex> Append(ReadOnlySpan<TVertex> vertices)
     {
-        if (vertices.Length != _meshDesc.VerticesPerMesh)
+        if (vertices.Length != _template.VerticesPerInstance)
         {
             unexpectedLength();
         }
@@ -65,16 +65,16 @@ internal sealed class MeshList<TVertex> : IDisposable
         uint oldCount = Count;
         GpuListSlice<TVertex> dstVertices = _vertices.Append((uint)vertices.Length);
         vertices.CopyTo(dstVertices.Data);
-        GpuListSlice<ushort> dstIndices = _indices.Append(_meshDesc.IndicesPerMesh);
+        GpuListSlice<ushort> dstIndices = _indices.Append(_template.IndicesPerInstance);
         for (int i = 0; i < dstIndices.Data.Length; i++)
         {
-            dstIndices.Data[i] = (ushort)(_meshDesc.Indices[i] + oldCount * vertices.Length);
+            dstIndices.Data[i] = (ushort)(_template.Indices[i] + oldCount * vertices.Length);
         }
 
-        return new Mesh<TVertex>(
+        return new PrimitiveSlice<TVertex>(
             dstVertices,
             dstIndices,
-            oldCount * _meshDesc.IndicesPerMesh
+            oldCount * _template.IndicesPerInstance
         );
 
         static void unexpectedLength()
