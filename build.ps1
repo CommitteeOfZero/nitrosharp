@@ -4,7 +4,7 @@ param(
     [string]$PublishDir
 )
 
-$Framework = "net7.0"
+$Framework = "net10.0"
 $ExeName = "Game"
 
 if ($Runtime -eq "") {
@@ -30,9 +30,9 @@ if (!$msvc) {
 }
 
 $dotnetArgs = @(
-    "run", "--no-launch-profile",
+    "run", "-c", "Release", "--no-launch-profile",
     "--project", "./src/NitroSharp.ShaderCompiler/NitroSharp.ShaderCompiler.csproj",
-    "./src/NitroSharp/Graphics/Shaders", "./bin/obj/NitroSharp/Shaders.Generated"
+    "./src/NitroSharp.Rebuild/Graphics/Shaders", "./bin/obj/NitroSharp.Rebuild/Shaders.Generated"
 )
 dotnet($dotnetArgs)
 
