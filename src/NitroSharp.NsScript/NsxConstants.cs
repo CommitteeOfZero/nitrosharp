@@ -5,7 +5,7 @@ namespace NitroSharp.NsScript;
 internal static class NsxConstants
 {
     public const int NsxHeaderSize = 32;
-    public const int TableHeaderSize = 6;
+    public const int TableHeaderSize = 8;
 
     public static ReadOnlySpan<byte> NsxMagic => "NSX\0"u8;
     public static ReadOnlySpan<byte> SubTableMarker => "SUB\0"u8;

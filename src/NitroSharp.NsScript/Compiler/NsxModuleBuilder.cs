@@ -146,7 +146,7 @@ internal sealed class NsxModuleBuilder
         int impTableSize = NsxConstants.TableHeaderSize + impTableWriter.Position;
         int stringTableOffset = impTableOffset + impTableSize;
         int dbgTableOffset = stringTableOffset  + stringTableSize;
-        const int dbgEntrySize = sizeof(int) + sizeof(ushort) * 4;
+        const int dbgEntrySize = 2 * sizeof(int) + sizeof(ushort) * 2;
         int dbgTableSize = NsxConstants.TableHeaderSize + SourceMappings.Length * dbgEntrySize + 6;
         int codeStart = dbgTableOffset + dbgTableSize;
 
@@ -181,6 +181,7 @@ internal sealed class NsxModuleBuilder
         Span<byte> strTableHeader = stackalloc byte[NsxConstants.TableHeaderSize];
         fillTableHeader(strTableHeader, NsxConstants.StringTableMarker, strTableWriter.Position);
 
+        // Build the debug table (DBG)
         using var dbgTable = PooledBuffer<byte>.Allocate(dbgTableSize);
         var dbgWriter = new BufferWriter(dbgTable);
 
@@ -238,7 +239,7 @@ internal sealed class NsxModuleBuilder
         {
             var headerWriter = new BufferWriter(buffer);
             headerWriter.WriteBytes(tableMarker);
-            headerWriter.WriteUInt16LE((ushort)tableSize);
+            headerWriter.WriteInt32LE(tableSize);
         }
     }
 

@@ -30,8 +30,14 @@ namespace NitroSharp.NsScript.VM
         private readonly Dictionary<string, int> _subroutineMap;
 
         private NsxModule(
-            Stream stream, string name, DateTimeOffset sourceModificationTime,
-            int[] subroutineOffsets, byte[] rtiTable, string[] imports, int[] stringOffsets, SourceMapping[] sourceMappings)
+            Stream stream,
+            string name,
+            DateTimeOffset sourceModificationTime,
+            int[] subroutineOffsets,
+            byte[] rtiTable,
+            string[] imports,
+            int[] stringOffsets,
+            SourceMapping[] sourceMappings)
         {
             _stream = stream;
             Name = name;
@@ -171,26 +177,6 @@ namespace NitroSharp.NsScript.VM
 
         public static NsxModule LoadModule(Stream stream, string name)
         {
-            static unsafe TableHeader readTableHeader(Stream stream)
-            {
-                Span<byte> bytes = stackalloc byte[6];
-                stream.ReadExactly(bytes);
-
-                TableHeader header;
-                bytes[..4].CopyTo(new Span<byte>(header.Marker, 4));
-                header.TableSize = BinaryPrimitives.ReadUInt16LittleEndian(bytes[4..]);
-                return header;
-            }
-
-            static unsafe void assertMarker(ref TableHeader header, ReadOnlySpan<byte> expected)
-            {
-                fixed (byte* pMarker = &header.Marker[0])
-                {
-                    var bytes = new Span<byte>(pMarker, 4);
-                    Debug.Assert(bytes.SequenceEqual(expected));
-                }
-            }
-
             Span<byte> header = stackalloc byte[NsxConstants.NsxHeaderSize];
             stream.ReadExactly(header);
 
@@ -205,10 +191,6 @@ namespace NitroSharp.NsScript.VM
             assertMarker(ref subHeader, NsxConstants.SubTableMarker);
             var subTableBytes = new byte[subHeader.TableSize];
             stream.ReadExactly(subTableBytes);
-
-            var buf = new byte[16];
-            stream.ReadExactly(buf, offset: 0, count: 16);
-
             reader = new BufferReader(subTableBytes);
             int subCount = reader.ReadUInt16LE();
             var subroutineOffsets = new int[subCount];
@@ -277,6 +259,26 @@ namespace NitroSharp.NsScript.VM
                 stringOffsets,
                 sourceMappings
             );
+
+            static unsafe void assertMarker(ref TableHeader header, ReadOnlySpan<byte> expected)
+            {
+                fixed (byte* pMarker = &header.Marker[0])
+                {
+                    var bytes = new Span<byte>(pMarker, 4);
+                    Debug.Assert(bytes.SequenceEqual(expected));
+                }
+            }
+
+            static unsafe TableHeader readTableHeader(Stream stream)
+            {
+                Span<byte> bytes = stackalloc byte[NsxConstants.TableHeaderSize];
+                stream.ReadExactly(bytes);
+
+                TableHeader header;
+                bytes[..4].CopyTo(new Span<byte>(header.Marker, 4));
+                header.TableSize = BinaryPrimitives.ReadInt32LittleEndian(bytes[4..]);
+                return header;
+            }
         }
     }
 
