@@ -1,10 +1,10 @@
-﻿using NitroSharp.Utilities;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Globalization;
 using System.Runtime.CompilerServices;
+using NitroSharp.Common;
 using NitroSharp.NsScript.Utilities;
 
 namespace NitroSharp.NsScript.Syntax
@@ -109,6 +109,15 @@ namespace NitroSharp.NsScript.Syntax
             return tk.Kind == expectedKind ? tk : CreateMissingToken(expectedKind);
         }
 
+        private bool TryEatToken(SyntaxTokenKind expectedKind)
+        {
+            if (_currentToken.Kind != expectedKind) { return false; }
+
+            _tokenIndex++;
+            _currentToken = Tokens[_tokenIndex];
+            return true;
+        }
+
         private string GetText(in SyntaxToken token)
             => SourceText.GetText(token.TextSpan);
 
@@ -147,9 +156,8 @@ namespace NitroSharp.NsScript.Syntax
                 SkipOnCurrentLineUntil(tk => tk == SyntaxTokenKind.IncludeDirective
                     || SyntaxFacts.CanStartDeclaration(tk), report: true);
 
-                if (_currentToken.Kind == SyntaxTokenKind.IncludeDirective)
+                if (TryEatToken(SyntaxTokenKind.IncludeDirective))
                 {
-                    EatToken();
                     SyntaxToken filePath = EatToken(SyntaxTokenKind.StringLiteralOrQuotedIdentifier);
                     fileReferences.Add(new Spanned<string>(GetValueText(filePath), filePath.TextSpan));
                     if (SyntaxFacts.IsStatementTerminator(_currentToken.Kind))
@@ -405,7 +413,8 @@ namespace NitroSharp.NsScript.Syntax
         {
             Expression expr = ParseExpression();
 
-            bool isValid = SyntaxFacts.IsStatementExpression(expr);
+            bool isValid = SyntaxFacts.IsStatementExpression(expr)
+                && expr.Kind != SyntaxNodeKind.ErrorExpression;
             if (isValid)
             {
                 EatStatementTerminator();
@@ -771,48 +780,37 @@ namespace NitroSharp.NsScript.Syntax
             }
 
             EatToken(SyntaxTokenKind.OpenParen);
-            SyntaxTokenKind tk = _currentToken.Kind;
-            if (tk == SyntaxTokenKind.CloseParen)
+            if (TryEatToken(SyntaxTokenKind.CloseParen))
             {
-                EatToken();
                 return ImmutableArray<Expression>.Empty;
             }
 
             var arguments = ImmutableArray.CreateBuilder<Expression>();
+            SyntaxTokenKind tk;
             while ((tk = _currentToken.Kind) is not (SyntaxTokenKind.CloseParen
                    or SyntaxTokenKind.Semicolon
                    or SyntaxTokenKind.EndOfFile))
             {
-                switch (tk)
+                if (SyntaxFacts.CanStartExpressionTerm(tk))
                 {
-                    case SyntaxTokenKind.NumericLiteral:
-                    case SyntaxTokenKind.StringLiteralOrQuotedIdentifier:
-                    case SyntaxTokenKind.Identifier:
-                    case SyntaxTokenKind.NullKeyword:
-                    case SyntaxTokenKind.TrueKeyword:
-                    case SyntaxTokenKind.FalseKeyword:
-                        Expression arg = ParseExpression();
-                        arguments.Add(arg);
-                        break;
-
-                    case SyntaxTokenKind.Comma:
-                    case SyntaxTokenKind.Dot:
-                    // Ampersand? Why?
-                    case SyntaxTokenKind.Ampersand:
-                        EatToken();
-                        break;
-
-                    default:
-                        Expression expr = ParseExpression();
-                        arguments.Add(expr);
-                        break;
+                    Expression arg = ParseExpression();
+                    arguments.Add(arg);
+                }
+                else if (tk is SyntaxTokenKind.Comma or SyntaxTokenKind.Dot
+                         or SyntaxTokenKind.Ampersand)
+                {
+                    EatToken();
+                }
+                else
+                {
+                    EatStrayToken();
                 }
 
                 // Bail if the current line ends with an error node - assume it ends the whole statement
                 if (arguments is [.., { Kind: SyntaxNodeKind.ErrorExpression } errorArg]
                     && GetCurrentLine().Start >= errorArg.Span.End)
                 {
-                    break;
+                    return arguments.ToImmutable();
                 }
             }
 
@@ -829,9 +827,8 @@ namespace NitroSharp.NsScript.Syntax
 
             Statement ifTrue = ParseStatement();
             Statement? ifFalse = null;
-            if (_currentToken.Kind == SyntaxTokenKind.ElseKeyword)
+            if (TryEatToken(SyntaxTokenKind.ElseKeyword))
             {
-                EatToken();
                 ifFalse = ParseStatement();
             }
 
@@ -912,19 +909,15 @@ namespace NitroSharp.NsScript.Syntax
         // or '{filepath}->{symbolName}' (e.g. 'nss/extra_gallery.nss->extra_gallery_main').
         private (Spanned<string>? filePath, Spanned<string> symbolName) ParseSymbolPath()
         {
-            if (_currentToken.Kind == SyntaxTokenKind.AtArrow)
-            {
-                EatToken();
-            }
+            TryEatToken(SyntaxTokenKind.AtArrow);
 
             Spanned<string>? filePath = null;
             Spanned<string> symbolName;
             Spanned<string> part = ConsumeTextUntil(
                 tk => tk is SyntaxTokenKind.Semicolon or SyntaxTokenKind.Arrow
             );
-            if (_currentToken.Kind == SyntaxTokenKind.Arrow)
+            if (TryEatToken(SyntaxTokenKind.Arrow))
             {
-                EatToken();
                 filePath = part;
                 symbolName = ConsumeTextUntil(tk => tk == SyntaxTokenKind.Semicolon);
             }
