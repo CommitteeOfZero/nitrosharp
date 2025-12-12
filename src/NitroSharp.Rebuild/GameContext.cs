@@ -18,8 +18,6 @@ using NitroSharp.Text;
 using Veldrid;
 using Veldrid.StartupUtilities;
 using ZeroLog;
-using ZeroLog.Appenders;
-using ZeroLog.Configuration;
 
 [assembly: InternalsVisibleTo("NitroSharp.Tests")]
 
@@ -44,6 +42,7 @@ internal sealed class GameContext
     internal Builtins Builtins { get; private set; }
     internal required World World { get; init; }
     internal Stopwatch Clock { get; } = Stopwatch.StartNew();
+    internal required Log RootLog { get; init; }
     internal CancellationTokenSource ShutdownSignal { get; } = new();
 
     internal float DeltaTime { get; private set; }
@@ -97,7 +96,7 @@ internal sealed class GameContext
 
     public static async Task<GameContext> Create(GameWindow window, Config config, GameProfile profile)
     {
-        Log log = CreateLogger();
+        Log log = LogManager.GetLogger("root");
         log.Info("**** Start apprication ****");
         log.Info(
             $"""
@@ -153,17 +152,11 @@ internal sealed class GameContext
             RenderContext = renderContext,
             InputContext = inputContext,
             VM = vm,
-            World = world
+            World = world,
+            RootLog = log
         };
         ctx.Builtins = new Builtins(ctx);
         return ctx;
-    }
-
-    private static Log CreateLogger()
-    {
-        var consoleAppender = new ConsoleAppender { Formatter = new LogFormatter(), ColorOutput = true };
-        LogManager.Initialize(new ZeroLogConfiguration { RootLogger = { Appenders = { consoleAppender } } });
-        return LogManager.GetLogger("main");
     }
 
     private static async Task<(GlyphRasterizer, FontSettings)> LoadFonts(GameProfile gameProfile)
@@ -182,8 +175,8 @@ internal sealed class GameContext
 
         if (OperatingSystem.IsWindows())
         {
-            string windir = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
-            await glyphRasterizer.AddFontAsync($"{windir}\\Fonts\\msgothic.ttc");
+            string winDir = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+            await glyphRasterizer.AddFontAsync($@"{winDir}\Fonts\msgothic.ttc");
         }
 
         if (Directory.Exists("Fonts"))
@@ -246,15 +239,9 @@ internal sealed class GameContext
 
     private static ContentManager CreateContentManager(GraphicsDevice device, GameProfile gameProfile)
     {
-        TextureLoader textureLoader;
-        if (OperatingSystem.IsWindows())
-        {
-            textureLoader = new WicTextureLoader(device);
-        }
-        else
-        {
-            textureLoader = new FFmpegTextureLoader(device);
-        }
+        TextureLoader textureLoader = OperatingSystem.IsWindows()
+            ? new WicTextureLoader(device)
+            : new FFmpegTextureLoader(device);
 
         var content = new ContentManager(gameProfile.ContentRoot, textureLoader, gameProfile.MountPoints);
         return content;
@@ -331,7 +318,12 @@ internal sealed class GameContext
         return (vm, mainThread);
     }
 
-    private static Process CreateProcess(World world, NsScriptVM vm, string modulePath, GameProfile profile, FontSettings fontSettings)
+    private static Process CreateProcess(
+        World world,
+        NsScriptVM vm,
+        string modulePath,
+        GameProfile profile,
+        FontSettings fontSettings)
     {
         string fullModulePath = Path.Combine(profile.ScriptRoot, modulePath);
         var processName = EntityName.Parse(Path.GetFileNameWithoutExtension(modulePath));

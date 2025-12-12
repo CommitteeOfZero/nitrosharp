@@ -17,7 +17,6 @@
     <ProjectReference Include="..\NitroSharp.NsScript\NitroSharp.NsScript.csproj" />
 
     <PackageReference Include="JetBrains.Annotations" Version="2025.2.2" PrivateAssets="All" />
-    <PackageReference Include="ZeroLog" Version="2.3.0" />
     <PackageReference Include="System.IO.Pipelines" Version="10.0.0" />
     <PackageReference Include="Microsoft.VisualStudio.Threading" Version="17.14.15" />
     <PackageReference Include="Sprintf.NET" Version="2.0.0" />

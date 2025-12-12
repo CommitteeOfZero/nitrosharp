@@ -1,58 +1,41 @@
 ﻿using System;
-using System.Globalization;
-using NitroSharp.Common;
-using ZeroLog;
 using ZeroLog.Formatting;
 
 namespace NitroSharp;
 
-internal sealed class LogFormatter : Formatter
+internal sealed class LogFormatter(string prefixPattern) : Formatter
 {
+    private readonly PatternWriter _prefixWriter = new(prefixPattern)
+    {
+        LogLevels = new PatternWriter.LogLevelNames("TRC", "DBG", "INF", "WRN", "ERR", "CRI")
+    };
+
     protected override void WriteMessage(LoggedMessage message)
     {
-        Write("[");
-        Span<char> buffer = GetRemainingBuffer();
-        DateTime timestamp = message.Timestamp.ToLocalTime();
-        if (timestamp.TryFormat(buffer, out int charsWritten, "HH:mm:ss", CultureInfo.InvariantCulture))
-        {
-            AdvanceBy(charsWritten);
-            Write(" ");
-        }
+        Write(message, _prefixWriter);
 
-        string level = message.Level switch
-        {
-            LogLevel.Trace => "TRC",
-            LogLevel.Debug => "DBG",
-            LogLevel.Info => "INF",
-            LogLevel.Warn => "WRN",
-            LogLevel.Error => "ERR",
-            LogLevel.Fatal => "FATAL",
-            LogLevel.None => "NONE",
-            _ => throw new ArgumentOutOfRangeException()
-        };
-
-        Write(level);
-        Write("] ");
-
-        int indent = 12 + level.Length;
+        int indent = GetOutput().Length;
         bool isFirstLine = true;
-        foreach (ReadOnlySpan<char> line in message.Message.Split('\n'))
+        ReadOnlySpan<char> messageText = message.Message;
+        foreach (Range line in messageText.Split('\n'))
         {
             if (isFirstLine)
             {
-                Write(line);
                 isFirstLine = false;
             }
             else
             {
-                for (int i = 0; i < indent; i++)
-                {
-                    Write(" ");
-                }
-                Write(line);
+                GetRemainingBuffer()[..indent].Fill(' ');
+                AdvanceBy(indent);
             }
 
+            Write(messageText[line]);
             WriteLine();
+        }
+
+        if (message.Exception is { } exception)
+        {
+            WriteLine(exception.ToString().AsSpan());
         }
     }
 }
