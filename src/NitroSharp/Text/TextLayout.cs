@@ -432,26 +432,7 @@ namespace NitroSharp.Text
         public bool IsWhitespace { get; init; }
     }
 
-    internal readonly ref struct LineEnumerable
-    {
-        private readonly TextLayoutContext _context;
-        private readonly ReadOnlySpan<TextRun> _textRuns;
-        private readonly float _caretStartX;
-
-        public LineEnumerable(
-            in TextLayoutContext context,
-            ReadOnlySpan<TextRun> textRuns,
-            float caretStartX)
-        {
-            _context = context;
-            _textRuns = textRuns;
-            _caretStartX = caretStartX;
-        }
-
-        public LineEnumerator GetEnumerator() => new(_context, _textRuns, _caretStartX);
-    }
-
-    internal ref struct LineEnumerator
+    internal ref struct LineEnumerable
     {
         private readonly TextLayoutContext _context;
         private readonly float _caretStartX;
@@ -459,7 +440,7 @@ namespace NitroSharp.Text
         private Word? _peekedWord;
         private bool _firstLine;
 
-        public LineEnumerator(
+        public LineEnumerable(
             in TextLayoutContext context,
             ReadOnlySpan<TextRun> textRuns,
             float caretStartX)
@@ -473,6 +454,8 @@ namespace NitroSharp.Text
         }
 
         public Line Current { get; private set; }
+
+        public LineEnumerable GetEnumerator() => this;
 
         public bool MoveNext()
         {
