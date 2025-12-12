@@ -22,8 +22,4 @@
   <Project Path="src/NitroSharp.ShaderCompiler/NitroSharp.ShaderCompiler.csproj" />
   <Project Path="src/NitroSharp.SourceGenerators/NitroSharp.SourceGenerators.csproj" />
   <Project Path="src/NitroSharp.Tests/NitroSharp.Tests.csproj" />
-  <Project Path="src/NitroSharp/NitroSharp.csproj" />
-  <Properties Name="Performance">
-    <Property Name="HasPerformanceSessions" Value="true" />
-  </Properties>
 </Solution>
