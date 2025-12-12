@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using NitroSharp.NsScript.Primitives;
 using NitroSharp.NsScript.Utilities;
+using ZeroLog;
 
 namespace NitroSharp.NsScript.VM;
 
@@ -17,6 +18,7 @@ public readonly partial struct GlobalsDump
 
 public sealed class NsScriptVM
 {
+    private readonly Log _log;
     private readonly NsxModuleLocator _moduleLocator;
     private readonly Dictionary<string, NsxModule> _loadedModules;
     private readonly BuiltInFunctionDispatcher _builtInCallDispatcher;
@@ -26,6 +28,7 @@ public sealed class NsScriptVM
 
     public NsScriptVM(NsxModuleLocator moduleLocator, Stream globalsLookupTableStream)
     {
+        _log = LogManager.GetLogger("VM");
         _loadedModules = new Dictionary<string, NsxModule>(16);
         _moduleLocator = moduleLocator;
         _variables = new ConstantValue[5000];
@@ -367,8 +370,12 @@ public sealed class NsScriptVM
                 case Opcode.Call:
                     ushort subroutineToken = program.DecodeToken();
                     frame.ProgramCounter = program.Position;
-                    var newFrame = CreateEntryPointCallFrame(frame.Module, subroutineToken);
+                    CallFrame newFrame = CreateEntryPointCallFrame(frame.Module, subroutineToken);
                     thread.CallFrameStack.Push(newFrame);
+                    if (_log.IsDebugEnabled)
+                    {
+                        logCall(newFrame);
+                    }
                     return TickResult.Ok;
                 case Opcode.CallFar:
                     newFrame = externalCall(ref program);
@@ -450,18 +457,16 @@ public sealed class NsScriptVM
 
                         case BuiltInFunction.log:
                             ConstantValue arg = stack.Pop();
-                            Console.WriteLine($"[VM]: {arg.ConvertToString()}");
+                            _log.Info(arg.ConvertToString());
                             break;
                         case BuiltInFunction.fail:
-                            string subName = thisModule
-                                .GetSubroutineRuntimeInfo(frame.SubroutineIndex).SubroutineName;
-                            Console.WriteLine($"{subName} + {program.Position - 1}: test failed.");
+                            string subName = frame.RuntimeInfo.SubroutineName;
+                            _log.Error($"{subName} + {program.Position - 1}: test failed.");
                             break;
                         case BuiltInFunction.fail_msg:
                             ConstantValue message = stack.Pop();
-                            subName = thisModule.GetSubroutineRuntimeInfo(frame.SubroutineIndex)
-                                .SubroutineName;
-                            Console.WriteLine($"{subName} + {program.Position - 1}: {message.ToString()}.");
+                            subName = frame.RuntimeInfo.SubroutineName;
+                            _log.Error($"{subName} + {program.Position - 1}: {message.ToString()}.");
                             break;
                     }
                     stack.Push(result ?? ConstantValue.Null);
@@ -470,7 +475,7 @@ public sealed class NsScriptVM
 
                 case Opcode.ActivateBlock:
                     ushort blockId = program.DecodeToken();
-                    (string box, string textName) = frame.SubroutineRuntimeInfo.DialogueBlockInfos[blockId];
+                    (string box, string textName) = frame.RuntimeInfo.DialogueBlockInfos[blockId];
                     SystemVariables.CurrentDialogueBox = ConstantValue.String(box);
                     SystemVariables.CurrentDialogueBlock = ConstantValue.String($"@{textName}");
                     break;
@@ -513,6 +518,13 @@ public sealed class NsScriptVM
                 BuiltInType.String => ConstantValue.String(module.GetString(imm.StringToken)),
                 _ => throw ThrowHelper.UnexpectedValueOf<BuiltInType>()
             };
+        }
+
+        void logCall(in CallFrame callFrame)
+        {
+            string moduleName = callFrame.Module.Name;
+            string routineName = callFrame.RuntimeInfo.SubroutineName;
+            _log.Debug($"{moduleName}::{routineName}");
         }
     }
 
