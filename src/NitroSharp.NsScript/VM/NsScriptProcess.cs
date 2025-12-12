@@ -2,9 +2,17 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using NitroSharp.Utilities;
 
 namespace NitroSharp.NsScript.VM;
+
+[Persistable]
+public readonly partial struct NsScriptProcessDump
+{
+    internal uint Id { get; init; }
+    internal double ClockBaseMs { get; init; }
+    internal NsScriptThreadDump[] Threads { get; init; }
+    internal uint MainThread { get; init; }
+}
 
 //
 // public sealed class NsScriptProcess
@@ -160,12 +168,3 @@ namespace NitroSharp.NsScript.VM;
 //         };
 //     }
 // }
-
-[Persistable]
-public readonly partial struct NsScriptProcessDump
-{
-    internal uint Id { get; init; }
-    internal double ClockBaseMs { get; init; }
-    internal NsScriptThreadDump[] Threads { get; init; }
-    internal uint MainThread { get; init; }
-}

@@ -1,7 +1,5 @@
 ﻿using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
-using System.Threading;
 using NitroSharp.NsScript;
 using NitroSharp.NsScript.VM;
 using NitroSharp.Text;
@@ -16,13 +14,13 @@ public class QueryExecutionTests
 
     private static IEnumerable<(string, string[])> GetGoodQueries()
     {
-        yield return ("foo1", new[] { "foo1" });
-        yield return ("foo1/bar", new[] { "foo1/bar" });
-        yield return ("foo1/bar", new[] { "foo1/bar" });
-        yield return ("*", new[] { "foo1", "foo2" });
-        yield return ("*/*", new[] { "foo1/bar", "foo2/bar" });
-        yield return ("@*", new[] { "foo1", "foo2/bar" });
-        yield return ("foo1/@*", new[] { "foo1", "foo2/bar" });
+        yield return ("foo1", ["foo1"]);
+        yield return ("foo1/bar", ["foo1/bar"]);
+        yield return ("foo1/bar", ["foo1/bar"]);
+        yield return ("*", ["foo1", "foo2"]);
+        yield return ("*/*", ["foo1/bar", "foo2/bar"]);
+        yield return ("@*", ["foo1", "foo2/bar"]);
+        yield return ("foo1/@*", ["foo1", "foo2/bar"]);
         //yield return ("@*/@*", new[] { "foo1", "foo2/bar" });
     }
 

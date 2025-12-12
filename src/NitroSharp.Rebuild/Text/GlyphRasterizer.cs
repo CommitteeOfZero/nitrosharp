@@ -11,760 +11,751 @@ using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 using FreeTypeBindings;
+using JetBrains.Annotations;
 using NitroSharp.Graphics.Core;
 using Veldrid;
 
-namespace NitroSharp.Text
+namespace NitroSharp.Text;
+
+internal sealed class GlyphRasterizer : IDisposable
 {
-    internal sealed class GlyphRasterizer : IDisposable
+    private readonly FontContext _metricsContext;
+    private readonly FontContext[] _contexts;
+    private readonly Channel<FontContext> _freeContexts;
+    private readonly Dictionary<FontFaceKey, FontData> _fontDatas;
+    private readonly Channel<RasterBatch> _rasterBatches;
+    private readonly ConcurrentBag<Exception> _exceptions;
+    private volatile int _pendingBatches;
+
+    [StructLayout(LayoutKind.Auto)]
+    private readonly record struct RasterResult(uint GlyphIndex, RasterizedGlyph Glyph)
     {
-        private readonly FontContext _metricsContext;
-        private readonly FontContext[] _contexts;
-        private readonly Channel<FontContext> _freeContexts;
-        private readonly Dictionary<FontFaceKey, FontData> _fontDatas;
-        private readonly Channel<RasterBatch> _rasterBatches;
-        private readonly ConcurrentBag<Exception> _exceptions;
-        private volatile int _pendingBatches;
+        public readonly RasterizedGlyph Glyph = Glyph;
+    }
 
-        [StructLayout(LayoutKind.Auto)]
-        private readonly record struct RasterResult(uint GlyphIndex, RasterizedGlyph Glyph)
-        {
-            public readonly RasterizedGlyph Glyph = Glyph;
-        }
+    private readonly record struct RasterBatch(
+        FontFaceKey Font,
+        PtFontSize FontSize,
+        RasterResult[] Results,
+        RasterResult[]? OutlineResults
+    );
 
-        private readonly record struct RasterBatch(
-            FontFaceKey Font,
-            PtFontSize FontSize,
-            RasterResult[] Results,
-            RasterResult[]? OutlineResults
+    public GlyphRasterizer()
+    {
+        _metricsContext = new FontContext();
+        _contexts = new FontContext[Environment.ProcessorCount];
+        _fontDatas = new Dictionary<FontFaceKey, FontData>();
+        _exceptions = [];
+        _freeContexts = Channel.CreateUnbounded<FontContext>(
+            new UnboundedChannelOptions
+            {
+                SingleReader = false,
+                SingleWriter = false
+            }
+        );
+        _rasterBatches = Channel.CreateUnbounded<RasterBatch>(
+            new UnboundedChannelOptions
+            {
+                SingleReader = true,
+                SingleWriter = true
+            }
         );
 
-        public GlyphRasterizer()
+        ChannelWriter<FontContext> ctxWriter = _freeContexts.Writer;
+        for (int i = 0; i < _contexts.Length; i++)
         {
-            _metricsContext = new FontContext();
-            _contexts = new FontContext[Environment.ProcessorCount];
-            _fontDatas = new Dictionary<FontFaceKey, FontData>();
-            _exceptions = new ConcurrentBag<Exception>();
-            _freeContexts = Channel.CreateUnbounded<FontContext>(
-                new UnboundedChannelOptions
-                {
-                    SingleReader = false,
-                    SingleWriter = false
-                }
-            );
-            _rasterBatches = Channel.CreateUnbounded<RasterBatch>(
-                new UnboundedChannelOptions
-                {
-                    SingleReader = true,
-                    SingleWriter = true
-                }
-            );
+            var ctx = new FontContext();
+            _contexts[i] = ctx;
+            ctxWriter.TryWrite(ctx);
+        }
+    }
 
-            ChannelWriter<FontContext> ctxWriter = _freeContexts.Writer;
-            for (int i = 0; i < _contexts.Length; i++)
+    public void AddFonts(IEnumerable<string> paths)
+    {
+        foreach (string path in paths)
+        {
+            AddFont(path);
+        }
+    }
+
+    private void AddFont(string path)
+    {
+        if (_metricsContext.AddFont(path, out ImmutableArray<(FontFaceKey, FontFace)> faces))
+        {
+            foreach (FontContext ctx in _contexts)
             {
-                var ctx = new FontContext();
-                _contexts[i] = ctx;
-                ctxWriter.TryWrite(ctx);
+                ctx.AddFont(path, out _);
+            }
+            foreach ((FontFaceKey key, FontFace face) in faces)
+            {
+                _fontDatas.TryAdd(key, new FontData(_metricsContext, face));
             }
         }
+    }
 
-        public void AddFonts(IEnumerable<string> paths)
+    public async Task AddFontsAsync(IEnumerable<string> paths)
+    {
+        foreach (string path in paths)
         {
-            foreach (string path in paths)
-            {
-                AddFont(path);
-            }
+            await AddFontAsync(path);
         }
+    }
 
-        private void AddFont(string path)
+    public async Task AddFontAsync(string path)
+    {
+        if (_metricsContext.AddFont(path, out ImmutableArray<(FontFaceKey, FontFace)> faces))
         {
-            if (_metricsContext.AddFont(path, out ImmutableArray<(FontFaceKey, FontFace)> faces))
+            if (_contexts.Length >= 4)
+            {
+                await loadAsync();
+            }
+            else
             {
                 foreach (FontContext ctx in _contexts)
                 {
                     ctx.AddFont(path, out _);
                 }
-                foreach ((FontFaceKey key, FontFace face) in faces)
-                {
-                    _fontDatas.TryAdd(key, new FontData(_metricsContext, face));
-                }
+            }
+            foreach ((FontFaceKey key, FontFace face) in faces)
+            {
+                _fontDatas.TryAdd(key, new FontData(_metricsContext, face));
             }
         }
 
-        public async Task AddFontsAsync(IEnumerable<string> paths)
+        return;
+
+        Task loadAsync()
+            => Task.WhenAll(_contexts.Select(x => Task.Run(() => x.AddFont(path, out _))));
+    }
+
+    public FontData GetFontData(FontFaceKey fontFaceKey)
+    {
+        return _fontDatas.TryGetValue(fontFaceKey, out FontData? data)
+            ? data : notFound(fontFaceKey);
+
+        static FontData notFound(FontFaceKey key)
         {
-            foreach (string path in paths)
-            {
-                await AddFontAsync(path);
-            }
+            throw new ArgumentException($"Font '{key}' has not been loaded.");
         }
+    }
 
-        public async Task AddFontAsync(string path)
+    public void RequestGlyphs(
+        FontFaceKey font,
+        PtFontSize fontSize,
+        ReadOnlySpan<PositionedGlyph> glyphs,
+        TextureCache textureCache,
+        bool generateOutlines)
+    {
+        List<uint>? newGlyphIndices = null;
+        FontData fontData = GetFontData(font);
+        foreach (ref readonly PositionedGlyph glyph in glyphs)
         {
-            Task loadAsync()
-                => Task.WhenAll(_contexts.Select(x => Task.Run(() => x.AddFont(path, out _))));
-
-            if (_metricsContext.AddFont(path, out ImmutableArray<(FontFaceKey, FontFace)> faces))
+            uint index = glyph.Index;
+            var key = new GlyphCacheKey(index, fontSize);
+            if (fontData.TryGetCachedGlyph(key, out GlyphCacheEntry cacheEntry))
             {
-                if (_contexts.Length >= 4)
+                if (!cacheEntry.IsRegular) { continue; }
+                if (textureCache.RequestEntry(cacheEntry.TextureCacheHandle))
                 {
-                    await loadAsync();
-                }
-                else
-                {
-                    foreach (FontContext ctx in _contexts)
+                    TextureCacheHandle outlineHandle = cacheEntry.OutlineTextureCacheHandle;
+                    if ((!outlineHandle.IsValid && !generateOutlines) ||
+                        textureCache.RequestEntry(cacheEntry.OutlineTextureCacheHandle))
                     {
-                        ctx.AddFont(path, out _);
-                    }
-                }
-                foreach ((FontFaceKey key, FontFace face) in faces)
-                {
-                    _fontDatas.TryAdd(key, new FontData(_metricsContext, face));
-                }
-            }
-        }
-
-        public FontData GetFontData(FontFaceKey fontFaceKey)
-        {
-            static FontData notFound(FontFaceKey key)
-            {
-                throw new ArgumentException($"Font '{key}' has not been loaded.");
-            }
-
-            return _fontDatas.TryGetValue(fontFaceKey, out FontData? data)
-                ? data : notFound(fontFaceKey);
-        }
-
-        public void RequestGlyphs(
-            FontFaceKey font,
-            PtFontSize fontSize,
-            ReadOnlySpan<PositionedGlyph> glyphs,
-            TextureCache textureCache,
-            bool generateOutlines)
-        {
-            List<uint>? newGlyphIndices = null;
-            FontData fontData = GetFontData(font);
-            foreach (ref readonly PositionedGlyph glyph in glyphs)
-            {
-                uint index = glyph.Index;
-                var key = new GlyphCacheKey(index, fontSize);
-                if (fontData.TryGetCachedGlyph(key, out GlyphCacheEntry cacheEntry))
-                {
-                    if (!cacheEntry.IsRegular) { continue; }
-                    if (textureCache.RequestEntry(cacheEntry.TextureCacheHandle))
-                    {
-                        TextureCacheHandle outlineHandle = cacheEntry.OutlineTextureCacheHandle;
-                        if ((!outlineHandle.IsValid && !generateOutlines) ||
-                            textureCache.RequestEntry(cacheEntry.OutlineTextureCacheHandle))
-                        {
-                            continue;
-                        }
-                    }
-                }
-                if (index == 0)
-                {
-                    fontData.UpsertCachedGlyph(key, GlyphCacheEntry.Blank());
-                }
-                else
-                {
-                    fontData.UpsertCachedGlyph(key, GlyphCacheEntry.Pending());
-                    newGlyphIndices ??= new List<uint>();
-                    newGlyphIndices.Add(index);
-                }
-            }
-
-            if (newGlyphIndices is not null)
-            {
-                Interlocked.Increment(ref _pendingBatches);
-                _ = Task.Run(() => RasterizeBatch(font, fontSize, newGlyphIndices, generateOutlines))
-                    .ContinueWith(t => _exceptions.Add(t.Exception!),
-                        CancellationToken.None,
-                        TaskContinuationOptions.OnlyOnFaulted,
-                        TaskScheduler.Default);
-            }
-        }
-
-        public ValueTask ResolveGlyphs(TextureCache textureCache)
-        {
-            return _pendingBatches == 0
-                ? default
-                : new ValueTask(DoResolveGlyphs(textureCache));
-        }
-
-        private async Task DoResolveGlyphs(TextureCache textureCache)
-        {
-            if (!_exceptions.IsEmpty)
-            {
-                Exception[] exceptions = _exceptions.ToArray();
-                throw exceptions.Length == 1
-                    ? exceptions[0]
-                    : new AggregateException(exceptions);
-            }
-
-            ChannelReader<RasterBatch> batches = _rasterBatches.Reader;
-            while (_pendingBatches > 0)
-            {
-                RasterBatch batch = await batches.ReadAsync();
-                Interlocked.Decrement(ref _pendingBatches);
-                uploadBatch(batch);
-            }
-
-            void uploadBatch(RasterBatch batch)
-            {
-                FontData fontData = GetFontData(batch.Font);
-                RasterResult[] results = batch.Results;
-                for (uint i = 0; i < results.Length; i++)
-                {
-                    ref readonly RasterResult rasterRes = ref results[i];
-                    ref readonly RasterizedGlyph glyph = ref rasterRes.Glyph;
-                    var key = new GlyphCacheKey(rasterRes.GlyphIndex, batch.FontSize);
-                    if (glyph.Width == 0 || glyph.Height == 0)
-                    {
-                        fontData.UpsertCachedGlyph(key, GlyphCacheEntry.Blank());
                         continue;
                     }
-                    var size = new TextureSizeU(glyph.Width, glyph.Height);
-                    var handle = TextureCacheHandle.Invalid;
-                    textureCache.Update<byte>(ref handle, PixelFormat.R8_UNorm, size, glyph.Bytes);
-
-                    var outlineHandle = TextureCacheHandle.Invalid;
-                    if (batch.OutlineResults is not null)
-                    {
-                        rasterRes = ref batch.OutlineResults[i];
-                        ref readonly RasterizedGlyph outline = ref rasterRes.Glyph;
-                        Debug.Assert(outline.Width != 0 && outline.Height != 0);
-                        size = new TextureSizeU(outline.Width, outline.Height);
-                        float horOffset = outline.Left;
-                        float verOffset = -(outline.Height - glyph.Height) - outline.Bottom;
-                        outlineHandle = TextureCacheHandle.Invalid;
-                        textureCache.Update<byte>(
-                            ref outlineHandle,
-                            PixelFormat.R8_G8_B8_A8_UNorm,
-                            size,
-                            outline.Bytes,
-                            userData: new Vector3(new Vector2(horOffset, verOffset), 0)
-                        );
-                    }
-
-                    fontData.UpsertCachedGlyph(key, GlyphCacheEntry.Regular(handle, outlineHandle));
                 }
+            }
+            if (index == 0)
+            {
+                fontData.UpsertCachedGlyph(key, GlyphCacheEntry.Blank());
+            }
+            else
+            {
+                fontData.UpsertCachedGlyph(key, GlyphCacheEntry.Pending());
+                newGlyphIndices ??= [];
+                newGlyphIndices.Add(index);
             }
         }
 
-        private unsafe struct RgbaPixel
+        if (newGlyphIndices is not null)
         {
-            public fixed byte Channels[4];
+            Interlocked.Increment(ref _pendingBatches);
+            _ = Task.Run(() => RasterizeBatch(font, fontSize, newGlyphIndices, generateOutlines))
+                .ContinueWith(t => _exceptions.Add(t.Exception!),
+                    CancellationToken.None,
+                    TaskContinuationOptions.OnlyOnFaulted,
+                    TaskScheduler.Default);
+        }
+    }
+
+    public ValueTask ResolveGlyphs(TextureCache textureCache)
+    {
+        return _pendingBatches == 0
+            ? default
+            : new ValueTask(DoResolveGlyphs(textureCache));
+    }
+
+    private async Task DoResolveGlyphs(TextureCache textureCache)
+    {
+        if (!_exceptions.IsEmpty)
+        {
+            Exception[] exceptions = _exceptions.ToArray();
+            throw exceptions.Length == 1
+                ? exceptions[0]
+                : new AggregateException(exceptions);
         }
 
-        private async Task RasterizeBatch(
-            FontFaceKey font,
-            PtFontSize fontSize,
-            List<uint> indices,
-            bool rasterizeOutlines)
+        ChannelReader<RasterBatch> batches = _rasterBatches.Reader;
+        while (_pendingBatches > 0)
         {
-            async Task<RasterResult> rasterizeGlyph(uint index)
-            {
-                FontContext ctx = await _freeContexts.Reader.ReadAsync();
-                FontFace face = ctx.GetFontFace(font)!;
-                RasterizedGlyph g = ctx.RasterizeGlyph(face, fontSize, index);
-                _freeContexts.Writer.TryWrite(ctx);
-                return new RasterResult(index, g);
-            }
+            RasterBatch batch = await batches.ReadAsync();
+            Interlocked.Decrement(ref _pendingBatches);
+            uploadBatch(batch);
+        }
 
-            async Task<RasterResult> produceOutline(uint glyphIndex)
-            {
-                NativeBitmapGlyph[] strokes = await Task.WhenAll(
-                    Task.Run(() => stroke(glyphIndex, radius: 1)),
-                    Task.Run(() => stroke(glyphIndex, radius: 2)),
-                    Task.Run(() => stroke(glyphIndex, radius: 2)),
-                    Task.Run(() => stroke(glyphIndex, radius: 2))
-                );
+        return;
 
-                RasterizedGlyph outline = mergeStrokes(strokes);
-                foreach (NativeBitmapGlyph g in strokes)
+        void uploadBatch(RasterBatch batch)
+        {
+            FontData fontData = GetFontData(batch.Font);
+            RasterResult[] results = batch.Results;
+            for (uint i = 0; i < results.Length; i++)
+            {
+                ref readonly RasterResult rasterRes = ref results[i];
+                ref readonly RasterizedGlyph glyph = ref rasterRes.Glyph;
+                var key = new GlyphCacheKey(rasterRes.GlyphIndex, batch.FontSize);
+                if (glyph.Width == 0 || glyph.Height == 0)
                 {
-                    g.Dispose();
+                    fontData.UpsertCachedGlyph(key, GlyphCacheEntry.Blank());
+                    continue;
                 }
-                return new RasterResult(glyphIndex, outline);
-            }
+                var size = new TextureSizeU(glyph.Width, glyph.Height);
+                var handle = TextureCacheHandle.Invalid;
+                textureCache.Update(ref handle, PixelFormat.R8_UNorm, size, glyph.Bytes);
 
-            static unsafe RasterizedGlyph mergeStrokes(NativeBitmapGlyph[] strokes)
-            {
-                NativeBitmapGlyph largest = strokes[^1];
-                var buffer = new byte[largest.Width * largest.Height * 4];
-                Span<RgbaPixel> pixels = MemoryMarshal.Cast<byte, RgbaPixel>(buffer.AsSpan());
-                for (int i = 0; i < 4; i++)
+                var outlineHandle = TextureCacheHandle.Invalid;
+                if (batch.OutlineResults is not null)
                 {
-                    NativeBitmapGlyph stroke = strokes[i];
-                    ReadOnlySpan<byte> bytes = stroke.Bytes;
-                    uint dstStartX = (uint)(-largest.Left + stroke.Left);
-                    uint dstStartY = (uint)(largest.Height - stroke.Height - stroke.Bottom + largest.Bottom);
-                    for (uint srcY = 0; srcY < stroke.Height; srcY++)
-                    {
-                        for (uint srcX = 0; srcX < stroke.Width; srcX++)
-                        {
-                            int idx = (int)(largest.Width * (dstStartY + srcY) + dstStartX + srcX);
-                            pixels[idx].Channels[i] = bytes[(int)(srcY * stroke.Width + srcX)];
-                        }
-                    }
+                    rasterRes = ref batch.OutlineResults[i];
+                    ref readonly RasterizedGlyph outline = ref rasterRes.Glyph;
+                    Debug.Assert(outline.Width != 0 && outline.Height != 0);
+                    size = new TextureSizeU(outline.Width, outline.Height);
+                    float horOffset = outline.Left;
+                    float verOffset = -(outline.Height - glyph.Height) - outline.Bottom;
+                    outlineHandle = TextureCacheHandle.Invalid;
+                    textureCache.Update(
+                        ref outlineHandle,
+                        PixelFormat.R8_G8_B8_A8_UNorm,
+                        size,
+                        outline.Bytes,
+                        userData: new Vector3(new Vector2(horOffset, verOffset), 0)
+                    );
                 }
-                return new RasterizedGlyph(
-                    buffer,
-                    largest.Left,
-                    largest.Width,
-                    largest.Height,
-                    largest.Bottom
-                );
-            }
 
-            async Task<NativeBitmapGlyph> stroke(uint index, uint radius)
-            {
-                FontContext ctx = await _freeContexts.Reader.ReadAsync();
-                FontFace face = ctx.GetFontFace(font)!;
-                NativeBitmapGlyph g = ctx.StrokeGlyph(face, fontSize, index, radius);
-                _freeContexts.Writer.TryWrite(ctx);
-                return g;
+                fontData.UpsertCachedGlyph(key, GlyphCacheEntry.Regular(handle, outlineHandle));
             }
+        }
+    }
 
-            var tasks = new Task<RasterResult>[indices.Count];
-            int i = 0;
+    [UsedImplicitly(ImplicitUseTargetFlags.Members)]
+    private unsafe struct RgbaPixel
+    {
+        public fixed byte Channels[4];
+    }
+
+    private async Task RasterizeBatch(
+        FontFaceKey font,
+        PtFontSize fontSize,
+        List<uint> indices,
+        bool rasterizeOutlines)
+    {
+        var tasks = new Task<RasterResult>[indices.Count];
+        int i = 0;
+        foreach (uint index in indices)
+        {
+            tasks[i++] = Task.Run(() => rasterizeGlyph(index));
+        }
+
+        Task<RasterResult>[]? outlineTasks = null;
+        if (rasterizeOutlines)
+        {
+            outlineTasks = new Task<RasterResult>[indices.Count];
+            i = 0;
             foreach (uint index in indices)
             {
-                tasks[i++] = Task.Run(() => rasterizeGlyph(index));
+                outlineTasks[i++] = Task.Run(() => produceOutline(index));
             }
+        }
 
-            Task<RasterResult>[]? outlineTasks = null;
-            if (rasterizeOutlines)
+        RasterResult[] results = await Task.WhenAll(tasks);
+        RasterResult[]? outlineResults = null;
+        if (rasterizeOutlines)
+        {
+            Debug.Assert(outlineTasks is not null);
+            outlineResults = await Task.WhenAll(outlineTasks);
+        }
+
+        _rasterBatches.Writer.TryWrite(new RasterBatch(font, fontSize, results, outlineResults));
+        return;
+
+        async Task<RasterResult> rasterizeGlyph(uint index)
+        {
+            FontContext ctx = await _freeContexts.Reader.ReadAsync();
+            FontFace face = ctx.GetFontFace(font)!;
+            RasterizedGlyph g = ctx.RasterizeGlyph(face, fontSize, index);
+            _freeContexts.Writer.TryWrite(ctx);
+            return new RasterResult(index, g);
+        }
+
+        async Task<RasterResult> produceOutline(uint glyphIndex)
+        {
+            NativeBitmapGlyph[] strokes = await Task.WhenAll(
+                Task.Run(() => stroke(glyphIndex, radius: 1)),
+                Task.Run(() => stroke(glyphIndex, radius: 2)),
+                Task.Run(() => stroke(glyphIndex, radius: 2)),
+                Task.Run(() => stroke(glyphIndex, radius: 2))
+            );
+
+            RasterizedGlyph outline = mergeStrokes(strokes);
+            foreach (NativeBitmapGlyph g in strokes)
             {
-                outlineTasks = new Task<RasterResult>[indices.Count];
-                i = 0;
-                foreach (uint index in indices)
+                g.Dispose();
+            }
+            return new RasterResult(glyphIndex, outline);
+        }
+
+        async Task<NativeBitmapGlyph> stroke(uint index, uint radius)
+        {
+            FontContext ctx = await _freeContexts.Reader.ReadAsync();
+            FontFace face = ctx.GetFontFace(font)!;
+            NativeBitmapGlyph g = ctx.StrokeGlyph(face, fontSize, index, radius);
+            _freeContexts.Writer.TryWrite(ctx);
+            return g;
+        }
+
+        static unsafe RasterizedGlyph mergeStrokes(NativeBitmapGlyph[] strokes)
+        {
+            NativeBitmapGlyph largest = strokes[^1];
+            var buffer = new byte[largest.Width * largest.Height * 4];
+            Span<RgbaPixel> pixels = MemoryMarshal.Cast<byte, RgbaPixel>(buffer.AsSpan());
+            for (int i = 0; i < 4; i++)
+            {
+                NativeBitmapGlyph stroke = strokes[i];
+                ReadOnlySpan<byte> bytes = stroke.Bytes;
+                uint dstStartX = (uint)(-largest.Left + stroke.Left);
+                uint dstStartY = (uint)(largest.Height - stroke.Height - stroke.Bottom + largest.Bottom);
+                for (uint srcY = 0; srcY < stroke.Height; srcY++)
                 {
-                    outlineTasks[i++] = Task.Run(() => produceOutline(index));
+                    for (uint srcX = 0; srcX < stroke.Width; srcX++)
+                    {
+                        int idx = (int)(largest.Width * (dstStartY + srcY) + dstStartX + srcX);
+                        pixels[idx].Channels[i] = bytes[(int)(srcY * stroke.Width + srcX)];
+                    }
                 }
             }
-
-            RasterResult[] results = await Task.WhenAll(tasks);
-            RasterResult[]? outlineResults = null;
-            if (rasterizeOutlines)
-            {
-                Debug.Assert(outlineTasks is not null);
-                outlineResults = await Task.WhenAll(outlineTasks);
-            }
-
-            _rasterBatches.Writer.TryWrite(
-                new RasterBatch(font, fontSize, results, outlineResults)
+            return new RasterizedGlyph(
+                buffer,
+                largest.Left,
+                largest.Width,
+                largest.Height,
+                largest.Bottom
             );
         }
-
-        public void Dispose()
-        {
-            _fontDatas.Clear();
-            _metricsContext.Dispose();
-            foreach (FontContext ctx in _contexts)
-            {
-                ctx.Dispose();
-            }
-        }
     }
 
-    // ReSharper disable NotAccessedPositionalProperty.Global
-    internal readonly record struct GlyphCacheKey(uint Index, PtFontSize FontSize);
-    // ReSharper restore NotAccessedPositionalProperty.Global
-
-    internal enum GlyphCacheEntryKind
+    public void Dispose()
     {
-        Regular,
-        Pending,
-        Blank
+        _fontDatas.Clear();
+        _metricsContext.Dispose();
+        foreach (FontContext ctx in _contexts)
+        {
+            ctx.Dispose();
+        }
+    }
+}
+
+internal readonly record struct GlyphCacheKey(uint Index, PtFontSize FontSize);
+
+internal enum GlyphCacheEntryKind
+{
+    Regular,
+    Pending,
+    Blank
+}
+
+[StructLayout(LayoutKind.Auto)]
+internal readonly struct GlyphCacheEntry
+{
+    private readonly TextureCacheHandle _handle;
+    private readonly TextureCacheHandle _outlineHandle;
+    public readonly GlyphCacheEntryKind Kind;
+
+    private GlyphCacheEntry(
+        GlyphCacheEntryKind kind,
+        TextureCacheHandle textureCacheHandle,
+        TextureCacheHandle outlineTextureCacheHandle)
+    {
+        Kind = kind;
+        _handle = textureCacheHandle;
+        _outlineHandle = outlineTextureCacheHandle;
     }
 
-    [StructLayout(LayoutKind.Auto)]
-    internal readonly struct GlyphCacheEntry
+    public bool IsRegular => Kind == GlyphCacheEntryKind.Regular;
+
+    public static GlyphCacheEntry Regular(
+        TextureCacheHandle textureCacheHandle,
+        TextureCacheHandle outlineTextureCacheHandle)
     {
-        private readonly TextureCacheHandle _handle;
-        private readonly TextureCacheHandle _outlineHandle;
-        public readonly GlyphCacheEntryKind Kind;
-
-        private GlyphCacheEntry(
-            GlyphCacheEntryKind kind,
-            TextureCacheHandle textureCacheHandle,
-            TextureCacheHandle outlineTextureCacheHandle)
-        {
-            Kind = kind;
-            _handle = textureCacheHandle;
-            _outlineHandle = outlineTextureCacheHandle;
-        }
-
-        public bool IsRegular => Kind == GlyphCacheEntryKind.Regular;
-
-        public static GlyphCacheEntry Regular(
-            TextureCacheHandle textureCacheHandle,
-            TextureCacheHandle outlineTextureCacheHandle)
-        {
-            return new GlyphCacheEntry(
-               GlyphCacheEntryKind.Regular,
-               textureCacheHandle,
-               outlineTextureCacheHandle
-            );
-        }
-
-        public static GlyphCacheEntry Pending() => new(
-            GlyphCacheEntryKind.Pending,
-            TextureCacheHandle.Invalid,
-            TextureCacheHandle.Invalid
+        return new GlyphCacheEntry(
+            GlyphCacheEntryKind.Regular,
+            textureCacheHandle,
+            outlineTextureCacheHandle
         );
-
-        public static GlyphCacheEntry Blank() => new(
-            GlyphCacheEntryKind.Blank,
-            TextureCacheHandle.Invalid,
-            TextureCacheHandle.Invalid
-        );
-
-        public TextureCacheHandle TextureCacheHandle
-        {
-            get
-            {
-                Debug.Assert(IsRegular);
-                return _handle;
-            }
-        }
-
-        public TextureCacheHandle OutlineTextureCacheHandle
-        {
-            get
-            {
-                Debug.Assert(IsRegular);
-                return _outlineHandle;
-            }
-        }
     }
 
-    internal sealed class FontData
-    {
-        private readonly FontContext _fontContext;
-        private readonly FontFace _fontFace;
-        private readonly Dictionary<int, uint> _glyphIndexCache;
-        private readonly Dictionary<(uint index, PtFontSize fontSize), GlyphDimensions> _dimensionsCache;
-        private readonly Dictionary<GlyphCacheKey, GlyphCacheEntry> _glyphCache;
-
-        public FontData(FontContext fontContext, FontFace fontFace)
-        {
-            _fontContext = fontContext;
-            _fontFace = fontFace;
-            _glyphIndexCache = new Dictionary<int, uint>();
-            _dimensionsCache = new Dictionary<(uint, PtFontSize), GlyphDimensions>();
-            _glyphCache = new Dictionary<GlyphCacheKey, GlyphCacheEntry>();
-        }
-
-        public void UpsertCachedGlyph(GlyphCacheKey key, in GlyphCacheEntry entry)
-        {
-            _glyphCache[key] = entry;
-        }
-
-        public bool TryGetCachedGlyph(GlyphCacheKey cacheKey, out GlyphCacheEntry cacheEntry)
-            => _glyphCache.TryGetValue(cacheKey, out cacheEntry);
-
-        public VerticalMetrics GetVerticalMetrics(PtFontSize fontSize)
-            => _fontContext.GetFontMetrics(_fontFace, fontSize);
-
-        public uint GetGlyphIndex(Rune scalar)
-        {
-            if (!_glyphIndexCache.TryGetValue(scalar.Value, out uint index))
-            {
-                index = _fontContext.GetGlyphIndex(_fontFace, (uint)scalar.Value);
-                _glyphIndexCache.Add(scalar.Value, index);
-            }
-            return index;
-        }
-
-        public GlyphDimensions GetGlyphDimensions(uint index, PtFontSize fontSize)
-        {
-            if (!_dimensionsCache.TryGetValue((index, fontSize), out GlyphDimensions dim))
-            {
-                dim = _fontContext.GetGlyphDimensions(_fontFace, fontSize, index);
-                _dimensionsCache.Add((index, fontSize), dim);
-            }
-            return dim;
-        }
-    }
-
-    internal readonly record struct RasterizedGlyph(
-        byte[] Bytes,
-        int Left,
-        uint Width,
-        uint Height,
-        int Bottom = 0
+    public static GlyphCacheEntry Pending() => new(
+        GlyphCacheEntryKind.Pending,
+        TextureCacheHandle.Invalid,
+        TextureCacheHandle.Invalid
     );
 
-    internal readonly unsafe struct NativeBitmapGlyph : IDisposable
+    public static GlyphCacheEntry Blank() => new(
+        GlyphCacheEntryKind.Blank,
+        TextureCacheHandle.Invalid,
+        TextureCacheHandle.Invalid
+    );
+
+    public TextureCacheHandle TextureCacheHandle
     {
-        private readonly BitmapGlyph* _ftGlyph;
-        public readonly int Left;
-        public readonly uint Width;
-        public readonly uint Height;
-
-        public NativeBitmapGlyph(BitmapGlyph* ftGlyph, int bottom)
+        get
         {
-            _ftGlyph = ftGlyph;
-            Bottom = bottom;
-            Left = _ftGlyph->left;
-            Width = (uint)_ftGlyph->bitmap.width;
-            Height = (uint)_ftGlyph->bitmap.rows;
-        }
-
-        public ReadOnlySpan<byte> Bytes => new(
-            _ftGlyph->bitmap.buffer.ToPointer(),
-            (int)(Width * Height)
-        );
-
-        public readonly int Bottom;
-
-        public void Dispose()
-        {
-            var ptr = (Glyph*)_ftGlyph;
-            FT.FT_Done_Glyph(ptr);
+            Debug.Assert(IsRegular);
+            return _handle;
         }
     }
 
-    internal sealed unsafe class FontFace : IDisposable
+    public TextureCacheHandle OutlineTextureCacheHandle
     {
-        private Face* _face;
-
-        public FontFace(Face* face)
+        get
         {
-            _face = face;
-            FontFamily = Marshal.PtrToStringAnsi(face->family_name)!;
-            var style = (StyleFlags)face->style_flags;
-            if (style == 0)
-            {
-                Style = FontStyle.Regular;
-            }
-            if ((style & StyleFlags.Italic) == StyleFlags.Italic)
-            {
-                Style |= FontStyle.Italic;
-            }
-            if ((style & StyleFlags.Bold) == StyleFlags.Bold)
-            {
-                Style |= FontStyle.Bold;
-            }
+            Debug.Assert(IsRegular);
+            return _outlineHandle;
         }
+    }
+}
 
-        public Face* FTFace => _face;
-        public string FontFamily { get; }
-        public FontStyle Style { get; }
+internal sealed class FontData(FontContext fontContext, FontFace fontFace)
+{
+    private readonly Dictionary<int, uint> _glyphIndexCache = new();
+    private readonly Dictionary<(uint index, PtFontSize fontSize), GlyphDimensions> _dimensionsCache = new();
+    private readonly Dictionary<GlyphCacheKey, GlyphCacheEntry> _glyphCache = new();
 
-        public void Dispose()
+    public void UpsertCachedGlyph(GlyphCacheKey key, in GlyphCacheEntry entry)
+    {
+        _glyphCache[key] = entry;
+    }
+
+    public bool TryGetCachedGlyph(GlyphCacheKey cacheKey, out GlyphCacheEntry cacheEntry)
+        => _glyphCache.TryGetValue(cacheKey, out cacheEntry);
+
+    public VerticalMetrics GetVerticalMetrics(PtFontSize fontSize)
+        => fontContext.GetFontMetrics(fontFace, fontSize);
+
+    public uint GetGlyphIndex(Rune scalar)
+    {
+        if (!_glyphIndexCache.TryGetValue(scalar.Value, out uint index))
         {
-            FT.FT_Done_Face(_face);
-            _face = null;
+            index = fontContext.GetGlyphIndex(fontFace, (uint)scalar.Value);
+            _glyphIndexCache.Add(scalar.Value, index);
+        }
+        return index;
+    }
+
+    public GlyphDimensions GetGlyphDimensions(uint index, PtFontSize fontSize)
+    {
+        if (!_dimensionsCache.TryGetValue((index, fontSize), out GlyphDimensions dim))
+        {
+            dim = fontContext.GetGlyphDimensions(fontFace, fontSize, index);
+            _dimensionsCache.Add((index, fontSize), dim);
+        }
+        return dim;
+    }
+}
+
+internal readonly record struct RasterizedGlyph(
+    byte[] Bytes,
+    int Left,
+    uint Width,
+    uint Height,
+    int Bottom = 0
+);
+
+internal readonly unsafe struct NativeBitmapGlyph : IDisposable
+{
+    private readonly BitmapGlyph* _ftGlyph;
+    public readonly int Left;
+    public readonly uint Width;
+    public readonly uint Height;
+
+    public NativeBitmapGlyph(BitmapGlyph* ftGlyph, int bottom)
+    {
+        _ftGlyph = ftGlyph;
+        Bottom = bottom;
+        Left = _ftGlyph->left;
+        Width = (uint)_ftGlyph->bitmap.width;
+        Height = (uint)_ftGlyph->bitmap.rows;
+    }
+
+    public ReadOnlySpan<byte> Bytes => new(
+        _ftGlyph->bitmap.buffer.ToPointer(),
+        (int)(Width * Height)
+    );
+
+    public readonly int Bottom;
+
+    public void Dispose()
+    {
+        var ptr = (Glyph*)_ftGlyph;
+        FT.FT_Done_Glyph(ptr);
+    }
+}
+
+internal sealed unsafe class FontFace : IDisposable
+{
+    private Face* _face;
+
+    public FontFace(Face* face)
+    {
+        _face = face;
+        FontFamily = Marshal.PtrToStringAnsi(face->family_name)!;
+        var style = (StyleFlags)face->style_flags;
+        if (style == 0)
+        {
+            Style = FontStyle.Regular;
+        }
+        if ((style & StyleFlags.Italic) == StyleFlags.Italic)
+        {
+            Style |= FontStyle.Italic;
+        }
+        if ((style & StyleFlags.Bold) == StyleFlags.Bold)
+        {
+            Style |= FontStyle.Bold;
         }
     }
 
-    internal sealed unsafe class FontContext : IDisposable
+    public Face* FTFace => _face;
+    public string FontFamily { get; }
+    public FontStyle Style { get; }
+
+    public void Dispose()
     {
-        private IntPtr _freetypeLib;
-        private IntPtr _stroker;
-        private PtFontSize _lastSize;
-        private readonly Dictionary<FontFaceKey, FontFace> _faces;
+        FT.FT_Done_Face(_face);
+        _face = null;
+    }
+}
 
-        public FontContext()
-        {
-            _faces = new Dictionary<FontFaceKey, FontFace>();
-            FT.FT_Init_FreeType(out _freetypeLib);
-            FT.FT_Stroker_New(_freetypeLib, out _stroker);
-        }
+internal sealed unsafe class FontContext : IDisposable
+{
+    private IntPtr _freetypeLib;
+    private IntPtr _stroker;
+    private PtFontSize _lastSize;
+    private readonly Dictionary<FontFaceKey, FontFace> _faces;
 
-        public bool AddFont(string path, out ImmutableArray<(FontFaceKey, FontFace)> faces)
+    public FontContext()
+    {
+        _faces = new Dictionary<FontFaceKey, FontFace>();
+        FT.FT_Init_FreeType(out _freetypeLib);
+        FT.FT_Stroker_New(_freetypeLib, out _stroker);
+    }
+
+    public bool AddFont(string path, out ImmutableArray<(FontFaceKey, FontFace)> faces)
+    {
+        int idxFace = 0;
+        int newFaces = 0;
+        faces = [];
+        while (FT.FT_New_Face(_freetypeLib, path, idxFace, out Face* ftFace) == Error.Ok)
         {
-            int idxFace = 0;
-            int newFaces = 0;
-            faces = ImmutableArray.Create<(FontFaceKey, FontFace)>();
-            while (FT.FT_New_Face(_freetypeLib, path, idxFace, out Face* ftFace) == Error.Ok)
+            var face = new FontFace(ftFace);
+            var key = new FontFaceKey(face.FontFamily, face.Style);
+            if (_faces.TryAdd(key, face))
             {
-                var face = new FontFace(ftFace);
-                var key = new FontFaceKey(face.FontFamily, face.Style);
-                if (_faces.TryAdd(key, face))
-                {
-                    newFaces++;
-                }
-                else
-                {
-                    face.Dispose();
-                    face = _faces[key];
-                }
-                faces = faces.Add((key, face));
-                idxFace++;
+                newFaces++;
             }
-
-            return newFaces > 0;
-        }
-
-        public FontFace? GetFontFace(FontFaceKey faceKey)
-            => _faces.TryGetValue(faceKey, out FontFace? face) ? face : null;
-
-        public uint GetGlyphIndex(FontFace fontFace, uint scalar)
-            => FT.FT_Get_Char_Index(fontFace.FTFace, scalar);
-
-        public VerticalMetrics GetFontMetrics(FontFace font, PtFontSize fontSize)
-        {
-            Face* ftFace = font.FTFace;
-            SetSize(ftFace, fontSize);
-            SizeMetrics metrics = ftFace->size->metrics;
-            float ascender = Fixed26Dot6.FromRawValue((int)metrics.ascender).ToSingle();
-            float descender = Fixed26Dot6.FromRawValue((int)metrics.descender).ToSingle();
-            float height = Fixed26Dot6.FromRawValue((int)metrics.height).ToSingle();
-            return new VerticalMetrics(ascender, descender, height);
-        }
-
-        public GlyphDimensions GetGlyphDimensions(FontFace fontFace, PtFontSize fontSize, uint index)
-        {
-            Face* ftFace = fontFace.FTFace;
-            SetSize(fontFace.FTFace, fontSize);
-            FT.CheckResult(FT.FT_Load_Glyph(ftFace, index, LoadFlags.NoBitmap));
-            GlyphSlot* glyph = ftFace->glyph;
-            return new GlyphDimensions(
-                glyph->bitmap_top,
-                glyph->bitmap_left,
-                (uint)glyph->bitmap.width,
-                (uint)glyph->bitmap.rows,
-                glyph->advance.X.ToSingle()
-            );
-        }
-
-        public RasterizedGlyph RasterizeGlyph(FontFace fontFace, PtFontSize fontSize, uint index)
-        {
-            static void to8bpp(GlyphSlot* glyph, Span<byte> outBuffer)
-            {
-                (int width, int height) = (glyph->bitmap.width, glyph->bitmap.rows);
-                FT.CheckResult(FT.FT_Render_Glyph(glyph, RenderMode.Normal));
-                int srcPitch = glyph->bitmap.pitch;
-                var mono = new Span<byte>(glyph->bitmap.buffer.ToPointer(), srcPitch * height);
-                int dst = 0;
-                for (int row = 0; row < height; row++)
-                {
-                    int src = row * srcPitch;
-                    int rowEnd = dst + width;
-                    while (dst < rowEnd)
-                    {
-                        sbyte b = (sbyte)mono[src++];
-                        int byteEnd = Math.Min(rowEnd, dst + 8);
-                        while (dst < byteEnd)
-                        {
-                            outBuffer[dst++] = (byte)(b >> 7);
-                            b <<= 1;
-                        }
-                    }
-                }
-            }
-
-            Face* ftFace = fontFace.FTFace;
-            SetSize(fontFace.FTFace, fontSize);
-            FT.CheckResult(FT.FT_Load_Glyph(ftFace, index, LoadFlags.NoBitmap));
-            GlyphSlot* glyph = ftFace->glyph;
-            (int bitmapLeft, int bitmapTop) = (glyph->bitmap_left, glyph->bitmap_top);
-            (int width, int height) = (glyph->bitmap.width, glyph->bitmap.rows);
-
-            ref Outline outline = ref glyph->outline;
-            FT.FT_Outline_Translate(
-                ref outline,
-                xOffset: (IntPtr)(-bitmapLeft * 64),
-                yOffset: (IntPtr)((height - bitmapTop) * 64)
-            );
-
-            int bufferSize = width * height;
-            var buffer = bufferSize > 0 ? new byte[width * height] : Array.Empty<byte>();
-            if (bufferSize > 0)
-            {
-                if (glyph->bitmap.pixel_mode == PixelMode.Mono)
-                {
-                    to8bpp(glyph, buffer);
-                }
-                else
-                {
-                    Debug.Assert(glyph->bitmap.pixel_mode == PixelMode.Gray);
-                    fixed (byte* ptr = &buffer[0])
-                    {
-                        var bmp = new Bitmap
-                        {
-                            buffer = new IntPtr(ptr),
-                            width = width,
-                            pitch = width,
-                            rows = height,
-                            pixel_mode = PixelMode.Gray,
-                            num_grays = 256
-                        };
-
-                        FT.CheckResult(
-                            FT.FT_Outline_Get_Bitmap(_freetypeLib, ref outline, ref bmp)
-                        );
-                    }
-                }
-            }
-
-            return new RasterizedGlyph(buffer, bitmapLeft, (uint)width, (uint)height);
-        }
-
-        public NativeBitmapGlyph StrokeGlyph(FontFace fontFace, PtFontSize fontSize, uint index, uint radius)
-        {
-            IntPtr stroker = _stroker;
-            Face* ftFace = fontFace.FTFace;
-            SetSize(fontFace.FTFace, fontSize);
-            FT.CheckResult(FT.FT_Load_Glyph(ftFace, index, LoadFlags.NoBitmap));
-
-            GlyphSlot* slot = ftFace->glyph;
-            ref Outline outline = ref slot->outline;
-            FT.FT_Outline_Translate(
-                ref outline,
-                xOffset: (IntPtr)(-slot->bitmap_left * 64),
-                yOffset: (IntPtr)((slot->bitmap.rows - slot->bitmap_top) * 64)
-            );
-
-            FT.CheckResult(FT.FT_Get_Glyph(ftFace->glyph, out Glyph* glyph));
-            FT.FT_Stroker_Set(
-                stroker,
-                radius: 64 * (int)radius,
-                StrokerLineCap.Round,
-                StrokerLineJoin.Round,
-                miter_limit: IntPtr.Zero
-            );
-            FT.CheckResult(FT.FT_Glyph_Stroke(ref glyph, stroker, destroy: true));
-            FTVector26Dot6 origin = default;
-            FT.CheckResult(
-                FT.FT_Glyph_To_Bitmap(ref glyph, RenderMode.Normal, ref origin, destroy: true)
-            );
-
-            FT.FT_Glyph_Get_CBox(glyph, GlyphBBoxMode.Pixels, out BBox cbox);
-            return new NativeBitmapGlyph((BitmapGlyph*)glyph, cbox.Bottom);
-        }
-
-        private void SetSize(Face* ftFace, PtFontSize size)
-        {
-            if (!size.Equals(_lastSize))
-            {
-                FT.CheckResult(FT.FT_Set_Char_Size(
-                    ftFace,
-                    char_width: (IntPtr)0,
-                    char_height: (IntPtr)size.Value.Value,
-                    72, 72
-                ));
-                _lastSize = size;
-            }
-        }
-
-        public void Dispose()
-        {
-            foreach (FontFace face in _faces.Values)
+            else
             {
                 face.Dispose();
+                face = _faces[key];
             }
-
-            _faces.Clear();
-            FT.FT_Stroker_Done(_stroker);
-            _stroker = IntPtr.Zero;
-            FT.FT_Done_FreeType(_freetypeLib);
-            _freetypeLib = IntPtr.Zero;
+            faces = faces.Add((key, face));
+            idxFace++;
         }
+
+        return newFaces > 0;
+    }
+
+    public FontFace? GetFontFace(FontFaceKey faceKey)
+        => _faces.GetValueOrDefault(faceKey);
+
+    public uint GetGlyphIndex(FontFace fontFace, uint scalar)
+        => FT.FT_Get_Char_Index(fontFace.FTFace, scalar);
+
+    public VerticalMetrics GetFontMetrics(FontFace font, PtFontSize fontSize)
+    {
+        Face* ftFace = font.FTFace;
+        SetSize(ftFace, fontSize);
+        SizeMetrics metrics = ftFace->size->metrics;
+        float ascender = Fixed26Dot6.FromRawValue((int)metrics.ascender).ToSingle();
+        float descender = Fixed26Dot6.FromRawValue((int)metrics.descender).ToSingle();
+        float height = Fixed26Dot6.FromRawValue((int)metrics.height).ToSingle();
+        return new VerticalMetrics(ascender, descender, height);
+    }
+
+    public GlyphDimensions GetGlyphDimensions(FontFace fontFace, PtFontSize fontSize, uint index)
+    {
+        Face* ftFace = fontFace.FTFace;
+        SetSize(fontFace.FTFace, fontSize);
+        FT.CheckResult(FT.FT_Load_Glyph(ftFace, index, LoadFlags.NoBitmap));
+        GlyphSlot* glyph = ftFace->glyph;
+        return new GlyphDimensions(
+            glyph->bitmap_top,
+            glyph->bitmap_left,
+            (uint)glyph->bitmap.width,
+            (uint)glyph->bitmap.rows,
+            glyph->advance.X.ToSingle()
+        );
+    }
+
+    public RasterizedGlyph RasterizeGlyph(FontFace fontFace, PtFontSize fontSize, uint index)
+    {
+        Face* ftFace = fontFace.FTFace;
+        SetSize(fontFace.FTFace, fontSize);
+        FT.CheckResult(FT.FT_Load_Glyph(ftFace, index, LoadFlags.NoBitmap));
+        GlyphSlot* glyph = ftFace->glyph;
+        (int bitmapLeft, int bitmapTop) = (glyph->bitmap_left, glyph->bitmap_top);
+        (int width, int height) = (glyph->bitmap.width, glyph->bitmap.rows);
+
+        ref Outline outline = ref glyph->outline;
+        FT.FT_Outline_Translate(
+            ref outline,
+            xOffset: (IntPtr)(-bitmapLeft * 64),
+            yOffset: (IntPtr)((height - bitmapTop) * 64)
+        );
+
+        int bufferSize = width * height;
+        var buffer = bufferSize > 0 ? new byte[width * height] : Array.Empty<byte>();
+        if (bufferSize > 0)
+        {
+            if (glyph->bitmap.pixel_mode == PixelMode.Mono)
+            {
+                to8bpp(glyph, buffer);
+            }
+            else
+            {
+                Debug.Assert(glyph->bitmap.pixel_mode == PixelMode.Gray);
+                fixed (byte* ptr = &buffer[0])
+                {
+                    var bmp = new Bitmap
+                    {
+                        buffer = new IntPtr(ptr),
+                        width = width,
+                        pitch = width,
+                        rows = height,
+                        pixel_mode = PixelMode.Gray,
+                        num_grays = 256
+                    };
+
+                    FT.CheckResult(
+                        FT.FT_Outline_Get_Bitmap(_freetypeLib, ref outline, ref bmp)
+                    );
+                }
+            }
+        }
+
+        return new RasterizedGlyph(buffer, bitmapLeft, (uint)width, (uint)height);
+
+        static void to8bpp(GlyphSlot* glyph, Span<byte> outBuffer)
+        {
+            (int width, int height) = (glyph->bitmap.width, glyph->bitmap.rows);
+            FT.CheckResult(FT.FT_Render_Glyph(glyph, RenderMode.Normal));
+            int srcPitch = glyph->bitmap.pitch;
+            var mono = new Span<byte>(glyph->bitmap.buffer.ToPointer(), srcPitch * height);
+            int dst = 0;
+            for (int row = 0; row < height; row++)
+            {
+                int src = row * srcPitch;
+                int rowEnd = dst + width;
+                while (dst < rowEnd)
+                {
+                    sbyte b = (sbyte)mono[src++];
+                    int byteEnd = Math.Min(rowEnd, dst + 8);
+                    while (dst < byteEnd)
+                    {
+                        outBuffer[dst++] = (byte)(b >> 7);
+                        b <<= 1;
+                    }
+                }
+            }
+        }
+    }
+
+    public NativeBitmapGlyph StrokeGlyph(FontFace fontFace, PtFontSize fontSize, uint index, uint radius)
+    {
+        IntPtr stroker = _stroker;
+        Face* ftFace = fontFace.FTFace;
+        SetSize(fontFace.FTFace, fontSize);
+        FT.CheckResult(FT.FT_Load_Glyph(ftFace, index, LoadFlags.NoBitmap));
+
+        GlyphSlot* slot = ftFace->glyph;
+        ref Outline outline = ref slot->outline;
+        FT.FT_Outline_Translate(
+            ref outline,
+            xOffset: (IntPtr)(-slot->bitmap_left * 64),
+            yOffset: (IntPtr)((slot->bitmap.rows - slot->bitmap_top) * 64)
+        );
+
+        FT.CheckResult(FT.FT_Get_Glyph(ftFace->glyph, out Glyph* glyph));
+        FT.FT_Stroker_Set(
+            stroker,
+            radius: 64 * (int)radius,
+            StrokerLineCap.Round,
+            StrokerLineJoin.Round,
+            miter_limit: IntPtr.Zero
+        );
+        FT.CheckResult(FT.FT_Glyph_Stroke(ref glyph, stroker, destroy: true));
+        FTVector26Dot6 origin = default;
+        FT.CheckResult(
+            FT.FT_Glyph_To_Bitmap(ref glyph, RenderMode.Normal, ref origin, destroy: true)
+        );
+
+        FT.FT_Glyph_Get_CBox(glyph, GlyphBBoxMode.Pixels, out BBox cbox);
+        return new NativeBitmapGlyph((BitmapGlyph*)glyph, cbox.Bottom);
+    }
+
+    private void SetSize(Face* ftFace, PtFontSize size)
+    {
+        if (!size.Equals(_lastSize))
+        {
+            FT.CheckResult(FT.FT_Set_Char_Size(
+                ftFace,
+                char_width: (IntPtr)0,
+                char_height: (IntPtr)size.Value.Value,
+                72, 72
+            ));
+            _lastSize = size;
+        }
+    }
+
+    public void Dispose()
+    {
+        foreach (FontFace face in _faces.Values)
+        {
+            face.Dispose();
+        }
+
+        _faces.Clear();
+        FT.FT_Stroker_Done(_stroker);
+        _stroker = IntPtr.Zero;
+        FT.FT_Done_FreeType(_freetypeLib);
+        _freetypeLib = IntPtr.Zero;
     }
 }

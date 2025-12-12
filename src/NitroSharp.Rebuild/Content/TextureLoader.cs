@@ -33,6 +33,7 @@ internal abstract class TextureLoader : IDisposable
                 PixelFormat.R8_G8_B8_A8_UNorm, TextureUsage.Sampled
             ));
 
+            // TODO: why are we creating a new command list per texture load?
             using CommandList cl = _gd.ResourceFactory.CreateCommandList();
             cl.Begin();
             cl.CopyTexture(source: stagingTex, destination: sampledTex);

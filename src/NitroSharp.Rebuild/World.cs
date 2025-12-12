@@ -91,7 +91,7 @@ internal sealed class World : EntityScope
         _newEntities.Clear();
     }
 
-    public Entity? Get(EntityPath entityPath)
+    public Entity? Get(in EntityPath entityPath)
     {
         if (!TryResolvePath(entityPath, out EntityName name, out Entity? parent))
         {
@@ -122,12 +122,12 @@ internal sealed class World : EntityScope
             return true;
         }
 
-        ReadOnlySpan<EntityPathPart> remainingParts = path.Parts.AsReadOnlySpan();
+        ReadOnlySpan<EntityPathPart> remainingParts = path.Parts;
         EntityScope scope = CurrentProcess.CurrentThread;
         var results = new SmallList<Entity>();
         while (remainingParts is [var currentPart, _, ..])
         {
-            var pattern = new EntityPattern(currentPart.Value, containsWildcard: false);
+            var pattern = new EntityPattern(currentPart.Value, ContainsWildcard: false);
             scope = currentPart.IsAlias ? CurrentProcess.Aliases : scope;
             scope.Query(pattern, ref results);
             if (results is not [var singleResult]) { return false; }

@@ -1,13 +1,10 @@
 ﻿using System;
-using System.Buffers;
-using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using NitroSharp.NsScript;
 
 namespace NitroSharp;
 
-[DebuggerDisplay("{Value}")]
-public readonly struct EntityName : IEquatable<EntityName>
+public readonly record struct EntityName
 {
     public readonly string Value;
 
@@ -50,9 +47,5 @@ public readonly struct EntityName : IEquatable<EntityName>
 
     public bool Matches(EntityPattern pattern) => pattern.Match(Value);
 
-    public bool Equals(EntityName other) => Value == other.Value;
-    public override bool Equals(object? obj) => obj is EntityName other && Equals(other);
-    public override int GetHashCode() => Value.GetHashCode();
-    public static bool operator ==(EntityName left, EntityName right) => left.Equals(right);
-    public static bool operator !=(EntityName left, EntityName right) => !(left == right);
+    public override string ToString() => Value;
 }

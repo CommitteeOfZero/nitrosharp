@@ -14,7 +14,7 @@ internal struct SmallLookupList<TKey, TValue>
     where TKey : IEquatable<TKey>
     where TValue : SmallLookupListEntry<TKey>
 {
-    private SmallList<TValue> _entries;
+    private SmallList<TValue> _list;
     private Dictionary<TKey, TValue>? _map;
 
     public Enumerator GetEnumerator() => new(ref this);
@@ -34,7 +34,7 @@ internal struct SmallLookupList<TKey, TValue>
             }
             else
             {
-                _listEnumerator = collection._entries.GetEnumerator();
+                _listEnumerator = collection._list.GetEnumerator();
                 _usingMap = false;
             }
         }
@@ -45,7 +45,7 @@ internal struct SmallLookupList<TKey, TValue>
 
     public void Add(TKey key, TValue value)
     {
-        if (_entries.Count == SmallList<Entity>.MaxFixed)
+        if (_list.Count == SmallList<Entity>.MaxFixed)
         {
             SwitchToDictionary();
         }
@@ -56,7 +56,7 @@ internal struct SmallLookupList<TKey, TValue>
         }
         else
         {
-            _entries.Add(value);
+            _list.Add(value);
         }
     }
 
@@ -64,12 +64,12 @@ internal struct SmallLookupList<TKey, TValue>
     private void SwitchToDictionary()
     {
         _map = new Dictionary<TKey, TValue>(capacity: 16);
-        foreach (TValue value in _entries.AsSpan())
+        foreach (TValue value in _list.AsSpan())
         {
             _map[value.Key] = value;
         }
 
-        _entries.Clear();
+        _list.Clear();
     }
 
     public void Remove(TValue value)
@@ -80,7 +80,7 @@ internal struct SmallLookupList<TKey, TValue>
         }
         else
         {
-            _entries.Remove(value);
+            _list.Remove(value);
         }
     }
 
@@ -91,7 +91,7 @@ internal struct SmallLookupList<TKey, TValue>
             return map.GetValueOrDefault(key);
         }
 
-        foreach (TValue entry in _entries)
+        foreach (TValue entry in _list)
         {
             if (entry.Key.Equals(key))
             {

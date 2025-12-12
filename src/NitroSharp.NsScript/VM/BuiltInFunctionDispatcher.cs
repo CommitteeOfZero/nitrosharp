@@ -1294,7 +1294,7 @@ namespace NitroSharp.NsScript.VM
                 ConstantValue val = Take();
                 return (val.Type, val.AsNumber()) switch
                 {
-                    (BuiltInType.Numeric or BuiltInType.Boolean, float delay) =>
+                    (BuiltInType.Numeric or BuiltInType.Boolean, { } delay) =>
                         (int)delay == 1 ? animDuration : TimeSpan.FromMilliseconds(delay),
                     (BuiltInType.Null, _) => TimeSpan.FromSeconds(0),
                     _ => UnexpectedType<TimeSpan>(val.Type)

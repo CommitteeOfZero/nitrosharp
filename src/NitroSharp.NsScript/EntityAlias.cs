@@ -29,4 +29,6 @@ public readonly record struct EntityAlias
     }
 
     public bool Matches(EntityPattern pattern) => pattern.Match(Value);
+
+    public override string ToString() => Value;
 }

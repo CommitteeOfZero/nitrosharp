@@ -23,6 +23,8 @@ internal interface EntityInternal
     void RemoveChild(Entity child);
 }
 
+internal sealed class BlankEntity(EntityName name, Entity? parent) : Entity(name, parent);
+
 [DebuggerDisplay("{GetAbsolutePath()}")]
 internal abstract class Entity : EntityScope, EntityInternal, SmallLookupListEntry<EntityName>, IDisposable
 {
@@ -64,7 +66,8 @@ internal abstract class Entity : EntityScope, EntityInternal, SmallLookupListEnt
                 if (entity is Process process) { return process; }
             }
 
-            throw new InvalidOperationException("Unreachable");
+            ThrowHelper.ThrowUnreachable();
+            return null;
         }
     }
 
@@ -107,7 +110,6 @@ internal abstract class Entity : EntityScope, EntityInternal, SmallLookupListEnt
 
     public Entity? TryGetChild(EntityName name) => _children.TryGetValue(name);
 
-
     public void Query(EntityPattern pattern, ref SmallList<Entity> results)
     {
         if (!pattern.ContainsWildcard
@@ -125,6 +127,26 @@ internal abstract class Entity : EntityScope, EntityInternal, SmallLookupListEnt
                 results.Add(child);
             }
         }
+    }
+
+    public string GetAbsolutePath()
+    {
+        var sb = new StringBuilder();
+        foreach (Entity entity in AscendantsAndSelf())
+        {
+            if (entity is Thread { IsMain: true }) { break; }
+
+            if (entity is Process) { break; }
+
+            if (sb.Length > 0)
+            {
+                sb.Insert(0, '/');
+            }
+
+            sb.Insert(0, entity.Name.Value);
+        }
+
+        return sb.ToString();
     }
 
     public virtual void Fade(float dstOpacity, TimeSpan duration, NsEaseFunction easeFunction = NsEaseFunction.Linear)
@@ -160,37 +182,17 @@ internal abstract class Entity : EntityScope, EntityInternal, SmallLookupListEnt
     {
     }
 
-
-    public string GetAbsolutePath()
+    public virtual void Render(GameContext ctx)
     {
-        var sb = new StringBuilder();
-        foreach (Entity entity in AscendantsAndSelf())
-        {
-            if (entity is Thread { IsMain: true }) { break; }
-
-            if (entity is Process) { break; }
-
-            if (sb.Length > 0)
-            {
-                sb.Insert(0, '/');
-            }
-
-            sb.Insert(0, entity.Name.Value);
-        }
-
-        return sb.ToString();
     }
 
-    public struct AscendantsAndSelfEnumerable
+    public virtual void Dispose()
     {
-        private readonly Entity _entity;
-        private bool _firstIteration;
+    }
 
-        public AscendantsAndSelfEnumerable(Entity entity)
-        {
-            _entity = entity;
-            _firstIteration = true;
-        }
+    internal struct AscendantsAndSelfEnumerable(Entity entity)
+    {
+        private bool _firstIteration = true;
 
         public Entity Current { get; private set; } = null!;
 
@@ -198,7 +200,7 @@ internal abstract class Entity : EntityScope, EntityInternal, SmallLookupListEnt
         {
             if (_firstIteration)
             {
-                Current = _entity;
+                Current = entity;
                 _firstIteration = false;
                 return true;
             }
@@ -246,16 +248,11 @@ internal abstract class Entity : EntityScope, EntityInternal, SmallLookupListEnt
         public DescendantsAndSelfEnumerable GetEnumerator() => this;
     }
 
-    internal ref struct DescendantsAndSelfOfTypeEnumerable<T> where T : Entity
+    internal ref struct DescendantsAndSelfOfTypeEnumerable<T>(T root)
+        where T : Entity
     {
-        private T? _self;
-        private DescendantOfTypeEnumerable<T> _descendants;
-
-        public DescendantsAndSelfOfTypeEnumerable(T root)
-        {
-            _descendants = new DescendantOfTypeEnumerable<T>(new DescendantEnumerable(root));
-            _self = root;
-        }
+        private T? _self = root;
+        private DescendantOfTypeEnumerable<T> _descendants = new(new DescendantEnumerable(root));
 
         public Entity Current { get; private set; } = null!;
 
@@ -278,7 +275,8 @@ internal abstract class Entity : EntityScope, EntityInternal, SmallLookupListEnt
 
     internal struct DescendantEnumerable
     {
-        private readonly ThreadLocal<Stack<Entity>> _stack = new(() => new Stack<Entity>(), trackAllValues: false);
+        private readonly ThreadLocal<Stack<Entity>> _stack
+            = new(() => new Stack<Entity>(), trackAllValues: false);
 
         public DescendantEnumerable(Entity root)
         {
@@ -314,17 +312,12 @@ internal abstract class Entity : EntityScope, EntityInternal, SmallLookupListEnt
         public DescendantEnumerable GetEnumerator() => this;
     }
 
-    internal ref struct DescendantOfTypeEnumerable<T> where T : Entity
+    internal ref struct DescendantOfTypeEnumerable<T>(DescendantEnumerable descendants)
+        where T : Entity
     {
-        private DescendantEnumerable _descendants;
+        private DescendantEnumerable _descendants = descendants;
 
-        public DescendantOfTypeEnumerable(DescendantEnumerable descendants)
-        {
-            _descendants = descendants;
-            Current = null!;
-        }
-
-        public T Current { get; private set; }
+        public T Current { get; private set; } = null!;
 
         public bool MoveNext()
         {
@@ -366,13 +359,5 @@ internal abstract class Entity : EntityScope, EntityInternal, SmallLookupListEnt
         }
 
         public ChildOfTypeEnumerable<T> GetEnumerator() => this;
-    }
-
-    public virtual void Render(GameContext ctx)
-    {
-    }
-
-    public virtual void Dispose()
-    {
     }
 }

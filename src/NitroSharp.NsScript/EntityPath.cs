@@ -3,26 +3,17 @@ using NitroSharp.Common;
 
 namespace NitroSharp.NsScript;
 
-public readonly record struct EntityPathPart(string Value, bool IsAlias)
+public readonly struct EntityPath
 {
-    public static EntityPathPart? FromQueryPart(EntityQueryPart queryPart)
+    private readonly SmallList<EntityPathPart> _parts;
+
+    private EntityPath(SmallList<EntityPathPart> parts)
     {
-        if (queryPart is not
-            {
-                Pattern.ContainsWildcard: false,
-                Scope: EntityQueryScope.Current or EntityQueryScope.CurrentAliases
-            })
-        {
-            return null;
-        }
-
-        bool isAlias = queryPart.Scope == EntityQueryScope.CurrentAliases;
-        return new EntityPathPart(queryPart.Pattern.Value, isAlias);
+        _parts = parts;
     }
-}
 
-public readonly record struct EntityPath(SmallList<EntityPathPart> Parts)
-{
+    public ReadOnlySpan<EntityPathPart> Parts => _parts.AsReadOnlySpan();
+
     public static EntityPath Parse(string value)
         => TryParse(value)
             ?? throw new ArgumentException($"Malformed entity path: '{value}'", nameof(value));
@@ -40,5 +31,23 @@ public readonly record struct EntityPath(SmallList<EntityPathPart> Parts)
         }
 
         return new EntityPath(parts);
+    }
+}
+
+public readonly record struct EntityPathPart(string Value, bool IsAlias)
+{
+    public static EntityPathPart? FromQueryPart(EntityQueryPart queryPart)
+    {
+        if (queryPart is not
+            {
+                Pattern.ContainsWildcard: false,
+                Scope: EntityQueryScope.Current or EntityQueryScope.CurrentAliases
+            })
+        {
+            return null;
+        }
+
+        bool isAlias = queryPart.Scope == EntityQueryScope.CurrentAliases;
+        return new EntityPathPart(queryPart.Pattern.Value, isAlias);
     }
 }

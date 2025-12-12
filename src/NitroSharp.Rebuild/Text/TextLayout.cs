@@ -104,7 +104,7 @@ namespace NitroSharp.Text
             int pos = 0;
             uint lastRunIndex = 0;
             CharacterKind lastCharKind = CharacterKind.Regular;
-            GlyphRun? lastRun = default;
+            GlyphRun? lastRun = null;
             float left = _boundingBox.Left;
             float right = _boundingBox.Right;
             float top = _boundingBox.Top;
@@ -741,7 +741,7 @@ namespace NitroSharp.Text
                     Font = null!,
                     Scalars = default,
                     LineBreaks = default,
-                    NextBreak = default
+                    NextBreak = null
                 };
 
             public bool IsNone => Font is null;

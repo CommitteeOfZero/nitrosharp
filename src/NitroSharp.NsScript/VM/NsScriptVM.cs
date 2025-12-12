@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
@@ -67,7 +68,7 @@ public sealed class NsScriptVM
 
     private static GlobalsDump DumpGlobals(
         ConstantValue[] table,
-        ImmutableDictionary<string, int> lookup)
+        FrozenDictionary<string, int> lookup)
     {
         var globals = new (string, ConstantValue)[lookup.Count];
         foreach ((string name, int i) in lookup)
@@ -79,7 +80,7 @@ public sealed class NsScriptVM
 
     private static void RestoreGlobals(
         ConstantValue[] table,
-        ImmutableDictionary<string, int> lookup,
+        FrozenDictionary<string, int> lookup,
         in GlobalsDump dump)
     {
         foreach ((string name, ConstantValue val) in dump.Globals)
