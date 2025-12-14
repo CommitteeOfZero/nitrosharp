@@ -28,22 +28,18 @@ public class QueryExecutionTests
     [MemberData(nameof(GetGoodQueryTestData))]
     public void Execute(string query, string[] expectedResults)
     {
-        var world = new World();
+        var (process, mainThread) = (TestContext.MainProcess, TestContext.MainThread);
+        var world = new World(process, mainThread);
         var parsedQuery = EntityQuery.Parse(query);
-        var process = new Process(EntityName.Parse("main"), null, new FontSettings());
-        var mainThread = new Thread(EntityName.Parse("test"), process, new NsScriptThreadState(), isMain: true);
         var foo1 = new TestEntity("foo1", mainThread);
         var foo2 = new TestEntity("foo2", mainThread);
         var bar1 = new TestEntity("bar", foo1);
         var bar2 = new TestEntity("bar", foo2);
-        world.AddEntity(process);
-        world.AddEntity(mainThread);
+
         world.AddEntity(foo1);
         world.AddEntity(foo2);
         world.AddEntity(bar1);
         world.AddEntity(bar2);
-
-        world.RegisterProcess(process, isMain: true, activate: true);
 
         foo1.SetAlias(EntityAlias.Parse("cat1"));
         bar2.SetAlias(EntityAlias.Parse("cat2"));

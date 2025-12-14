@@ -7,7 +7,7 @@ namespace NitroSharp;
 
 internal sealed class LogConsoleAppender : StreamAppender
 {
-    private LogLevel _lastLoggedLevel;
+    private LogLevel _lastLoggedLevel = LogLevel.None;
 
     public LogConsoleAppender()
     {

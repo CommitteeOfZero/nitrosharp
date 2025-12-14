@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Numerics;
-using System.Threading;
 using Veldrid;
 
 namespace NitroSharp
@@ -8,14 +7,12 @@ namespace NitroSharp
     public interface GameWindow : IDisposable
     {
         SwapchainSource SwapchainSource { get; }
-        AutoResetEvent Mobile_HandledSurfaceDestroyed { get; }
         ScreenSizeU Size { get; }
         bool Exists { get; }
 
         event Action? CloseRequested;
         event Action Resized;
         event Action<SwapchainSource>? Mobile_SurfaceCreated;
-        event Action? Mobile_SurfaceDestroyed;
         //event Action Destroyed;
 
         InputSnapshot PumpEvents();

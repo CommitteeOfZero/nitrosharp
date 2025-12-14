@@ -25,8 +25,8 @@ internal sealed class RenderItemComparer : IComparer<RenderItem>
 internal sealed class Process : Entity
 {
     private readonly FontSettings _fontSettings;
-    private readonly List<Entity> _updateList = new();
-    private readonly List<RenderItem> _renderList = new();
+    private readonly List<Entity> _updateList = [];
+    private readonly List<RenderItem> _renderList = [];
 
     public Process(EntityName name, Entity? parent, FontSettings fontSettings)
         : base(name, parent)
@@ -53,7 +53,11 @@ internal sealed class Process : Entity
         }
     }
 
-    public Thread CurrentThread { get; private set; }
+    public Thread CurrentThread
+    {
+        get => field ?? MainThread;
+        private set;
+    }
 
     public void RenderAll(GameContext ctx)
     {

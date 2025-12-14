@@ -11,22 +11,15 @@ internal sealed class World : EntityScope
     private readonly List<Entity> _newEntities = [];
     private readonly List<Entity> _deletedEntities = [];
 
+    public World(Process mainProcess, Thread mainThread)
+    {
+        MainProcess = CurrentProcess = mainProcess;
+        AddEntity(mainProcess);
+        AddEntity(mainThread);
+    }
+
     public Process CurrentProcess { get; private set; }
     public Process MainProcess { get; private set; }
-
-    public void RegisterProcess(Process process, bool isMain, bool activate)
-    {
-        _processes.Add(process);
-        if (isMain)
-        {
-            MainProcess = process;
-        }
-
-        if (activate)
-        {
-            CurrentProcess = process;
-        }
-    }
 
     public T AddEntity<T>(T entity) where T : Entity
     {
@@ -42,10 +35,6 @@ internal sealed class World : EntityScope
         _newEntities.Add(entity);
         if (entity is Process process)
         {
-            if (_processes is [])
-            {
-                MainProcess = process;
-            }
             _processes.Add(process);
         }
         return entity;

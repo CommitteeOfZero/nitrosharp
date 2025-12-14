@@ -53,10 +53,8 @@ internal sealed class GameContext
         long prevFrameTicks = 0L;
         long frameId = 0L;
 
-        bool surfaceDestroyed = false;
         bool needsResize = false;
         bool closeRequested = false;
-        Window.Mobile_SurfaceDestroyed += () => surfaceDestroyed = true;
         Window.Resized += () => needsResize = true;
         Window.CloseRequested += () => closeRequested = true;
 
@@ -105,19 +103,13 @@ internal sealed class GameContext
              """
         );
 
-        var createSurface = new TaskCompletionSource<SwapchainSource>();
-        window.Mobile_SurfaceCreated += surf => createSurface.SetResult(surf);
         var initAudio = Task.Run(() => InitAudio(config));
         var loadFonts = Task.Run(async () => await LoadFonts(profile));
-
-        (GlyphRasterizer glyphRasterizer, FontSettings fontSettings) = await loadFonts;
         var startVM = Task.Run(() => LoadStartupScript(profile, log));
 
-        SwapchainSource swapchainSource = await createSurface.Task;
         (GraphicsDevice gd, Swapchain swapchain) = InitGraphics(window, config);
         ContentManager contentMgr = CreateContentManager(gd, profile);
-        AudioContext audioContext = await initAudio;
-        (NsScriptVM vm, NsScriptThreadState mainThread) = await startVM;
+        (GlyphRasterizer glyphRasterizer, FontSettings fontSettings) = await loadFonts;
 
         var inputContext = new InputContext(window);
         var renderContext = new RenderContext(
@@ -131,6 +123,9 @@ internal sealed class GameContext
             null!
         );
 
+        AudioContext audioContext = await initAudio;
+        (NsScriptVM vm, NsScriptThreadState mainThreadState) = await startVM;
+
         log.Info(
             $"""
             Init successful.
@@ -139,9 +134,8 @@ internal sealed class GameContext
             """
         );
 
-        var world = new World();
-        Process mainProcess = CreateProcess(world, vm, profile.SysScripts.Startup, profile, fontSettings);
-        world.RegisterProcess(mainProcess, isMain: true, activate: true);
+        (Process process, Thread thread) = CreateProcess(mainThreadState, profile.SysScripts.Startup, fontSettings);
+        var world = new World(process, thread);
         var ctx =  new GameContext
         {
             Window = window,
@@ -249,10 +243,12 @@ internal sealed class GameContext
 
     private static (NsScriptVM vm, NsScriptThreadState mainThread) LoadStartupScript(GameProfile gameProfile, Log log)
     {
+        DirectoryInfo tempDir = Directory.CreateTempSubdirectory("NitroSharp");
+
         const string globalsFileName = "_globals";
 
         string nssFolder = Path.Combine(gameProfile.ContentRoot, gameProfile.ScriptRoot);
-        string bytecodeCacheDir = nssFolder.Replace("nss", "nsx");
+        string bytecodeCacheDir = tempDir.FullName;
 
         string globalsPath = Path.Combine(bytecodeCacheDir, globalsFileName);
         if (gameProfile.SkipUpToDateCheck || !File.Exists(globalsPath))
@@ -314,30 +310,19 @@ internal sealed class GameContext
 
         var nsxLocator = new FileSystemNsxModuleLocator(bytecodeCacheDir);
         var vm = new NsScriptVM(nsxLocator, File.OpenRead(globalsPath));
-        NsScriptThreadState mainThread = CreateThread(vm, gameProfile.SysScripts.Startup);
+        string moduleName = Path.ChangeExtension(gameProfile.SysScripts.Startup, null);
+        NsScriptThreadState mainThread = vm.CreateThread(moduleName, "main")!.Value;
         return (vm, mainThread);
     }
 
-    private static Process CreateProcess(
-        World world,
-        NsScriptVM vm,
+    private static (Process process, Thread thread) CreateProcess(
+        in NsScriptThreadState threadState,
         string modulePath,
-        GameProfile profile,
         FontSettings fontSettings)
     {
-        string fullModulePath = Path.Combine(profile.ScriptRoot, modulePath);
-        var processName = EntityName.Parse(Path.GetFileNameWithoutExtension(modulePath));
-        NsScriptThreadState threadState = CreateThread(vm, modulePath);
-        var process = new Process(processName, parent: null, fontSettings);
-        var mainThread = new Thread(EntityName.Parse("main"), parent: process, threadState, isMain: true);
-        world.AddEntity(process);
-        world.AddEntity(mainThread);
-        return process;
-    }
-
-    private static NsScriptThreadState CreateThread(NsScriptVM vm, string modulePath)
-    {
-        string moduleName = Path.ChangeExtension(modulePath, null);
-        return vm.CreateThread(moduleName, "main")!.Value;
+        string moduleName = Path.GetFileNameWithoutExtension(modulePath);
+        var process = new Process(EntityName.Parse(moduleName), parent: null, fontSettings);
+        var thread = new Thread(EntityName.Parse("main"), parent: process, threadState, isMain: true);
+        return (process, thread);
     }
 }
