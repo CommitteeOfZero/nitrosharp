@@ -148,6 +148,10 @@ public static class SyntaxFacts
             case SyntaxTokenKind.TrueKeyword:
             case SyntaxTokenKind.FalseKeyword:
             case SyntaxTokenKind.OpenParen:
+            case SyntaxTokenKind.Exclamation:
+            case SyntaxTokenKind.Plus:
+            case SyntaxTokenKind.Minus:
+            case SyntaxTokenKind.At:
                 return true;
 
             default:
