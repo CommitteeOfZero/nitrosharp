@@ -43,15 +43,6 @@ public sealed class NsScriptVM
     internal GlobalsLookupTable GlobalsLookup { get; }
 
     public SystemVariableLookup SystemVariables { get; }
-    // public NsScriptProcess? CurrentProcess { get; private set; }
-    //
-    // public NsScriptProcess RestoreProcess(in NsScriptProcessDump dump)
-    // {
-    //     NsScriptProcess process = new(this, dump);
-    //     _lastProcessId = Math.Max(_lastProcessId, process.Id);
-    //     _lastThreadId = Math.Max(_lastThreadId, dump.Threads.Max(x => x.Id));
-    //     return process;
-    // }
 
     public GlobalsDump DumpVariables() => DumpGlobals(_variables, GlobalsLookup.Variables);
     public GlobalsDump DumpFlags() => DumpGlobals(_flags, GlobalsLookup.Flags);
@@ -104,47 +95,6 @@ public sealed class NsScriptVM
         return module;
     }
 
-    // public NsScriptProcess CreateProcess(string moduleName, string symbol)
-    // {
-    //     uint pid = ++_lastProcessId;
-    //     NsScriptThread? mainThread = CreateThread(moduleName, symbol);
-    //     if (mainThread is null)
-    //     {
-    //         throw new ArgumentException($"Symbol '{symbol}' not found in module '{moduleName}'");
-    //     }
-    //     return new NsScriptProcess(this, pid, mainThread);
-    // }
-    //
-    // public NsScriptProcessState? CreateProcess(string moduleName, string symbol)
-    // {
-    //     uint pid = ++_lastProcessId;
-    //     NsScriptThreadState? mainThread = CreateThread(moduleName, symbol);
-    //     if (mainThread is null)
-    //     {
-    //         throw new ArgumentException($"Symbol '{symbol}' not found in module '{moduleName}'");
-    //     }
-    //
-    //     return new NsScriptProcessState(pid);
-    // }
-
-    // public NsScriptThread? CreateThread(NsScriptProcess process, string symbol, bool start = false)
-    //     => CreateThread(process, process.CurrentThread!.CurrentFrame.Module.Name, symbol, start);
-
-    // private NsScriptThread? CreateThread(string moduleName, string symbol)
-    // {
-    //     NsxModule? module = GetModule(moduleName);
-    //     if (!module.TryLookupSubroutineIndex(symbol, out int index))
-    //     {
-    //         module = module.Imports
-    //             .Select(GetModule)
-    //             .FirstOrDefault(import => import.TryLookupSubroutineIndex(symbol, out index));
-    //     }
-    //
-    //     if (module is null) { return null; }
-    //     var frame = new CallFrame(module, (ushort)index, 0);
-    //     return new NsScriptThread(++_lastThreadId, ref frame);
-    // }
-
     public NsScriptThreadState? CreateThread(string moduleName, string symbol)
     {
         NsxModule? module = GetModule(moduleName);
@@ -159,75 +109,6 @@ public sealed class NsScriptVM
         var frame = CreateEntryPointCallFrame(module, (ushort)index);
         return new NsScriptThreadState(frame);
     }
-
-    // public NsScriptThread ActivateDialogueBlock(in DialogueBlockToken blockToken)
-    //     => ActivateDialogueBlock(CurrentProcess!, blockToken);
-    //
-    // private NsScriptThread ActivateDialogueBlock(
-    //     NsScriptProcess process,
-    //     in DialogueBlockToken blockToken)
-    // {
-    //     var frame = new CallFrame(
-    //         blockToken.Module,
-    //         (ushort)blockToken.SubroutineIndex,
-    //         pc: blockToken.Offset
-    //     );
-    //     NsScriptThread thread = CreateThread(ref frame, declaredId: process.CurrentThread!.Id);
-    //     thread.DialoguePage = EntityPath.Parse("@" + blockToken.BlockName);
-    //     return thread;
-    // }
-
-    // public void Run(
-    //     NsScriptProcess process,
-    //     BuiltInFunctions builtins,
-    //     CancellationToken cancellationToken)
-    // {
-    //     builtins._vm = this;
-    //     CurrentProcess = process;
-    //     process.Tick();
-    //
-    //     while (process.IsRunning
-    //            && (!process.Threads.IsEmpty || process.PendingThreadActions.Count > 0))
-    //     {
-    //         process.ProcessPendingThreadActions();
-    //         uint nbActive = 0;
-    //         foreach (NsScriptThread thread in process.Threads)
-    //         {
-    //             if (!process.IsRunning) { break; }
-    //             if (thread is { IsActive: true, Yielded: false })
-    //             {
-    //                 process.CurrentThread = thread;
-    //                 nbActive++;
-    //                 TickResult tickResult = Tick(process, ref thread, builtins);
-    //                 if (!process.IsRunning) { break; }
-    //                 if (tickResult == TickResult.Yield)
-    //                 {
-    //                     thread.Yielded = true;
-    //                     nbActive--;
-    //                 }
-    //                 else if (thread.DoneExecuting)
-    //                 {
-    //                     if (thread.WaitingThread is { DoneExecuting: false } waitingThread)
-    //                     {
-    //                         ResumeThread(waitingThread);
-    //                         nbActive++;
-    //                     }
-    //                     TerminateThread(thread);
-    //                     nbActive--;
-    //                 }
-    //             }
-    //         }
-    //
-    //         if (nbActive == 0)
-    //         {
-    //             foreach (NsScriptThread thread in process.Threads)
-    //             {
-    //                 thread.Yielded = false;
-    //             }
-    //             break;
-    //         }
-    //     }
-    // }
 
     internal ref ConstantValue GetVariable(int index)
     {
@@ -379,6 +260,7 @@ public sealed class NsScriptVM
                     }
                     return TickResult.Ok;
                 case Opcode.CallFar:
+                case Opcode.CallChapter:
                     newFrame = externalCall(ref program);
                     thread.CallFrameStack.Push(newFrame);
                     frame.ProgramCounter = program.Position;
