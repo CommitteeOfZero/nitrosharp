@@ -32,12 +32,23 @@ internal abstract class TextScanner(string text)
     protected TextSpan CurrentLexemeSpan
         => new(start: LexemeStart, length: Position - LexemeStart);
 
-    protected char PeekChar() => PeekChar(0);
+    protected char PeekChar()
+    {
+        string text = Text;
+        int index = Position;
+
+        return (uint)index < (uint)text.Length
+            ? text[index]
+            : EofCharacter;
+    }
 
     protected char PeekChar(int offset)
     {
-        return Position + offset < Text.Length
-            ? Text[Position + offset]
+        string text = Text;
+        int index = Position + offset;
+
+        return (uint)index < (uint)text.Length
+            ? text[index]
             : EofCharacter;
     }
 
