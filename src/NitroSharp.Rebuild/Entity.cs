@@ -72,7 +72,7 @@ internal abstract class Entity : EntityScope, EntityInternal, SmallLookupListEnt
     }
 
     protected ChildOfTypeEnumerable<T> GetChildren<T>() where T : Entity => new(ref _children);
-    public DescendantsAndSelfEnumerable DescendantsAndSelf() => new(this);
+    public DescendantsAndSelfEnumerable DescendantsAndSelf(bool selfFirst = true) => new(this, selfFirst);
     public DescendantsAndSelfOfTypeEnumerable<T> DescendantsAndSelf<T>() where T : Entity => new((T)this);
     private AscendantsAndSelfEnumerable AscendantsAndSelf() => new(this);
     public DescendantEnumerable GetDescendants() => new(this);
@@ -218,31 +218,32 @@ internal abstract class Entity : EntityScope, EntityInternal, SmallLookupListEnt
         public AscendantsAndSelfEnumerable GetEnumerator() => this;
     }
 
-    internal struct DescendantsAndSelfEnumerable
+    internal struct DescendantsAndSelfEnumerable(Entity root, bool selfFirst)
     {
-        private Entity? _self;
-        private DescendantEnumerable _descendants;
-
-        public DescendantsAndSelfEnumerable(Entity root)
-        {
-            _descendants = new DescendantEnumerable(root);
-            _self = root;
-        }
+        private Entity? _self = root;
+        private DescendantEnumerable _descendants = new(root);
 
         public Entity Current { get; private set; } = null!;
 
         public bool MoveNext()
         {
-            if (_self is not null)
+            if (_self is not null && selfFirst)
             {
-                Current = _self;
-                _self = null;
-                return true;
+                goto ret_self;
             }
 
             bool result = _descendants.MoveNext();
             Current = _descendants.Current;
+            if (!result && _self is not null)
+            {
+                goto ret_self;
+            }
             return result;
+
+        ret_self:
+            Current = _self;
+            _self = null;
+            return true;
         }
 
         public DescendantsAndSelfEnumerable GetEnumerator() => this;

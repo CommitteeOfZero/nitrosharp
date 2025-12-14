@@ -137,7 +137,7 @@ internal sealed class Builtins : BuiltInFunctions
     {
         foreach (Entity entity in Query(query))
         {
-            foreach (Entity node in entity.DescendantsAndSelf())
+            foreach (Entity node in entity.DescendantsAndSelf(selfFirst: false))
             {
                 node.Move(_ctx.RenderContext, dstX, dstY, duration, easeFunction);
             }
