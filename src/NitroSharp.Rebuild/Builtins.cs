@@ -231,7 +231,13 @@ internal sealed class Builtins : BuiltInFunctions
     {
         foreach (Entity entity in Query(query))
         {
-
+            if (!entity.Request(action))
+            {
+                _log.Warn(
+                    $"Thread {CurrentThread.Name.ToString()} | " +
+                    $"Action '{action.ToString()}' not implemented for entity '{entity.GetAbsolutePath()}'"
+                );
+            }
         }
     }
 

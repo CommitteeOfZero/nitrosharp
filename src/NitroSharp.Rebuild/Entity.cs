@@ -111,6 +111,9 @@ internal abstract class Entity : EntityScope, EntityInternal, SmallLookupListEnt
         Process.Aliases.Set(this, alias);
     }
 
+
+    public virtual bool Request(NsEntityAction action) => false;
+
     public Entity? TryGetChild(EntityName name) => _children.TryGetValue(name);
 
     public void Query(EntityPattern pattern, ref SmallList<Entity> results)
