@@ -34,10 +34,11 @@ internal abstract class RenderItem : Entity
 
     public override void Update(GameContext ctx)
     {
+        AdvanceAnimation(ref _fadeAnimation, ctx.DeltaTime);
+        AdvanceAnimation(ref _moveAnimation, ctx.DeltaTime);
+        AdvanceAnimation(ref _scaleAnimation, ctx.DeltaTime);
+
         PerformLayout(ctx, null);
-        _moveAnimation?.Update(ctx.DeltaTime);
-        _fadeAnimation?.Update(ctx.DeltaTime);
-        _scaleAnimation?.Update(ctx.DeltaTime);
     }
 
     private void PerformLayout(GameContext ctx, DesignRect? constraintRect)
@@ -51,6 +52,26 @@ internal abstract class RenderItem : Entity
         // {
         //     constraintRect = BoundingRect;
         // }
+    }
+
+    protected static void AdvanceAnimation<T>(ref T? anim, float dt)
+        where T : Animation
+    {
+        if (anim?.Update(dt) is false)
+        {
+            anim = null;
+        }
+    }
+
+    public override bool IsAnimationActive(AnimationKind animationKind)
+    {
+        return animationKind switch
+        {
+            AnimationKind.Fade => _fadeAnimation is not null,
+            AnimationKind.Move => _moveAnimation is not null,
+            AnimationKind.Zoom => _scaleAnimation is not null,
+            _ => false
+        };
     }
 
     public override void Move(RenderContext ctx, in NsCoordinate x, in NsCoordinate y, TimeSpan duration, NsEaseFunction easeFunction)
