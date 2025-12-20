@@ -20,7 +20,7 @@ internal sealed class Thread : Entity, IVmThread
         EntityIdle,
     }
 
-    internal record struct WaitOperation(WaitCondition WaitCondition, EntityQuery? EntityQuery, TimeSpan? Deadline)
+    internal record struct WaitOperation(WaitCondition Condition, EntityQuery? EntityQuery, TimeSpan? Deadline)
     {
         public static WaitOperation Suspend(TimeSpan deadline) => new(WaitCondition.Timeout, null, deadline);
         public static WaitOperation UserInput(TimeSpan? deadline) => new(WaitCondition.UserInput, null, deadline);
@@ -67,9 +67,23 @@ internal sealed class Thread : Entity, IVmThread
             InputContext input = ctx.InputContext;
             return waitOperation switch
             {
-                { WaitCondition: WaitCondition.UserInput } => input.ConsumeAdvance(),
-                _ => true
+                { Condition: WaitCondition.UserInput } => input.ConsumeAdvance(),
+                { Condition: WaitCondition.FadeCompleted, EntityQuery: { } query } => checkAnim(
+                    query,
+                    AnimationKind.Fade
+                ),
+                _ => false
             };
+
+            bool checkAnim(EntityQuery query, AnimationKind anim)
+            {
+                foreach (var entity in World.Query(query))
+                {
+                    if (entity.IsAnimationActive(anim)) { return false; }
+                }
+
+                return true;
+            }
         }
 
         return true;

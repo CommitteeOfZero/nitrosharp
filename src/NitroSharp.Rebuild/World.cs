@@ -37,6 +37,8 @@ internal sealed class World : EntityScope
         {
             _processes.Add(process);
         }
+
+        entity.World = this;
         return entity;
     }
 

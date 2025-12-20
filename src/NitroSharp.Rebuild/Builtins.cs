@@ -7,6 +7,7 @@ using NitroSharp.NsScript;
 using NitroSharp.NsScript.Primitives;
 using NitroSharp.NsScript.VM;
 using Veldrid;
+using ZeroLog;
 
 namespace NitroSharp;
 
@@ -14,11 +15,13 @@ internal sealed class Builtins : BuiltInFunctions
 {
     private readonly GameContext _ctx;
     private readonly World _world;
+    private readonly Log _log;
 
     public Builtins(GameContext gameContext)
     {
         _ctx = gameContext;
         _world = gameContext.World;
+        _log = gameContext.RootLog;
     }
 
     private Thread CurrentThread => _world.CurrentProcess.CurrentThread;
@@ -26,9 +29,30 @@ internal sealed class Builtins : BuiltInFunctions
 
     private SmallList<Entity> Query(in EntityQuery query) => _world.Query(query);
 
+    private bool ResolveEntityPath(in EntityPath path, out EntityName name, out Entity? parent)
+    {
+        if (_world.TryResolvePath(path, out name, out parent)) { return true; }
+
+        _log.Warn($"Failed to resolve entity path: \"{path.ToString()}\"");
+        return false;
+    }
+
+    protected override void NotImplemented(string functionName = "")
+    {
+        _log.Warn($"Thread '{CurrentThread.Name.ToString()}' | {functionName} is not implemented");
+    }
+
+    protected override T NotImplemented<T>(string functionName = "")
+    {
+        NotImplemented(functionName);
+        return default!;
+    }
+
+    public override int GetPlatformId() => 100;
+
     public override void CreateEntity(in EntityPath entityPath)
     {
-        if (_world.TryResolvePath(entityPath, out EntityName name, out Entity? parent))
+        if (ResolveEntityPath(entityPath, out EntityName name, out Entity? parent))
         {
             _world.AddEntity(new BlankEntity(name, parent));
         }
@@ -36,7 +60,7 @@ internal sealed class Builtins : BuiltInFunctions
 
     public override void LoadImage(in EntityPath entityPath, string source)
     {
-        if (_world.TryResolvePath(entityPath, out EntityName name, out Entity? parent))
+        if (ResolveEntityPath(entityPath, out EntityName name, out Entity? parent))
         {
             _world.AddEntity(new Image(name, parent, GetSpriteTexture(source)));
         }
@@ -44,7 +68,7 @@ internal sealed class Builtins : BuiltInFunctions
 
     public override void CreateSprite(in EntityPath entityPath, int priority, NsCoordinate x, NsCoordinate y, string source)
     {
-        if (_world.TryResolvePath(entityPath, out EntityName name, out Entity? parent))
+        if (ResolveEntityPath(entityPath, out EntityName name, out Entity? parent))
         {
             _world.AddEntity(new Sprite(name, parent, priority, GetSpriteTexture(source)))
                 .WithPosition(_ctx.RenderContext, x, y);
@@ -53,7 +77,7 @@ internal sealed class Builtins : BuiltInFunctions
 
     public override void CreateSpriteEx(in EntityPath entityPath, int priority, NsCoordinate x, NsCoordinate y, uint srcX, uint srcY, uint width, uint height, string source)
     {
-        if (_world.TryResolvePath(entityPath, out EntityName name, out Entity? parent))
+        if (ResolveEntityPath(entityPath, out EntityName name, out Entity? parent))
         {
             SpriteTexture texture = GetSpriteTexture(source, new DesignRectU(srcX, srcY, width, height));
             _world.AddEntity(new Sprite(name, parent, priority, texture))
@@ -84,7 +108,7 @@ internal sealed class Builtins : BuiltInFunctions
         NsTextDimension height,
         string markup)
     {
-        if (_world.TryResolvePath(entityPath, out EntityName name, out Entity? parent))
+        if (ResolveEntityPath(entityPath, out EntityName name, out Entity? parent))
         {
             _world.AddEntity(new TextBlock(name, parent, priority, markup, _ctx.RenderContext.Text))
                 .WithPosition(_ctx.RenderContext, x, y);
@@ -112,7 +136,7 @@ internal sealed class Builtins : BuiltInFunctions
 
     public override void CreateThread(in EntityPath entityPath, string target, NsCoordinate x, NsCoordinate y)
     {
-        if (_world.TryResolvePath(entityPath, out EntityName name, out Entity? parent))
+        if (ResolveEntityPath(entityPath, out EntityName name, out Entity? parent))
         {
             parent = _world.CurrentProcess;
             NsScriptThreadState? vmState = VM.CreateThread(CurrentModule.Name, target);
@@ -125,7 +149,7 @@ internal sealed class Builtins : BuiltInFunctions
 
     public override void CreateRectangle(in EntityPath entityPath, int priority, NsCoordinate x, NsCoordinate y, uint width, uint height, NsColor color)
     {
-        if (_world.TryResolvePath(entityPath, out EntityName entityName, out Entity? parent))
+        if (ResolveEntityPath(entityPath, out EntityName entityName, out Entity? parent))
         {
             var size = new DesignSize(width, height);
             _world.AddEntity(new SolidColorRect(entityName, parent, priority, color.ToRgbaFloat(), size))
@@ -148,10 +172,29 @@ internal sealed class Builtins : BuiltInFunctions
     {
         foreach (Entity entity in Query(query))
         {
-            foreach (Entity node in entity.DescendantsAndSelf())
+            foreach (Entity node in entity.DescendantsAndSelf(selfFirst: false))
             {
                 node.Fade(dstOpacity, duration, easeFunction);
             }
+        }
+
+        Pause(Thread.WaitCondition.FadeCompleted, query, duration, delay);
+    }
+
+    private void Pause(
+        Thread.WaitCondition condition,
+        EntityQuery query,
+        TimeSpan duration,
+        TimeSpan delay)
+    {
+        if (delay == TimeSpan.Zero) { return; }
+        if (!delay.Equals(duration))
+        {
+            Wait(AdjustDuration(delay));
+        }
+        else
+        {
+            CurrentThread.Wait(new Thread.WaitOperation(condition, query, null));
         }
     }
 
@@ -190,6 +233,11 @@ internal sealed class Builtins : BuiltInFunctions
         {
 
         }
+    }
+
+    public override void Wait(TimeSpan delay)
+    {
+        CurrentThread.Wait(Thread.WaitOperation.Suspend(Clock.Elapsed + delay));
     }
 
     public override void WaitForInput()

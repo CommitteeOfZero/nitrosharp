@@ -35,6 +35,7 @@ internal abstract class Entity : EntityScope, EntityInternal, SmallLookupListEnt
         Parent = parent;
         Name = name;
         IsEnabled = false;
+        World = null!;
     }
 
     void EntityInternal.AddChild(Entity child)
@@ -56,6 +57,8 @@ internal abstract class Entity : EntityScope, EntityInternal, SmallLookupListEnt
     public bool IsEnabled { get; private set; }
 
     public ref readonly SmallLookupList<EntityName, Entity> Children => ref _children;
+
+    public World World { get; internal set; }
 
     public Process Process
     {
@@ -148,6 +151,8 @@ internal abstract class Entity : EntityScope, EntityInternal, SmallLookupListEnt
 
         return sb.ToString();
     }
+
+    public virtual bool IsAnimationActive(AnimationKind animationKind) => false;
 
     public virtual void Fade(float dstOpacity, TimeSpan duration, NsEaseFunction easeFunction = NsEaseFunction.Linear)
     {

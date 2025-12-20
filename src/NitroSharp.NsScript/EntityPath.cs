@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using NitroSharp.Common;
 
 namespace NitroSharp.NsScript;
@@ -32,6 +33,9 @@ public readonly struct EntityPath
 
         return new EntityPath(parts);
     }
+
+    public override string ToString()
+        => string.Join('/', Parts.ToArray().Select(x => x.ToString()));
 }
 
 public readonly record struct EntityPathPart(string Value, bool IsAlias)
@@ -49,5 +53,11 @@ public readonly record struct EntityPathPart(string Value, bool IsAlias)
 
         bool isAlias = queryPart.Scope == EntityQueryScope.CurrentAliases;
         return new EntityPathPart(queryPart.Pattern.Value, isAlias);
+    }
+
+    public override string ToString()
+    {
+        string prefix = IsAlias ? "@" : "";
+        return $"{prefix}{Value}";
     }
 }
