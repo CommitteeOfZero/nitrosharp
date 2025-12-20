@@ -8,717 +8,712 @@ using NitroSharp.NsScript.Syntax;
 using NitroSharp.NsScript.Utilities;
 using NitroSharp.NsScript.VM;
 
-namespace NitroSharp.NsScript.Compiler
+namespace NitroSharp.NsScript.Compiler;
+
+internal ref struct Emitter
 {
-    internal ref struct Emitter
+    private readonly ref struct EmitRangeCookie(SyntaxNode syntaxNode, ref Emitter emitter)
     {
-        private readonly ref struct EmitRangeCookie(SyntaxNode syntaxNode, ref Emitter emitter)
-        {
-            private readonly ref readonly int _currentOffset = ref emitter._code.PositionRef;
-            private readonly int _startOffset = emitter._code.Position;
-            private readonly NsxModuleBuilder _moduleBuilder = emitter._module;
+        private readonly ref readonly int _currentOffset = ref emitter._code.PositionRef;
+        private readonly int _startOffset = emitter._code.Position;
+        private readonly NsxModuleBuilder _moduleBuilder = emitter._module;
 
-            public void Dispose()
+        public void Dispose()
+        {
+            int endOffset = _currentOffset;
+            int length = endOffset - _startOffset;
+            var bytecodeSpan = new BytecodeSpan(_startOffset, length);
+            _moduleBuilder.AddSourceMapping(new SourceMapping(bytecodeSpan, syntaxNode.Span));
+        }
+    }
+
+    private readonly NsxModuleBuilder _module;
+    private readonly SubroutineSymbol _subroutine;
+    private readonly Checker _checker;
+    private readonly EmitContext _context;
+    private BufferWriter _code;
+    private int _textId;
+    private ValueStack<BreakScope> _breakScopes;
+    private bool _suppressConstantLookup;
+
+    private Emitter(NsxModuleBuilder moduleBuilder, SubroutineSymbol subroutine)
+    {
+        _module = moduleBuilder;
+        _subroutine = subroutine;
+        _checker = new Checker(moduleBuilder.EmitContext, subroutine);
+        _context = moduleBuilder.EmitContext;
+        _breakScopes = new ValueStack<BreakScope>(initialCapacity: 4);
+        _code = default;
+        _textId = 0;
+        _suppressConstantLookup = false;
+
+        if (subroutine is FunctionSymbol { Parameters.Length: > 0 } function)
+        {
+            foreach (ParameterSymbol p in function.Parameters)
             {
-                int endOffset = _currentOffset;
-                int length = endOffset - _startOffset;
-                var bytecodeSpan = new BytecodeSpan(_startOffset, length);
-                _moduleBuilder.AddSourceMapping(new SourceMapping(bytecodeSpan, syntaxNode.Span));
+                _ = GetVariableToken(p.Name);
+            }
+        }
+    }
+
+    private readonly struct JumpPlaceholder(int instrPos)
+    {
+        public readonly int InstructionPos = instrPos;
+
+        public int OffsetPos => InstructionPos + 1;
+    }
+
+    private struct BreakScope
+    {
+        private Queue<JumpPlaceholder>? _breakPlaceholders;
+
+        public Queue<JumpPlaceholder> BreakPlaceholders
+            => _breakPlaceholders ??= new Queue<JumpPlaceholder>();
+    };
+
+    private void EmitOpcode(Opcode opcode)
+    {
+        _code.WriteByte((byte)opcode);
+    }
+
+    private ushort GetVariableToken(string name)
+        => _context.GetVariableToken(name);
+
+    private ushort GetFlagToken(string name)
+        => _context.GetFlagToken(name);
+
+    [UnscopedRef]
+    private EmitRangeCookie StartRange(SyntaxNode syntaxNode)
+        => new(syntaxNode, ref this);
+
+    public static void CompileSubroutine(
+        NsxModuleBuilder moduleBuilder, SubroutineSymbol subroutine,
+        ref BufferWriter codeBuffer, List<int> dialogueBlockOffsets)
+    {
+        Debug.Assert(dialogueBlockOffsets.Count == 0);
+        int start = codeBuffer.Position;
+        var emitter = new Emitter(moduleBuilder, subroutine);
+        emitter._code = codeBuffer;
+        emitter.EmitStatement(subroutine.Declaration.Body);
+        emitter.EmitOpcode(Opcode.Return);
+
+        SubroutineDeclaration decl = subroutine.Declaration;
+        ImmutableArray<DialogueBlock> dialogueBlocks = decl.DialogueBlocks;
+        foreach (DialogueBlock dialogueBlock in dialogueBlocks)
+        {
+            dialogueBlockOffsets.Add(emitter._code.Position - start);
+            emitter.EmitDialogueBlock(dialogueBlock);
+        }
+        codeBuffer = emitter._code;
+    }
+
+    private void EmitUnary(UnaryOperatorKind opKind)
+    {
+        switch (opKind)
+        {
+            case UnaryOperatorKind.Not:
+                EmitOpcode(Opcode.Invert);
+                break;
+            case UnaryOperatorKind.Minus:
+                EmitOpcode(Opcode.Neg);
+                break;
+            case UnaryOperatorKind.Delta:
+                EmitOpcode(Opcode.Delta);
+                break;
+        }
+    }
+
+    private void EmitBinary(BinaryOperatorKind opKind)
+    {
+        switch (opKind)
+        {
+            case BinaryOperatorKind.Equals:
+                EmitOpcode(Opcode.Equal);
+                break;
+            case BinaryOperatorKind.NotEquals:
+                EmitOpcode(Opcode.NotEqual);
+                break;
+            default:
+                EmitOpcode(Opcode.Binary);
+                _code.WriteByte((byte)opKind);
+                break;
+        }
+    }
+
+    private void EmitExpression(Expression expression)
+    {
+        switch (expression.Kind)
+        {
+            case SyntaxNodeKind.LiteralExpression:
+                EmitLiteral((LiteralExpression)expression);
+                break;
+            case SyntaxNodeKind.NameExpression:
+                EmitNameExpression((NameExpression)expression);
+                break;
+            case SyntaxNodeKind.UnaryExpression:
+                EmitUnaryExpression((UnaryExpression)expression);
+                break;
+            case SyntaxNodeKind.BinaryExpression:
+                EmitBinaryExpression((BinaryExpression)expression);
+                break;
+            case SyntaxNodeKind.AssignmentExpression:
+                EmitAssignmentExpression((AssignmentExpression)expression);
+                break;
+            case SyntaxNodeKind.FunctionCallExpression:
+                EmitFunctionCall((FunctionCallExpression)expression);
+                break;
+            case SyntaxNodeKind.BezierExpression:
+                EmitBezierExpression((BezierExpression)expression);
+                break;
+        }
+    }
+
+    private void EmitLiteral(LiteralExpression literal)
+    {
+        ConstantValue val = literal.Value;
+        if (val.IsString && !_suppressConstantLookup)
+        {
+            string strVal = val.AsString()!;
+            if (WellKnownSymbols.LookupBuiltInConstant(strVal) is { } constant)
+            {
+                val = ConstantValue.BuiltInConstant(constant);
+            }
+        }
+        EmitLoadImm(val);
+    }
+
+    private void EmitNameExpression(NameExpression expression)
+    {
+        LookupResult lookupResult = _checker.LookupNonInvocableSymbol(expression);
+        switch (lookupResult.Variant)
+        {
+            case LookupResultVariant.BuiltInConstant:
+                EmitLoadImm(ConstantValue.BuiltInConstant(lookupResult.BuiltInConstant));
+                break;
+            case LookupResultVariant.Variable:
+                Debug.Assert(lookupResult.Global is not null);
+                ushort varToken = GetVariableToken(lookupResult.Global);
+                EmitOpcode(Opcode.LoadVar);
+                _code.WriteUInt16LE(varToken);
+                break;
+            case LookupResultVariant.Flag:
+                Debug.Assert(lookupResult.Global is not null);
+                ushort flagToken = GetFlagToken(lookupResult.Global);
+                EmitOpcode(Opcode.LoadFlag);
+                _code.WriteUInt16LE(flagToken);
+                break;
+            case LookupResultVariant.Empty:
+                var literal = ConstantValue.String(expression.Name);
+                EmitLoadImm(literal);
+                break;
+        }
+    }
+
+    private void EmitUnaryExpression(UnaryExpression expression)
+    {
+        EmitExpression(expression.Operand);
+        EmitUnary(expression.OperatorKind.Value);
+    }
+
+    private void EmitBinaryExpression(BinaryExpression expression)
+    {
+        using EmitRangeCookie rangeCookie = StartRange(expression);
+        EmitExpression(expression.Right);
+        EmitExpression(expression.Left);
+        EmitBinary(expression.OperatorKind.Value);
+    }
+
+    private void EmitAssignmentExpression(AssignmentExpression assignmentExpr)
+    {
+        using EmitRangeCookie rangeCookie = StartRange(assignmentExpr);
+        LookupResult target = _checker.ResolveAssignmentTarget(assignmentExpr.Target);
+        if (target.IsEmpty)
+        {
+            EmitLoadImm(ConstantValue.Null);
+            return;
+        }
+
+        EmitExpression(assignmentExpr.Value);
+
+        Debug.Assert(target.Variant is LookupResultVariant.Variable or LookupResultVariant.Flag);
+        Debug.Assert(target.Global is not null);
+        AssignmentOperatorKind opKind = assignmentExpr.OperatorKind.Value;
+
+        Opcode loadOp;
+        ushort token;
+        if (target.Variant == LookupResultVariant.Variable)
+        {
+            token = GetVariableToken(target.Global);
+            loadOp = Opcode.LoadVar;
+        }
+        else
+        {
+            token = GetFlagToken(target.Global);
+            loadOp = Opcode.LoadFlag;
+        }
+
+        if (opKind != AssignmentOperatorKind.Assign)
+        {
+            EmitOpcode(loadOp);
+            _code.WriteUInt16LE(token);
+        }
+
+        switch (opKind)
+        {
+            case AssignmentOperatorKind.Assign:
+                break;
+            case AssignmentOperatorKind.AddAssign:
+                EmitBinary(BinaryOperatorKind.Add);
+                break;
+            case AssignmentOperatorKind.SubtractAssign:
+                EmitBinary(BinaryOperatorKind.Subtract);
+                break;
+            case AssignmentOperatorKind.MultiplyAssign:
+                EmitBinary(BinaryOperatorKind.Multiply);
+                break;
+            case AssignmentOperatorKind.DivideAssign:
+                EmitBinary(BinaryOperatorKind.Divide);
+                break;
+            case AssignmentOperatorKind.Increment:
+                EmitOpcode(Opcode.Inc);
+                break;
+            case AssignmentOperatorKind.Decrement:
+                EmitOpcode(Opcode.Dec);
+                break;
+        }
+
+        Opcode storeOp = target.Variant == LookupResultVariant.Variable
+            ? Opcode.StoreVar
+            : Opcode.StoreFlag;
+        EmitStore(storeOp, token);
+        EmitLoadImm(ConstantValue.Null);
+    }
+
+    private void EmitFunctionCall(FunctionCallExpression callExpression)
+    {
+        using EmitRangeCookie rangeCookie = StartRange(callExpression);
+        LookupResult lookupResult = _checker.LookupFunction(callExpression, callExpression.TargetName);
+        if (lookupResult.IsEmpty)
+        {
+            EmitLoadImm(ConstantValue.Null);
+            return;
+        }
+        bool isBuiltIn = lookupResult.Variant == LookupResultVariant.BuiltInFunction;
+        ImmutableArray<Expression> arguments = callExpression.Arguments;
+        bool suppressConstantLookup = _suppressConstantLookup;
+
+        if (!isBuiltIn)
+        {
+            Debug.Assert(lookupResult.Subroutine is not null);
+            var target = (FunctionSymbol)lookupResult.Subroutine;
+            int count = Math.Min(arguments.Length, target.Parameters.Length);
+            for (int i = 0; i < count; i++)
+            {
+                _suppressConstantLookup = true;
+                EmitExpression(arguments[i]);
+                EmitStore(Opcode.StoreVar, GetVariableToken(target.Parameters[i].Name));
+                _suppressConstantLookup = suppressConstantLookup;
+            }
+        }
+        else
+        {
+            // Assumption: the first argument is never a built-in constant
+            // Even if it looks like one (e.g. "Black"), it should be treated
+            // as a string literal, not as a built-in constant.
+            // Reasoning: "Black" and "White" are sometimes used as entity names.
+            // Update: also make an exception for regular function calls (see code above).
+            for (int i = 0; i < arguments.Length; i++)
+            {
+                _suppressConstantLookup = i == 0;
+                EmitExpression(arguments[i]);
+                _suppressConstantLookup = suppressConstantLookup;
             }
         }
 
-        private readonly NsxModuleBuilder _module;
-        private readonly SubroutineSymbol _subroutine;
-        private readonly Checker _checker;
-        private readonly EmitContext _context;
-        private BufferWriter _code;
-        private int _textId;
-        private ValueStack<BreakScope> _breakScopes;
-        private bool _suppressConstantLookup;
-
-        private Emitter(NsxModuleBuilder moduleBuilder, SubroutineSymbol subroutine)
+        if (isBuiltIn)
         {
-            _module = moduleBuilder;
-            _subroutine = subroutine;
-            _checker = new Checker(moduleBuilder.EmitContext, subroutine);
-            _context = moduleBuilder.EmitContext;
-            _breakScopes = new ValueStack<BreakScope>(initialCapacity: 4);
-            _code = default;
-            _textId = 0;
-            _suppressConstantLookup = false;
-
-            if (subroutine is FunctionSymbol { Parameters.Length: > 0 } function)
+            EmitOpcode(Opcode.Dispatch);
+            _code.WriteByte((byte)lookupResult.BuiltInFunction);
+            _code.WriteByte((byte)callExpression.Arguments.Length);
+        }
+        else
+        {
+            Debug.Assert(lookupResult.Subroutine is not null);
+            var function = (FunctionSymbol)lookupResult.Subroutine;
+            if (ReferenceEquals(function.DeclaringSourceFile, _subroutine.DeclaringSourceFile))
             {
-                foreach (ParameterSymbol p in function.Parameters)
-                {
-                    _ = GetVariableToken(p.Name);
-                }
-            }
-        }
-
-        private readonly struct JumpPlaceholder(int instrPos)
-        {
-            public readonly int InstructionPos = instrPos;
-
-            public int OffsetPos => InstructionPos + 1;
-        }
-
-        private struct BreakScope
-        {
-            private Queue<JumpPlaceholder>? _breakPlaceholders;
-
-            public Queue<JumpPlaceholder> BreakPlaceholders
-                => _breakPlaceholders ??= new Queue<JumpPlaceholder>();
-        };
-
-        private void EmitOpcode(Opcode opcode)
-        {
-            _code.WriteByte((byte)opcode);
-        }
-
-        private ushort GetVariableToken(string name)
-            => _context.GetVariableToken(name);
-
-        private ushort GetFlagToken(string name)
-            => _context.GetFlagToken(name);
-
-        [UnscopedRef]
-        private EmitRangeCookie StartRange(SyntaxNode syntaxNode)
-            => new(syntaxNode, ref this);
-
-        public static void CompileSubroutine(
-            NsxModuleBuilder moduleBuilder, SubroutineSymbol subroutine,
-            ref BufferWriter codeBuffer, List<int> dialogueBlockOffsets)
-        {
-            Debug.Assert(dialogueBlockOffsets.Count == 0);
-            int start = codeBuffer.Position;
-            var emitter = new Emitter(moduleBuilder, subroutine);
-            emitter._code = codeBuffer;
-            emitter.EmitStatement(subroutine.Declaration.Body);
-            emitter.EmitOpcode(Opcode.Return);
-
-            SubroutineDeclaration decl = subroutine.Declaration;
-            ImmutableArray<DialogueBlock> dialogueBlocks = decl.DialogueBlocks;
-            foreach (DialogueBlock dialogueBlock in dialogueBlocks)
-            {
-                dialogueBlockOffsets.Add(emitter._code.Position - start);
-                emitter.EmitDialogueBlock(dialogueBlock);
-            }
-            codeBuffer = emitter._code;
-        }
-
-        private void EmitUnary(UnaryOperatorKind opKind)
-        {
-            switch (opKind)
-            {
-                case UnaryOperatorKind.Not:
-                    EmitOpcode(Opcode.Invert);
-                    break;
-                case UnaryOperatorKind.Minus:
-                    EmitOpcode(Opcode.Neg);
-                    break;
-                case UnaryOperatorKind.Delta:
-                    EmitOpcode(Opcode.Delta);
-                    break;
-            }
-        }
-
-        private void EmitBinary(BinaryOperatorKind opKind)
-        {
-            switch (opKind)
-            {
-                case BinaryOperatorKind.Equals:
-                    EmitOpcode(Opcode.Equal);
-                    break;
-                case BinaryOperatorKind.NotEquals:
-                    EmitOpcode(Opcode.NotEqual);
-                    break;
-                default:
-                    EmitOpcode(Opcode.Binary);
-                    _code.WriteByte((byte)opKind);
-                    break;
-            }
-        }
-
-        private void EmitExpression(Expression expression)
-        {
-            switch (expression.Kind)
-            {
-                case SyntaxNodeKind.LiteralExpression:
-                    EmitLiteral((LiteralExpression)expression);
-                    break;
-                case SyntaxNodeKind.NameExpression:
-                    EmitNameExpression((NameExpression)expression);
-                    break;
-                case SyntaxNodeKind.UnaryExpression:
-                    EmitUnaryExpression((UnaryExpression)expression);
-                    break;
-                case SyntaxNodeKind.BinaryExpression:
-                    EmitBinaryExpression((BinaryExpression)expression);
-                    break;
-                case SyntaxNodeKind.AssignmentExpression:
-                    EmitAssignmentExpression((AssignmentExpression)expression);
-                    break;
-                case SyntaxNodeKind.FunctionCallExpression:
-                    EmitFunctionCall((FunctionCallExpression)expression);
-                    break;
-                case SyntaxNodeKind.BezierExpression:
-                    EmitBezierExpression((BezierExpression)expression);
-                    break;
-            }
-        }
-
-        private void EmitLiteral(LiteralExpression literal)
-        {
-            ConstantValue val = literal.Value;
-            if (val.IsString && !_suppressConstantLookup)
-            {
-                string strVal = val.AsString()!;
-                if (WellKnownSymbols.LookupBuiltInConstant(strVal) is { } constant)
-                {
-                    val = ConstantValue.BuiltInConstant(constant);
-                }
-            }
-            EmitLoadImm(val);
-        }
-
-        private void EmitNameExpression(NameExpression expression)
-        {
-            LookupResult lookupResult = _checker.LookupNonInvocableSymbol(expression);
-            switch (lookupResult.Variant)
-            {
-                case LookupResultVariant.BuiltInConstant:
-                    EmitLoadImm(ConstantValue.BuiltInConstant(lookupResult.BuiltInConstant));
-                    break;
-                case LookupResultVariant.Variable:
-                    Debug.Assert(lookupResult.Global is not null);
-                    ushort varToken = GetVariableToken(lookupResult.Global);
-                    EmitOpcode(Opcode.LoadVar);
-                    _code.WriteUInt16LE(varToken);
-                    break;
-                case LookupResultVariant.Flag:
-                    Debug.Assert(lookupResult.Global is not null);
-                    ushort flagToken = GetFlagToken(lookupResult.Global);
-                    EmitOpcode(Opcode.LoadFlag);
-                    _code.WriteUInt16LE(flagToken);
-                    break;
-                case LookupResultVariant.Empty:
-                    var literal = ConstantValue.String(expression.Name);
-                    EmitLoadImm(literal);
-                    break;
-            }
-        }
-
-        private void EmitUnaryExpression(UnaryExpression expression)
-        {
-            EmitExpression(expression.Operand);
-            EmitUnary(expression.OperatorKind.Value);
-        }
-
-        private void EmitBinaryExpression(BinaryExpression expression)
-        {
-            using EmitRangeCookie rangeCookie = StartRange(expression);
-            EmitExpression(expression.Right);
-            EmitExpression(expression.Left);
-            EmitBinary(expression.OperatorKind.Value);
-        }
-
-        private void EmitAssignmentExpression(AssignmentExpression assignmentExpr)
-        {
-            using EmitRangeCookie rangeCookie = StartRange(assignmentExpr);
-            LookupResult target = _checker.ResolveAssignmentTarget(assignmentExpr.Target);
-            if (target.IsEmpty)
-            {
-                EmitLoadImm(ConstantValue.Null);
-                return;
-            }
-
-            EmitExpression(assignmentExpr.Value);
-
-            Debug.Assert(target.Variant is LookupResultVariant.Variable or LookupResultVariant.Flag);
-            Debug.Assert(target.Global is not null);
-            AssignmentOperatorKind opKind = assignmentExpr.OperatorKind.Value;
-
-            Opcode loadOp;
-            ushort token;
-            if (target.Variant == LookupResultVariant.Variable)
-            {
-                token = GetVariableToken(target.Global);
-                loadOp = Opcode.LoadVar;
+                EmitOpcode(Opcode.Call);
+                _code.WriteUInt16LE(_module.GetSubroutineToken(function));
             }
             else
             {
-                token = GetFlagToken(target.Global);
-                loadOp = Opcode.LoadFlag;
+                EmitCallFar(Opcode.CallFar, function);
             }
 
-            if (opKind != AssignmentOperatorKind.Assign)
-            {
-                EmitOpcode(loadOp);
-                _code.WriteUInt16LE(token);
-            }
-
-            switch (opKind)
-            {
-                case AssignmentOperatorKind.Assign:
-                    break;
-                case AssignmentOperatorKind.AddAssign:
-                    EmitBinary(BinaryOperatorKind.Add);
-                    break;
-                case AssignmentOperatorKind.SubtractAssign:
-                    EmitBinary(BinaryOperatorKind.Subtract);
-                    break;
-                case AssignmentOperatorKind.MultiplyAssign:
-                    EmitBinary(BinaryOperatorKind.Multiply);
-                    break;
-                case AssignmentOperatorKind.DivideAssign:
-                    EmitBinary(BinaryOperatorKind.Divide);
-                    break;
-                case AssignmentOperatorKind.Increment:
-                    EmitOpcode(Opcode.Inc);
-                    break;
-                case AssignmentOperatorKind.Decrement:
-                    EmitOpcode(Opcode.Dec);
-                    break;
-            }
-
-            Opcode storeOp = target.Variant == LookupResultVariant.Variable
-                ? Opcode.StoreVar
-                : Opcode.StoreFlag;
-            EmitStore(storeOp, token);
+            _code.WriteByte((byte)callExpression.Arguments.Length);
             EmitLoadImm(ConstantValue.Null);
         }
+    }
 
-        private void EmitFunctionCall(FunctionCallExpression callExpression)
+    private void EmitBezierExpression(BezierExpression expr)
+    {
+        if (_checker.ParseBezierCurve(expr, out ImmutableArray<CompileTimeBezierSegment> segments))
         {
-            using EmitRangeCookie rangeCookie = StartRange(callExpression);
-            LookupResult lookupResult = _checker.LookupFunction(callExpression, callExpression.TargetName);
-            if (lookupResult.IsEmpty)
+            EmitOpcode(Opcode.BezierStart);
+            foreach (CompileTimeBezierSegment seg in segments.Reverse())
             {
-                EmitLoadImm(ConstantValue.Null);
-                return;
-            }
-            bool isBuiltIn = lookupResult.Variant == LookupResultVariant.BuiltInFunction;
-            ImmutableArray<Expression> arguments = callExpression.Arguments;
-            bool suppressConstantLookup = _suppressConstantLookup;
-
-            if (!isBuiltIn)
-            {
-                Debug.Assert(lookupResult.Subroutine is not null);
-                var target = (FunctionSymbol)lookupResult.Subroutine;
-                int count = Math.Min(arguments.Length, target.Parameters.Length);
-                for (int i = 0; i < count; i++)
+                seg.Points.Reverse();
+                foreach (BezierControlPoint cp in seg.Points)
                 {
-                    _suppressConstantLookup = true;
-                    EmitExpression(arguments[i]);
-                    EmitStore(Opcode.StoreVar, GetVariableToken(target.Parameters[i].Name));
-                    _suppressConstantLookup = suppressConstantLookup;
+                    EmitExpression(cp.Y);
+                    EmitExpression(cp.X);
                 }
+                EmitOpcode(Opcode.BezierEndSeg);
             }
-            else
-            {
-                // Assumption: the first argument is never a built-in constant
-                // Even if it looks like one (e.g. "Black"), it should be treated
-                // as a string literal, not as a built-in constant.
-                // Reasoning: "Black" and "White" are sometimes used as entity names.
-                // Update: also make an exception for regular function calls (see code above).
-                for (int i = 0; i < arguments.Length; i++)
-                {
-                    _suppressConstantLookup = i == 0;
-                    EmitExpression(arguments[i]);
-                    _suppressConstantLookup = suppressConstantLookup;
-                }
-            }
+            EmitOpcode(Opcode.BezierEnd);
+        }
+    }
 
-            if (isBuiltIn)
-            {
-                EmitOpcode(Opcode.Dispatch);
-                _code.WriteByte((byte)lookupResult.BuiltInFunction);
-                _code.WriteByte((byte)callExpression.Arguments.Length);
-            }
-            else
-            {
-                Debug.Assert(lookupResult.Subroutine is not null);
-                var function = (FunctionSymbol)lookupResult.Subroutine;
-                if (ReferenceEquals(function.DeclaringSourceFile, _subroutine.DeclaringSourceFile))
-                {
-                    EmitOpcode(Opcode.Call);
-                    _code.WriteUInt16LE(_module.GetSubroutineToken(function));
-                }
-                else
-                {
-                    EmitOpcode(Opcode.CallFar);
-                    SourceFileSymbol externalSourceFile = function.DeclaringSourceFile;
-                    NsxModuleBuilder externalNsxBuilder = _context.GetNsxModuleBuilder(externalSourceFile);
-                    _code.WriteUInt16LE(_module.GetExternalModuleToken(externalSourceFile));
-                    _code.WriteUInt16LE(externalNsxBuilder.GetSubroutineToken(function));
-                }
+    private void EmitCallChapter(CallChapterStatement statement)
+    {
+        if (_checker.ResolveCallChapterTarget(statement) is { } chapter)
+        {
+            EmitCallFar(Opcode.CallChapter, chapter);
+        }
+    }
 
-                _code.WriteByte((byte)callExpression.Arguments.Length);
-                EmitLoadImm(ConstantValue.Null);
-            }
+    private void EmitCallScene(CallSceneStatement statement)
+    {
+        if (_checker.ResolveCallSceneTarget(statement) is { } scene)
+        {
+            EmitCallFar(Opcode.CallScene, scene);
+        }
+    }
+
+    private void EmitCallFar(Opcode opcode, SubroutineSymbol target)
+    {
+        EmitOpcode(opcode);
+        SourceFileSymbol externalSourceFile = target.DeclaringSourceFile;
+        NsxModuleBuilder externalNsxBuilder = _context.GetNsxModuleBuilder(externalSourceFile);
+        _code.WriteUInt16LE(_module.GetExternalModuleToken(externalSourceFile));
+        _code.WriteUInt16LE(externalNsxBuilder.GetSubroutineToken(target));
+    }
+
+    private void EmitStatement(Statement statement)
+    {
+        using EmitRangeCookie rangeCookie = StartRange(statement);
+        switch (statement.Kind)
+        {
+            case SyntaxNodeKind.Block:
+                EmitBlock((Block)statement);
+                break;
+            case SyntaxNodeKind.ExpressionStatement:
+                EmitExpression(((ExpressionStatement)statement).Expression);
+                EmitOpcode(Opcode.Pop);
+                break;
+            case SyntaxNodeKind.IfStatement:
+                EmitIfStatement((IfStatement)statement);
+                break;
+            case SyntaxNodeKind.BreakStatement:
+                EmitBreakStatement((BreakStatement)statement);
+                break;
+            case SyntaxNodeKind.WhileStatement:
+                EmitWhileStatement((WhileStatement)statement);
+                break;
+            case SyntaxNodeKind.ReturnStatement:
+                EmitOpcode(Opcode.Return);
+                break;
+            case SyntaxNodeKind.CallChapterStatement:
+                EmitCallChapter((CallChapterStatement)statement);
+                break;
+            case SyntaxNodeKind.CallSceneStatement:
+                EmitCallScene((CallSceneStatement)statement);
+                break;
+            case SyntaxNodeKind.SelectStatement:
+                EmitSelect((SelectStatement)statement);
+                break;
+            case SyntaxNodeKind.SelectSection:
+                EmitSelectSection((SelectSection)statement);
+                break;
+            case SyntaxNodeKind.DialogueBlock:
+                EmitOpcode(Opcode.ActivateBlock);
+                _code.WriteUInt16LE((ushort)_textId++);
+                break;
+        }
+    }
+
+    private void EmitBlock(Block block)
+    {
+        foreach (Statement statement in block.Statements)
+        {
+            EmitStatement(statement);
+        }
+    }
+
+    private void EmitIfStatement(IfStatement ifStmt)
+    {
+        using (StartRange(ifStmt.Condition))
+        {
+            EmitExpression(ifStmt.Condition);
         }
 
-        private void EmitBezierExpression(BezierExpression expr)
+        if (ifStmt.IfFalseStatement is null)
         {
-            if (_checker.ParseBezierCurve(expr, out ImmutableArray<CompileTimeBezierSegment> segments))
-            {
-                EmitOpcode(Opcode.BezierStart);
-                foreach (CompileTimeBezierSegment seg in segments.Reverse())
-                {
-                    seg.Points.Reverse();
-                    foreach (BezierControlPoint cp in seg.Points)
-                    {
-                        EmitExpression(cp.Y);
-                        EmitExpression(cp.X);
-                    }
-                    EmitOpcode(Opcode.BezierEndSeg);
-                }
-                EmitOpcode(Opcode.BezierEnd);
-            }
-        }
-
-        private void EmitCallChapter(CallChapterStatement statement)
-        {
-            if (_checker.ResolveCallChapterTarget(statement) is { } chapter)
-            {
-                EmitCall(Opcode.CallChapter, chapter);
-            }
-        }
-
-        private void EmitCallScene(CallSceneStatement statement)
-        {
-            if (_checker.ResolveCallSceneTarget(statement) is { } scene)
-            {
-                EmitCall(Opcode.CallScene, scene);
-            }
-        }
-
-        private void EmitCall(Opcode opcode, SubroutineSymbol target)
-        {
-            EmitOpcode(opcode);
-            SourceFileSymbol externalSourceFile = target.DeclaringSourceFile;
-            NsxModuleBuilder externalNsxBuilder = _context.GetNsxModuleBuilder(externalSourceFile);
-            _code.WriteUInt16LE(_module.GetExternalModuleToken(externalSourceFile));
-            _code.WriteUInt16LE(externalNsxBuilder.GetSubroutineToken(target));
-        }
-
-        private void EmitStatement(Statement statement)
-        {
-            using EmitRangeCookie rangeCookie = StartRange(statement);
-            switch (statement.Kind)
-            {
-                case SyntaxNodeKind.Block:
-                    EmitBlock((Block)statement);
-                    break;
-                case SyntaxNodeKind.ExpressionStatement:
-                    EmitExpression(((ExpressionStatement)statement).Expression);
-                    EmitOpcode(Opcode.Pop);
-                    break;
-                case SyntaxNodeKind.IfStatement:
-                    EmitIfStatement((IfStatement)statement);
-                    break;
-                case SyntaxNodeKind.BreakStatement:
-                    EmitBreakStatement((BreakStatement)statement);
-                    break;
-                case SyntaxNodeKind.WhileStatement:
-                    EmitWhileStatement((WhileStatement)statement);
-                    break;
-                case SyntaxNodeKind.ReturnStatement:
-                    EmitOpcode(Opcode.Return);
-                    break;
-                case SyntaxNodeKind.CallChapterStatement:
-                    EmitCallChapter((CallChapterStatement)statement);
-                    break;
-                case SyntaxNodeKind.CallSceneStatement:
-                    EmitCallScene((CallSceneStatement)statement);
-                    break;
-                case SyntaxNodeKind.SelectStatement:
-                    EmitSelect((SelectStatement)statement);
-                    break;
-                case SyntaxNodeKind.SelectSection:
-                    EmitSelectSection((SelectSection)statement);
-                    break;
-                case SyntaxNodeKind.DialogueBlock:
-                    EmitOpcode(Opcode.ActivateBlock);
-                    _code.WriteUInt16LE((ushort)_textId++);
-                    break;
-            }
-        }
-
-        private void EmitBlock(Block block)
-        {
-            foreach (Statement statement in block.Statements)
-            {
-                EmitStatement(statement);
-            }
-        }
-
-        private void EmitIfStatement(IfStatement ifStmt)
-        {
-            using (StartRange(ifStmt.Condition))
-            {
-                EmitExpression(ifStmt.Condition);
-            }
-
-            if (ifStmt.IfFalseStatement is null)
-            {
-                // if (<condition>)
-                //      <consequence>
-                //
-                // ---->
-                //
-                // <condition>
-                // JumpIfFalse exit
-                // <consequence>
-                // exit:
-
-                JumpPlaceholder exitJump = EmitJump(Opcode.JumpIfFalse);
-                EmitStatement(ifStmt.IfTrueStatement);
-                PatchJump(exitJump, _code.Position);
-            }
-            else
-            {
-                // if <condition>
-                //      <consequence>
-                // else
-                //      <alternative>
-                //
-                // ---->
-                //
-                // <condition>
-                // JumpIfFalse alternative
-                // <consequence>
-                // Jump exit
-                // <alternative>
-                // exit:
-
-                JumpPlaceholder altJump = EmitJump(Opcode.JumpIfFalse);
-                EmitStatement(ifStmt.IfTrueStatement);
-                JumpPlaceholder exitJump = EmitJump(Opcode.Jump);
-                int alternativePos = _code.Position;
-                EmitStatement(ifStmt.IfFalseStatement);
-                PatchJump(exitJump, _code.Position);
-                PatchJump(altJump, alternativePos);
-            }
-        }
-
-        private void EmitWhileStatement(WhileStatement whileStmt)
-        {
-            // while (<condition>)
-            //     <body>
+            // if (<condition>)
+            //      <consequence>
             //
             // ---->
             //
             // <condition>
             // JumpIfFalse exit
-            // <body>
-            // Jump <condition>
+            // <consequence>
             // exit:
 
-            int loopStart = _code.Position;
-            using (StartRange(whileStmt.Condition))
-            {
-                EmitExpression(whileStmt.Condition);
-            }
-
             JumpPlaceholder exitJump = EmitJump(Opcode.JumpIfFalse);
-            BreakScope bodyScope = EmitLoopBody(whileStmt.Body);
-            EmitJump(Opcode.Jump, loopStart);
+            EmitStatement(ifStmt.IfTrueStatement);
             PatchJump(exitJump, _code.Position);
-            PatchBreaks(ref bodyScope, _code.Position);
+        }
+        else
+        {
+            // if <condition>
+            //      <consequence>
+            // else
+            //      <alternative>
+            //
+            // ---->
+            //
+            // <condition>
+            // JumpIfFalse alternative
+            // <consequence>
+            // Jump exit
+            // <alternative>
+            // exit:
+
+            JumpPlaceholder altJump = EmitJump(Opcode.JumpIfFalse);
+            EmitStatement(ifStmt.IfTrueStatement);
+            JumpPlaceholder exitJump = EmitJump(Opcode.Jump);
+            int alternativePos = _code.Position;
+            EmitStatement(ifStmt.IfFalseStatement);
+            PatchJump(exitJump, _code.Position);
+            PatchJump(altJump, alternativePos);
+        }
+    }
+
+    private void EmitWhileStatement(WhileStatement whileStmt)
+    {
+        // while (<condition>)
+        //     <body>
+        //
+        // ---->
+        //
+        // <condition>
+        // JumpIfFalse exit
+        // <body>
+        // Jump <condition>
+        // exit:
+
+        int loopStart = _code.Position;
+        using (StartRange(whileStmt.Condition))
+        {
+            EmitExpression(whileStmt.Condition);
         }
 
-        private void EmitSelect(SelectStatement selectStmt)
+        JumpPlaceholder exitJump = EmitJump(Opcode.JumpIfFalse);
+        BreakScope bodyScope = EmitLoopBody(whileStmt.Body);
+        EmitJump(Opcode.Jump, loopStart);
+        PatchJump(exitJump, _code.Position);
+        PatchBreaks(ref bodyScope, _code.Position);
+    }
+
+    private void EmitSelect(SelectStatement selectStmt)
+    {
+        int loopStart = _code.Position;
+        EmitOpcode(Opcode.SelectLoopStart);
+        BreakScope bodyScope = EmitLoopBody(selectStmt.Body);
+        EmitOpcode(Opcode.SelectLoopEnd);
+        EmitJump(Opcode.JumpIfFalse, loopStart);
+        PatchBreaks(ref bodyScope, _code.Position);
+        EmitOpcode(Opcode.SelectEnd);
+    }
+
+    private void EmitSelectSection(SelectSection section)
+    {
+        EmitOpcode(Opcode.IsPressed);
+        _code.WriteUInt16LE(_module.GetStringToken(section.Label.Value));
+        JumpPlaceholder jmp = EmitJump(Opcode.JumpIfFalse);
+        EmitStatement(section.Body);
+        PatchJump(jmp, _code.Position);
+    }
+
+    private BreakScope EmitLoopBody(Statement body)
+    {
+        _breakScopes.Push(new BreakScope());
+        EmitStatement(body);
+        return _breakScopes.Pop();
+    }
+
+    private void EmitBreakStatement(BreakStatement breakStmt)
+    {
+        if (_breakScopes.Count == 0)
         {
-            int loopStart = _code.Position;
-            EmitOpcode(Opcode.SelectLoopStart);
-            BreakScope bodyScope = EmitLoopBody(selectStmt.Body);
-            EmitOpcode(Opcode.SelectLoopEnd);
-            EmitJump(Opcode.JumpIfFalse, loopStart);
-            PatchBreaks(ref bodyScope, _code.Position);
-            EmitOpcode(Opcode.SelectEnd);
+            _checker.Report(breakStmt, DiagnosticId.MisplacedBreak);
+            return;
         }
 
-        private void EmitSelectSection(SelectSection section)
+        EmitBreakPlaceholder();
+    }
+
+    private void EmitBreakPlaceholder()
+    {
+        ref BreakScope scope = ref _breakScopes.Peek();
+        scope.BreakPlaceholders.Enqueue(EmitJump(Opcode.Jump));
+    }
+
+    private void PatchBreaks(scoped ref BreakScope scope, int destination)
+    {
+        while (scope.BreakPlaceholders.TryDequeue(out JumpPlaceholder jump))
         {
-            EmitOpcode(Opcode.IsPressed);
-            _code.WriteUInt16LE(_module.GetStringToken(section.Label.Value));
-            JumpPlaceholder jmp = EmitJump(Opcode.JumpIfFalse);
-            EmitStatement(section.Body);
-            PatchJump(jmp, _code.Position);
+            PatchJump(jump, destination);
         }
+    }
 
-        private BreakScope EmitLoopBody(Statement body)
+    private void EmitJump(Opcode opcode, int dst)
+    {
+        AssertJumpInstr(opcode);
+        int pos = _code.Position;
+        EmitOpcode(opcode);
+        _code.WriteInt16LE((short)(dst - pos));
+    }
+
+    private JumpPlaceholder EmitJump(Opcode opcode)
+    {
+        AssertJumpInstr(opcode);
+        int pos = _code.Position;
+        EmitOpcode(opcode);
+        _code.WriteInt16LE(0);
+        return new JumpPlaceholder(pos);
+    }
+
+    private static void AssertJumpInstr(Opcode opcode)
+    {
+        Debug.Assert(opcode is Opcode.Jump or Opcode.JumpIfFalse or Opcode.JumpIfTrue);
+    }
+
+    private void PatchJump(JumpPlaceholder jumpPlaceholder, int dst)
+    {
+        int oldPos = _code.Position;
+        _code.Position = jumpPlaceholder.OffsetPos;
+        _code.WriteInt16LE((short)(dst - jumpPlaceholder.InstructionPos));
+        _code.Position = oldPos;
+    }
+
+    private void EmitStore(Opcode opcode, ushort tk)
+    {
+        EmitOpcode(opcode);
+        _code.WriteUInt16LE(tk);
+    }
+
+    private void EmitLoadImm(scoped in ConstantValue value)
+    {
+        switch (value.Type)
         {
-            _breakScopes.Push(new BreakScope());
-            EmitStatement(body);
-            return _breakScopes.Pop();
-        }
-
-        private void EmitBreakStatement(BreakStatement breakStmt)
-        {
-            if (_breakScopes.Count == 0)
-            {
-                _checker.Report(breakStmt, DiagnosticId.MisplacedBreak);
-                return;
-            }
-
-            EmitBreakPlaceholder();
-        }
-
-        private void EmitBreakPlaceholder()
-        {
-            ref BreakScope scope = ref _breakScopes.Peek();
-            scope.BreakPlaceholders.Enqueue(EmitJump(Opcode.Jump));
-        }
-
-        private void PatchBreaks(scoped ref BreakScope scope, int destination)
-        {
-            while (scope.BreakPlaceholders.TryDequeue(out JumpPlaceholder jump))
-            {
-                PatchJump(jump, destination);
-            }
-        }
-
-        private void EmitJump(Opcode opcode, int dst)
-        {
-            AssertJumpInstr(opcode);
-            int pos = _code.Position;
-            EmitOpcode(opcode);
-            _code.WriteInt16LE((short)(dst - pos));
-        }
-
-        private JumpPlaceholder EmitJump(Opcode opcode)
-        {
-            AssertJumpInstr(opcode);
-            int pos = _code.Position;
-            EmitOpcode(opcode);
-            _code.WriteInt16LE(0);
-            return new JumpPlaceholder(pos);
-        }
-
-        private static void AssertJumpInstr(Opcode opcode)
-        {
-            Debug.Assert(opcode is Opcode.Jump or Opcode.JumpIfFalse or Opcode.JumpIfTrue);
-        }
-
-        private void PatchJump(JumpPlaceholder jumpPlaceholder, int dst)
-        {
-            int oldPos = _code.Position;
-            _code.Position = jumpPlaceholder.OffsetPos;
-            _code.WriteInt16LE((short)(dst - jumpPlaceholder.InstructionPos));
-            _code.Position = oldPos;
-        }
-
-        private void EmitStore(Opcode opcode, ushort tk)
-        {
-            EmitOpcode(opcode);
-            _code.WriteUInt16LE(tk);
-        }
-
-        private void EmitLoadImm(scoped in ConstantValue value)
-        {
-            switch (value.Type)
-            {
-                case BuiltInType.Numeric:
-                    float num = value.AsNumber()!.Value;
-                    switch (num)
-                    {
-                        case 0:
-                            EmitOpcode(Opcode.LoadImm0);
-                            break;
-                        case 1:
-                            EmitOpcode(Opcode.LoadImm1);
-                            break;
-                        default:
-                            EmitOpcode(Opcode.LoadImm);
-                            _code.WriteByte((byte)value.Type);
-                            _code.WriteSingle(num);
-                            break;
-                    }
-                    break;
-                case BuiltInType.DeltaNumeric:
-                    EmitOpcode(Opcode.LoadImm);
-                    _code.WriteByte((byte)value.Type);
-                    _code.WriteSingle(value.AsDeltaNumber()!.Value);
-                    break;
-                case BuiltInType.Boolean:
-                    Opcode opcode = value.AsBool()!.Value
-                        ? Opcode.LoadImmTrue
-                        : Opcode.LoadImmFalse;
-                    EmitOpcode(opcode);
-                    break;
-                case BuiltInType.String:
-                    string str = value.AsString()!;
-                    if (string.IsNullOrEmpty(str))
-                    {
-                        EmitOpcode(Opcode.LoadImmEmptyStr);
-                    }
-                    else
-                    {
+            case BuiltInType.Numeric:
+                float num = value.AsNumber()!.Value;
+                switch (num)
+                {
+                    case 0:
+                        EmitOpcode(Opcode.LoadImm0);
+                        break;
+                    case 1:
+                        EmitOpcode(Opcode.LoadImm1);
+                        break;
+                    default:
                         EmitOpcode(Opcode.LoadImm);
                         _code.WriteByte((byte)value.Type);
-                        ushort token = _module.GetStringToken(str);
-                        _code.WriteUInt16LE(token);
-                    }
-                    break;
-                case BuiltInType.BuiltInConstant:
+                        _code.WriteSingle(num);
+                        break;
+                }
+                break;
+            case BuiltInType.DeltaNumeric:
+                EmitOpcode(Opcode.LoadImm);
+                _code.WriteByte((byte)value.Type);
+                _code.WriteSingle(value.AsDeltaNumber()!.Value);
+                break;
+            case BuiltInType.Boolean:
+                Opcode opcode = value.AsBool()!.Value
+                    ? Opcode.LoadImmTrue
+                    : Opcode.LoadImmFalse;
+                EmitOpcode(opcode);
+                break;
+            case BuiltInType.String:
+                string str = value.AsString()!;
+                if (string.IsNullOrEmpty(str))
+                {
+                    EmitOpcode(Opcode.LoadImmEmptyStr);
+                }
+                else
+                {
                     EmitOpcode(Opcode.LoadImm);
                     _code.WriteByte((byte)value.Type);
-                    _code.WriteByte((byte)value.AsBuiltInConstant()!.Value);
-                    break;
-                case BuiltInType.Null:
-                    EmitOpcode(Opcode.LoadImmNull);
-                    break;
-            }
-        }
-
-        private void EmitDialogueBlock(DialogueBlock dialogueBlock)
-        {
-            _code.WriteByte((byte)dialogueBlock.Parts.Length);
-            foreach (DialogueBlockPart part in dialogueBlock.Parts)
-            {
-                EmitDialogueBlockPart(part);
-            }
-            EmitOpcode(Opcode.Return);
-        }
-
-        private void EmitDialogueBlockPart(DialogueBlockPart part)
-        {
-            switch (part)
-            {
-                case DialogueBlockPart.Markup { Text: var text }:
-                {
-                    _code.WriteByte((byte)CompiledDialogueBlockPart.Kind.Markup);
-                    ushort token = _module.GetStringToken(text.ToString());
+                    ushort token = _module.GetStringToken(str);
                     _code.WriteUInt16LE(token);
-                    break;
                 }
-                case DialogueBlockPart.BlankLine:
-                {
-                    _code.WriteByte((byte)CompiledDialogueBlockPart.Kind.BlankLine);
-                    break;
-                }
-                case DialogueBlockPart.CodeBlock { Statements: var statements }:
-                {
-                    _code.WriteByte((byte)CompiledDialogueBlockPart.Kind.CodeBlock);
-                    int lengthOffset = _code.Position;
-                    _code.WriteUInt16LE(0);
-                    foreach (Statement statement in statements)
-                    {
-                        EmitStatement(statement);
-                    }
+                break;
+            case BuiltInType.BuiltInConstant:
+                EmitOpcode(Opcode.LoadImm);
+                _code.WriteByte((byte)value.Type);
+                _code.WriteByte((byte)value.AsBuiltInConstant()!.Value);
+                break;
+            case BuiltInType.Null:
+                EmitOpcode(Opcode.LoadImmNull);
+                break;
+        }
+    }
 
-                    int newPosition = _code.Position;
-                    _code.Position = lengthOffset;
-                    _code.WriteUInt16LE((ushort)(newPosition - lengthOffset));
-                    _code.Position = newPosition;
-                    break;
-                }
-                default:
-                    throw ThrowHelper.UnexpectedValueOf<DialogueBlockPart>();
+    private void EmitDialogueBlock(DialogueBlock dialogueBlock)
+    {
+        _code.WriteByte((byte)dialogueBlock.Parts.Length);
+        foreach (DialogueBlockPart part in dialogueBlock.Parts)
+        {
+            EmitDialogueBlockPart(part);
+        }
+        EmitOpcode(Opcode.Return);
+    }
+
+    private void EmitDialogueBlockPart(DialogueBlockPart part)
+    {
+        switch (part)
+        {
+            case DialogueBlockPart.Markup { Text: var text }:
+            {
+                _code.WriteByte((byte)CompiledDialogueBlockPart.Kind.Markup);
+                ushort token = _module.GetStringToken(text.ToString());
+                _code.WriteUInt16LE(token);
+                break;
             }
+            case DialogueBlockPart.BlankLine:
+            {
+                _code.WriteByte((byte)CompiledDialogueBlockPart.Kind.BlankLine);
+                break;
+            }
+            case DialogueBlockPart.CodeBlock { Statements: var statements }:
+            {
+                _code.WriteByte((byte)CompiledDialogueBlockPart.Kind.CodeBlock);
+                int lengthOffset = _code.Position;
+                _code.WriteUInt16LE(0);
+                foreach (Statement statement in statements)
+                {
+                    EmitStatement(statement);
+                }
+
+                int newPosition = _code.Position;
+                _code.Position = lengthOffset;
+                _code.WriteUInt16LE((ushort)(newPosition - lengthOffset));
+                _code.Position = newPosition;
+                break;
+            }
+            default:
+                throw ThrowHelper.UnexpectedValueOf<DialogueBlockPart>();
         }
     }
 }

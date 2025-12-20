@@ -78,20 +78,23 @@ internal abstract class Animation
 
     protected abstract AdvanceResult Advance();
 
-    protected static float GetFactor(float progress, NsEaseFunction easeFunction) => easeFunction switch
+    protected static float GetFactor(float progress, NsEaseFunction easeFunction)
     {
-        NsEaseFunction.QuadraticEaseIn => MathF.Pow(progress, 2),
-        NsEaseFunction.CubicEaseIn => MathF.Pow(progress, 3),
-        NsEaseFunction.QuarticEaseIn => MathF.Pow(progress, 4),
-        NsEaseFunction.QuadraticEaseOut => 1.0f - MathF.Pow(1.0f - progress, 2),
-        NsEaseFunction.CubicEaseOut => 1.0f - MathF.Pow(1.0f - progress, 3),
-        NsEaseFunction.QuarticEaseOut => 1.0f - MathF.Pow(1.0f - progress, 4),
-        NsEaseFunction.SineEaseIn => 1.0f - MathF.Cos(progress * MathF.PI * 0.5f),
-        NsEaseFunction.SineEaseOut => MathF.Sin(progress * MathF.PI * 0.5f),
-        NsEaseFunction.SineEaseInOut => 0.5f * (1.0f - MathF.Cos(progress * MathF.PI)),
-        NsEaseFunction.SineEaseOutIn => MathF.Acos(1.0f - progress * 2.0f) / MathF.PI,
-        _ => progress
-    };
+        return easeFunction switch
+        {
+            NsEaseFunction.QuadraticEaseIn => MathF.Pow(progress, 2),
+            NsEaseFunction.CubicEaseIn => MathF.Pow(progress, 3),
+            NsEaseFunction.QuarticEaseIn => MathF.Pow(progress, 4),
+            NsEaseFunction.QuadraticEaseOut => 1.0f - MathF.Pow(1.0f - progress, 2),
+            NsEaseFunction.CubicEaseOut => 1.0f - MathF.Pow(1.0f - progress, 3),
+            NsEaseFunction.QuarticEaseOut => 1.0f - MathF.Pow(1.0f - progress, 4),
+            NsEaseFunction.SineEaseIn => 1.0f - MathF.Cos(progress * MathF.PI * 0.5f),
+            NsEaseFunction.SineEaseOut => MathF.Sin(progress * MathF.PI * 0.5f),
+            NsEaseFunction.SineEaseInOut => 0.5f * (1.0f - MathF.Cos(progress * MathF.PI)),
+            NsEaseFunction.SineEaseOutIn => MathF.Acos(1.0f - progress * 2.0f) / MathF.PI,
+            _ => progress
+        };
+    }
 }
 
 internal abstract class AnimationWithDuration : Animation
