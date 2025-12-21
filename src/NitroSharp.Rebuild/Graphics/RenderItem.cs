@@ -1,22 +1,37 @@
 using System;
 using System.Numerics;
+using NitroSharp.Common;
 using NitroSharp.NsScript;
 using NitroSharp.NsScript.Primitives;
 using Veldrid;
 
 namespace NitroSharp.Graphics;
 
-internal abstract class RenderItem : Entity
+internal readonly record struct RenderItemKey(int Priority, int Id) : IComparable<RenderItemKey>
 {
-    private Transform _transform = Transform.Default;
-    private RgbaFloat _color = RgbaFloat.White;
+    public int CompareTo(RenderItemKey other)
+    {
+        if (Priority > other.Priority) { return 1; }
+        if (Priority < other.Priority) { return -1; }
+        if (Id > other.Id) { return 1; }
+        return -1;
+    }
+}
 
+internal abstract class RenderItem : Entity, IComparable<RenderItem>
+{
+    private static int s_lastId;
+
+    private readonly RenderItemKey _key;
+    private RgbaFloat _color = RgbaFloat.White;
+    private Transform _transform = Transform.Default;
     private OpacityAnimation? _fadeAnimation;
     private MoveAnimation? _moveAnimation;
     private ScaleAnimation? _scaleAnimation;
 
     protected RenderItem(EntityName name, Entity? parent, int priority) : base(name, parent)
     {
+        _key = new RenderItemKey(priority, s_lastId++);
         Priority = priority;
     }
 
@@ -87,7 +102,7 @@ internal abstract class RenderItem : Entity
         }
     }
 
-    public override void Fade(float dstOpacity, TimeSpan duration, NsEaseFunction easeFunction = NsEaseFunction.Linear)
+    public override void Fade(float dstOpacity, TimeSpan duration, NsEaseFunction easeFunction)
     {
         if (duration > TimeSpan.Zero)
         {
@@ -165,6 +180,8 @@ internal abstract class RenderItem : Entity
         pos -= new Vector3(anchorPoint * size, 0);
         return pos;
     }
+
+    public int CompareTo(RenderItem? other) => _key.CompareTo(other.NotNull()._key);
 }
 
 internal static class RenderItemExt

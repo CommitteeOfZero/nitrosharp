@@ -7,26 +7,6 @@ namespace NitroSharp;
 
 internal sealed class Thread : Entity, IVmThread
 {
-    internal enum WaitCondition
-    {
-        Timeout,
-        UserInput,
-        MoveCompleted,
-        ZoomCompleted,
-        RotateCompleted,
-        FadeCompleted,
-        BezierMoveCompleted,
-        TransitionCompleted,
-        EntityIdle,
-    }
-
-    internal record struct WaitOperation(WaitCondition Condition, EntityQuery? EntityQuery, TimeSpan? Deadline)
-    {
-        public static WaitOperation Suspend(TimeSpan deadline) => new(WaitCondition.Timeout, null, deadline);
-        public static WaitOperation UserInput(TimeSpan? deadline) => new(WaitCondition.UserInput, null, deadline);
-
-    }
-
     private NsScriptThreadState _vmState;
     private WaitOperation? _waitOperation;
 
@@ -51,41 +31,66 @@ internal sealed class Thread : Entity, IVmThread
 
     public void Wait(WaitOperation waitOperation)
     {
+        Debug.Assert(_waitOperation is null, "Thread is already suspended.");
         _waitOperation = waitOperation;
     }
 
     private bool HasWaitExpired(GameContext ctx)
     {
         Stopwatch clock = ctx.Clock;
-        if (_waitOperation is { } waitOperation)
+        if (_waitOperation is not { } waitOperation) { return true; }
+        if (waitOperation.Deadline is { } deadline && clock.Elapsed >= deadline)
         {
-            if (waitOperation.Deadline is { } deadline)
-            {
-                if (clock.Elapsed >= deadline) { return true; }
-            }
-
-            InputContext input = ctx.InputContext;
-            return waitOperation switch
-            {
-                { Condition: WaitCondition.UserInput } => input.ConsumeAdvance(),
-                { Condition: WaitCondition.FadeCompleted, EntityQuery: { } query } => checkAnim(
-                    query,
-                    AnimationKind.Fade
-                ),
-                _ => false
-            };
-
-            bool checkAnim(EntityQuery query, AnimationKind anim)
-            {
-                foreach (var entity in World.Query(query))
-                {
-                    if (entity.IsAnimationActive(anim)) { return false; }
-                }
-
-                return true;
-            }
+            return true;
         }
 
-        return true;
+        InputContext input = ctx.InputContext;
+        return waitOperation switch
+        {
+            { Condition: WaitCondition.UserInput } => input.ConsumeAdvance(),
+            {
+                Condition: WaitCondition.MoveCompleted or WaitCondition.FadeCompleted or WaitCondition.ZoomCompleted,
+                EntityQuery: { } query
+            } => hasAnimationCompleted(query, waitOperation.Condition),
+            _ => false
+        };
+
+        bool hasAnimationCompleted(in EntityQuery query, WaitCondition condition)
+        {
+            AnimationKind animationKind = condition switch
+            {
+                WaitCondition.FadeCompleted => AnimationKind.Fade,
+                WaitCondition.ZoomCompleted => AnimationKind.Zoom,
+                WaitCondition.MoveCompleted => AnimationKind.Move,
+                _ => throw ThrowHelper.UnexpectedValueOf<WaitCondition>()
+            };
+
+            foreach (Entity entity in World.Query(query))
+            {
+                if (entity.IsAnimationActive(animationKind)) { return false; }
+            }
+
+            return true;
+        }
+    }
+
+    internal enum WaitCondition
+    {
+        Timeout,
+        UserInput,
+        MoveCompleted,
+        ZoomCompleted,
+        RotateCompleted,
+        FadeCompleted,
+        BezierMoveCompleted,
+        TransitionCompleted,
+        EntityIdle,
+    }
+
+    internal record struct WaitOperation(WaitCondition Condition, EntityQuery? EntityQuery, TimeSpan? Deadline)
+    {
+        public static WaitOperation Suspend(TimeSpan deadline) => new(WaitCondition.Timeout, null, deadline);
+        public static WaitOperation UserInput(TimeSpan? deadline) => new(WaitCondition.UserInput, null, deadline);
+
     }
 }

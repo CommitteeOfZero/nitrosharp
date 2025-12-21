@@ -5,23 +5,6 @@ using NitroSharp.Text;
 
 namespace NitroSharp;
 
-internal enum ProcessKind
-{
-    Main,
-    System
-}
-
-internal sealed class RenderItemComparer : IComparer<RenderItem>
-{
-    public static readonly RenderItemComparer Instance = new();
-
-    public int Compare(RenderItem? x, RenderItem? y)
-    {
-        if (x is null || y is null) return 0;
-        return x.Priority.CompareTo(y.Priority);
-    }
-}
-
 internal sealed class Process : Entity
 {
     private readonly FontSettings _fontSettings;
@@ -68,7 +51,7 @@ internal sealed class Process : Entity
             _renderList.Add(renderItem);
         }
 
-        _renderList.Sort(RenderItemComparer.Instance);
+        _renderList.Sort();
 
         foreach (RenderItem renderItem in _renderList)
         {

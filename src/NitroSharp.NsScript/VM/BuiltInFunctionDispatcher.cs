@@ -332,7 +332,7 @@ internal sealed class BuiltInFunctionDispatcher
             endY: args.TakeCoordinate(),
             freq: args.TakeUInt(),
             args.TakeEaseFunction(),
-            args.TakeAnimDelay(duration)
+            args.TakeAnimWaitTimeout(duration)
         );
     }
 
@@ -712,7 +712,7 @@ internal sealed class BuiltInFunctionDispatcher
             dstScaleX: args.TakeRational(),
             dstScaleY: args.TakeRational(),
             easeFunction: args.TakeEaseFunction(),
-            args.TakeAnimDelay(duration)
+            args.TakeAnimWaitTimeout(duration)
         );
     }
 
@@ -727,7 +727,7 @@ internal sealed class BuiltInFunctionDispatcher
             dstRotationY: args.TakeNumeric(),
             dstRotationZ: args.TakeNumeric(),
             args.TakeEaseFunction(),
-            args.TakeAnimDelay(duration)
+            args.TakeAnimWaitTimeout(duration)
         );
     }
 
@@ -738,18 +738,18 @@ internal sealed class BuiltInFunctionDispatcher
         NsCoordinate dstX = args.TakeCoordinate();
         NsCoordinate dstY = args.TakeCoordinate();
         NsEaseFunction easeFunction = NsEaseFunction.Linear;
-        TimeSpan delay = TimeSpan.Zero;
+        TimeSpan waitTimeout = TimeSpan.Zero;
         if (args.Count == 6)
         {
             easeFunction = args.TakeEaseFunction();
-            delay = args.TakeAnimDelay(duration);
+            waitTimeout = args.TakeAnimWaitTimeout(duration);
         }
         _impl.Move(
             query,
             duration,
             dstX, dstY,
             easeFunction,
-            delay
+            waitTimeout
         );
     }
 
@@ -771,10 +771,10 @@ internal sealed class BuiltInFunctionDispatcher
             TimeSpan duration = args.TakeTimeSpan();
             NsRational dstOpacity = args.TakeRational();
             NsEaseFunction easeFunction = NsEaseFunction.Linear;
-            TimeSpan animDelay;
+            TimeSpan waitTimeout;
             if (args.Count == 4)
             {
-                animDelay = args.TakeAnimDelay(duration);
+                waitTimeout = args.TakeAnimWaitTimeout(duration);
             }
             else
             {
@@ -782,12 +782,12 @@ internal sealed class BuiltInFunctionDispatcher
                 if (args.AsSpan(0)[^1].AsBuiltInConstant() is null)
                 {
                     easeFunction = args.TakeEaseFunction();
-                    animDelay = args.TakeAnimDelay(duration);
+                    waitTimeout = args.TakeAnimWaitTimeout(duration);
                 }
                 else
                 {
                     // Sometimes the order is switched.
-                    animDelay = args.TakeAnimDelay(duration);
+                    waitTimeout = args.TakeAnimWaitTimeout(duration);
                     easeFunction = args.TakeEaseFunction();
                 }
             }
@@ -797,7 +797,7 @@ internal sealed class BuiltInFunctionDispatcher
                 duration,
                 dstOpacity,
                 easeFunction,
-                animDelay
+                waitTimeout
             );
         }
     }
@@ -814,16 +814,13 @@ internal sealed class BuiltInFunctionDispatcher
             feather: args.TakeRational(),
             args.TakeEaseFunction(),
             maskFileName: args.TakeString(),
-            delay: args.TakeAnimDelay(duration)
+            waitTimeout: args.TakeAnimWaitTimeout(duration)
         );
     }
 
     private void SetAlias(ref ArgConsumer args)
     {
-        _impl.SetAlias(
-            args.TakeEntityQuery(),
-            alias: args.TakeEntityAlias()
-        );
+        _impl.SetAlias(args.TakeEntityQuery(), alias: args.TakeEntityAlias());
     }
 
     private void Request(ref ArgConsumer args)
@@ -1289,13 +1286,13 @@ internal sealed class BuiltInFunctionDispatcher
             };
         }
 
-        public TimeSpan TakeAnimDelay(TimeSpan animDuration)
+        public TimeSpan TakeAnimWaitTimeout(TimeSpan animDuration)
         {
             ConstantValue val = Take();
             return (val.Type, val.AsNumber()) switch
             {
-                (BuiltInType.Numeric or BuiltInType.Boolean, { } delay) =>
-                    (int)delay == 1 ? animDuration : TimeSpan.FromMilliseconds(delay),
+                (BuiltInType.Numeric or BuiltInType.Boolean, { } timeout) =>
+                    (int)timeout == 1 ? animDuration : TimeSpan.FromMilliseconds(timeout),
                 (BuiltInType.Null, _) => TimeSpan.FromSeconds(0),
                 _ => UnexpectedType<TimeSpan>(val.Type)
             };

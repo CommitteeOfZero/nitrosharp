@@ -157,7 +157,7 @@ internal abstract class Entity : EntityScope, EntityInternal, SmallLookupListEnt
 
     public virtual bool IsAnimationActive(AnimationKind animationKind) => false;
 
-    public virtual void Fade(float dstOpacity, TimeSpan duration, NsEaseFunction easeFunction = NsEaseFunction.Linear)
+    public virtual void Fade(float dstOpacity, TimeSpan duration, NsEaseFunction easeFunction)
     {
     }
 

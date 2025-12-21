@@ -115,13 +115,13 @@ public abstract class BuiltInFunctions
     public virtual void SetLoopRegion(in EntityQuery query, TimeSpan loopStart, TimeSpan loopEnd) { NotImplemented(); }
     public virtual void SetVolume(in EntityQuery query, TimeSpan duration, NsRational volume) { NotImplemented(); }
 
-    public virtual void Fade(in EntityQuery query, TimeSpan duration, NsRational dstOpacity, NsEaseFunction easeFunction, TimeSpan delay) { NotImplemented(); }
-    public virtual void Move(in EntityQuery query, TimeSpan duration, NsCoordinate dstX, NsCoordinate dstY, NsEaseFunction easeFunction, TimeSpan delay) { NotImplemented(); }
-    public virtual void Zoom(in EntityQuery query, TimeSpan duration, NsRational dstScaleX, NsRational dstScaleY, NsEaseFunction easeFunction, TimeSpan delay) { NotImplemented(); }
-    public virtual void Rotate(in EntityQuery query, TimeSpan duration, NsNumeric dstRotationX, NsNumeric dstRotationY, NsNumeric dstRotationZ, NsEaseFunction easeFunction, TimeSpan delay) { NotImplemented(); }
+    public virtual void Fade(in EntityQuery query, TimeSpan duration, NsRational dstOpacity, NsEaseFunction easeFunction, TimeSpan waitTimeout) { NotImplemented(); }
+    public virtual void Move(in EntityQuery query, TimeSpan duration, NsCoordinate dstX, NsCoordinate dstY, NsEaseFunction easeFunction, TimeSpan waitTimeout) { NotImplemented(); }
+    public virtual void Zoom(in EntityQuery query, TimeSpan duration, NsRational dstScaleX, NsRational dstScaleY, NsEaseFunction easeFunction, TimeSpan waitTimeout) { NotImplemented(); }
+    public virtual void Rotate(in EntityQuery query, TimeSpan duration, NsNumeric dstRotationX, NsNumeric dstRotationY, NsNumeric dstRotationZ, NsEaseFunction easeFunction, TimeSpan waitTimeout) { NotImplemented(); }
     public virtual void BezierMove(in EntityQuery query, TimeSpan duration, CompositeBezier curve, NsEaseFunction easeFunction, bool wait) { NotImplemented(); }
-    public virtual void BeginTransition(in EntityQuery query, TimeSpan duration, NsRational srcFadeAmount, NsRational dstFadeAmount, NsRational feather, NsEaseFunction easeFunction, string maskFileName, TimeSpan delay) { NotImplemented(); }
-    public virtual void Shake(in EntityQuery query, TimeSpan duration, NsCoordinate startX, NsCoordinate startY, NsCoordinate endX, NsCoordinate endY, uint freq, NsEaseFunction easeFunction, TimeSpan delay) { NotImplemented(); }
+    public virtual void BeginTransition(in EntityQuery query, TimeSpan duration, NsRational srcFadeAmount, NsRational dstFadeAmount, NsRational feather, NsEaseFunction easeFunction, string maskFileName, TimeSpan waitTimeout) { NotImplemented(); }
+    public virtual void Shake(in EntityQuery query, TimeSpan duration, NsCoordinate startX, NsCoordinate startY, NsCoordinate endX, NsCoordinate endY, uint freq, NsEaseFunction easeFunction, TimeSpan waitTimeout) { NotImplemented(); }
 
     public virtual void WaitAction(in EntityQuery query, TimeSpan? timeout) { NotImplemented(); }
     public virtual void WaitMove(in EntityQuery query) { NotImplemented(); }
