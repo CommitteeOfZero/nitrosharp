@@ -157,8 +157,10 @@ internal sealed class Builtins : BuiltInFunctions
         }
     }
 
-    public override void Move(in EntityQuery query, TimeSpan duration, NsCoordinate dstX, NsCoordinate dstY, NsEaseFunction easeFunction, TimeSpan delay)
+    public override void Move(in EntityQuery query, TimeSpan duration, NsCoordinate dstX, NsCoordinate dstY, NsEaseFunction easeFunction, TimeSpan waitTimeout)
     {
+        duration = AdjustDuration(duration);
+        waitTimeout = AdjustDuration(waitTimeout);
         foreach (Entity entity in Query(query))
         {
             foreach (Entity node in entity.DescendantsAndSelf(selfFirst: false))
@@ -166,10 +168,14 @@ internal sealed class Builtins : BuiltInFunctions
                 node.Move(_ctx.RenderContext, dstX, dstY, duration, easeFunction);
             }
         }
+
+        WaitOpt(Thread.WaitCondition.MoveCompleted, query, waitTimeout);
     }
 
-    public override void Fade(in EntityQuery query, TimeSpan duration, NsRational dstOpacity, NsEaseFunction easeFunction, TimeSpan delay)
+    public override void Fade(in EntityQuery query, TimeSpan duration, NsRational dstOpacity, NsEaseFunction easeFunction, TimeSpan waitTimeout)
     {
+        duration = AdjustDuration(duration);
+        waitTimeout = AdjustDuration(waitTimeout);
         foreach (Entity entity in Query(query))
         {
             foreach (Entity node in entity.DescendantsAndSelf(selfFirst: false))
@@ -178,34 +184,28 @@ internal sealed class Builtins : BuiltInFunctions
             }
         }
 
-        Pause(Thread.WaitCondition.FadeCompleted, query, duration, delay);
+        WaitOpt(Thread.WaitCondition.FadeCompleted, query, waitTimeout);
     }
 
-    private void Pause(
-        Thread.WaitCondition condition,
-        EntityQuery query,
-        TimeSpan duration,
-        TimeSpan delay)
-    {
-        if (delay == TimeSpan.Zero) { return; }
-        if (!delay.Equals(duration))
-        {
-            Wait(AdjustDuration(delay));
-        }
-        else
-        {
-            CurrentThread.Wait(new Thread.WaitOperation(condition, query, null));
-        }
-    }
-
-    public override void Zoom(in EntityQuery query, TimeSpan duration, NsRational dstScaleX, NsRational dstScaleY, NsEaseFunction easeFunction, TimeSpan delay)
+    public override void Zoom(in EntityQuery query, TimeSpan duration, NsRational dstScaleX, NsRational dstScaleY, NsEaseFunction easeFunction, TimeSpan waitTimeout)
     {
         duration = AdjustDuration(duration);
-        delay = AdjustDuration(delay);
+        waitTimeout = AdjustDuration(waitTimeout);
         var dstScale = new Vector3(dstScaleX.Rebase(1.0f), dstScaleY.Rebase(1.0f), 1.0f);
         foreach (Entity entity in Query(query))
         {
             entity.Scale(dstScale, duration, easeFunction);
+        }
+
+        WaitOpt(Thread.WaitCondition.ZoomCompleted, query, waitTimeout);
+    }
+
+    private void WaitOpt(Thread.WaitCondition condition, in EntityQuery query, TimeSpan timeout)
+    {
+        if (timeout != TimeSpan.Zero)
+        {
+            TimeSpan deadline = Clock.Elapsed + timeout;
+            CurrentThread.Wait(new Thread.WaitOperation(condition, query, deadline));
         }
     }
 
