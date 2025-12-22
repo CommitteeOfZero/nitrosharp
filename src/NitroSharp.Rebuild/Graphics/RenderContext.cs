@@ -86,14 +86,12 @@ namespace NitroSharp.Graphics
                 graphicsDevice,
                 new ScreenRectU(PointU<ScreenPixel>.Zero, RenderResolution)
             );
-            var view = Matrix4x4.CreateLookAt(Vector3.Zero, Vector3.UnitZ, Vector3.UnitY);
-            var projection = Matrix4x4.CreatePerspectiveFieldOfView(
-                MathF.PI / 3.0f,
-                (float)RenderResolution.Width / RenderResolution.Height,
-                nearPlaneDistance: 0.1f,
-                farPlaneDistance: 1000.0f
+
+            PerspectiveViewProjection = ViewProjection.CreatePerspective(
+                graphicsDevice,
+                fov: MathF.PI / 3,
+                (float)RenderResolution.Width / RenderResolution.Height
             );
-            PerspectiveViewProjection = new ViewProjection(GraphicsDevice, view * projection);
 
             ShaderResources = new ShaderResources(
                 graphicsDevice,
@@ -106,19 +104,19 @@ namespace NitroSharp.Graphics
             _textureCache = new TextureCache(GraphicsDevice);
             WhiteTexture = CreateWhiteTexture();
 
-            Quads = new MeshList<QuadVertex>(
+            Quads = new PrimitiveBatch<QuadVertex>(
                 graphicsDevice,
-                new MeshDescription(QuadGeometry.Indices, verticesPerMesh: 4),
+                new PrimitiveTemplate(QuadPrimitive.IndexPattern, QuadPrimitive.VertexCount),
                 initialCapacity: 512
             );
-            QuadsUV3 = new MeshList<QuadVertexUV3>(
+            QuadsUV3 = new PrimitiveBatch<QuadVertexUV3>(
                 graphicsDevice,
-                new MeshDescription(QuadGeometry.Indices, verticesPerMesh: 4),
+                new PrimitiveTemplate(QuadPrimitive.IndexPattern, QuadPrimitiveUV3.VertexCount),
                 initialCapacity: 4
             );
-            Cubes = new MeshList<CubeVertex>(
+            Cubes = new PrimitiveBatch<CubeVertex>(
                 graphicsDevice,
-                new MeshDescription(CubeGeometry.Indices, verticesPerMesh: 24),
+                new PrimitiveTemplate(CubePrimitive.IndexPattern, CubePrimitive.VertexCount),
                 initialCapacity: 1
             );
 
@@ -150,9 +148,9 @@ namespace NitroSharp.Graphics
         public ScreenSizeU RenderResolution { get; }
         public ViewProjection OrthoProjection { get; }
         public ViewProjection PerspectiveViewProjection { get; }
-        public MeshList<QuadVertex> Quads { get; }
-        public MeshList<QuadVertexUV3> QuadsUV3 { get; }
-        public MeshList<CubeVertex> Cubes { get; }
+        public PrimitiveBatch<QuadVertex> Quads { get; }
+        public PrimitiveBatch<QuadVertexUV3> QuadsUV3 { get; }
+        public PrimitiveBatch<CubeVertex> Cubes { get; }
 
         public float RenderScale { get; }
         public float ViewportLeft { get; }
@@ -190,7 +188,7 @@ namespace NitroSharp.Graphics
                 width: 1, height: 1, mipLevels: 1, arrayLayers: 1,
                 PixelFormat.R8_G8_B8_A8_UNorm, TextureUsage.Staging
             );
-            Texture stagingWhite = ResourceFactory.CreateTexture(ref textureDesc);
+            Texture stagingWhite = ResourceFactory.CreateTexture(in textureDesc);
             MappedResourceView<RgbaByte> pixels = GraphicsDevice.Map<RgbaByte>(
                 stagingWhite, MapMode.Write
             );
@@ -198,7 +196,7 @@ namespace NitroSharp.Graphics
             GraphicsDevice.Unmap(stagingWhite);
 
             textureDesc.Usage = TextureUsage.Sampled;
-            Texture texture = ResourceFactory.CreateTexture(ref textureDesc);
+            Texture texture = ResourceFactory.CreateTexture(in textureDesc);
 
             TransferCommands.Begin();
             TransferCommands.CopyTexture(stagingWhite, texture);
@@ -217,21 +215,16 @@ namespace NitroSharp.Graphics
                 PixelFormat.B8_G8_R8_A8_UNorm,
                 TextureUsage.Sampled
             );
-            return ResourceFactory.CreateTexture(ref desc);
+            return ResourceFactory.CreateTexture(in desc);
         }
 
         private AnimatedIcons LoadIcons(GameProfile gameProfile)
         {
-            CommandList cl = CommandListPool.Rent();
-            cl.Begin();
             Icon? waitLine = null;
             if (Icon.Exists(Content, gameProfile.IconPathPatterns.WaitLine))
             {
                 waitLine = Icon.Load(this, gameProfile.IconPathPatterns.WaitLine);
             }
-            cl.End();
-            GraphicsDevice.SubmitCommands(cl);
-            CommandListPool.Return(cl);
             return new AnimatedIcons(waitLine);
         }
 
@@ -313,15 +306,13 @@ namespace NitroSharp.Graphics
             {
                 FilterMode.Linear => CustomSampler,
                 FilterMode.Point => GraphicsDevice.PointSampler,
-                _ => ThrowHelper.Unreachable<Sampler>()
+                _ => throw ThrowHelper.UnexpectedValueOf<FilterMode>()
             };
         }
 
         public Matrix4x4 GetTransformMatrix(Transform transform, DesignSize size, bool useScaling, bool aligned)
         {
-            static float rad(float deg) => deg / 180.0f * MathF.PI;
-
-            var bounds = size.ToVector2() * RenderScale;
+            var bounds = size.ToVector2();
             var center = new Vector3(new Vector2(0.5f) * bounds, 0);
             var scale = Matrix4x4.CreateScale(transform.Scale, center);
             Matrix4x4 rot = Matrix4x4.CreateRotationZ(rad(transform.Rotation.Z), center)
@@ -343,6 +334,8 @@ namespace NitroSharp.Graphics
                 matrix = Matrix4x4.CreateScale(RenderScale) * matrix;
             }
             return matrix;
+
+            static float rad(float deg) => deg / 180.0f * MathF.PI;
         }
 
         public void Dispose()

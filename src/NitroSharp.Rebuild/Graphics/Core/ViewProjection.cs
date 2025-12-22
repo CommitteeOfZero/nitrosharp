@@ -16,7 +16,23 @@ internal sealed class ViewProjection : IDisposable
         return new ViewProjection(graphicsDevice, projection);
     }
 
-    public ViewProjection(GraphicsDevice gd, in Matrix4x4 matrix)
+    public static ViewProjection CreatePerspective(GraphicsDevice graphicsDevice, float fov, float aspectRatio)
+    {
+        var view = Matrix4x4.CreateLookAt(
+            cameraPosition: Vector3.Zero,
+            cameraTarget: Vector3.UnitZ,
+            cameraUpVector: Vector3.UnitY
+        );
+        var projection = Matrix4x4.CreatePerspectiveFieldOfView(
+            fov,
+            aspectRatio,
+            nearPlaneDistance: 0.1f,
+            farPlaneDistance: 1000.0f
+        );
+        return new ViewProjection(graphicsDevice, view * projection);
+    }
+
+    private ViewProjection(GraphicsDevice gd, in Matrix4x4 matrix)
     {
         ResourceFactory rf = gd.ResourceFactory;
         ResourceLayout = rf.CreateResourceLayout(new ResourceLayoutDescription(
