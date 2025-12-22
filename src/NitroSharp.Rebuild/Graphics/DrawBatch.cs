@@ -173,15 +173,13 @@ internal sealed class DrawBatch(RenderContext context) : IDisposable
     private bool _began;
     private Draw _lastDraw;
     private Vector2 _lastAlphaMaskPosition = new(float.NaN);
-    private Viewport _viewport;
 
     public RenderTarget Target { get; private set; } = null!;
 
-    public void Begin(CommandList commandList, RenderTarget target, in Viewport viewport)
+    public void Begin(CommandList commandList, RenderTarget target)
     {
         Debug.Assert(!_began);
         _commandList = commandList;
-        _viewport = viewport;
         Target = target;
 
         _began = true;
@@ -307,7 +305,6 @@ internal sealed class DrawBatch(RenderContext context) : IDisposable
         CommandList cl = _commandList;
         cl.SetFramebuffer(Target.Framebuffer);
         cl.SetPipeline(lastDraw.Pipeline);
-        cl.SetViewport(0, _viewport);
         if (lastDraw.ScissorRect is { } sr)
         {
             cl.SetScissorRect(0, sr.Left, sr.Top, sr.Width, sr.Height);
@@ -315,8 +312,8 @@ internal sealed class DrawBatch(RenderContext context) : IDisposable
         else
         {
             // TODO: decide whether to use scissor rect for letterboxing
-            cl.SetScissorRect(0, (uint)(_viewport.X), (uint)(_viewport.Y), (uint)(_viewport.Width), (uint)(_viewport.Height));
-            // cl.SetFullScissorRect(0);
+            //cl.SetScissorRect(0, (uint)(_viewport.X), (uint)(_viewport.Y), (uint)(_viewport.Width), (uint)(_viewport.Height));
+             cl.SetFullScissorRect(0);
         }
         ref BufferBindings buffers = ref lastDraw.BufferBindings;
         if (buffers.Vertices is { } vertices)
