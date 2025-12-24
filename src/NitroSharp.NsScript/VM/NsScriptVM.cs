@@ -318,6 +318,7 @@ public sealed class NsScriptVM
                     break;
                 case Opcode.Dispatch:
                     dispatchBuiltIn(ref program, ref thread);
+                    frame.ProgramCounter = program.Position;
                     return TickResult.Ok;
 
                 case Opcode.ActivateBlock:
@@ -390,22 +391,20 @@ public sealed class NsScriptVM
                     break;
 
                 case BuiltInFunction.log:
-                    ConstantValue arg = evalStack.Pop();
-                    _log.Info(arg.ConvertToString());
+                    _log.Info(args[0].ConvertToString());
                     break;
                 case BuiltInFunction.fail:
                     string subName = frame.RuntimeInfo.SubroutineName;
                     _log.Error($"{subName} + {program.Position - 1}: test failed.");
                     break;
                 case BuiltInFunction.fail_msg:
-                    ConstantValue message = evalStack.Pop();
                     subName = frame.RuntimeInfo.SubroutineName;
-                    _log.Error($"{subName} + {program.Position - 1}: {message.ToString()}.");
+                    _log.Error($"{subName} + {program.Position - 1}: {args[0].ToString()}.");
                     break;
             }
 
+            evalStack.Pop(argCount);
             evalStack.Push(result ?? ConstantValue.Null);
-            frame.ProgramCounter = program.Position;
         }
 
         CallFrame externalCall(ref BytecodeStream program)
