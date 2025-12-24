@@ -140,6 +140,19 @@ public sealed class NsScriptVM
 
     public TickResult Tick(ref NsScriptThreadState thread, BuiltInFunctions builtins)
     {
+        try
+        {
+            return TickCore(ref thread, builtins);
+        }
+        catch (Exception e)
+        {
+            ReportException(thread, e);
+            throw;
+        }
+    }
+
+    private TickResult TickCore(ref NsScriptThreadState thread, BuiltInFunctions builtins)
+    {
         if (thread.CallFrameStack.Count == 0)
         {
             return TickResult.Yield;
@@ -155,7 +168,7 @@ public sealed class NsScriptVM
         {
             frame.ProgramCounter = program.Position;
             Opcode opcode = program.NextOpcode();
-            if (opcode is >= Opcode.LoadImm0 and <= Opcode.LoadVar)
+            if (opcode is >= Opcode.LoadImm0 and <= Opcode.LoadFlag)
             {
                 handleLoadOp(opcode, ref program, ref thread);
                 continue;
@@ -373,19 +386,7 @@ public sealed class NsScriptVM
             switch (func)
             {
                 default:
-                    try
-                    {
-                        result = _builtInCallDispatcher.Dispatch(builtins, func, args);
-                    }
-                    catch (Exception e)
-                    {
-                        ReportException(ref thread, e);
-                        throw;
-                    }
-                    finally
-                    {
-                        evalStack.Pop(argCount);
-                    }
+                    result = _builtInCallDispatcher.Dispatch(builtins, func, args);
                     break;
 
                 case BuiltInFunction.log:
@@ -402,6 +403,7 @@ public sealed class NsScriptVM
                     _log.Error($"{subName} + {program.Position - 1}: {message.ToString()}.");
                     break;
             }
+
             evalStack.Push(result ?? ConstantValue.Null);
             frame.ProgramCounter = program.Position;
         }
@@ -436,53 +438,6 @@ public sealed class NsScriptVM
         }
     }
 
-    private void ReportException(ref NsScriptThreadState thread, Exception exception)
-    {
-        LogMessage message = _log.ForLevel(LogLevel.Error)
-            .Append("Runtime error: ")
-            .Append(exception.Message)
-            .Append("\n");
-
-        message = WriteStackTrace(thread, message);
-        message.Log();
-    }
-
-    private LogMessage WriteStackTrace(NsScriptThreadState thread, LogMessage message)
-    {
-        using SourceMappingScope sourceMapping = _moduleLocator.BeginSourceMapping();
-        for (int i = thread.CallFrameStack.Count - 1; i >= 0; i--)
-        {
-            ref CallFrame frame = ref thread.CallFrameStack[i];
-            NsxModule module = frame.Module;
-            string routineName = frame.RuntimeInfo.SubroutineName;
-            CodeOffset codeOffset = i == thread.CallFrameStack.Count - 1
-                ? frame.ProgramCounter
-                : frame.ProgramCounter - 1;
-
-            int? lineNumber = null;
-            if (module.GetSourceSpan(codeOffset) is { } sourceSpan)
-            {
-                SourceText sourceText = sourceMapping.GetSourceText(module.Name);
-                lineNumber = sourceText.GetLineNumberFromPosition(sourceSpan.Start) + 1;
-                if (i == thread.CallFrameStack.Count - 1)
-                {
-                    ReadOnlySpan<char> context = sourceText.GetCharacterSpan(sourceSpan);
-                    message = message.Append($"Context: {context.TrimEnd()}\n");
-                }
-            }
-
-            message = message.Append($"    at {routineName} in {module.Name}.nss");
-            if (lineNumber is not null)
-            {
-                message = message.Append($":line {lineNumber}");
-            }
-
-            message = message.Append('\n');
-        }
-
-        return message;
-    }
-
     private static ConstantValue BinOp(
         in ConstantValue left,
         BinaryOperatorKind opKind,
@@ -509,5 +464,52 @@ public sealed class NsScriptVM
     {
         Subroutine subroutine = module.GetSubroutine(subroutineIndex);
         return new CallFrame(module, subroutineIndex, subroutine.BytecodeStart);
+    }
+
+    private void ReportException(in NsScriptThreadState thread, Exception exception)
+    {
+        LogMessage message = _log.ForLevel(LogLevel.Error)
+            .Append("Runtime error: ")
+            .Append(exception.Message)
+            .Append("\n");
+
+        message = WriteStackTrace(thread.CallFrameStack, message);
+        message.Log();
+    }
+
+    private LogMessage WriteStackTrace(ValueStack<CallFrame> frames, LogMessage message)
+    {
+        using SourceMappingScope sourceMapping = _moduleLocator.BeginSourceMapping();
+        for (int i = frames.Count - 1; i >= 0; i--)
+        {
+            ref CallFrame frame = ref frames[i];
+            NsxModule module = frame.Module;
+            string routineName = frame.RuntimeInfo.SubroutineName;
+            CodeOffset codeOffset = i == frames.Count - 1
+                ? frame.ProgramCounter
+                : frame.ProgramCounter - 1;
+
+            int? lineNumber = null;
+            if (module.GetSourceSpan(codeOffset) is { } sourceSpan)
+            {
+                SourceText sourceText = sourceMapping.GetSourceText(module.Name);
+                lineNumber = sourceText.GetLineNumberFromPosition(sourceSpan.Start) + 1;
+                if (i == frames.Count - 1)
+                {
+                    ReadOnlySpan<char> context = sourceText.GetCharacterSpan(sourceSpan);
+                    message = message.Append($"Context: {context.TrimEnd()}\n");
+                }
+            }
+
+            message = message.Append($"    at {routineName} in {module.Name}.nss");
+            if (lineNumber is not null)
+            {
+                message = message.Append($":line {lineNumber}");
+            }
+
+            message = message.Append('\n');
+        }
+
+        return message;
     }
 }

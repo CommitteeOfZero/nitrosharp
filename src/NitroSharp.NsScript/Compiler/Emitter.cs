@@ -334,7 +334,7 @@ internal ref struct Emitter
         {
             EmitOpcode(Opcode.Dispatch);
             _code.WriteByte((byte)lookupResult.BuiltInFunction);
-            _code.WriteByte((byte)callExpression.Arguments.Length);
+            _code.WriteByte((byte)arguments.Length);
         }
         else
         {
@@ -350,7 +350,7 @@ internal ref struct Emitter
                 EmitCallFar(Opcode.CallFar, function);
             }
 
-            _code.WriteByte((byte)callExpression.Arguments.Length);
+            // TODO: is it still necessary?
             EmitLoadImm(ConstantValue.Null);
         }
     }

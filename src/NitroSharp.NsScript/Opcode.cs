@@ -12,8 +12,9 @@ public enum Opcode : byte
     LoadImmEmptyStr = 0x15, // <>
     LoadImm = 0x16,         // <byte type> <value>
     LoadVar = 0x17,         // <ushort slot>
-    StoreVar = 0x18,        // <ushort slot>
-    LoadFlag = 0x19,        // <ushort slot>
+    LoadFlag = 0x18,        // <ushort slot>
+
+    StoreVar = 0x19,        // <ushort slot>
     StoreFlag = 0x1A,       // <ushort slot>
 
     Inc = 0x1B,             // <>
@@ -32,8 +33,8 @@ public enum Opcode : byte
     JumpIfTrue = 0x31,      // <short offset>
     JumpIfFalse = 0x32,     // <short offset>
     Dispatch = 0x33,        // <byte function> <byte argCount>
-    Call = 0x34,            // <ushort subroutine> <byte argCount>
-    CallFar = 0x35,         // <ushort module> <ushort subroutine> <byte argCount>
+    Call = 0x34,            // <ushort subroutine>
+    CallFar = 0x35,         // <ushort module> <ushort subroutine>
     CallChapter = 0x36,     // <ushort module>
     CallScene = 0x37,       // <ushort module> <ushort scene>
     Return = 0x38,          // <>
