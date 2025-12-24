@@ -74,7 +74,7 @@ internal sealed class NsxModuleBuilder
         // Compile subroutines
         using var codeBuffer = PooledBuffer<byte>.Allocate(64 * 1024);
         var codeWriter = new BufferWriter(codeBuffer);
-        var subroutineOffsets = new List<int>(Subroutines.Length);
+        var subroutineOffsets = new List<CodeOffset>(Subroutines.Length);
         CompileSubroutines(
             SourceFile.Chapters.As<SubroutineSymbol>(),
             ref codeWriter,
@@ -98,7 +98,7 @@ internal sealed class NsxModuleBuilder
         int stringTableSize = NsxConstants.TableHeaderSize + 6 + stringHeap.Length * sizeof(int);
 
         // Build the runtime information table (RTI)
-        int rtiTableOffset = NsxConstants.NsxHeaderSize + subTableSize;
+        FileOffset rtiTableOffset = NsxConstants.NsxHeaderSize + subTableSize;
         using var rtiBuffer = PooledBuffer<byte>.Allocate(8 * 1024);
         var rtiWriter = new BufferWriter(rtiBuffer);
         uint rtiOffsetBlockSize = SourceFile.SubroutineCount * sizeof(ushort);
@@ -123,11 +123,9 @@ internal sealed class NsxModuleBuilder
 
         int rtiSize = NsxConstants.TableHeaderSize + rtiOffsetWriter.Position + rtiWriter.Position;
         Span<byte> rtiHeader = stackalloc byte[NsxConstants.TableHeaderSize];
-        var rtiHeaderWriter = new BufferWriter(rtiHeader);
-        rtiHeaderWriter.WriteBytes(NsxConstants.RtiTableMarker);
-        rtiHeaderWriter.WriteUInt16LE((ushort)(rtiSize - NsxConstants.TableHeaderSize));
+        fillTableHeader(rtiHeader, NsxConstants.RtiTableMarker, rtiOffsetWriter.Position + rtiWriter.Position);
 
-        int impTableOffset = rtiTableOffset + rtiSize;
+        FileOffset impTableOffset = rtiTableOffset + rtiSize;
 
         // Build the import table (IMP)
         ReadOnlySpan<SourceFileSymbol> imports = Imports;
@@ -144,11 +142,11 @@ internal sealed class NsxModuleBuilder
         fillTableHeader(impHeader, NsxConstants.ImportTableMarker, impTableWriter.Position);
 
         int impTableSize = NsxConstants.TableHeaderSize + impTableWriter.Position;
-        int stringTableOffset = impTableOffset + impTableSize;
-        int dbgTableOffset = stringTableOffset  + stringTableSize;
-        const int dbgEntrySize = 2 * sizeof(int) + sizeof(ushort) * 2;
+        FileOffset stringTableOffset = impTableOffset + impTableSize;
+        FileOffset dbgTableOffset = stringTableOffset  + stringTableSize;
+        const int dbgEntrySize = 4 * sizeof(int);
         int dbgTableSize = NsxConstants.TableHeaderSize + SourceMappings.Length * dbgEntrySize + 6;
-        int codeStart = dbgTableOffset + dbgTableSize;
+        FileOffset codeSectionStart = dbgTableOffset + dbgTableSize;
 
         // Build the subroutine offset table (SUB)
         using var subTable = PooledBuffer<byte>.Allocate(subTableSize);
@@ -156,7 +154,7 @@ internal sealed class NsxModuleBuilder
         subWriter.WriteUInt16LE((ushort)Subroutines.Length);
         for (int i = 0; i < Subroutines.Length; i++)
         {
-            subWriter.WriteInt32LE(subroutineOffsets[i] + codeStart);
+            subWriter.WriteInt32LE(subroutineOffsets[i]);
         }
         subWriter.WriteBytes(NsxConstants.TableEndMarker);
 
@@ -164,7 +162,7 @@ internal sealed class NsxModuleBuilder
         fillTableHeader(subHeader, NsxConstants.SubTableMarker, subWriter.Position);
 
         // Encode the strings and build the offset table (STR)
-        int stringHeapStart = codeStart + codeWriter.Position;
+        FileOffset stringHeapStart = codeSectionStart + codeWriter.Position;
         using var stringHeapBuffer = PooledBuffer<byte>.Allocate(64 * 1024);
         using var stringOffsetTable = PooledBuffer<byte>.Allocate(stringTableSize);
         var strTableWriter = new BufferWriter(stringOffsetTable);
@@ -173,7 +171,7 @@ internal sealed class NsxModuleBuilder
         var stringWriter = new BufferWriter(stringHeapBuffer);
         foreach (string s in stringHeap)
         {
-            strTableWriter.WriteInt32LE(stringHeapStart + stringWriter.Position);
+            strTableWriter.WriteInt32LE(stringWriter.Position);
             stringWriter.WriteLengthPrefixedUtf8String(s);
         }
         strTableWriter.WriteBytes(NsxConstants.TableEndMarker);
@@ -186,12 +184,13 @@ internal sealed class NsxModuleBuilder
         var dbgWriter = new BufferWriter(dbgTable);
 
         dbgWriter.WriteUInt16LE((ushort)SourceMappings.Length);
+        SourceMappings.Sort();
         foreach ((BytecodeSpan bytecodeSpan, TextSpan textSpan) in SourceMappings)
         {
             dbgWriter.WriteInt32LE(textSpan.Start);
             dbgWriter.WriteInt32LE(textSpan.Length);
-            dbgWriter.WriteUInt16LE((ushort)bytecodeSpan.Start);
-            dbgWriter.WriteUInt16LE((ushort)bytecodeSpan.Length);
+            dbgWriter.WriteInt32LE(bytecodeSpan.Start);
+            dbgWriter.WriteInt32LE(bytecodeSpan.Length);
         }
 
         dbgWriter.WriteBytes(NsxConstants.TableEndMarker);
@@ -210,7 +209,9 @@ internal sealed class NsxModuleBuilder
         headerWriter.WriteInt32LE(rtiTableOffset);
         headerWriter.WriteInt32LE(impTableOffset);
         headerWriter.WriteInt32LE(stringTableOffset);
-        headerWriter.WriteInt32LE(codeStart);
+        headerWriter.WriteInt32LE(dbgTableOffset);
+        headerWriter.WriteInt32LE(codeSectionStart);
+        headerWriter.WriteInt32LE(stringHeapStart);
 
         // --- Write everything to the stream ---
         outputStream.Write(headerWriter.Written);
@@ -245,7 +246,7 @@ internal sealed class NsxModuleBuilder
 
     private void CompileSubroutines(
         ImmutableArray<SubroutineSymbol> subroutines,
-        ref BufferWriter writer, List<int> subroutineOffsets)
+        ref BufferWriter writer, List<CodeOffset> subroutineOffsets)
     {
         if (subroutines.Length == 0) { return; }
         var dialogueBlockOffsets = new List<int>();

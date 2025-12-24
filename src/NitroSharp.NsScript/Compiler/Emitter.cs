@@ -12,16 +12,16 @@ namespace NitroSharp.NsScript.Compiler;
 
 internal ref struct Emitter
 {
-    private readonly ref struct EmitRangeCookie(SyntaxNode syntaxNode, ref Emitter emitter)
+    private readonly ref struct SourceMappingScope(SyntaxNode syntaxNode, ref Emitter emitter)
     {
         private readonly ref readonly int _currentOffset = ref emitter._code.PositionRef;
-        private readonly int _startOffset = emitter._code.Position;
+        private readonly CodeOffset _startOffset = emitter._code.Position;
         private readonly NsxModuleBuilder _moduleBuilder = emitter._module;
 
         public void Dispose()
         {
-            int endOffset = _currentOffset;
-            int length = endOffset - _startOffset;
+            int length = _currentOffset - _startOffset;
+            if (length == 0) { return; }
             var bytecodeSpan = new BytecodeSpan(_startOffset, length);
             _moduleBuilder.AddSourceMapping(new SourceMapping(bytecodeSpan, syntaxNode.Span));
         }
@@ -36,14 +36,17 @@ internal ref struct Emitter
     private ValueStack<BreakScope> _breakScopes;
     private bool _suppressConstantLookup;
 
-    private Emitter(NsxModuleBuilder moduleBuilder, SubroutineSymbol subroutine)
+    private Emitter(
+        NsxModuleBuilder moduleBuilder,
+        SubroutineSymbol subroutine,
+        scoped in BufferWriter codeBuffer)
     {
         _module = moduleBuilder;
         _subroutine = subroutine;
         _checker = new Checker(moduleBuilder.EmitContext, subroutine);
         _context = moduleBuilder.EmitContext;
         _breakScopes = new ValueStack<BreakScope>(initialCapacity: 4);
-        _code = default;
+        _code = codeBuffer;
         _textId = 0;
         _suppressConstantLookup = false;
 
@@ -83,7 +86,7 @@ internal ref struct Emitter
         => _context.GetFlagToken(name);
 
     [UnscopedRef]
-    private EmitRangeCookie StartRange(SyntaxNode syntaxNode)
+    private SourceMappingScope BeginSourceMapping(SyntaxNode syntaxNode)
         => new(syntaxNode, ref this);
 
     public static void CompileSubroutine(
@@ -91,9 +94,8 @@ internal ref struct Emitter
         ref BufferWriter codeBuffer, List<int> dialogueBlockOffsets)
     {
         Debug.Assert(dialogueBlockOffsets.Count == 0);
-        int start = codeBuffer.Position;
-        var emitter = new Emitter(moduleBuilder, subroutine);
-        emitter._code = codeBuffer;
+        int subroutineCodeStart = codeBuffer.Position;
+        var emitter = new Emitter(moduleBuilder, subroutine, codeBuffer);
         emitter.EmitStatement(subroutine.Declaration.Body);
         emitter.EmitOpcode(Opcode.Return);
 
@@ -101,9 +103,10 @@ internal ref struct Emitter
         ImmutableArray<DialogueBlock> dialogueBlocks = decl.DialogueBlocks;
         foreach (DialogueBlock dialogueBlock in dialogueBlocks)
         {
-            dialogueBlockOffsets.Add(emitter._code.Position - start);
+            dialogueBlockOffsets.Add(emitter._code.Position - subroutineCodeStart);
             emitter.EmitDialogueBlock(dialogueBlock);
         }
+
         codeBuffer = emitter._code;
     }
 
@@ -217,7 +220,6 @@ internal ref struct Emitter
 
     private void EmitBinaryExpression(BinaryExpression expression)
     {
-        using EmitRangeCookie rangeCookie = StartRange(expression);
         EmitExpression(expression.Right);
         EmitExpression(expression.Left);
         EmitBinary(expression.OperatorKind.Value);
@@ -225,7 +227,6 @@ internal ref struct Emitter
 
     private void EmitAssignmentExpression(AssignmentExpression assignmentExpr)
     {
-        using EmitRangeCookie rangeCookie = StartRange(assignmentExpr);
         LookupResult target = _checker.ResolveAssignmentTarget(assignmentExpr.Target);
         if (target.IsEmpty)
         {
@@ -291,7 +292,6 @@ internal ref struct Emitter
 
     private void EmitFunctionCall(FunctionCallExpression callExpression)
     {
-        using EmitRangeCookie rangeCookie = StartRange(callExpression);
         LookupResult lookupResult = _checker.LookupFunction(callExpression, callExpression.TargetName);
         if (lookupResult.IsEmpty)
         {
@@ -378,7 +378,10 @@ internal ref struct Emitter
     {
         if (_checker.ResolveCallChapterTarget(statement) is { } chapter)
         {
-            EmitCallFar(Opcode.CallChapter, chapter);
+            using (BeginSourceMapping(statement))
+            {
+                EmitCallFar(Opcode.CallChapter, chapter);
+            }
         }
     }
 
@@ -386,7 +389,10 @@ internal ref struct Emitter
     {
         if (_checker.ResolveCallSceneTarget(statement) is { } scene)
         {
-            EmitCallFar(Opcode.CallScene, scene);
+            using (BeginSourceMapping(statement))
+            {
+                EmitCallFar(Opcode.CallScene, scene);
+            }
         }
     }
 
@@ -401,15 +407,13 @@ internal ref struct Emitter
 
     private void EmitStatement(Statement statement)
     {
-        using EmitRangeCookie rangeCookie = StartRange(statement);
         switch (statement.Kind)
         {
             case SyntaxNodeKind.Block:
                 EmitBlock((Block)statement);
                 break;
             case SyntaxNodeKind.ExpressionStatement:
-                EmitExpression(((ExpressionStatement)statement).Expression);
-                EmitOpcode(Opcode.Pop);
+                EmitExpressionStatement(statement);
                 break;
             case SyntaxNodeKind.IfStatement:
                 EmitIfStatement((IfStatement)statement);
@@ -442,6 +446,15 @@ internal ref struct Emitter
         }
     }
 
+    private void EmitExpressionStatement(Statement statement)
+    {
+        using (BeginSourceMapping(statement))
+        {
+            EmitExpression(((ExpressionStatement)statement).Expression);
+            EmitOpcode(Opcode.Pop);
+        }
+    }
+
     private void EmitBlock(Block block)
     {
         foreach (Statement statement in block.Statements)
@@ -452,7 +465,7 @@ internal ref struct Emitter
 
     private void EmitIfStatement(IfStatement ifStmt)
     {
-        using (StartRange(ifStmt.Condition))
+        using (BeginSourceMapping(ifStmt.Condition))
         {
             EmitExpression(ifStmt.Condition);
         }
@@ -470,7 +483,10 @@ internal ref struct Emitter
             // exit:
 
             JumpPlaceholder exitJump = EmitJump(Opcode.JumpIfFalse);
-            EmitStatement(ifStmt.IfTrueStatement);
+            using (BeginSourceMapping(ifStmt.IfTrueStatement))
+            {
+                EmitStatement(ifStmt.IfTrueStatement);
+            }
             PatchJump(exitJump, _code.Position);
         }
         else
@@ -490,10 +506,17 @@ internal ref struct Emitter
             // exit:
 
             JumpPlaceholder altJump = EmitJump(Opcode.JumpIfFalse);
-            EmitStatement(ifStmt.IfTrueStatement);
+            using (BeginSourceMapping(ifStmt.IfTrueStatement))
+            {
+                EmitStatement(ifStmt.IfTrueStatement);
+            }
+
             JumpPlaceholder exitJump = EmitJump(Opcode.Jump);
             int alternativePos = _code.Position;
-            EmitStatement(ifStmt.IfFalseStatement);
+            using (BeginSourceMapping(ifStmt.IfFalseStatement))
+            {
+                EmitStatement(ifStmt.IfFalseStatement);
+            }
             PatchJump(exitJump, _code.Position);
             PatchJump(altJump, alternativePos);
         }
@@ -513,16 +536,19 @@ internal ref struct Emitter
         // exit:
 
         int loopStart = _code.Position;
-        using (StartRange(whileStmt.Condition))
+        using (BeginSourceMapping(whileStmt.Condition))
         {
             EmitExpression(whileStmt.Condition);
         }
 
         JumpPlaceholder exitJump = EmitJump(Opcode.JumpIfFalse);
-        BreakScope bodyScope = EmitLoopBody(whileStmt.Body);
-        EmitJump(Opcode.Jump, loopStart);
-        PatchJump(exitJump, _code.Position);
-        PatchBreaks(ref bodyScope, _code.Position);
+        using (BeginSourceMapping(whileStmt.Body))
+        {
+            BreakScope bodyScope = EmitLoopBody(whileStmt.Body);
+            EmitJump(Opcode.Jump, loopStart);
+            PatchJump(exitJump, _code.Position);
+            PatchBreaks(ref bodyScope, _code.Position);
+        }
     }
 
     private void EmitSelect(SelectStatement selectStmt)
@@ -538,6 +564,7 @@ internal ref struct Emitter
 
     private void EmitSelectSection(SelectSection section)
     {
+        using SourceMappingScope scope = BeginSourceMapping(section);
         EmitOpcode(Opcode.IsPressed);
         _code.WriteUInt16LE(_module.GetStringToken(section.Label.Value));
         JumpPlaceholder jmp = EmitJump(Opcode.JumpIfFalse);
@@ -548,7 +575,10 @@ internal ref struct Emitter
     private BreakScope EmitLoopBody(Statement body)
     {
         _breakScopes.Push(new BreakScope());
-        EmitStatement(body);
+        using (BeginSourceMapping(body))
+        {
+            EmitStatement(body);
+        }
         return _breakScopes.Pop();
     }
 

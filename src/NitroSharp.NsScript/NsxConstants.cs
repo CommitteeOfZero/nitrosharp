@@ -1,10 +1,13 @@
-﻿using System;
+﻿global using CodeOffset = int;
+global using StringOffset = int;
+global using FileOffset = int;
+using System;
 
 namespace NitroSharp.NsScript;
 
 internal static class NsxConstants
 {
-    public const int NsxHeaderSize = 32;
+    public const int NsxHeaderSize = 40;
     public const int TableHeaderSize = 8;
 
     public static ReadOnlySpan<byte> NsxMagic => "NSX\0"u8;

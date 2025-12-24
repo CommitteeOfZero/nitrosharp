@@ -14,13 +14,31 @@ public readonly record struct SourceLocation(SourceText SourceText, TextSpan Spa
     public LinePositionSpan GetLineSpan() => SourceText.GetLinePositionSpan(Span);
 }
 
-internal readonly record struct BytecodeSpan(int Start, int Length)
+internal readonly record struct BytecodeSpan(CodeOffset Start, int Length) : IComparable<BytecodeSpan>
 {
     public int End => Start + Length;
+
+    public int CompareTo(BytecodeSpan other)
+    {
+        int diff = Start - other.Start;
+        if (diff != 0)
+        {
+            return diff;
+        }
+
+        return Length - other.Length;
+    }
+
+    public override string ToString() => $"[{Start}..{End})";
 }
 
 [StructLayout(LayoutKind.Auto)]
-internal readonly record struct SourceMapping(BytecodeSpan BytecodeSpan, TextSpan SourceSpan);
+internal readonly record struct SourceMapping(BytecodeSpan BytecodeSpan, TextSpan SourceSpan)
+    : IComparable<SourceMapping>
+{
+    public int CompareTo(SourceMapping other) => BytecodeSpan.CompareTo(other.BytecodeSpan);
+    public override string ToString() => $"{BytecodeSpan} -> {SourceSpan}";
+}
 
 public readonly record struct TextSpan : IComparable<TextSpan>
 {

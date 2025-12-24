@@ -19,25 +19,30 @@ namespace NitroSharp.NsScript.VM
     [DebuggerDisplay("Module '{Name}'")]
     public sealed class NsxModule
     {
-        private readonly Stream _stream;
-        private readonly int[] _stringOffsets;
+        private readonly byte[] _codeSection;
+        private readonly StringOffset[] _stringOffsets;
         private readonly string?[] _stringHeap;
 
-        private readonly int[] _subroutineOffsets;
+        private readonly CodeOffset[] _subroutineOffsets;
         private readonly Subroutine[] _subroutines;
         private readonly SourceMapping[] _sourceMappings;
         private readonly SubroutineRuntimeInfo[] _srti;
         private readonly Dictionary<string, int> _subroutineMap;
 
+        private readonly FileOffset _stringHeapOffset;
+        private readonly Stream _stream;
+
         private NsxModule(
             Stream stream,
             string name,
             DateTimeOffset sourceModificationTime,
-            int[] subroutineOffsets,
+            CodeOffset[] subroutineOffsets,
             byte[] rtiTable,
             string[] imports,
-            int[] stringOffsets,
-            SourceMapping[] sourceMappings)
+            StringOffset[] stringOffsets,
+            SourceMapping[] sourceMappings,
+            byte[] codeSection,
+            FileOffset stringHeapOffset)
         {
             _stream = stream;
             Name = name;
@@ -48,6 +53,8 @@ namespace NitroSharp.NsScript.VM
             _stringHeap = new string?[stringOffsets.Length];
             _subroutines = new Subroutine[_subroutineOffsets.Length];
             _sourceMappings = sourceMappings;
+            _codeSection = codeSection;
+            _stringHeapOffset = stringHeapOffset;
 
             int subroutineCount = _subroutines.Length;
             var rtiReader = new BufferReader(rtiTable);
@@ -72,13 +79,33 @@ namespace NitroSharp.NsScript.VM
         public string Name { get; }
         public string[] Imports { get; }
         public DateTimeOffset SourceModificationTime { get; }
+        public ReadOnlySpan<byte> Code => _codeSection;
 
-        internal Subroutine GetSubroutine(int index)
+        public string GetString(ushort token)
+        {
+            Span<byte> stackBuffer = stackalloc byte[256];
+            ref string? s = ref _stringHeap[token];
+            if (s is null)
+            {
+                _stream.Position = _stringHeapOffset + _stringOffsets[token];
+                int length = ReadUInt16();
+                Span<byte> bytes = length <= stackBuffer.Length
+                    ? stackBuffer[..length]
+                    : new byte[length];
+                _stream.ReadExactly(bytes);
+                s = Encoding.UTF8.GetString(bytes);
+            }
+
+            return s;
+        }
+
+        public Subroutine GetSubroutine(int index)
         {
             ref Subroutine subroutine = ref _subroutines[index];
             if (subroutine.IsEmpty)
             {
-                LoadSubroutine(index);
+                CodeOffset subStart = _subroutineOffsets[index];
+                subroutine = new Subroutine(_codeSection, subStart);
             }
 
             return subroutine;
@@ -90,32 +117,10 @@ namespace NitroSharp.NsScript.VM
         public string GetSubroutineName(int subroutineIndex)
             => _srti[subroutineIndex].SubroutineName;
 
-        public string GetString(ushort token)
-        {
-            Span<byte> stackBuffer = stackalloc byte[256];
-            ref string? s = ref _stringHeap[token];
-            if (s is null)
-            {
-                _stream.Position = _stringOffsets[token];
-                int length = ReadUInt16();
-                Span<byte> bytes = length <= stackBuffer.Length
-                    ? stackBuffer[..length]
-                    : new byte[length];
-                _stream.ReadExactly(bytes);
-                s = Encoding.UTF8.GetString(bytes);
-
-            }
-
-            return s;
-        }
-
         public bool TryLookupSubroutineIndex(string name, out int index)
             => _subroutineMap.TryGetValue(name, out index);
 
-        public int LookupSubroutineIndex(string name)
-            => _subroutineMap[name];
-
-        public TextSpan? GetSourceSpan(int codeOffset)
+        public TextSpan? GetSourceSpan(CodeOffset codeOffset)
         {
             int lower = 0;
             int upper = _sourceMappings.Length - 1;
@@ -125,7 +130,8 @@ namespace NitroSharp.NsScript.VM
                 int index = lower + ((upper - lower) / 2);
                 ref readonly SourceMapping mapping = ref _sourceMappings[index];
 
-                if (codeOffset >= mapping.BytecodeSpan.Start && codeOffset < mapping.BytecodeSpan.End)
+                if (codeOffset >= mapping.BytecodeSpan.Start &&
+                    codeOffset < mapping.BytecodeSpan.End)
                 {
                     return mapping.SourceSpan;
                 }
@@ -141,15 +147,6 @@ namespace NitroSharp.NsScript.VM
             }
 
             return null;
-        }
-
-        private void LoadSubroutine(int index)
-        {
-            _stream.Position = _subroutineOffsets[index];
-            int size = ReadUInt16();
-            var bytes = new byte[size];
-            _stream.ReadExactly(bytes);
-            _subroutines[index] = new Subroutine(bytes);
         }
 
         private ushort ReadUInt16()
@@ -184,16 +181,27 @@ namespace NitroSharp.NsScript.VM
             ReadOnlySpan<byte> magic = reader.Consume(4);
             long unixTimestamp = reader.ReadInt64LE();
             var modificationTime = DateTimeOffset.FromUnixTimeSeconds(unixTimestamp);
-            _ = reader.ReadInt32LE();
-            int rtiTableOffset = reader.ReadInt32LE();
+            FileOffset subTableOffset = reader.ReadInt32LE();
+            FileOffset rtiTableOffset = reader.ReadInt32LE();
+            FileOffset impTableOffset = reader.ReadInt32LE();
+            FileOffset strTableOffset = reader.ReadInt32LE();
+            FileOffset dbgTableOffset = reader.ReadInt32LE();
+            FileOffset codeSectionOffset = reader.ReadInt32LE();
+            FileOffset stringHeapOffset = reader.ReadInt32LE();
 
+            int codeSectionSize = stringHeapOffset - codeSectionOffset;
+            stream.Position = codeSectionOffset;
+            var codeSectionBytes = new byte[codeSectionSize];
+            stream.ReadExactly(codeSectionBytes);
+
+            stream.Position = subTableOffset;
             TableHeader subHeader = readTableHeader(stream);
             assertMarker(ref subHeader, NsxConstants.SubTableMarker);
             var subTableBytes = new byte[subHeader.TableSize];
             stream.ReadExactly(subTableBytes);
             reader = new BufferReader(subTableBytes);
             int subCount = reader.ReadUInt16LE();
-            var subroutineOffsets = new int[subCount];
+            var subroutineOffsets = new CodeOffset[subCount];
             for (int i = 0; i < subCount; i++)
             {
                 subroutineOffsets[i] = reader.ReadInt32LE();
@@ -205,6 +213,7 @@ namespace NitroSharp.NsScript.VM
             var rtiBytes = new byte[rtiHeader.TableSize];
             stream.ReadExactly(rtiBytes);
 
+            stream.Position = impTableOffset;
             TableHeader impHeader = readTableHeader(stream);
             assertMarker(ref impHeader, NsxConstants.ImportTableMarker);
             var impBytes = new byte[impHeader.TableSize];
@@ -217,18 +226,20 @@ namespace NitroSharp.NsScript.VM
                 imports[i] = reader.ReadLengthPrefixedUtf8String();
             }
 
+            stream.Position = strTableOffset;
             TableHeader strHeader = readTableHeader(stream);
             assertMarker(ref strHeader, NsxConstants.StringTableMarker);
             var strTableBytes = new byte[strHeader.TableSize];
             stream.ReadExactly(strTableBytes);
             reader = new BufferReader(strTableBytes);
             int stringCount = reader.ReadUInt16LE();
-            var stringOffsets = new int[stringCount];
+            var stringOffsets = new StringOffset[stringCount];
             for (int i = 0; i < stringCount; i++)
             {
                 stringOffsets[i] = reader.ReadInt32LE();
             }
 
+            stream.Position = dbgTableOffset;
             TableHeader dbgHeader = readTableHeader(stream);
             assertMarker(ref dbgHeader, NsxConstants.DebugTableMarker);
             var dbgBytes = new byte[dbgHeader.TableSize];
@@ -238,14 +249,14 @@ namespace NitroSharp.NsScript.VM
             var sourceMappings = new SourceMapping[dbgEntryCount];
             for (int i = 0; i < dbgEntryCount; i++)
             {
-                int start = reader.ReadInt32LE();
-                int length = reader.ReadInt32LE();
-                int codeOffset = reader.ReadUInt16LE();
-                int codeLength = reader.ReadUInt16LE();
+                int textStart = reader.ReadInt32LE();
+                int textLength = reader.ReadInt32LE();
+                CodeOffset codeOffset = reader.ReadInt32LE();
+                int codeLength = reader.ReadInt32LE();
 
                 sourceMappings[i] = new SourceMapping(
                     new BytecodeSpan(codeOffset, codeLength),
-                    new TextSpan(start, length)
+                    new TextSpan(textStart, textLength)
                 );
             }
 
@@ -257,7 +268,9 @@ namespace NitroSharp.NsScript.VM
                 rtiBytes,
                 imports,
                 stringOffsets,
-                sourceMappings
+                sourceMappings,
+                codeSectionBytes,
+                stringHeapOffset
             );
 
             static unsafe void assertMarker(ref TableHeader header, ReadOnlySpan<byte> expected)
@@ -282,39 +295,37 @@ namespace NitroSharp.NsScript.VM
         }
     }
 
-    internal readonly struct Subroutine
+    public readonly struct Subroutine
     {
-        private readonly byte[] _bytes;
+        private readonly ReadOnlyMemory<byte> _bytecode;
 
-        public bool IsEmpty => _bytes is null;
+        public bool IsEmpty => _bytecode.IsEmpty;
 
-        public Subroutine(byte[] bytes)
+        public Subroutine(byte[] codeSection, CodeOffset subStart)
         {
-            _bytes = bytes;
-            var reader = new BufferReader(bytes);
+            var reader = new BufferReader(codeSection.AsSpan(subStart));
+            int size = reader.ReadUInt16LE();
             int dialogueBlockCount = reader.ReadUInt16LE();
             int[] dialogueBlockOffsets = new int[dialogueBlockCount];
             for (int i = 0; i < dialogueBlockCount; i++)
             {
                 dialogueBlockOffsets[i] = reader.ReadUInt16LE();
             }
-            int start = reader.Position;
+
+            BytecodeStart = subStart + reader.Position;
+            _bytecode = codeSection.AsMemory(BytecodeStart, size);
             var dialogueBlocks = ImmutableArray.CreateBuilder<CompiledDialogueBlock>(dialogueBlockCount);
             for (int i = 0; i < dialogueBlockCount; i++)
             {
-                reader.Position = start + dialogueBlockOffsets[i];
+                reader.Position = (BytecodeStart - subStart) + dialogueBlockOffsets[i];
                 dialogueBlocks.Add(new CompiledDialogueBlock(ref reader));
             }
 
-            EntryPoint = start;
             DialogueBlocks = dialogueBlocks.ToImmutable();
         }
 
-        public int EntryPoint { get; }
-
+        public CodeOffset BytecodeStart { get; }
         public ImmutableArray<CompiledDialogueBlock> DialogueBlocks { get; }
-
-        public ReadOnlySpan<byte> Code => _bytes;
     }
 
     public readonly struct CompiledDialogueBlock
@@ -398,6 +409,8 @@ namespace NitroSharp.NsScript.VM
         public readonly SubroutineKind SubroutineKind;
         public readonly string SubroutineName;
         public readonly (string box, string name)[] DialogueBlockInfos;
+
+        public int HeaderSize => 2 + 2 + (DialogueBlockInfos.Length * 2);
 
         internal SubroutineRuntimeInfo(ref BufferReader reader)
         {

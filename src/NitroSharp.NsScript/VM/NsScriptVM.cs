@@ -149,40 +149,15 @@ public sealed class NsScriptVM
         NsxModule thisModule = frame.Module;
         builtins._vm = this;
         builtins.CurrentModule = thisModule;
-        Subroutine subroutine = thisModule.GetSubroutine(frame.SubroutineIndex);
-        var program = new BytecodeStream(subroutine.Code, frame.ProgramCounter);
-        ref ValueStack<ConstantValue> stack = ref thread.EvalStack;
+        var program = new BytecodeStream(thisModule.Code, frame.ProgramCounter);
+        ref ValueStack<ConstantValue> evalStack = ref thread.EvalStack;
         while (true)
         {
+            frame.ProgramCounter = program.Position;
             Opcode opcode = program.NextOpcode();
-            ushort varToken = ushort.MaxValue;
-            ushort flagToken;
-            ConstantValue? imm = opcode switch
+            if (opcode is >= Opcode.LoadImm0 and <= Opcode.LoadVar)
             {
-                Opcode.LoadImm => readConst(ref program, thisModule),
-                Opcode.LoadImm0 => ConstantValue.Number(0),
-                Opcode.LoadImm1 => ConstantValue.Number(1),
-                Opcode.LoadImmTrue => ConstantValue.True,
-                Opcode.LoadImmFalse => ConstantValue.False,
-                Opcode.LoadImmNull => ConstantValue.Null,
-                Opcode.LoadImmEmptyStr => ConstantValue.EmptyString,
-                Opcode.LoadVar => GetVariable(varToken = program.DecodeToken())
-                    .WithSlot((short)varToken),
-                Opcode.LoadFlag => GetFlag(flagToken = program.DecodeToken())
-                    .WithSlot((short)flagToken),
-                _ => null
-            };
-
-            if (imm.HasValue)
-            {
-                if (varToken != ushort.MaxValue && varToken == SystemVariables.PresentProcess)
-                {
-                    string subName = thisModule.GetSubroutineName(frame.SubroutineIndex);
-                    imm = _variables[varToken] = ConstantValue.String(subName);
-                }
-
-                ConstantValue value = imm.Value;
-                stack.Push(ref value);
+                handleLoadOp(opcode, ref program, ref thread);
                 continue;
             }
 
@@ -190,48 +165,49 @@ public sealed class NsScriptVM
             {
                 case Opcode.StoreVar:
                     int index = program.DecodeToken();
-                    GetVariable(index) = stack.Pop();
+                    GetVariable(index) = evalStack.Pop();
                     break;
                 case Opcode.StoreFlag:
                     index = program.DecodeToken();
-                    GetFlag(index) = stack.Pop();
+                    GetFlag(index) = evalStack.Pop();
                     break;
                 case Opcode.Binary:
                     var opKind = (BinaryOperatorKind)program.ReadByte();
-                    ConstantValue op1 = stack.Pop();
-                    ConstantValue op2 = stack.Pop();
-                    stack.Push(BinOp(op1, opKind, op2));
+                    ConstantValue op1 = evalStack.Pop();
+                    ConstantValue op2 = evalStack.Pop();
+                    evalStack.Push(BinOp(op1, opKind, op2));
                     break;
                 case Opcode.Equal:
-                    op1 = stack.Pop();
-                    op2 = stack.Pop();
-                    stack.Push(op1 == op2);
+                    op1 = evalStack.Pop();
+                    op2 = evalStack.Pop();
+                    evalStack.Push(op1 == op2);
                     break;
                 case Opcode.NotEqual:
-                    op1 = stack.Pop();
-                    op2 = stack.Pop();
-                    stack.Push(op1 != op2);
+                    op1 = evalStack.Pop();
+                    op2 = evalStack.Pop();
+                    evalStack.Push(op1 != op2);
                     break;
                 case Opcode.Neg:
-                    ref ConstantValue val = ref stack.Peek();
+                    ref ConstantValue val = ref evalStack.Peek();
                     val = val.Type switch
                     {
                         BuiltInType.Numeric => ConstantValue.Number(-val.AsNumber()!.Value),
+                        // TODO: runtime error
                         _ => throw ThrowHelper.Unreachable()
                     };
                     break;
                 case Opcode.Inc:
-                    val = ref stack.Peek();
+                    val = ref evalStack.Peek();
                     Debug.Assert(val.Type == BuiltInType.Numeric); // TODO: runtime error
                     val = ConstantValue.Number(val.AsNumber()!.Value + 1);
                     break;
                 case Opcode.Dec:
-                    val = ref stack.Peek();
+                    val = ref evalStack.Peek();
                     Debug.Assert(val.Type == BuiltInType.Numeric); // TODO: runtime error
                     val = ConstantValue.Number(val.AsNumber()!.Value - 1);
                     break;
                 case Opcode.Delta:
-                    val = ref stack.Peek();
+                    val = ref evalStack.Peek();
                     if (val.AsNumber() is { } num)
                     {
                         val = ConstantValue.Delta(num);
@@ -242,12 +218,12 @@ public sealed class NsScriptVM
                     }
                     break;
                 case Opcode.Invert:
-                    val = ref stack.Peek();
+                    val = ref evalStack.Peek();
                     Debug.Assert(val.AsBool() is not null);
                     val = ConstantValue.Boolean(!val.AsBool()!.Value);
                     break;
                 case Opcode.Pop:
-                    stack.Pop();
+                    evalStack.Pop();
                     break;
                 case Opcode.Call:
                     ushort subroutineToken = program.DecodeToken();
@@ -262,16 +238,16 @@ public sealed class NsScriptVM
                 case Opcode.CallFar:
                 case Opcode.CallChapter:
                     newFrame = externalCall(ref program);
-                    thread.CallFrameStack.Push(newFrame);
                     frame.ProgramCounter = program.Position;
+                    thread.CallFrameStack.Push(newFrame);
                     return TickResult.Ok;
                 case Opcode.CallScene:
                     newFrame = externalCall(ref program);
+                    frame.ProgramCounter = program.Position;
                     var newThread = new NsScriptThreadState(newFrame);
-
+                    // TODO: CallScene not actually implemented
                     //Join(thread, newThread);
                     //ResumeThread(newThread);
-                    frame.ProgramCounter = program.Position;
                     return TickResult.Ok;
                 case Opcode.Jump:
                     int @base = program.Position - 1;
@@ -280,7 +256,7 @@ public sealed class NsScriptVM
                     break;
                 case Opcode.JumpIfTrue:
                     @base = program.Position - 1;
-                    ConstantValue condition = stack.Pop();
+                    ConstantValue condition = evalStack.Pop();
                     offset = program.DecodeOffset();
                     Debug.Assert(condition.Type == BuiltInType.Boolean);
                     if (condition.AsBool()!.Value)
@@ -290,7 +266,7 @@ public sealed class NsScriptVM
                     break;
                 case Opcode.JumpIfFalse:
                     @base = program.Position - 1;
-                    condition = stack.Pop();
+                    condition = evalStack.Pop();
                     offset = program.DecodeOffset();
                     if (!condition.AsBool()!.Value)
                     {
@@ -307,53 +283,28 @@ public sealed class NsScriptVM
                     _bezierSegmentStack.Clear();
                     break;
                 case Opcode.BezierEndSeg:
+
+                    var seg = new CubicBezierSegment(
+                        popPoint(ref evalStack),
+                        popPoint(ref evalStack),
+                        popPoint(ref evalStack),
+                        popPoint(ref evalStack)
+                    );
+                    _bezierSegmentStack.Push(seg);
+                    break;
+
                     static BezierControlPoint popPoint(ref ValueStack<ConstantValue> stack)
                     {
                         var x = NsCoordinate.FromValue(stack.Pop());
                         var y = NsCoordinate.FromValue(stack.Pop());
                         return new BezierControlPoint(x, y);
                     }
-
-                    var seg = new CubicBezierSegment(
-                        popPoint(ref stack),
-                        popPoint(ref stack),
-                        popPoint(ref stack),
-                        popPoint(ref stack)
-                    );
-                    _bezierSegmentStack.Push(seg);
-                    break;
                 case Opcode.BezierEnd:
                     var curve = new CompositeBezier(_bezierSegmentStack.ToImmutableArray());
-                    stack.Push(ConstantValue.BezierCurve(curve));
+                    evalStack.Push(ConstantValue.BezierCurve(curve));
                     break;
                 case Opcode.Dispatch:
-                    var func = (BuiltInFunction)program.ReadByte();
-                    int argCount = program.ReadByte();
-                    ReadOnlySpan<ConstantValue> args = stack.AsSpan(stack.Count - argCount, argCount);
-                    ConstantValue? result = null;
-                    switch (func)
-                    {
-                        default:
-                            result = _builtInCallDispatcher.Dispatch(builtins, func, args);
-                            stack.Pop(argCount);
-                            break;
-
-                        case BuiltInFunction.log:
-                            ConstantValue arg = stack.Pop();
-                            _log.Info(arg.ConvertToString());
-                            break;
-                        case BuiltInFunction.fail:
-                            string subName = frame.RuntimeInfo.SubroutineName;
-                            _log.Error($"{subName} + {program.Position - 1}: test failed.");
-                            break;
-                        case BuiltInFunction.fail_msg:
-                            ConstantValue message = stack.Pop();
-                            subName = frame.RuntimeInfo.SubroutineName;
-                            _log.Error($"{subName} + {program.Position - 1}: {message.ToString()}.");
-                            break;
-                    }
-                    stack.Push(result ?? ConstantValue.Null);
-                    frame.ProgramCounter = program.Position;
+                    dispatchBuiltIn(ref program, ref thread);
                     return TickResult.Ok;
 
                 case Opcode.ActivateBlock:
@@ -368,17 +319,91 @@ public sealed class NsScriptVM
                 case Opcode.IsPressed:
                     string choice = thisModule.GetString(program.DecodeToken());
                     bool pressed = builtins.HandleInputEvents(EntityQuery.Parse(choice));
-                    stack.Push(ConstantValue.Boolean(pressed));
+                    evalStack.Push(ConstantValue.Boolean(pressed));
                     thread.SelectResult |= pressed;
                     break;
                 case Opcode.SelectLoopEnd:
-                    stack.Push(ConstantValue.Boolean(thread.SelectResult));
+                    evalStack.Push(ConstantValue.Boolean(thread.SelectResult));
                     frame.ProgramCounter = program.Position;
                     return TickResult.Yield;
                 case Opcode.SelectEnd:
                     builtins.SelectEnd();
                     break;
             }
+        }
+
+        void handleLoadOp(Opcode opcode, ref BytecodeStream program, ref NsScriptThreadState thread)
+        {
+            ushort varToken = ushort.MaxValue;
+            ushort flagToken;
+            ConstantValue? imm = opcode switch
+            {
+                Opcode.LoadImm => readConst(ref program),
+                Opcode.LoadImm0 => ConstantValue.Number(0),
+                Opcode.LoadImm1 => ConstantValue.Number(1),
+                Opcode.LoadImmTrue => ConstantValue.True,
+                Opcode.LoadImmFalse => ConstantValue.False,
+                Opcode.LoadImmNull => ConstantValue.Null,
+                Opcode.LoadImmEmptyStr => ConstantValue.EmptyString,
+                Opcode.LoadVar => GetVariable(varToken = program.DecodeToken())
+                    .WithSlot((short)varToken),
+                Opcode.LoadFlag => GetFlag(flagToken = program.DecodeToken())
+                    .WithSlot((short)flagToken),
+                _ => null
+            };
+
+            if (varToken != ushort.MaxValue && varToken == SystemVariables.PresentProcess)
+            {
+                string subName = thisModule.GetSubroutineName(thread.CurrentFrame.SubroutineIndex);
+                imm = _variables[varToken] = ConstantValue.String(subName);
+            }
+
+            ConstantValue value = imm!.Value;
+            thread.EvalStack.Push(ref value);
+        }
+
+        void dispatchBuiltIn(ref BytecodeStream program, ref NsScriptThreadState thread)
+        {
+            ref CallFrame frame = ref thread.CurrentFrame;
+            ref ValueStack<ConstantValue> evalStack = ref thread.EvalStack;
+            var func = (BuiltInFunction)program.ReadByte();
+            int argCount = program.ReadByte();
+            ReadOnlySpan<ConstantValue> args = evalStack.AsSpan(evalStack.Count - argCount, argCount);
+            ConstantValue? result = null;
+            switch (func)
+            {
+                default:
+                    try
+                    {
+                        result = _builtInCallDispatcher.Dispatch(builtins, func, args);
+                    }
+                    catch (Exception e)
+                    {
+                        ReportException(ref thread, e);
+                        throw;
+                    }
+                    finally
+                    {
+                        evalStack.Pop(argCount);
+                    }
+                    break;
+
+                case BuiltInFunction.log:
+                    ConstantValue arg = evalStack.Pop();
+                    _log.Info(arg.ConvertToString());
+                    break;
+                case BuiltInFunction.fail:
+                    string subName = frame.RuntimeInfo.SubroutineName;
+                    _log.Error($"{subName} + {program.Position - 1}: test failed.");
+                    break;
+                case BuiltInFunction.fail_msg:
+                    ConstantValue message = evalStack.Pop();
+                    subName = frame.RuntimeInfo.SubroutineName;
+                    _log.Error($"{subName} + {program.Position - 1}: {message.ToString()}.");
+                    break;
+            }
+            evalStack.Push(result ?? ConstantValue.Null);
+            frame.ProgramCounter = program.Position;
         }
 
         CallFrame externalCall(ref BytecodeStream program)
@@ -390,7 +415,7 @@ public sealed class NsScriptVM
             return CreateEntryPointCallFrame(externalModule, subroutineToken);
         }
 
-        static ConstantValue readConst(ref BytecodeStream stream, NsxModule module)
+        ConstantValue readConst(ref BytecodeStream stream)
         {
             Immediate imm = stream.DecodeImmediateValue();
             return imm.Type switch
@@ -398,7 +423,7 @@ public sealed class NsScriptVM
                 BuiltInType.Numeric => ConstantValue.Number(imm.Numeric),
                 BuiltInType.DeltaNumeric => ConstantValue.Delta(imm.Numeric),
                 BuiltInType.BuiltInConstant => ConstantValue.BuiltInConstant(imm.Constant),
-                BuiltInType.String => ConstantValue.String(module.GetString(imm.StringToken)),
+                BuiltInType.String => ConstantValue.String(thisModule.GetString(imm.StringToken)),
                 _ => throw ThrowHelper.UnexpectedValueOf<BuiltInType>()
             };
         }
@@ -409,6 +434,53 @@ public sealed class NsScriptVM
             string routineName = callFrame.RuntimeInfo.SubroutineName;
             _log.Debug($"{moduleName}::{routineName}");
         }
+    }
+
+    private void ReportException(ref NsScriptThreadState thread, Exception exception)
+    {
+        LogMessage message = _log.ForLevel(LogLevel.Error)
+            .Append("Runtime error: ")
+            .Append(exception.Message)
+            .Append("\n");
+
+        message = WriteStackTrace(thread, message);
+        message.Log();
+    }
+
+    private LogMessage WriteStackTrace(NsScriptThreadState thread, LogMessage message)
+    {
+        using SourceMappingScope sourceMapping = _moduleLocator.BeginSourceMapping();
+        for (int i = thread.CallFrameStack.Count - 1; i >= 0; i--)
+        {
+            ref CallFrame frame = ref thread.CallFrameStack[i];
+            NsxModule module = frame.Module;
+            string routineName = frame.RuntimeInfo.SubroutineName;
+            CodeOffset codeOffset = i == thread.CallFrameStack.Count - 1
+                ? frame.ProgramCounter
+                : frame.ProgramCounter - 1;
+
+            int? lineNumber = null;
+            if (module.GetSourceSpan(codeOffset) is { } sourceSpan)
+            {
+                SourceText sourceText = sourceMapping.GetSourceText(module.Name);
+                lineNumber = sourceText.GetLineNumberFromPosition(sourceSpan.Start) + 1;
+                if (i == thread.CallFrameStack.Count - 1)
+                {
+                    ReadOnlySpan<char> context = sourceText.GetCharacterSpan(sourceSpan);
+                    message = message.Append($"Context: {context.TrimEnd()}\n");
+                }
+            }
+
+            message = message.Append($"    at {routineName} in {module.Name}.nss");
+            if (lineNumber is not null)
+            {
+                message = message.Append($":line {lineNumber}");
+            }
+
+            message = message.Append('\n');
+        }
+
+        return message;
     }
 
     private static ConstantValue BinOp(
@@ -436,6 +508,6 @@ public sealed class NsScriptVM
     private static CallFrame CreateEntryPointCallFrame(NsxModule module, ushort subroutineIndex)
     {
         Subroutine subroutine = module.GetSubroutine(subroutineIndex);
-        return new CallFrame(module, subroutineIndex, subroutine.EntryPoint);
+        return new CallFrame(module, subroutineIndex, subroutine.BytecodeStart);
     }
 }

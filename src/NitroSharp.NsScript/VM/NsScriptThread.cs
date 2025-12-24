@@ -26,12 +26,12 @@ public struct NsScriptThreadState
     internal ref CallFrame CurrentFrame => ref CallFrameStack.Peek();
 }
 
-internal struct CallFrame(NsxModule module, ushort subroutineIndex, int pc)
+internal struct CallFrame(NsxModule module, ushort subroutineIndex, CodeOffset pc)
 {
     public readonly NsxModule Module = module;
     public readonly ushort SubroutineIndex = subroutineIndex;
 
-    public int ProgramCounter = pc;
+    public CodeOffset ProgramCounter = pc;
 
     public ref readonly SubroutineRuntimeInfo RuntimeInfo =>
         ref Module.GetSubroutineRuntimeInfo(SubroutineIndex);
@@ -50,7 +50,7 @@ internal readonly partial struct CallFrameDump
 {
     public string ModuleName { get; init; }
     public ushort Subroutine { get; init; }
-    public int PC { get; init; }
+    public CodeOffset PC { get; init; }
 }
 
 [Persistable]

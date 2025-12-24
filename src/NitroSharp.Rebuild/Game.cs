@@ -21,6 +21,12 @@ public static class Game
     {
         const string prefixPattern = @"[%{localTime:hh\:mm\:ss} %{level}] %logger: ";
         var consoleAppender = new LogConsoleAppender { Formatter = new LogFormatter(prefixPattern) };
-        return LogManager.Initialize(new ZeroLogConfiguration { RootLogger = { Appenders = { consoleAppender } } });
+        return LogManager.Initialize(new ZeroLogConfiguration
+            {
+                RootLogger = { Appenders = { consoleAppender } },
+                LogMessagePoolSize = 128,
+                LogMessageBufferSize = 512
+            }
+        );
     }
 }
