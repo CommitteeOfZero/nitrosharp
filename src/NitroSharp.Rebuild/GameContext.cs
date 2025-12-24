@@ -15,6 +15,7 @@ using NitroSharp.NsScript;
 using NitroSharp.NsScript.Compiler;
 using NitroSharp.NsScript.VM;
 using NitroSharp.Text;
+using NitroSharp.Utilities;
 using Veldrid;
 using Veldrid.StartupUtilities;
 using ZeroLog;
@@ -295,20 +296,25 @@ internal sealed class GameContext
                 log.Warn($"System module '{nonExistingModule}' is missing");
             }
 
-            var compilation = new Compilation(nssFolder, sourceEncoding);
-            SourceModuleSymbol[] modules = existingModules
-                .Select(compilation.GetSourceModule)
-                .ToArray();
+            TimeSpan compilationTime;
+            using (TimingScope.Start(out compilationTime))
+            {
+                var compilation = new Compilation(nssFolder, sourceEncoding);
+                SourceModuleSymbol[] modules = existingModules
+                    .Select(compilation.GetSourceModule)
+                    .ToArray();
 
-            // ReSharper disable once RedundantAssignment
-            compilation = compilation.Emit(modules, bytecodeCacheDir, globalsFileName);
+                // ReSharper disable once RedundantAssignment
+                compilation = compilation.Emit(modules, bytecodeCacheDir, globalsFileName);
+            }
+            log.Info($"Compilation finished in {compilationTime.TotalMilliseconds} ms.");
         }
         else
         {
             log.Info("Bytecode cache is up-to-date.");
         }
 
-        var nsxLocator = new FileSystemNsxModuleLocator(bytecodeCacheDir);
+        var nsxLocator = new FileSystemNsxModuleLocator(bytecodeCacheDir, nssFolder);
         var vm = new NsScriptVM(nsxLocator, File.OpenRead(globalsPath));
         string moduleName = Path.ChangeExtension(gameProfile.SysScripts.Startup, null);
         NsScriptThreadState mainThread = vm.CreateThread(moduleName, "main")!.Value;
