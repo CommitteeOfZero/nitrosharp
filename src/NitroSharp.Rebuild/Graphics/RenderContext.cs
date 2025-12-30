@@ -182,6 +182,56 @@ namespace NitroSharp.Graphics
 
         public SystemVariableLookup SystemVariables { get; }
 
+        public static GraphicsBackend GetDefaultBackend()
+        {
+            if (GraphicsDevice.IsBackendSupported(GraphicsBackend.Direct3D11))
+            {
+                return GraphicsBackend.Direct3D11;
+            }
+            if (GraphicsDevice.IsBackendSupported(GraphicsBackend.Metal))
+            {
+                return GraphicsBackend.Metal;
+            }
+            if (GraphicsDevice.IsBackendSupported(GraphicsBackend.Vulkan))
+            {
+                return GraphicsBackend.Vulkan;
+            }
+
+            return GraphicsBackend.OpenGL;
+        }
+
+        private Viewport CalculateViewport()
+        {
+            float designAspect = (float)DesignResolution.Width / DesignResolution.Height;
+            float windowAspect = (float)RenderResolution.Width / RenderResolution.Height;
+
+            float viewportWidth, viewportHeight;
+            if (windowAspect > designAspect)
+            {
+                // Window is wider - letterbox sides
+                viewportHeight = RenderResolution.Height;
+                viewportWidth = MathF.Round(viewportHeight * designAspect);
+            }
+            else
+            {
+                // Window is taller - letterbox top/bottom
+                viewportWidth = RenderResolution.Width;
+                viewportHeight = MathF.Round(viewportWidth / designAspect);
+            }
+
+            float viewportLeft = MathF.Round((RenderResolution.Width - viewportWidth) / 2.0f);
+            float viewportTop = MathF.Round((RenderResolution.Height - viewportHeight) / 2.0f);
+
+            return new Viewport(
+                viewportLeft,
+                viewportTop,
+                viewportWidth,
+                viewportHeight,
+                minDepth: 0f,
+                maxDepth: 1f
+            );
+        }
+
         private Texture CreateWhiteTexture()
         {
             var textureDesc = TextureDescription.Texture2D(

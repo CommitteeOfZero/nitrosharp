@@ -1,0 +1,36 @@
+﻿using static SDL.SDL_GamepadAxis;
+using static SDL.SDL_GamepadButton;
+namespace NitroSharp.Input;
+
+public enum GamepadButton
+{
+    Invalid = SDL_GAMEPAD_BUTTON_INVALID,
+    SouthA = SDL_GAMEPAD_BUTTON_SOUTH,
+    EastB = SDL_GAMEPAD_BUTTON_EAST,
+    WestX = SDL_GAMEPAD_BUTTON_WEST,
+    NorthY = SDL_GAMEPAD_BUTTON_NORTH,
+    Back = SDL_GAMEPAD_BUTTON_BACK,
+    Guide = SDL_GAMEPAD_BUTTON_GUIDE,
+    Start = SDL_GAMEPAD_BUTTON_START,
+    LeftStick = SDL_GAMEPAD_BUTTON_LEFT_STICK,
+    RightStick = SDL_GAMEPAD_BUTTON_RIGHT_STICK,
+    LeftShoulder = SDL_GAMEPAD_BUTTON_LEFT_SHOULDER,
+    RightShoulder = SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER,
+    DPadUp = SDL_GAMEPAD_BUTTON_DPAD_UP,
+    DPadDown = SDL_GAMEPAD_BUTTON_DPAD_DOWN,
+    DPadLeft = SDL_GAMEPAD_BUTTON_DPAD_LEFT,
+    DPadRight = SDL_GAMEPAD_BUTTON_DPAD_RIGHT
+}
+
+public enum GamepadAxis
+{
+    Invalid = SDL_GAMEPAD_AXIS_INVALID,
+    LeftX = SDL_GAMEPAD_AXIS_LEFTX,
+    LeftY = SDL_GAMEPAD_AXIS_LEFTY,
+    RightX = SDL_GAMEPAD_AXIS_RIGHTX,
+    RightY = SDL_GAMEPAD_AXIS_RIGHTY,
+    LeftTrigger = SDL_GAMEPAD_AXIS_LEFT_TRIGGER,
+    RightTrigger = SDL_GAMEPAD_AXIS_RIGHT_TRIGGER,
+    AxisCount = SDL_GAMEPAD_AXIS_COUNT,
+}
+

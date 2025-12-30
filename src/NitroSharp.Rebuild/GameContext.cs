@@ -10,6 +10,8 @@ using System.Threading.Tasks;
 using NitroSharp.Common;
 using NitroSharp.Content;
 using NitroSharp.Graphics;
+using NitroSharp.Graphics.Core;
+using NitroSharp.Input;
 using NitroSharp.Media;
 using NitroSharp.NsScript;
 using NitroSharp.NsScript.Compiler;
@@ -17,7 +19,6 @@ using NitroSharp.NsScript.VM;
 using NitroSharp.Text;
 using NitroSharp.Utilities;
 using Veldrid;
-using Veldrid.StartupUtilities;
 using ZeroLog;
 
 [assembly: InternalsVisibleTo("NitroSharp.Tests")]
@@ -80,12 +81,13 @@ internal sealed class GameContext
 
     private void Tick()
     {
-        InputContext.Update(VM.SystemVariables);
+        InputContext.Update(Window, VM.SystemVariables);
         RenderContext.BeginFrame(FrameStamp);
         World.BeginFrame();
         World.Update(this);
         if (Content.ResolveAssets())
         {
+            RenderContext.ResolveGlyphs();
             RenderContext.MainBatch.Clear(RgbaFloat.Black);
             World.Render(this);
         }
@@ -202,7 +204,7 @@ internal sealed class GameContext
 #if DEBUG
         options.Debug = true;
 #endif
-        GraphicsBackend backend = configuration.PreferredGraphicsBackend ?? VeldridStartup.GetPlatformDefaultBackend();
+        GraphicsBackend backend = configuration.PreferredGraphicsBackend ?? RenderContext.GetDefaultBackend();
         ScreenSizeU renderResolution = window.Size;
         var swapchainDesc = new SwapchainDescription(
             window.SwapchainSource,
@@ -214,9 +216,9 @@ internal sealed class GameContext
 
         if (backend is GraphicsBackend.OpenGL or GraphicsBackend.OpenGLES)
         {
-            var wnd = window as DesktopWindow;
+            var wnd = (Sdl3Window)window;
             GraphicsDevice glDevice = backend == GraphicsBackend.OpenGL
-                ? VeldridStartup.CreateDefaultOpenGLGraphicsDevice(options, wnd!.SdlWindow, backend)
+                ? VeldridStartupGL.CreateDefaultOpenGLGraphicsDevice(options, wnd, backend)
                 : GraphicsDevice.CreateOpenGLES(options, swapchainDesc);
             return (glDevice, glDevice.MainSwapchain.NotNull());
         }

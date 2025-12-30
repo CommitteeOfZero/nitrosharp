@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using NitroSharp.Input;
 using NitroSharp.NsScript;
 using NitroSharp.NsScript.VM;
 
