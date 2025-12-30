@@ -13,12 +13,16 @@ public abstract class InputSnapshot
     private readonly bool[] _newMouseButtons = new bool[13];
     private Vector2 _prevMousePosition;
 
+    private readonly Dictionary<ulong, TouchPoint> _activeTouches = [];
+
     public Vector2 MousePosition { get; protected set; }
     public Vector2 WheelDelta { get; protected set; }
+    public IReadOnlyCollection<TouchPoint> ActiveTouches => _activeTouches.Values;
 
     public abstract ReadOnlySpan<KeyEvent> KeyEvents { get; }
     public abstract ReadOnlySpan<MouseButtonEvent> MouseEvents { get; }
     public abstract ReadOnlySpan<GamepadEvent> GamepadEvents { get; }
+    public abstract ReadOnlySpan<TouchEvent> TouchEvents { get; }
 
     public bool KeyState(Key key)
         => _keyboardState.Contains(key);
@@ -59,6 +63,21 @@ public abstract class InputSnapshot
             int index = (int)evt.MouseButton;
             _newMouseButtons[index] = !_mouseState[index] & evt.Down;
             _mouseState[index] = evt.Down;
+        }
+
+        foreach (TouchEvent evt in TouchEvents)
+        {
+            switch (evt.Kind)
+            {
+                case TouchEventKind.Down:
+                case TouchEventKind.Motion:
+                    _activeTouches[evt.FingerId] = new TouchPoint(evt.Position, evt.Pressure);
+                    MousePosition = evt.Position;
+                    break;
+                case TouchEventKind.Up:
+                    _activeTouches.Remove(evt.FingerId);
+                    break;
+            }
         }
     }
 }

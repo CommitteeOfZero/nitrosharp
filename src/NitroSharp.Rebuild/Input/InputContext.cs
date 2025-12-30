@@ -4,55 +4,42 @@ using NitroSharp.NsScript.VM;
 
 namespace NitroSharp.Input;
 
-internal enum VirtualKey
+internal enum InputAction
 {
-    Enter,
+    Enter = 0,
     Advance,
     Back,
     Left,
     Up,
     Right,
     Down,
-    Skip
-}
-
-internal enum VirtualAxis
-{
+    Skip,
     TriggerLeft,
     TriggerRight
 }
 
 internal sealed class InputContext(GameWindow window) : IDisposable
 {
-    private readonly bool[] _vkeyState = new bool[8];
-    private readonly bool[] _newVkeys = new bool[8];
-    private bool _advance;
+    private static readonly InputAction[] s_allActions = Enum.GetValues<InputAction>();
 
-    public InputSnapshot Snapshot { get; private set; } = null!;
-    public Gamepad Gamepad { get; private set; } = Gamepad.Default(window is Sdl3Window);
+    private readonly InputMap _inputMap = CreateDefaultMap();
+    private readonly float[] _actionValues = new float[s_allActions.Length];
+    private readonly bool[] _actionDown = new bool[s_allActions.Length];
+    private readonly bool[] _actionTriggered = new bool[s_allActions.Length];
 
-    public bool VKeyState(VirtualKey vkey) => _vkeyState[(int)vkey];
-    public bool VKeyDown(VirtualKey vkey) => _newVkeys[(int)vkey];
+    private InputSnapshot Snapshot { get; set; } = null!;
+    private Gamepad Gamepad { get; set; } = Gamepad.Default(window is Sdl3Window);
 
-    public bool ConsumeAdvance()
+    private float GetActionValue(InputAction action) => _actionValues[(int)action];
+    private bool IsActionDown(InputAction action) => _actionDown[(int)action];
+    private bool IsActionTriggered(InputAction action) => _actionTriggered[(int)action];
+
+    public bool Consume(InputAction action)
     {
-        bool result = _advance;
-        _advance = false;
+        int index = (int)action;
+        bool result = _actionTriggered[index];
+        _actionTriggered[index] = false;
         return result;
-    }
-
-    public float GetAxis(VirtualAxis axis)
-    {
-        return axis switch
-        {
-            VirtualAxis.TriggerLeft => Snapshot.IsKeyDown(Key.Left)
-                ? 1.0f
-                : Gamepad.GetAxis(GamepadAxis.LeftTrigger),
-            VirtualAxis.TriggerRight => Snapshot.IsKeyDown(Key.Right)
-                ? 1.0f
-                : Gamepad.GetAxis(GamepadAxis.RightTrigger),
-            _ => 0.0f
-        };
     }
 
     public void Update(GameWindow window, SystemVariableLookup systemVariables)
@@ -60,40 +47,39 @@ internal sealed class InputContext(GameWindow window) : IDisposable
         Snapshot = window.PumpEvents();
         ProcessGamepadEvents();
 
-        PollVKey(VirtualKey.Enter);
-        PollVKey(VirtualKey.Advance);
-        PollVKey(VirtualKey.Back);
-        PollVKey(VirtualKey.Left);
-        PollVKey(VirtualKey.Up);
-        PollVKey(VirtualKey.Right);
-        PollVKey(VirtualKey.Down);
-        PollVKey(VirtualKey.Skip);
+        foreach (InputAction action in s_allActions)
+        {
+            PollAction(action);
+        }
 
         SystemVariableLookup sys = systemVariables;
-        set(ref sys.RightButtonDown, VKeyState(VirtualKey.Back));
-        pollController(GamepadButton.Start, ref sys.X360StartButtonDown);
-        set(ref sys.X360AButtonDown, VKeyState(VirtualKey.Advance));
-        set(ref sys.X360BButtonDown, VKeyState(VirtualKey.Back));
-        pollController(GamepadButton.NorthY, ref sys.X360YButtonDown);
-        set(ref sys.X360LeftButtonDown, VKeyState(VirtualKey.Left));
-        set(ref sys.X360UpButtonDown, VKeyState(VirtualKey.Down));
-        set(ref sys.X360RightButtonDown, VKeyState(VirtualKey.Right));
-        set(ref sys.X360DownButtonDown, VKeyState(VirtualKey.Down));
-        pollController(GamepadButton.LeftShoulder, ref sys.X360LbButtonDown);
-        pollController(GamepadButton.RightShoulder, ref sys.X360RbButtonDown);
+        set(out sys.RightButtonDown, IsActionDown(InputAction.Back));
+        set(out sys.X360StartButtonDown, IsActionDown(InputAction.Advance));
+        set(out sys.X360AButtonDown, IsActionDown(InputAction.Advance));
+        set(out sys.X360BButtonDown, IsActionDown(InputAction.Back));
+        set(out sys.X360YButtonDown, Gamepad.ButtonState(GamepadButton.NorthY));
+        set(out sys.X360LeftButtonDown, IsActionDown(InputAction.Left));
+        set(out sys.X360UpButtonDown, IsActionDown(InputAction.Up));
+        set(out sys.X360RightButtonDown, IsActionDown(InputAction.Right));
+        set(out sys.X360DownButtonDown, IsActionDown(InputAction.Down));
+        set(out sys.X360LbButtonDown, Gamepad.ButtonState(GamepadButton.LeftShoulder));
+        set(out sys.X360RbButtonDown, Gamepad.ButtonState(GamepadButton.RightShoulder));
+        return;
 
-        _advance = VKeyDown(VirtualKey.Advance);
-
-        static void set(ref ConstantValue target, bool value)
+        static void set(out ConstantValue target, bool value)
         {
             target = ConstantValue.Boolean(value);
         }
+    }
 
-        void pollController(GamepadButton button, ref ConstantValue val)
-        {
-            bool down = Gamepad.ButtonState(button);
-            set(ref val, down);
-        }
+    private void PollAction(InputAction action)
+    {
+        int index = (int)action;
+        float value = _inputMap.GetValue(action, Snapshot, Gamepad);
+        bool isDown = value > 0.5f;
+        _actionTriggered[index] = !_actionDown[index] && isDown;
+        _actionDown[index] = isDown;
+        _actionValues[index] = value;
     }
 
     private void ProcessGamepadEvents()
@@ -101,9 +87,9 @@ internal sealed class InputContext(GameWindow window) : IDisposable
         Gamepad.Refresh();
         foreach (GamepadEvent ev in Snapshot.GamepadEvents)
         {
-            switch (ev.Type)
+            switch (ev.Kind)
             {
-                case GamepadEventType.Added:
+                case GamepadEventKind.Added:
                 {
                     if (Gamepad is NullGamepad)
                     {
@@ -111,7 +97,7 @@ internal sealed class InputContext(GameWindow window) : IDisposable
                     }
                     break;
                 }
-                case GamepadEventType.Removed:
+                case GamepadEventKind.Removed:
                 {
                     if (Gamepad is Sdl3Gamepad gamepad && gamepad.InstanceId == ev.GamepadId)
                     {
@@ -120,9 +106,9 @@ internal sealed class InputContext(GameWindow window) : IDisposable
                     }
                     break;
                 }
-                case GamepadEventType.ButtonDown:
-                case GamepadEventType.ButtonUp:
-                case GamepadEventType.AxisMotion:
+                case GamepadEventKind.ButtonDown:
+                case GamepadEventKind.ButtonUp:
+                case GamepadEventKind.AxisMotion:
                 {
                     Gamepad.HandleEvent(ev);
                     break;
@@ -131,44 +117,50 @@ internal sealed class InputContext(GameWindow window) : IDisposable
         }
     }
 
-    private bool VKeyState(InputSnapshot input, VirtualKey key)
+    private static InputMap CreateDefaultMap()
     {
-        return key switch
-        {
-            VirtualKey.Advance => input.MouseState(MouseButton.Left) |
-                input.KeyState(Key.Return) |
-                input.KeyState(Key.KeypadEnter) |
-                input.KeyState(Key.Space) |
-                Gamepad.ButtonState(GamepadButton.SouthA),
-            VirtualKey.Back => input.MouseState(MouseButton.Right) |
-                input.KeyState(Key.Backspace) |
-                input.KeyState(Key.Escape) |
-                Gamepad.ButtonState(GamepadButton.EastB),
-            VirtualKey.Enter => input.MouseState(MouseButton.Left) |
-                input.KeyState(Key.Return) |
-                input.KeyState(Key.KeypadEnter) |
-                Gamepad.ButtonState(GamepadButton.SouthA),
-            VirtualKey.Left => input.KeyState(Key.Left) |
-                Gamepad.ButtonState(GamepadButton.DPadLeft),
-            VirtualKey.Up => input.KeyState(Key.Up) |
-                input.WheelDelta.Y > 0 |
-                Gamepad.ButtonState(GamepadButton.DPadUp),
-            VirtualKey.Right => input.KeyState(Key.Right) |
-                Gamepad.ButtonState(GamepadButton.DPadRight),
-            VirtualKey.Down => input.KeyState(Key.Down) |
-                input.WheelDelta.Y < 0 |
-                Gamepad.ButtonState(GamepadButton.DPadDown),
-            VirtualKey.Skip => input.KeyState(Key.LeftControl) | input.KeyState(Key.RightControl),
-            _ => false
-        };
-    }
+        var map = new InputMapBuilder();
+        map.Bind(InputAction.Advance, new Binding { MouseButton = MouseButton.Left });
+        map.Bind(InputAction.Advance, new Binding { Key = Key.Return });
+        map.Bind(InputAction.Advance, new Binding { Key = Key.KeypadEnter });
+        map.Bind(InputAction.Advance, new Binding { Key = Key.Space });
+        map.Bind(InputAction.Advance, new Binding { GamepadButton = GamepadButton.SouthA });
+        map.Bind(InputAction.Advance, new Binding { Touch = true });
 
-    private void PollVKey(VirtualKey vkey)
-    {
-        int index = (int)vkey;
-        bool down = VKeyState(Snapshot, vkey);
-        _newVkeys[index] = !_vkeyState[index] & down;
-        _vkeyState[index] = down;
+        map.Bind(InputAction.Back, new Binding { MouseButton = MouseButton.Right });
+        map.Bind(InputAction.Back, new Binding { Key = Key.Backspace });
+        map.Bind(InputAction.Back, new Binding { Key = Key.Escape });
+        map.Bind(InputAction.Back, new Binding { GamepadButton = GamepadButton.EastB });
+
+        map.Bind(InputAction.Enter, new Binding { MouseButton = MouseButton.Left });
+        map.Bind(InputAction.Enter, new Binding { Key = Key.Return });
+        map.Bind(InputAction.Enter, new Binding { Key = Key.KeypadEnter });
+        map.Bind(InputAction.Enter, new Binding { GamepadButton = GamepadButton.SouthA });
+
+        map.Bind(InputAction.Left, new Binding { Key = Key.Left });
+        map.Bind(InputAction.Left, new Binding { GamepadButton = GamepadButton.DPadLeft });
+
+        map.Bind(InputAction.Up, new Binding { Key = Key.Up });
+        map.Bind(InputAction.Up, new Binding { WheelUp = true });
+        map.Bind(InputAction.Up, new Binding { GamepadButton = GamepadButton.DPadUp });
+
+        map.Bind(InputAction.Right, new Binding { Key = Key.Right });
+        map.Bind(InputAction.Right, new Binding { GamepadButton = GamepadButton.DPadRight });
+
+        map.Bind(InputAction.Down, new Binding { Key = Key.Down });
+        map.Bind(InputAction.Down, new Binding { WheelDown = true });
+        map.Bind(InputAction.Down, new Binding { GamepadButton = GamepadButton.DPadDown });
+
+        map.Bind(InputAction.Skip, new Binding { Key = Key.LeftControl });
+        map.Bind(InputAction.Skip, new Binding { Key = Key.RightControl });
+
+        map.Bind(InputAction.TriggerLeft, new Binding { Key = Key.Left });
+        map.Bind(InputAction.TriggerLeft, new Binding { GamepadAxis = GamepadAxis.LeftTrigger });
+
+        map.Bind(InputAction.TriggerRight, new Binding { Key = Key.Right });
+        map.Bind(InputAction.TriggerRight, new Binding { GamepadAxis = GamepadAxis.RightTrigger });
+
+        return map.Build();
     }
 
     public void Dispose()

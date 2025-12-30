@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Text.Json;
 using NitroSharp.Common;
+using NitroSharp.Graphics;
 using NitroSharp.Media;
 using Veldrid;
 
@@ -10,7 +11,7 @@ namespace NitroSharp;
 public sealed record Config
 {
     public ScreenSizeU? RenderResolution { get; private init; }
-    public GraphicsBackend? PreferredGraphicsBackend { get; private init; }
+    public GraphicsBackend GraphicsBackend { get; private init; }
     public AudioBackend? PreferredAudioBackend { get; private init; }
 
     public bool EnableFullScreen { get; private init; }
@@ -22,7 +23,8 @@ public sealed record Config
 
         return new Config
         {
-            PreferredGraphicsBackend = GetGraphicsBackend(property("graphics.backend").GetString()),
+            GraphicsBackend = GetGraphicsBackend(property("graphics.backend").GetString())
+                ?? RenderContext.GetDefaultBackend(),
             PreferredAudioBackend = GetAudioBackend(property("audio.backend").GetString()),
             EnableVSync = property("graphics.vsync").GetBoolean(),
             RenderResolution = TryParseResolution<ScreenPixel>(propertyOpt("graphics.renderResolution")?.GetString())

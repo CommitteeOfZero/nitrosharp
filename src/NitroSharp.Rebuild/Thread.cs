@@ -48,7 +48,7 @@ internal sealed class Thread : Entity, IVmThread
         InputContext input = ctx.InputContext;
         return waitOperation switch
         {
-            { Condition: WaitCondition.UserInput } => input.ConsumeAdvance(),
+            { Condition: WaitCondition.UserInput } => input.Consume(InputAction.Advance),
             {
                 Condition: WaitCondition.MoveCompleted or WaitCondition.FadeCompleted or WaitCondition.ZoomCompleted,
                 EntityQuery: { } query

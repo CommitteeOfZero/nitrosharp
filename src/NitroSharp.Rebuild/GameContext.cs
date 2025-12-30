@@ -204,7 +204,7 @@ internal sealed class GameContext
 #if DEBUG
         options.Debug = true;
 #endif
-        GraphicsBackend backend = configuration.PreferredGraphicsBackend ?? RenderContext.GetDefaultBackend();
+        GraphicsBackend backend = configuration.GraphicsBackend;
         ScreenSizeU renderResolution = window.Size;
         var swapchainDesc = new SwapchainDescription(
             window.SwapchainSource,

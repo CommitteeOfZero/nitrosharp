@@ -1,4 +1,6 @@
-﻿namespace NitroSharp.Input;
+﻿using System.Numerics;
+
+namespace NitroSharp.Input;
 
 public readonly record struct KeyEvent(
     uint Timestamp,
@@ -16,7 +18,7 @@ public readonly record struct MouseButtonEvent(
     bool Down,
     byte Clicks);
 
-public enum GamepadEventType
+public enum GamepadEventKind
 {
     Added,
     Removed,
@@ -26,8 +28,24 @@ public enum GamepadEventType
 }
 
 public readonly record struct GamepadEvent(
-    GamepadEventType Type,
+    GamepadEventKind Kind,
     uint GamepadId,
     GamepadButton Button,
     GamepadAxis Axis,
     float AxisValue);
+
+public enum TouchEventKind
+{
+    Down,
+    Up,
+    Motion
+}
+
+public readonly record struct TouchEvent(
+    uint Timestamp,
+    TouchEventKind Kind,
+    ulong FingerId,
+    Vector2 Position,
+    float Pressure);
+
+public readonly record struct TouchPoint(Vector2 Position, float Pressure);

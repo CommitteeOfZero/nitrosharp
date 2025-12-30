@@ -16,19 +16,19 @@ internal abstract class Gamepad : IDisposable
 
     public virtual void HandleEvent(in GamepadEvent ev)
     {
-        switch (ev.Type)
+        switch (ev.Kind)
         {
-            case GamepadEventType.ButtonDown:
-            case GamepadEventType.ButtonUp:
+            case GamepadEventKind.ButtonDown:
+            case GamepadEventKind.ButtonUp:
                 int btnIndex = (int)ev.Button;
                 if (btnIndex >= 0 && btnIndex < _buttonState.Length)
                 {
-                    bool down = ev.Type == GamepadEventType.ButtonDown;
+                    bool down = ev.Kind == GamepadEventKind.ButtonDown;
                     _newButtons[btnIndex] = !_buttonState[btnIndex] && down;
                     _buttonState[btnIndex] = down;
                 }
                 break;
-            case GamepadEventType.AxisMotion:
+            case GamepadEventKind.AxisMotion:
                 int axisIndex = (int)ev.Axis;
                 if (axisIndex >= 0 && axisIndex < _axisValues.Length)
                 {

@@ -31,7 +31,7 @@ public sealed unsafe class Sdl3Window : GameWindow
 
     public Sdl3Window(string title, ScreenSizeU size, GraphicsBackend graphicsBackend)
     {
-        SDL_Init(SDL_InitFlags.SDL_INIT_VIDEO | SDL_InitFlags.SDL_INIT_GAMEPAD);
+        SDL_Init(SDL_InitFlags.SDL_INIT_GAMEPAD);
         SDL_WindowFlags flags = graphicsBackend switch
         {
             GraphicsBackend.Vulkan => SDL_WindowFlags.SDL_WINDOW_VULKAN,
@@ -53,7 +53,7 @@ public sealed unsafe class Sdl3Window : GameWindow
 
     public SDL_Window* SdlWindow { get; }
     public SwapchainSource SwapchainSource { get; }
-    public ScreenSizeU Size { get; }
+    public ScreenSizeU Size { get; private set; }
     public bool Exists { get; private set; }
 
     public event Action? CloseRequested;
@@ -93,8 +93,13 @@ public sealed unsafe class Sdl3Window : GameWindow
                     break;
 
                 case SDL_EventType.SDL_EVENT_WINDOW_RESIZED:
+                {
+                    int w, h;
+                    SDL_GetWindowSize(SdlWindow, &w, &h);
+                    Size = new ScreenSizeU((uint)w, (uint)h);
                     Resized?.Invoke();
                     break;
+                }
 
                 case SDL_EventType.SDL_EVENT_KEY_DOWN:
                 case SDL_EventType.SDL_EVENT_KEY_UP:
@@ -140,7 +145,7 @@ public sealed unsafe class Sdl3Window : GameWindow
                 case SDL_EventType.SDL_EVENT_GAMEPAD_ADDED:
                     _inputSnapshot.GamepadEventList.Add(new GamepadEvent
                     {
-                        Type = GamepadEventType.Added,
+                        Kind = GamepadEventKind.Added,
                         GamepadId = (uint)ev.gdevice.which
                     });
                     break;
@@ -148,7 +153,7 @@ public sealed unsafe class Sdl3Window : GameWindow
                 case SDL_EventType.SDL_EVENT_GAMEPAD_REMOVED:
                     _inputSnapshot.GamepadEventList.Add(new GamepadEvent
                     {
-                        Type = GamepadEventType.Removed,
+                        Kind = GamepadEventKind.Removed,
                         GamepadId = (uint)ev.gdevice.which
                     });
                     break;
@@ -157,9 +162,9 @@ public sealed unsafe class Sdl3Window : GameWindow
                 case SDL_EventType.SDL_EVENT_GAMEPAD_BUTTON_UP:
                     _inputSnapshot.GamepadEventList.Add(new GamepadEvent
                     {
-                        Type = (SDL_EventType)ev.type == SDL_EventType.SDL_EVENT_GAMEPAD_BUTTON_DOWN
-                            ? GamepadEventType.ButtonDown
-                            : GamepadEventType.ButtonUp,
+                        Kind = (SDL_EventType)ev.type == SDL_EventType.SDL_EVENT_GAMEPAD_BUTTON_DOWN
+                            ? GamepadEventKind.ButtonDown
+                            : GamepadEventKind.ButtonUp,
                         GamepadId = (uint)ev.gbutton.which,
                         Button = (GamepadButton)ev.gbutton.button
                     });
@@ -168,7 +173,7 @@ public sealed unsafe class Sdl3Window : GameWindow
                 case SDL_EventType.SDL_EVENT_GAMEPAD_AXIS_MOTION:
                     _inputSnapshot.GamepadEventList.Add(new GamepadEvent
                     {
-                        Type = GamepadEventType.AxisMotion,
+                        Kind = GamepadEventKind.AxisMotion,
                         GamepadId = (uint)ev.gaxis.which,
                         Axis = (GamepadAxis)ev.gaxis.axis,
                         AxisValue = ev.gaxis.value < 0
@@ -176,6 +181,26 @@ public sealed unsafe class Sdl3Window : GameWindow
                             : (float)ev.gaxis.value / short.MaxValue
                     });
                     break;
+
+                case SDL_EventType.SDL_EVENT_FINGER_DOWN:
+                case SDL_EventType.SDL_EVENT_FINGER_UP:
+                case SDL_EventType.SDL_EVENT_FINGER_MOTION:
+                {
+                    TouchEventKind kind = (SDL_EventType)ev.type switch
+                    {
+                        SDL_EventType.SDL_EVENT_FINGER_DOWN => TouchEventKind.Down,
+                        SDL_EventType.SDL_EVENT_FINGER_UP => TouchEventKind.Up,
+                        _ => TouchEventKind.Motion
+                    };
+                    _inputSnapshot.TouchEventList.Add(new TouchEvent(
+                        (uint)ev.tfinger.timestamp,
+                        kind,
+                        (ulong)ev.tfinger.fingerID,
+                        new Vector2(ev.tfinger.x * Size.Width, ev.tfinger.y * Size.Height),
+                        ev.tfinger.pressure
+                    ));
+                    break;
+                }
             }
         }
 
@@ -257,10 +282,12 @@ public sealed unsafe class Sdl3Window : GameWindow
         public List<KeyEvent> KeyEventList { get; } = [];
         public List<MouseButtonEvent> MouseEventList { get; } = [];
         public List<GamepadEvent> GamepadEventList { get; } = [];
+        public List<TouchEvent> TouchEventList { get; } = [];
 
         public override ReadOnlySpan<KeyEvent> KeyEvents => CollectionsMarshal.AsSpan(KeyEventList);
         public override ReadOnlySpan<MouseButtonEvent> MouseEvents => CollectionsMarshal.AsSpan(MouseEventList);
         public override ReadOnlySpan<GamepadEvent> GamepadEvents => CollectionsMarshal.AsSpan(GamepadEventList);
+        public override ReadOnlySpan<TouchEvent> TouchEvents => CollectionsMarshal.AsSpan(TouchEventList);
 
         public void SetMousePosition(Vector2 pos)
         {
@@ -277,6 +304,7 @@ public sealed unsafe class Sdl3Window : GameWindow
             KeyEventList.Clear();
             MouseEventList.Clear();
             GamepadEventList.Clear();
+            TouchEventList.Clear();
             WheelDelta = Vector2.Zero;
         }
     }

@@ -53,9 +53,10 @@ internal static class Program
         }
         // ReSharper restore UseAwaitUsing
 
-        var window = new DesktopWindow(
+        var window = new Sdl3Window(
             gameProfile.ProductDisplayName,
-            config.RenderResolution ?? gameProfile.DesignResolution.Convert(Scale<DesignPixel, ScreenPixel>.Identity)
+            config.RenderResolution ?? gameProfile.DesignResolution.Convert(Scale<DesignPixel, ScreenPixel>.Identity),
+            config.GraphicsBackend
         );
 
         await NitroSharp.Game.Run(window, config, gameProfile);
